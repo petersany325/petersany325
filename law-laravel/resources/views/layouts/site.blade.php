@@ -2,13 +2,15 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a1628" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
   <title>@yield('title', $siteSettings['site_name'] ?? 'مؤسسه حقوقی آریان')</title>
   <meta name="description" content="@yield('description', $siteSettings['hero_lead'] ?? 'وکالت و مشاوره حقوقی تخصصی')" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}" />
+  <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}?v=5" />
 </head>
 <body>
   @php
@@ -33,11 +35,7 @@
         <a class="nav-phone" href="tel:{{ preg_replace('/\s+/', '', $siteSettings['phone']) }}">{{ $siteSettings['phone'] }}</a>
       @endif
 
-      <button class="nav-toggle" id="navToggle" aria-label="منو" type="button">
-        <span></span><span></span><span></span>
-      </button>
-
-      <nav class="nav-links" id="navLinks">
+      <nav class="nav-links" id="navLinks" aria-label="منوی اصلی">
         @foreach ($headerMenus as $item)
           <a
             href="{{ $item->resolvedUrl() }}"
@@ -46,7 +44,12 @@
           >{{ $item->label }}</a>
         @endforeach
       </nav>
+
+      <button class="nav-toggle" id="navToggle" aria-label="باز کردن منو" aria-expanded="false" aria-controls="navLinks" type="button">
+        <span></span><span></span><span></span>
+      </button>
     </div>
+    <div class="nav-backdrop" id="navBackdrop" hidden></div>
   </header>
 
   <main class="site-main @yield('mainClass')" id="top">
@@ -97,6 +100,6 @@
     </div>
   </footer>
 
-  <script src="{{ asset('assets/js/main.js') }}"></script>
+  <script src="{{ asset('assets/js/main.js') }}?v=5"></script>
 </body>
 </html>
