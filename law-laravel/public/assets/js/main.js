@@ -15,10 +15,12 @@
   };
 
   const onScroll = () => {
-    nav?.classList.toggle("is-scrolled", window.scrollY > 24);
+    const mobile = window.matchMedia("(max-width: 980px)").matches;
+    nav?.classList.toggle("is-scrolled", mobile || window.scrollY > 24);
   };
 
   window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
   onScroll();
 
   toggle?.addEventListener("click", () => {
