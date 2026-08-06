@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Service;
-use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -118,28 +116,10 @@ class Installer
             ]
         );
 
-        Setting::many([
-            'site_name' => 'مؤسسه حقوقی آریان',
-            'site_tagline' => 'وکالت · مشاوره · دفاع',
-            'phone' => '۰۲۱−۸۸۷۷۶۶۵۵',
-            'address' => 'تهران، خیابان ولیعصر، برج حقوقی آریان',
-            'hours' => 'شنبه تا چهارشنبه · ۹ تا ۱۸',
-            'about_title' => 'دفتری که پرونده را تا نتیجه همراهی می‌کند',
-            'about_text' => 'آریان ترکیبی از تجربه وکالت و مشاوره شفاف است. از همان جلسه اول، مسیر پرونده، ریسک‌ها و گزینه‌های واقعی را با شما مرور می‌کنیم.',
-            'hero_lead' => 'همراهی دقیق و حرفه‌ای در پرونده‌های حقوقی، کیفری و تجاری — با زبانی ساده و دفاعی قوی.',
+        Artisan::call('db:seed', [
+            '--class' => \Database\Seeders\CmsSeeder::class,
+            '--force' => true,
         ]);
-
-        if (Service::query()->count() === 0) {
-            $defaults = [
-                ['sort_order' => 1, 'title' => 'حقوق خانواده', 'description' => 'طلاق، حضانت، مهریه، نفقه و توافقات خانوادگی با رویکرد حمایتی و واقع‌بینانه.'],
-                ['sort_order' => 2, 'title' => 'کیفری و دفاع', 'description' => 'دفاع تخصصی در مراحل تحقیقات، دادگاه و تجدیدنظر با تمرکز بر حقوق متهم.'],
-                ['sort_order' => 3, 'title' => 'قرارداد و تجارت', 'description' => 'تنظیم، بررسی و حل اختلاف قراردادهای تجاری، شرکتی و ملکی.'],
-                ['sort_order' => 4, 'title' => 'ملک و ثبت', 'description' => 'دعاوی ملکی، خلع ید، الزام به تنظیم سند و پیگیری امور ثبتی.'],
-            ];
-            foreach ($defaults as $row) {
-                Service::query()->create($row + ['is_active' => true]);
-            }
-        }
 
         self::markInstalled();
 

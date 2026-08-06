@@ -1,22 +1,23 @@
-# نصب روی هاست cPanel — لاراول ۱۳.۸
+# نصب روی هاست cPanel — سایت کامل لاراول + Filament
 
-فایل ZIP نصبی (`law-laravel-cpanel-install.zip`) شامل `vendor` است و روی هاست به Composer نیاز ندارد.
+پکیج ZIP شامل `vendor` است. پنل ادمین حرفه‌ای با **Filament** روی مسیر `/admin` فعال است.
 
-## پیش‌نیاز هاست
-- **PHP 8.3** (در MultiPHP نسخهٔ `ea-php83` را انتخاب کنید؛ بعضی `alt-php83`ها mbstring/fileinfo ندارند)
-- افزونه‌ها: `pdo_mysql`, `mbstring`, `openssl`, `tokenizer`, `xml`, `ctype`, `json`, `fileinfo`
-- یک دیتابیس MySQL خالی + یوزر با دسترسی کامل
-- دسترسی نوشتن به `storage/` و `bootstrap/cache/`
+## پیش‌نیاز
+- PHP **8.3** ترجیحاً `ea-php83` (mbstring/fileinfo/pdo_mysql/intl/gd)
+- MySQL خالی + یوزر
+- نوشتن روی `storage/` و `bootstrap/cache/`
 
-## نصب سریع
-1. ZIP را آپلود و Extract کنید.
-2. محتویات `public/` را به `public_html` وصل کنید و در `index.php` مسیر را به پوشهٔ اصلی پروژه تنظیم کنید  
-   **یا** Document Root دامنه را روی `.../law-laravel-host/public` بگذارید.
-3. دامنه را باز کنید → `/install`
-4. فقط مشخصات دیتابیس را وارد کنید.
-5. ایمیل و رمز ادمین نمایش داده می‌شود → وارد `/admin` شوید.
+## نصب
+1. Extract ZIP
+2. Document Root روی `public` (یا اتصال `public_html` به پروژه طبق راهنمای قبلی)
+3. باز کردن `/install` و وارد کردن فقط مشخصات دیتابیس
+4. دریافت ایمیل/رمز ادمین → ورود به `/admin`
 
-## نکات
-- نصب فقط یک‌بار انجام می‌شود (`storage/app/installed`).
-- برای نصب مجدد همان فایل را حذف کنید.
-- بعد از نصب، رمز ادمین را از پنل عوض کنید.
+## امکانات پنل
+- درخواست‌های مشاوره و نوبت‌ها
+- خدمات، مقالات، صفحات، تیم، FAQ، نظرات
+- تنظیمات برند و تماس
+- داشبورد آماری
+
+## صفحات سایت
+`/`, `/blog`, `/team`, `/faq`, `/p/{slug}`

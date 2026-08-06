@@ -20,5 +20,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         \Illuminate\Pagination\Paginator::useBootstrapFive();
+
+        \Illuminate\Support\Facades\View::composer('layouts.site', function ($view) {
+            $view->with('settings', [
+                'site_name' => \App\Models\Setting::get('site_name', 'مؤسسه حقوقی آریان'),
+            ]);
+        });
     }
 }

@@ -22,8 +22,9 @@
       </button>
       <nav class="nav-links" id="navLinks">
         <a href="#services">خدمات</a>
-        <a href="#about">درباره ما</a>
-        <a href="#approach">روش کار</a>
+        <a href="#team">تیم</a>
+        <a href="#blog">مقالات</a>
+        <a href="#faq">سوالات</a>
         <a href="#contact" class="nav-cta">مشاوره رایگان</a>
       </nav>
     </div>
@@ -108,6 +109,108 @@
       </div>
     </section>
 
+
+    <section class="section" id="team">
+      <div class="container">
+        <div class="section-head reveal">
+          <h2>تیم حقوقی</h2>
+          <p>وکلا و مشاورانی که پرونده را تا نتیجه همراهی می‌کنند.</p>
+        </div>
+        <div class="grid-3">
+          @foreach ($members as $member)
+            <article class="plain-block reveal">
+              <h3>{{ $member->name }}</h3>
+              <p class="meta">{{ $member->role }}</p>
+              <p>{{ $member->bio }}</p>
+            </article>
+          @endforeach
+        </div>
+        <p style="margin-top:1.5rem"><a class="btn btn-primary" href="{{ route('team') }}">مشاهده همه اعضای تیم</a></p>
+      </div>
+    </section>
+
+    <section class="section services" id="testimonials">
+      <div class="container">
+        <div class="section-head reveal">
+          <h2>نظر موکلین</h2>
+          <p>تجربه واقعی کسانی که با ما کار کرده‌اند.</p>
+        </div>
+        <div class="grid-3">
+          @foreach ($testimonials as $item)
+            <article class="plain-block reveal">
+              <p>«{{ $item->content }}»</p>
+              <p class="meta">{{ $item->client_name }} · {{ $item->client_role }}</p>
+            </article>
+          @endforeach
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="blog">
+      <div class="container">
+        <div class="section-head reveal">
+          <h2>مقالات حقوقی</h2>
+          <p>نکات کاربردی برای تصمیم‌گیری بهتر.</p>
+        </div>
+        <div class="grid-3">
+          @foreach ($posts as $post)
+            <article class="plain-block reveal">
+              <h3><a href="{{ route('blog.show', $post) }}">{{ $post->title }}</a></h3>
+              <p>{{ $post->excerpt }}</p>
+            </article>
+          @endforeach
+        </div>
+        <p style="margin-top:1.5rem"><a class="btn btn-ghost" style="border-color:var(--ink);color:var(--ink)" href="{{ route('blog.index') }}">همه مقالات</a></p>
+      </div>
+    </section>
+
+    <section class="section services" id="faq">
+      <div class="container">
+        <div class="section-head reveal">
+          <h2>سوالات متداول</h2>
+          <p>پاسخ‌های کوتاه به پرسش‌های پرتکرار.</p>
+        </div>
+        <div class="faq-list">
+          @foreach ($faqs as $faq)
+            <details class="faq-item reveal">
+              <summary>{{ $faq->question }}</summary>
+              <p>{{ $faq->answer }}</p>
+            </details>
+          @endforeach
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="appointment">
+      <div class="container contact-grid">
+        <div class="contact-info reveal">
+          <h2>رزرو نوبت مشاوره</h2>
+          <p>زمان پیشنهادی خود را بفرستید تا برای جلسه هماهنگ کنیم.</p>
+        </div>
+        <form class="contact-form reveal" action="{{ route('appointments.store') }}" method="post">
+          @csrf
+          @if (session('success'))
+            <div class="alert alert-success">{{ session('success') }}</div>
+          @endif
+          <div class="hp-field" aria-hidden="true"><label>وب‌سایت<input name="website" tabindex="-1" autocomplete="off"></label></div>
+          <div class="form-row">
+            <label>نام<input name="name" required value="{{ old('name') }}"></label>
+            <label>تلفن<input name="phone" required value="{{ old('phone') }}"></label>
+          </div>
+          <div class="form-row">
+            <label>ایمیل<input type="email" name="email" value="{{ old('email') }}"></label>
+            <label>موضوع<input name="topic" value="{{ old('topic') }}"></label>
+          </div>
+          <div class="form-row">
+            <label>تاریخ پیشنهادی<input type="date" name="preferred_date" value="{{ old('preferred_date') }}"></label>
+            <label>ساعت پیشنهادی<input name="preferred_time" placeholder="مثلاً ۱۰ صبح" value="{{ old('preferred_time') }}"></label>
+          </div>
+          <label>توضیح<textarea name="notes" rows="3">{{ old('notes') }}</textarea></label>
+          <button class="btn btn-primary" type="submit">ثبت نوبت</button>
+        </form>
+      </div>
+    </section>
+
     <section class="section contact" id="contact">
       <div class="container contact-grid">
         <div class="contact-info reveal">
@@ -187,7 +290,7 @@
       </div>
       <div class="footer-bottom">
         <span>{{ $settings['site_name'] }}</span>
-        <span><a href="{{ route('admin.login') }}" style="opacity:.7">ورود مدیران</a></span>
+        <span><a href="{{ url('/admin') }}" style="opacity:.7">ورود مدیران</a></span>
       </div>
     </div>
   </footer>
