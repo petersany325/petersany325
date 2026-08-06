@@ -1,0 +1,176 @@
+/* vBulletin-inspired Admin CP — always-readable sidebar labels */
+@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap");
+
+:root {
+  --vb-navy: #1e3a5f;
+  --vb-navy-deep: #152a45;
+  --vb-navy-mid: #2b5278;
+  --vb-border: #9bb1c7;
+  --vb-sidebar: #e8eef5;
+  --vb-sidebar-hover: #d5e0ec;
+  --vb-header: #234e75;
+  --vb-accent: #c9a227;
+  --vb-content: #f4f7fb;
+  --vb-text: #152536;
+}
+
+.fi-body,
+.fi-sidebar,
+.fi-topbar,
+.fi-main,
+.fi-sidebar-item-label,
+.fi-sidebar-group-label {
+  font-family: "Vazirmatn", Tahoma, sans-serif !important;
+}
+
+/* Topbar */
+.fi-topbar {
+  background: linear-gradient(180deg, var(--vb-navy-mid), var(--vb-navy)) !important;
+  border-bottom: 3px solid var(--vb-accent) !important;
+}
+.fi-topbar .fi-logo,
+.fi-topbar .fi-icon-btn,
+.fi-topbar a.fi-topbar-item-button,
+.fi-topbar .fi-avatar {
+  color: #fff !important;
+}
+
+/* Sidebar: light panel, dark text (works even if dark class sneaks in) */
+.fi-sidebar,
+.dark .fi-sidebar,
+html.dark .fi-sidebar {
+  background: var(--vb-sidebar) !important;
+  border-inline-end: 1px solid var(--vb-border) !important;
+  color: var(--vb-text) !important;
+}
+
+.fi-sidebar-header,
+.dark .fi-sidebar-header {
+  background: var(--vb-navy-deep) !important;
+  border-bottom: 2px solid var(--vb-accent) !important;
+}
+.fi-sidebar-header .fi-logo,
+.fi-sidebar-header span,
+.fi-sidebar-header a,
+.fi-sidebar-header button {
+  color: #fff !important;
+}
+
+/* Group headers */
+.fi-sidebar-group-label,
+.fi-sidebar-group-btn,
+.fi-sidebar-group > .fi-sidebar-group-btn {
+  background: var(--vb-header) !important;
+  color: #fff !important;
+  font-size: 0.8rem !important;
+  font-weight: 800 !important;
+  padding: 0.55rem 0.85rem !important;
+  margin: 0.65rem 0.5rem 0.25rem !important;
+  border-radius: 0 !important;
+  border: 1px solid var(--vb-navy-deep) !important;
+}
+.fi-sidebar-group-label,
+.fi-sidebar-group-btn .fi-sidebar-group-label {
+  color: #fff !important;
+  opacity: 1 !important;
+}
+
+/* CRITICAL: item labels — Filament uses .fi-sidebar-item-btn / .fi-sidebar-item-label */
+.fi-sidebar-nav .fi-sidebar-item-btn,
+.fi-sidebar-nav .fi-sidebar-item-label,
+.fi-sidebar-item > .fi-sidebar-item-btn,
+.fi-sidebar-item > .fi-sidebar-item-btn > .fi-sidebar-item-label,
+.dark .fi-sidebar-nav .fi-sidebar-item-label,
+.dark .fi-sidebar-item > .fi-sidebar-item-btn > .fi-sidebar-item-label,
+html.dark .fi-sidebar-item-label {
+  color: var(--vb-text) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  -webkit-text-fill-color: var(--vb-text) !important;
+}
+
+.fi-sidebar-item-btn {
+  border-radius: 0 !important;
+  margin-inline: 0.5rem !important;
+  border: 1px solid transparent !important;
+  font-weight: 700 !important;
+  font-size: 0.92rem !important;
+  background: transparent !important;
+}
+
+.fi-sidebar-item-btn:hover,
+.fi-sidebar-item-btn:hover .fi-sidebar-item-label {
+  background: var(--vb-sidebar-hover) !important;
+  color: var(--vb-navy) !important;
+  -webkit-text-fill-color: var(--vb-navy) !important;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn > .fi-sidebar-item-label,
+.dark .fi-sidebar-item.fi-active > .fi-sidebar-item-btn > .fi-sidebar-item-label {
+  background: #fff !important;
+  color: var(--vb-navy) !important;
+  -webkit-text-fill-color: var(--vb-navy) !important;
+  border-color: var(--vb-border) !important;
+  box-shadow: inset 3px 0 0 var(--vb-accent);
+  font-weight: 800 !important;
+}
+
+.fi-sidebar-item-btn > .fi-icon,
+.fi-sidebar-item svg {
+  color: var(--vb-navy-mid) !important;
+  opacity: 1 !important;
+}
+
+.fi-main,
+.fi-main-ctn {
+  background: var(--vb-content) !important;
+}
+
+.fi-header-heading,
+.fi-page-header-heading {
+  color: var(--vb-navy) !important;
+  font-weight: 800 !important;
+}
+
+.fi-section,
+.fi-ta,
+.fi-wi-stats-overview-stat {
+  border: 1px solid var(--vb-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.fi-section-header,
+.fi-ta-header {
+  background: linear-gradient(180deg, #f8fbff, #e4ecf5) !important;
+  border-bottom: 1px solid var(--vb-border) !important;
+}
+
+.fi-ta-header-cell {
+  background: #d7e3f0 !important;
+  color: var(--vb-navy) !important;
+  font-weight: 800 !important;
+}
+
+.fi-btn-color-primary {
+  background: linear-gradient(180deg, #3d6ea5, var(--vb-navy)) !important;
+  border: 1px solid var(--vb-navy-deep) !important;
+  border-radius: 2px !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+
+.fi-simple-page {
+  background: linear-gradient(180deg, #1e3a5f, #0f2138) !important;
+}
+.fi-simple-main {
+  border: 1px solid var(--vb-border) !important;
+  border-radius: 0 !important;
+}
+
+/* Hide theme toggle confusion — panel is light-only */
+.fi-theme-switcher,
+.fi-topbar .fi-color-scheme-switcher {
+  display: none !important;
+}
