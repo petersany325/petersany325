@@ -27,7 +27,12 @@ class Setting extends Model
     public static function many(array $pairs): void
     {
         foreach ($pairs as $key => $value) {
-            static::put($key, $value);
+            if (is_bool($value)) {
+                $value = $value ? '1' : '0';
+            } elseif ($value !== null && ! is_string($value)) {
+                $value = (string) $value;
+            }
+            static::put((string) $key, $value);
         }
     }
 }

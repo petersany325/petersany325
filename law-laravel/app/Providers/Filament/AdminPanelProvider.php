@@ -12,6 +12,7 @@ use Filament\Navigation\MenuItem;
 use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
+use Filament\Enums\ThemeMode;
 use Filament\Support\Colors\Color;
 use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
@@ -42,6 +43,9 @@ class AdminPanelProvider extends PanelProvider
                 'warning' => Color::hex('#c9a227'),
             ])
             ->font('Vazirmatn')
+            ->darkMode(false)
+            ->themeSwitcher(false)
+            ->defaultThemeMode(ThemeMode::Light)
             ->sidebarCollapsibleOnDesktop()
             ->sidebarWidth('18rem')
             ->collapsedSidebarWidth('4.5rem')
@@ -78,7 +82,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
-                fn (): string => Blade::render('<link rel="stylesheet" href="{{ asset(\'css/vbulletin-admin.css\') }}?v=2" />')
+                fn (): string => Blade::render('<link rel="stylesheet" href="{{ asset(\'css/vbulletin-admin.css\') }}?v=4" />')
             )
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,

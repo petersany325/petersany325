@@ -1,110 +1,127 @@
-/* vBulletin-inspired Admin CP theme for Filament */
+/* vBulletin-inspired Admin CP — always-readable sidebar labels */
+@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap");
+
 :root {
   --vb-navy: #1e3a5f;
   --vb-navy-deep: #152a45;
   --vb-navy-mid: #2b5278;
   --vb-border: #9bb1c7;
-  --vb-sidebar: #d9e2ec;
-  --vb-sidebar-hover: #c5d4e4;
+  --vb-sidebar: #e8eef5;
+  --vb-sidebar-hover: #d5e0ec;
   --vb-header: #234e75;
   --vb-accent: #c9a227;
   --vb-content: #f4f7fb;
-  --vb-row: #eef3f8;
+  --vb-text: #152536;
 }
 
-/* Force Vazirmatn across panel */
 .fi-body,
 .fi-sidebar,
 .fi-topbar,
-.fi-main {
+.fi-main,
+.fi-sidebar-item-label,
+.fi-sidebar-group-label {
   font-family: "Vazirmatn", Tahoma, sans-serif !important;
 }
 
-/* Top bar like classic ACP */
+/* Topbar */
 .fi-topbar {
   background: linear-gradient(180deg, var(--vb-navy-mid), var(--vb-navy)) !important;
   border-bottom: 3px solid var(--vb-accent) !important;
-  color: #fff !important;
 }
-
-.fi-topbar * {
-  color: #fff !important;
-}
-
-.fi-topbar .fi-icon-btn,
-.fi-topbar a,
-.fi-topbar button {
-  color: #fff !important;
-}
-
 .fi-topbar .fi-logo,
-.fi-logo {
+.fi-topbar .fi-icon-btn,
+.fi-topbar a.fi-topbar-item-button,
+.fi-topbar .fi-avatar {
   color: #fff !important;
-  font-weight: 800 !important;
-  letter-spacing: -0.02em;
 }
 
-/* Sidebar ACP style */
-.fi-sidebar {
+/* Sidebar: light panel, dark text (works even if dark class sneaks in) */
+.fi-sidebar,
+.dark .fi-sidebar,
+html.dark .fi-sidebar {
   background: var(--vb-sidebar) !important;
   border-inline-end: 1px solid var(--vb-border) !important;
+  color: var(--vb-text) !important;
 }
 
-.fi-sidebar-header {
+.fi-sidebar-header,
+.dark .fi-sidebar-header {
   background: var(--vb-navy-deep) !important;
   border-bottom: 2px solid var(--vb-accent) !important;
 }
-
 .fi-sidebar-header .fi-logo,
-.fi-sidebar-header * {
+.fi-sidebar-header span,
+.fi-sidebar-header a,
+.fi-sidebar-header button {
   color: #fff !important;
 }
 
-/* Navigation groups = vBulletin menu categories */
-.fi-sidebar-nav-group-label,
-.fi-sidebar-group-label {
+/* Group headers */
+.fi-sidebar-group-label,
+.fi-sidebar-group-btn,
+.fi-sidebar-group > .fi-sidebar-group-btn {
   background: var(--vb-header) !important;
   color: #fff !important;
-  font-size: 0.78rem !important;
+  font-size: 0.8rem !important;
   font-weight: 800 !important;
-  text-transform: none !important;
-  letter-spacing: 0 !important;
   padding: 0.55rem 0.85rem !important;
   margin: 0.65rem 0.5rem 0.25rem !important;
   border-radius: 0 !important;
   border: 1px solid var(--vb-navy-deep) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+.fi-sidebar-group-label,
+.fi-sidebar-group-btn .fi-sidebar-group-label {
+  color: #fff !important;
+  opacity: 1 !important;
 }
 
-/* Menu items */
-.fi-sidebar-item-button,
-.fi-sidebar-item > a,
-.fi-sidebar-item-button a {
+/* CRITICAL: item labels — Filament uses .fi-sidebar-item-btn / .fi-sidebar-item-label */
+.fi-sidebar-nav .fi-sidebar-item-btn,
+.fi-sidebar-nav .fi-sidebar-item-label,
+.fi-sidebar-item > .fi-sidebar-item-btn,
+.fi-sidebar-item > .fi-sidebar-item-btn > .fi-sidebar-item-label,
+.dark .fi-sidebar-nav .fi-sidebar-item-label,
+.dark .fi-sidebar-item > .fi-sidebar-item-btn > .fi-sidebar-item-label,
+html.dark .fi-sidebar-item-label {
+  color: var(--vb-text) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  -webkit-text-fill-color: var(--vb-text) !important;
+}
+
+.fi-sidebar-item-btn {
   border-radius: 0 !important;
   margin-inline: 0.5rem !important;
   border: 1px solid transparent !important;
-  color: #1a2b3c !important;
-  font-weight: 600 !important;
-  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  font-size: 0.92rem !important;
+  background: transparent !important;
 }
 
-.fi-sidebar-item-button:hover,
-.fi-sidebar-item > a:hover {
+.fi-sidebar-item-btn:hover,
+.fi-sidebar-item-btn:hover .fi-sidebar-item-label {
   background: var(--vb-sidebar-hover) !important;
-  border-color: var(--vb-border) !important;
+  color: var(--vb-navy) !important;
+  -webkit-text-fill-color: var(--vb-navy) !important;
 }
 
-.fi-sidebar-item-active .fi-sidebar-item-button,
-.fi-sidebar-item-active > a,
-.fi-sidebar-item.fi-active .fi-sidebar-item-button {
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn > .fi-sidebar-item-label,
+.dark .fi-sidebar-item.fi-active > .fi-sidebar-item-btn > .fi-sidebar-item-label {
   background: #fff !important;
+  color: var(--vb-navy) !important;
+  -webkit-text-fill-color: var(--vb-navy) !important;
   border-color: var(--vb-border) !important;
   box-shadow: inset 3px 0 0 var(--vb-accent);
-  color: var(--vb-navy) !important;
   font-weight: 800 !important;
 }
 
-/* Main content like ACP tables area */
+.fi-sidebar-item-btn > .fi-icon,
+.fi-sidebar-item svg {
+  color: var(--vb-navy-mid) !important;
+  opacity: 1 !important;
+}
+
 .fi-main,
 .fi-main-ctn {
   background: var(--vb-content) !important;
@@ -116,12 +133,9 @@
   font-weight: 800 !important;
 }
 
-/* Cards / sections with classic ACP borders */
 .fi-section,
 .fi-ta,
-.fi-wi-stats-overview-stat,
-.fi-fo-tabs,
-.fi-modal-window {
+.fi-wi-stats-overview-stat {
   border: 1px solid var(--vb-border) !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -137,16 +151,9 @@
   background: #d7e3f0 !important;
   color: var(--vb-navy) !important;
   font-weight: 800 !important;
-  border-bottom: 1px solid var(--vb-border) !important;
 }
 
-.fi-ta-row:nth-child(even) {
-  background: var(--vb-row) !important;
-}
-
-/* Primary buttons */
-.fi-btn-color-primary,
-button.fi-btn[class*="primary"] {
+.fi-btn-color-primary {
   background: linear-gradient(180deg, #3d6ea5, var(--vb-navy)) !important;
   border: 1px solid var(--vb-navy-deep) !important;
   border-radius: 2px !important;
@@ -154,25 +161,16 @@ button.fi-btn[class*="primary"] {
   font-weight: 700 !important;
 }
 
-/* User menu hint strip */
-.fi-user-menu {
-  border-top: 1px solid var(--vb-border);
-}
-
-/* Login page ACP feel */
 .fi-simple-page {
-  background:
-    radial-gradient(ellipse at top, rgba(43, 82, 120, 0.25), transparent 55%),
-    linear-gradient(180deg, #1e3a5f, #0f2138) !important;
+  background: linear-gradient(180deg, #1e3a5f, #0f2138) !important;
 }
-
 .fi-simple-main {
   border: 1px solid var(--vb-border) !important;
   border-radius: 0 !important;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35) !important;
 }
 
-/* Compact classic spacing */
-.fi-sidebar-nav {
-  padding-bottom: 1rem;
+/* Hide theme toggle confusion — panel is light-only */
+.fi-theme-switcher,
+.fi-topbar .fi-color-scheme-switcher {
+  display: none !important;
 }

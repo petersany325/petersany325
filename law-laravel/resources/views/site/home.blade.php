@@ -1,36 +1,10 @@
-<!DOCTYPE html>
-<html lang="fa" dir="rtl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ $settings['site_name'] }} | وکالت و مشاوره حقوقی</title>
-  <meta name="description" content="وکالت، مشاوره و دفاع تخصصی — {{ $settings['site_name'] }}" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}" />
-</head>
-<body>
-  <header class="site-nav" id="nav">
-    <div class="container">
-      <a href="#top" class="brand">
-        <span class="brand-mark">آ</span>
-        {{ $settings['site_name'] }}
-      </a>
-      <button class="nav-toggle" id="navToggle" aria-label="منو" type="button">
-        <span></span><span></span><span></span>
-      </button>
-      <nav class="nav-links" id="navLinks">
-        <a href="#services">خدمات</a>
-        <a href="#team">تیم</a>
-        <a href="#blog">مقالات</a>
-        <a href="#faq">سوالات</a>
-        <a href="#contact" class="nav-cta">مشاوره رایگان</a>
-      </nav>
-    </div>
-  </header>
+@extends('layouts.site')
 
-  <main id="top">
+@section('title', ($settings['site_name'] ?? 'مؤسسه حقوقی آریان') . ' | وکالت و مشاوره حقوقی')
+@section('description', 'وکالت، مشاوره و دفاع تخصصی — ' . ($settings['site_name'] ?? ''))
+@section('mainClass', 'is-home')
+
+@section('content')
     <section class="hero">
       <div class="hero-media" aria-hidden="true">
         <img src="{{ asset('assets/img/hero.jpg') }}" alt="" width="1920" height="1080" />
@@ -43,7 +17,7 @@
         </h1>
         <p class="hero-lead">{{ $settings['hero_lead'] }}</p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="#contact">رزرو مشاوره</a>
+          <a class="btn btn-primary" href="#appointment">درخواست نوبت</a>
           <a class="btn btn-ghost" href="#services">مشاهده خدمات</a>
         </div>
       </div>
@@ -272,29 +246,5 @@
         </form>
       </div>
     </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container">
-      <div class="footer-top">
-        <div>
-          <div class="footer-brand">{{ $settings['site_name'] }}</div>
-          <p>وکالت و مشاوره حقوقی تخصصی</p>
-        </div>
-        <nav class="footer-links">
-          <a href="#services">خدمات</a>
-          <a href="#about">درباره</a>
-          <a href="#approach">روش کار</a>
-          <a href="#contact">تماس</a>
-        </nav>
-      </div>
-      <div class="footer-bottom">
-        <span>{{ $settings['site_name'] }}</span>
-        <span><a href="{{ url('/admin') }}" style="opacity:.7">ورود مدیران</a></span>
-      </div>
-    </div>
-  </footer>
-
-  <script src="{{ asset('assets/js/main.js') }}"></script>
-</body>
-</html>
+  
+@endsection

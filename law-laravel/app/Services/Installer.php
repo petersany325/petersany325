@@ -120,6 +120,10 @@ class Installer
             '--class' => \Database\Seeders\CmsSeeder::class,
             '--force' => true,
         ]);
+        Artisan::call('db:seed', [
+            '--class' => \Database\Seeders\MenuSeeder::class,
+            '--force' => true,
+        ]);
 
         self::markInstalled();
 
