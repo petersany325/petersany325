@@ -70,8 +70,12 @@ class HomeController extends Controller
 
     public function contact(Request $request): RedirectResponse
     {
+        $base = $request->boolean('from_app') || str_contains((string) url()->previous(), '/app')
+            ? url('/app')
+            : url('/');
+
         if (filled($request->input('website'))) {
-            return redirect()->to(url('/').'#contact')->with('success', 'درخواست شما ثبت شد. به‌زودی با شما تماس می‌گیریم.');
+            return redirect()->to($base.'#contact')->with('success', 'درخواست شما ثبت شد. به‌زودی با شما تماس می‌گیریم.');
         }
 
         $data = $request->validate([
@@ -90,13 +94,17 @@ class HomeController extends Controller
             'status' => 'new',
         ]);
 
-        return redirect()->to(url('/').'#contact')->with('success', 'درخواست شما ثبت شد. به‌زودی با شما تماس می‌گیریم.');
+        return redirect()->to($base.'#contact')->with('success', 'درخواست شما ثبت شد. به‌زودی با شما تماس می‌گیریم.');
     }
 
     public function appointment(Request $request): RedirectResponse
     {
+        $base = $request->boolean('from_app') || str_contains((string) url()->previous(), '/app')
+            ? url('/app')
+            : url('/');
+
         if (filled($request->input('website'))) {
-            return redirect()->to(url('/').'#appointment')->with('success', 'نوبت شما ثبت شد.');
+            return redirect()->to($base.'#appointment')->with('success', 'نوبت شما ثبت شد.');
         }
 
         $data = $request->validate([
@@ -111,6 +119,6 @@ class HomeController extends Controller
 
         Appointment::query()->create($data + ['status' => 'pending']);
 
-        return redirect()->to(url('/').'#appointment')->with('success', 'نوبت مشاوره ثبت شد. برای تأیید با شما تماس می‌گیریم.');
+        return redirect()->to($base.'#appointment')->with('success', 'نوبت مشاوره ثبت شد. برای تأیید با شما تماس می‌گیریم.');
     }
 }

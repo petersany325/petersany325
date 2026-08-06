@@ -1,0 +1,169 @@
+/* Mobile WebApp shell */
+:root {
+  --app-top: 3.35rem;
+  --app-tab: 3.6rem;
+}
+
+html.webapp,
+body.is-webapp {
+  background: #0a1628;
+  overscroll-behavior: none;
+}
+
+.app-shell {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgba(184, 149, 108, 0.12), transparent 55%),
+    #f3f5f8;
+}
+
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: calc(var(--app-top) + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 0.9rem 0.45rem;
+  background: rgba(10, 22, 40, 0.97);
+  color: #fff;
+  border-bottom: 1px solid rgba(184, 149, 108, 0.28);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+.app-brand .brand-mark {
+  width: 1.7rem;
+  height: 1.7rem;
+  border: 1px solid #b8956c;
+  display: grid;
+  place-items: center;
+  color: #d4b896;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.app-brand strong {
+  display: block;
+  font-size: 0.86rem;
+  line-height: 1.2;
+}
+.app-brand small {
+  display: block;
+  font-size: 0.68rem;
+  color: #d4b896;
+  opacity: 0.9;
+}
+
+.app-install-btn {
+  border: 1px solid rgba(212, 184, 150, 0.45);
+  background: linear-gradient(180deg, #d4b896, #b8956c);
+  color: #0a1628;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.4rem 0.7rem;
+  white-space: nowrap;
+}
+
+.app-main {
+  flex: 1;
+  padding-bottom: calc(var(--app-tab) + env(safe-area-inset-bottom, 0px) + 0.75rem);
+}
+
+.app-hero.hero {
+  min-height: 72svh;
+  height: auto;
+}
+
+.app-tabbar {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.15rem;
+  min-height: calc(var(--app-tab) + env(safe-area-inset-bottom, 0px));
+  padding: 0.35rem 0.35rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+  background: rgba(10, 22, 40, 0.98);
+  border-top: 1px solid rgba(184, 149, 108, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.35rem 0.15rem;
+  border-inline-start: 2px solid transparent;
+}
+.app-tab.is-active {
+  color: #ffe6bc;
+  border-inline-start-color: #b8956c;
+  background: rgba(184, 149, 108, 0.12);
+}
+.app-tab-cta {
+  color: #0a1628 !important;
+  background: linear-gradient(180deg, #e2c08a, #b8956c) !important;
+  font-weight: 800;
+}
+
+.app-quick-contact {
+  display: grid;
+  gap: 0.55rem;
+}
+.app-quick-contact .btn {
+  width: 100%;
+}
+.app-wa {
+  border-color: #0a1628 !important;
+  color: #0a1628 !important;
+}
+
+.app-desktop-link {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.82rem;
+}
+.app-desktop-link a {
+  color: #3d4f66;
+  text-decoration: underline;
+}
+
+.app-toast {
+  position: fixed;
+  inset-inline: 0.75rem;
+  bottom: calc(var(--app-tab) + env(safe-area-inset-bottom, 0px) + 0.75rem);
+  z-index: 70;
+  padding: 0.7rem 0.85rem;
+  background: rgba(10, 22, 40, 0.95);
+  color: #fff;
+  border: 1px solid rgba(184, 149, 108, 0.4);
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 900px) {
+  .app-shell {
+    max-width: 430px;
+    margin-inline: auto;
+    box-shadow: 0 0 0 1px rgba(10, 22, 40, 0.08), 0 24px 60px rgba(10, 22, 40, 0.18);
+  }
+  .app-tabbar {
+    inset-inline: max(0px, calc(50% - 215px));
+  }
+}

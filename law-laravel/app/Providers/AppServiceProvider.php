@@ -21,18 +21,26 @@ class AppServiceProvider extends ServiceProvider
     {
         \Illuminate\Pagination\Paginator::useBootstrapFive();
 
-        \Illuminate\Support\Facades\View::composer(['layouts.site', 'site.home'], function ($view) {
+        \Illuminate\Support\Facades\View::composer(['layouts.site', 'layouts.app', 'site.home', 'app.index'], function ($view) {
             $keys = [
                 'site_name', 'site_tagline', 'phone', 'mobile', 'email', 'address', 'hours',
                 'about_title', 'about_text', 'hero_lead',
                 'footer_about', 'footer_copyright', 'footer_disclaimer',
                 'social_instagram', 'social_linkedin', 'social_whatsapp',
                 'cta_text', 'show_phone_in_header',
+                'pwa_enabled', 'pwa_auto_mobile', 'pwa_name', 'pwa_short_name',
+                'pwa_description', 'pwa_theme_color', 'pwa_bg_color', 'pwa_start_url',
             ];
             $siteSettings = [];
             try {
                 foreach ($keys as $key) {
-                    $siteSettings[$key] = \App\Models\Setting::get($key, '');
+                    $siteSettings[$key] = \App\Models\Setting::get($key, match ($key) {
+                        'pwa_enabled', 'pwa_auto_mobile', 'show_phone_in_header' => '1',
+                        'pwa_short_name' => 'آریان',
+                        'pwa_theme_color', 'pwa_bg_color' => '#0a1628',
+                        'pwa_start_url' => '/app',
+                        default => '',
+                    });
                 }
             } catch (\Throwable) {
                 $siteSettings = array_fill_keys($keys, '');

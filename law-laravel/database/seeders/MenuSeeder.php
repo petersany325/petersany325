@@ -48,6 +48,14 @@ class MenuSeeder extends Seeder
             'show_phone_in_header' => Setting::get('show_phone_in_header') ?: '1',
             'email' => Setting::get('email') ?: 'info@hoghoghibabol.ir',
             'mobile' => Setting::get('mobile') ?: '',
+            'pwa_enabled' => Setting::get('pwa_enabled') ?: '1',
+            'pwa_auto_mobile' => Setting::get('pwa_auto_mobile') ?: '1',
+            'pwa_name' => Setting::get('pwa_name') ?: (Setting::get('site_name') ?: 'مؤسسه حقوقی آریان'),
+            'pwa_short_name' => Setting::get('pwa_short_name') ?: 'آریان',
+            'pwa_description' => Setting::get('pwa_description') ?: (Setting::get('hero_lead') ?: 'وکالت و مشاوره حقوقی تخصصی'),
+            'pwa_theme_color' => Setting::get('pwa_theme_color') ?: '#0a1628',
+            'pwa_bg_color' => Setting::get('pwa_bg_color') ?: '#0a1628',
+            'pwa_start_url' => Setting::get('pwa_start_url') ?: '/app',
         ]);
     }
 }

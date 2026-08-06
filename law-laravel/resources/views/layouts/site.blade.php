@@ -3,14 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#0a1628" />
+  <meta name="theme-color" content="{{ $siteSettings['pwa_theme_color'] ?? '#0a1628' }}" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="{{ $siteSettings['pwa_short_name'] ?? 'آریان' }}" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title>@yield('title', $siteSettings['site_name'] ?? 'مؤسسه حقوقی آریان')</title>
   <meta name="description" content="@yield('description', $siteSettings['hero_lead'] ?? 'وکالت و مشاوره حقوقی تخصصی')" />
+  @if (($siteSettings['pwa_enabled'] ?? '1') === '1')
+    <link rel="manifest" href="{{ url('/manifest.webmanifest') }}" />
+  @endif
+  <link rel="apple-touch-icon" href="{{ asset('assets/icons/apple-touch-icon.png') }}" />
+  <link rel="icon" href="{{ asset('assets/icons/icon-192.png') }}" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}?v=8" />
+  <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}?v=9" />
 </head>
 <body>
   @php
@@ -100,6 +108,13 @@
     </div>
   </footer>
 
-  <script src="{{ asset('assets/js/main.js') }}?v=8"></script>
+  <script src="{{ asset('assets/js/main.js') }}?v=9"></script>
+  @if (($siteSettings['pwa_enabled'] ?? '1') === '1')
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('{{ url('/sw.js') }}', { scope: '/' }).catch(function () {});
+    }
+  </script>
+  @endif
 </body>
 </html>
