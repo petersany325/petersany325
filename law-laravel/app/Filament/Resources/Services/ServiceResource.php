@@ -31,7 +31,7 @@ class ServiceResource extends Resource
 
     protected static ?string $pluralModelLabel = 'خدمات';
 
-    protected static string|UnitEnum|null $navigationGroup = 'محتوای سایت';
+    protected static string|UnitEnum|null $navigationGroup = 'مدیریت محتوا';
 
 
     public static function form(Schema $schema): Schema

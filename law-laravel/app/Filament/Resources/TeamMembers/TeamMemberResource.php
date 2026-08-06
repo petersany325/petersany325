@@ -31,7 +31,7 @@ class TeamMemberResource extends Resource
 
     protected static ?string $pluralModelLabel = 'تیم حقوقی';
 
-    protected static string|UnitEnum|null $navigationGroup = 'محتوای سایت';
+    protected static string|UnitEnum|null $navigationGroup = 'مدیریت محتوا';
 
 
     public static function form(Schema $schema): Schema

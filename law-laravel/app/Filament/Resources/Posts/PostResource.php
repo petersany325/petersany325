@@ -32,7 +32,7 @@ class PostResource extends Resource
 
     protected static ?string $pluralModelLabel = 'مقالات';
 
-    protected static string|UnitEnum|null $navigationGroup = 'محتوای سایت';
+    protected static string|UnitEnum|null $navigationGroup = 'مدیریت محتوا';
 
 
     public static function form(Schema $schema): Schema

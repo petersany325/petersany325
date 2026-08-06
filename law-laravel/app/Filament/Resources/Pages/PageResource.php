@@ -31,7 +31,7 @@ class PageResource extends Resource
 
     protected static ?string $pluralModelLabel = 'صفحات';
 
-    protected static string|UnitEnum|null $navigationGroup = 'محتوای سایت';
+    protected static string|UnitEnum|null $navigationGroup = 'مدیریت محتوا';
 
 
     public static function form(Schema $schema): Schema

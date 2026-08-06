@@ -30,7 +30,7 @@ class AppointmentResource extends Resource
 
     protected static ?string $pluralModelLabel = 'نوبت‌ها';
 
-    protected static string|UnitEnum|null $navigationGroup = 'ارتباط با موکلین';
+    protected static string|UnitEnum|null $navigationGroup = 'ورودی‌ها و پیگیری';
 
 
     public static function form(Schema $schema): Schema

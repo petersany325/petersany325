@@ -28,7 +28,7 @@ class ManageSiteSettings extends Page
 
     protected static ?string $title = 'تنظیمات سایت';
 
-    protected static string|UnitEnum|null $navigationGroup = 'تنظیمات';
+    protected static string|UnitEnum|null $navigationGroup = 'سیستم و حساب';
 
     protected static ?int $navigationSort = 100;
 
