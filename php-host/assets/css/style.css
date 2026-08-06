@@ -447,7 +447,7 @@ ul {
   inset: 0;
   background:
     radial-gradient(ellipse 50% 60% at 0% 50%, rgba(184, 149, 108, 0.12), transparent 60%),
-    url("../img/consult.png") center / cover no-repeat;
+    url("../img/consult.jpg") center / cover no-repeat;
   opacity: 0.18;
   pointer-events: none;
 }

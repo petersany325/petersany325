@@ -41,7 +41,7 @@ $pageTitle = $config['site_name'] . ' | وکالت و مشاوره حقوقی';
   <main id="top">
     <section class="hero">
       <div class="hero-media" aria-hidden="true">
-        <img src="assets/img/hero.png" alt="" width="1920" height="1080" />
+        <img src="assets/img/hero.jpg" alt="" width="1920" height="1080" />
         <div class="hero-overlay"></div>
       </div>
       <div class="hero-content">
@@ -105,7 +105,7 @@ $pageTitle = $config['site_name'] . ' | وکالت و مشاوره حقوقی';
     <section class="section about" id="about">
       <div class="container about-grid">
         <div class="about-visual reveal">
-          <img src="assets/img/office.png" alt="فضای دفتر <?= e($config['site_name']) ?>" width="1200" height="800" />
+          <img src="assets/img/office.jpg" alt="فضای دفتر <?= e($config['site_name']) ?>" width="1200" height="800" />
         </div>
         <div class="about-copy reveal">
           <h2>دفتری که پرونده را تا نتیجه همراهی می‌کند</h2>
