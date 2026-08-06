@@ -56,6 +56,10 @@ class MenuSeeder extends Seeder
             'pwa_theme_color' => Setting::get('pwa_theme_color') ?: '#0a1628',
             'pwa_bg_color' => Setting::get('pwa_bg_color') ?: '#0a1628',
             'pwa_start_url' => Setting::get('pwa_start_url') ?: '/app',
+            'app_banner_size' => Setting::get('app_banner_size') ?: 'medium',
+            'app_banner_height' => Setting::get('app_banner_height') ?: '42',
+            'app_banner_position' => Setting::get('app_banner_position') ?: 'center 35%',
+            'app_banner_show_lead' => Setting::get('app_banner_show_lead') ?: '1',
         ]);
     }
 }

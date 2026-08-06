@@ -3,9 +3,9 @@ const CACHE = 'aryan-pwa-v1';
 const PRECACHE = [
   '/app',
   '/assets/css/style.css?v=9',
-  '/assets/css/app.css?v=1',
+  '/assets/css/app.css?v=2',
   '/assets/js/main.js?v=9',
-  '/assets/js/app.js?v=1',
+  '/assets/js/app.js?v=2',
   '/assets/icons/icon-192.png',
   '/assets/icons/icon-512.png',
 ];

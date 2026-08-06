@@ -7,6 +7,19 @@
     $brand = $siteSettings['site_name'] ?? 'مؤسسه حقوقی آریان';
     $theme = $siteSettings['pwa_theme_color'] ?? '#0a1628';
     $pwaOn = ($siteSettings['pwa_enabled'] ?? '1') === '1';
+    $bannerH = max(25, min(70, (int) ($siteSettings['app_banner_height'] ?? 42)));
+    $bannerPos = $siteSettings['app_banner_position'] ?? 'center 35%';
+    $bannerShowLead = ($siteSettings['app_banner_show_lead'] ?? '1') === '1';
+    $bannerMin = match (true) {
+        $bannerH <= 36 => '190px',
+        $bannerH >= 50 => '260px',
+        default => '220px',
+    };
+    $bannerMax = match (true) {
+        $bannerH <= 36 => '280px',
+        $bannerH >= 50 => '420px',
+        default => '340px',
+    };
   @endphp
   <meta name="theme-color" content="{{ $theme }}" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -25,7 +38,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}?v=9" />
-  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=1" />
+  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=2" />
+  <style>
+    :root {
+      --app-banner-h: {{ $bannerH }}vh;
+      --app-banner-min: {{ $bannerMin }};
+      --app-banner-max: {{ $bannerMax }};
+      --app-banner-pos: {{ $bannerPos }};
+    }
+  </style>
 </head>
 <body class="is-webapp">
   <div class="app-shell">
@@ -56,7 +77,7 @@
   <div class="app-toast" id="appToast" hidden>برای دسترسی سریع، وب‌اپ را به صفحه اصلی اضافه کنید.</div>
 
   <script src="{{ asset('assets/js/main.js') }}?v=9"></script>
-  <script src="{{ asset('assets/js/app.js') }}?v=1"></script>
+  <script src="{{ asset('assets/js/app.js') }}?v=2"></script>
   @if ($pwaOn)
   <script>
     if ('serviceWorker' in navigator) {

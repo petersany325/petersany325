@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-  <section class="hero app-hero">
+  <section class="hero app-hero {{ ($siteSettings['app_banner_show_lead'] ?? '1') === '1' ? '' : 'is-hide-lead' }}">
     <div class="hero-media" aria-hidden="true">
       <img src="{{ asset('assets/img/hero.jpg') }}" alt="" width="1920" height="1080" />
       <div class="hero-overlay"></div>

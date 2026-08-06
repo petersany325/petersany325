@@ -30,15 +30,19 @@ class AppServiceProvider extends ServiceProvider
                 'cta_text', 'show_phone_in_header',
                 'pwa_enabled', 'pwa_auto_mobile', 'pwa_name', 'pwa_short_name',
                 'pwa_description', 'pwa_theme_color', 'pwa_bg_color', 'pwa_start_url',
+                'app_banner_size', 'app_banner_height', 'app_banner_position', 'app_banner_show_lead',
             ];
             $siteSettings = [];
             try {
                 foreach ($keys as $key) {
                     $siteSettings[$key] = \App\Models\Setting::get($key, match ($key) {
-                        'pwa_enabled', 'pwa_auto_mobile', 'show_phone_in_header' => '1',
+                        'pwa_enabled', 'pwa_auto_mobile', 'show_phone_in_header', 'app_banner_show_lead' => '1',
                         'pwa_short_name' => 'آریان',
                         'pwa_theme_color', 'pwa_bg_color' => '#0a1628',
                         'pwa_start_url' => '/app',
+                        'app_banner_size' => 'medium',
+                        'app_banner_height' => '42',
+                        'app_banner_position' => 'center 35%',
                         default => '',
                     });
                 }
