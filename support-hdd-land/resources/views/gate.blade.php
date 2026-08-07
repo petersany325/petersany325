@@ -23,8 +23,7 @@
         body {
             font-family: Vazirmatn, Tahoma, sans-serif;
             color: var(--ink);
-            background:
-                linear-gradient(180deg, #3a4454 0%, #2b3340 38%, #e8eaee 38%, #e8eaee 100%);
+            background: #e8eaee;
             min-height: 100dvh;
             display: grid;
             place-items: center;
@@ -33,11 +32,18 @@
         .gate {
             width: min(520px, 100%);
             position: relative;
+            background: #fff;
+            border: 1px solid #9aa5b5;
+            border-radius: 4px;
+            box-shadow: 0 10px 28px rgba(0,0,0,.14);
+            overflow: hidden;
         }
         .gate-brand {
             text-align: center;
             color: #f2f4f7;
-            margin-bottom: 22px;
+            margin-bottom: 0;
+            padding: 22px 16px 18px;
+            background: linear-gradient(180deg, #3a4454, #2b3340);
             animation: rise .4s ease-out;
         }
         .gate-logo {
@@ -56,15 +62,18 @@
             margin: 0;
             font-size: clamp(22px, 5vw, 28px);
             font-weight: 800;
+            color: #fff;
         }
         .gate-brand p {
             margin: 8px 0 0;
             font-size: 13px;
             opacity: .88;
+            color: #d7dde6;
         }
         .gate-cards {
             display: grid;
             gap: 12px;
+            padding: 16px;
             animation: rise .45s ease-out .05s both;
         }
         .gate-card {
