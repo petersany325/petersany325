@@ -399,7 +399,7 @@ class SettingController extends Controller
 
         BackupSettings::save([
             'enabled' => $request->boolean('enabled'),
-            'scope' => $data['scope'] ?? 'accounting',
+            'scope' => $data['scope'] ?? 'full',
             'interval' => $data['interval'] ?? 'weekly',
             'weekday' => $data['weekday'] ?? 5,
             'hour' => $data['hour'] ?? 3,

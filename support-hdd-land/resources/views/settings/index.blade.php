@@ -385,14 +385,16 @@
         <div class="ws-pane {{ $activeTab === 'backup' ? 'active' : '' }}" data-ws-pane="backup" id="backup">
             <h2>بکاپ خودکار دیتابیس</h2>
             <p class="lead">
-                بکاپ بدون mysqldump (سازگار با هاست اشتراکی cPanel). می‌توانید بکاپ حسابداری را هفتگی به هاست FTP بفرستید.
+                بکاپ بدون mysqldump (سازگار با هاست اشتراکی cPanel). برای انتقال سایت به هاست دیگر از بکاپ «کامل سیستم» استفاده کنید.
             </p>
 
             @if(auth()->user()->canAccess('system.tools'))
             <div class="split-2" style="gap:10px;margin-bottom:12px;">
                 <div class="panel" style="padding:10px;">
                     <h3 style="margin:0 0 6px;">ذخیره بکاپ روی کامپیوتر</h3>
-                    <p class="muted" style="margin:0 0 8px;">ساخت بکاپ و دانلود فوری فایل روی سیستم شما.</p>
+                    <p class="muted" style="margin:0 0 8px;">
+                        برای انتقال به هاست جدید، «کامل سیستم» را انتخاب کنید تا مشتری، قبض، کارمند، منوها و تنظیمات برگردند.
+                    </p>
                     <form method="POST" action="{{ route('system-tools.run') }}">
                         @csrf
                         <input type="hidden" name="settings_tab" value="backup">
@@ -401,8 +403,8 @@
                             <div>
                                 <label>نوع بکاپ</label>
                                 <select name="scope">
-                                    <option value="accounting" selected>حسابداری و مالی</option>
-                                    <option value="full">کل دیتابیس</option>
+                                    <option value="full" selected>کامل سیستم (پیشنهادی برای ریستور/هاست جدید)</option>
+                                    <option value="accounting">فقط حسابداری و مالی</option>
                                 </select>
                             </div>
                             <div class="actions" style="margin:0;">
@@ -413,7 +415,7 @@
                 </div>
                 <div class="panel" style="padding:10px;">
                     <h3 style="margin:0 0 6px;">ریستور بکاپ از کامپیوتر</h3>
-                    <p class="muted" style="margin:0 0 8px;">فایل `.sql` / `.sql.gz` را از کامپیوتر انتخاب کنید.</p>
+                    <p class="muted" style="margin:0 0 8px;">فایل `.sql` / `.sql.gz` کامل را از کامپیوتر انتخاب کنید تا همه داده‌ها برگردند.</p>
                     <form method="POST" action="{{ route('system-tools.run') }}" enctype="multipart/form-data"
                           data-confirm="ریستور از فایل کامپیوتر؟ جداول داخل فایل جایگزین می‌شوند.">
                         @csrf

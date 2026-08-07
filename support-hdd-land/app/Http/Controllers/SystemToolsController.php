@@ -37,25 +37,30 @@ class SystemToolsController extends Controller
             'backup_file' => ['nullable', 'file', 'max:512000'],
         ]);
 
-        // Create backup then immediately download to the user's computer
+        // Create backup, then redirect and trigger a GET download (more reliable than POST→binary).
         if ($data['action'] === 'backup_save_pc') {
-            $scope = ($data['scope'] ?? 'accounting') === 'full' ? 'full' : 'accounting';
+            $scope = ($data['scope'] ?? 'full') === 'accounting' ? 'accounting' : 'full';
             $created = $this->backups->create($scope, true);
             if (! ($created['ok'] ?? false)) {
                 return $this->toolsRedirect($request, $created['message'] ?? 'ساخت بکاپ ناموفق بود.', 'error')
                     ->with('system_tools_result', $created);
             }
 
-            $path = $created['path'] ?? $this->backups->absolutePath((string) ($created['file'] ?? ''));
-            if (! $path || ! is_file($path)) {
+            $file = (string) ($created['file'] ?? '');
+            $path = $created['path'] ?? $this->backups->absolutePath($file);
+            if (! $file || ! $path || ! is_file($path)) {
                 return $this->toolsRedirect($request, 'بکاپ ساخته شد ولی فایل برای دانلود یافت نشد.', 'error')
-                    ->with('system_tools_result', $created)
-                    ->with('backup_download_file', $created['file'] ?? null);
+                    ->with('system_tools_result', $created);
             }
 
-            return response()->download($path, basename($path), [
-                'Content-Type' => str_ends_with($path, '.gz') ? 'application/gzip' : 'application/sql',
-            ]);
+            return $this->toolsRedirect(
+                $request,
+                'بکاپ کامل آماده است — دانلود خودکار شروع می‌شود. اگر شروع نشد روی دکمه دانلود بزنید.',
+                'success'
+            )
+                ->with('system_tools_result', $created)
+                ->with('backup_download_file', $file)
+                ->with('backup_auto_download', true);
         }
 
         $result = match ($data['action']) {
@@ -95,7 +100,7 @@ class SystemToolsController extends Controller
             ($result['ok'] ?? false) ? 'success' : 'error'
         )->with('system_tools_result', $result);
 
-        if (($result['ok'] ?? false) && ! empty($result['file']) && in_array($data['action'], ['backup_full', 'backup_accounting'], true)) {
+        if (($result['ok'] ?? false) && ! empty($result['file']) && in_array($data['action'], ['backup_full', 'backup_accounting', 'backup_run_now'], true)) {
             $redirect->with('backup_download_file', $result['file']);
         }
 
@@ -123,8 +128,12 @@ class SystemToolsController extends Controller
         $path = $this->backups->absolutePath($file);
         abort_unless($path, 404);
 
-        return response()->download($path, basename($path), [
-            'Content-Type' => str_ends_with($path, '.gz') ? 'application/gzip' : 'application/sql',
+        $name = basename($path);
+
+        return response()->download($path, $name, [
+            'Content-Type' => 'application/octet-stream',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 }

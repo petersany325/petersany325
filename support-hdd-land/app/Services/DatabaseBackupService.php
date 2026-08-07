@@ -66,7 +66,7 @@ class DatabaseBackupService
         try {
             $tables = $scope === 'accounting'
                 ? $this->filterExisting(BackupSettings::accountingTables())
-                : $this->listTables();
+                : $this->listTablesForFull();
 
             if ($tables === []) {
                 return ['ok' => false, 'message' => 'جدولی برای بکاپ یافت نشد.'];
@@ -82,6 +82,10 @@ class DatabaseBackupService
             $this->write($fh, '-- Generated: '.now('Asia/Tehran')->toDateTimeString()." (Asia/Tehran)\n");
             $this->write($fh, "-- Database: {$db}\n");
             $this->write($fh, "-- Scope: {$scope}\n");
+            $this->write($fh, '-- Purpose: '.($scope === 'full'
+                ? 'Complete shop restore (customers, tickets, staff, menus, settings, …)'
+                : 'Accounting / financial subset')."\n");
+            $this->write($fh, '-- Tables: '.count($tables)."\n");
             $this->write($fh, "SET NAMES utf8mb4;\nSET FOREIGN_KEY_CHECKS=0;\nSET SQL_MODE='NO_AUTO_VALUE_ON_ZERO';\n\n");
 
             foreach ($tables as $table) {
@@ -125,23 +129,24 @@ class DatabaseBackupService
 
             $this->write($fh, "SET FOREIGN_KEY_CHECKS=1;\n");
             fclose($fh);
+            $fh = null;
 
             $finalPath = $path;
             $finalName = $base;
-            if ($gzip && function_exists('gzencode')) {
-                $gzPath = $path.'.gz';
-                $raw = File::get($path);
-                File::put($gzPath, gzencode($raw, 6));
-                @unlink($path);
-                $finalPath = $gzPath;
-                $finalName = $base.'.gz';
+            if ($gzip) {
+                $gz = $this->gzipFile($path);
+                if ($gz['ok']) {
+                    @unlink($path);
+                    $finalPath = $gz['path'];
+                    $finalName = $base.'.gz';
+                }
             }
 
             $this->pruneLocal(BackupSettings::all()['keep_local']);
 
             return [
                 'ok' => true,
-                'message' => 'بکاپ ساخته شد: '.$finalName,
+                'message' => 'بکاپ ساخته شد: '.$finalName.' ('.count($tables).' جدول)',
                 'file' => $finalName,
                 'path' => $finalPath,
                 'details' => $details,
@@ -471,6 +476,56 @@ class DatabaseBackupService
             ->filter()
             ->values()
             ->all();
+    }
+
+    /** Full dump for host migration — all business tables, skip ephemeral ones. */
+    private function listTablesForFull(): array
+    {
+        $skip = array_flip(BackupSettings::SKIP_TABLES);
+
+        return array_values(array_filter(
+            $this->listTables(),
+            fn ($t) => ! isset($skip[$t])
+        ));
+    }
+
+    /** @return array{ok:bool,path?:string,message?:string} */
+    private function gzipFile(string $path): array
+    {
+        $gzPath = $path.'.gz';
+        if (function_exists('gzopen')) {
+            $in = @fopen($path, 'rb');
+            $out = @gzopen($gzPath, 'wb6');
+            if (! $in || ! $out) {
+                if (is_resource($in)) {
+                    fclose($in);
+                }
+                if (is_resource($out)) {
+                    gzclose($out);
+                }
+
+                return ['ok' => false, 'message' => 'gzip open failed'];
+            }
+            while (! feof($in)) {
+                $chunk = fread($in, 1024 * 256);
+                if ($chunk === false || $chunk === '') {
+                    break;
+                }
+                gzwrite($out, $chunk);
+            }
+            fclose($in);
+            gzclose($out);
+
+            return is_file($gzPath) ? ['ok' => true, 'path' => $gzPath] : ['ok' => false, 'message' => 'gzip missing'];
+        }
+
+        if (function_exists('gzencode')) {
+            File::put($gzPath, gzencode(File::get($path), 6));
+
+            return is_file($gzPath) ? ['ok' => true, 'path' => $gzPath] : ['ok' => false, 'message' => 'gzencode failed'];
+        }
+
+        return ['ok' => false, 'message' => 'gzip unavailable'];
     }
 
     /** @param list<string> $tables */

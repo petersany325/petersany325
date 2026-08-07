@@ -110,7 +110,7 @@
         @if(!empty($downloadFile))
             <div class="alert alert-success" style="margin-bottom:10px;">
                 بکاپ آماده است —
-                <a class="btn btn-primary" href="{{ route('system-tools.backups.download', $downloadFile) }}">دانلود و ذخیره روی کامپیوتر</a>
+                <a class="btn btn-primary" id="backup-auto-dl-tools" href="{{ route('system-tools.backups.download', $downloadFile) }}">دانلود و ذخیره روی کامپیوتر</a>
                 <span class="muted" dir="ltr" style="margin-right:8px;">{{ $downloadFile }}</span>
             </div>
         @endif
@@ -126,8 +126,8 @@
                     <div style="margin-bottom:8px;">
                         <label>نوع بکاپ</label>
                         <select name="scope">
-                            <option value="accounting" selected>حسابداری و مالی (پیشنهادی)</option>
-                            <option value="full">کل دیتابیس</option>
+                            <option value="full" selected>کامل سیستم (پیشنهادی برای ریستور/هاست جدید)</option>
+                            <option value="accounting">فقط حسابداری و مالی</option>
                         </select>
                     </div>
                     <button class="btn btn-primary" type="submit">ساخت و ذخیره روی کامپیوتر</button>

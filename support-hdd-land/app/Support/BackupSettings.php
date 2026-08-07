@@ -9,8 +9,20 @@ use Illuminate\Support\Str;
 class BackupSettings
 {
     public const SCOPES = [
-        'full' => 'کل دیتابیس',
-        'accounting' => 'حسابداری و مالی (پیشنهادی برای بکاپ هفتگی)',
+        'full' => 'کامل سیستم (مشتری، قبض، کارمند، منو، تنظیمات و …)',
+        'accounting' => 'فقط حسابداری و مالی (بکاپ سبک هفتگی)',
+    ];
+
+    /** Tables skipped in full dumps (ephemeral / rebuildable on new host). */
+    public const SKIP_TABLES = [
+        'cache',
+        'cache_locks',
+        'sessions',
+        'jobs',
+        'job_batches',
+        'failed_jobs',
+        'login_otps',
+        'password_reset_tokens',
     ];
 
     public const INTERVALS = [
@@ -44,7 +56,7 @@ class BackupSettings
 
         return [
             'enabled' => AppSetting::getValue('backup_auto_enabled', '0') === '1',
-            'scope' => AppSetting::getValue('backup_auto_scope', 'accounting') ?: 'accounting',
+            'scope' => AppSetting::getValue('backup_auto_scope', 'full') ?: 'full',
             'interval' => AppSetting::getValue('backup_auto_interval', 'weekly') ?: 'weekly',
             'weekday' => (int) AppSetting::getValue('backup_auto_weekday', '5'),
             'hour' => (int) AppSetting::getValue('backup_auto_hour', '3'),
@@ -67,7 +79,7 @@ class BackupSettings
     public static function save(array $data): void
     {
         AppSetting::setValue('backup_auto_enabled', ! empty($data['enabled']) ? '1' : '0');
-        AppSetting::setValue('backup_auto_scope', in_array($data['scope'] ?? '', array_keys(self::SCOPES), true) ? $data['scope'] : 'accounting');
+        AppSetting::setValue('backup_auto_scope', in_array($data['scope'] ?? '', array_keys(self::SCOPES), true) ? $data['scope'] : 'full');
         AppSetting::setValue('backup_auto_interval', in_array($data['interval'] ?? '', array_keys(self::INTERVALS), true) ? $data['interval'] : 'weekly');
         AppSetting::setValue('backup_auto_weekday', (string) max(0, min(6, (int) ($data['weekday'] ?? 5))));
         AppSetting::setValue('backup_auto_hour', (string) max(0, min(23, (int) ($data['hour'] ?? 3))));
@@ -120,7 +132,10 @@ class BackupSettings
         return true;
     }
 
-    /** Tables for accounting-focused backup */
+    /**
+     * Tables for accounting-focused (lightweight) backup.
+     * For moving the whole shop to another host, use scope=full instead.
+     */
     public static function accountingTables(): array
     {
         return [
@@ -137,7 +152,13 @@ class BackupSettings
             'parts',
             'warehouses',
             'customers',
+            'technicians',
+            'fault_types',
+            'referral_sources',
+            'lookup_options',
+            'users',
             'app_settings',
+            'migrations',
         ];
     }
 }
