@@ -3,8 +3,7 @@
 @section('page_title', 'تنظیمات')
 @section('window_title', 'پنجره تنظیمات سیستم')
 @section('content')
-@php($activeTab = $activeTab ?? 'lookups')
-<div data-workspace-tabs data-active-tab="{{ $activeTab }}">
+<div data-workspace-tabs data-active-tab="{{ $activeTab ?? 'lookups' }}">
     <div class="ws-tabs">
         <button type="button" class="{{ $activeTab === 'lookups' ? 'active' : '' }}" data-ws-tab="lookups">منوهای پذیرش</button>
         <button type="button" class="{{ $activeTab === 'faults' ? 'active' : '' }}" data-ws-tab="faults">انواع ایراد</button>
