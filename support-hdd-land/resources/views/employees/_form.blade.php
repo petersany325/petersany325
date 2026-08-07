@@ -111,6 +111,18 @@
                 </div>
             </div>
         </div>
+        @unless($employee)
+            <div class="emp-welcome-sms" style="margin-top:8px;">
+                @include('partials.toggle', [
+                    'name' => 'send_welcome_sms',
+                    'label' => 'ارسال پیامک خوش‌آمدگویی با لینک ورود',
+                    'checked' => (bool) old('send_welcome_sms', true),
+                    'on' => 'ارسال',
+                    'off' => 'بدون SMS',
+                ])
+                <p class="hint" style="margin:6px 0 0;">متن نمونه: شما کارمند سرزمین هارد هستید + لینک ورود کارتابل</p>
+            </div>
+        @endunless
     </section>
 
     <section class="emp-section">

@@ -8,7 +8,7 @@
     <div class="emp-cartable-hero" style="margin-bottom:10px;">
         <div>
             <h2 style="margin:0;font-size:15px;">ثبت کارمند جدید</h2>
-            <p class="lead" style="margin:2px 0 0;">وظیفه را انتخاب کنید تا دسترسی‌ها خودکار تنظیم شوند. ورود پیش‌فرض با پیامک است.</p>
+            <p class="lead" style="margin:2px 0 0;">وظیفه را انتخاب کنید تا دسترسی‌ها خودکار تنظیم شوند. بعد از ثبت، پیامک خوش‌آمدگویی با لینک ورود ارسال می‌شود.</p>
         </div>
         <a class="btn btn-ghost" href="{{ route('employees.index') }}">بازگشت به کارتابل</a>
     </div>

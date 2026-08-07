@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SmsLog;
 use App\Models\Technician;
 use App\Models\User;
+use App\Services\NiazpardazSmsService;
 use App\Support\Permissions;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class EmployeeController extends Controller
@@ -34,7 +37,7 @@ class EmployeeController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, NiazpardazSmsService $sms)
     {
         $data = $this->validated($request);
 
@@ -65,7 +68,19 @@ class EmployeeController extends Controller
             );
         }
 
-        return redirect()->route('employees.index')->with('success', 'کارمند ثبت شد.');
+        $welcomeOk = true;
+        $flash = 'کارمند ثبت شد.';
+        if ($request->boolean('send_welcome_sms', true)) {
+            $welcome = $this->sendWelcomeSms($sms, $user);
+            $welcomeOk = (bool) ($welcome['ok'] ?? false);
+            $flash .= $welcomeOk
+                ? ' پیامک خوش‌آمدگویی ارسال شد.'
+                : ' پیامک خوش‌آمدگویی ارسال نشد: '.($welcome['message'] ?? '');
+        }
+
+        return redirect()
+            ->route('employees.index')
+            ->with($welcomeOk ? 'success' : 'error', $flash);
     }
 
     public function edit(User $employee)
@@ -137,6 +152,42 @@ class EmployeeController extends Controller
         $employee->delete();
 
         return redirect()->route('employees.index')->with('success', 'کاربر/کارمند حذف شد.');
+    }
+
+    public function sendWelcome(User $employee, NiazpardazSmsService $sms)
+    {
+        $result = $this->sendWelcomeSms($sms, $employee);
+
+        return back()->with(
+            $result['ok'] ? 'success' : 'error',
+            $result['ok']
+                ? 'پیامک خوش‌آمدگویی برای '.$employee->name.' ارسال شد.'
+                : 'ارسال پیامک ناموفق بود: '.($result['message'] ?? '')
+        );
+    }
+
+    /** @return array{ok:bool,message:string} */
+    private function sendWelcomeSms(NiazpardazSmsService $sms, User $user): array
+    {
+        $result = $sms->sendEmployeeWelcome($user);
+
+        SmsLog::create([
+            'reception_id' => null,
+            'customer_id' => null,
+            'sms_status_rule_id' => null,
+            'sent_by' => Auth::id(),
+            'phone' => User::normalizePhone($user->phone) ?: (string) $user->phone,
+            'status_key' => 'employee_welcome',
+            'audience' => 'employee',
+            'message' => $result['text'] ?? '',
+            'ok' => (bool) ($result['ok'] ?? false),
+            'provider_message' => $result['message'] ?? null,
+        ]);
+
+        return [
+            'ok' => (bool) ($result['ok'] ?? false),
+            'message' => (string) ($result['message'] ?? ''),
+        ];
     }
 
     private function validated(Request $request, ?User $employee = null): array

@@ -60,6 +60,10 @@
                 </div>
                 <footer class="emp-card-foot">
                     <a class="btn btn-secondary" href="{{ route('employees.edit', $employee) }}">ویرایش دسترسی</a>
+                    <form method="POST" action="{{ route('employees.welcome-sms', $employee) }}">
+                        @csrf
+                        <button class="btn btn-ghost" type="submit" title="ارسال مجدد پیامک خوش‌آمدگویی">SMS خوش‌آمد</button>
+                    </form>
                     @if((int) $employee->id !== (int) auth()->id())
                         <form method="POST"
                               action="{{ route('employees.destroy', $employee) }}"

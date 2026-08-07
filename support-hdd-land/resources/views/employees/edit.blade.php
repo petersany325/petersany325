@@ -20,5 +20,9 @@
             <a class="btn btn-ghost" href="{{ route('employees.index') }}">انصراف</a>
         </div>
     </form>
+    <form method="POST" action="{{ route('employees.welcome-sms', $employee) }}" style="margin-top:8px;">
+        @csrf
+        <button class="btn btn-secondary" type="submit">ارسال مجدد پیامک خوش‌آمدگویی + لینک ورود</button>
+    </form>
 </div>
 @endsection

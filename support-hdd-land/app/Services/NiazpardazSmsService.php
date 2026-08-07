@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AppSetting;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -20,6 +21,36 @@ class NiazpardazSmsService
         $message = 'تست پنل پیامک سرزمین هارد — ارسال موفق بود.';
 
         return $this->send($phone, $message);
+    }
+
+    /**
+     * Welcome SMS for newly registered staff with login link.
+     *
+     * @return array{ok:bool,message:string,text?:string}
+     */
+    public function sendEmployeeWelcome(User $user): array
+    {
+        $phone = User::normalizePhone($user->phone);
+        if (! $phone) {
+            return ['ok' => false, 'message' => 'شماره موبایل کارمند معتبر نیست.'];
+        }
+
+        $shop = trim((string) AppSetting::getValue('invoice_shop_name', 'سرزمین هارد')) ?: 'سرزمین هارد';
+        $role = $user->roleLabel();
+        $loginUrl = url('/login?otp=1');
+        $name = trim((string) $user->name) ?: 'همکار';
+
+        $message = "سلام {$name} عزیز\n"
+            ."شما کارمند {$shop} هستید.\n"
+            ."نقش: {$role}\n"
+            ."برای ورود به کارتابل روی لینک زیر بزنید:\n"
+            ."{$loginUrl}\n"
+            .'ورود با پیامک فعال است.';
+
+        $result = $this->send($phone, $message);
+        $result['text'] = $message;
+
+        return $result;
     }
 
     public function send(string $phone, string $message, ?string $debugCode = null): array

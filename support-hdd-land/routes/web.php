@@ -147,6 +147,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware(EnsurePermission::class.':employees')->group(function () {
         Route::resource('employees', EmployeeController::class)->except(['show']);
+        Route::post('employees/{employee}/welcome-sms', [EmployeeController::class, 'sendWelcome'])->name('employees.welcome-sms');
     });
 
     Route::post('reports/settings', [ReportController::class, 'saveSettings'])->name('reports.settings');
