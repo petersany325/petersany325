@@ -3,19 +3,20 @@
 @section('page_title', 'تنظیمات')
 @section('window_title', 'پنجره تنظیمات سیستم')
 @section('content')
-<div data-workspace-tabs>
+@php($activeTab = $activeTab ?? 'lookups')
+<div data-workspace-tabs data-active-tab="{{ $activeTab }}">
     <div class="ws-tabs">
-        <button type="button" class="active" data-ws-tab="lookups">منوهای پذیرش</button>
-        <button type="button" data-ws-tab="faults">انواع ایراد</button>
-        <button type="button" data-ws-tab="referrals">نحوه آشنایی</button>
-        <button type="button" data-ws-tab="invoice">فاکتور / چاپ</button>
-        <button type="button" data-ws-tab="payments">پرداخت / زرین‌پال</button>
-        <button type="button" data-ws-tab="sms">پیامک نیازپرداز</button>
-        <button type="button" data-ws-tab="backup">بکاپ دیتابیس</button>
-        <button type="button" data-ws-tab="users">کارتابل کارمند</button>
+        <button type="button" class="{{ $activeTab === 'lookups' ? 'active' : '' }}" data-ws-tab="lookups">منوهای پذیرش</button>
+        <button type="button" class="{{ $activeTab === 'faults' ? 'active' : '' }}" data-ws-tab="faults">انواع ایراد</button>
+        <button type="button" class="{{ $activeTab === 'referrals' ? 'active' : '' }}" data-ws-tab="referrals">نحوه آشنایی</button>
+        <button type="button" class="{{ $activeTab === 'invoice' ? 'active' : '' }}" data-ws-tab="invoice">فاکتور / چاپ</button>
+        <button type="button" class="{{ $activeTab === 'payments' ? 'active' : '' }}" data-ws-tab="payments">پرداخت / زرین‌پال</button>
+        <button type="button" class="{{ $activeTab === 'sms' ? 'active' : '' }}" data-ws-tab="sms">پیامک نیازپرداز</button>
+        <button type="button" class="{{ $activeTab === 'backup' ? 'active' : '' }}" data-ws-tab="backup">بکاپ دیتابیس</button>
+        <button type="button" class="{{ $activeTab === 'users' ? 'active' : '' }}" data-ws-tab="users">کارتابل کارمند</button>
     </div>
     <div class="ws-panes">
-        <div class="ws-pane active" data-ws-pane="lookups">
+        <div class="ws-pane {{ $activeTab === 'lookups' ? 'active' : '' }}" data-ws-pane="lookups">
             <h2>منوهای پذیرش</h2>
             <p class="lead">از لیست کشویی مورد را انتخاب کنید، سپس ویرایش، فعال/غیرفعال یا حذف کنید. برای مورد جدید، «— جدید —» را بگذارید.</p>
 
@@ -41,6 +42,7 @@
 
                     <form method="POST" action="{{ route('settings.lookups') }}" class="lookup-form-create">
                         @csrf
+                        <input type="hidden" name="settings_tab" value="lookups">
                         <input type="hidden" name="group_key" value="{{ $groupKey }}">
                         <div class="accept-row accept-row-4">
                             <div>
@@ -66,6 +68,7 @@
 
                     <form method="POST" action="#" class="lookup-form-edit hidden">
                         @csrf
+                        <input type="hidden" name="settings_tab" value="lookups">
                         <input type="hidden" name="_method" value="PUT" class="lookup-method">
                         <div class="accept-row accept-row-4">
                             <div>
@@ -93,7 +96,7 @@
             @endforeach
         </div>
 
-        <div class="ws-pane" data-ws-pane="faults">
+        <div class="ws-pane {{ $activeTab === 'faults' ? 'active' : '' }}" data-ws-pane="faults">
             <h2>انواع ایراد</h2>
             <p class="lead">از لیست انتخاب کنید، سپس ویرایش یا حذف کنید. برای مورد جدید «— جدید —» را بگذارید.</p>
             <div class="lookup-editor panel" data-simple-editor data-base-url="{{ url('settings/fault-types') }}">
@@ -114,6 +117,7 @@
                 </div>
                 <form method="POST" action="{{ route('settings.fault-types') }}" class="simple-form-create">
                     @csrf
+                    <input type="hidden" name="settings_tab" value="faults">
                     <div class="accept-row accept-row-4">
                         <div>
                             <label>نام ایراد</label>
@@ -129,6 +133,7 @@
                 </form>
                 <form method="POST" action="#" class="simple-form-edit hidden">
                     @csrf
+                    <input type="hidden" name="settings_tab" value="faults">
                     <input type="hidden" name="_method" value="PUT" class="simple-method">
                     <div class="accept-row accept-row-4">
                         <div>
@@ -147,7 +152,7 @@
             </div>
         </div>
 
-        <div class="ws-pane" data-ws-pane="referrals">
+        <div class="ws-pane {{ $activeTab === 'referrals' ? 'active' : '' }}" data-ws-pane="referrals">
             <h2>نحوه آشنایی</h2>
             <p class="lead">از لیست انتخاب کنید، سپس ویرایش یا حذف کنید.</p>
             <div class="lookup-editor panel" data-simple-editor data-base-url="{{ url('settings/referral-sources') }}">
@@ -168,6 +173,7 @@
                 </div>
                 <form method="POST" action="{{ route('settings.referral-sources') }}" class="simple-form-create">
                     @csrf
+                    <input type="hidden" name="settings_tab" value="referrals">
                     <div class="accept-row accept-row-4">
                         <div>
                             <label>نام منبع</label>
@@ -183,6 +189,7 @@
                 </form>
                 <form method="POST" action="#" class="simple-form-edit hidden">
                     @csrf
+                    <input type="hidden" name="settings_tab" value="referrals">
                     <input type="hidden" name="_method" value="PUT" class="simple-method">
                     <div class="accept-row accept-row-4">
                         <div>
@@ -201,11 +208,12 @@
             </div>
         </div>
 
-        <div class="ws-pane" data-ws-pane="invoice">
+        <div class="ws-pane {{ $activeTab === 'invoice' ? 'active' : '' }}" data-ws-pane="invoice">
             <h2>تنظیمات فاکتور و چاپ</h2>
             <p class="lead">اطلاعات سربرگ فاکتور، نمایش فیلدها، چاپ خودکار و شرایط تعمیرات را اینجا تنظیم کنید.</p>
             <form method="POST" action="{{ route('settings.invoice') }}">
                 @csrf
+                <input type="hidden" name="settings_tab" value="invoice">
                 <div class="accept-row accept-row-2">
                     <div>
                         <label>نام فروشگاه / برند روی فاکتور</label>
@@ -276,7 +284,7 @@
             </form>
         </div>
 
-        <div class="ws-pane" data-ws-pane="payments">
+        <div class="ws-pane {{ $activeTab === 'payments' ? 'active' : '' }}" data-ws-pane="payments">
             <h2>درگاه پرداخت و لینک بانک‌ها</h2>
             <p class="lead">زرین‌پال به‌صورت IPG واقعی فعال است. بانک‌ها بعد از گرفتن اطلاعات ترمینال اضافه می‌شوند.</p>
             <div class="panel" style="margin-bottom:10px;">
@@ -285,6 +293,7 @@
             </div>
             <form method="POST" action="{{ route('settings.payments') }}">
                 @csrf
+                <input type="hidden" name="settings_tab" value="payments">
                 <h3>زرین‌پال (IPG)</h3>
                 <div class="pay-settings-grid">
                     <div class="pay-settings-card tone-amber">
@@ -341,10 +350,11 @@
             </form>
         </div>
 
-        <div class="ws-pane" data-ws-pane="sms">
+        <div class="ws-pane {{ $activeTab === 'sms' ? 'active' : '' }}" data-ws-pane="sms">
             <h2>پنل نیازپرداز</h2>
             <form method="POST" action="{{ route('settings.sms') }}">
                 @csrf
+                <input type="hidden" name="settings_tab" value="sms">
                 <div class="form-grid" style="grid-template-columns:1fr 1fr;">
                     <div><label>نام کاربری پنل</label><input type="text" name="niazpardaz_username" value="{{ $sms['username'] }}"></div>
                     <div><label>رمز پنل</label><input type="password" name="niazpardaz_password" value="{{ $sms['password'] }}"></div>
@@ -359,6 +369,7 @@
                 <p class="lead">پس از ذخیره تنظیمات، یک پیامک تست به شماره دلخواه بفرستید تا اتصال پنل را بررسی کنید.</p>
                 <form method="POST" action="{{ route('settings.sms.test') }}">
                     @csrf
+                    <input type="hidden" name="settings_tab" value="sms">
                     <div class="accept-row accept-row-3">
                         <div>
                             <label>شماره موبایل گیرنده تست</label>
@@ -372,7 +383,7 @@
             </div>
         </div>
 
-        <div class="ws-pane" data-ws-pane="backup" id="backup">
+        <div class="ws-pane {{ $activeTab === 'backup' ? 'active' : '' }}" data-ws-pane="backup" id="backup">
             <h2>بکاپ خودکار دیتابیس</h2>
             <p class="lead">
                 بکاپ بدون mysqldump (سازگار با هاست اشتراکی cPanel). می‌توانید بکاپ حسابداری را هفتگی به هاست FTP بفرستید.
@@ -385,6 +396,7 @@
                     <p class="muted" style="margin:0 0 8px;">ساخت بکاپ و دانلود فوری فایل روی سیستم شما.</p>
                     <form method="POST" action="{{ route('system-tools.run') }}">
                         @csrf
+                        <input type="hidden" name="settings_tab" value="backup">
                         <input type="hidden" name="action" value="backup_save_pc">
                         <div class="accept-row accept-row-2" style="align-items:end;">
                             <div>
@@ -406,6 +418,7 @@
                     <form method="POST" action="{{ route('system-tools.run') }}" enctype="multipart/form-data"
                           data-confirm="ریستور از فایل کامپیوتر؟ جداول داخل فایل جایگزین می‌شوند.">
                         @csrf
+                        <input type="hidden" name="settings_tab" value="backup">
                         <input type="hidden" name="action" value="backup_restore_upload">
                         <div style="margin-bottom:8px;">
                             <input type="file" name="backup_file" accept=".sql,.gz,application/gzip" required>
@@ -426,6 +439,7 @@
 
             <form method="POST" action="{{ route('settings.backup') }}">
                 @csrf
+                <input type="hidden" name="settings_tab" value="backup">
                 <div class="panel" style="margin-bottom:10px;">
                     <h3 style="margin-top:0;">زمان‌بندی</h3>
                     <div class="accept-row accept-row-4" style="align-items:end;">
@@ -541,7 +555,7 @@
             </form>
         </div>
 
-        <div class="ws-pane" data-ws-pane="users">
+        <div class="ws-pane {{ $activeTab === 'users' ? 'active' : '' }}" data-ws-pane="users">
             <div class="emp-cartable-hero">
                 <div>
                     <h2 style="margin:0;">کارتابل کارمندان</h2>

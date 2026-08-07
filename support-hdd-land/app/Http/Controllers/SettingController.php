@@ -16,7 +16,9 @@ use Illuminate\Validation\Rule;
 
 class SettingController extends Controller
 {
-    public function index()
+    private const TABS = ['lookups', 'faults', 'referrals', 'invoice', 'payments', 'sms', 'backup', 'users'];
+
+    public function index(Request $request)
     {
         $lookups = [];
         foreach (LookupOption::GROUPS as $key => $label) {
@@ -26,7 +28,13 @@ class SettingController extends Controller
             ];
         }
 
+        $tab = (string) $request->query('tab', session('settings_tab', 'lookups'));
+        if (! in_array($tab, self::TABS, true)) {
+            $tab = 'lookups';
+        }
+
         return view('settings.index', [
+            'activeTab' => $tab,
             'faultTypes' => FaultType::orderBy('name')->get(),
             'referralSources' => ReferralSource::orderBy('name')->get(),
             'users' => User::orderBy('name')->get(),
@@ -77,6 +85,27 @@ class SettingController extends Controller
         ]);
     }
 
+    private function resolveTab(Request $request, string $fallback = 'lookups'): string
+    {
+        $tab = (string) $request->input('settings_tab', $fallback);
+        if (! in_array($tab, self::TABS, true)) {
+            $tab = $fallback;
+        }
+
+        return in_array($tab, self::TABS, true) ? $tab : 'lookups';
+    }
+
+    private function settingsRedirect(Request $request, string $fallbackTab, string $flash, string $message)
+    {
+        $tab = $this->resolveTab($request, $fallbackTab);
+
+        return redirect()
+            ->route('settings.index', ['tab' => $tab])
+            ->withFragment($tab)
+            ->with($flash, $message)
+            ->with('settings_tab', $tab);
+    }
+
     public function storeFaultType(Request $request)
     {
         $data = $request->validate([
@@ -86,7 +115,7 @@ class SettingController extends Controller
 
         FaultType::create($data);
 
-        return back()->with('success', 'نوع ایراد ثبت شد.');
+        return $this->settingsRedirect($request, 'faults', 'success', 'نوع ایراد ثبت شد.');
     }
 
     public function updateFaultType(Request $request, FaultType $faultType)
@@ -103,21 +132,21 @@ class SettingController extends Controller
             'is_active' => $request->boolean('is_active'),
         ]);
 
-        return back()->with('success', 'نوع ایراد ویرایش شد.');
+        return $this->settingsRedirect($request, 'faults', 'success', 'نوع ایراد ویرایش شد.');
     }
 
-    public function destroyFaultType(FaultType $faultType)
+    public function destroyFaultType(Request $request, FaultType $faultType)
     {
         $inUse = \App\Models\Reception::query()->where('fault_type_id', $faultType->id)->exists();
         if ($inUse) {
             $faultType->update(['is_active' => false]);
 
-            return back()->with('success', 'این نوع ایراد در قبض‌ها استفاده شده؛ به‌جای حذف، غیرفعال شد.');
+            return $this->settingsRedirect($request, 'faults', 'success', 'این نوع ایراد در قبض‌ها استفاده شده؛ به‌جای حذف، غیرفعال شد.');
         }
 
         $faultType->delete();
 
-        return back()->with('success', 'نوع ایراد حذف شد.');
+        return $this->settingsRedirect($request, 'faults', 'success', 'نوع ایراد حذف شد.');
     }
 
     public function storeReferralSource(Request $request)
@@ -128,7 +157,7 @@ class SettingController extends Controller
 
         ReferralSource::create($data);
 
-        return back()->with('success', 'نحوه آشنایی ثبت شد.');
+        return $this->settingsRedirect($request, 'referrals', 'success', 'نحوه آشنایی ثبت شد.');
     }
 
     public function updateReferralSource(Request $request, ReferralSource $referralSource)
@@ -143,21 +172,21 @@ class SettingController extends Controller
             'is_active' => $request->boolean('is_active'),
         ]);
 
-        return back()->with('success', 'نحوه آشنایی ویرایش شد.');
+        return $this->settingsRedirect($request, 'referrals', 'success', 'نحوه آشنایی ویرایش شد.');
     }
 
-    public function destroyReferralSource(ReferralSource $referralSource)
+    public function destroyReferralSource(Request $request, ReferralSource $referralSource)
     {
         $inUse = \App\Models\Customer::query()->where('referral_source_id', $referralSource->id)->exists();
         if ($inUse) {
             $referralSource->update(['is_active' => false]);
 
-            return back()->with('success', 'این نحوه آشنایی برای مشتری ثبت شده؛ به‌جای حذف، غیرفعال شد.');
+            return $this->settingsRedirect($request, 'referrals', 'success', 'این نحوه آشنایی برای مشتری ثبت شده؛ به‌جای حذف، غیرفعال شد.');
         }
 
         $referralSource->delete();
 
-        return back()->with('success', 'نحوه آشنایی حذف شد.');
+        return $this->settingsRedirect($request, 'referrals', 'success', 'نحوه آشنایی حذف شد.');
     }
 
     public function storeUser(Request $request)
@@ -180,7 +209,7 @@ class SettingController extends Controller
             }
         }
 
-        return back()->with('success', 'تنظیمات پنل نیازپرداز ذخیره شد.');
+        return $this->settingsRedirect($request, 'sms', 'success', 'تنظیمات پنل نیازپرداز ذخیره شد.');
     }
 
     public function testSms(Request $request, NiazpardazSmsService $sms)
@@ -206,10 +235,12 @@ class SettingController extends Controller
         $result = $sms->sendTest($phone);
 
         if ($result['ok'] ?? false) {
-            return back()->with('success', $result['message'].' ('.$phone.')');
+            return $this->settingsRedirect($request, 'sms', 'success', $result['message'].' ('.$phone.')');
         }
 
-        return back()->withErrors(['test_phone' => $result['message'] ?? 'ارسال تست ناموفق بود.'])->withInput();
+        return $this->settingsRedirect($request, 'sms', 'error', $result['message'] ?? 'ارسال تست ناموفق بود.')
+            ->withErrors(['test_phone' => $result['message'] ?? 'ارسال تست ناموفق بود.'])
+            ->withInput();
     }
 
     public function storeLookup(Request $request)
@@ -228,7 +259,7 @@ class SettingController extends Controller
             'is_active' => $request->boolean('is_active', true),
         ]);
 
-        return back()->with('success', 'منوی پذیرش جدید اضافه شد.');
+        return $this->settingsRedirect($request, 'lookups', 'success', 'منوی پذیرش جدید اضافه شد.');
     }
 
     public function updateLookup(Request $request, LookupOption $lookup)
@@ -245,14 +276,14 @@ class SettingController extends Controller
             'is_active' => $request->boolean('is_active'),
         ]);
 
-        return back()->with('success', 'منوی پذیرش ویرایش شد.');
+        return $this->settingsRedirect($request, 'lookups', 'success', 'منوی پذیرش ویرایش شد.');
     }
 
-    public function destroyLookup(LookupOption $lookup)
+    public function destroyLookup(Request $request, LookupOption $lookup)
     {
         $lookup->delete();
 
-        return back()->with('success', 'مورد منو حذف شد.');
+        return $this->settingsRedirect($request, 'lookups', 'success', 'مورد منو حذف شد.');
     }
 
     public function updateInvoice(Request $request)
@@ -313,7 +344,7 @@ class SettingController extends Controller
             AppSetting::setValue($key, $request->boolean($key) ? '1' : '0');
         }
 
-        return back()->with('success', 'تنظیمات فاکتور و چاپ ذخیره شد.');
+        return $this->settingsRedirect($request, 'invoice', 'success', 'تنظیمات فاکتور و چاپ ذخیره شد.');
     }
 
     public function updatePayments(Request $request)
@@ -345,7 +376,7 @@ class SettingController extends Controller
         AppSetting::setValue('zarinpal_sandbox', $request->boolean('zarinpal_sandbox') ? '1' : '0');
         AppSetting::setValue('zarinpal_currency', (string) ($data['zarinpal_currency'] ?? 'IRT'));
 
-        return back()->with('success', 'تنظیمات پرداخت ذخیره شد.');
+        return $this->settingsRedirect($request, 'payments', 'success', 'تنظیمات پرداخت ذخیره شد.');
     }
 
     public function updateBackup(Request $request)
@@ -382,6 +413,6 @@ class SettingController extends Controller
             'remote_path' => $data['remote_path'] ?? '/backups',
         ]);
 
-        return back()->with('success', 'تنظیمات بکاپ خودکار ذخیره شد.');
+        return $this->settingsRedirect($request, 'backup', 'success', 'تنظیمات بکاپ خودکار ذخیره شد.');
     }
 }

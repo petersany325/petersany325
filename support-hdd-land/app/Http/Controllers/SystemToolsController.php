@@ -42,17 +42,13 @@ class SystemToolsController extends Controller
             $scope = ($data['scope'] ?? 'accounting') === 'full' ? 'full' : 'accounting';
             $created = $this->backups->create($scope, true);
             if (! ($created['ok'] ?? false)) {
-                return redirect()
-                    ->route('system-tools.index')
-                    ->with('error', $created['message'] ?? 'ساخت بکاپ ناموفق بود.')
+                return $this->toolsRedirect($request, $created['message'] ?? 'ساخت بکاپ ناموفق بود.', 'error')
                     ->with('system_tools_result', $created);
             }
 
             $path = $created['path'] ?? $this->backups->absolutePath((string) ($created['file'] ?? ''));
             if (! $path || ! is_file($path)) {
-                return redirect()
-                    ->route('system-tools.index')
-                    ->with('error', 'بکاپ ساخته شد ولی فایل برای دانلود یافت نشد.')
+                return $this->toolsRedirect($request, 'بکاپ ساخته شد ولی فایل برای دانلود یافت نشد.', 'error')
                     ->with('system_tools_result', $created)
                     ->with('backup_download_file', $created['file'] ?? null);
             }
@@ -93,16 +89,33 @@ class SystemToolsController extends Controller
             default => ['ok' => false, 'message' => 'عملیات نامعتبر است.'],
         };
 
-        $redirect = redirect()
-            ->route('system-tools.index')
-            ->with($result['ok'] ? 'success' : 'error', $result['message'])
-            ->with('system_tools_result', $result);
+        $redirect = $this->toolsRedirect(
+            $request,
+            $result['message'] ?? '',
+            ($result['ok'] ?? false) ? 'success' : 'error'
+        )->with('system_tools_result', $result);
 
         if (($result['ok'] ?? false) && ! empty($result['file']) && in_array($data['action'], ['backup_full', 'backup_accounting'], true)) {
             $redirect->with('backup_download_file', $result['file']);
         }
 
         return $redirect;
+    }
+
+    private function toolsRedirect(Request $request, string $message, string $flash = 'success')
+    {
+        $returnTab = (string) $request->input('settings_tab', '');
+        if ($returnTab === 'backup' || $request->input('return_to') === 'settings') {
+            return redirect()
+                ->route('settings.index', ['tab' => 'backup'])
+                ->withFragment('backup')
+                ->with($flash, $message)
+                ->with('settings_tab', 'backup');
+        }
+
+        return redirect()
+            ->route('system-tools.index')
+            ->with($flash, $message);
     }
 
     public function downloadBackup(string $file): BinaryFileResponse

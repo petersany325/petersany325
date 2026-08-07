@@ -159,10 +159,15 @@
             }
         });
 
-        // Open tab from URL hash (#backup)
+        // Open tab from ?tab=, data-active-tab, or URL hash (#backup)
+        var params = new URLSearchParams(location.search || '');
+        var fromQuery = params.get('tab') || '';
+        var root = document.querySelector('[data-workspace-tabs]');
+        var fromData = root ? (root.getAttribute('data-active-tab') || '') : '';
         var hash = (location.hash || '').replace(/^#/, '');
-        if (hash) {
-            var tab = document.querySelector('[data-ws-tab="' + hash + '"]');
+        var key = fromQuery || fromData || hash;
+        if (key) {
+            var tab = document.querySelector('[data-ws-tab="' + key + '"]');
             if (tab) activateWorkspaceTab(tab);
         }
     }
