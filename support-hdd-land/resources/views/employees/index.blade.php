@@ -29,7 +29,7 @@
         @forelse($employees as $employee)
             @php $meta = \App\Support\Permissions::roleMeta($employee->role); @endphp
             <article class="emp-card tone-{{ $meta['tone'] }} {{ $employee->is_active ? '' : 'is-off' }}">
-                <header class="emp-card-head"><meta charset="utf-8">
+                <header class="emp-card-head">
                     <div class="emp-avatar">{{ $meta['mark'] }}</div>
                     <div>
                         <strong>{{ $employee->name }}</strong>
