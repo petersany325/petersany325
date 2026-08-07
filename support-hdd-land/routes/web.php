@@ -38,6 +38,7 @@ Route::get('/', function () {
         ->header('Pragma', 'no-cache');
 })->name('gate');
 
+Route::redirect('/gate', '/');
 Route::redirect('/portal', '/cartable');
 
 Route::get('/payments/zarinpal/callback/{trx}', [ZarinPalController::class, 'callback'])

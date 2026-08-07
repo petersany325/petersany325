@@ -1,9 +1,11 @@
 <?php
 
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -34,6 +36,27 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            $previous = $e->getPrevious();
+            if ($previous instanceof ModelNotFoundException
+                && $previous->getModel() === \App\Models\Customer::class
+            ) {
+                if ($request->is('reports/customers*')) {
+                    return redirect()
+                        ->route('reports.customers')
+                        ->with('error', 'این مشتری حذف شده یا یافت نشد.');
+                }
+
+                if ($request->is('customers*')) {
+                    return redirect()
+                        ->route('customers.index')
+                        ->with('error', 'این مشتری حذف شده یا یافت نشد.');
+                }
+            }
+
+            return null;
+        });
 
         $exceptions->respond(function ($response, $exception, $request) {
             if ($response->getStatusCode() !== 419) {

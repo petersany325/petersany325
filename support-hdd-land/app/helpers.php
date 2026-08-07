@@ -10,10 +10,16 @@ if (! function_exists('toman')) {
 if (! function_exists('jalali_like')) {
     function jalali_like($date): string
     {
-        if (! $date) {
+        if ($date instanceof \Illuminate\Support\Optional || blank($date)) {
             return '—';
         }
 
-        return \Illuminate\Support\Carbon::parse($date)->timezone(config('app.timezone'))->format('Y/m/d H:i');
+        try {
+            return \Illuminate\Support\Carbon::parse($date)
+                ->timezone(config('app.timezone'))
+                ->format('Y/m/d H:i');
+        } catch (\Throwable) {
+            return '—';
+        }
     }
 }
