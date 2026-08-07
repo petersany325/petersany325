@@ -457,8 +457,8 @@ class ReportController extends Controller
             $searchResults = Customer::query()
                 ->with('referralSource')
                 ->withCount('receptions')
-                ->withSum('receptions as billed_sum', 'total_amount')
-                ->withSum('receptions as paid_sum', 'paid_amount')
+                ->withSum('receptions', 'total_amount')
+                ->withSum('receptions', 'paid_amount')
                 ->where(function ($w) use ($q) {
                     $w->where('name', 'like', "%{$q}%")
                         ->orWhere('phone', 'like', "%{$q}%")
@@ -468,7 +468,11 @@ class ReportController extends Controller
                 ->limit(40)
                 ->get()
                 ->map(function (Customer $c) {
-                    $c->debt_sum = max(0, (int) ($c->billed_sum ?? 0) - (int) ($c->paid_sum ?? 0));
+                    $billed = (int) ($c->receptions_sum_total_amount ?? 0);
+                    $paid = (int) ($c->receptions_sum_paid_amount ?? 0);
+                    $c->billed_sum = $billed;
+                    $c->paid_sum = $paid;
+                    $c->debt_sum = max(0, $billed - $paid);
 
                     return $c;
                 });
@@ -487,7 +491,10 @@ class ReportController extends Controller
             ->having('visits', '>', 0)
             ->orderByDesc('visits')
             ->limit(20)
-            ->get();
+            ->get()
+            ->each(function (Customer $c) {
+                $c->paid_sum = (int) ($c->paid_sum ?? 0);
+            });
 
         $referrals = ReferralSource::withCount([
             'customers as customers_count' => function ($q2) use ($from, $to) {
@@ -538,8 +545,8 @@ class ReportController extends Controller
             'paid' => (int) $receptions->sum('paid_amount'),
             'parts_qty' => (int) $receptions->sum(fn ($r) => $r->parts->sum('quantity')),
             'parts_amount' => (int) $receptions->sum(fn ($r) => $r->parts->sum('total_price')),
-            'first_visit' => optional($receptions->min('received_at') ?? $receptions->min('created_at')),
-            'last_visit' => optional($receptions->max('received_at') ?? $receptions->max('created_at')),
+            'first_visit' => $receptions->min('received_at') ?? $receptions->min('created_at'),
+            'last_visit' => $receptions->max('received_at') ?? $receptions->max('created_at'),
         ];
         $lifetime['debt'] = max(0, $lifetime['billed'] - $lifetime['paid']);
 
