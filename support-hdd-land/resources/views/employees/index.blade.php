@@ -5,7 +5,6 @@
 
 @section('content')
 <div class="emp-cartable">
-    @include('partials.flash')
     @if($errors->any())
         <div class="alert alert-error">{{ $errors->first() }}</div>
     @endif
