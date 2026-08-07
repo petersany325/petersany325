@@ -966,3 +966,37 @@ table.data th, .data-table th { background:linear-gradient(180deg,#5b6576,#464f5
 .login-method-state{margin-right:auto;font-size:10.5px;font-weight:800;color:var(--muted)}
 .login-method-card.is-on .login-method-state{color:#166534}
 .emp-admin-note{padding:6px 8px;background:#fff6e5;border:1px solid #f5d59a;border-radius:2px;font-size:11px;margin-bottom:6px}
+
+/* ===== System tools ===== */
+.sys-tools{display:grid;gap:10px}
+.sys-hero{display:grid;grid-template-columns:1.4fr .9fr;gap:12px;align-items:stretch;background:
+  linear-gradient(135deg,rgba(47,111,237,.08),transparent 42%),
+  linear-gradient(180deg,#fff,#f3f6fb);overflow:hidden;position:relative}
+.sys-hero::after{content:"";position:absolute;inset:auto -40px -40px auto;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(47,111,237,.18),transparent 70%);pointer-events:none}
+.sys-eyebrow{margin:0 0 4px;font-size:10.5px;font-weight:800;letter-spacing:.04em;color:#2f6fed;text-transform:uppercase}
+.sys-hero-copy h2{margin:0 0 4px;font-size:18px}
+.sys-hero-status{border:1px solid #c5ccd6;border-radius:3px;background:rgba(255,255,255,.85);padding:8px 10px}
+.sys-status-title{font-size:11px;font-weight:800;color:#334155;margin-bottom:4px}
+.sys-hero-status ul{margin:0;padding:0 14px 0 0;display:grid;gap:2px}
+.sys-hero-status li{font-size:11px;color:#3a4454}
+.sys-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.sys-card{border:1px solid #9aa5b5;border-radius:3px;background:linear-gradient(180deg,#fff,#f4f6f9);padding:10px;display:grid;gap:6px;min-height:148px;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.sys-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(36,48,65,.08);border-color:#7f8b9c}
+.sys-card h3{margin:0;font-size:13px}
+.sys-card p{margin:0;font-size:11px;color:var(--muted);line-height:1.45}
+.sys-card form{margin-top:auto}
+.sys-card-mark{width:34px;height:24px;display:grid;place-items:center;border-radius:2px;font-size:10px;font-weight:800;color:#fff;background:#3a4454}
+.sys-card.tone-cache .sys-card-mark{background:#2f6fed}
+.sys-card.tone-db .sys-card-mark{background:#0f766e}
+.sys-card.tone-danger .sys-card-mark{background:#b45309}
+.sys-card.tone-migrate .sys-card-mark{background:#475569}
+.sys-card.tone-danger{background:linear-gradient(180deg,#fffaf3,#fff4e5)}
+.sys-result{border-color:#86efac}
+.sys-result.is-bad{border-color:#fecaca;background:#fff7f7}
+.sys-result.is-ok{background:#f3fbf6}
+.sys-log{max-height:260px;overflow:auto;border:1px solid #d9dee6;border-radius:2px;background:#fff;padding:6px 8px;font-size:11px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;direction:ltr;text-align:left;white-space:pre-wrap}
+.sys-log > div{padding:1px 0;border-bottom:1px dashed #eef1f5}
+.sys-note{margin:0;font-size:11px}
+@media (max-width:900px){
+  .sys-hero{grid-template-columns:1fr}
+}

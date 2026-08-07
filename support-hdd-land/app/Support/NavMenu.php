@@ -175,6 +175,18 @@ class NavMenu
                 ],
             ],
             [
+                'key' => 'system_tools',
+                'label' => 'ابزارهای سیستم',
+                'permission' => 'system.tools',
+                'route' => 'system-tools.index',
+                'match' => 'system-tools.*',
+                'mark' => 'س',
+                'hint' => 'کش، تعمیر و بازسازی دیتابیس',
+                'children' => [
+                    ['label' => 'نگهداری و کش', 'route' => 'system-tools.index', 'match' => 'system-tools.*', 'hint' => 'کش سایت، سلامت، تعمیر', 'mark' => 'ن'],
+                ],
+            ],
+            [
                 'key' => 'settings',
                 'label' => 'تنظیمات',
                 'permission' => null,
@@ -269,6 +281,7 @@ class NavMenu
             'sms' => 'violet',
             'accounting' => 'teal',
             'reports' => 'green',
+            'system_tools' => 'teal',
             'settings' => 'slate',
             default => 'slate',
         };

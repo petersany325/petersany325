@@ -24,6 +24,7 @@ class Permissions
         'reports.sms' => 'گزارش پیامک',
         'reports.messages' => 'گزارش پیام مشتری',
         'settings' => 'تنظیمات سیستم',
+        'system.tools' => 'ابزارهای سیستم (کش / دیتابیس)',
         'profile' => 'پروفایل و تغییر رمز',
     ];
 

@@ -12,6 +12,7 @@ use App\Http\Controllers\ReceptionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SmsStatusController;
+use App\Http\Controllers\SystemToolsController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
 use App\Http\Controllers\HandoffController;
@@ -220,5 +221,10 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/lookups', [SettingController::class, 'storeLookup'])->name('settings.lookups');
         Route::put('settings/lookups/{lookup}', [SettingController::class, 'updateLookup'])->name('settings.lookups.update');
         Route::delete('settings/lookups/{lookup}', [SettingController::class, 'destroyLookup'])->name('settings.lookups.destroy');
+    });
+
+    Route::middleware(EnsurePermission::class.':system.tools')->group(function () {
+        Route::get('system-tools', [SystemToolsController::class, 'index'])->name('system-tools.index');
+        Route::post('system-tools/run', [SystemToolsController::class, 'run'])->name('system-tools.run');
     });
 });
