@@ -29,7 +29,31 @@
     <div><span>پذیرش</span><strong>{{ jalali_like($reception->received_at) }}</strong></div>
     <div><span>عیب اظهار شده</span><strong>{{ $reception->reported_fault ?: ($reception->faultType?->name ?: '—') }}</strong></div>
     <div><span>تعمیرکار</span><strong>{{ $reception->technician?->name ?: '—' }}</strong></div>
+    <div><span>محل دستگاه</span><strong>{{ $reception->custodyLabel() }}</strong></div>
 </div>
+
+<section class="p-section">
+    <h2>ردیابی ارجاع</h2>
+    @forelse($reception->handoffs as $h)
+        <div class="p-part-row">
+            <div>
+                <strong>{{ $h->directionLabel() }}</strong>
+                <small>
+                    @if($h->direction === 'to_bench')
+                        ارجاع به تعمیرگاه / تعمیرکار {{ $h->toTechnician?->name ?: '' }}
+                    @else
+                        بازگشت به پذیرش برای تحویل
+                    @endif
+                    — {{ $h->responded_at?->format('Y/m/d H:i') ?: $h->created_at?->format('Y/m/d H:i') }}
+                </small>
+            </div>
+            <span>{{ $h->statusLabel() }}</span>
+        </div>
+    @empty
+        <div class="p-empty soft">هنوز ارجاعی ثبت نشده؛ دستگاه نزد پذیرش است.</div>
+    @endforelse
+    <a class="p-btn ghost" style="margin-top:10px;width:100%;" href="{{ route('portal.messages', ['reception_id' => $reception->id]) }}">پیام به تعمیرگاه درباره این قبض</a>
+</section>
 
 <section class="p-section">
     <h2>قطعات ({{ $reception->parts->count() }} ردیف · {{ $reception->parts->sum('quantity') }} عدد)</h2>

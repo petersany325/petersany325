@@ -14,8 +14,11 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SmsStatusController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
+use App\Http\Controllers\HandoffController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Portal\AuthController as PortalAuthController;
 use App\Http\Controllers\Portal\CartableController as PortalCartableController;
+use App\Http\Controllers\Portal\MessageController as PortalMessageController;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsurePortalCustomer;
 use Illuminate\Support\Facades\Auth;
@@ -54,6 +57,8 @@ Route::prefix('cartable')->name('portal.')->group(function () {
         Route::get('/report', [PortalCartableController::class, 'report'])->name('report');
         Route::get('/pay', [PortalCartableController::class, 'pay'])->name('pay');
         Route::post('/pay/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('zarinpal.start');
+        Route::get('/messages', [PortalMessageController::class, 'index'])->name('messages');
+        Route::post('/messages', [PortalMessageController::class, 'store'])->name('messages.store');
     });
 });
 
@@ -94,6 +99,20 @@ Route::middleware('auth')->group(function () {
         Route::post('receptions/{reception}/payments', [ReceptionController::class, 'addPayment'])->name('receptions.payments');
         Route::post('receptions/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('receptions.zarinpal');
         Route::get('receptions/{reception}/print', [ReceptionController::class, 'print'])->name('receptions.print');
+        Route::post('receptions/{reception}/handoffs', [HandoffController::class, 'store'])->name('receptions.handoffs.store');
+    });
+
+    Route::middleware(EnsurePermission::class.':handoffs')->group(function () {
+        Route::get('handoffs', [HandoffController::class, 'index'])->name('handoffs.index');
+        Route::post('handoffs/{handoff}/respond', [HandoffController::class, 'respond'])->name('handoffs.respond');
+        Route::post('receptions/{reception}/handoffs/return', [HandoffController::class, 'store'])->name('receptions.handoffs.return');
+    });
+
+    Route::middleware(EnsurePermission::class.':notifications')->group(function () {
+        Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+        Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
+        Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+        Route::get('notifications/messages/{message}', [NotificationController::class, 'openMessage'])->name('notifications.messages.show');
     });
 
     Route::middleware(EnsurePermission::class.':parts')->group(function () {

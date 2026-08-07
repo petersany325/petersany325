@@ -99,7 +99,10 @@ class CartableController extends Controller
         $customer = $this->customer($request);
         abort_unless((int) $reception->customer_id === (int) $customer->id, 404);
 
-        $reception->load(['parts', 'payments', 'faultType', 'technician']);
+        $reception->load([
+            'parts', 'payments', 'faultType', 'technician', 'custodyTechnician',
+            'handoffs' => fn ($q) => $q->with('toTechnician')->where('status', 'accepted')->latest('id')->limit(12),
+        ]);
         $payLinks = $reception->status === 'ready' ? PaymentGateways::active() : [];
 
         return view('portal.show', compact('customer', 'reception', 'payLinks'));

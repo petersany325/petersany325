@@ -10,7 +10,8 @@ class Reception extends Model
 {
     protected $fillable = [
         'ticket_no', 'receipt_no', 'batch_code', 'delivery_batch_id', 'account_code', 'admission_type', 'service_type', 'repair_type',
-        'customer_id', 'technician_id', 'fault_type_id', 'created_by',
+        'customer_id', 'technician_id', 'custody_technician_id', 'fault_type_id', 'created_by',
+        'custody',
         'product_name', 'brand', 'model', 'serial_number', 'accessories', 'appearance_notes',
         'delivered_by', 'pickup_name', 'pickup_phone', 'referrer', 'commission', 'photo_path',
         'hdd_capacity', 'warranty_return', 'warranty_type', 'card_number', 'warranty_end_date',
@@ -51,6 +52,30 @@ class Reception extends Model
     public function technician(): BelongsTo
     {
         return $this->belongsTo(Technician::class);
+    }
+
+    public function custodyTechnician(): BelongsTo
+    {
+        return $this->belongsTo(Technician::class, 'custody_technician_id');
+    }
+
+    public function handoffs(): HasMany
+    {
+        return $this->hasMany(DeviceHandoff::class);
+    }
+
+    public function customerMessages(): HasMany
+    {
+        return $this->hasMany(CustomerMessage::class);
+    }
+
+    public function custodyLabel(): string
+    {
+        return match ($this->custody ?? 'front_desk') {
+            'with_technician' => 'نزد تعمیرکار'.($this->custodyTechnician?->name ? ' ('.$this->custodyTechnician->name.')' : ''),
+            'returning' => 'در حال بازگشت به پذیرش',
+            default => 'نزد پذیرش / منشی',
+        };
     }
 
     public function faultType(): BelongsTo

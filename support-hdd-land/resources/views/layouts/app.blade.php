@@ -14,6 +14,9 @@
 @auth
 @php
     $menuGroups = \App\Support\NavMenu::forUser(auth()->user());
+    $unreadNotes = auth()->user()->canAccess('notifications')
+        ? \App\Models\StaffNotification::query()->where('user_id', auth()->id())->whereNull('read_at')->count()
+        : 0;
 @endphp
 <div class="app-shell">
     {{-- نوار عنوان ویندوز --}}
@@ -23,6 +26,11 @@
             سرزمین هارد — مدیریت تعمیرگاه
         </div>
         <div class="win-app-caption-user">
+            @if(auth()->user()->canAccess('notifications'))
+                <a href="{{ route('notifications.index') }}" class="win-caption-btn" title="اعلان‌ها" style="text-decoration:none;margin-left:6px;">
+                    ✉ @if($unreadNotes)<b>{{ $unreadNotes }}</b>@endif
+                </a>
+            @endif
             {{ auth()->user()->name }} ({{ auth()->user()->roleLabel() }})
             <form method="POST" action="{{ route('logout') }}" class="win-logout-form">
                 @csrf

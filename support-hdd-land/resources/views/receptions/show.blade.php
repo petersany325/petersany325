@@ -29,6 +29,7 @@
                 <div><span class="muted">ظرفیت هارد</span><div>{{ $reception->hdd_capacity ?: '—' }}</div></div>
                 <div><span class="muted">گارانتی</span><div>{{ $reception->warranty_type ?: '—' }}</div></div>
                 <div><span class="muted">تعمیرکار</span><div>{{ $reception->technician?->name ?: '—' }}</div></div>
+                <div><span class="muted">محل دستگاه (Custody)</span><div>{{ $reception->custodyLabel() }}</div></div>
                 <div><span class="muted">پذیرش</span><div>{{ jalali_like($reception->received_at) }}</div></div>
                 <div class="full"><span class="muted">عیب اظهار مشتری</span><div>{{ $reception->reported_fault ?: '—' }}</div></div>
                 <div class="full"><span class="muted">لوازم همراه</span><div>{{ $reception->accessories ?: '—' }}</div></div>
@@ -38,6 +39,74 @@
                 @endif
             </div>
         </div>
+
+        @if(auth()->user()->canAccess('receptions') || auth()->user()->canAccess('handoffs'))
+        <div class="panel" style="margin-bottom:12px;">
+            <h3 style="margin-top:0;">ارجاع به همکار (Chain of Custody)</h3>
+            <p class="muted">منشی دستگاه را به تعمیرکار ارجاع می‌دهد؛ تعمیرکار باید دریافت با همین سریال را تأیید کند. در پایان، تعمیرکار دستگاه را به پذیرش برمی‌گرداند.</p>
+
+            @if(!empty($pendingHandoff))
+                <div class="p-alert" style="background:#fff7ed;padding:10px;border-radius:10px;margin-bottom:10px;">
+                    ارجاع باز: {{ $pendingHandoff->directionLabel() }}
+                    @if($pendingHandoff->toTechnician) → {{ $pendingHandoff->toTechnician->name }} @endif
+                    — {{ $pendingHandoff->statusLabel() }}
+                    <div class="muted">سریال: <span dir="ltr">{{ $pendingHandoff->serial_snapshot ?: '—' }}</span></div>
+                </div>
+            @endif
+
+            @if(auth()->user()->canAccess('receptions') && ($reception->custody ?? 'front_desk') !== 'with_technician' && empty($pendingHandoff))
+                <form method="POST" action="{{ route('receptions.handoffs.store', $reception) }}" class="form-grid" style="grid-template-columns:1fr 1fr auto;align-items:end;">
+                    @csrf
+                    <input type="hidden" name="direction" value="to_bench">
+                    <div>
+                        <label>ارجاع به تعمیرکار</label>
+                        <select name="technician_id" required>
+                            <option value="">— انتخاب تعمیرکار —</option>
+                            @foreach($technicians as $tech)
+                                <option value="{{ $tech->id }}">{{ $tech->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>یادداشت ارجاع</label>
+                        <input type="text" name="note" placeholder="مثلاً: شروع بازیابی اطلاعات">
+                    </div>
+                    <button class="btn btn-primary" type="submit">ارجاع و درخواست تأیید دریافت</button>
+                </form>
+            @endif
+
+            @if(auth()->user()->technician && (int) $reception->custody_technician_id === (int) auth()->user()->technician->id && empty($pendingHandoff))
+                <form method="POST" action="{{ route('receptions.handoffs.store', $reception) }}" class="actions" style="margin-top:8px;">
+                    @csrf
+                    <input type="hidden" name="direction" value="to_front_desk">
+                    <input type="text" name="note" placeholder="یادداشت بازگشت به منشی" style="min-width:220px;">
+                    <button class="btn btn-primary" type="submit">ارجاع به پذیرش برای تحویل مشتری</button>
+                </form>
+            @endif
+
+            @if($reception->handoffs->count())
+                <div class="table-wrap" style="margin-top:12px;">
+                    <table class="compact-table">
+                        <thead>
+                        <tr><th>زمان</th><th>نوع</th><th>از</th><th>به</th><th>سریال</th><th>وضعیت</th></tr>
+                        </thead>
+                        <tbody>
+                        @foreach($reception->handoffs as $h)
+                            <tr>
+                                <td>{{ $h->created_at?->format('Y/m/d H:i') }}</td>
+                                <td>{{ $h->directionLabel() }}</td>
+                                <td>{{ $h->fromUser?->name }}</td>
+                                <td>{{ $h->toTechnician?->name ?: ($h->toUser?->name ?: 'پذیرش') }}</td>
+                                <td dir="ltr">{{ $h->serial_snapshot ?: '—' }}</td>
+                                <td>{{ $h->statusLabel() }}</td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+        @endif
 
         <div class="panel status-sms-panel" id="status-sms-panel"
              data-previews='@json($smsPreviews)'

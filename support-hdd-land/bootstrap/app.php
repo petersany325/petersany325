@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 | Request::HEADER_X_FORWARDED_AWS_ELB
         );
 
+        // Portal remember cookie is encrypted by app code (EnsurePortalCustomer)
+        $middleware->encryptCookies(except: [
+            \App\Http\Middleware\EnsurePortalCustomer::REMEMBER_COOKIE,
+        ]);
+
         $middleware->web(prepend: [
             \App\Http\Middleware\ForceCanonicalUrl::class,
         ]);

@@ -41,6 +41,28 @@ class NavMenu
                 ],
             ],
             [
+                'key' => 'handoffs',
+                'label' => 'ارجاع / کارتابل تعمیر',
+                'permission' => 'handoffs',
+                'route' => 'handoffs.index',
+                'match' => 'handoffs.*',
+                'mark' => 'ا',
+                'hint' => 'دریافت دستگاه و هاردهای دست تعمیر',
+                'children' => [
+                    ['label' => 'کارتابل ارجاع', 'route' => 'handoffs.index', 'match' => 'handoffs.index', 'hint' => 'تأیید دریافت + دستگاه‌های نزد من', 'mark' => 'ک'],
+                ],
+            ],
+            [
+                'key' => 'notifications',
+                'label' => 'اعلان‌ها',
+                'permission' => 'notifications',
+                'route' => 'notifications.index',
+                'match' => 'notifications.*',
+                'mark' => 'ن',
+                'hint' => 'پیام مشتری و اعلان ارجاع',
+                'children' => [],
+            ],
+            [
                 'key' => 'customers',
                 'label' => 'مشتریان',
                 'permission' => 'customers',
@@ -227,6 +249,8 @@ class NavMenu
         return match ($key) {
             'home' => 'slate',
             'reception' => 'blue',
+            'handoffs' => 'green',
+            'notifications' => 'violet',
             'customers' => 'teal',
             'parts' => 'amber',
             'technicians' => 'green',

@@ -286,7 +286,11 @@ class ReceptionController extends Controller
 
     public function show(Reception $reception, SmsNotificationService $smsNotifications)
     {
-        $reception->load(['customer.referralSource', 'technician', 'faultType', 'parts.part', 'payments.receiver', 'creator']);
+        $reception->load([
+            'customer.referralSource', 'technician', 'custodyTechnician', 'faultType',
+            'parts.part', 'payments.receiver', 'creator',
+            'handoffs' => fn ($q) => $q->with(['fromUser', 'toTechnician', 'toUser'])->latest('id')->limit(20),
+        ]);
         $rules = SmsStatusRule::activeOrdered();
         $previews = [];
         foreach ($rules as $rule) {
@@ -308,6 +312,7 @@ class ReceptionController extends Controller
             'paymentMethods' => Payment::METHODS,
             'paymentTypes' => Payment::TYPES,
             'parts' => Part::where('is_active', true)->orderBy('name')->get(),
+            'pendingHandoff' => $reception->handoffs->firstWhere('status', \App\Models\DeviceHandoff::STATUS_PENDING),
         ]));
     }
 

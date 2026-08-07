@@ -7,6 +7,8 @@ class Permissions
     public const ALL = [
         'dashboard' => 'داشبورد',
         'receptions' => 'قبض‌ها و پذیرش',
+        'handoffs' => 'ارجاع دستگاه / کارتابل تعمیر',
+        'notifications' => 'اعلان‌ها و پیام مشتری',
         'customers' => 'مشتریان',
         'parts' => 'قطعات و انبار',
         'technicians' => 'تعمیرکاران',
@@ -59,15 +61,15 @@ class Permissions
         return match ($role) {
             'admin' => array_keys(self::ALL),
             'receptionist' => [
-                'dashboard', 'receptions', 'customers', 'parts', 'sms.statuses', 'profile',
+                'dashboard', 'receptions', 'handoffs', 'notifications', 'customers', 'parts', 'sms.statuses', 'profile',
             ],
             'technician' => [
-                'dashboard', 'receptions', 'parts', 'profile',
+                'dashboard', 'receptions', 'handoffs', 'notifications', 'parts', 'profile',
             ],
             'accountant' => [
-                'dashboard', 'reports.accounting', 'reports.parts', 'customers', 'profile',
+                'dashboard', 'reports.accounting', 'reports.parts', 'customers', 'notifications', 'profile',
             ],
-            default => ['dashboard', 'profile'],
+            default => ['dashboard', 'notifications', 'profile'],
         };
     }
 

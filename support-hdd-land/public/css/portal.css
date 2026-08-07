@@ -26,9 +26,14 @@ a{color:var(--teal);text-decoration:none}
 .p-lead{margin:0 0 16px;color:var(--muted);font-size:13px;line-height:1.7}
 .p-form{display:grid;gap:12px}
 .p-form label{display:grid;gap:6px;font-size:13px;font-weight:700}
-.p-form input{
+.p-form input,.p-form select,.p-form textarea{
   width:100%;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;background:#fff;
 }
+.p-form textarea{resize:vertical;min-height:110px}
+.portal-shell{max-width:720px;margin:0 auto;padding:16px 16px 96px}
+.p-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px}
+.p-card h2,.p-card h3{margin:0 0 8px}
+.muted{color:var(--muted);font-size:13px}
 .p-otp-input{letter-spacing:.35em;font-size:1.25rem;text-align:center}
 .p-btn{display:inline-flex;justify-content:center;align-items:center;gap:8px;border:0;border-radius:14px;padding:12px 14px;font:inherit;font-weight:800;cursor:pointer}
 .p-btn.primary{background:linear-gradient(135deg,var(--teal2),var(--teal));color:#fff}

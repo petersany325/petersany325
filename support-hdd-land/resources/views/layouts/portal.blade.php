@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head><meta charset="utf-8">
-    
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0f766e">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/portal.css') }}?v=p1">
+    <link rel="stylesheet" href="{{ asset('css/portal.css') }}?v=p2">
 </head>
 <body class="@yield('body_class', 'portal-body')">
 @yield('content')
@@ -32,8 +31,8 @@
     <a href="{{ route('portal.tickets', ['status' => 'ready']) }}" class="{{ request()->query('status') === 'ready' ? 'is-on' : '' }}">
         <span>✓</span><small>آماده</small>
     </a>
-    <a href="{{ route('portal.report') }}" class="{{ request()->routeIs('portal.report') ? 'is-on' : '' }}">
-        <span>▦</span><small>گزارش</small>
+    <a href="{{ route('portal.messages') }}" class="{{ request()->routeIs('portal.messages') ? 'is-on' : '' }}">
+        <span>✉</span><small>پیام</small>
     </a>
     <a href="{{ route('portal.pay') }}" class="{{ request()->routeIs('portal.pay') ? 'is-on' : '' }}">
         <span>₿</span><small>پرداخت</small>

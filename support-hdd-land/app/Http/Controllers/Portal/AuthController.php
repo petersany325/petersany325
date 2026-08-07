@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsurePortalCustomer;
 use App\Models\Customer;
 use App\Models\LoginOtp;
 use App\Models\User;
 use App\Services\NiazpardazSmsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -16,6 +18,15 @@ class AuthController extends Controller
     {
         if ($request->session()->get('portal_customer_id')) {
             return redirect()->route('portal.home');
+        }
+
+        // If session was dropped (refresh / CSRF / PWA) but remember cookie is valid, restore quietly
+        $restored = app(EnsurePortalCustomer::class)->restoreCustomerId($request);
+        if ($restored) {
+            $request->session()->put('portal_customer_id', $restored);
+            $request->session()->put('portal_last_seen', now()->timestamp);
+
+            return redirect()->intended(route('portal.home'));
         }
 
         return response()
@@ -100,6 +111,24 @@ class AuthController extends Controller
         $otp->delete();
         $request->session()->regenerate();
         $request->session()->put('portal_customer_id', $customer->id);
+        $request->session()->put('portal_last_seen', now()->timestamp);
+
+        // Persistent portal login (30 days) so refresh / PWA reopen does not force SMS again
+        $minutes = 60 * 24 * 30;
+        Cookie::queue(cookie(
+            EnsurePortalCustomer::REMEMBER_COOKIE,
+            encrypt([
+                'cid' => $customer->id,
+                'exp' => now()->addMinutes($minutes)->timestamp,
+            ]),
+            $minutes,
+            '/',
+            null,
+            true,
+            true,
+            false,
+            'Lax'
+        ));
 
         return redirect()->route('portal.home');
     }
@@ -107,6 +136,8 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         $request->session()->forget('portal_customer_id');
+        $request->session()->forget('portal_last_seen');
+        Cookie::queue(Cookie::forget(EnsurePortalCustomer::REMEMBER_COOKIE));
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
