@@ -3,18 +3,20 @@
 <head><meta charset="utf-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#0f4c5c">
+    <meta name="theme-color" content="#2b3340">
     <title>سرزمین هارد | انتخاب ورود</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}?v=hd1" type="image/x-icon">
+    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}?v=hd1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --ink: #0f2a2e;
-            --muted: #5a7378;
-            --teal: #0f766e;
-            --teal-2: #14b8a6;
-            --amber: #f59e0b;
+            --ink: #1f2933;
+            --muted: #5f6b7a;
+            --teal: #3a4454;
+            --teal-2: #5b6576;
+            --amber: #c8922a;
         }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         html, body { margin: 0; min-height: 100%; }
@@ -22,9 +24,7 @@
             font-family: Vazirmatn, Tahoma, sans-serif;
             color: var(--ink);
             background:
-                radial-gradient(900px 420px at 110% -10%, rgba(20,184,166,.28), transparent 55%),
-                radial-gradient(700px 380px at -20% 110%, rgba(245,158,11,.2), transparent 50%),
-                linear-gradient(165deg, #0f4c5c 0%, #0f766e 42%, #134e4a 100%);
+                linear-gradient(180deg, #3a4454 0%, #2b3340 38%, #e8eaee 38%, #e8eaee 100%);
             min-height: 100dvh;
             display: grid;
             place-items: center;
@@ -36,20 +36,22 @@
         }
         .gate-brand {
             text-align: center;
-            color: #fff8e7;
+            color: #f2f4f7;
             margin-bottom: 22px;
             animation: rise .4s ease-out;
         }
         .gate-logo {
-            width: 64px; height: 64px;
+            width: 88px; height: 88px;
             margin: 0 auto 12px;
-            border-radius: 18px;
+            border-radius: 8px;
             display: grid; place-items: center;
-            font-size: 26px;
-            background: linear-gradient(135deg, #ffe7b0, #f59e0b);
-            color: #123843;
-            box-shadow: 0 12px 28px rgba(0,0,0,.22);
+            background: #fff;
+            border: 1px solid #c5ccd6;
+            box-shadow: 0 8px 20px rgba(0,0,0,.18);
+            overflow: hidden;
+            padding: 8px;
         }
+        .gate-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
         .gate-brand h1 {
             margin: 0;
             font-size: clamp(22px, 5vw, 28px);
@@ -119,7 +121,7 @@
         .gate-foot {
             text-align: center;
             margin-top: 18px;
-            color: rgba(255,248,231,.75);
+            color: #5f6b7a;
             font-size: 11px;
             animation: rise .5s ease-out .1s both;
         }
@@ -135,9 +137,9 @@
 <body>
 <div class="gate">
     <div class="gate-brand">
-        <div class="gate-logo">▣</div>
+        <div class="gate-logo"><img src="{{ asset('images/logo.png') }}?v=hd1" alt="HDD LAND"></div>
         <h1>سرزمین هارد</h1>
-        <p>مدیریت تعمیرگاه — نوع ورود را انتخاب کنید</p>
+        <p>سیستم مدیریت تعمیرات — نوع ورود را انتخاب کنید</p>
     </div>
 
     <div class="gate-cards">

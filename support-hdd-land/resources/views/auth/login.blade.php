@@ -7,6 +7,7 @@
 <div class="login-page">
     <div class="panel login-card login-card-modern">
         <div class="brand-center">
+            <img class="brand-logo-lg" src="{{ asset('images/logo.png') }}?v=hd1" alt="HDD LAND" width="96" height="96">
             <h1>سرزمین هارد</h1>
             <p>ورود کارمند به کارتابل مدیریت</p>
         </div>

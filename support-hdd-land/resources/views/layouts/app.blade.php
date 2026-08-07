@@ -5,10 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'سرزمین هارد')</title>
+    <meta name="theme-color" content="#2b3340">
+    <link rel="icon" href="{{ asset('favicon.ico') }}?v=hd1" type="image/x-icon">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}?v=hd1">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon-16.png') }}?v=hd1">
+    <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}?v=hd1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=win21">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp1">
     @stack('head')
 </head>
 <body>
@@ -23,8 +28,8 @@
     {{-- نوار عنوان ویندوز --}}
     <div class="win-app-caption">
         <div class="win-app-caption-title">
-            <span class="win-app-icon">▣</span>
-            سرزمین هارد — مدیریت تعمیرگاه
+            <img class="brand-logo" src="{{ asset('images/logo-header.png') }}?v=hd1" alt="HDD LAND" width="120" height="28">
+            <span>سرزمین هارد — سیستم مدیریت تعمیرات</span>
         </div>
         <div class="win-app-caption-user">
             @if(auth()->user()->canAccess('notifications'))
@@ -134,7 +139,7 @@
 @else
     @yield('content')
 @endauth
-<script src="{{ asset('js/app.js') }}?v=win21"></script>
+<script src="{{ asset('js/app.js') }}?v=erp1"></script>
 <script>
 (function () {
     var bar = document.getElementById('win-menubar');

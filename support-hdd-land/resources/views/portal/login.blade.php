@@ -8,7 +8,7 @@
     <div class="p-auth-orb orb-b"></div>
     <div class="p-auth-card">
         <div class="p-brand">
-            <div class="p-logo">▣</div>
+            <div class="p-logo"><img src="{{ asset('images/logo.png') }}?v=hd1" alt="HDD LAND"></div>
             <div>
                 <strong>سرزمین هارد</strong>
                 <span>کارتابل مشتری</span>
