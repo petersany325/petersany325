@@ -1,0 +1,162 @@
+<?php
+
+use App\Http\Controllers\AccountingController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DeliveryController;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\PartController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReceptionController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SmsStatusController;
+use App\Http\Controllers\TechnicianController;
+use App\Http\Controllers\Payment\ZarinPalController;
+use App\Http\Controllers\Portal\AuthController as PortalAuthController;
+use App\Http\Controllers\Portal\CartableController as PortalCartableController;
+use App\Http\Middleware\EnsurePermission;
+use App\Http\Middleware\EnsurePortalCustomer;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('dashboard');
+    }
+    if (session('portal_customer_id')) {
+        return redirect()->route('portal.home');
+    }
+
+    return response()
+        ->view('gate')
+        ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        ->header('Pragma', 'no-cache');
+})->name('gate');
+
+Route::redirect('/portal', '/cartable');
+
+Route::get('/payments/zarinpal/callback/{trx}', [ZarinPalController::class, 'callback'])
+    ->name('payments.zarinpal.callback');
+
+Route::prefix('cartable')->name('portal.')->group(function () {
+    Route::get('/', [PortalAuthController::class, 'showLogin'])->name('login');
+    Route::post('/otp/send', [PortalAuthController::class, 'sendOtp'])->name('otp.send');
+    Route::post('/otp/verify', [PortalAuthController::class, 'verifyOtp'])->name('otp.verify');
+
+    Route::middleware(EnsurePortalCustomer::class)->group(function () {
+        Route::post('/logout', [PortalAuthController::class, 'logout'])->name('logout');
+        Route::get('/home', [PortalCartableController::class, 'home'])->name('home');
+        Route::get('/tickets', [PortalCartableController::class, 'tickets'])->name('tickets');
+        Route::get('/search', [PortalCartableController::class, 'search'])->name('search');
+        Route::get('/tickets/{reception}', [PortalCartableController::class, 'show'])->name('show');
+        Route::get('/report', [PortalCartableController::class, 'report'])->name('report');
+        Route::get('/pay', [PortalCartableController::class, 'pay'])->name('pay');
+        Route::post('/pay/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('zarinpal.start');
+    });
+});
+
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login/otp/send', [AuthController::class, 'sendOtp'])->name('login.otp.send');
+    Route::post('/login/otp/verify', [AuthController::class, 'verifyOtp'])->name('login.otp.verify');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->middleware(EnsurePermission::class.':dashboard')
+        ->name('dashboard');
+
+    Route::middleware(EnsurePermission::class.':profile')->group(function () {
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
+        Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
+    });
+
+    Route::middleware(EnsurePermission::class.':customers')->group(function () {
+        Route::resource('customers', CustomerController::class)->except(['destroy']);
+    });
+
+    Route::middleware(EnsurePermission::class.':receptions')->group(function () {
+        Route::get('receptions/lookup-phone', [ReceptionController::class, 'lookupPhone'])->name('receptions.lookup-phone');
+        Route::post('receptions/ensure-customer', [ReceptionController::class, 'ensureCustomer'])->name('receptions.ensure-customer');
+        Route::get('receptions/search', [ReceptionController::class, 'search'])->name('receptions.search');
+        Route::get('deliveries/group', [DeliveryController::class, 'create'])->name('deliveries.group');
+        Route::post('deliveries/lookup', [DeliveryController::class, 'lookup'])->name('deliveries.lookup');
+        Route::post('deliveries/group', [DeliveryController::class, 'store'])->name('deliveries.store');
+        Route::resource('receptions', ReceptionController::class)->only(['index', 'create', 'store', 'show']);
+        Route::post('receptions/{reception}/status', [ReceptionController::class, 'updateStatus'])->name('receptions.status');
+        Route::post('receptions/{reception}/parts', [ReceptionController::class, 'addPart'])->name('receptions.parts');
+        Route::post('receptions/{reception}/payments', [ReceptionController::class, 'addPayment'])->name('receptions.payments');
+        Route::post('receptions/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('receptions.zarinpal');
+        Route::get('receptions/{reception}/print', [ReceptionController::class, 'print'])->name('receptions.print');
+    });
+
+    Route::middleware(EnsurePermission::class.':parts')->group(function () {
+        Route::resource('parts', PartController::class)->except(['show', 'destroy']);
+        Route::post('parts/{part}/stock', [PartController::class, 'adjustStock'])->name('parts.stock');
+    });
+
+    Route::middleware(EnsurePermission::class.':technicians')->group(function () {
+        Route::resource('technicians', TechnicianController::class)->except(['show', 'destroy']);
+    });
+
+    Route::middleware(EnsurePermission::class.':employees')->group(function () {
+        Route::resource('employees', EmployeeController::class)->except(['show', 'destroy']);
+    });
+
+    Route::get('reports/accounting', [ReportController::class, 'accounting'])
+        ->middleware(EnsurePermission::class.':reports.accounting')
+        ->name('reports.accounting');
+    Route::get('reports/technicians', [ReportController::class, 'technicians'])
+        ->middleware(EnsurePermission::class.':reports.technicians')
+        ->name('reports.technicians');
+    Route::get('reports/customers', [ReportController::class, 'customers'])
+        ->middleware(EnsurePermission::class.':reports.customers')
+        ->name('reports.customers');
+    Route::get('reports/parts-used', [ReportController::class, 'partsUsed'])
+        ->middleware(EnsurePermission::class.':reports.parts')
+        ->name('reports.parts-used');
+
+    Route::middleware(EnsurePermission::class.':reports.accounting')->prefix('accounting')->name('accounting.')->group(function () {
+        Route::get('/', [AccountingController::class, 'index'])->name('index');
+        Route::get('/accounts', [AccountingController::class, 'accounts'])->name('accounts');
+        Route::get('/journals', [AccountingController::class, 'journals'])->name('journals');
+        Route::get('/journals/{journal}', [AccountingController::class, 'show'])->name('show');
+        Route::get('/ledger', [AccountingController::class, 'ledger'])->name('ledger');
+        Route::get('/trial-balance', [AccountingController::class, 'trialBalance'])->name('trial');
+        Route::get('/receivables', [AccountingController::class, 'receivables'])->name('receivables');
+        Route::get('/manual', [AccountingController::class, 'manualForm'])->name('manual');
+        Route::post('/manual', [AccountingController::class, 'storeManual'])->name('manual.store');
+        Route::post('/rebuild', [AccountingController::class, 'rebuild'])->name('rebuild');
+    });
+
+    Route::middleware(EnsurePermission::class.':sms.statuses')->group(function () {
+        Route::get('sms-statuses', [SmsStatusController::class, 'index'])->name('sms-statuses.index');
+        Route::post('sms-statuses', [SmsStatusController::class, 'store'])->name('sms-statuses.store');
+        Route::put('sms-statuses/{smsStatus}', [SmsStatusController::class, 'update'])->name('sms-statuses.update');
+        Route::delete('sms-statuses/{smsStatus}', [SmsStatusController::class, 'destroy'])->name('sms-statuses.destroy');
+        Route::post('sms-statuses/{smsStatus}/hide', [SmsStatusController::class, 'hide'])->name('sms-statuses.hide');
+        Route::post('sms-statuses/master', [SmsStatusController::class, 'updateMaster'])->name('sms-statuses.master');
+        Route::post('sms-statuses/gateway', [SmsStatusController::class, 'updateGateway'])->name('sms-statuses.gateway');
+        Route::post('sms-statuses/test', [SmsStatusController::class, 'test'])->name('sms-statuses.test');
+    });
+
+    Route::middleware(EnsurePermission::class.':settings')->group(function () {
+        Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::post('settings/fault-types', [SettingController::class, 'storeFaultType'])->name('settings.fault-types');
+        Route::post('settings/referral-sources', [SettingController::class, 'storeReferralSource'])->name('settings.referral-sources');
+        Route::post('settings/users', [SettingController::class, 'storeUser'])->name('settings.users');
+        Route::post('settings/sms', [SettingController::class, 'updateSms'])->name('settings.sms');
+        Route::post('settings/sms/test', [SettingController::class, 'testSms'])->name('settings.sms.test');
+        Route::post('settings/invoice', [SettingController::class, 'updateInvoice'])->name('settings.invoice');
+        Route::post('settings/payments', [SettingController::class, 'updatePayments'])->name('settings.payments');
+        Route::post('settings/lookups', [SettingController::class, 'storeLookup'])->name('settings.lookups');
+        Route::put('settings/lookups/{lookup}', [SettingController::class, 'updateLookup'])->name('settings.lookups.update');
+        Route::delete('settings/lookups/{lookup}', [SettingController::class, 'destroyLookup'])->name('settings.lookups.destroy');
+    });
+});
