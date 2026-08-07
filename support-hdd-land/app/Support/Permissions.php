@@ -15,9 +15,14 @@ class Permissions
         'employees' => 'کارمندان و دسترسی‌ها',
         'sms.statuses' => 'تعریف تغییر وضعیت / پیامک',
         'reports.accounting' => 'حسابداری',
+        'reports.operations' => 'گزارش عملیات کارگاه',
+        'reports.custody' => 'گزارش ارجاع / محل دستگاه',
+        'reports.payments' => 'گزارش صندوق و دریافت‌ها',
         'reports.technicians' => 'گزارش عملکرد تعمیرکاران',
         'reports.customers' => 'گزارش کاربران',
         'reports.parts' => 'گزارش کالای خرج‌شده',
+        'reports.sms' => 'گزارش پیامک',
+        'reports.messages' => 'گزارش پیام مشتری',
         'settings' => 'تنظیمات سیستم',
         'profile' => 'پروفایل و تغییر رمز',
     ];
@@ -61,13 +66,17 @@ class Permissions
         return match ($role) {
             'admin' => array_keys(self::ALL),
             'receptionist' => [
-                'dashboard', 'receptions', 'handoffs', 'notifications', 'customers', 'parts', 'sms.statuses', 'profile',
+                'dashboard', 'receptions', 'handoffs', 'notifications', 'customers', 'parts', 'sms.statuses',
+                'reports.operations', 'reports.custody', 'reports.sms', 'reports.messages', 'profile',
             ],
             'technician' => [
-                'dashboard', 'receptions', 'handoffs', 'notifications', 'parts', 'profile',
+                'dashboard', 'receptions', 'handoffs', 'notifications', 'parts',
+                'reports.custody', 'reports.technicians', 'profile',
             ],
             'accountant' => [
-                'dashboard', 'reports.accounting', 'reports.parts', 'customers', 'notifications', 'profile',
+                'dashboard', 'reports.accounting', 'reports.operations', 'reports.payments',
+                'reports.technicians', 'reports.customers', 'reports.parts',
+                'customers', 'notifications', 'profile',
             ],
             default => ['dashboard', 'notifications', 'profile'],
         };

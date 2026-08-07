@@ -131,6 +131,15 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/accounting', [ReportController::class, 'accounting'])
         ->middleware(EnsurePermission::class.':reports.accounting')
         ->name('reports.accounting');
+    Route::get('reports/operations', [ReportController::class, 'operations'])
+        ->middleware(EnsurePermission::class.':reports.operations')
+        ->name('reports.operations');
+    Route::get('reports/custody', [ReportController::class, 'custody'])
+        ->middleware(EnsurePermission::class.':reports.custody')
+        ->name('reports.custody');
+    Route::get('reports/payments', [ReportController::class, 'payments'])
+        ->middleware(EnsurePermission::class.':reports.payments')
+        ->name('reports.payments');
     Route::get('reports/technicians', [ReportController::class, 'technicians'])
         ->middleware(EnsurePermission::class.':reports.technicians')
         ->name('reports.technicians');
@@ -140,6 +149,12 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/parts-used', [ReportController::class, 'partsUsed'])
         ->middleware(EnsurePermission::class.':reports.parts')
         ->name('reports.parts-used');
+    Route::get('reports/sms', [ReportController::class, 'sms'])
+        ->middleware(EnsurePermission::class.':reports.sms')
+        ->name('reports.sms');
+    Route::get('reports/messages', [ReportController::class, 'messages'])
+        ->middleware(EnsurePermission::class.':reports.messages')
+        ->name('reports.messages');
 
     Route::middleware(EnsurePermission::class.':reports.accounting')->prefix('accounting')->name('accounting.')->group(function () {
         Route::get('/', [AccountingController::class, 'index'])->name('index');
