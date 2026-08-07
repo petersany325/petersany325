@@ -82,6 +82,37 @@ class SettingController extends Controller
         return back()->with('success', 'نوع ایراد ثبت شد.');
     }
 
+    public function updateFaultType(Request $request, FaultType $faultType)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $faultType->update([
+            'name' => $data['name'],
+            'description' => $data['description'] ?? $faultType->description,
+            'is_active' => $request->boolean('is_active'),
+        ]);
+
+        return back()->with('success', 'نوع ایراد ویرایش شد.');
+    }
+
+    public function destroyFaultType(FaultType $faultType)
+    {
+        $inUse = \App\Models\Reception::query()->where('fault_type_id', $faultType->id)->exists();
+        if ($inUse) {
+            $faultType->update(['is_active' => false]);
+
+            return back()->with('success', 'این نوع ایراد در قبض‌ها استفاده شده؛ به‌جای حذف، غیرفعال شد.');
+        }
+
+        $faultType->delete();
+
+        return back()->with('success', 'نوع ایراد حذف شد.');
+    }
+
     public function storeReferralSource(Request $request)
     {
         $data = $request->validate([
@@ -91,6 +122,35 @@ class SettingController extends Controller
         ReferralSource::create($data);
 
         return back()->with('success', 'نحوه آشنایی ثبت شد.');
+    }
+
+    public function updateReferralSource(Request $request, ReferralSource $referralSource)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:120'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $referralSource->update([
+            'name' => $data['name'],
+            'is_active' => $request->boolean('is_active'),
+        ]);
+
+        return back()->with('success', 'نحوه آشنایی ویرایش شد.');
+    }
+
+    public function destroyReferralSource(ReferralSource $referralSource)
+    {
+        $inUse = \App\Models\Customer::query()->where('referral_source_id', $referralSource->id)->exists();
+        if ($inUse) {
+            $referralSource->update(['is_active' => false]);
+
+            return back()->with('success', 'این نحوه آشنایی برای مشتری ثبت شده؛ به‌جای حذف، غیرفعال شد.');
+        }
+
+        $referralSource->delete();
+
+        return back()->with('success', 'نحوه آشنایی حذف شد.');
     }
 
     public function storeUser(Request $request)

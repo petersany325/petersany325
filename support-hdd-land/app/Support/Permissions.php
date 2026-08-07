@@ -62,6 +62,25 @@ class Permissions
             'tone' => 'green',
             'mark' => 'ک',
         ],
+        'intern' => [
+            'label' => 'کارآموز',
+            'hint' => 'پرتال کارآموز — دفتر روز و خدمات تعریف‌شده شرکت',
+            'tone' => 'violet',
+            'mark' => 'آ',
+        ],
+    ];
+
+    /** دسترسی‌هایی که مدیر معمولاً برای کارآموز روشن می‌کند */
+    public const INTERN_MANAGEABLE = [
+        'dashboard' => 'میز کار',
+        'daily_logs' => 'دفتر روزانه',
+        'notifications' => 'اعلان‌ها',
+        'handoffs' => 'ارجاع دستگاه / کارتابل تعمیر',
+        'receptions' => 'قبض‌ها و پذیرش (مشاهده/کمک)',
+        'customers' => 'مشتریان',
+        'parts' => 'انبار',
+        'reports.custody' => 'گزارش ارجاع / محل دستگاه',
+        'profile' => 'پروفایل',
     ];
 
     public static function defaultsForRole(string $role): array
@@ -81,6 +100,7 @@ class Permissions
                 'reports.technicians', 'reports.customers', 'reports.parts',
                 'customers', 'notifications', 'daily_logs', 'profile',
             ],
+            'intern' => ['dashboard', 'daily_logs', 'notifications', 'profile'],
             default => ['dashboard', 'notifications', 'daily_logs', 'profile'],
         };
     }

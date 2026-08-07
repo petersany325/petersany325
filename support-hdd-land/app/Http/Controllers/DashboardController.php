@@ -13,6 +13,11 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+        if ($user && $user->isIntern()) {
+            return redirect()->route('intern.portal');
+        }
+
         $openStatuses = ['received', 'repairing', 'waiting_part', 'ready'];
 
         return view('dashboard', [

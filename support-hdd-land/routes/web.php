@@ -19,6 +19,7 @@ use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
 use App\Http\Controllers\HandoffController;
 use App\Http\Controllers\InternController;
+use App\Http\Controllers\InternPortalController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StaffSmsTemplateController;
 use App\Http\Controllers\Portal\AuthController as PortalAuthController;
@@ -31,7 +32,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     if (Auth::check()) {
-        return redirect()->route('dashboard');
+        return redirect()->route(Auth::user()->homeRoute());
     }
     if (session('portal_customer_id')) {
         return redirect()->route('portal.home');
@@ -134,6 +135,11 @@ Route::middleware('auth')->group(function () {
         Route::get('handoffs', [HandoffController::class, 'index'])->name('handoffs.index');
         Route::post('handoffs/{handoff}/respond', [HandoffController::class, 'respond'])->name('handoffs.respond');
         Route::post('receptions/{reception}/handoffs/return', [HandoffController::class, 'store'])->name('receptions.handoffs.return');
+    });
+
+    Route::middleware('auth')->prefix('intern')->name('intern.')->group(function () {
+        Route::get('/', [InternPortalController::class, 'index'])->name('portal');
+        Route::post('/log', [InternPortalController::class, 'store'])->name('log');
     });
 
     Route::middleware(EnsurePermission::class.':notifications')->group(function () {
@@ -247,7 +253,11 @@ Route::middleware('auth')->group(function () {
     Route::middleware(EnsurePermission::class.':settings')->group(function () {
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
         Route::post('settings/fault-types', [SettingController::class, 'storeFaultType'])->name('settings.fault-types');
+        Route::put('settings/fault-types/{faultType}', [SettingController::class, 'updateFaultType'])->name('settings.fault-types.update');
+        Route::delete('settings/fault-types/{faultType}', [SettingController::class, 'destroyFaultType'])->name('settings.fault-types.destroy');
         Route::post('settings/referral-sources', [SettingController::class, 'storeReferralSource'])->name('settings.referral-sources');
+        Route::put('settings/referral-sources/{referralSource}', [SettingController::class, 'updateReferralSource'])->name('settings.referral-sources.update');
+        Route::delete('settings/referral-sources/{referralSource}', [SettingController::class, 'destroyReferralSource'])->name('settings.referral-sources.destroy');
         Route::post('settings/users', [SettingController::class, 'storeUser'])->name('settings.users');
         Route::post('settings/sms', [SettingController::class, 'updateSms'])->name('settings.sms');
         Route::post('settings/sms/test', [SettingController::class, 'testSms'])->name('settings.sms.test');

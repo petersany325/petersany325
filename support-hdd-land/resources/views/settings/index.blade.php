@@ -94,30 +94,110 @@
 
         <div class="ws-pane" data-ws-pane="faults">
             <h2>انواع ایراد</h2>
-            <form method="POST" action="{{ route('settings.fault-types') }}" class="form-grid" style="grid-template-columns:1fr auto;align-items:end;">
-                @csrf
-                <div><label>نام ایراد</label><input type="text" name="name" required></div>
-                <button class="btn btn-primary" type="submit">افزودن</button>
-            </form>
-            <ul style="margin-top:8px;padding-right:16px;">
-                @foreach($faultTypes as $item)
-                    <li>{{ $item->name }}</li>
-                @endforeach
-            </ul>
+            <p class="lead">از لیست انتخاب کنید، سپس ویرایش یا حذف کنید. برای مورد جدید «— جدید —» را بگذارید.</p>
+            <div class="lookup-editor panel" data-simple-editor data-base-url="{{ url('settings/fault-types') }}">
+                <div class="accept-row accept-row-4" style="margin-bottom:6px;">
+                    <div style="grid-column:1/-1">
+                        <label>انتخاب از منو</label>
+                        <select class="simple-select">
+                            <option value="">— جدید —</option>
+                            @foreach($faultTypes as $item)
+                                <option value="{{ $item->id }}"
+                                        data-name="{{ $item->name }}"
+                                        data-active="{{ $item->is_active ? '1' : '0' }}">
+                                    {{ $item->name }}{{ $item->is_active ? '' : ' (غیرفعال)' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <form method="POST" action="{{ route('settings.fault-types') }}" class="simple-form-create">
+                    @csrf
+                    <div class="accept-row accept-row-4">
+                        <div>
+                            <label>نام ایراد</label>
+                            <input type="text" name="name" class="simple-name" required>
+                        </div>
+                        <div>
+                            @include('partials.toggle', ['name' => 'is_active', 'label' => 'فعال', 'checked' => true])
+                        </div>
+                    </div>
+                    <div class="actions simple-actions-create">
+                        <button class="btn btn-primary" type="submit">افزودن</button>
+                    </div>
+                </form>
+                <form method="POST" action="#" class="simple-form-edit hidden">
+                    @csrf
+                    <input type="hidden" name="_method" value="PUT" class="simple-method">
+                    <div class="accept-row accept-row-4">
+                        <div>
+                            <label>نام ایراد</label>
+                            <input type="text" name="name" class="simple-name" required>
+                        </div>
+                        <div>
+                            @include('partials.toggle', ['name' => 'is_active', 'label' => 'فعال', 'checked' => true])
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-primary simple-save-btn" type="submit">ذخیره ویرایش</button>
+                        <button class="btn btn-danger simple-delete-btn" type="submit" data-confirm="حذف این نوع ایراد؟">حذف</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <div class="ws-pane" data-ws-pane="referrals">
             <h2>نحوه آشنایی</h2>
-            <form method="POST" action="{{ route('settings.referral-sources') }}" class="form-grid" style="grid-template-columns:1fr auto;align-items:end;">
-                @csrf
-                <div><label>نام منبع</label><input type="text" name="name" required></div>
-                <button class="btn btn-primary" type="submit">افزودن</button>
-            </form>
-            <ul style="margin-top:8px;padding-right:16px;">
-                @foreach($referralSources as $item)
-                    <li>{{ $item->name }}</li>
-                @endforeach
-            </ul>
+            <p class="lead">از لیست انتخاب کنید، سپس ویرایش یا حذف کنید.</p>
+            <div class="lookup-editor panel" data-simple-editor data-base-url="{{ url('settings/referral-sources') }}">
+                <div class="accept-row accept-row-4" style="margin-bottom:6px;">
+                    <div style="grid-column:1/-1">
+                        <label>انتخاب از منو</label>
+                        <select class="simple-select">
+                            <option value="">— جدید —</option>
+                            @foreach($referralSources as $item)
+                                <option value="{{ $item->id }}"
+                                        data-name="{{ $item->name }}"
+                                        data-active="{{ $item->is_active ? '1' : '0' }}">
+                                    {{ $item->name }}{{ $item->is_active ? '' : ' (غیرفعال)' }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <form method="POST" action="{{ route('settings.referral-sources') }}" class="simple-form-create">
+                    @csrf
+                    <div class="accept-row accept-row-4">
+                        <div>
+                            <label>نام منبع</label>
+                            <input type="text" name="name" class="simple-name" required>
+                        </div>
+                        <div>
+                            @include('partials.toggle', ['name' => 'is_active', 'label' => 'فعال', 'checked' => true])
+                        </div>
+                    </div>
+                    <div class="actions simple-actions-create">
+                        <button class="btn btn-primary" type="submit">افزودن</button>
+                    </div>
+                </form>
+                <form method="POST" action="#" class="simple-form-edit hidden">
+                    @csrf
+                    <input type="hidden" name="_method" value="PUT" class="simple-method">
+                    <div class="accept-row accept-row-4">
+                        <div>
+                            <label>نام منبع</label>
+                            <input type="text" name="name" class="simple-name" required>
+                        </div>
+                        <div>
+                            @include('partials.toggle', ['name' => 'is_active', 'label' => 'فعال', 'checked' => true])
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button class="btn btn-primary simple-save-btn" type="submit">ذخیره ویرایش</button>
+                        <button class="btn btn-danger simple-delete-btn" type="submit" data-confirm="حذف این نحوه آشنایی؟">حذف</button>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <div class="ws-pane" data-ws-pane="invoice">

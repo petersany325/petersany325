@@ -14,15 +14,18 @@ class NavMenu
      */
     public static function forUser(User $user): array
     {
+        $homeRoute = $user->isIntern() ? 'intern.portal' : 'dashboard';
+        $homeMatch = $user->isIntern() ? 'intern.*|dashboard' : 'dashboard';
+
         $groups = [
             [
                 'key' => 'home',
-                'label' => 'میز کار',
+                'label' => $user->isIntern() ? 'پرتال کارآموز' : 'میز کار',
                 'permission' => 'dashboard',
-                'route' => 'dashboard',
-                'match' => 'dashboard',
-                'mark' => 'م',
-                'hint' => 'شورت‌کارت‌ها و خلاصه',
+                'route' => $homeRoute,
+                'match' => $homeMatch,
+                'mark' => $user->isIntern() ? 'آ' : 'م',
+                'hint' => $user->isIntern() ? 'خدمات شرکت و ثبت کار' : 'شورت‌کارت‌ها و خلاصه',
                 'children' => [],
             ],
             [
@@ -49,7 +52,8 @@ class NavMenu
                 'mark' => 'ا',
                 'hint' => 'دریافت دستگاه و هاردهای دست تعمیر',
                 'children' => [
-                    ['label' => 'کارتابل ارجاع', 'route' => 'handoffs.index', 'match' => 'handoffs.index', 'hint' => 'تأیید دریافت + دستگاه‌های نزد من', 'mark' => 'ک'],
+                    ['label' => 'کارتابل ارجاع', 'route' => 'handoffs.index', 'match' => 'handoffs.index', 'hint' => 'جستجو، تأیید دریافت، دست تعمیر', 'mark' => 'ک'],
+                    ['label' => 'گزارش ارجاع / محل', 'route' => 'reports.custody', 'match' => 'reports.custody', 'hint' => 'گزارش سریال و قبض', 'mark' => 'گ', 'permission' => 'reports.custody'],
                 ],
             ],
             [
@@ -132,8 +136,9 @@ class NavMenu
                 'children' => [
                     ['label' => 'کارتابل کارمند', 'route' => 'employees.index', 'match' => 'employees.index|employees.edit', 'hint' => 'لیست، وظیفه، دسترسی', 'mark' => 'ک', 'permission' => 'employees'],
                     ['label' => 'کارمند جدید', 'route' => 'employees.create', 'match' => 'employees.create', 'hint' => 'پذیرش / حسابدار / تعمیرکار…', 'mark' => '+', 'permission' => 'employees'],
-                    ['label' => 'کارتابل کارآموز', 'route' => 'interns.index', 'match' => 'interns.index|interns.edit', 'hint' => 'لیست و دوره کارآموزی', 'mark' => 'آ', 'permission' => 'employees', 'sep' => true],
-                    ['label' => 'کارآموز جدید', 'route' => 'interns.create', 'match' => 'interns.create', 'hint' => 'ثبت‌نام + SMS تأیید دوره', 'mark' => '+', 'permission' => 'employees'],
+                    ['label' => 'کارتابل کارآموز', 'route' => 'interns.index', 'match' => 'interns.index|interns.edit', 'hint' => 'دسترسی و پرتال ورود', 'mark' => 'آ', 'permission' => 'employees', 'sep' => true],
+                    ['label' => 'کارآموز جدید', 'route' => 'interns.create', 'match' => 'interns.create', 'hint' => 'ثبت + فعال‌سازی ورود', 'mark' => '+', 'permission' => 'employees'],
+                    ['label' => 'پرتال کارآموز (پیش‌نمایش)', 'route' => 'intern.portal', 'match' => 'intern.portal', 'hint' => 'نمای ورود کارآموز', 'mark' => 'پ', 'permission' => 'employees'],
                     ['label' => 'متن SMS خوش‌آمد', 'route' => 'staff-sms.templates', 'match' => 'staff-sms.*', 'hint' => 'کارمند و کارآموز', 'mark' => 'پ', 'permission' => 'employees'],
                     ['label' => 'تخصص و کمیسیون تعمیرکار', 'route' => 'technicians.index', 'match' => 'technicians.index|technicians.edit', 'hint' => 'هارد، بازیابی، قیمت/٪', 'mark' => 'ت', 'permission' => 'technicians', 'sep' => true],
                     ['label' => 'تعمیرکار جدید (قیمت)', 'route' => 'technicians.create', 'match' => 'technicians.create', 'hint' => 'تخصص + کمیسیون', 'mark' => '+', 'permission' => 'technicians'],

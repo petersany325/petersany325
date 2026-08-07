@@ -51,8 +51,19 @@ class User extends Authenticatable
             'technician' => 'تعمیرکار',
             'accountant' => 'حسابدار',
             'employee' => 'کارمند',
+            'intern' => 'کارآموز',
             default => $this->role,
         };
+    }
+
+    public function isIntern(): bool
+    {
+        return $this->role === 'intern';
+    }
+
+    public function homeRoute(): string
+    {
+        return $this->isIntern() ? 'intern.portal' : 'dashboard';
     }
 
     public function permissionList(): array

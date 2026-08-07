@@ -113,10 +113,15 @@ class ReportController extends Controller
     public function custody(Request $request): View
     {
         [$from, $to] = $this->range($request);
+        $ticket = trim((string) $request->input('ticket_no', ''));
+        $serial = trim((string) $request->input('serial', ''));
+        $q = trim((string) $request->input('q', ''));
 
         $handoffs = DeviceHandoff::query()
             ->whereDate('created_at', '>=', $from)
             ->whereDate('created_at', '<=', $to);
+
+        $this->applyCustodySearch($handoffs, $ticket, $serial, $q);
 
         $summary = [
             'total' => (clone $handoffs)->count(),
@@ -138,20 +143,38 @@ class ReportController extends Controller
 
         $techNames = Technician::query()->pluck('name', 'id');
 
-        $inHand = Reception::query()
+        $inHandQuery = Reception::query()
             ->with(['customer', 'custodyTechnician'])
             ->where('custody', 'with_technician')
-            ->whereNotIn('status', ['delivered', 'cancelled'])
-            ->latest('id')
-            ->limit(50)
-            ->get();
+            ->whereNotIn('status', ['delivered', 'cancelled']);
+        if ($ticket !== '') {
+            $inHandQuery->where('ticket_no', 'like', '%'.$ticket.'%');
+        }
+        if ($serial !== '') {
+            $inHandQuery->where('serial_number', 'like', '%'.$serial.'%');
+        }
+        if ($q !== '') {
+            $inHandQuery->where(function ($inner) use ($q) {
+                $inner->where('ticket_no', 'like', '%'.$q.'%')
+                    ->orWhere('serial_number', 'like', '%'.$q.'%')
+                    ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%'));
+            });
+        }
+        $inHand = $inHandQuery->latest('id')->limit(80)->get();
 
-        $pendingRows = DeviceHandoff::query()
+        $pendingRowsQuery = DeviceHandoff::query()
             ->with(['reception.customer', 'toTechnician', 'fromUser'])
-            ->where('status', DeviceHandoff::STATUS_PENDING)
-            ->latest('id')
-            ->limit(30)
-            ->get();
+            ->where('status', DeviceHandoff::STATUS_PENDING);
+        $this->applyCustodySearch($pendingRowsQuery, $ticket, $serial, $q);
+        $pendingRows = $pendingRowsQuery->latest('id')->limit(40)->get();
+
+        $historyQuery = DeviceHandoff::query()
+            ->with(['reception.customer', 'toTechnician', 'fromUser'])
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to)
+            ->whereIn('status', [DeviceHandoff::STATUS_ACCEPTED, DeviceHandoff::STATUS_REJECTED]);
+        $this->applyCustodySearch($historyQuery, $ticket, $serial, $q);
+        $historyRows = $historyQuery->latest('id')->limit(80)->get();
 
         $byCustody = Reception::query()
             ->select('custody', DB::raw('COUNT(*) as total'))
@@ -169,8 +192,31 @@ class ReportController extends Controller
 
         return view('reports.custody', compact(
             'from', 'to', 'summary', 'byTech', 'techNames', 'inHand', 'pendingRows', 'byCustody',
-            'chartCustodyLabels', 'chartCustodyValues'
+            'chartCustodyLabels', 'chartCustodyValues', 'ticket', 'serial', 'q', 'historyRows'
         ));
+    }
+
+    private function applyCustodySearch($query, string $ticket, string $serial, string $q): void
+    {
+        if ($ticket !== '') {
+            $query->whereHas('reception', fn ($r) => $r->where('ticket_no', 'like', '%'.$ticket.'%'));
+        }
+        if ($serial !== '') {
+            $query->where(function ($inner) use ($serial) {
+                $inner->where('serial_snapshot', 'like', '%'.$serial.'%')
+                    ->orWhereHas('reception', fn ($r) => $r->where('serial_number', 'like', '%'.$serial.'%'));
+            });
+        }
+        if ($q !== '') {
+            $query->where(function ($inner) use ($q) {
+                $inner->where('serial_snapshot', 'like', '%'.$q.'%')
+                    ->orWhereHas('reception', function ($r) use ($q) {
+                        $r->where('ticket_no', 'like', '%'.$q.'%')
+                            ->orWhere('serial_number', 'like', '%'.$q.'%')
+                            ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('phone', 'like', '%'.$q.'%'));
+                    });
+            });
+        }
     }
 
     public function payments(Request $request): View

@@ -111,6 +111,9 @@
         .gate-card.staff .gate-ico {
             background: #2f6fed;
         }
+        .gate-card.intern .gate-ico {
+            background: #6d28d9;
+        }
         .gate-text { min-width: 0; flex: 1; }
         .gate-text strong {
             display: block;
@@ -170,6 +173,15 @@
             <span class="gate-text">
                 <strong>ورود کارمندان</strong>
                 <span id="staff-gate-hint">وب‌سرویس موبایل و پنل کامپیوتر — منوها خودکار با تشخیص دستگاه تنظیم می‌شوند</span>
+            </span>
+            <span class="gate-go">←</span>
+        </a>
+
+        <a class="gate-card intern" href="{{ route('login', ['intern' => 1]) }}">
+            <span class="gate-ico">آ</span>
+            <span class="gate-text">
+                <strong>ورود کارآموز</strong>
+                <span>پرتال کارآموز — دفتر روز و خدمات تعریف‌شده شرکت (با دسترسی مدیر)</span>
             </span>
             <span class="gate-go">←</span>
         </a>

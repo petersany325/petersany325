@@ -74,3 +74,72 @@
         <p class="hint" style="margin:6px 0 0;">متن SMS را از منوی «متن SMS خوش‌آمد» می‌توانید تغییر دهید.</p>
     </section>
 @endunless
+
+@php
+    $portalUser = $intern->user ?? null;
+    $portalDefault = $portalUser
+        ? ($portalUser->is_active && ($portalUser->can_login_otp || $portalUser->can_login_password))
+        : true;
+    $portalOn = (bool) old('portal_enabled', $portalDefault);
+    $selectedPerms = old('permissions', $selected ?? \App\Support\Permissions::defaultsForRole('intern'));
+    $otpOn = (bool) old('can_login_otp', $portalUser->can_login_otp ?? true);
+    $passOn = (bool) old('can_login_password', $portalUser->can_login_password ?? false);
+@endphp
+<section class="emp-section">
+    <div class="emp-section-head">
+        <h3>پرتال ورود کارآموز و دسترسی‌ها</h3>
+        <p>مدیر بخش‌ها را برای کارآموز فعال می‌کند — مخصوصاً دفتر روزانه. خدمات شرکت را از «تنظیمات دفتر روز» تعریف کنید.</p>
+    </div>
+    <div class="accept-row accept-row-3" style="align-items:end;">
+        <div>
+            @include('partials.toggle', [
+                'name' => 'portal_enabled',
+                'label' => 'فعال‌سازی پرتال ورود',
+                'checked' => $portalOn,
+                'on' => 'فعال',
+                'off' => 'خاموش',
+            ])
+        </div>
+        <div>
+            @include('partials.toggle', [
+                'name' => 'can_login_otp',
+                'label' => 'ورود با موبایل / SMS',
+                'checked' => $otpOn,
+            ])
+        </div>
+        <div>
+            @include('partials.toggle', [
+                'name' => 'can_login_password',
+                'label' => 'ورود با رمز',
+                'checked' => $passOn,
+            ])
+        </div>
+    </div>
+    <div class="accept-row accept-row-2" style="margin-top:8px;">
+        <div>
+            <label>رمز عبور (اختیاری — برای ورود با رمز)</label>
+            <input type="password" name="password" autocomplete="new-password" placeholder="حداقل ۶ کاراکتر">
+        </div>
+        <div>
+            <label>لینک پرتال</label>
+            <div class="hint" dir="ltr" style="margin-top:6px;">{{ url('/intern') }} · ورود از {{ url('/login') }}</div>
+        </div>
+    </div>
+    <div style="margin-top:10px;">
+        <strong style="font-size:12px;">دسترسی بخش‌ها</strong>
+        <div class="perm-tile-grid" style="margin-top:6px;">
+            @foreach(($permissions ?? \App\Support\Permissions::INTERN_MANAGEABLE) as $key => $label)
+                <label class="perm-tile {{ in_array($key, $selectedPerms, true) ? 'is-on' : '' }} {{ $key === 'daily_logs' ? 'is-priority' : '' }}">
+                    <input type="checkbox"
+                           name="permissions[]"
+                           value="{{ $key }}"
+                           class="perm-tile-input"
+                           @checked(in_array($key, $selectedPerms, true))>
+                    <span class="perm-tile-dot"></span>
+                    <span class="perm-tile-label">{{ $label }}@if($key === 'daily_logs') ★@endif</span>
+                </label>
+            @endforeach
+        </div>
+        <p class="hint" style="margin-top:6px;">خدمات قابل انجام همان دسته‌های دفتر روز هستند؛ از منوی تنظیمات دفتر روز تعریف/ویرایش کنید.</p>
+    </div>
+</section>

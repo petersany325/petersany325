@@ -227,7 +227,7 @@ class EmployeeController extends Controller
             'name' => ['required', 'string', 'max:120'],
             'email' => ['nullable', 'email', 'max:120'],
             'phone' => ['required', 'string', 'min:10', 'max:20'],
-            'role' => ['required', Rule::in(['admin', 'receptionist', 'technician', 'accountant', 'employee'])],
+            'role' => ['required', Rule::in(['admin', 'receptionist', 'technician', 'accountant', 'employee', 'intern'])],
             'password' => ['nullable', 'string', 'min:6'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', Rule::in(array_keys(Permissions::ALL))],

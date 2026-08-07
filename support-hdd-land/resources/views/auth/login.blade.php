@@ -3,13 +3,16 @@
 @section('title', 'ورود | سرزمین هارد')
 
 @section('content')
-@php $otpFirst = session('otp_sent') || old('phone') || request()->boolean('otp'); @endphp
+@php
+    $otpFirst = session('otp_sent') || old('phone') || request()->boolean('otp');
+    $isInternLogin = request()->boolean('intern');
+@endphp
 <div class="login-page">
     <div class="panel login-card login-card-modern">
         <div class="brand-center">
             <img class="brand-logo-lg" src="{{ asset('images/logo.png') }}?v=hd1" alt="HDD LAND" width="96" height="96">
             <h1>سرزمین هارد</h1>
-            <p>ورود کارمند — موبایل و کامپیوتر</p>
+            <p>{{ $isInternLogin ? 'ورود کارآموز — پرتال خدمات و دفتر روز' : 'ورود کارمند — موبایل و کامپیوتر' }}</p>
         </div>
         @include('partials.flash')
 

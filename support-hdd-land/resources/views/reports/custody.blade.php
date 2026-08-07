@@ -7,6 +7,28 @@
 @include('reports._settings')
 
 <div class="panel" style="margin-bottom:12px;">
+    <form method="GET" action="{{ route('reports.custody') }}" class="accept-row accept-row-4" style="align-items:end;">
+        <div>
+            <label>شماره قبض</label>
+            <input type="text" name="ticket_no" value="{{ $ticket ?? '' }}" placeholder="R-..." dir="ltr" style="text-align:left;">
+        </div>
+        <div>
+            <label>سریال</label>
+            <input type="text" name="serial" value="{{ $serial ?? '' }}" dir="ltr" style="text-align:left;">
+        </div>
+        <div>
+            <label>جستجوی کلی</label>
+            <input type="text" name="q" value="{{ $q ?? '' }}" placeholder="قبض / سریال / مشتری">
+        </div>
+        <div class="actions" style="margin:0;">
+            <button class="btn btn-primary" type="submit">فیلتر گزارش</button>
+            <a class="btn btn-ghost" href="{{ route('reports.custody') }}">پاک</a>
+            <a class="btn btn-secondary" href="{{ route('handoffs.index', array_filter(['ticket_no' => $ticket ?? '', 'serial' => $serial ?? '', 'q' => $q ?? ''])) }}">کارتابل ارجاع</a>
+        </div>
+    </form>
+</div>
+
+<div class="panel" style="margin-bottom:12px;">
     <h2 style="margin-top:0;">ارجاع و Custody</h2>
     <p class="muted" style="margin-top:0;">کنترل شفاف قبض‌ها: چند دستگاه نزد تعمیرکار است، چند ارجاع تأیید/رد شده.</p>
     <div class="stats stats-compact">
@@ -100,5 +122,28 @@
         </table>
     </div>
 </div>
+
+@if(isset($historyRows) && $historyRows->isNotEmpty())
+<div class="panel" style="margin-top:12px;">
+    <h3 style="margin-top:0;">تاریخچه ارجاع دوره</h3>
+    <div class="table-wrap">
+        <table class="compact-table">
+            <thead><tr><th>قبض</th><th>سریال</th><th>نوع</th><th>وضعیت</th><th>تعمیرکار</th><th>زمان</th></tr></thead>
+            <tbody>
+            @foreach($historyRows as $h)
+                <tr>
+                    <td><a href="{{ route('receptions.show', $h->reception_id) }}">{{ $h->reception?->ticket_no }}</a></td>
+                    <td dir="ltr">{{ $h->serial_snapshot ?: '—' }}</td>
+                    <td>{{ $h->directionLabel() }}</td>
+                    <td>{{ $h->status === 'accepted' ? 'تأیید' : ($h->status === 'rejected' ? 'رد' : $h->status) }}</td>
+                    <td>{{ $h->toTechnician?->name ?: 'پذیرش' }}</td>
+                    <td>{{ jalali_like($h->responded_at ?: $h->created_at) }}</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
+@endif
 @endsection
 @include('reports._charts-boot')

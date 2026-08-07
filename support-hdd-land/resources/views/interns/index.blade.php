@@ -8,7 +8,7 @@
     <div class="emp-cartable-hero">
         <div>
             <h2>کارتابل کارآموزان</h2>
-            <p class="lead">ثبت‌نام کارآموز و تأیید دوره با پیامک خوش‌آمدگویی</p>
+            <p class="lead">ثبت‌نام کارآموز، فعال‌سازی پرتال ورود و دسترسی بخش‌ها (دفتر روزانه و …)</p>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <a class="btn btn-primary" href="{{ route('interns.create') }}">کارآموز جدید</a>
@@ -21,6 +21,7 @@
         <div class="emp-stat"><span>کل</span><strong>{{ $stats['total'] }}</strong></div>
         <div class="emp-stat tone-ok"><span>در حال کارآموزی</span><strong>{{ $stats['active'] }}</strong></div>
         <div class="emp-stat tone-sms"><span>آینده</span><strong>{{ $stats['upcoming'] }}</strong></div>
+        <div class="emp-stat tone-pass"><span>پرتال فعال</span><strong>{{ $stats['portal'] }}</strong></div>
         <div class="emp-stat"><span>پایان/غیرفعال</span><strong>{{ $stats['finished'] }}</strong></div>
     </div>
 
@@ -37,6 +38,16 @@
                 </header>
                 <div class="emp-card-body">
                     <div class="emp-phone" dir="ltr">{{ $intern->phone }}</div>
+                    <div class="emp-login-chips" style="margin-top:4px;">
+                        @if($intern->hasPortalAccess())
+                            <span class="chip chip-sms">پرتال</span>
+                            @if($intern->user?->can_login_otp)<span class="chip chip-sms">SMS</span>@endif
+                            @if($intern->user?->can_login_password)<span class="chip chip-pass">رمز</span>@endif
+                            @if($intern->user?->canAccess('daily_logs'))<span class="chip chip-pass">دفتر روز</span>@endif
+                        @else
+                            <span class="chip">بدون ورود</span>
+                        @endif
+                    </div>
                     <div class="muted" style="font-size:11px;margin-top:4px;">
                         از {{ jalali_date($intern->start_date) }} تا {{ jalali_date($intern->end_date) }}
                     </div>
@@ -45,7 +56,7 @@
                     @endif
                 </div>
                 <footer class="emp-card-foot">
-                    <a class="btn btn-secondary" href="{{ route('interns.edit', $intern) }}">ویرایش</a>
+                    <a class="btn btn-secondary" href="{{ route('interns.edit', $intern) }}">دسترسی / ویرایش</a>
                     <form method="POST" action="{{ route('interns.welcome-sms', $intern) }}">
                         @csrf
                         <button class="btn btn-ghost" type="submit">SMS خوش‌آمد</button>

@@ -15,42 +15,135 @@ class HandoffController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $pending = DeviceHandoff::query()
+        $ticket = trim((string) $request->input('ticket_no', ''));
+        $serial = trim((string) $request->input('serial', ''));
+        $q = trim((string) $request->input('q', ''));
+        $status = (string) $request->input('status', 'pending');
+        if (! in_array($status, ['pending', 'all', 'accepted', 'rejected', 'in_hand'], true)) {
+            $status = 'pending';
+        }
+
+        $pendingQuery = DeviceHandoff::query()
             ->with(['reception.customer', 'fromUser', 'toTechnician'])
             ->where('status', DeviceHandoff::STATUS_PENDING)
-            ->where(function ($q) use ($user) {
-                $q->where('to_user_id', $user->id);
+            ->where(function ($qBuilder) use ($user) {
+                $qBuilder->where('to_user_id', $user->id);
                 if ($user->technician) {
-                    $q->orWhere('to_technician_id', $user->technician->id);
+                    $qBuilder->orWhere('to_technician_id', $user->technician->id);
                 }
                 if ($user->canAccess('receptions')) {
-                    // بازگشت به پذیرش (بدون گیرنده مشخص)
-                    $q->orWhere(function ($q2) {
+                    $qBuilder->orWhere(function ($q2) {
                         $q2->where('direction', DeviceHandoff::DIR_TO_FRONT)
                             ->whereNull('to_user_id');
                     });
-                    // ارجاع به تعمیرکار بدون حساب کاربری لینک‌شده — پذیرش می‌تواند تأیید نیابتی بزند
-                    $q->orWhere(function ($q2) {
+                    $qBuilder->orWhere(function ($q2) {
                         $q2->where('direction', DeviceHandoff::DIR_TO_BENCH)
                             ->whereNull('to_user_id');
                     });
                 }
-            })
-            ->latest('id')
-            ->get();
+            });
+
+        $this->applyHandoffSearch($pendingQuery, $ticket, $serial, $q);
+        $pending = $pendingQuery->latest('id')->limit(100)->get();
 
         $inHand = collect();
-        if ($user->technician) {
-            $inHand = Reception::query()
-                ->with(['customer', 'technician'])
+        if ($user->technician || $user->canAccess('receptions') || $user->canAccess('reports.custody')) {
+            $inHandQuery = Reception::query()
+                ->with(['customer', 'technician', 'custodyTechnician'])
                 ->where('custody', 'with_technician')
-                ->where('custody_technician_id', $user->technician->id)
-                ->whereNotIn('status', ['delivered', 'cancelled'])
-                ->latest('id')
-                ->get();
+                ->whereNotIn('status', ['delivered', 'cancelled']);
+
+            if ($user->technician && ! $user->canAccess('receptions') && ! $user->isAdmin()) {
+                $inHandQuery->where('custody_technician_id', $user->technician->id);
+            }
+
+            if ($ticket !== '') {
+                $inHandQuery->where('ticket_no', 'like', '%'.$ticket.'%');
+            }
+            if ($serial !== '') {
+                $inHandQuery->where('serial_number', 'like', '%'.$serial.'%');
+            }
+            if ($q !== '') {
+                $inHandQuery->where(function ($inner) use ($q) {
+                    $inner->where('ticket_no', 'like', '%'.$q.'%')
+                        ->orWhere('serial_number', 'like', '%'.$q.'%')
+                        ->orWhere('product_name', 'like', '%'.$q.'%')
+                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('phone', 'like', '%'.$q.'%'));
+                });
+            }
+
+            $inHand = $inHandQuery->latest('id')->limit(80)->get();
         }
 
-        return view('handoffs.index', compact('pending', 'inHand'));
+        $history = collect();
+        if (in_array($status, ['all', 'accepted', 'rejected'], true) || $ticket !== '' || $serial !== '' || $q !== '') {
+            $historyQuery = DeviceHandoff::query()
+                ->with(['reception.customer', 'fromUser', 'toTechnician'])
+                ->latest('id');
+
+            if ($status === 'accepted') {
+                $historyQuery->where('status', DeviceHandoff::STATUS_ACCEPTED);
+            } elseif ($status === 'rejected') {
+                $historyQuery->where('status', DeviceHandoff::STATUS_REJECTED);
+            } elseif ($status === 'pending') {
+                // keep empty when only searching pending; filled below if search terms
+            } else {
+                // all
+            }
+
+            $this->applyHandoffSearch($historyQuery, $ticket, $serial, $q);
+
+            if ($status === 'pending' && ($ticket !== '' || $serial !== '' || $q !== '')) {
+                $historyQuery->where('status', '!=', DeviceHandoff::STATUS_PENDING);
+            }
+
+            $history = $historyQuery->limit(60)->get();
+        }
+
+        $stats = [
+            'pending' => DeviceHandoff::query()->where('status', DeviceHandoff::STATUS_PENDING)->count(),
+            'accepted_today' => DeviceHandoff::query()
+                ->where('status', DeviceHandoff::STATUS_ACCEPTED)
+                ->whereDate('responded_at', now('Asia/Tehran')->toDateString())
+                ->count(),
+            'in_hand' => Reception::query()
+                ->where('custody', 'with_technician')
+                ->whereNotIn('status', ['delivered', 'cancelled'])
+                ->count(),
+            'rejected_today' => DeviceHandoff::query()
+                ->where('status', DeviceHandoff::STATUS_REJECTED)
+                ->whereDate('responded_at', now('Asia/Tehran')->toDateString())
+                ->count(),
+        ];
+
+        return view('handoffs.index', compact(
+            'pending', 'inHand', 'history', 'stats', 'ticket', 'serial', 'q', 'status'
+        ));
+    }
+
+    private function applyHandoffSearch($query, string $ticket, string $serial, string $q): void
+    {
+        if ($ticket !== '') {
+            $query->whereHas('reception', fn ($r) => $r->where('ticket_no', 'like', '%'.$ticket.'%'));
+        }
+        if ($serial !== '') {
+            $query->where(function ($inner) use ($serial) {
+                $inner->where('serial_snapshot', 'like', '%'.$serial.'%')
+                    ->orWhereHas('reception', fn ($r) => $r->where('serial_number', 'like', '%'.$serial.'%'));
+            });
+        }
+        if ($q !== '') {
+            $query->where(function ($inner) use ($q) {
+                $inner->where('serial_snapshot', 'like', '%'.$q.'%')
+                    ->orWhere('note', 'like', '%'.$q.'%')
+                    ->orWhereHas('reception', function ($r) use ($q) {
+                        $r->where('ticket_no', 'like', '%'.$q.'%')
+                            ->orWhere('serial_number', 'like', '%'.$q.'%')
+                            ->orWhere('product_name', 'like', '%'.$q.'%')
+                            ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('phone', 'like', '%'.$q.'%'));
+                    });
+            });
+        }
     }
 
     public function store(Request $request, Reception $reception, StaffNotifier $notifier): RedirectResponse
@@ -222,7 +315,6 @@ class HandoffController extends Controller
                 ])->save();
             }
         } elseif ($data['decision'] === DeviceHandoff::STATUS_REJECTED && $reception) {
-            // Rejected return → device stays with technician; rejected assign → stays at desk
             if ($handoff->direction === DeviceHandoff::DIR_TO_FRONT) {
                 $reception->forceFill(['custody' => 'with_technician'])->save();
             }

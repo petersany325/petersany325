@@ -1011,6 +1011,141 @@
         }
     }
 
+    function initLookupEditors() {
+        function setToggle(root, on) {
+            if (!root) return;
+            var cb = root.querySelector('[data-toggle-input]');
+            var btn = root.querySelector('[data-toggle-btn]');
+            var state = root.querySelector('.toggle-state');
+            if (cb) cb.checked = !!on;
+            if (btn) {
+                btn.classList.toggle('is-on', !!on);
+                btn.classList.toggle('is-off', !on);
+                btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+                if (state) state.textContent = on
+                    ? (btn.getAttribute('data-on-text') || 'روشن')
+                    : (btn.getAttribute('data-off-text') || 'خاموش');
+            }
+        }
+
+        document.querySelectorAll('[data-lookup-editor]').forEach(function (editor) {
+            var base = editor.getAttribute('data-base-url') || '';
+            var select = editor.querySelector('.lookup-select');
+            var createForm = editor.querySelector('.lookup-form-create');
+            var editForm = editor.querySelector('.lookup-form-edit');
+            var createActions = editor.querySelector('.lookup-actions-create');
+            if (!select || !createForm || !editForm) return;
+
+            function modeCreate() {
+                createForm.classList.remove('hidden');
+                editForm.classList.add('hidden');
+                if (createActions) createActions.classList.remove('hidden');
+                editForm.setAttribute('action', '#');
+                createForm.querySelectorAll('.lookup-name').forEach(function (i) { i.value = ''; });
+                createForm.querySelectorAll('.lookup-sort').forEach(function (i) { i.value = '0'; });
+                setToggle(createForm.querySelector('[data-toggle-field]'), true);
+            }
+
+            function modeEdit(opt) {
+                createForm.classList.add('hidden');
+                editForm.classList.remove('hidden');
+                if (createActions) createActions.classList.add('hidden');
+                var id = opt.value;
+                editForm.setAttribute('action', base.replace(/\/$/, '') + '/' + id);
+                editForm.querySelectorAll('.lookup-name').forEach(function (i) {
+                    i.value = opt.getAttribute('data-name') || '';
+                });
+                editForm.querySelectorAll('.lookup-sort').forEach(function (i) {
+                    i.value = opt.getAttribute('data-sort') || '0';
+                });
+                setToggle(editForm.querySelector('[data-toggle-field]'), opt.getAttribute('data-active') === '1');
+                var method = editForm.querySelector('.lookup-method');
+                if (method) method.value = 'PUT';
+            }
+
+            select.addEventListener('change', function () {
+                var opt = select.options[select.selectedIndex];
+                if (!opt || !opt.value) modeCreate();
+                else modeEdit(opt);
+            });
+
+            var delBtn = editForm.querySelector('.lookup-delete-btn');
+            if (delBtn) {
+                delBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var msg = delBtn.getAttribute('data-confirm') || 'حذف شود؟';
+                    if (!window.confirm(msg)) return;
+                    var method = editForm.querySelector('.lookup-method');
+                    if (method) method.value = 'DELETE';
+                    editForm.submit();
+                });
+            }
+            var saveBtn = editForm.querySelector('.lookup-save-btn');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function () {
+                    var method = editForm.querySelector('.lookup-method');
+                    if (method) method.value = 'PUT';
+                });
+            }
+        });
+
+        document.querySelectorAll('[data-simple-editor]').forEach(function (editor) {
+            var base = editor.getAttribute('data-base-url') || '';
+            var select = editor.querySelector('.simple-select');
+            var createForm = editor.querySelector('.simple-form-create');
+            var editForm = editor.querySelector('.simple-form-edit');
+            var createActions = editor.querySelector('.simple-actions-create');
+            if (!select || !createForm || !editForm) return;
+
+            function modeCreate() {
+                createForm.classList.remove('hidden');
+                editForm.classList.add('hidden');
+                if (createActions) createActions.classList.remove('hidden');
+                editForm.setAttribute('action', '#');
+                createForm.querySelectorAll('.simple-name').forEach(function (i) { i.value = ''; });
+                setToggle(createForm.querySelector('[data-toggle-field]'), true);
+            }
+
+            function modeEdit(opt) {
+                createForm.classList.add('hidden');
+                editForm.classList.remove('hidden');
+                if (createActions) createActions.classList.add('hidden');
+                editForm.setAttribute('action', base.replace(/\/$/, '') + '/' + opt.value);
+                editForm.querySelectorAll('.simple-name').forEach(function (i) {
+                    i.value = opt.getAttribute('data-name') || '';
+                });
+                setToggle(editForm.querySelector('[data-toggle-field]'), opt.getAttribute('data-active') !== '0');
+                var method = editForm.querySelector('.simple-method');
+                if (method) method.value = 'PUT';
+            }
+
+            select.addEventListener('change', function () {
+                var opt = select.options[select.selectedIndex];
+                if (!opt || !opt.value) modeCreate();
+                else modeEdit(opt);
+            });
+
+            var delBtn = editForm.querySelector('.simple-delete-btn');
+            if (delBtn) {
+                delBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var msg = delBtn.getAttribute('data-confirm') || 'حذف شود؟';
+                    if (!window.confirm(msg)) return;
+                    var method = editForm.querySelector('.simple-method');
+                    if (method) method.value = 'DELETE';
+                    editForm.submit();
+                });
+            }
+            var saveBtn = editForm.querySelector('.simple-save-btn');
+            if (saveBtn) {
+                saveBtn.addEventListener('click', function () {
+                    var method = editForm.querySelector('.simple-method');
+                    if (method) method.value = 'PUT';
+                });
+            }
+        });
+    }
+
     /* =========================================================
      * Boot
      * ========================================================= */
@@ -1024,5 +1159,6 @@
         initReceptionWizard();
         initStaffShell();
         initStaffLoginDeviceHint();
+        initLookupEditors();
     });
 })();

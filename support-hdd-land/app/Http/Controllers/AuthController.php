@@ -62,7 +62,7 @@ class AuthController extends Controller
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended(route($user->homeRoute()));
     }
 
     public function sendOtp(Request $request, NiazpardazSmsService $sms)
@@ -144,7 +144,7 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->intended(route($user->homeRoute()));
     }
 
     public function logout(Request $request)
