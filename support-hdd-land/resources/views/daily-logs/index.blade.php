@@ -20,7 +20,9 @@
         <div class="daybook-hero-actions">
             @if($canManage)
                 <a class="btn btn-secondary" href="{{ route('daily-logs.report') }}">گزارش همه</a>
-                <a class="btn btn-ghost" href="{{ route('daily-logs.settings') }}">تنظیمات</a>
+            @endif
+            @if(auth()->user()->canAccess('daily_logs.manage'))
+                <a class="btn btn-ghost" href="{{ route('daily-logs.settings') }}">تنظیمات (ادمین)</a>
             @endif
         </div>
     </section>

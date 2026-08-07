@@ -14,7 +14,12 @@
             <h2>کارتابل کارمندان</h2>
             <p class="lead">ورود با موبایل + تأیید SMS و دسترسی طبق وظیفه هر نفر</p>
         </div>
-        <a class="btn btn-primary" href="{{ route('employees.create') }}">کارمند جدید</a>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <a class="btn btn-primary" href="{{ route('employees.create') }}">کارمند جدید</a>
+            <a class="btn btn-secondary" href="{{ route('interns.create') }}">کارآموز جدید</a>
+            <a class="btn btn-ghost" href="{{ route('interns.index') }}">کارتابل کارآموز</a>
+            <a class="btn btn-ghost" href="{{ route('staff-sms.templates') }}">متن SMS</a>
+        </div>
     </div>
 
     <div class="emp-stat-row">

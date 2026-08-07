@@ -12,7 +12,9 @@
         </div>
         <div class="daybook-hero-actions">
             <a class="btn btn-secondary" href="{{ route('daily-logs.index') }}">ثبت امروز</a>
-            <a class="btn btn-ghost" href="{{ route('daily-logs.settings') }}">تنظیمات</a>
+            @if(auth()->user()->canAccess('daily_logs.manage'))
+                <a class="btn btn-ghost" href="{{ route('daily-logs.settings') }}">تنظیمات (ادمین)</a>
+            @endif
         </div>
     </section>
 

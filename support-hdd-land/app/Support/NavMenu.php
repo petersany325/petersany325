@@ -66,15 +66,14 @@ class NavMenu
                 'key' => 'daily_logs',
                 'label' => 'دفتر روز',
                 'permission' => 'daily_logs',
-                'route' => null,
-                'match' => 'daily-logs.*',
+                'route' => 'daily-logs.index',
+                'match' => 'daily-logs.index|daily-logs.report',
                 'mark' => 'ر',
                 'hint' => 'ثبت کار و رویداد روزانه',
                 'any_of' => ['daily_logs', 'daily_logs.manage'],
                 'children' => [
                     ['label' => 'ثبت امروز', 'route' => 'daily-logs.index', 'match' => 'daily-logs.index', 'hint' => 'رویدادهای روز جاری', 'mark' => 'ام', 'permission' => 'daily_logs'],
                     ['label' => 'گزارش همه', 'route' => 'daily-logs.report', 'match' => 'daily-logs.report', 'hint' => 'مرور کارمندان', 'mark' => 'گ', 'permission' => 'daily_logs.manage'],
-                    ['label' => 'تنظیمات دفتر', 'route' => 'daily-logs.settings', 'match' => 'daily-logs.settings', 'hint' => 'دسته و قوانین', 'mark' => 'ظ', 'permission' => 'daily_logs.manage'],
                 ],
             ],
             [
@@ -121,13 +120,16 @@ class NavMenu
                 'label' => 'کارمندان',
                 'permission' => null,
                 'route' => null,
-                'match' => 'employees.*|technicians.*',
+                'match' => 'employees.*|technicians.*|interns.*|staff-sms.*',
                 'mark' => 'ک',
-                'hint' => 'کارتابل، تخصص، کمیسیون',
+                'hint' => 'کارتابل، کارآموز، SMS',
                 'any_of' => ['employees', 'technicians'],
                 'children' => [
                     ['label' => 'کارتابل کارمند', 'route' => 'employees.index', 'match' => 'employees.index|employees.edit', 'hint' => 'لیست، وظیفه، دسترسی', 'mark' => 'ک', 'permission' => 'employees'],
                     ['label' => 'کارمند جدید', 'route' => 'employees.create', 'match' => 'employees.create', 'hint' => 'پذیرش / حسابدار / تعمیرکار…', 'mark' => '+', 'permission' => 'employees'],
+                    ['label' => 'کارتابل کارآموز', 'route' => 'interns.index', 'match' => 'interns.index|interns.edit', 'hint' => 'لیست و دوره کارآموزی', 'mark' => 'آ', 'permission' => 'employees', 'sep' => true],
+                    ['label' => 'کارآموز جدید', 'route' => 'interns.create', 'match' => 'interns.create', 'hint' => 'ثبت‌نام + SMS تأیید دوره', 'mark' => '+', 'permission' => 'employees'],
+                    ['label' => 'متن SMS خوش‌آمد', 'route' => 'staff-sms.templates', 'match' => 'staff-sms.*', 'hint' => 'کارمند و کارآموز', 'mark' => 'پ', 'permission' => 'employees'],
                     ['label' => 'تخصص و کمیسیون تعمیرکار', 'route' => 'technicians.index', 'match' => 'technicians.index|technicians.edit', 'hint' => 'هارد، بازیابی، قیمت/٪', 'mark' => 'ت', 'permission' => 'technicians', 'sep' => true],
                     ['label' => 'تعمیرکار جدید (قیمت)', 'route' => 'technicians.create', 'match' => 'technicians.create', 'hint' => 'تخصص + کمیسیون', 'mark' => '+', 'permission' => 'technicians'],
                 ],
@@ -206,12 +208,13 @@ class NavMenu
                 'label' => 'تنظیمات',
                 'permission' => null,
                 'route' => null,
-                'match' => 'settings.*|profile.*',
+                'match' => 'settings.*|profile.*|daily-logs.settings',
                 'mark' => 'ظ',
                 'hint' => 'سیستم و منوها',
-                'any_of' => ['settings', 'profile'],
+                'any_of' => ['settings', 'profile', 'daily_logs.manage'],
                 'children' => [
                     ['label' => 'تنظیمات سیستم', 'route' => 'settings.index', 'match' => 'settings.*', 'hint' => 'منو، فاکتور، SMS', 'mark' => 'ظ', 'permission' => 'settings'],
+                    ['label' => 'تنظیمات دفتر روز', 'route' => 'daily-logs.settings', 'match' => 'daily-logs.settings', 'hint' => 'دسته و قوانین — فقط ادمین', 'mark' => 'ر', 'permission' => 'daily_logs.manage'],
                     ['label' => 'پروفایل من', 'route' => 'profile.edit', 'match' => 'profile.*', 'hint' => 'نام و رمز', 'mark' => 'پ', 'permission' => 'profile'],
                 ],
             ],
@@ -359,7 +362,7 @@ class NavMenu
                 'match' => $g['match'],
                 'tone' => self::tone($key),
             ];
-            if (count($tabs) >= 4) {
+            if (count($tabs) >= 3) {
                 break;
             }
         }

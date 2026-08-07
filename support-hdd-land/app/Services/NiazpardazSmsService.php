@@ -35,18 +35,7 @@ class NiazpardazSmsService
             return ['ok' => false, 'message' => 'شماره موبایل کارمند معتبر نیست.'];
         }
 
-        $shop = trim((string) AppSetting::getValue('invoice_shop_name', 'سرزمین هارد')) ?: 'سرزمین هارد';
-        $role = $user->roleLabel();
-        $loginUrl = url('/login?otp=1');
-        $name = trim((string) $user->name) ?: 'همکار';
-
-        $message = "سلام {$name} عزیز\n"
-            ."شما کارمند {$shop} هستید.\n"
-            ."نقش: {$role}\n"
-            ."برای ورود به کارتابل روی لینک زیر بزنید:\n"
-            ."{$loginUrl}\n"
-            .'ورود با پیامک فعال است.';
-
+        $message = \App\Support\StaffSmsTemplates::renderEmployee($user);
         $result = $this->send($phone, $message);
         $result['text'] = $message;
 

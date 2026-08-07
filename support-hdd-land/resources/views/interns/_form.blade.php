@@ -1,0 +1,76 @@
+@php $intern = $intern ?? null; @endphp
+<section class="emp-section">
+    <div class="emp-section-head">
+        <h3>اطلاعات کارآموز</h3>
+        <p>نام و موبایل برای پیامک تأیید دوره الزامی است.</p>
+    </div>
+    <div class="accept-row accept-row-3">
+        <div>
+            <label>نام کامل</label>
+            <input type="text" name="name" value="{{ old('name', $intern->name ?? '') }}" required>
+            @error('name')<div class="alert alert-error" style="margin-top:4px;padding:4px 6px;">{{ $message }}</div>@enderror
+        </div>
+        <div>
+            <label>موبایل</label>
+            <input type="text" name="phone" value="{{ old('phone', $intern->phone ?? '') }}" required placeholder="09xxxxxxxxx" dir="ltr" style="text-align:left;" inputmode="tel">
+            @error('phone')<div class="alert alert-error" style="margin-top:4px;padding:4px 6px;">{{ $message }}</div>@enderror
+        </div>
+        <div>
+            <label>ایمیل (اختیاری)</label>
+            <input type="email" name="email" value="{{ old('email', $intern->email ?? '') }}">
+        </div>
+    </div>
+    <div class="accept-row accept-row-3" style="margin-top:6px;">
+        <div>
+            <label>کد ملی (اختیاری)</label>
+            <input type="text" name="national_code" value="{{ old('national_code', $intern->national_code ?? '') }}" dir="ltr" style="text-align:left;">
+        </div>
+        <div>
+            <label>بخش / واحد</label>
+            <input type="text" name="department" value="{{ old('department', $intern->department ?? '') }}" placeholder="مثلاً پذیرش / کارگاه">
+        </div>
+        <div>
+            @include('partials.toggle', [
+                'name' => 'is_active',
+                'label' => 'وضعیت فعال',
+                'checked' => (bool) old('is_active', $intern->is_active ?? true),
+            ])
+        </div>
+    </div>
+</section>
+
+<section class="emp-section">
+    <div class="emp-section-head">
+        <h3>بازه کارآموزی</h3>
+        <p>همین تاریخ‌ها در پیامک تأیید برای کارآموز ارسال می‌شود.</p>
+    </div>
+    <div class="accept-row accept-row-2">
+        <div>
+            <label>از تاریخ</label>
+            <input type="date" name="start_date" value="{{ old('start_date', optional($intern->start_date ?? null)->format('Y-m-d') ?: now('Asia/Tehran')->toDateString()) }}" required>
+            @error('start_date')<div class="alert alert-error" style="margin-top:4px;padding:4px 6px;">{{ $message }}</div>@enderror
+        </div>
+        <div>
+            <label>تا تاریخ</label>
+            <input type="date" name="end_date" value="{{ old('end_date', optional($intern->end_date ?? null)->format('Y-m-d') ?: now('Asia/Tehran')->addMonth()->toDateString()) }}" required>
+            @error('end_date')<div class="alert alert-error" style="margin-top:4px;padding:4px 6px;">{{ $message }}</div>@enderror
+        </div>
+    </div>
+    <div style="margin-top:6px;">
+        <label>یادداشت</label>
+        <textarea name="notes" rows="2" placeholder="توضیحات دوره…">{{ old('notes', $intern->notes ?? '') }}</textarea>
+    </div>
+</section>
+
+@unless($intern)
+    <section class="emp-section">
+        @include('partials.toggle', [
+            'name' => 'send_welcome_sms',
+            'label' => 'ارسال پیامک تأیید کارآموزی',
+            'checked' => (bool) old('send_welcome_sms', true),
+            'on' => 'ارسال',
+            'off' => 'بدون SMS',
+        ])
+        <p class="hint" style="margin:6px 0 0;">متن SMS را از منوی «متن SMS خوش‌آمد» می‌توانید تغییر دهید.</p>
+    </section>
+@endunless

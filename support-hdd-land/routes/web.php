@@ -17,7 +17,9 @@ use App\Http\Controllers\SystemToolsController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
 use App\Http\Controllers\HandoffController;
+use App\Http\Controllers\InternController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\StaffSmsTemplateController;
 use App\Http\Controllers\Portal\AuthController as PortalAuthController;
 use App\Http\Controllers\Portal\CartableController as PortalCartableController;
 use App\Http\Controllers\Portal\MessageController as PortalMessageController;
@@ -162,6 +164,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware(EnsurePermission::class.':employees')->group(function () {
         Route::resource('employees', EmployeeController::class)->except(['show']);
         Route::post('employees/{employee}/welcome-sms', [EmployeeController::class, 'sendWelcome'])->name('employees.welcome-sms');
+        Route::resource('interns', InternController::class)->except(['show']);
+        Route::post('interns/{intern}/welcome-sms', [InternController::class, 'sendWelcomeSms'])->name('interns.welcome-sms');
+        Route::get('staff-sms/templates', [StaffSmsTemplateController::class, 'edit'])->name('staff-sms.templates');
+        Route::post('staff-sms/templates', [StaffSmsTemplateController::class, 'update'])->name('staff-sms.templates.save');
     });
 
     Route::post('reports/settings', [ReportController::class, 'saveSettings'])->name('reports.settings');
