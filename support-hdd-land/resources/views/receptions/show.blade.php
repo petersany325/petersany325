@@ -1,0 +1,387 @@
+@extends('layouts.app')
+
+@section('title', $reception->ticket_no.' | سرزمین هارد')
+@section('page_title', 'جزئیات قبض '.$reception->ticket_no)
+@section('window_title', 'قبض '.$reception->ticket_no.' — تغییر وضعیت و پیامک')
+
+@section('content')
+<div class="split-2">
+    <div class="stack">
+        <div class="panel">
+            <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                <div>
+                    <h2>{{ $reception->ticket_no }}</h2>
+                    <p class="lead">{{ $reception->product_name }} — {{ $reception->brand }} {{ $reception->model }}</p>
+                </div>
+                <div>
+                    <span class="badge badge-{{ $reception->status }}">{{ $reception->statusLabel() }}</span>
+                    <a class="btn btn-secondary" href="{{ route('receptions.print', $reception) }}" target="_blank">چاپ قبض</a>
+                </div>
+            </div>
+            <div class="form-grid">
+                <div><span class="muted">مشتری</span><div>{{ $reception->customer->name }}</div></div>
+                <div><span class="muted">تلفن</span><div>{{ $reception->customer->phone }}</div></div>
+                <div><span class="muted">شماره قبض</span><div>{{ $reception->receipt_no ?: '—' }}</div></div>
+                <div><span class="muted">نوع پذیرش</span><div>{{ $reception->admission_type ?: '—' }}</div></div>
+                <div><span class="muted">سریال</span><div>{{ $reception->serial_number ?: '—' }}</div></div>
+                <div><span class="muted">مدل</span><div>{{ $reception->brand }} {{ $reception->model }}</div></div>
+                <div><span class="muted">نوع خدمات</span><div>{{ $reception->service_type ?: '—' }} / {{ $reception->repair_type ?: '—' }}</div></div>
+                <div><span class="muted">ظرفیت هارد</span><div>{{ $reception->hdd_capacity ?: '—' }}</div></div>
+                <div><span class="muted">گارانتی</span><div>{{ $reception->warranty_type ?: '—' }}</div></div>
+                <div><span class="muted">تعمیرکار</span><div>{{ $reception->technician?->name ?: '—' }}</div></div>
+                <div><span class="muted">پذیرش</span><div>{{ jalali_like($reception->received_at) }}</div></div>
+                <div class="full"><span class="muted">عیب اظهار مشتری</span><div>{{ $reception->reported_fault ?: '—' }}</div></div>
+                <div class="full"><span class="muted">لوازم همراه</span><div>{{ $reception->accessories ?: '—' }}</div></div>
+                <div class="full"><span class="muted">وضعیت ظاهری</span><div>{{ $reception->appearance_notes ?: '—' }}</div></div>
+                @if($reception->photo_path)
+                    <div class="full"><span class="muted">عکس</span><div><img src="{{ asset('storage/'.$reception->photo_path) }}" alt="photo" style="max-width:280px;border-radius:10px;"></div></div>
+                @endif
+            </div>
+        </div>
+
+        <div class="panel status-sms-panel" id="status-sms-panel"
+             data-previews='@json($smsPreviews)'
+             data-current="{{ $reception->status }}"
+             data-master="{{ $smsMasterEnabled ? '1' : '0' }}">
+            <div class="status-sms-head">
+                <div>
+                    <h3>تغییر وضعیت + پیامک مشتری</h3>
+                    <p class="lead" style="margin:0;">وضعیت را انتخاب کنید، متن پیامک را ببینید، اجازه ارسال را روشن/خاموش کنید، سپس تایید و ثبت بزنید.</p>
+                </div>
+                @if(!$smsMasterEnabled)
+                    <span class="pill pill-off">سوییچ اصلی پیامک خاموش است</span>
+                @endif
+            </div>
+
+            <form method="POST" action="{{ route('receptions.status', $reception) }}" id="status-sms-form">
+                @csrf
+                <input type="hidden" name="status" id="selected-status" value="{{ $reception->status }}">
+
+                <div class="status-chips" role="listbox" aria-label="وضعیت قبض">
+                    @foreach($smsRules as $rule)
+                        <button type="button"
+                                class="status-chip color-{{ $rule->color }} {{ $reception->status === $rule->status_key ? 'is-active' : '' }}"
+                                data-status-chip="{{ $rule->status_key }}"
+                                data-auto-send="{{ $rule->auto_send ? '1' : '0' }}">
+                            <span class="status-chip-title">{{ $rule->title }}</span>
+                            <span class="status-chip-meta">{{ $rule->auto_send ? 'پیامک مجاز' : 'بدون پیامک پیش‌فرض' }}</span>
+                        </button>
+                    @endforeach
+                    @foreach($statuses as $key => $label)
+                        @if(!$smsRules->contains(fn ($r) => $r->status_key === $key))
+                            <button type="button"
+                                    class="status-chip color-slate {{ $reception->status === $key ? 'is-active' : '' }}"
+                                    data-status-chip="{{ $key }}"
+                                    data-auto-send="0">
+                                <span class="status-chip-title">{{ $label }}</span>
+                                <span class="status-chip-meta">بدون قالب پیامک</span>
+                            </button>
+                        @endif
+                    @endforeach
+                </div>
+
+                <div class="sms-preview-box">
+                    <div class="sms-preview-top">
+                        <strong>پیش‌نمایش پیامک</strong>
+                        <span class="muted" id="sms-preview-title">—</span>
+                    </div>
+                    <pre id="sms-preview-body" class="sms-preview-body">وضعیتی را انتخاب کنید…</pre>
+                </div>
+
+                <div class="accept-row accept-row-3" style="margin-top:8px;">
+                    <div>
+                        @include('partials.toggle', [
+                            'name' => 'send_sms',
+                            'label' => 'ارسال پیامک به مشتری پس از تایید',
+                            'checked' => false,
+                            'on' => 'برود',
+                            'off' => 'نرود',
+                            'id' => 'send_sms_toggle',
+                        ])
+                    </div>
+                    <div>
+                        @include('partials.toggle', [
+                            'name' => 'send_price_sms',
+                            'label' => 'پیامک مبلغ (سریال + قبض + قیمت)',
+                            'checked' => false,
+                            'on' => 'برود',
+                            'off' => 'نرود',
+                        ])
+                    </div>
+                    <div>
+                        @include('partials.toggle', [
+                            'name' => 'force_without_cost',
+                            'label' => 'تحویل حتی بدون هزینه مشخص',
+                            'checked' => false,
+                            'on' => 'اجازه',
+                            'off' => 'خیر',
+                        ])
+                    </div>
+                    <div>
+                        <label>تعمیرکار</label>
+                        <select name="technician_id">
+                            <option value="">—</option>
+                            @foreach($technicians as $tech)
+                                <option value="{{ $tech->id }}" @selected($reception->technician_id == $tech->id)>{{ $tech->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>نوع ایراد نهایی</label>
+                        <select name="fault_type_id">
+                            <option value="">—</option>
+                            @foreach($faultTypes as $fault)
+                                <option value="{{ $fault->id }}" @selected($reception->fault_type_id == $fault->id)>{{ $fault->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>اجرت تعمیر (تومان)</label>
+                        <input type="number" name="labor_cost" min="0" value="{{ $reception->labor_cost }}">
+                        @if(!$reception->hasCostSet())
+                            <div class="muted" style="color:#8a5a12;font-size:11px;">هزینه هنوز مشخص نشده — قبل از تحویل ثبت کنید.</div>
+                        @else
+                            <div class="muted" style="font-size:11px;">مبلغ کل: {{ number_format($reception->total_amount) }} تومان</div>
+                        @endif
+                    </div>
+                    <div>
+                        <label>تخفیف</label>
+                        <input type="number" name="discount" min="0" value="{{ $reception->discount }}">
+                    </div>
+                    <div class="full">
+                        <label>ایراد نهایی / شرح کار</label>
+                        <textarea name="final_fault">{{ $reception->final_fault }}</textarea>
+                    </div>
+                    <div class="full">
+                        <label>یادداشت تعمیرکار</label>
+                        <textarea name="technician_notes">{{ $reception->technician_notes }}</textarea>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" type="submit">تایید و ثبت وضعیت</button>
+                    @if(auth()->user()->canAccess('sms.statuses'))
+                        <a class="btn btn-ghost" href="{{ route('sms-statuses.index') }}">تعریف تغییر وضعیت / پیامک</a>
+                    @endif
+                </div>
+            </form>
+
+            @if($smsLogs->count())
+                <div class="sms-ticket-logs">
+                    <h4>پیامک‌های این قبض</h4>
+                    <ul>
+                        @foreach($smsLogs as $log)
+                            <li>
+                                <span class="{{ $log->ok ? 'pill pill-ok' : 'pill pill-off' }}">{{ $log->ok ? 'موفق' : 'ناموفق' }}</span>
+                                <span class="muted">{{ $log->created_at?->format('Y/m/d H:i') }}</span>
+                                — {{ $log->rule?->title ?: $log->status_key }}
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+        </div>
+
+        <div class="panel">
+            <h3>قطعات خرج‌شده</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                    <tr><th>قطعه</th><th>تعداد</th><th>فی</th><th>جمع</th><th>تاریخ</th></tr>
+                    </thead>
+                    <tbody>
+                    @forelse($reception->parts as $part)
+                        <tr>
+                            <td>{{ $part->part_name }}</td>
+                            <td>{{ $part->quantity }}</td>
+                            <td>{{ toman($part->unit_price) }}</td>
+                            <td>{{ toman($part->total_price) }}</td>
+                            <td>{{ optional($part->used_at)->format('Y/m/d') }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5">قطعه‌ای ثبت نشده.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+            <form method="POST" action="{{ route('receptions.parts', $reception) }}" style="margin-top:1rem;">
+                @csrf
+                <div class="form-grid">
+                    <div>
+                        <label>از انبار</label>
+                        <select name="part_id">
+                            <option value="">— قطعه آزاد —</option>
+                            @foreach($parts as $part)
+                                <option value="{{ $part->id }}">{{ $part->name }} (موجودی: {{ $part->stock }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>نام قطعه آزاد</label>
+                        <input type="text" name="part_name">
+                    </div>
+                    <div>
+                        <label>تعداد</label>
+                        <input type="number" name="quantity" min="1" value="1" required>
+                    </div>
+                    <div>
+                        <label>فی (تومان)</label>
+                        <input type="number" name="unit_price" min="0" value="0">
+                    </div>
+                    <div>
+                        <label>تاریخ مصرف</label>
+                        <input type="date" name="used_at" value="{{ now()->toDateString() }}">
+                    </div>
+                </div>
+                <div style="margin-top:8px;">
+                    @include('partials.toggle', [
+                        'name' => 'send_price_sms',
+                        'label' => 'پیامک مبلغ به مشتری (سریال + قبض + قیمت)',
+                        'checked' => true,
+                        'on' => 'برود',
+                        'off' => 'نرود',
+                    ])
+                </div>
+                <div class="actions">
+                    <button class="btn btn-secondary" type="submit">افزودن قطعه</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="stack">
+        <div class="panel">
+            <h3>خلاصه مالی</h3>
+            <div class="form-grid" style="grid-template-columns:1fr;">
+                <div><span class="muted">بیعانه</span><div>{{ toman($reception->deposit) }}</div></div>
+                <div><span class="muted">اجرت</span><div>{{ toman($reception->labor_cost) }}</div></div>
+                <div><span class="muted">قطعات</span><div>{{ toman($reception->parts_cost) }}</div></div>
+                <div><span class="muted">تخفیف</span><div>{{ toman($reception->discount) }}</div></div>
+                <div><span class="muted">جمع کل</span><div style="font-size:1.2rem;font-weight:700;">{{ toman($reception->total_amount) }}</div></div>
+                <div><span class="muted">پرداخت‌شده</span><div>{{ toman($reception->paid_amount) }}</div></div>
+                <div><span class="muted">مانده</span><div style="font-weight:700;">{{ toman($reception->remainingAmount()) }}</div></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>ثبت پرداخت / تحویل</h3>
+            @if(\App\Support\PaymentGateways::showOnReception())
+                @include('partials.payment-links', ['payTitle' => 'لینک بانک‌ها'])
+            @endif
+            @if(\App\Support\PaymentGateways::zarinpal()['configured'] && $reception->remainingAmount() >= 1000)
+                <form method="POST" action="{{ route('receptions.zarinpal', $reception) }}" style="margin-bottom:10px;">
+                    @csrf
+                    <button class="btn btn-primary" type="submit" style="width:100%;">
+                        پرداخت زرین‌پال — {{ number_format($reception->remainingAmount()) }} تومان
+                    </button>
+                </form>
+            @endif
+            <form method="POST" action="{{ route('receptions.payments', $reception) }}">
+                @csrf
+                <div class="form-grid" style="grid-template-columns:1fr;">
+                    <div>
+                        <label>نوع</label>
+                        <select name="type">
+                            @foreach($paymentTypes as $key => $label)
+                                <option value="{{ $key }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>روش</label>
+                        <select name="method">
+                            @foreach($paymentMethods as $key => $label)
+                                <option value="{{ $key }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>مبلغ</label>
+                        <input type="number" name="amount" min="1" value="{{ $reception->remainingAmount() ?: 0 }}" required>
+                    </div>
+                    <div>
+                        <label>توضیح</label>
+                        <input type="text" name="note">
+                    </div>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-primary" type="submit">ثبت پرداخت</button>
+                </div>
+            </form>
+            <div class="table-wrap" style="margin-top:1rem;">
+                <table style="min-width:0;">
+                    <thead><tr><th>نوع</th><th>مبلغ</th><th>زمان</th></tr></thead>
+                    <tbody>
+                    @forelse($reception->payments as $payment)
+                        <tr>
+                            <td>{{ $payment->typeLabel() }} / {{ $payment->methodLabel() }}</td>
+                            <td>{{ toman($payment->amount) }}</td>
+                            <td>{{ jalali_like($payment->paid_at) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="3">پرداختی نیست.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+@push('scripts')
+<script>
+(function () {
+    var panel = document.getElementById('status-sms-panel');
+    if (!panel) return;
+    var previews = {};
+    try { previews = JSON.parse(panel.getAttribute('data-previews') || '{}'); } catch (e) {}
+    var masterOn = panel.getAttribute('data-master') === '1';
+    var selected = document.getElementById('selected-status');
+    var titleEl = document.getElementById('sms-preview-title');
+    var bodyEl = document.getElementById('sms-preview-body');
+    var toggleField = panel.querySelector('[data-toggle-field]');
+
+    function setSendSms(on) {
+        if (!toggleField || !window) return;
+        var input = toggleField.querySelector('[data-toggle-input]');
+        var btn = toggleField.querySelector('[data-toggle-btn]');
+        if (!input || !btn) return;
+        input.checked = !!on;
+        btn.classList.toggle('is-on', !!on);
+        btn.classList.toggle('is-off', !on);
+        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        var state = btn.querySelector('.toggle-state');
+        if (state) state.textContent = on ? (btn.getAttribute('data-on-text') || 'برود') : (btn.getAttribute('data-off-text') || 'نرود');
+    }
+
+    function applyStatus(key, autoDefault) {
+        selected.value = key;
+        panel.querySelectorAll('[data-status-chip]').forEach(function (chip) {
+            chip.classList.toggle('is-active', chip.getAttribute('data-status-chip') === key);
+        });
+        var preview = previews[key];
+        if (preview) {
+            titleEl.textContent = preview.title || key;
+            bodyEl.textContent = preview.message || '—';
+            setSendSms(masterOn && !!preview.auto_send);
+        } else {
+            titleEl.textContent = key;
+            bodyEl.textContent = 'برای این وضعیت قالب پیامک تعریف نشده است. از منوی «تعریف تغییر وضعیت / پیامک» اضافه کنید.';
+            setSendSms(false);
+        }
+        if (typeof autoDefault === 'boolean') {
+            setSendSms(masterOn && autoDefault);
+        }
+    }
+
+    panel.querySelectorAll('[data-status-chip]').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            applyStatus(chip.getAttribute('data-status-chip'), chip.getAttribute('data-auto-send') === '1');
+        });
+    });
+
+    applyStatus(panel.getAttribute('data-current') || selected.value);
+})();
+</script>
+@endpush
