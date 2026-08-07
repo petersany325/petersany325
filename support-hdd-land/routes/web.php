@@ -141,6 +141,7 @@ Route::middleware('auth')->group(function () {
         Route::get('handoffs', [HandoffController::class, 'index'])->name('handoffs.index');
         Route::post('handoffs/{handoff}/respond', [HandoffController::class, 'respond'])->name('handoffs.respond');
         Route::post('receptions/{reception}/handoffs/return', [HandoffController::class, 'store'])->name('receptions.handoffs.return');
+        Route::post('receptions/{reception}/work-report', [HandoffController::class, 'storeWorkReport'])->name('receptions.work-report');
     });
 
     Route::middleware('auth')->prefix('intern')->name('intern.')->group(function () {
