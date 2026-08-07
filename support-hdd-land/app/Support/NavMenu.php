@@ -71,8 +71,8 @@ class NavMenu
                 'mark' => 'ش',
                 'hint' => 'فهرست و پرونده مشتری',
                 'children' => [
-                    ['label' => 'فهرست مشتریان', 'route' => 'customers.index', 'match' => 'customers.index|customers.show', 'hint' => 'جستجو و مشاهده', 'mark' => 'ف'],
-                    ['label' => 'مشتری جدید', 'route' => 'customers.create', 'match' => 'customers.create', 'hint' => 'ثبت سریع', 'mark' => '+'],
+                    ['label' => 'فهرست مشتریان', 'route' => 'customers.index', 'match' => 'customers.index|customers.show|customers.edit', 'hint' => 'جستجو، ویرایش، حذف', 'mark' => 'ف'],
+                    ['label' => 'مشتری جدید', 'route' => 'customers.create', 'match' => 'customers.create', 'hint' => 'نام و موبایل یکتا', 'mark' => '+'],
                 ],
             ],
             [

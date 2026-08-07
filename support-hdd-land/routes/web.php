@@ -83,7 +83,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware(EnsurePermission::class.':customers')->group(function () {
-        Route::resource('customers', CustomerController::class)->except(['destroy']);
+        Route::resource('customers', CustomerController::class);
     });
 
     Route::middleware(EnsurePermission::class.':receptions')->group(function () {

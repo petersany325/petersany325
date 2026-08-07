@@ -77,7 +77,13 @@ class NiazpardazSmsService
             ]);
 
             if ($response->successful()) {
-                return ['ok' => true, 'message' => 'پیامک با موفقیت ارسال شد.', 'provider' => 'panel-post', 'raw' => $response->body()];
+                $body = trim((string) $response->body());
+                // Some panel endpoints return HTTP 200 with numeric error codes
+                if ($body !== '' && preg_match('/^-\d+$/', $body)) {
+                    Log::warning('Niazpardaz panel post error code', ['body' => $body]);
+                } else {
+                    return ['ok' => true, 'message' => 'پیامک با موفقیت ارسال شد.', 'provider' => 'panel-post', 'raw' => $body];
+                }
             }
 
             $get = Http::timeout(20)->get('https://panel.niazpardaz-sms.com/SMSInOutBox/SendSms', [
@@ -89,7 +95,12 @@ class NiazpardazSmsService
             ]);
 
             if ($get->successful()) {
-                return ['ok' => true, 'message' => 'پیامک با موفقیت ارسال شد.', 'provider' => 'panel-get', 'raw' => $get->body()];
+                $body = trim((string) $get->body());
+                if ($body !== '' && preg_match('/^-\d+$/', $body)) {
+                    Log::warning('Niazpardaz panel get error code', ['body' => $body]);
+                } else {
+                    return ['ok' => true, 'message' => 'پیامک با موفقیت ارسال شد.', 'provider' => 'panel-get', 'raw' => $body];
+                }
             }
 
             Log::warning('Niazpardaz panel send failed', [

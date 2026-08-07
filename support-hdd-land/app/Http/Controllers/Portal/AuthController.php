@@ -43,13 +43,18 @@ class AuthController extends Controller
 
         $phone = User::normalizePhone($data['phone']);
         if (! $phone || strlen($phone) < 10) {
-            return back()->withErrors(['phone' => 'شماره موبایل معتبر نیست.'])->withInput();
+            return back()->withErrors(['phone' => 'شماره موبایل معتبر نیست. ارقام را انگلیسی وارد کنید یا دوباره تلاش کنید.'])->withInput();
         }
 
-        $customer = Customer::query()->where('phone', $phone)->first();
+        $customer = Customer::findByPhone($phone);
         if (! $customer) {
-            // also try without leading zero variants already normalized
             return back()->withErrors(['phone' => 'این شماره به‌عنوان مشتری ثبت نشده است. با پذیرش تماس بگیرید.'])->withInput();
+        }
+
+        // Always store canonical 09xxxxxxxxx on the OTP + prefer fixing customer phone
+        $phone = User::normalizePhone($customer->phone) ?: $phone;
+        if ($customer->phone !== $phone) {
+            $customer->forceFill(['phone' => $phone])->save();
         }
 
         $code = (string) random_int(100000, 999999);
@@ -88,6 +93,14 @@ class AuthController extends Controller
         ]);
 
         $phone = User::normalizePhone($data['phone']);
+        $digitMap = [
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+        ];
+        $code = preg_replace('/\D+/', '', strtr((string) $data['code'], $digitMap)) ?? '';
+
         $otp = LoginOtp::query()->where('phone', $phone)->latest('id')->first();
 
         if (! $otp || $otp->isExpired()) {
@@ -98,12 +111,12 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['code' => 'تعداد تلاش بیش از حد مجاز است.']);
         }
 
-        if (! hash_equals($otp->code, trim($data['code']))) {
+        if ($code === '' || ! hash_equals($otp->code, $code)) {
             $otp->increment('attempts');
             throw ValidationException::withMessages(['code' => 'کد وارد شده نادرست است.']);
         }
 
-        $customer = Customer::query()->where('phone', $phone)->first();
+        $customer = Customer::findByPhone($phone);
         if (! $customer) {
             throw ValidationException::withMessages(['phone' => 'مشتری یافت نشد.']);
         }
