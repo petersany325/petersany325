@@ -22,14 +22,17 @@
             <div>
                 <label>نام کامل</label>
                 <input type="text" name="name" value="{{ old('name', $employee->name ?? '') }}" required>
+                @error('name')<div class="alert alert-error" style="margin-top:4px;padding:4px 6px;">{{ $message }}</div>@enderror
             </div>
             <div>
                 <label>موبایل (ورود SMS)</label>
-                <input type="text" name="phone" value="{{ old('phone', $employee->phone ?? '') }}" required placeholder="09xxxxxxxxx" dir="ltr" style="text-align:left;">
+                <input type="text" name="phone" value="{{ old('phone', $employee->phone ?? '') }}" required placeholder="09xxxxxxxxx" dir="ltr" style="text-align:left;" inputmode="tel">
+                @error('phone')<div class="alert alert-error" style="margin-top:4px;padding:4px 6px;">{{ $message }}</div>@enderror
             </div>
             <div>
                 <label>ایمیل (اختیاری)</label>
                 <input type="email" name="email" value="{{ old('email', $employee->email ?? '') }}">
+                @error('email')<div class="alert alert-error" style="margin-top:4px;padding:4px 6px;">{{ $message }}</div>@enderror
             </div>
         </div>
     </section>

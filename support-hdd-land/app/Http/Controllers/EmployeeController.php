@@ -192,16 +192,61 @@ class EmployeeController extends Controller
 
     private function validated(Request $request, ?User $employee = null): array
     {
+        $phone = User::normalizePhone((string) $request->input('phone', ''));
+        $email = trim((string) $request->input('email', ''));
+        $request->merge([
+            'phone' => $phone,
+            'email' => $email !== '' ? $email : null,
+        ]);
+
+        if ($phone) {
+            $dupPhone = User::query()
+                ->where('phone', $phone)
+                ->when($employee, fn ($q) => $q->where('id', '!=', $employee->id))
+                ->first();
+            if ($dupPhone) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'phone' => "این موبایل قبلاً برای «{$dupPhone->name}» ثبت شده است. همان کارمند را ویرایش کنید یا شماره دیگری بزنید.",
+                ]);
+            }
+        }
+
+        if ($email !== '') {
+            $dupEmail = User::query()
+                ->where('email', $email)
+                ->when($employee, fn ($q) => $q->where('id', '!=', $employee->id))
+                ->first();
+            if ($dupEmail) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'email' => "این ایمیل قبلاً برای «{$dupEmail->name}» ثبت شده است.",
+                ]);
+            }
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
-            'email' => ['nullable', 'email', Rule::unique('users', 'email')->ignore($employee?->id)],
-            'phone' => ['required', 'string', 'max:20', Rule::unique('users', 'phone')->ignore($employee?->id)],
+            'email' => ['nullable', 'email', 'max:120'],
+            'phone' => ['required', 'string', 'min:10', 'max:20'],
             'role' => ['required', Rule::in(['admin', 'receptionist', 'technician', 'accountant', 'employee'])],
-            'password' => [$employee ? 'nullable' : 'nullable', 'string', 'min:6'],
+            'password' => ['nullable', 'string', 'min:6'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', Rule::in(array_keys(Permissions::ALL))],
             'specialty' => ['nullable', 'string', 'max:120'],
             'commission_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+        ], [
+            'name.required' => 'نام کامل الزامی است.',
+            'email.email' => 'ایمیل معتبر نیست.',
+            'phone.required' => 'شماره موبایل الزامی است.',
+            'phone.min' => 'شماره موبایل معتبر نیست.',
+            'role.required' => 'وظیفه / نقش را انتخاب کنید.',
+            'role.in' => 'نقش انتخاب‌شده معتبر نیست.',
+            'password.min' => 'رمز عبور حداقل ۶ کاراکتر باشد.',
+        ], [
+            'name' => 'نام کامل',
+            'email' => 'ایمیل',
+            'phone' => 'موبایل',
+            'role' => 'وظیفه',
+            'password' => 'رمز عبور',
         ]);
 
         return $data;
