@@ -44,7 +44,7 @@
             <div class="p-part-row">
                 <div>
                     <strong>{{ $log->ok ? 'ارسال موفق' : 'ارسال ناموفق' }}</strong>
-                    <small>{{ jalali_like($log->created_at?) }}</small>
+                    <small>{{ jalali_like($log->created_at) }}</small>
                 </div>
                 <span>{{ $log->ok ? '✓' : '!' }}</span>
             </div>

@@ -103,7 +103,7 @@
                         <tbody>
                         @foreach($reception->handoffs as $h)
                             <tr>
-                                <td>{{ jalali_like($h->created_at?) }}</td>
+                                <td>{{ jalali_like($h->created_at) }}</td>
                                 <td>{{ $h->directionLabel() }}</td>
                                 <td>{{ $h->fromUser?->name }}</td>
                                 <td>{{ $h->toTechnician?->name ?: ($h->toUser?->name ?: 'پذیرش') }}</td>

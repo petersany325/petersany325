@@ -77,7 +77,7 @@
                 <tbody>
                 @forelse($entries as $entry)
                     <tr>
-                        <td>{{ jalali_date($entry->work_date?) }}</td>
+                        <td>{{ jalali_date($entry->work_date) }}</td>
                         <td>{{ $entry->user?->name }}</td>
                         <td>{{ $entry->displayTitle() }}</td>
                         <td>{{ $entry->category_name ?: '—' }}</td>

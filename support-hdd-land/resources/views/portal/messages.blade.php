@@ -44,7 +44,7 @@
         @forelse($messages as $m)
             <div style="border-top:1px solid var(--line);padding:10px 0;">
                 <div style="font-size:12px;color:var(--muted);">
-                    {{ jalali_like($m->created_at?) }}
+                    {{ jalali_like($m->created_at) }}
                     @if($m->reception) — {{ $m->reception->ticket_no }} @endif
                     — {{ $m->priorityLabel() }}
                     @if($m->isUnread()) · در صف بررسی @else · دیده شده @endif

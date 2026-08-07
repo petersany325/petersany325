@@ -68,7 +68,7 @@
                                 @else — @endif
                             </td>
                             <td>
-                                {{ jalali_like($m->created_at?) }}
+                                {{ jalali_like($m->created_at) }}
                                 <div class="muted" style="font-size:10px;">{{ $m->user?->name }}@if($m->note) — {{ $m->note }}@endif</div>
                             </td>
                         </tr>

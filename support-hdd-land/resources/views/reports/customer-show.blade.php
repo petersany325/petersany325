@@ -129,14 +129,14 @@
                 <tbody>
                 @foreach($messages as $m)
                     <tr>
-                        <td>{{ jalali_like($m->created_at?) }}</td>
+                        <td>{{ jalali_like($m->created_at) }}</td>
                         <td>پیام کارتابل ({{ $m->priorityLabel() }})</td>
                         <td>{{ \Illuminate\Support\Str::limit($m->body, 90) }}</td>
                     </tr>
                 @endforeach
                 @foreach($smsLogs as $s)
                     <tr>
-                        <td>{{ jalali_like($s->created_at?) }}</td>
+                        <td>{{ jalali_like($s->created_at) }}</td>
                         <td>SMS {{ $s->ok ? 'موفق' : 'ناموفق' }}</td>
                         <td>{{ \Illuminate\Support\Str::limit($s->message, 90) }}</td>
                     </tr>

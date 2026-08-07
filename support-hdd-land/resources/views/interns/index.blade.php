@@ -38,7 +38,7 @@
                 <div class="emp-card-body">
                     <div class="emp-phone" dir="ltr">{{ $intern->phone }}</div>
                     <div class="muted" style="font-size:11px;margin-top:4px;">
-                        از {{ jalali_date($intern->start_date?) }} تا {{ jalali_date($intern->end_date?) }}
+                        از {{ jalali_date($intern->start_date) }} تا {{ jalali_date($intern->end_date) }}
                     </div>
                     @if($intern->notes)
                         <div style="font-size:11px;margin-top:4px;">{{ \Illuminate\Support\Str::limit($intern->notes, 80) }}</div>

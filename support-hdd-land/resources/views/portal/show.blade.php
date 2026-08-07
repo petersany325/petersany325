@@ -63,7 +63,7 @@
             <div>
                 <strong>{{ $log->displayTitle() }}</strong>
                 <small>
-                    {{ jalali_like($log->created_at?) }}
+                    {{ jalali_like($log->created_at) }}
                     @if($log->fromStatusLabel()) · از {{ $log->fromStatusLabel() }} @endif
                     → {{ $log->toStatusLabel() }}
                 </small>
@@ -160,7 +160,7 @@
             <div class="p-part-row">
                 <div>
                     <strong>{{ $log->status_key === 'cost_approval' ? 'لینک تأیید هزینه' : ($log->rule?->title ?: ($log->status_key ?: 'پیامک')) }}</strong>
-                    <small>{{ jalali_like($log->created_at?) }} — {{ $log->ok ? 'موفق' : 'ناموفق' }}</small>
+                    <small>{{ jalali_like($log->created_at) }} — {{ $log->ok ? 'موفق' : 'ناموفق' }}</small>
                 </div>
                 <span>{{ $log->ok ? '✓' : '!' }}</span>
             </div>

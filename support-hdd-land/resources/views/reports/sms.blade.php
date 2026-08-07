@@ -90,7 +90,7 @@
                 <tbody>
                 @forelse($entries as $log)
                     <tr>
-                        <td>{{ jalali_like($log->created_at?) }}</td>
+                        <td>{{ jalali_like($log->created_at) }}</td>
                         <td>
                             <span class="{{ $log->ok ? 'pill pill-ok' : 'pill pill-off' }}">{{ $log->ok ? 'موفق' : 'ناموفق' }}</span>
                         </td>
@@ -160,7 +160,7 @@
                     <tbody>
                     @forelse($fails as $f)
                         <tr>
-                            <td>{{ jalali_like($f->created_at?) }}</td>
+                            <td>{{ jalali_like($f->created_at) }}</td>
                             <td dir="ltr">{{ $f->phone }}</td>
                             <td>
                                 @if($f->reception_id)

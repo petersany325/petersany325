@@ -8,7 +8,7 @@
     <div class="emp-cartable-hero" style="margin-bottom:10px;">
         <div>
             <h2 style="margin:0;font-size:15px;">ویرایش {{ $intern->name }}</h2>
-            <p class="lead" style="margin:2px 0 0;">دوره: {{ jalali_date($intern->start_date?) }} تا {{ jalali_date($intern->end_date?) }}</p>
+            <p class="lead" style="margin:2px 0 0;">دوره: {{ jalali_date($intern->start_date) }} تا {{ jalali_date($intern->end_date) }}</p>
         </div>
         <a class="btn btn-ghost" href="{{ route('interns.index') }}">بازگشت</a>
     </div>
