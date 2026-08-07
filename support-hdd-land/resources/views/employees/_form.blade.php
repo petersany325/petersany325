@@ -76,15 +76,15 @@
     <section class="emp-section">
         <div class="emp-section-head">
             <h3>نحوه ورود</h3>
-            <p>پیش‌فرض: ورود با موبایل و تأیید پیامک نیازپرداز.</p>
+            <p>کارمند هم از وب‌سرویس موبایل و هم از کامپیوتر وارد می‌شود؛ منوها خودکار با تشخیص دستگاه تنظیم می‌شوند.</p>
         </div>
         <div class="login-method-grid">
             <label class="login-method-card {{ $otpDefault ? 'is-on' : '' }}">
                 <input type="checkbox" name="can_login_otp" value="1" @checked($otpDefault) class="login-method-input" data-method="otp">
                 <span class="login-method-icon otp">SMS</span>
                 <span class="login-method-text">
-                    <strong>ورود با موبایل</strong>
-                    <small>ارسال کد تأیید پیامک و ورود به کارتابل</small>
+                    <strong>ورود موبایل / وب‌سرویس</strong>
+                    <small>کد تأیید پیامک — مناسب گوشی و نصب روی صفحه اصلی</small>
                 </span>
                 <span class="login-method-state">{{ $otpDefault ? 'فعال' : 'خاموش' }}</span>
             </label>
@@ -92,8 +92,8 @@
                 <input type="checkbox" name="can_login_password" value="1" @checked($passDefault) class="login-method-input" data-method="pass">
                 <span class="login-method-icon pass">رمز</span>
                 <span class="login-method-text">
-                    <strong>ورود با رمز</strong>
-                    <small>ایمیل/موبایل + رمز عبور (اختیاری)</small>
+                    <strong>ورود کامپیوتر / رمز</strong>
+                    <small>ایمیل یا موبایل + رمز — مناسب میز کار</small>
                 </span>
                 <span class="login-method-state">{{ $passDefault ? 'فعال' : 'خاموش' }}</span>
             </label>

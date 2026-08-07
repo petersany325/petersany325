@@ -9,9 +9,11 @@
         <div class="brand-center">
             <img class="brand-logo-lg" src="{{ asset('images/logo.png') }}?v=hd1" alt="HDD LAND" width="96" height="96">
             <h1>سرزمین هارد</h1>
-            <p>ورود کارمند به کارتابل مدیریت</p>
+            <p>ورود کارمند — موبایل و کامپیوتر</p>
         </div>
         @include('partials.flash')
+
+        <p class="hint" data-device-login-hint style="text-align:center;margin:0 0 10px;">تشخیص خودکار دستگاه…</p>
 
         <p style="text-align:center;margin:0 0 12px;">
             <a href="{{ route('gate') }}" style="font-size:12px;font-weight:700;color:#0f766e;">→ بازگشت به انتخاب ورود</a>
@@ -34,7 +36,7 @@
                         <input type="password" name="password" required autocomplete="current-password">
                     </div>
                 </div>
-                <p class="hint" style="margin-top:8px;">اگر رمز را فراموش کرده‌اید از تب «موبایل / SMS» با شماره ثبت‌شده وارد شوید.</p>
+                <p class="hint" style="margin-top:8px;">مناسب کامپیوتر. اگر رمز ندارید از تب «موبایل / SMS» وارد شوید.</p>
                 <div class="actions">
                     <button class="btn btn-primary" type="submit" style="width:100%;">ورود با رمز</button>
                 </div>
@@ -45,11 +47,11 @@
             @unless(session('otp_sent'))
                 <form method="POST" action="{{ route('login.otp.send') }}">
                     @csrf
-                    <p class="hint" style="margin-top:0;">شماره موبایل ثبت‌شده در کارتابل کارمند را وارد کنید. کد تأیید پیامک ارسال می‌شود.</p>
+                    <p class="hint" style="margin-top:0;">مناسب وب‌سرویس موبایل. شماره ثبت‌شده در کارتابل کارمند را وارد کنید.</p>
                     <div class="form-grid" style="grid-template-columns:1fr;">
                         <div>
                             <label>شماره موبایل</label>
-                            <input type="text" name="phone" value="{{ old('phone') }}" placeholder="09xxxxxxxxx" required {{ $otpFirst ? 'autofocus' : '' }} dir="ltr" style="text-align:left;">
+                            <input type="text" name="phone" value="{{ old('phone') }}" placeholder="09xxxxxxxxx" required {{ $otpFirst ? 'autofocus' : '' }} dir="ltr" style="text-align:left;" inputmode="tel" autocomplete="tel">
                         </div>
                     </div>
                     <div class="actions">
@@ -63,11 +65,11 @@
                     <div class="form-grid" style="grid-template-columns:1fr;">
                         <div>
                             <label>شماره موبایل</label>
-                            <input type="text" name="phone" value="{{ session('otp_phone') }}" required dir="ltr" style="text-align:left;">
+                            <input type="text" name="phone" value="{{ session('otp_phone') }}" required dir="ltr" style="text-align:left;" inputmode="tel">
                         </div>
                         <div>
                             <label>کد تأیید پیامک</label>
-                            <input type="text" name="code" inputmode="numeric" required autofocus maxlength="6" dir="ltr" style="text-align:left;letter-spacing:0.3em;font-size:1.2rem;">
+                            <input type="text" name="code" inputmode="numeric" required autofocus maxlength="6" dir="ltr" style="text-align:left;letter-spacing:0.3em;font-size:1.2rem;" autocomplete="one-time-code">
                         </div>
                     </div>
                     @if(session('debug_otp'))
@@ -93,7 +95,21 @@
             });
         });
     });
-    // Avoid submitting a stale CSRF token from browser back-forward cache
+    try {
+        var forced = localStorage.getItem('staff_ui_mode');
+        var mobile = (forced === 'mobile') || ((forced !== 'desktop') && window.matchMedia('(max-width: 900px)').matches);
+        var otpForced = {{ $otpFirst ? 'true' : 'false' }};
+        if (mobile && !otpForced) {
+            var otpBtn = document.querySelector('[data-login-tab="otp"]');
+            if (otpBtn) otpBtn.click();
+        }
+        var hint = document.querySelector('[data-device-login-hint]');
+        if (hint) {
+            hint.textContent = mobile
+                ? 'موبایل تشخیص داده شد — ورود پیامکی پیشنهاد می‌شود.'
+                : 'کامپیوتر تشخیص داده شد — ورود با رمز یا SMS.';
+        }
+    } catch (e) {}
     window.addEventListener('pageshow', function (e) {
         if (e.persisted) {
             window.location.reload();

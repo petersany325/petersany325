@@ -861,6 +861,157 @@
     }
 
     /* =========================================================
+     * Staff UI mode (mobile / desktop) + drawer menus
+     * ========================================================= */
+
+    var UI_MODE_KEY = 'staff_ui_mode';
+
+    function detectStaffUiMode() {
+        try {
+            var forced = localStorage.getItem(UI_MODE_KEY);
+            if (forced === 'mobile' || forced === 'desktop') {
+                return forced;
+            }
+        } catch (e) {}
+        var narrow = false;
+        var coarse = false;
+        try {
+            narrow = window.matchMedia('(max-width: 900px)').matches;
+            coarse = window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1100;
+        } catch (e2) {
+            narrow = window.innerWidth <= 900;
+        }
+        return (narrow || coarse) ? 'mobile' : 'desktop';
+    }
+
+    function applyStaffUiMode(mode) {
+        var resolved = mode || detectStaffUiMode();
+        document.documentElement.setAttribute('data-ui-mode', resolved);
+        var label = document.querySelector('[data-ui-mode-label]');
+        if (label) {
+            var forced = null;
+            try { forced = localStorage.getItem(UI_MODE_KEY); } catch (e) {}
+            if (forced === 'mobile') label.textContent = 'موبایل (ثابت)';
+            else if (forced === 'desktop') label.textContent = 'کامپیوتر (ثابت)';
+            else label.textContent = resolved === 'mobile' ? 'خودکار · موبایل' : 'خودکار · کامپیوتر';
+        }
+        document.querySelectorAll('[data-ui-mode-set]').forEach(function (btn) {
+            var v = btn.getAttribute('data-ui-mode-set');
+            var forced = null;
+            try { forced = localStorage.getItem(UI_MODE_KEY); } catch (e) {}
+            var on = (v === 'auto' && !forced) || (forced && forced === v);
+            btn.classList.toggle('btn-secondary', on);
+            btn.classList.toggle('btn-ghost', !on);
+        });
+        return resolved;
+    }
+
+    function setStaffUiMode(value) {
+        try {
+            if (value === 'auto' || !value) localStorage.removeItem(UI_MODE_KEY);
+            else localStorage.setItem(UI_MODE_KEY, value);
+        } catch (e) {}
+        applyStaffUiMode();
+    }
+
+    function openStaffDrawer() {
+        var drawer = document.getElementById('staff-drawer');
+        if (!drawer) return;
+        drawer.hidden = false;
+        document.body.style.overflow = 'hidden';
+        var search = document.getElementById('staff-drawer-search');
+        if (search) setTimeout(function () { search.focus(); }, 50);
+    }
+
+    function closeStaffDrawer() {
+        var drawer = document.getElementById('staff-drawer');
+        if (!drawer) return;
+        drawer.hidden = true;
+        document.body.style.overflow = '';
+    }
+
+    function initStaffShell() {
+        applyStaffUiMode();
+
+        document.querySelectorAll('[data-staff-drawer-open]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                openStaffDrawer();
+            });
+        });
+        document.querySelectorAll('[data-staff-drawer-close]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                closeStaffDrawer();
+            });
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeStaffDrawer();
+        });
+
+        document.querySelectorAll('[data-ui-mode-set]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                setStaffUiMode(btn.getAttribute('data-ui-mode-set'));
+            });
+        });
+        document.querySelectorAll('[data-ui-mode-toggle]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var current = document.documentElement.getAttribute('data-ui-mode') || 'desktop';
+                setStaffUiMode(current === 'mobile' ? 'desktop' : 'mobile');
+            });
+        });
+
+        var search = document.getElementById('staff-drawer-search');
+        if (search) {
+            search.addEventListener('input', function () {
+                var q = (search.value || '').trim().toLowerCase();
+                document.querySelectorAll('[data-drawer-group]').forEach(function (g) {
+                    var groupLabel = (g.getAttribute('data-menu-label') || '').toLowerCase();
+                    var items = g.querySelectorAll('[data-menu-label]');
+                    var any = false;
+                    items.forEach(function (item) {
+                        var label = (item.getAttribute('data-menu-label') || '').toLowerCase();
+                        var show = !q || label.indexOf(q) !== -1 || groupLabel.indexOf(q) !== -1;
+                        item.style.display = show ? '' : 'none';
+                        if (show) any = true;
+                    });
+                    g.style.display = (!q || any || groupLabel.indexOf(q) !== -1) ? '' : 'none';
+                });
+            });
+        }
+
+        var mq = null;
+        try {
+            mq = window.matchMedia('(max-width: 900px)');
+            var onChange = function () {
+                var forced = null;
+                try { forced = localStorage.getItem(UI_MODE_KEY); } catch (e) {}
+                if (!forced) applyStaffUiMode();
+            };
+            if (mq.addEventListener) mq.addEventListener('change', onChange);
+            else if (mq.addListener) mq.addListener(onChange);
+        } catch (e) {}
+    }
+
+    function initStaffLoginDeviceHint() {
+        var otpTab = document.querySelector('[data-login-tab="otp"]');
+        var passTab = document.querySelector('[data-login-tab="pass"]');
+        if (!otpTab || !passTab) return;
+        if (document.getElementById('tab-otp') && detectStaffUiMode() === 'mobile') {
+            // Prefer SMS login on phones unless password pane already active from server
+            if (!document.querySelector('.login-tab.is-active[data-login-tab="pass"]') || document.querySelector('.login-tab.is-active[data-login-tab="otp"]')) {
+                otpTab.click();
+            }
+        }
+        var hint = document.querySelector('[data-device-login-hint]');
+        if (hint) {
+            hint.textContent = detectStaffUiMode() === 'mobile'
+                ? 'دستگاه شما موبایل تشخیص داده شد — ورود پیامکی پیشنهاد می‌شود.'
+                : 'دستگاه شما کامپیوتر تشخیص داده شد — می‌توانید با رمز یا SMS وارد شوید.';
+        }
+    }
+
+    /* =========================================================
      * Boot
      * ========================================================= */
 
@@ -871,5 +1022,7 @@
         initAsciiFields();
         initAppModals();
         initReceptionWizard();
+        initStaffShell();
+        initStaffLoginDeviceHint();
     });
 })();

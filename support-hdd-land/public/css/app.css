@@ -1000,3 +1000,65 @@ table.data th, .data-table th { background:linear-gradient(180deg,#5b6576,#464f5
 @media (max-width:900px){
   .sys-hero{grid-template-columns:1fr}
 }
+
+/* ===== Staff mobile / desktop shell ===== */
+.caption-short{display:none}
+html[data-ui-mode="desktop"] .mobile-only{display:none!important}
+html[data-ui-mode="mobile"] .desktop-only{display:none!important}
+html[data-ui-mode="mobile"] .caption-full{display:none}
+html[data-ui-mode="mobile"] .caption-short{display:inline}
+html[data-ui-mode="mobile"] .caption-user-name{display:none}
+html[data-ui-mode="mobile"] body{background:#eef1f5}
+html[data-ui-mode="mobile"] .app-shell{padding-bottom:calc(62px + env(safe-area-inset-bottom,0px))}
+html[data-ui-mode="mobile"] .app-toolbar{position:sticky;top:0;z-index:20;border-bottom:1px solid #9aa5b5}
+html[data-ui-mode="mobile"] .app-workspace{padding:8px}
+html[data-ui-mode="mobile"] .win-frame{border:0;box-shadow:none;background:transparent}
+html[data-ui-mode="mobile"] .win-body{padding:0;background:transparent}
+html[data-ui-mode="mobile"] .table-wrap{border-radius:6px}
+html[data-ui-mode="mobile"] .panel{border-radius:8px}
+html[data-ui-mode="mobile"] .login-page{padding:12px;padding-bottom:24px}
+.ui-mode-toggle{font-size:13px;line-height:1}
+.staff-more-btn{min-height:28px;padding:4px 10px}
+.staff-tabbar{
+  position:fixed;inset:auto 0 0 0;z-index:40;
+  display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
+  gap:2px;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(180deg,#3a4454,#2b3340);
+  border-top:1px solid #1c222c;
+  box-shadow:0 -8px 24px rgba(0,0,0,.18);
+}
+.staff-tabbar a,.staff-tab-more{
+  display:grid;gap:2px;place-items:center;padding:6px 4px;border:0;
+  background:transparent;color:#d7dde6;text-decoration:none;font:inherit;cursor:pointer;border-radius:6px;
+}
+.staff-tabbar a.is-on,.staff-tab-more.is-on{background:rgba(255,255,255,.12);color:#fff}
+.staff-tab-mark{
+  width:26px;height:22px;display:grid;place-items:center;border-radius:5px;
+  background:rgba(255,255,255,.08);font-size:11px;font-weight:800;
+}
+.staff-tabbar a.is-on .staff-tab-mark{background:#2f6fed}
+.staff-tabbar small{font-size:10px;font-weight:700}
+.staff-drawer[hidden]{display:none!important}
+.staff-drawer{position:fixed;inset:0;z-index:60}
+.staff-drawer-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(2px)}
+.staff-drawer-panel{
+  position:absolute;inset:auto 0 0 0;max-height:min(86vh,720px);
+  background:#f7f8fa;border-radius:14px 14px 0 0;border:1px solid #9aa5b5;
+  box-shadow:0 -12px 40px rgba(0,0,0,.22);display:grid;grid-template-rows:auto auto auto 1fr;
+  padding-bottom:env(safe-area-inset-bottom,0px);animation:staffDrawerUp .22s ease-out;
+}
+@keyframes staffDrawerUp{from{transform:translateY(24px);opacity:.4}to{transform:translateY(0);opacity:1}}
+.staff-drawer-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 12px 8px;border-bottom:1px solid #d9dee6}
+.staff-drawer-mode{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;font-size:11px;border-bottom:1px solid #eef1f5}
+.staff-drawer-search{padding:8px 12px}
+.staff-drawer-search input{width:100%;min-height:34px;border:1px solid #9aa5b5;border-radius:8px;padding:6px 10px;background:#fff}
+.staff-drawer-list{overflow:auto;padding:4px 10px 16px;display:grid;gap:8px}
+.staff-drawer-group{background:#fff;border:1px solid #c5ccd6;border-radius:8px;overflow:hidden}
+.staff-drawer-group-title{padding:7px 10px;font-size:11px;font-weight:800;color:#334155;background:linear-gradient(180deg,#eceff3,#e2e7ee);border-bottom:1px solid #d9dee6}
+.staff-drawer-item{display:flex;gap:10px;align-items:center;padding:9px 10px;border-bottom:1px solid #eef1f5;text-decoration:none;color:inherit}
+.staff-drawer-item:last-child{border-bottom:0}
+.staff-drawer-item.is-on{background:#e7f0ff}
+.staff-drawer-item strong{display:block;font-size:12.5px}
+.staff-drawer-item small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
+.staff-drawer-ico{width:28px;height:28px;border-radius:6px;display:grid;place-items:center;background:#3a4454;color:#fff;font-size:11px;font-weight:800;flex:0 0 auto}
+html[data-ui-mode="mobile"] .staff-drawer:not([hidden]) .staff-tab-more{color:#fff}

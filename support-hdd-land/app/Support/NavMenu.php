@@ -287,6 +287,69 @@ class NavMenu
         };
     }
 
+    /** Short label for mobile tabbar. */
+    public static function shortLabel(string $key, string $fallback = ''): string
+    {
+        return match ($key) {
+            'home' => 'میز',
+            'reception' => 'پذیرش',
+            'handoffs' => 'ارجاع',
+            'notifications' => 'اعلان',
+            'cost_approvals' => 'تأیید',
+            'customers' => 'مشتری',
+            'parts' => 'انبار',
+            'employees' => 'کارمند',
+            'sms' => 'وضعیت',
+            'accounting' => 'حساب',
+            'reports' => 'گزارش',
+            'system_tools' => 'ابزار',
+            'settings' => 'تنظیم',
+            default => $fallback !== '' ? mb_substr($fallback, 0, 8) : 'منو',
+        };
+    }
+
+    /**
+     * Primary bottom-tab items for mobile staff shell (max 4 + «بیشتر»).
+     *
+     * @return list<array{key:string,label:string,mark:string,route:?string,match:string,tone:string}>
+     */
+    public static function mobilePrimary(User $user): array
+    {
+        $groups = collect(self::forUser($user))->keyBy('key');
+        $order = [
+            'home', 'reception', 'handoffs', 'notifications',
+            'customers', 'parts', 'cost_approvals', 'accounting', 'reports',
+        ];
+
+        $tabs = [];
+        foreach ($order as $key) {
+            if (! $groups->has($key)) {
+                continue;
+            }
+            $g = $groups->get($key);
+            $route = $g['route'] ?? null;
+            if (! $route && ! empty($g['children'][0]['route'])) {
+                $route = $g['children'][0]['route'];
+            }
+            if (! $route || ! Route::has($route)) {
+                continue;
+            }
+            $tabs[] = [
+                'key' => $key,
+                'label' => self::shortLabel($key, $g['label']),
+                'mark' => $g['mark'],
+                'route' => $route,
+                'match' => $g['match'],
+                'tone' => self::tone($key),
+            ];
+            if (count($tabs) >= 4) {
+                break;
+            }
+        }
+
+        return $tabs;
+    }
+
     public static function isActive(string $match): bool
     {
         $patterns = array_values(array_filter(explode('|', $match)));

@@ -169,13 +169,29 @@
             <span class="gate-ico">ک</span>
             <span class="gate-text">
                 <strong>ورود کارمندان</strong>
-                <span>پنل مدیریت تعمیرگاه — دسترسی‌ها مطابق نقش و مجوزهایی که ادمین اصلی تعیین کرده</span>
+                <span id="staff-gate-hint">وب‌سرویس موبایل و پنل کامپیوتر — منوها خودکار با تشخیص دستگاه تنظیم می‌شوند</span>
             </span>
             <span class="gate-go">←</span>
         </a>
     </div>
 
-    <div class="gate-foot">support.hdd-land.ir</div>
+    <div class="gate-foot">support.hdd-land.ir · تشخیص خودکار موبایل / کامپیوتر</div>
 </div>
+<script>
+(function () {
+    try {
+        var forced = localStorage.getItem('staff_ui_mode');
+        var mode = (forced === 'mobile' || forced === 'desktop')
+            ? forced
+            : (window.matchMedia('(max-width: 900px)').matches ? 'mobile' : 'desktop');
+        var hint = document.getElementById('staff-gate-hint');
+        if (hint) {
+            hint.textContent = mode === 'mobile'
+                ? 'موبایل تشخیص داده شد — ورود پیامکی و منوی لمسی کارمند'
+                : 'کامپیوتر تشخیص داده شد — منوی کامل ویندوزی کارمند';
+        }
+    } catch (e) {}
+})();
+</script>
 </body>
 </html>
