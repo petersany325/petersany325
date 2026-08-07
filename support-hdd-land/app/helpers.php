@@ -58,6 +58,13 @@ if (! function_exists('jalali_like')) {
     }
 }
 
+if (! function_exists('jalali_date')) {
+    function jalali_date($date): string
+    {
+        return jalali_like($date, false);
+    }
+}
+
 if (! function_exists('jalali_to_gregorian')) {
     /**
      * Jalali Y/M/D → [gy, gm, gd]

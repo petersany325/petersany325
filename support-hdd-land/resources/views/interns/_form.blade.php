@@ -46,8 +46,8 @@
     </div>
     <div class="accept-row accept-row-2">
         @php
-            $startOld = old('start_date', isset($intern) && $intern->start_date ? jalali_input($intern->start_date) : jalali_input(now('Asia/Tehran')));
-            $endOld = old('end_date', isset($intern) && $intern->end_date ? jalali_input($intern->end_date) : jalali_input(now('Asia/Tehran')->addMonth()));
+            $startOld = old('start_date', ($intern ?? null)?->start_date ? jalali_input($intern->start_date) : jalali_input(now('Asia/Tehran')));
+            $endOld = old('end_date', ($intern ?? null)?->end_date ? jalali_input($intern->end_date) : jalali_input(now('Asia/Tehran')->addMonth()));
             if (is_string($startOld) && preg_match('/^20\d{2}-/', $startOld)) {
                 $startOld = jalali_input($startOld);
             }
