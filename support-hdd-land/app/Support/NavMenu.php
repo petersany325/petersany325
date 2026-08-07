@@ -30,7 +30,7 @@ class NavMenu
                 'label' => 'پذیرش',
                 'permission' => 'receptions',
                 'route' => null,
-                'match' => 'receptions.*|deliveries.*|handoffs.*',
+                'match' => 'receptions.*|deliveries.*',
                 'mark' => 'پ',
                 'hint' => 'قبض، جستجو، تحویل',
                 'children' => [
@@ -38,8 +38,29 @@ class NavMenu
                     ['label' => 'جستجوی قبض', 'route' => 'receptions.search', 'match' => 'receptions.search', 'hint' => 'سریال، موبایل، شماره', 'mark' => 'ج'],
                     ['label' => 'لیست قبض‌ها', 'route' => 'receptions.index', 'match' => 'receptions.index|receptions.show', 'hint' => 'همه پذیرش‌ها', 'mark' => 'لی'],
                     ['label' => 'تحویل گروهی', 'route' => 'deliveries.group', 'match' => 'deliveries.*', 'hint' => 'خروج چند قبض', 'mark' => 'تح'],
-                    ['label' => 'کارتابل ارجاع', 'route' => 'handoffs.index', 'match' => 'handoffs.*', 'hint' => 'تأیید دریافت دستگاه', 'mark' => 'ارج', 'permission' => 'handoffs'],
                 ],
+            ],
+            [
+                'key' => 'handoffs',
+                'label' => 'ارجاع / کارتابل تعمیر',
+                'permission' => 'handoffs',
+                'route' => 'handoffs.index',
+                'match' => 'handoffs.*',
+                'mark' => 'ا',
+                'hint' => 'دریافت دستگاه و هاردهای دست تعمیر',
+                'children' => [
+                    ['label' => 'کارتابل ارجاع', 'route' => 'handoffs.index', 'match' => 'handoffs.index', 'hint' => 'تأیید دریافت + دستگاه‌های نزد من', 'mark' => 'ک'],
+                ],
+            ],
+            [
+                'key' => 'notifications',
+                'label' => 'اعلان‌ها',
+                'permission' => 'notifications',
+                'route' => 'notifications.index',
+                'match' => 'notifications.*',
+                'mark' => 'ن',
+                'hint' => 'پیام مشتری و اعلان ارجاع',
+                'children' => [],
             ],
             [
                 'key' => 'customers',
@@ -140,7 +161,6 @@ class NavMenu
                     'reports.messages',
                 ],
                 'children' => [
-                    // ترتیب قبلی حفظ شده؛ گزارش‌های جدید بعد از آن‌ها
                     ['label' => 'عملکرد تعمیرکاران', 'route' => 'reports.technicians', 'match' => 'reports.technicians', 'permission' => 'reports.technicians', 'hint' => '', 'mark' => 'ت'],
                     ['label' => 'گزارش مشتریان', 'route' => 'reports.customers', 'match' => 'reports.customers', 'permission' => 'reports.customers', 'hint' => '', 'mark' => 'ش'],
                     ['label' => 'کالای خرج‌شده', 'route' => 'reports.parts-used', 'match' => 'reports.parts-used', 'permission' => 'reports.parts', 'hint' => '', 'mark' => 'ق'],
@@ -156,13 +176,12 @@ class NavMenu
                 'label' => 'تنظیمات',
                 'permission' => null,
                 'route' => null,
-                'match' => 'settings.*|profile.*|notifications.*',
+                'match' => 'settings.*|profile.*',
                 'mark' => 'ظ',
                 'hint' => 'سیستم و منوها',
-                'any_of' => ['settings', 'profile', 'notifications'],
+                'any_of' => ['settings', 'profile'],
                 'children' => [
                     ['label' => 'تنظیمات سیستم', 'route' => 'settings.index', 'match' => 'settings.*', 'hint' => 'منو، فاکتور، SMS', 'mark' => 'ظ', 'permission' => 'settings'],
-                    ['label' => 'اعلان‌ها', 'route' => 'notifications.index', 'match' => 'notifications.*', 'hint' => 'پیام مشتری و ارجاع', 'mark' => 'ن', 'permission' => 'notifications'],
                     ['label' => 'پروفایل من', 'route' => 'profile.edit', 'match' => 'profile.*', 'hint' => 'نام و رمز', 'mark' => 'پ', 'permission' => 'profile'],
                 ],
             ],
@@ -191,7 +210,6 @@ class NavMenu
                 $children[] = $child;
             }
 
-            // parent-only groups that lost all children via any_of filtering
             if (! empty($group['any_of']) && $children === [] && empty($group['route'])) {
                 continue;
             }
@@ -207,8 +225,6 @@ class NavMenu
     }
 
     /**
-     * Flat shortcut cards for dashboard — one compact card per menu group.
-     *
      * @return list<array{label:string,route:string,hint:string,mark:string,group:string,tone:string}>
      */
     public static function shortcuts(User $user): array
@@ -240,6 +256,8 @@ class NavMenu
         return match ($key) {
             'home' => 'slate',
             'reception' => 'blue',
+            'handoffs' => 'green',
+            'notifications' => 'violet',
             'customers' => 'teal',
             'parts' => 'amber',
             'technicians' => 'green',

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=reports3">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=win21">
     @stack('head')
 </head>
 <body>
@@ -134,8 +134,7 @@
 @else
     @yield('content')
 @endauth
-<script src="{{ asset('js/app.js') }}?v=win20"></script>
-@stack('scripts')
+<script src="{{ asset('js/app.js') }}?v=win21"></script>
 <script>
 (function () {
     var bar = document.getElementById('win-menubar');
