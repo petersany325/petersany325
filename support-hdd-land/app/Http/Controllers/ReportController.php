@@ -268,21 +268,23 @@ class ReportController extends Controller
             ->limit(30)
             ->get();
 
-        $approvals = \App\Models\CostApproval::query()
-            ->with(['reception', 'customer'])
+        $approvalsQuery = \App\Models\CostApproval::query()
             ->where(function ($q) use ($from, $to) {
                 $q->whereDate('sent_at', '>=', $from)->whereDate('sent_at', '<=', $to);
-            })
+            });
+
+        $approvalSummary = [
+            'sent' => (clone $approvalsQuery)->count(),
+            'approved' => (clone $approvalsQuery)->where('status', 'approved')->count(),
+            'rejected' => (clone $approvalsQuery)->where('status', 'rejected')->count(),
+            'viewed' => (clone $approvalsQuery)->whereIn('status', ['viewed', 'approved', 'rejected'])->count(),
+        ];
+
+        $approvals = (clone $approvalsQuery)
+            ->with(['reception', 'customer'])
             ->latest('id')
             ->limit(40)
             ->get();
-
-        $approvalSummary = [
-            'sent' => (clone $approvals)->count(),
-            'approved' => $approvals->where('status', 'approved')->count(),
-            'rejected' => $approvals->where('status', 'rejected')->count(),
-            'viewed' => $approvals->whereIn('status', ['viewed', 'approved', 'rejected'])->count(),
-        ];
 
         return view('reports.sms', [
             'from' => $from,
