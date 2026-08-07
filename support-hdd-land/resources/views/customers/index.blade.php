@@ -3,7 +3,6 @@
 @section('page_title', 'مدیریت مشتریان')
 @section('content')
 <div class="panel">
-    @include('partials.flash')
     <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;align-items:center;">
         <div>
             <h2>مشتریان</h2>
