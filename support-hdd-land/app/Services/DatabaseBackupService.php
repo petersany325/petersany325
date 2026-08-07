@@ -497,10 +497,10 @@ class DatabaseBackupService
             $in = @fopen($path, 'rb');
             $out = @gzopen($gzPath, 'wb6');
             if (! $in || ! $out) {
-                if (is_resource($in)) {
+                if ($in) {
                     fclose($in);
                 }
-                if (is_resource($out)) {
+                if ($out) {
                     gzclose($out);
                 }
 
