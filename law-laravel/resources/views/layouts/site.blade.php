@@ -108,7 +108,7 @@
     </div>
   </footer>
 
-  <script src="{{ asset('assets/js/main.js') }}?v=10"></script>
+  <script src="{{ asset('assets/js/main.js') }}?v=11"></script>
   @if (($siteSettings['pwa_enabled'] ?? '1') === '1')
   <script>
     if ('serviceWorker' in navigator) {
