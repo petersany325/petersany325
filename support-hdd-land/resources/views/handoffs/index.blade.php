@@ -93,46 +93,68 @@
 
     @if($status === 'in_hand' || $status === 'pending' || auth()->user()->technician || auth()->user()->canAccess('receptions'))
     <div class="panel" style="margin-bottom:12px;">
-        <h3 style="margin:0 0 8px;">هارد دیسک‌های دست تعمیر</h3>
+        <h3 style="margin:0 0 8px;">دست تعمیرکار — گزارش کار و بازگشت</h3>
+        <p class="muted" style="margin:0 0 10px;">روی هر قبض باید گزارش کار ثبت شود؛ بعد از آن ارجاع بازگشت به منشی/حسابدار فعال می‌شود. بدون این‌ها اعلام هزینه و خروج قفل است.</p>
         <div class="table-wrap">
             <table class="compact-table">
                 <thead>
                 <tr>
                     <th>قبض</th>
-                    <th>مشتری</th>
-                    <th>کالا / سریال</th>
+                    <th>مشتری / سریال</th>
                     <th>تعمیرکار</th>
-                    <th>وضعیت</th>
-                    @if(auth()->user()->technician)
-                        <th>بازگشت به پذیرش</th>
-                    @endif
+                    <th>گزارش کار</th>
+                    <th>عملیات</th>
                 </tr>
                 </thead>
                 <tbody>
                 @forelse($inHand as $row)
+                    @php
+                        $owns = auth()->user()->technician && (int) $row->custody_technician_id === (int) auth()->user()->technician->id;
+                        $hasReport = (bool) $row->latestWorkReport;
+                    @endphp
                     <tr>
-                        <td><a href="{{ route('receptions.show', $row) }}">{{ $row->ticket_no }}</a></td>
-                        <td>{{ $row->customer?->name }}</td>
-                        <td>{{ $row->product_name }} <span class="muted" dir="ltr">{{ $row->serial_number }}</span></td>
+                        <td>
+                            <a href="{{ route('receptions.show', $row) }}">{{ $row->ticket_no }}</a>
+                            <div><span class="badge badge-{{ $row->status }}">{{ $row->statusLabel() }}</span></div>
+                        </td>
+                        <td>
+                            {{ $row->customer?->name }}
+                            <div class="muted">{{ $row->product_name }} <span dir="ltr">{{ $row->serial_number }}</span></div>
+                        </td>
                         <td>{{ $row->custodyTechnician?->name ?: $row->technician?->name ?: '—' }}</td>
-                        <td><span class="badge badge-{{ $row->status }}">{{ $row->statusLabel() }}</span></td>
-                        @if(auth()->user()->technician)
-                            <td>
-                                @if((int) $row->custody_technician_id === (int) auth()->user()->technician->id)
-                                    <form method="POST" action="{{ route('receptions.handoffs.store', $row) }}" class="actions">
-                                        @csrf
-                                        <input type="hidden" name="direction" value="to_front_desk">
-                                        <input type="text" name="note" placeholder="آماده تحویل به منشی؟" style="min-width:160px;">
-                                        <button class="btn btn-primary" type="submit">ارجاع به پذیرش</button>
-                                    </form>
-                                @else
-                                    <span class="muted">—</span>
-                                @endif
-                            </td>
-                        @endif
+                        <td>
+                            @if($hasReport)
+                                <span class="pill pill-ok">ثبت شده</span>
+                                <div class="muted">{{ $row->latestWorkReport->summary }}</div>
+                            @else
+                                <span class="pill pill-off">ثبت نشده</span>
+                            @endif
+                        </td>
+                        <td>
+                            @if($owns)
+                                <form method="POST" action="{{ route('receptions.work-report', $row) }}" style="margin-bottom:8px;">
+                                    @csrf
+                                    <input type="text" name="summary" required maxlength="500" placeholder="گزارش کار این قبض…" style="min-width:200px;width:100%;margin-bottom:4px;">
+                                    <div class="actions" style="margin:0;">
+                                        <button class="btn btn-primary" type="submit">ثبت گزارش کار</button>
+                                    </div>
+                                </form>
+                                <form method="POST" action="{{ route('receptions.handoffs.store', $row) }}" class="actions">
+                                    @csrf
+                                    <input type="hidden" name="direction" value="to_front_desk">
+                                    <input type="text" name="note" placeholder="یادداشت بازگشت" style="min-width:140px;" @disabled(! $hasReport)>
+                                    <button class="btn btn-secondary" type="submit" @disabled(! $hasReport)>ارجاع به پذیرش</button>
+                                </form>
+                                @unless($hasReport)
+                                    <div class="muted" style="margin-top:4px;">اول گزارش کار، بعد ارجاع بازگشت</div>
+                                @endunless
+                            @else
+                                <a class="btn btn-ghost" href="{{ route('receptions.show', $row) }}">جزئیات قبض</a>
+                            @endif
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="{{ auth()->user()->technician ? 6 : 5 }}">دستگاهی نزد تعمیرکار نیست{{ ($ticket || $serial || $q) ? ' (با این فیلتر)' : '' }}.</td></tr>
+                    <tr><td colspan="5">دستگاهی نزد تعمیرکار نیست{{ ($ticket || $serial || $q) ? ' (با این فیلتر)' : '' }}.</td></tr>
                 @endforelse
                 </tbody>
             </table>

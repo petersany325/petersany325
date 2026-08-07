@@ -15,6 +15,7 @@ use App\Models\StockMovement;
 use App\Models\Technician;
 use App\Services\AccountingService;
 use App\Services\CostApprovalService;
+use App\Services\ReceptionCustodyGate;
 use App\Services\SmsNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -286,7 +287,7 @@ class ReceptionController extends Controller
             ->with('success', $flash);
     }
 
-    public function show(Reception $reception, SmsNotificationService $smsNotifications)
+    public function show(Reception $reception, SmsNotificationService $smsNotifications, ReceptionCustodyGate $gate)
     {
         $reception->load([
             'customer.referralSource', 'technician', 'custodyTechnician', 'faultType',
@@ -295,6 +296,7 @@ class ReceptionController extends Controller
             'costStages',
             'statusLogs' => fn ($q) => $q->with('actor')->latest('id')->limit(40),
             'handoffs' => fn ($q) => $q->with(['fromUser', 'toTechnician', 'toUser'])->latest('id')->limit(20),
+            'workReports' => fn ($q) => $q->with(['user', 'technician'])->latest('id')->limit(10),
         ]);
         $rules = SmsStatusRule::activeOrdered();
         $previews = [];
@@ -321,16 +323,20 @@ class ReceptionController extends Controller
             'paymentTypes' => Payment::TYPES,
             'parts' => Part::where('is_active', true)->orderBy('name')->get(),
             'pendingHandoff' => $reception->handoffs->firstWhere('status', \App\Models\DeviceHandoff::STATUS_PENDING),
+            'custodyChecklist' => $gate->checklist($reception),
+            'workReports' => $reception->workReports,
         ]));
     }
 
-    public function requestCostApproval(Request $request, Reception $reception, CostApprovalService $approvals)
+    public function requestCostApproval(Request $request, Reception $reception, CostApprovalService $approvals, ReceptionCustodyGate $gate)
     {
         $data = $request->validate([
             'description' => ['nullable', 'string', 'max:1000'],
             'send_sms' => ['nullable', 'boolean'],
             'force' => ['nullable', 'boolean'],
         ]);
+
+        $gate->assertCanSetCost($reception);
 
         $result = $approvals->requestAndSend(
             $reception->fresh(['customer', 'parts', 'faultType', 'technician']),
@@ -346,7 +352,7 @@ class ReceptionController extends Controller
         return back()->with('success', $result['message'] ?? 'لینک تأیید هزینه ارسال شد.');
     }
 
-    public function updateStatus(Request $request, Reception $reception, SmsNotificationService $smsNotifications)
+    public function updateStatus(Request $request, Reception $reception, SmsNotificationService $smsNotifications, ReceptionCustodyGate $gate)
     {
         $statusKeys = array_keys(Reception::availableStatuses());
         $data = $request->validate([
@@ -369,6 +375,27 @@ class ReceptionController extends Controller
             ]);
         }
 
+        $newLabor = array_key_exists('labor_cost', $data) ? (int) ($data['labor_cost'] ?? 0) : (int) $reception->labor_cost;
+        $costIncreasing = $newLabor > (int) $reception->labor_cost
+            || ((int) ($data['discount'] ?? $reception->discount) !== (int) $reception->discount && $newLabor > 0);
+        if ($costIncreasing || ($newLabor > 0 && ! $reception->hasCostSet())) {
+            $gate->assertCanSetCost($reception);
+        }
+
+        if ($data['status'] === 'delivered') {
+            $gate->assertCanDeliver($reception);
+        }
+
+        // Soft assign of technician_id without handoff is blocked once custody workflow started.
+        if (! empty($data['technician_id'])
+            && (int) $data['technician_id'] !== (int) $reception->technician_id
+            && ($reception->custody ?? 'front_desk') === 'front_desk'
+            && ! $gate->hasAcceptedBenchHandoff($reception)) {
+            throw ValidationException::withMessages([
+                'technician_id' => 'برای سپردن دستگاه به تعمیرکار از «ارجاع به تعمیرکار» استفاده کنید تا تعمیرکار در کارتابل تأیید دریافت بزند.',
+            ]);
+        }
+
         $prevTotal = (int) $reception->total_amount;
         $fromStatus = $reception->status;
 
@@ -387,7 +414,7 @@ class ReceptionController extends Controller
 
         $reception->save();
         $reception->recalculateTotals();
-        $reception = $reception->fresh(['customer', 'faultType', 'technician']);
+        $reception = $reception->fresh(['customer', 'faultType', 'technician', 'custodyTechnician']);
 
         if ((int) $reception->total_amount > 0 && ! $reception->cost_confirmed_at) {
             $reception->confirmCost();
@@ -607,6 +634,11 @@ class ReceptionController extends Controller
 
             if ($data['type'] === 'final' || $reception->remainingAmount() === 0) {
                 if ($reception->status === 'ready') {
+                    $gate = app(ReceptionCustodyGate::class);
+                    $block = $gate->deliveryBlockReason($reception->fresh(['custodyTechnician']));
+                    if ($block) {
+                        throw ValidationException::withMessages(['amount' => $block]);
+                    }
                     $from = $reception->status;
                     $reception->update([
                         'status' => 'delivered',
@@ -645,11 +677,13 @@ class ReceptionController extends Controller
         return back()->with($result['ok'] ? 'success' : 'error', $result['message']);
     }
 
-    public function storeCostStage(Request $request, Reception $reception)
+    public function storeCostStage(Request $request, Reception $reception, ReceptionCustodyGate $gate)
     {
         if ($reception->isDelivered()) {
             return back()->withErrors(['stage' => 'قبض تحویل‌شده را نمی‌توان ویرایش کرد. ابتدا لغو تحویل بزنید.']);
         }
+
+        $gate->assertCanSetCost($reception);
 
         $keys = array_keys(\App\Models\ReceptionCostStage::STAGES);
         $data = $request->validate([

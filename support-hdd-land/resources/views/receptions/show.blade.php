@@ -45,19 +45,36 @@
 
         @if(auth()->user()->canAccess('receptions') || auth()->user()->canAccess('handoffs'))
         <div class="panel" style="margin-bottom:12px;">
-            <h3 style="margin-top:0;">ارجاع به همکار (Chain of Custody)</h3>
-            <p class="muted">منشی دستگاه را به تعمیرکار ارجاع می‌دهد؛ تعمیرکار باید دریافت با همین سریال را تأیید کند. در پایان، تعمیرکار دستگاه را به پذیرش برمی‌گرداند.</p>
+            <h3 style="margin-top:0;">ارجاع قبض — زنجیره تأیید اجباری</h3>
+            <p class="muted">پذیرش → ارجاع به تعمیرکار → تأیید تعمیرکار → گزارش کار → ارجاع بازگشت → تأیید منشی/حسابدار → اعلام هزینه / تحویل</p>
+
+            @php
+                $c = $custodyChecklist ?? [];
+            @endphp
+            <div class="accept-row accept-row-4" style="margin-bottom:10px;gap:8px;">
+                <div><span class="pill {{ !empty($c['assigned_confirmed']) ? 'pill-ok' : 'pill-off' }}">۱) تأیید دریافت تعمیرکار</span></div>
+                <div><span class="pill {{ !empty($c['work_report']) ? 'pill-ok' : 'pill-off' }}">۲) گزارش کار</span></div>
+                <div><span class="pill {{ !empty($c['return_confirmed']) ? 'pill-ok' : 'pill-off' }}">۳) تأیید بازگشت پذیرش</span></div>
+                <div><span class="pill {{ !empty($c['ready_for_delivery']) ? 'pill-ok' : 'pill-off' }}">۴) آماده تحویل</span></div>
+            </div>
+            @if(!empty($c['delivery_block']))
+                <div class="alert alert-error" style="margin-bottom:10px;">{{ $c['delivery_block'] }}</div>
+            @elseif(!empty($c['cost_block']))
+                <div class="alert alert-error" style="margin-bottom:10px;">{{ $c['cost_block'] }}</div>
+            @endif
 
             @if(!empty($pendingHandoff))
                 <div class="p-alert" style="background:#fff7ed;padding:10px;border-radius:10px;margin-bottom:10px;">
                     ارجاع باز: {{ $pendingHandoff->directionLabel() }}
                     @if($pendingHandoff->toTechnician) → {{ $pendingHandoff->toTechnician->name }} @endif
                     — {{ $pendingHandoff->statusLabel() }}
-                    <div class="muted">سریال: <span dir="ltr">{{ $pendingHandoff->serial_snapshot ?: '—' }}</span></div>
+                    <div class="muted">سریال: <span dir="ltr">{{ $pendingHandoff->serial_snapshot ?: '—' }}</span>
+                        · <a href="{{ route('handoffs.index') }}">رفتن به کارتابل تأیید</a>
+                    </div>
                 </div>
             @endif
 
-            @if(auth()->user()->canAccess('receptions') && ($reception->custody ?? 'front_desk') !== 'with_technician' && empty($pendingHandoff))
+            @if(auth()->user()->canAccess('receptions') && ($reception->custody ?? 'front_desk') !== 'with_technician' && ($reception->custody ?? '') !== 'returning' && empty($pendingHandoff))
                 <form method="POST" action="{{ route('receptions.handoffs.store', $reception) }}" class="form-grid" style="grid-template-columns:1fr 1fr auto;align-items:end;">
                     @csrf
                     <input type="hidden" name="direction" value="to_bench">
@@ -78,20 +95,74 @@
                 </form>
             @endif
 
-            @if(auth()->user()->technician && (int) $reception->custody_technician_id === (int) auth()->user()->technician->id && empty($pendingHandoff))
-                <form method="POST" action="{{ route('receptions.handoffs.store', $reception) }}" class="actions" style="margin-top:8px;">
-                    @csrf
-                    <input type="hidden" name="direction" value="to_front_desk">
-                    <input type="text" name="note" placeholder="یادداشت بازگشت به منشی" style="min-width:220px;">
-                    <button class="btn btn-primary" type="submit">ارجاع به پذیرش برای تحویل مشتری</button>
-                </form>
-            @elseif(auth()->user()->canAccess('receptions') && ($reception->custody ?? '') === 'with_technician' && empty($pendingHandoff))
-                <form method="POST" action="{{ route('receptions.handoffs.store', $reception) }}" class="actions" style="margin-top:8px;">
-                    @csrf
-                    <input type="hidden" name="direction" value="to_front_desk">
-                    <input type="text" name="note" placeholder="دستگاه از تعمیرکار برگشت؟" style="min-width:220px;">
-                    <button class="btn btn-primary" type="submit">ثبت بازگشت به پذیرش (تحویل از تعمیرکار)</button>
-                </form>
+            @if(auth()->user()->technician && (int) $reception->custody_technician_id === (int) auth()->user()->technician->id && ($reception->custody ?? '') === 'with_technician')
+                <div class="panel" style="margin-top:10px;padding:10px;border:1px dashed #c5ccd6;">
+                    <h3 style="margin:0 0 6px;">گزارش کار تعمیرکار (اجباری)</h3>
+                    <form method="POST" action="{{ route('receptions.work-report', $reception) }}">
+                        @csrf
+                        <div class="accept-row accept-row-2">
+                            <div style="grid-column:1/-1">
+                                <label>خلاصه کار انجام‌شده</label>
+                                <input type="text" name="summary" required maxlength="500" placeholder="مثلاً: PCB تعویض شد، تست رید پاس شد">
+                            </div>
+                            <div style="grid-column:1/-1">
+                                <label>جزئیات</label>
+                                <textarea name="details" rows="3" placeholder="شرح فنی، قطعه مصرفی، نتیجه تست…"></textarea>
+                            </div>
+                            <div>
+                                <label>وضعیت پیشنهادی بعد از کار</label>
+                                <select name="result_status">
+                                    <option value="">— بدون تغییر وضعیت —</option>
+                                    <option value="repairing">در حال تعمیر</option>
+                                    <option value="waiting_part">منتظر قطعه</option>
+                                    <option value="ready">آماده تحویل</option>
+                                    <option value="unrepairable">غیرقابل تعمیر</option>
+                                </select>
+                            </div>
+                            <div>
+                                @include('partials.toggle', ['name' => 'needs_part', 'label' => 'نیاز به قطعه دارد', 'checked' => false])
+                            </div>
+                        </div>
+                        <div class="actions" style="margin-top:8px;">
+                            <button class="btn btn-primary" type="submit">ثبت گزارش کار</button>
+                        </div>
+                    </form>
+                </div>
+
+                @if(empty($pendingHandoff))
+                    <form method="POST" action="{{ route('receptions.handoffs.store', $reception) }}" class="actions" style="margin-top:8px;">
+                        @csrf
+                        <input type="hidden" name="direction" value="to_front_desk">
+                        <input type="text" name="note" placeholder="یادداشت بازگشت به منشی/حسابدار" style="min-width:220px;">
+                        <button class="btn btn-secondary" type="submit" @disabled(empty($c['work_report']))>ارجاع بازگشت به پذیرش</button>
+                    </form>
+                    @if(empty($c['work_report']))
+                        <p class="muted" style="margin:4px 0 0;">برای ارجاع بازگشت، اول گزارش کار را ثبت کنید.</p>
+                    @endif
+                @endif
+            @elseif(auth()->user()->canAccess('receptions') && ($reception->custody ?? '') === 'with_technician')
+                <p class="muted" style="margin-top:8px;">دستگاه نزد تعمیرکار است. بازگشت فقط با ارجاع خود تعمیرکار و تأیید شما در کارتابل ارجاع انجام می‌شود.</p>
+            @endif
+
+            @if(($workReports ?? collect())->count())
+                <div class="table-wrap" style="margin-top:12px;">
+                    <h3 style="margin:0 0 6px;">گزارش‌های کار</h3>
+                    <table class="compact-table">
+                        <thead>
+                        <tr><th>زمان</th><th>تعمیرکار</th><th>خلاصه</th><th>قطعه</th></tr>
+                        </thead>
+                        <tbody>
+                        @foreach($workReports as $wr)
+                            <tr>
+                                <td>{{ jalali_like($wr->created_at) }}</td>
+                                <td>{{ $wr->technician?->name ?: $wr->user?->name }}</td>
+                                <td>{{ $wr->summary }}@if($wr->details)<div class="muted">{{ $wr->details }}</div>@endif</td>
+                                <td>{{ $wr->needs_part ? 'نیاز دارد' : '—' }}</td>
+                            </tr>
+                        @endforeach
+                        </tbody>
+                    </table>
+                </div>
             @endif
 
             @if($reception->handoffs->count())

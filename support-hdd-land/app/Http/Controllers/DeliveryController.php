@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\DeliveryBatch;
 use App\Models\Reception;
 use App\Services\AccountingService;
+use App\Services\ReceptionCustodyGate;
 use App\Services\SmsNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,7 +46,10 @@ class DeliveryController extends Controller
             ->unique('id')
             ->values();
 
-        $payload = $items->map(function (Reception $r) {
+        $gate = app(ReceptionCustodyGate::class);
+        $payload = $items->map(function (Reception $r) use ($gate) {
+            $block = $gate->deliveryBlockReason($r);
+
             return [
                 'id' => $r->id,
                 'ticket_no' => $r->ticket_no,
@@ -56,11 +60,14 @@ class DeliveryController extends Controller
                 'device' => trim(($r->product_name ?? '').' '.($r->brand ?? '').' '.($r->model ?? '')),
                 'status' => $r->status,
                 'status_label' => $r->statusLabel(),
+                'custody' => $r->custodyLabel(),
                 'total_amount' => (int) $r->total_amount,
                 'labor_cost' => (int) $r->labor_cost,
                 'parts_cost' => (int) $r->parts_cost,
                 'has_cost' => $r->hasCostSet(),
                 'already_delivered' => $r->status === 'delivered',
+                'custody_ok' => $block === null,
+                'custody_block' => $block,
             ];
         });
 
@@ -68,11 +75,12 @@ class DeliveryController extends Controller
             'ok' => true,
             'count' => $payload->count(),
             'missing_cost' => $payload->where('has_cost', false)->count(),
+            'custody_blocked' => $payload->where('custody_ok', false)->where('already_delivered', false)->count(),
             'items' => $payload,
         ]);
     }
 
-    public function store(Request $request, SmsNotificationService $sms)
+    public function store(Request $request, SmsNotificationService $sms, ReceptionCustodyGate $gate)
     {
         $data = $request->validate([
             'pickup_name' => ['required', 'string', 'max:120'],
@@ -104,6 +112,9 @@ class DeliveryController extends Controller
         foreach ($receptions as $r) {
             if (isset($data['costs'][$r->id]) && (int) $data['costs'][$r->id] >= 0) {
                 $amount = (int) $data['costs'][$r->id];
+                if ($amount > 0) {
+                    $gate->assertCanSetCost($r);
+                }
                 $r->labor_cost = $amount;
                 $r->save();
                 $r->recalculateTotals();
@@ -119,9 +130,21 @@ class DeliveryController extends Controller
 
         // reload after cost updates
         $receptions = Reception::query()
-            ->with('customer')
+            ->with(['customer', 'custodyTechnician'])
             ->whereIn('id', $receptions->pluck('id'))
             ->get();
+
+        $custodyBlocked = $receptions->filter(function (Reception $r) use ($gate) {
+            return $r->status !== 'delivered' && $gate->deliveryBlockReason($r);
+        });
+        if ($custodyBlocked->isNotEmpty()) {
+            $msgs = $custodyBlocked->map(fn (Reception $r) => $r->ticket_no.': '.$gate->deliveryBlockReason($r))->implode(' | ');
+
+            throw ValidationException::withMessages([
+                'ticket_ids' => $msgs,
+            ]);
+        }
+
         $missing = $receptions->filter(fn (Reception $r) => ! $r->hasCostSet());
         if ($missing->isNotEmpty() && ! $request->boolean('force_without_cost')) {
             $list = $missing->pluck('ticket_no')->implode('، ');

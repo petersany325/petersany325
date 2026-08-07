@@ -96,9 +96,10 @@ class Permissions
                 'reports.custody', 'reports.technicians', 'profile',
             ],
             'accountant' => [
-                'dashboard', 'reports.accounting', 'reports.operations', 'reports.payments',
-                'reports.technicians', 'reports.customers', 'reports.parts',
-                'customers', 'notifications', 'daily_logs', 'profile',
+                'dashboard', 'receptions', 'handoffs', 'notifications',
+                'reports.accounting', 'reports.operations', 'reports.payments',
+                'reports.technicians', 'reports.customers', 'reports.parts', 'reports.custody',
+                'customers', 'daily_logs', 'profile',
             ],
             'intern' => ['dashboard', 'daily_logs', 'notifications', 'profile'],
             default => ['dashboard', 'notifications', 'daily_logs', 'profile'],

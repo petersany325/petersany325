@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\DeviceHandoff;
 use App\Models\Reception;
+use App\Models\ReceptionWorkReport;
 use App\Models\Technician;
+use App\Services\ReceptionCustodyGate;
+use App\Services\ReceptionLifecycleService;
 use App\Services\StaffNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,7 +52,7 @@ class HandoffController extends Controller
         $inHand = collect();
         if ($user->technician || $user->canAccess('receptions') || $user->canAccess('reports.custody')) {
             $inHandQuery = Reception::query()
-                ->with(['customer', 'technician', 'custodyTechnician'])
+                ->with(['customer', 'technician', 'custodyTechnician', 'latestWorkReport'])
                 ->where('custody', 'with_technician')
                 ->whereNotIn('status', ['delivered', 'cancelled']);
 
@@ -75,6 +78,7 @@ class HandoffController extends Controller
             $inHand = $inHandQuery->latest('id')->limit(80)->get();
         }
 
+        $gate = app(ReceptionCustodyGate::class);
         $history = collect();
         if (in_array($status, ['all', 'accepted', 'rejected'], true) || $ticket !== '' || $serial !== '' || $q !== '') {
             $historyQuery = DeviceHandoff::query()
@@ -117,7 +121,7 @@ class HandoffController extends Controller
         ];
 
         return view('handoffs.index', compact(
-            'pending', 'inHand', 'history', 'stats', 'ticket', 'serial', 'q', 'status'
+            'pending', 'inHand', 'history', 'stats', 'ticket', 'serial', 'q', 'status', 'gate'
         ));
     }
 
@@ -200,14 +204,16 @@ class HandoffController extends Controller
             return back()->with('success', 'ارجاع به تعمیرکار ثبت شد. منتظر تأیید دریافت بمانید.');
         }
 
-        // to_front_desk — technician returns device (or desk records physical return)
+        // to_front_desk — only owning technician can request return; desk must confirm.
         $tech = $user->technician;
         $isOwningTech = $tech && (int) $reception->custody_technician_id === (int) $tech->id;
-        $isDeskProxy = $user->canAccess('receptions')
-            && ($reception->custody ?? '') === 'with_technician'
-            && $reception->custody_technician_id;
+        abort_unless($isOwningTech, 403, 'فقط تعمیرکار نگهدارنده دستگاه می‌تواند ارجاع بازگشت ثبت کند.');
 
-        abort_unless($isOwningTech || $isDeskProxy, 403);
+        if (! app(ReceptionCustodyGate::class)->hasWorkReport($reception)) {
+            return back()->withErrors([
+                'note' => 'قبل از ارجاع بازگشت به پذیرش، باید گزارش کار این قبض را در کارتابل ثبت کنید.',
+            ]);
+        }
 
         $existing = DeviceHandoff::query()
             ->where('reception_id', $reception->id)
@@ -217,33 +223,8 @@ class HandoffController extends Controller
             return back()->withErrors(['note' => 'ارجاع باز دیگری برای این قبض وجود دارد.']);
         }
 
-        $techId = $isOwningTech ? $tech->id : (int) $reception->custody_technician_id;
-        $techName = $isOwningTech
-            ? $tech->name
-            : (Technician::query()->find($techId)?->name ?? 'تعمیرکار');
-
-        // Desk recording a physical return: accept immediately (receiver = desk)
-        if ($isDeskProxy && ! $isOwningTech) {
-            $handoff = DeviceHandoff::query()->create([
-                'reception_id' => $reception->id,
-                'from_user_id' => $user->id,
-                'to_user_id' => $user->id,
-                'to_technician_id' => $techId,
-                'direction' => DeviceHandoff::DIR_TO_FRONT,
-                'serial_snapshot' => $reception->serial_number,
-                'status' => DeviceHandoff::STATUS_ACCEPTED,
-                'note' => $data['note'] ?? 'ثبت بازگشت فیزیکی توسط پذیرش',
-                'response_note' => 'تأیید دریافت توسط پذیرش',
-                'responded_at' => now(),
-            ]);
-
-            $reception->forceFill([
-                'custody' => 'front_desk',
-                'custody_technician_id' => null,
-            ])->save();
-
-            return back()->with('success', "بازگشت دستگاه از {$techName} در پذیرش ثبت شد.");
-        }
+        $techId = $tech->id;
+        $techName = $tech->name;
 
         $handoff = DeviceHandoff::query()->create([
             'reception_id' => $reception->id,
@@ -268,7 +249,59 @@ class HandoffController extends Controller
             ['handoff_id' => $handoff->id, 'reception_id' => $reception->id]
         );
 
-        return back()->with('success', 'درخواست بازگشت به پذیرش ثبت شد.');
+        return back()->with('success', 'درخواست بازگشت به پذیرش ثبت شد. منتظر تأیید منشی/حسابدار بمانید.');
+    }
+
+    public function storeWorkReport(Request $request, Reception $reception): RedirectResponse
+    {
+        $user = $request->user();
+        $tech = $user->technician;
+        $owns = $tech && (int) $reception->custody_technician_id === (int) $tech->id;
+        abort_unless($owns || $user->isAdmin(), 403);
+
+        if (($reception->custody ?? '') !== 'with_technician') {
+            return back()->withErrors(['summary' => 'گزارش کار فقط وقتی دستگاه نزد تعمیرکار است ثبت می‌شود.']);
+        }
+
+        $data = $request->validate([
+            'summary' => ['required', 'string', 'max:500'],
+            'details' => ['nullable', 'string', 'max:5000'],
+            'needs_part' => ['nullable', 'boolean'],
+            'result_status' => ['nullable', 'in:repairing,waiting_part,ready,unrepairable'],
+        ]);
+
+        $report = ReceptionWorkReport::query()->create([
+            'reception_id' => $reception->id,
+            'user_id' => $user->id,
+            'technician_id' => $tech?->id,
+            'summary' => $data['summary'],
+            'details' => $data['details'] ?? null,
+            'needs_part' => $request->boolean('needs_part'),
+            'result_status' => $data['result_status'] ?? null,
+        ]);
+
+        if (! empty($data['result_status']) && $reception->status !== 'delivered') {
+            $from = $reception->status;
+            $reception->forceFill(['status' => $data['result_status']])->save();
+            app(ReceptionLifecycleService::class)->log(
+                $reception,
+                $data['result_status'],
+                'status_change',
+                $from,
+                'گزارش کار تعمیرکار',
+                $data['summary']
+            );
+        }
+
+        if ($tech && trim((string) ($data['summary'] ?? '')) !== '') {
+            $notes = trim((string) $reception->technician_notes);
+            $line = '['.now('Asia/Tehran')->format('Y-m-d H:i').'] '.$data['summary'];
+            $reception->forceFill([
+                'technician_notes' => $notes === '' ? $line : ($notes."\n".$line),
+            ])->save();
+        }
+
+        return back()->with('success', 'گزارش کار قبض '.$reception->ticket_no.' ثبت شد. (گزارش #'.$report->id.')');
     }
 
     public function respond(Request $request, DeviceHandoff $handoff, StaffNotifier $notifier): RedirectResponse

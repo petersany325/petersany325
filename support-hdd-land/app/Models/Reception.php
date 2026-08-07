@@ -68,6 +68,16 @@ class Reception extends Model
         return $this->hasMany(DeviceHandoff::class);
     }
 
+    public function workReports(): HasMany
+    {
+        return $this->hasMany(ReceptionWorkReport::class)->latest('id');
+    }
+
+    public function latestWorkReport()
+    {
+        return $this->hasOne(ReceptionWorkReport::class)->latestOfMany();
+    }
+
     public function customerMessages(): HasMany
     {
         return $this->hasMany(CustomerMessage::class);
