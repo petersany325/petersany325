@@ -1,21 +1,60 @@
 @extends('layouts.app')
 @section('title', 'عملکرد تعمیرکاران | سرزمین هارد')
 @section('page_title', 'گزارش عملکرد تعمیرکاران')
+@section('window_title', 'جستجو و پرونده تعمیرکار')
+
 @section('content')
-<div class="panel">
-    <h2>عملکرد تعمیرکاران</h2>
-    <form class="search-row" method="GET">
-        <input type="date" name="from" value="{{ $from }}">
-        <input type="date" name="to" value="{{ $to }}">
-        <button class="btn btn-secondary" type="submit">اعمال فیلتر</button>
+@include('reports._settings')
+
+<div class="panel" style="margin-bottom:12px;">
+    <h2 style="margin-top:0;">عملکرد تعمیرکاران</h2>
+    <p class="muted">نام تعمیرکار را جستجو کنید یا روی پرونده بزنید تا کارهای دوره، قطعات، کمیسیون و دستگاه‌های دست تعمیر را ببینید.</p>
+    <form class="search-row" method="GET" action="{{ route('reports.technicians') }}">
+        <input type="search" name="q" value="{{ $q }}" placeholder="نام / تخصص / موبایل" style="min-width:240px;">
+        <button class="btn btn-primary" type="submit">جستجو</button>
+        @if($q !== '')
+            <a class="btn btn-ghost" href="{{ route('reports.technicians') }}">پاک</a>
+        @endif
     </form>
+</div>
+
+@if(\App\Support\ReportSettings::showCharts())
+<div class="report-charts-row" style="margin-bottom:12px;">
+    @include('reports._chart', [
+        'id' => 'chartTechJobs',
+        'title' => 'تعداد کار در بازه',
+        'labels' => $chartLabels,
+        'values' => $chartJobs,
+    ])
+    @include('reports._chart', [
+        'id' => 'chartTechLabor',
+        'title' => 'جمع اجرت تحویل‌شده',
+        'labels' => $chartLabels,
+        'values' => $chartLabor,
+    ])
+</div>
+@endif
+
+<div class="panel">
     <div class="table-wrap">
-        <table>
-            <thead><tr><th>تعمیرکار</th><th>تخصص</th><th>کل کار</th><th>تحویل‌شده</th><th>دست تعمیر</th><th>جمع اجرت</th><th>کمیسیون%</th><th>مبلغ کمیسیون</th></tr></thead>
+        <table class="compact-table">
+            <thead>
+            <tr>
+                <th>تعمیرکار</th>
+                <th>تخصص</th>
+                <th>کل کار</th>
+                <th>تحویل‌شده</th>
+                <th>دست تعمیر</th>
+                <th>جمع اجرت</th>
+                <th>کمیسیون%</th>
+                <th>مبلغ کمیسیون</th>
+                <th></th>
+            </tr>
+            </thead>
             <tbody>
-            @foreach($rows as $row)
+            @forelse($rows as $row)
                 <tr>
-                    <td>{{ $row->name }}</td>
+                    <td><strong>{{ $row->name }}</strong><div class="muted" dir="ltr">{{ $row->phone }}</div></td>
                     <td>{{ $row->specialty ?: '—' }}</td>
                     <td>{{ $row->jobs_count }}</td>
                     <td>{{ $row->delivered_count }}</td>
@@ -23,10 +62,15 @@
                     <td>{{ toman($row->labor_sum) }}</td>
                     <td>{{ $row->commission_percent }}٪</td>
                     <td>{{ toman($row->commission_sum ?? 0) }}</td>
+                    <td><a class="btn btn-primary" href="{{ route('reports.technicians.show', $row) }}">پرونده عملکرد</a></td>
                 </tr>
-            @endforeach
+            @empty
+                <tr><td colspan="9">تعمیرکاری یافت نشد.</td></tr>
+            @endforelse
             </tbody>
         </table>
     </div>
 </div>
 @endsection
+
+@include('reports._charts-boot')

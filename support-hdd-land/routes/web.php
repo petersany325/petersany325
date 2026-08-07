@@ -128,6 +128,8 @@ Route::middleware('auth')->group(function () {
         Route::resource('employees', EmployeeController::class)->except(['show', 'destroy']);
     });
 
+    Route::post('reports/settings', [ReportController::class, 'saveSettings'])->name('reports.settings');
+
     Route::get('reports/accounting', [ReportController::class, 'accounting'])
         ->middleware(EnsurePermission::class.':reports.accounting')
         ->name('reports.accounting');
@@ -143,9 +145,15 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/technicians', [ReportController::class, 'technicians'])
         ->middleware(EnsurePermission::class.':reports.technicians')
         ->name('reports.technicians');
+    Route::get('reports/technicians/{technician}', [ReportController::class, 'technicianShow'])
+        ->middleware(EnsurePermission::class.':reports.technicians')
+        ->name('reports.technicians.show');
     Route::get('reports/customers', [ReportController::class, 'customers'])
         ->middleware(EnsurePermission::class.':reports.customers')
         ->name('reports.customers');
+    Route::get('reports/customers/{customer}', [ReportController::class, 'customerShow'])
+        ->middleware(EnsurePermission::class.':reports.customers')
+        ->name('reports.customers.show');
     Route::get('reports/parts-used', [ReportController::class, 'partsUsed'])
         ->middleware(EnsurePermission::class.':reports.parts')
         ->name('reports.parts-used');

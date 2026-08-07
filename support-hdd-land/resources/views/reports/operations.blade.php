@@ -4,10 +4,11 @@
 @section('window_title', 'پذیرش، تحویل، WIP و درآمد دوره')
 
 @section('content')
+@include('reports._settings')
+
 <div class="panel" style="margin-bottom:12px;">
     <h2 style="margin-top:0;">عملیات کارگاه</h2>
     <p class="muted" style="margin-top:0;">خلاصه پذیرش، تحویل، کارهای باز و درآمد قبض‌های تحویل‌شده در بازه انتخابی.</p>
-    @include('reports._filters')
     <div class="stats stats-compact">
         <div class="stat"><div class="label">پذیرش دوره</div><div class="value">{{ number_format($intake) }}</div></div>
         <div class="stat"><div class="label">تحویل دوره</div><div class="value">{{ number_format($delivered) }}</div></div>
@@ -17,6 +18,13 @@
         <div class="stat"><div class="label">میانگین روز تعمیر</div><div class="value">{{ $avgDays !== null ? number_format((float) $avgDays, 1) : '—' }}</div></div>
     </div>
 </div>
+
+@if(\App\Support\ReportSettings::showCharts())
+<div class="report-charts-row" style="margin-bottom:12px;">
+    @include('reports._chart', ['id'=>'chartOpsStatus','title'=>'توزیع وضعیت','labels'=>$chartStatusLabels,'values'=>$chartStatusValues,'type'=>'doughnut'])
+    @include('reports._chart', ['id'=>'chartOpsDaily','title'=>'پذیرش روزانه','labels'=>$daily->pluck('day')->values()->all(),'values'=>$daily->pluck('total')->map(fn($v)=>(int)$v)->values()->all()])
+</div>
+@endif
 
 <div class="split-2">
     <div class="panel">
@@ -49,19 +57,7 @@
                 </tbody>
             </table>
         </div>
-        <h3>پذیرش روزانه</h3>
-        <div class="table-wrap">
-            <table class="compact-table">
-                <thead><tr><th>روز</th><th>تعداد</th></tr></thead>
-                <tbody>
-                @forelse($daily as $row)
-                    <tr><td>{{ $row->day }}</td><td>{{ $row->total }}</td></tr>
-                @empty
-                    <tr><td colspan="2">—</td></tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
     </div>
 </div>
 @endsection
+@include('reports._charts-boot')

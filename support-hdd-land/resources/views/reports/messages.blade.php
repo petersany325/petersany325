@@ -4,10 +4,11 @@
 @section('window_title', 'تیکت پشتیبانی مشتریان')
 
 @section('content')
+@include('reports._settings')
+
 <div class="panel" style="margin-bottom:12px;">
     <h2 style="margin-top:0;">پیام‌های مشتری</h2>
     <p class="muted" style="margin-top:0;">پیگیری درخواست‌هایی که مشتری از کارتابل درباره قبض ارسال کرده است.</p>
-    @include('reports._filters')
     <div class="stats stats-compact">
         <div class="stat"><div class="label">کل</div><div class="value">{{ number_format($summary['total']) }}</div></div>
         <div class="stat"><div class="label">خوانده‌نشده</div><div class="value">{{ number_format($summary['unread']) }}</div></div>
@@ -15,6 +16,12 @@
         <div class="stat"><div class="label">میانگین پاسخ (ساعت)</div><div class="value">{{ $avgResponseHours !== null ? number_format((float) $avgResponseHours, 1) : '—' }}</div></div>
     </div>
 </div>
+
+@if(\App\Support\ReportSettings::showCharts())
+<div class="report-charts-row" style="margin-bottom:12px;">
+    @include('reports._chart', ['id'=>'chartMsg','title'=>'وضعیت پیام‌ها','labels'=>$chartMsgLabels,'values'=>$chartMsgValues,'type'=>'doughnut'])
+</div>
+@endif
 
 <div class="panel">
     <h3 style="margin-top:0;">آخرین پیام‌ها</h3>
@@ -35,7 +42,12 @@
             @forelse($rows as $m)
                 <tr style="{{ $m->isUnread() ? 'background:rgba(245,158,11,.08);' : '' }}">
                     <td>{{ $m->created_at?->format('Y/m/d H:i') }}</td>
-                    <td>{{ $m->customer?->name }}</td>
+                    <td>
+                        {{ $m->customer?->name }}
+                        @if($m->customer_id && auth()->user()->canAccess('reports.customers'))
+                            <div><a class="btn btn-ghost" href="{{ route('reports.customers.show', $m->customer_id) }}">پرونده</a></div>
+                        @endif
+                    </td>
                     <td>
                         @if($m->reception_id)
                             <a href="{{ route('receptions.show', $m->reception_id) }}">{{ $m->reception?->ticket_no }}</a>
@@ -54,3 +66,4 @@
     </div>
 </div>
 @endsection
+@include('reports._charts-boot')

@@ -4,9 +4,10 @@
 @section('window_title', 'موفق / ناموفق و به تفکیک وضعیت')
 
 @section('content')
+@include('reports._settings')
+
 <div class="panel" style="margin-bottom:12px;">
     <h2 style="margin-top:0;">پیامک‌های ارسال‌شده</h2>
-    @include('reports._filters')
     <div class="stats stats-compact">
         <div class="stat"><div class="label">کل</div><div class="value">{{ number_format($summary['total']) }}</div></div>
         <div class="stat"><div class="label">موفق</div><div class="value">{{ number_format($summary['ok']) }}</div></div>
@@ -15,6 +16,13 @@
         <div class="stat"><div class="label">همکار</div><div class="value">{{ number_format($summary['coworker']) }}</div></div>
     </div>
 </div>
+
+@if(\App\Support\ReportSettings::showCharts())
+<div class="report-charts-row" style="margin-bottom:12px;">
+    @include('reports._chart', ['id'=>'chartSms','title'=>'موفق در برابر ناموفق','labels'=>$chartSmsLabels,'values'=>$chartSmsValues,'type'=>'doughnut'])
+    @include('reports._chart', ['id'=>'chartSmsStatus','title'=>'به تفکیک وضعیت','labels'=>$byStatus->pluck('status_key')->map(fn($v)=>$v?:'—')->values()->all(),'values'=>$byStatus->pluck('total')->map(fn($v)=>(int)$v)->values()->all()])
+</div>
+@endif
 
 <div class="split-2">
     <div class="panel">
@@ -49,8 +57,7 @@
                         <td>
                             @if($f->reception_id)
                                 <a href="{{ route('receptions.show', $f->reception_id) }}">{{ $f->reception?->ticket_no }}</a>
-                            @else —
-                            @endif
+                            @else — @endif
                         </td>
                         <td class="muted">{{ \Illuminate\Support\Str::limit($f->provider_message, 60) }}</td>
                     </tr>
@@ -63,3 +70,4 @@
     </div>
 </div>
 @endsection
+@include('reports._charts-boot')

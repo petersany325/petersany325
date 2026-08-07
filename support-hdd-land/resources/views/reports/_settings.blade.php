@@ -1,0 +1,44 @@
+@php
+    $rs = \App\Support\ReportSettings::all();
+    $periodLabels = \App\Support\ReportSettings::periodLabels();
+@endphp
+<div class="panel report-settings" style="margin-bottom:12px;">
+    <form method="POST" action="{{ route('reports.settings') }}" class="report-settings-form">
+        @csrf
+        <input type="hidden" name="redirect" value="{{ url()->full() }}">
+        <div class="report-settings-head">
+            <div>
+                <strong>تنظیمات سراسری گزارش‌ها</strong>
+                <span class="muted">این بازه و گراف روی همه گزارش‌ها اعمال می‌شود.</span>
+            </div>
+            <button class="btn btn-primary" type="submit">اعمال</button>
+        </div>
+        <div class="report-settings-grid">
+            <label>بازه سریع
+                <select name="period" id="report-period">
+                    @foreach($periodLabels as $key => $label)
+                        <option value="{{ $key }}" @selected(($rs['period'] ?? '') === $key)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </label>
+            <label>از تاریخ
+                <input type="date" name="from" value="{{ $rs['from'] }}">
+            </label>
+            <label>تا تاریخ
+                <input type="date" name="to" value="{{ $rs['to'] }}">
+            </label>
+            <label>نوع گراف
+                <select name="chart_type">
+                    <option value="bar" @selected(($rs['chart_type'] ?? '') === 'bar')>میله‌ای</option>
+                    <option value="line" @selected(($rs['chart_type'] ?? '') === 'line')>خطی</option>
+                    <option value="doughnut" @selected(($rs['chart_type'] ?? '') === 'doughnut')>حلقه‌ای</option>
+                </select>
+            </label>
+            <label class="report-check">
+                <input type="hidden" name="show_charts" value="0">
+                <input type="checkbox" name="show_charts" value="1" @checked(!empty($rs['show_charts']))>
+                نمایش گراف در گزارش‌ها
+            </label>
+        </div>
+    </form>
+</div>

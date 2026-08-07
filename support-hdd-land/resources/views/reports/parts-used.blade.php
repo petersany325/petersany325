@@ -1,16 +1,23 @@
 @extends('layouts.app')
 @section('title', 'کالای خرج‌شده | سرزمین هارد')
 @section('page_title', 'گزارش کالاهای خرج‌شده')
+
 @section('content')
+@include('reports._settings')
+
+<div class="panel" style="margin-bottom:12px;">
+    <h2 style="margin-top:0;">کالا/قطعات خرج‌شده در تاریخ</h2>
+</div>
+
+@if(\App\Support\ReportSettings::showCharts())
+<div class="report-charts-row" style="margin-bottom:12px;">
+    @include('reports._chart', ['id'=>'chartParts','title'=>'۱۰ قطعه پرمصرف','labels'=>$chartPartLabels,'values'=>$chartPartValues])
+</div>
+@endif
+
 <div class="panel">
-    <h2>کالا/قطعات خرج‌شده در تاریخ</h2>
-    <form class="search-row" method="GET">
-        <input type="date" name="from" value="{{ $from }}">
-        <input type="date" name="to" value="{{ $to }}">
-        <button class="btn btn-secondary" type="submit">اعمال فیلتر</button>
-    </form>
     <div class="table-wrap">
-        <table>
+        <table class="compact-table">
             <thead><tr><th>نام قطعه</th><th>تعداد مصرف</th><th>مبلغ</th></tr></thead>
             <tbody>
             @forelse($rows as $row)
@@ -27,3 +34,4 @@
     </div>
 </div>
 @endsection
+@include('reports._charts-boot')

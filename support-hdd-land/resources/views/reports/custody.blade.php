@@ -4,10 +4,11 @@
 @section('window_title', 'Chain of Custody و دست تعمیر')
 
 @section('content')
+@include('reports._settings')
+
 <div class="panel" style="margin-bottom:12px;">
     <h2 style="margin-top:0;">ارجاع و Custody</h2>
-    <p class="muted" style="margin-top:0;">کنترل شفاف قبض‌ها: چند دستگاه نزد تعمیرکار است، چند ارجاع تأیید/رد شده، چه چیزی در انتظار دریافت است.</p>
-    @include('reports._filters')
+    <p class="muted" style="margin-top:0;">کنترل شفاف قبض‌ها: چند دستگاه نزد تعمیرکار است، چند ارجاع تأیید/رد شده.</p>
     <div class="stats stats-compact">
         <div class="stat"><div class="label">کل ارجاع دوره</div><div class="value">{{ number_format($summary['total']) }}</div></div>
         <div class="stat"><div class="label">تأیید شده</div><div class="value">{{ number_format($summary['accepted']) }}</div></div>
@@ -18,28 +19,19 @@
     </div>
 </div>
 
+@if(\App\Support\ReportSettings::showCharts())
+<div class="report-charts-row" style="margin-bottom:12px;">
+    @include('reports._chart', ['id'=>'chartCustody','title'=>'محل فعلی دستگاه‌های باز','labels'=>$chartCustodyLabels,'values'=>$chartCustodyValues,'type'=>'doughnut'])
+    @include('reports._chart', ['id'=>'chartHandoff','title'=>'نتیجه ارجاع دوره','labels'=>['تأیید','رد','انتظار'],'values'=>[(int)$summary['accepted'],(int)$summary['rejected'],(int)$summary['pending']],'type'=>'bar'])
+</div>
+@endif
+
 <div class="split-2" style="margin-bottom:12px;">
     <div class="panel">
-        <h3 style="margin-top:0;">محل فعلی دستگاه‌های باز</h3>
+        <h3 style="margin-top:0;">عملکرد ارجاع به تفکیک تعمیرکار</h3>
         <div class="table-wrap">
             <table class="compact-table">
-                <thead><tr><th>محل</th><th>تعداد</th></tr></thead>
-                <tbody>
-                @php
-                    $labels = ['front_desk'=>'نزد پذیرش','with_technician'=>'دست تعمیرکار','returning'=>'در حال بازگشت'];
-                @endphp
-                @forelse($byCustody as $key => $total)
-                    <tr><td>{{ $labels[$key] ?? $key }}</td><td>{{ $total }}</td></tr>
-                @empty
-                    <tr><td colspan="2">قبص بازی نیست.</td></tr>
-                @endforelse
-                </tbody>
-            </table>
-        </div>
-        <h3>عملکرد ارجاع به تفکیک تعمیرکار</h3>
-        <div class="table-wrap">
-            <table class="compact-table">
-                <thead><tr><th>تعمیرکار</th><th>تأیید</th><th>رد</th><th>انتظار</th></tr></thead>
+                <thead><tr><th>تعمیرکار</th><th>تأیید</th><th>رد</th><th>انتظار</th><th></th></tr></thead>
                 <tbody>
                 @forelse($byTech as $techId => $rows)
                     @php
@@ -52,9 +44,14 @@
                         <td>{{ $acc }}</td>
                         <td>{{ $rej }}</td>
                         <td>{{ $pen }}</td>
+                        <td>
+                            @if(auth()->user()->canAccess('reports.technicians'))
+                                <a class="btn btn-ghost" href="{{ route('reports.technicians.show', $techId) }}">پرونده</a>
+                            @endif
+                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4">ارجاعی در بازه نیست.</td></tr>
+                    <tr><td colspan="5">ارجاعی در بازه نیست.</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -104,3 +101,4 @@
     </div>
 </div>
 @endsection
+@include('reports._charts-boot')
