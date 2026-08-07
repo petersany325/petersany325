@@ -73,11 +73,14 @@ class CustomerController extends Controller
 
     public function destroy(Customer $customer)
     {
-        if ($customer->receptions()->exists()) {
-            return back()->withErrors([
-                'customer' => 'این مشتری قبض دارد و قابل حذف نیست. ابتدا قبض‌ها را بررسی کنید یا فقط ویرایش کنید.',
-            ]);
-        }
+        $receiptCount = $customer->receptions()->count();
+
+        // Soft-delete keeps historical receipts (FK is CASCADE on hard delete).
+        // Free unique name/phone so the same person can be registered again.
+        $customer->forceFill([
+            'name' => mb_substr($customer->name, 0, 100).' «حذف‌شده»',
+            'phone' => 'del'.$customer->id.'_'.preg_replace('/\D+/', '', (string) $customer->phone),
+        ])->save();
 
         if (method_exists($customer, 'messages') && $customer->messages()->exists()) {
             $customer->messages()->delete();
@@ -85,7 +88,11 @@ class CustomerController extends Controller
 
         $customer->delete();
 
-        return redirect()->route('customers.index')->with('success', 'مشتری حذف شد.');
+        $message = $receiptCount > 0
+            ? "مشتری از فهرست حذف شد. {$receiptCount} قبض قبلی در سیستم باقی ماند."
+            : 'مشتری حذف شد.';
+
+        return redirect()->route('customers.index')->with('success', $message);
     }
 
     private function validated(Request $request, ?Customer $customer = null): array
@@ -101,7 +108,7 @@ class CustomerController extends Controller
                 'required',
                 'string',
                 'max:120',
-                Rule::unique('customers', 'name')->ignore($customer?->id),
+                Rule::unique('customers', 'name')->whereNull('deleted_at')->ignore($customer?->id),
             ],
             'phone' => [
                 'required',
@@ -112,7 +119,7 @@ class CustomerController extends Controller
                         $fail('شماره موبایل معتبر نیست.');
                     }
                 },
-                Rule::unique('customers', 'phone')->ignore($customer?->id),
+                Rule::unique('customers', 'phone')->whereNull('deleted_at')->ignore($customer?->id),
             ],
             'national_code' => ['nullable', 'string', 'max:20'],
             'job' => ['nullable', 'string', 'max:120'],

@@ -12,10 +12,6 @@
         <a class="btn btn-primary" href="{{ route('customers.create') }}">مشتری جدید</a>
     </div>
 
-    @if($errors->any())
-        <div class="alert alert-error">{{ $errors->first() }}</div>
-    @endif
-
     <form class="ticket-search-bar" method="GET" style="margin:8px 0;">
         <div class="field">
             <label>جستجو</label>
@@ -55,7 +51,13 @@
                         <div class="actions" style="margin:0;">
                             <a class="btn btn-ghost" href="{{ route('customers.show', $customer) }}">نمایش</a>
                             <a class="btn btn-secondary" href="{{ route('customers.edit', $customer) }}">ویرایش</a>
-                            <form method="POST" action="{{ route('customers.destroy', $customer) }}" style="display:inline;" data-confirm="مشتری «{{ $customer->name }}» حذف شود؟">
+                            @php
+                                $rc = (int) ($customer->receptions_count ?? 0);
+                                $confirm = $rc > 0
+                                    ? "مشتری «{$customer->name}» {$rc} قبض دارد. از فهرست مشتریان حذف می‌شود ولی قبض‌ها می‌مانند. ادامه؟"
+                                    : "مشتری «{$customer->name}» حذف شود؟";
+                            @endphp
+                            <form method="POST" action="{{ route('customers.destroy', $customer) }}" style="display:inline;" data-confirm="{{ $confirm }}">
                                 @csrf
                                 @method('DELETE')
                                 <button class="btn btn-danger" type="submit">حذف</button>

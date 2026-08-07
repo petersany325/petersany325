@@ -10,7 +10,13 @@
         </div>
         <div class="report-head-actions">
             <a class="btn btn-secondary" href="{{ route('customers.edit', $customer) }}">ویرایش</a>
-            <form method="POST" action="{{ route('customers.destroy', $customer) }}" data-confirm="مشتری «{{ $customer->name }}» حذف شود؟">
+            @php
+                $rc = $customer->receptions->count();
+                $confirm = $rc > 0
+                    ? "مشتری «{$customer->name}» {$rc} قبض دارد. از فهرست حذف می‌شود ولی قبض‌ها می‌مانند. ادامه؟"
+                    : "مشتری «{$customer->name}» حذف شود؟";
+            @endphp
+            <form method="POST" action="{{ route('customers.destroy', $customer) }}" data-confirm="{{ $confirm }}">
                 @csrf
                 @method('DELETE')
                 <button class="btn btn-danger" type="submit">حذف</button>
