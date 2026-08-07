@@ -99,7 +99,7 @@
         <div class="ticket-meta">
             <strong>{{ $reception->ticket_no }}</strong>
             <span class="muted">قبض {{ $reception->receipt_no ?: '—' }}</span><br>
-            <span class="muted">{{ optional($reception->received_at)->format('Y/m/d H:i') }}</span>
+            <span class="muted">{{ jalali_like($reception->received_at) }}</span>
         </div>
     </div>
 

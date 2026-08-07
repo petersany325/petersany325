@@ -77,7 +77,7 @@
             <tbody>
             @forelse($recent as $p)
                 <tr>
-                    <td>{{ optional($p->paid_at)->format('Y/m/d H:i') }}</td>
+                    <td>{{ jalali_like($p->paid_at) }}</td>
                     <td>{{ $p->customer?->name }}</td>
                     <td>{{ $p->methodLabel() }}</td>
                     <td>{{ toman((int) $p->amount) }}</td>

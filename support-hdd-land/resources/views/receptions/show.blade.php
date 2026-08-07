@@ -103,7 +103,7 @@
                         <tbody>
                         @foreach($reception->handoffs as $h)
                             <tr>
-                                <td>{{ $h->created_at?->format('Y/m/d H:i') }}</td>
+                                <td>{{ jalali_like($h->created_at?) }}</td>
                                 <td>{{ $h->directionLabel() }}</td>
                                 <td>{{ $h->fromUser?->name }}</td>
                                 <td>{{ $h->toTechnician?->name ?: ($h->toUser?->name ?: 'پذیرش') }}</td>
@@ -155,7 +155,7 @@
                     <div>
                         <strong>{{ $log->displayTitle() }}</strong>
                         <div class="muted" style="font-size:11px;">
-                            {{ $log->created_at?->timezone('Asia/Tehran')->format('Y/m/d H:i') }}
+                            {{ jalali_like($log->created_at) }}
                             @if($log->actor) · {{ $log->actor->name }} @endif
                             @if($log->fromStatusLabel()) · از {{ $log->fromStatusLabel() }} @endif
                             → {{ $log->toStatusLabel() }}
@@ -342,7 +342,7 @@
                     <strong>{{ $apLabels[$apStatus] ?? ($apStatus ?: 'ارسال نشده') }}</strong>
                     @if($reception->customer_cost_approved_at)
                         — تأیید {{ number_format((int) $reception->customer_cost_approved_amount) }} تومان
-                        در {{ $reception->customer_cost_approved_at->format('Y/m/d H:i') }}
+                        در {{ jalali_like($reception->customer_cost_approved_at) }}
                     @endif
                 </div>
                 <form method="POST" action="{{ route('receptions.cost-approval', $reception) }}" class="accept-row accept-row-2" style="margin-bottom:8px;">
@@ -398,9 +398,9 @@
                                     <td>V{{ $ap->version }}</td>
                                     <td>{{ number_format((int) $ap->amount) }}</td>
                                     <td>{{ $ap->statusLabel() }}</td>
-                                    <td>{{ $ap->sent_at?->format('Y/m/d H:i') ?: '—' }}</td>
-                                    <td>{{ $ap->viewed_at?->format('Y/m/d H:i') ?: '—' }}</td>
-                                    <td>{{ $ap->decided_at?->format('Y/m/d H:i') ?: '—' }}</td>
+                                    <td>{{ jalali_like($ap->sent_at) }}</td>
+                                    <td>{{ jalali_like($ap->viewed_at) }}</td>
+                                    <td>{{ jalali_like($ap->decided_at) }}</td>
                                     <td dir="ltr">{{ $ap->approval_code ?: '—' }}</td>
                                 </tr>
                             @endforeach
@@ -411,7 +411,7 @@
             </div>
         </div>
 
-        <div class="panel">
+        <div class="panel" id="cost-stages-box">
             <h3>مراحل هزینه (چندمرحله‌ای)</h3>
             <p class="lead" style="margin:0 0 8px;">مثلاً خرید برد، بازیابی و تست — هر کدام مبلغ جدا. جمع در فاکتور خروج لحاظ می‌شود.</p>
             <div class="table-wrap">
@@ -480,7 +480,7 @@
             @endunless
         </div>
 
-        <div class="panel">
+        <div class="panel" id="parts-box">
             <h3>قطعات خرج‌شده</h3>
             <div class="table-wrap">
                 <table>
@@ -494,7 +494,7 @@
                             <td>{{ $part->quantity }}</td>
                             <td>{{ toman($part->unit_price) }}</td>
                             <td>{{ toman($part->total_price) }}</td>
-                            <td>{{ optional($part->used_at)->format('Y/m/d') }}</td>
+                            <td>{{ jalali_date($part->used_at) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="5">قطعه‌ای ثبت نشده.</td></tr>
@@ -553,23 +553,50 @@
         </div>
     </div>
 
-    <div class="stack">
-        <div class="panel">
+    <div class="stack rx-finance-rail">
+        <nav class="rx-mini-nav" aria-label="میانبر قبض">
+            <a href="#rx-finance" class="rx-mini-item tone-amber"><span>ف</span>فاکتور</a>
+            <a href="#rx-pay" class="rx-mini-item tone-teal"><span>پ</span>پرداخت</a>
+            <a href="#cost-stages-box" class="rx-mini-item tone-blue"><span>ه</span>هزینه</a>
+            <a href="#status-sms-panel" class="rx-mini-item tone-violet"><span>و</span>وضعیت</a>
+            <a href="#parts-box" class="rx-mini-item tone-green"><span>ق</span>قطعات</a>
+        </nav>
+
+        <div class="panel" id="rx-finance">
             <h3>خلاصه مالی / فاکتور خروج</h3>
-            <div class="form-grid" style="grid-template-columns:1fr;">
-                <div><span class="muted">بیعانه</span><div>{{ toman($reception->deposit) }}</div></div>
-                <div><span class="muted">اجرت</span><div>{{ toman($reception->labor_cost) }}</div></div>
-                <div><span class="muted">قطعات انبار</span><div>{{ toman($reception->parts_cost) }}</div></div>
-                <div><span class="muted">مراحل هزینه</span><div>{{ toman($reception->stages_cost) }}</div></div>
-                <div><span class="muted">تخفیف</span><div>{{ toman($reception->discount) }}@if($reception->discount_reason)<small class="muted"> — {{ $reception->discount_reason }}</small>@endif</div></div>
-                <div><span class="muted">جمع کل</span><div style="font-size:1.2rem;font-weight:700;">{{ toman($reception->total_amount) }}</div></div>
-                <div><span class="muted">پرداخت‌شده</span><div>{{ toman($reception->paid_amount) }}</div></div>
-                <div><span class="muted">مانده</span><div style="font-weight:700;">{{ toman($reception->remainingAmount()) }}</div></div>
+            @php
+                $gross = $reception->grossCost();
+                $stageRows = $costStages ?? collect();
+            @endphp
+            <div class="rx-cost-board">
+                <div class="rx-cost-row"><span>اجرت / خدمات</span><strong>{{ toman($reception->labor_cost) }}</strong></div>
+                <div class="rx-cost-row"><span>قطعات انبار</span><strong>{{ toman($reception->parts_cost) }}</strong></div>
+                @forelse($stageRows as $stage)
+                    <div class="rx-cost-row soft">
+                        <span>{{ $stage->stage_label }}</span>
+                        <strong>{{ toman($stage->amount) }}</strong>
+                    </div>
+                @empty
+                    <div class="rx-cost-row soft"><span>مراحل هزینه</span><strong>{{ toman($reception->stages_cost) }}</strong></div>
+                @endforelse
+                @if((int) $reception->admission_fee > 0)
+                    <div class="rx-cost-row"><span>حق پذیرش</span><strong>{{ toman($reception->admission_fee) }}</strong></div>
+                @endif
+                <div class="rx-cost-row total-line"><span>جمع هزینه‌های ثبت‌شده</span><strong>{{ toman($gross) }}</strong></div>
+                <div class="rx-cost-row"><span>بیعانه ثبت‌شده</span><strong>{{ toman($reception->deposit) }}</strong></div>
+                <div class="rx-cost-row"><span>تخفیف</span><strong>{{ toman($reception->discount) }}@if($reception->discount_reason)<small class="muted"> — {{ $reception->discount_reason }}</small>@endif</strong></div>
+                <div class="rx-cost-row grand"><span>جمع فاکتور</span><strong>{{ toman($reception->total_amount) }}</strong></div>
+                <div class="rx-cost-row"><span>پرداخت‌شده</span><strong>{{ toman($reception->paid_amount) }}</strong></div>
+                <div class="rx-cost-row remain"><span>مانده</span><strong>{{ toman($reception->remainingAmount()) }}</strong></div>
             </div>
         </div>
 
-        <div class="panel">
+        <div class="panel" id="rx-pay">
             <h3>ثبت پرداخت / تخفیف / تحویل</h3>
+            <div class="rx-pay-due">
+                <span>مبلغ قابل دریافت از مشتری</span>
+                <strong data-due-gross="{{ max(0, $gross - (int) $reception->paid_amount) }}">{{ number_format(max(0, $gross - (int) $reception->paid_amount)) }} تومان</strong>
+            </div>
             @if(\App\Support\PaymentGateways::showOnReception())
                 @include('partials.payment-links', ['payTitle' => 'لینک بانک‌ها'])
             @endif
@@ -581,14 +608,15 @@
                     </button>
                 </form>
             @endif
-            <form method="POST" action="{{ route('receptions.payments', $reception) }}">
+            <form method="POST" action="{{ route('receptions.payments', $reception) }}" id="rx-payment-form">
                 @csrf
+                <input type="hidden" name="auto_discount" value="1">
                 <div class="form-grid" style="grid-template-columns:1fr;">
                     <div>
                         <label>نوع پرداخت</label>
                         <select name="type">
                             @foreach($paymentTypes as $key => $label)
-                                <option value="{{ $key }}">{{ $label }}</option>
+                                <option value="{{ $key }}" @selected($key === 'final')>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -602,18 +630,19 @@
                     </div>
                     <div>
                         <label>مبلغ دریافتی</label>
-                        <input type="number" name="amount" min="1" value="{{ $reception->remainingAmount() ?: 0 }}" required>
+                        <input type="number" name="amount" id="rx-pay-amount" min="1" value="{{ max(0, $gross - (int) $reception->paid_amount) }}" required>
                     </div>
                     <div>
-                        <label>تخفیف (تومان)</label>
-                        <input type="number" name="discount" min="0" value="{{ (int) $reception->discount }}">
+                        <label>تخفیف خودکار (تومان)</label>
+                        <input type="number" name="discount" id="rx-pay-discount" min="0" value="{{ (int) $reception->discount }}" readonly>
+                        <div class="muted" style="font-size:11px;margin-top:3px;">اگر کمتر از جمع هزینه بگیرید، اختلاف اینجا می‌نشیند.</div>
                     </div>
                     <div>
                         <label>دلیل تخفیف</label>
-                        <input type="text" name="discount_reason" value="{{ $reception->discount_reason }}" placeholder="اختیاری">
+                        <input type="text" name="discount_reason" id="rx-pay-discount-reason" value="{{ $reception->discount_reason }}" placeholder="اختیاری — در تخفیف خودکار پر می‌شود">
                     </div>
                     <div>
-                        <label>توضیح</label>
+                        <label>توضیح / پیگیری</label>
                         <input type="text" name="note" placeholder="شماره پیگیری کارت‌به‌کارت و …">
                     </div>
                 </div>
@@ -648,12 +677,31 @@
     var stageSel = document.getElementById('stage-key-select');
     var customWrap = document.getElementById('custom-label-wrap');
     if (stageSel && customWrap) {
-        var sync = function () {
+        var syncCustom = function () {
             customWrap.style.display = stageSel.value === 'custom' ? '' : 'none';
         };
-        stageSel.addEventListener('change', sync);
-        sync();
+        stageSel.addEventListener('change', syncCustom);
+        syncCustom();
     }
+
+    var amountEl = document.getElementById('rx-pay-amount');
+    var discountEl = document.getElementById('rx-pay-discount');
+    var reasonEl = document.getElementById('rx-pay-discount-reason');
+    var dueEl = document.querySelector('[data-due-gross]');
+    if (amountEl && discountEl && dueEl) {
+        var due = parseInt(dueEl.getAttribute('data-due-gross') || '0', 10) || 0;
+        var syncDiscount = function () {
+            var amount = parseInt(amountEl.value || '0', 10) || 0;
+            var diff = Math.max(0, due - amount);
+            discountEl.value = String(diff);
+            if (diff > 0 && reasonEl && !reasonEl.value) {
+                reasonEl.placeholder = 'تخفیف تسویه خودکار';
+            }
+        };
+        amountEl.addEventListener('input', syncDiscount);
+        syncDiscount();
+    }
+
     var panel = document.getElementById('status-sms-panel');
     if (!panel) return;
     var previews = {};
@@ -665,7 +713,7 @@
     var toggleField = panel.querySelector('[data-toggle-field]');
 
     function setSendSms(on) {
-        if (!toggleField || !window) return;
+        if (!toggleField) return;
         var input = toggleField.querySelector('[data-toggle-input]');
         var btn = toggleField.querySelector('[data-toggle-btn]');
         if (!input || !btn) return;

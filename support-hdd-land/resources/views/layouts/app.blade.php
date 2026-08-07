@@ -16,7 +16,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp7">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp8">
     <script>
     (function () {
         try {
@@ -83,7 +83,7 @@
                                 data-menu-toggle
                                 aria-haspopup="true"
                                 aria-expanded="false">
-                            <span class="win-menu-dot"></span>
+                            <span class="win-menu-dot">{{ $group['mark'] ?? '•' }}</span>
                             {{ $group['label'] }}
                             <span class="win-menu-chevron">▾</span>
                         </button>
@@ -111,7 +111,7 @@
                         <a href="{{ $href }}"
                            class="win-menu-btn link {{ $groupActive ? 'is-current' : '' }}"
                            data-menu-label="{{ $group['label'] }}">
-                            <span class="win-menu-dot"></span>
+                            <span class="win-menu-dot">{{ $group['mark'] ?? '•' }}</span>
                             {{ $group['label'] }}
                         </a>
                     @endif
@@ -143,7 +143,7 @@
                         @yield('page_title', 'پنجره کار')
                     @endif
                 </div>
-                <div class="muted">{{ now()->format('Y/m/d H:i') }}</div>
+                <div class="muted">{{ jalali_like(now()) }}</div>
             </div>
             <div class="win-body">
                 @include('partials.flash')

@@ -487,6 +487,7 @@ class ReceptionController extends Controller
                 StockMovement::create([
                     'doc_no' => StockMovement::nextDocNo('OUT'),
                     'part_id' => $part->id,
+                    'warehouse_id' => $part->warehouse_id,
                     'reception_id' => $reception->id,
                     'user_id' => Auth::id(),
                     'type' => 'out',
@@ -553,19 +554,42 @@ class ReceptionController extends Controller
             'note' => ['nullable', 'string', 'max:500'],
             'discount' => ['nullable', 'integer', 'min:0'],
             'discount_reason' => ['nullable', 'string', 'max:255'],
+            'auto_discount' => ['nullable', 'boolean'],
         ]);
 
-        DB::transaction(function () use ($data, $reception) {
-            if (array_key_exists('discount', $data) && $data['discount'] !== null) {
-                $reception->discount = (int) $data['discount'];
-                $reception->discount_reason = $data['discount_reason'] ?? $reception->discount_reason;
-                $reception->save();
-                $reception->recalculateTotals();
-            }
-
+        DB::transaction(function () use ($data, $reception, $request) {
             $amount = (int) $data['amount'];
             if ($data['type'] === 'refund') {
                 $amount = -1 * abs($amount);
+            }
+
+            $gross = $reception->grossCost();
+            $paidBefore = (int) $reception->paid_amount;
+            $explicitDiscount = array_key_exists('discount', $data) && $data['discount'] !== null
+                ? (int) $data['discount']
+                : null;
+
+            // اگر مبلغ دریافتی کمتر از ماندهٔ هزینه‌هاست، اختلاف = تخفیف تسویه
+            if ($data['type'] !== 'refund' && $request->boolean('auto_discount', true) && $amount > 0) {
+                $dueBeforeDiscount = max(0, $gross - $paidBefore);
+                if ($amount < $dueBeforeDiscount) {
+                    $auto = $dueBeforeDiscount - $amount;
+                    $reception->discount = $auto;
+                    $reception->discount_reason = $data['discount_reason']
+                        ?: ('تخفیف تسویه — دریافت '.number_format($amount).' از '.number_format($dueBeforeDiscount));
+                    $reception->save();
+                    $reception->recalculateTotals();
+                } elseif ($explicitDiscount !== null) {
+                    $reception->discount = $explicitDiscount;
+                    $reception->discount_reason = $data['discount_reason'] ?? $reception->discount_reason;
+                    $reception->save();
+                    $reception->recalculateTotals();
+                }
+            } elseif ($explicitDiscount !== null) {
+                $reception->discount = $explicitDiscount;
+                $reception->discount_reason = $data['discount_reason'] ?? $reception->discount_reason;
+                $reception->save();
+                $reception->recalculateTotals();
             }
 
             $payment = Payment::create([

@@ -86,7 +86,7 @@
                     <td>{{ $b->pickup_name }} <span class="muted">{{ $b->pickup_phone }}</span></td>
                     <td>{{ $b->ticket_count }}</td>
                     <td>{{ number_format($b->total_amount) }}</td>
-                    <td>{{ optional($b->delivered_at)->format('Y/m/d H:i') }}</td>
+                    <td>{{ jalali_like($b->delivered_at) }}</td>
                 </tr>
             @endforeach
             </tbody>

@@ -44,7 +44,7 @@
                     @else
                         بازگشت به پذیرش برای تحویل
                     @endif
-                    — {{ $h->responded_at?->format('Y/m/d H:i') ?: $h->created_at?->format('Y/m/d H:i') }}
+                    — {{ jalali_like($h->responded_at ?: $h->created_at) }}
                 </small>
             </div>
             <span>{{ $h->statusLabel() }}</span>
@@ -63,7 +63,7 @@
             <div>
                 <strong>{{ $log->displayTitle() }}</strong>
                 <small>
-                    {{ $log->created_at?->format('Y/m/d H:i') }}
+                    {{ jalali_like($log->created_at?) }}
                     @if($log->fromStatusLabel()) · از {{ $log->fromStatusLabel() }} @endif
                     → {{ $log->toStatusLabel() }}
                 </small>
@@ -140,13 +140,13 @@
             <strong>{{ $apLabels[$reception->cost_approval_status] ?? ($reception->cost_approval_status ?: '—') }}</strong>
             @if($reception->customer_cost_approved_at)
                 <div>مبلغ تأییدشده: {{ number_format((int) $reception->customer_cost_approved_amount) }} تومان</div>
-                <div>زمان تأیید: {{ $reception->customer_cost_approved_at->format('Y/m/d H:i') }}</div>
+                <div>زمان تأیید: {{ jalali_like($reception->customer_cost_approved_at) }}</div>
                 @if($latestAp?->approval_code)
                     <div>کد: <span dir="ltr">{{ $latestAp->approval_code }}</span></div>
                 @endif
             @elseif($latestAp)
-                <div>ارسال لینک: {{ $latestAp->sent_at?->format('Y/m/d H:i') ?: '—' }}</div>
-                <div>مشاهده: {{ $latestAp->viewed_at?->format('Y/m/d H:i') ?: 'هنوز باز نشده' }}</div>
+                <div>ارسال لینک: {{ jalali_like($latestAp->sent_at) }}</div>
+                <div>مشاهده: {{ $latestAp->viewed_at ? jalali_like($latestAp->viewed_at) : 'هنوز باز نشده' }}</div>
             @endif
         </div>
     @endif
@@ -160,7 +160,7 @@
             <div class="p-part-row">
                 <div>
                     <strong>{{ $log->status_key === 'cost_approval' ? 'لینک تأیید هزینه' : ($log->rule?->title ?: ($log->status_key ?: 'پیامک')) }}</strong>
-                    <small>{{ $log->created_at?->format('Y/m/d H:i') }} — {{ $log->ok ? 'موفق' : 'ناموفق' }}</small>
+                    <small>{{ jalali_like($log->created_at?) }} — {{ $log->ok ? 'موفق' : 'ناموفق' }}</small>
                 </div>
                 <span>{{ $log->ok ? '✓' : '!' }}</span>
             </div>

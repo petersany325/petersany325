@@ -51,7 +51,7 @@
             @endif
         </form>
         <div class="daybook-stats">
-            <div><span>تاریخ</span><strong>{{ $date->format('Y/m/d') }}</strong></div>
+            <div><span>تاریخ</span><strong>{{ jalali_date($date) }}</strong></div>
             <div><span>کارمند</span><strong>{{ $employee->name }}</strong></div>
             <div><span>رویداد</span><strong>{{ $summary['count'] }}</strong></div>
             @if($settings['show_quantity'])

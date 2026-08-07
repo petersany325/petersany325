@@ -32,7 +32,7 @@
                         @if($n->isUnread())<span class="badge">جدید</span>@endif
                     </td>
                     <td>{{ $n->body }}</td>
-                    <td>{{ $n->created_at?->format('Y/m/d H:i') }}</td>
+                    <td>{{ jalali_like($n->created_at?) }}</td>
                     <td>
                         <form method="POST" action="{{ route('notifications.read', $n) }}">
                             @csrf
@@ -77,7 +77,7 @@
                     </td>
                     <td>{{ $m->priorityLabel() }}</td>
                     <td>{{ $m->body }}</td>
-                    <td>{{ $m->created_at?->format('Y/m/d H:i') }}</td>
+                    <td>{{ jalali_like($m->created_at?) }}</td>
                     <td><a class="btn btn-ghost" href="{{ route('notifications.messages.show', $m) }}">مشاهده</a></td>
                 </tr>
             @empty

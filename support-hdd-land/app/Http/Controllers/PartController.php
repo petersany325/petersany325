@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Part;
 use App\Models\StockMovement;
+use App\Models\Warehouse;
 use App\Services\AccountingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,9 +16,12 @@ class PartController extends Controller
     public function index(Request $request)
     {
         $q = trim((string) $request->get('q'));
-        $filter = (string) $request->get('filter', 'all'); // all|low|active|inactive
+        $filter = (string) $request->get('filter', 'all');
+        $warehouseId = $request->integer('warehouse_id') ?: null;
 
         $parts = Part::query()
+            ->with('warehouse')
+            ->when($warehouseId, fn ($query) => $query->where('warehouse_id', $warehouseId))
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($inner) use ($q) {
                     $inner->where('name', 'like', "%{$q}%")
@@ -33,27 +37,33 @@ class PartController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        $all = Part::query()->where('is_active', true);
+        $all = Part::query()->where('is_active', true)
+            ->when($warehouseId, fn ($query) => $query->where('warehouse_id', $warehouseId));
         $stats = [
             'sku' => (clone $all)->count(),
             'qty' => (int) (clone $all)->sum('stock'),
             'value_cost' => (int) (clone $all)->selectRaw('COALESCE(SUM(stock * purchase_price),0) as v')->value('v'),
             'value_sale' => (int) (clone $all)->selectRaw('COALESCE(SUM(stock * sale_price),0) as v')->value('v'),
-            'low' => Part::query()->where('is_active', true)->whereColumn('stock', '<=', 'min_stock')->count(),
+            'low' => (clone $all)->whereColumn('stock', '<=', 'min_stock')->count(),
         ];
 
         $recent = StockMovement::query()
-            ->with(['part', 'user', 'reception'])
+            ->with(['part', 'user', 'reception', 'warehouse'])
+            ->when($warehouseId, fn ($query) => $query->where('warehouse_id', $warehouseId))
             ->latest('id')
             ->limit(12)
             ->get();
 
-        return view('parts.index', compact('parts', 'q', 'filter', 'stats', 'recent'));
+        $warehouses = Warehouse::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get();
+
+        return view('parts.index', compact('parts', 'q', 'filter', 'stats', 'recent', 'warehouses', 'warehouseId'));
     }
 
     public function create()
     {
-        return view('parts.create');
+        return view('parts.create', [
+            'warehouses' => Warehouse::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get(),
+        ]);
     }
 
     public function store(Request $request)
@@ -63,6 +73,9 @@ class PartController extends Controller
         DB::transaction(function () use ($data) {
             $stock = (int) ($data['stock'] ?? 0);
             $data['stock'] = 0;
+            if (empty($data['warehouse_id'])) {
+                $data['warehouse_id'] = Warehouse::defaultId();
+            }
             $part = Part::create($data);
 
             if ($stock > 0) {
@@ -75,7 +88,10 @@ class PartController extends Controller
 
     public function edit(Part $part)
     {
-        return view('parts.edit', compact('part'));
+        return view('parts.edit', [
+            'part' => $part->load('warehouse'),
+            'warehouses' => Warehouse::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get(),
+        ]);
     }
 
     public function update(Request $request, Part $part)
@@ -87,8 +103,9 @@ class PartController extends Controller
 
     public function show(Part $part)
     {
+        $part->load('warehouse');
         $movements = $part->stockMovements()
-            ->with(['user', 'reception'])
+            ->with(['user', 'reception', 'warehouse'])
             ->latest('id')
             ->paginate(40);
 
@@ -148,7 +165,8 @@ class PartController extends Controller
     public function receiptForm()
     {
         return view('parts.receipt', [
-            'parts' => Part::where('is_active', true)->orderBy('name')->get(),
+            'parts' => Part::with('warehouse')->where('is_active', true)->orderBy('name')->get(),
+            'warehouses' => Warehouse::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get(),
         ]);
     }
 
@@ -190,7 +208,7 @@ class PartController extends Controller
     public function issueForm()
     {
         return view('parts.issue', [
-            'parts' => Part::where('is_active', true)->orderBy('name')->get(),
+            'parts' => Part::with('warehouse')->where('is_active', true)->orderBy('name')->get(),
         ]);
     }
 
@@ -307,6 +325,7 @@ class PartController extends Controller
         $movement = StockMovement::create([
             'doc_no' => StockMovement::nextDocNo($prefix),
             'part_id' => $part->id,
+            'warehouse_id' => $part->warehouse_id ?: Warehouse::defaultId(),
             'reception_id' => $receptionId,
             'user_id' => Auth::id(),
             'type' => $type,
@@ -335,6 +354,7 @@ class PartController extends Controller
     private function validated(Request $request, bool $withStock = true): array
     {
         $rules = [
+            'warehouse_id' => ['nullable', 'exists:warehouses,id'],
             'code' => ['nullable', 'string', 'max:50'],
             'name' => ['required', 'string', 'max:120'],
             'brand' => ['nullable', 'string', 'max:80'],
@@ -354,6 +374,9 @@ class PartController extends Controller
         $data['purchase_price'] = (int) ($data['purchase_price'] ?? 0);
         $data['sale_price'] = (int) ($data['sale_price'] ?? 0);
         $data['min_stock'] = (int) ($data['min_stock'] ?? 0);
+        $data['warehouse_id'] = ! empty($data['warehouse_id'])
+            ? (int) $data['warehouse_id']
+            : Warehouse::defaultId();
 
         if ($withStock) {
             $data['stock'] = (int) ($data['stock'] ?? 0);

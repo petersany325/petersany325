@@ -113,9 +113,9 @@
                     <td>{{ $ap->reception?->service_type ?: '—' }} / {{ $ap->reception?->repair_type ?: '—' }}</td>
                     <td>{{ number_format((int) $ap->amount) }}</td>
                     <td>{{ $ap->statusLabel() }}</td>
-                    <td>{{ $ap->sent_at?->format('Y/m/d H:i') ?: '—' }}</td>
-                    <td>{{ $ap->viewed_at?->format('Y/m/d H:i') ?: '—' }}</td>
-                    <td>{{ $ap->decided_at?->format('Y/m/d H:i') ?: '—' }}</td>
+                    <td>{{ jalali_like($ap->sent_at) }}</td>
+                    <td>{{ jalali_like($ap->viewed_at) }}</td>
+                    <td>{{ jalali_like($ap->decided_at) }}</td>
                     <td dir="ltr">{{ $ap->approval_code ?: '—' }}</td>
                 </tr>
             @empty

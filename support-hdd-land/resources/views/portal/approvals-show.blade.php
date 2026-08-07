@@ -23,9 +23,9 @@
 </section>
 
 <div class="p-kv">
-    <div><span>ارسال لینک</span><strong>{{ $approval->sent_at?->format('Y/m/d H:i') ?: '—' }}</strong></div>
-    <div><span>مشاهده لینک</span><strong>{{ $approval->viewed_at?->format('Y/m/d H:i') ?: 'هنوز باز نشده' }}</strong></div>
-    <div><span>تصمیم</span><strong>{{ $approval->decided_at?->format('Y/m/d H:i') ?: '—' }}</strong></div>
+    <div><span>ارسال لینک</span><strong>{{ jalali_like($approval->sent_at) }}</strong></div>
+    <div><span>مشاهده لینک</span><strong>{{ $approval->viewed_at ? jalali_like($approval->viewed_at) : 'هنوز باز نشده' }}</strong></div>
+    <div><span>تصمیم</span><strong>{{ jalali_like($approval->decided_at) }}</strong></div>
     <div><span>اجرت / قطعات</span><strong>{{ number_format((int) $approval->labor_cost) }} / {{ number_format((int) $approval->parts_cost) }}</strong></div>
 </div>
 
@@ -44,7 +44,7 @@
             <div class="p-part-row">
                 <div>
                     <strong>{{ $log->ok ? 'ارسال موفق' : 'ارسال ناموفق' }}</strong>
-                    <small>{{ $log->created_at?->format('Y/m/d H:i') }}</small>
+                    <small>{{ jalali_like($log->created_at?) }}</small>
                 </div>
                 <span>{{ $log->ok ? '✓' : '!' }}</span>
             </div>

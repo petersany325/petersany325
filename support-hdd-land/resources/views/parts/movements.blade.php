@@ -57,7 +57,7 @@
                 @forelse($movements as $m)
                     <tr>
                         <td dir="ltr">{{ $m->doc_no ?: '#'.$m->id }}</td>
-                        <td>{{ $m->created_at?->format('Y/m/d H:i') }}</td>
+                        <td>{{ jalali_like($m->created_at?) }}</td>
                         <td>
                             @if($m->part_id)
                                 <a href="{{ route('parts.show', $m->part_id) }}">{{ $m->part?->name }}</a>

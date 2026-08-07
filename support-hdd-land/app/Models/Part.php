@@ -8,13 +8,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Part extends Model
 {
     protected $fillable = [
-        'code', 'name', 'brand', 'model', 'stock',
+        'warehouse_id', 'code', 'name', 'brand', 'model', 'stock',
         'purchase_price', 'sale_price', 'min_stock', 'is_active',
     ];
 
     protected function casts(): array
     {
         return ['is_active' => 'boolean'];
+    }
+
+    public function warehouse(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function receptionParts(): HasMany

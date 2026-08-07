@@ -1,4 +1,14 @@
 <div class="form-grid">
+    <div>
+        <label>انبار</label>
+        <select name="warehouse_id" required>
+            @foreach(($warehouses ?? collect()) as $wh)
+                <option value="{{ $wh->id }}" @selected((int) old('warehouse_id', $part->warehouse_id ?? \App\Models\Warehouse::defaultId()) === (int) $wh->id)>
+                    {{ $wh->name }}@if($wh->is_default) (پیش‌فرض)@endif
+                </option>
+            @endforeach
+        </select>
+    </div>
     <div><label>کد کالا</label><input type="text" name="code" value="{{ old('code', $part->code ?? '') }}" data-ascii-en placeholder="مثلاً HDD-PCB-01"></div>
     <div><label>نام کالا</label><input type="text" name="name" value="{{ old('name', $part->name ?? '') }}" required></div>
     <div><label>برند</label><input type="text" name="brand" value="{{ old('brand', $part->brand ?? '') }}"></div>

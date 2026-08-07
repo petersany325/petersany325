@@ -143,6 +143,16 @@ class Reception extends Model
         return SmsStatusRule::statusMap();
     }
 
+    public function grossCost(): int
+    {
+        return max(0,
+            (int) $this->labor_cost
+            + (int) $this->parts_cost
+            + (int) $this->stages_cost
+            + (int) $this->admission_fee
+        );
+    }
+
     public function remainingAmount(): int
     {
         return max(0, (int) $this->total_amount - (int) $this->paid_amount);

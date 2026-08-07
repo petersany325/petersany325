@@ -36,6 +36,12 @@
     <div class="wh-toolbar panel">
         <form method="GET" class="wh-filters">
             <input type="text" name="q" value="{{ $q }}" placeholder="نام، کد، برند، مدل" data-ascii-en>
+            <select name="warehouse_id">
+                <option value="">همه انبارها</option>
+                @foreach(($warehouses ?? []) as $wh)
+                    <option value="{{ $wh->id }}" @selected((int)($warehouseId ?? 0) === (int)$wh->id)>{{ $wh->name }}</option>
+                @endforeach
+            </select>
             <select name="filter">
                 <option value="all" @selected($filter === 'all')>همه</option>
                 <option value="low" @selected($filter === 'low')>فقط کم‌موجود</option>
@@ -63,6 +69,7 @@
                     <tr>
                         <th>کد</th>
                         <th>نام</th>
+                        <th>انبار</th>
                         <th>برند/مدل</th>
                         <th>موجودی</th>
                         <th>بهای خرید</th>
@@ -80,6 +87,7 @@
                                 @if($part->isLowStock())<span class="badge badge-cancelled">کم</span>@endif
                                 @unless($part->is_active)<span class="badge">غیرفعال</span>@endunless
                             </td>
+                            <td>{{ $part->warehouse?->name ?: '—' }}</td>
                             <td>{{ trim($part->brand.' '.$part->model) ?: '—' }}</td>
                             <td><strong>{{ number_format($part->stock) }}</strong></td>
                             <td>{{ toman($part->purchase_price) }}</td>
@@ -91,7 +99,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8">قطعه‌ای ثبت نشده. از «کالای جدید» شروع کنید.</td></tr>
+                        <tr><td colspan="9">قطعه‌ای ثبت نشده. از «کالای جدید» شروع کنید.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -114,7 +122,7 @@
                             <td>{{ $m->part?->name ?: '—' }}</td>
                             <td>{{ $m->docTypeLabel() }}</td>
                             <td class="{{ $m->quantity < 0 ? 'wh-neg' : 'wh-pos' }}">{{ $m->quantity > 0 ? '+' : '' }}{{ $m->quantity }}</td>
-                            <td>{{ $m->created_at?->format('m/d H:i') }}</td>
+                            <td>{{ jalali_like($m->created_at) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="5">گردشی ثبت نشده.</td></tr>

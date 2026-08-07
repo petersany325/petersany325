@@ -116,7 +116,7 @@
                 <div><span>اجرت</span><strong>{{ number_format((int) $approval->labor_cost) }}</strong></div>
                 <div><span>قطعات</span><strong>{{ number_format((int) $approval->parts_cost) }}</strong></div>
                 <div><span>تخفیف</span><strong>{{ number_format((int) $approval->discount) }}</strong></div>
-                <div><span>اعتبار لینک تا</span><strong>{{ $approval->expires_at?->format('Y/m/d H:i') ?: '—' }}</strong></div>
+                <div><span>اعتبار لینک تا</span><strong>{{ jalali_like($approval->expires_at) }}</strong></div>
             </div>
 
             <div class="box"><strong>شرح کار:</strong>

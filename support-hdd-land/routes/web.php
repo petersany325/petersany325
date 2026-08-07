@@ -8,6 +8,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\PartController;
+use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReceptionController;
 use App\Http\Controllers\ReportController;
@@ -162,6 +163,10 @@ Route::middleware('auth')->group(function () {
         Route::post('parts/receipt', [PartController::class, 'receiptStore'])->name('parts.receipt.store');
         Route::get('parts/issue', [PartController::class, 'issueForm'])->name('parts.issue');
         Route::post('parts/issue', [PartController::class, 'issueStore'])->name('parts.issue.store');
+        Route::get('warehouses', [WarehouseController::class, 'index'])->name('warehouses.index');
+        Route::post('warehouses', [WarehouseController::class, 'store'])->name('warehouses.store');
+        Route::put('warehouses/{warehouse}', [WarehouseController::class, 'update'])->name('warehouses.update');
+        Route::delete('warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouses.destroy');
         Route::resource('parts', PartController::class)->except(['destroy']);
         Route::post('parts/{part}/stock', [PartController::class, 'adjustStock'])->name('parts.stock');
     });

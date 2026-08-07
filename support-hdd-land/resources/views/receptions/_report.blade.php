@@ -122,7 +122,7 @@
                     <div>
                         <strong>{{ $log->displayTitle() }}</strong>
                         <div class="muted" style="font-size:11px;">
-                            {{ $log->created_at?->timezone('Asia/Tehran')->format('Y/m/d H:i') }}
+                            {{ jalali_like($log->created_at) }}
                             @if($log->actor) · {{ $log->actor->name }} @endif
                             @if($log->fromStatusLabel()) · از {{ $log->fromStatusLabel() }} @endif
                             → {{ $log->toStatusLabel() }}

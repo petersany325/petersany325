@@ -3,6 +3,7 @@
     $whSub = $whSub ?? 'سیستم انبارداری حسابداری تعمیرگاه';
     $whNav = [
         ['route' => 'parts.index', 'label' => 'میز انبار', 'mark' => 'م', 'tone' => 'teal'],
+        ['route' => 'warehouses.index', 'label' => 'انبارها', 'mark' => 'چ', 'tone' => 'violet'],
         ['route' => 'parts.receipt', 'label' => 'رسید ورود', 'mark' => 'ر', 'tone' => 'blue'],
         ['route' => 'parts.issue', 'label' => 'حواله خروج', 'mark' => 'ح', 'tone' => 'rose'],
         ['route' => 'parts.movements', 'label' => 'کارتکس / گردش', 'mark' => 'ک', 'tone' => 'amber'],

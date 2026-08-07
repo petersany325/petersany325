@@ -90,7 +90,7 @@
                 <tbody>
                 @forelse($entries as $log)
                     <tr>
-                        <td>{{ $log->created_at?->format('Y/m/d H:i') }}</td>
+                        <td>{{ jalali_like($log->created_at?) }}</td>
                         <td>
                             <span class="{{ $log->ok ? 'pill pill-ok' : 'pill pill-off' }}">{{ $log->ok ? 'موفق' : 'ناموفق' }}</span>
                         </td>
@@ -160,7 +160,7 @@
                     <tbody>
                     @forelse($fails as $f)
                         <tr>
-                            <td>{{ $f->created_at?->format('Y/m/d H:i') }}</td>
+                            <td>{{ jalali_like($f->created_at?) }}</td>
                             <td dir="ltr">{{ $f->phone }}</td>
                             <td>
                                 @if($f->reception_id)
@@ -211,9 +211,9 @@
                         <td>{{ $ap->customer?->name ?: '—' }}</td>
                         <td>{{ number_format((int) $ap->amount) }}</td>
                         <td>{{ $ap->statusLabel() }}</td>
-                        <td>{{ $ap->sent_at?->format('Y/m/d H:i') ?: '—' }}</td>
-                        <td>{{ $ap->viewed_at?->format('Y/m/d H:i') ?: '—' }}</td>
-                        <td>{{ $ap->decided_at?->format('Y/m/d H:i') ?: '—' }}</td>
+                        <td>{{ jalali_like($ap->sent_at) }}</td>
+                        <td>{{ jalali_like($ap->viewed_at) }}</td>
+                        <td>{{ jalali_like($ap->decided_at) }}</td>
                         <td dir="ltr">{{ $ap->approval_code ?: '—' }}</td>
                     </tr>
                 @empty

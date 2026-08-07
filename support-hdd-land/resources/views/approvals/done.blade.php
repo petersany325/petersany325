@@ -28,7 +28,7 @@
     @endif
     <div class="amt">{{ number_format((int) $approval->amount) }} تومان</div>
     <div class="code">کد پیگیری: <b dir="ltr">{{ $approval->approval_code }}</b></div>
-    <div class="code">زمان: {{ $approval->decided_at?->format('Y/m/d H:i') ?: '—' }}</div>
+    <div class="code">زمان: {{ jalali_like($approval->decided_at) }}</div>
 </div>
 </body>
 </html>

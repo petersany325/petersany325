@@ -22,6 +22,7 @@
         <div class="panel">
             <h3 style="margin-top:0;">شناسنامه کالا</h3>
             <div class="form-grid" style="grid-template-columns:1fr 1fr;">
+                <div><span class="muted">انبار</span><div>{{ $part->warehouse?->name ?: '—' }}</div></div>
                 <div><span class="muted">کد</span><div dir="ltr">{{ $part->code ?: '—' }}</div></div>
                 <div><span class="muted">وضعیت</span><div>{{ $part->is_active ? 'فعال' : 'غیرفعال' }}</div></div>
                 <div><span class="muted">برند</span><div>{{ $part->brand ?: '—' }}</div></div>
@@ -67,7 +68,7 @@
                                 @else — @endif
                             </td>
                             <td>
-                                {{ $m->created_at?->format('Y/m/d H:i') }}
+                                {{ jalali_like($m->created_at?) }}
                                 <div class="muted" style="font-size:10px;">{{ $m->user?->name }}@if($m->note) — {{ $m->note }}@endif</div>
                             </td>
                         </tr>

@@ -54,7 +54,7 @@
                     @forelse($recentEntries as $e)
                         <tr>
                             <td><a class="acc-link" href="{{ route('accounting.show', $e) }}">{{ $e->entry_no }}</a></td>
-                            <td>{{ $e->entry_date?->format('Y/m/d') }}</td>
+                            <td>{{ jalali_date($e->entry_date?) }}</td>
                             <td>{{ \Illuminate\Support\Str::limit($e->description, 42) }}</td>
                             <td class="acc-num">{{ number_format($e->total_amount) }}</td>
                         </tr>

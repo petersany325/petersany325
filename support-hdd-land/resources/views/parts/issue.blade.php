@@ -23,7 +23,9 @@
                     <option value="">— انتخاب قطعه —</option>
                     @foreach($parts as $part)
                         <option value="{{ $part->id }}" @selected(old('part_id') == $part->id)>
-                            {{ $part->name }} (موجودی {{ $part->stock }})
+                            {{ $part->name }}
+                            @if($part->warehouse) [{{ $part->warehouse->name }}] @endif
+                            (موجودی {{ $part->stock }})
                         </option>
                     @endforeach
                 </select>

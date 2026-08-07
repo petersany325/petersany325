@@ -125,10 +125,11 @@ img { max-width: 100%; display: block; }
     background: transparent;
     color: #f4f6f8;
     padding: 4px 8px;
-    border-radius: 2px;
+    border-radius: 3px;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 11.5px;
+    min-height: 28px;
     white-space: nowrap;
     line-height: 1.2;
 }
@@ -145,18 +146,23 @@ a.win-menu-btn.link { text-decoration: none; }
     box-shadow: inset 0 0 0 1px rgba(160,190,255,.35);
 }
 .win-menu-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
     background: #9aa6b5;
     flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
 }
-.win-menu.tone-slate .win-menu-dot { background: #9aa6b5; }
-.win-menu.tone-blue .win-menu-dot { background: #5b9cff; }
-.win-menu.tone-teal .win-menu-dot { background: #37c2b0; }
-.win-menu.tone-amber .win-menu-dot { background: #f0b429; }
-.win-menu.tone-green .win-menu-dot { background: #49c27a; }
-.win-menu.tone-violet .win-menu-dot { background: #a78bfa; }
+.win-menu.tone-slate .win-menu-dot { background: #64748b; }
+.win-menu.tone-blue .win-menu-dot { background: #2563eb; }
+.win-menu.tone-teal .win-menu-dot { background: #0f766e; }
+.win-menu.tone-amber .win-menu-dot { background: #b45309; }
+.win-menu.tone-green .win-menu-dot { background: #15803d; }
+.win-menu.tone-violet .win-menu-dot { background: #7c3aed; }
 .win-menu-chevron { font-size: 8px; opacity: .65; }
 
 .win-popup {
@@ -1143,6 +1149,27 @@ html[data-ui-mode="mobile"] .staff-drawer:not([hidden]) .staff-tab-more{color:#f
 @media (max-width:960px){
   .wh-panels{grid-template-columns:1fr}
 }
+
+/* Reception finance rail + mini graphical nav */
+.rx-finance-rail{position:sticky;top:8px}
+.rx-mini-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin-bottom:8px}
+.rx-mini-item{display:grid;justify-items:center;gap:2px;padding:6px 4px;border:1px solid #9aa5b5;border-radius:3px;background:linear-gradient(180deg,#fff,#eef1f5);font-size:10px;font-weight:800;text-decoration:none;color:#334155}
+.rx-mini-item span{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;background:#3a4454;color:#fff;font-size:11px}
+.rx-mini-item.tone-amber span{background:#b45309}
+.rx-mini-item.tone-teal span{background:#0f766e}
+.rx-mini-item.tone-blue span{background:#2563eb}
+.rx-mini-item.tone-violet span{background:#7c3aed}
+.rx-mini-item.tone-green span{background:#15803d}
+.rx-cost-board{display:grid;gap:0;border:1px solid #c5ccd6;border-radius:3px;overflow:hidden;background:#fff}
+.rx-cost-row{display:flex;justify-content:space-between;gap:8px;padding:7px 10px;border-bottom:1px dashed #e5e9ef;font-size:12px}
+.rx-cost-row:last-child{border-bottom:0}
+.rx-cost-row.soft{background:#f8fafc;font-size:11.5px;color:#475569}
+.rx-cost-row.total-line{background:#eef6ff;font-weight:800;border-bottom:1px solid #c5ccd6}
+.rx-cost-row.grand{background:linear-gradient(180deg,#fff,#f3f5f8);font-size:14px;font-weight:800}
+.rx-cost-row.remain{background:#fff8eb;font-weight:800}
+.rx-pay-due{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;margin-bottom:10px;border:1px solid #99d5cf;border-radius:3px;background:linear-gradient(180deg,#f2fffc,#e6f7f4)}
+.rx-pay-due span{font-size:11px;color:var(--muted);font-weight:700}
+.rx-pay-due strong{font-size:15px}
 
 /* ===== Accounting shell (shared look) ===== */
 .acc-shell{display:grid;gap:10px;margin-bottom:12px}

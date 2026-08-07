@@ -41,7 +41,7 @@
             <tbody>
             @forelse($rows as $m)
                 <tr style="{{ $m->isUnread() ? 'background:rgba(245,158,11,.08);' : '' }}">
-                    <td>{{ $m->created_at?->format('Y/m/d H:i') }}</td>
+                    <td>{{ jalali_like($m->created_at?) }}</td>
                     <td>
                         {{ $m->customer?->name }}
                         @if($m->customer_id && auth()->user()->canAccess('reports.customers'))

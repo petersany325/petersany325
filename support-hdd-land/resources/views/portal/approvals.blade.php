@@ -31,11 +31,11 @@
                     <span>V{{ $ap->version }}</span>
                 </div>
                 <div class="p-ticket-meta" style="margin-top:4px;">
-                    <span>ارسال {{ $ap->sent_at?->format('Y/m/d H:i') ?: '—' }}</span>
+                    <span>ارسال {{ jalali_like($ap->sent_at) }}</span>
                     @if($ap->decided_at)
-                        <span>تصمیم {{ $ap->decided_at->format('Y/m/d H:i') }}</span>
+                        <span>تصمیم {{ jalali_like($ap->decided_at) }}</span>
                     @elseif($ap->viewed_at)
-                        <span>مشاهده {{ $ap->viewed_at->format('Y/m/d H:i') }}</span>
+                        <span>مشاهده {{ jalali_like($ap->viewed_at) }}</span>
                     @endif
                 </div>
             </a>
