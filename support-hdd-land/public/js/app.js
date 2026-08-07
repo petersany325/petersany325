@@ -161,9 +161,11 @@
      * ========================================================= */
 
     function initConfirmButtons() {
+        // One confirm only: forms on submit, non-form controls on click.
         document.addEventListener('click', function (e) {
             var el = e.target.closest('[data-confirm]');
             if (!el) return;
+            if (el.tagName === 'FORM') return; // handled on submit
             var message = el.getAttribute('data-confirm') || 'مطمئن هستید؟';
             if (!window.confirm(message)) {
                 e.preventDefault();
@@ -174,10 +176,16 @@
         document.addEventListener('submit', function (e) {
             var form = e.target;
             if (!form || !form.hasAttribute || !form.hasAttribute('data-confirm')) return;
+            if (form.getAttribute('data-confirm-accepted') === '1') {
+                form.removeAttribute('data-confirm-accepted');
+                return;
+            }
             var message = form.getAttribute('data-confirm') || 'مطمئن هستید؟';
             if (!window.confirm(message)) {
                 e.preventDefault();
+                return;
             }
+            form.setAttribute('data-confirm-accepted', '1');
         }, true);
     }
 

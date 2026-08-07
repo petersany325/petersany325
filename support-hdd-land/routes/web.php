@@ -125,7 +125,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware(EnsurePermission::class.':employees')->group(function () {
-        Route::resource('employees', EmployeeController::class)->except(['show', 'destroy']);
+        Route::resource('employees', EmployeeController::class)->except(['show']);
     });
 
     Route::post('reports/settings', [ReportController::class, 'saveSettings'])->name('reports.settings');

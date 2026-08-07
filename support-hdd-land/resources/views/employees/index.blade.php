@@ -5,6 +5,11 @@
 
 @section('content')
 <div class="emp-cartable">
+    @include('partials.flash')
+    @if($errors->any())
+        <div class="alert alert-error">{{ $errors->first() }}</div>
+    @endif
+
     <div class="emp-cartable-hero">
         <div>
             <h2>کارتابل کارمندان</h2>
@@ -56,6 +61,15 @@
                 </div>
                 <footer class="emp-card-foot">
                     <a class="btn btn-secondary" href="{{ route('employees.edit', $employee) }}">ویرایش دسترسی</a>
+                    @if((int) $employee->id !== (int) auth()->id())
+                        <form method="POST"
+                              action="{{ route('employees.destroy', $employee) }}"
+                              data-confirm="کاربر «{{ $employee->name }}» حذف شود؟ این عمل برگشت‌ناپذیر است.">
+                            @csrf
+                            @method('DELETE')
+                            <button class="btn btn-danger" type="submit">حذف کاربر</button>
+                        </form>
+                    @endif
                 </footer>
             </article>
         @empty

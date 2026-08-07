@@ -116,6 +116,29 @@ class EmployeeController extends Controller
         return redirect()->route('employees.index')->with('success', 'اطلاعات کارمند به‌روزرسانی شد.');
     }
 
+    public function destroy(User $employee)
+    {
+        if ((int) $employee->id === (int) auth()->id()) {
+            return back()->withErrors(['employee' => 'نمی‌توانید حساب خودتان را حذف کنید.']);
+        }
+
+        if ($employee->isAdmin()) {
+            $adminCount = User::query()->where('role', 'admin')->count();
+            if ($adminCount <= 1) {
+                return back()->withErrors(['employee' => 'حداقل یک مدیر باید در سیستم بماند.']);
+            }
+        }
+
+        if ($employee->technician) {
+            // Keep technician profile for historical receptions, but detach login
+            $employee->technician->update(['user_id' => null, 'is_active' => false]);
+        }
+
+        $employee->delete();
+
+        return redirect()->route('employees.index')->with('success', 'کاربر/کارمند حذف شد.');
+    }
+
     private function validated(Request $request, ?User $employee = null): array
     {
         $data = $request->validate([
