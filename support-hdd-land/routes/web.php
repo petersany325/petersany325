@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\EmployeeController;
@@ -134,6 +135,19 @@ Route::middleware('auth')->group(function () {
         Route::post('notifications/read-all', [NotificationController::class, 'markAllRead'])->name('notifications.read-all');
         Route::post('notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
         Route::get('notifications/messages/{message}', [NotificationController::class, 'openMessage'])->name('notifications.messages.show');
+    });
+
+    Route::middleware(EnsurePermission::class.':daily_logs')->prefix('daily-logs')->name('daily-logs.')->group(function () {
+        Route::get('/', [DailyLogController::class, 'index'])->name('index');
+        Route::post('/', [DailyLogController::class, 'store'])->name('store');
+        Route::get('/report', [DailyLogController::class, 'report'])->name('report');
+        Route::get('/settings', [DailyLogController::class, 'settings'])->name('settings');
+        Route::post('/settings', [DailyLogController::class, 'saveSettings'])->name('settings.save');
+        Route::post('/categories', [DailyLogController::class, 'storeCategory'])->name('categories.store');
+        Route::put('/categories/{category}', [DailyLogController::class, 'updateCategory'])->name('categories.update');
+        Route::delete('/categories/{category}', [DailyLogController::class, 'destroyCategory'])->name('categories.destroy');
+        Route::put('/{dailyLog}', [DailyLogController::class, 'update'])->name('update');
+        Route::delete('/{dailyLog}', [DailyLogController::class, 'destroy'])->name('destroy');
     });
 
     Route::middleware(EnsurePermission::class.':parts')->group(function () {

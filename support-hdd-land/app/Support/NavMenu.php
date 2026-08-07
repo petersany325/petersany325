@@ -63,6 +63,21 @@ class NavMenu
                 'children' => [],
             ],
             [
+                'key' => 'daily_logs',
+                'label' => 'دفتر روز',
+                'permission' => 'daily_logs',
+                'route' => null,
+                'match' => 'daily-logs.*',
+                'mark' => 'ر',
+                'hint' => 'ثبت کار و رویداد روزانه',
+                'any_of' => ['daily_logs', 'daily_logs.manage'],
+                'children' => [
+                    ['label' => 'ثبت امروز', 'route' => 'daily-logs.index', 'match' => 'daily-logs.index', 'hint' => 'رویدادهای روز جاری', 'mark' => 'ام', 'permission' => 'daily_logs'],
+                    ['label' => 'گزارش همه', 'route' => 'daily-logs.report', 'match' => 'daily-logs.report', 'hint' => 'مرور کارمندان', 'mark' => 'گ', 'permission' => 'daily_logs.manage'],
+                    ['label' => 'تنظیمات دفتر', 'route' => 'daily-logs.settings', 'match' => 'daily-logs.settings', 'hint' => 'دسته و قوانین', 'mark' => 'ظ', 'permission' => 'daily_logs.manage'],
+                ],
+            ],
+            [
                 'key' => 'cost_approvals',
                 'label' => 'تأیید هزینه',
                 'permission' => 'receptions',
@@ -273,6 +288,7 @@ class NavMenu
             'reception' => 'blue',
             'handoffs' => 'green',
             'notifications' => 'violet',
+            'daily_logs' => 'amber',
             'cost_approvals' => 'amber',
             'customers' => 'teal',
             'parts' => 'amber',
@@ -295,6 +311,7 @@ class NavMenu
             'reception' => 'پذیرش',
             'handoffs' => 'ارجاع',
             'notifications' => 'اعلان',
+            'daily_logs' => 'دفتر',
             'cost_approvals' => 'تأیید',
             'customers' => 'مشتری',
             'parts' => 'انبار',
@@ -317,7 +334,7 @@ class NavMenu
     {
         $groups = collect(self::forUser($user))->keyBy('key');
         $order = [
-            'home', 'reception', 'handoffs', 'notifications',
+            'home', 'daily_logs', 'reception', 'handoffs', 'notifications',
             'customers', 'parts', 'cost_approvals', 'accounting', 'reports',
         ];
 
