@@ -301,22 +301,19 @@
                 </div>
             </form>
 
-            @if($smsLogs->count())
-                <div class="sms-ticket-logs">
-                    <h4>پیامک‌های این قبض</h4>
-                    <ul>
-                        @foreach($smsLogs as $log)
-                            <li>
-                                <span class="{{ $log->ok ? 'pill pill-ok' : 'pill pill-off' }}">{{ $log->ok ? 'موفق' : 'ناموفق' }}</span>
-                                <span class="muted">{{ $log->created_at?->format('Y/m/d H:i') }}</span>
-                                — {{ $log->status_key === 'cost_approval' ? 'لینک تأیید هزینه' : ($log->rule?->title ?: $log->status_key) }}
-                                <div class="muted" style="font-size:11px;white-space:pre-wrap;margin-top:2px;">{{ \Illuminate\Support\Str::limit($log->message, 180) }}</div>
-                            </li>
-                        @endforeach
-                    </ul>
+            <div class="sms-ticket-logs">
+                <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;">
+                    <h4 style="margin:0;">پیامک‌های این قبض</h4>
+                    @if(auth()->user()->canAccess('reports.sms'))
+                        <a class="btn btn-secondary" href="{{ route('reports.sms', ['reception_id' => $reception->id]) }}">گزارش کامل پیامک این قبض</a>
+                    @endif
                 </div>
-            @endif
-
+                <p class="muted" style="margin:6px 0 0;font-size:11.5px;">
+                    فهرست کامل، فیلتر و آمار پیامک‌ها در منوی
+                    <strong>پیامک‌ها ← گزارش پیامک قبض‌ها</strong>
+                    نمایش داده می‌شود.
+                </p>
+            </div>
             <div class="cost-approval-box" style="margin-top:12px;border-top:1px solid #d7dde6;padding-top:10px;">
                 <h4 style="margin:0 0 8px;font-size:12.5px;">تأیید هزینه توسط مشتری</h4>
                 @php

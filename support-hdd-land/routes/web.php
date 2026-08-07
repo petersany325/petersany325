@@ -156,7 +156,13 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware(EnsurePermission::class.':parts')->group(function () {
-        Route::resource('parts', PartController::class)->except(['show', 'destroy']);
+        Route::get('parts/movements', [PartController::class, 'movements'])->name('parts.movements');
+        Route::get('parts/valuation', [PartController::class, 'valuation'])->name('parts.valuation');
+        Route::get('parts/receipt', [PartController::class, 'receiptForm'])->name('parts.receipt');
+        Route::post('parts/receipt', [PartController::class, 'receiptStore'])->name('parts.receipt.store');
+        Route::get('parts/issue', [PartController::class, 'issueForm'])->name('parts.issue');
+        Route::post('parts/issue', [PartController::class, 'issueStore'])->name('parts.issue.store');
+        Route::resource('parts', PartController::class)->except(['destroy']);
         Route::post('parts/{part}/stock', [PartController::class, 'adjustStock'])->name('parts.stock');
     });
 

@@ -241,37 +241,73 @@ class ReportController extends Controller
     {
         [$from, $to] = $this->range($request);
 
-        $logs = SmsLog::query()
+        $receptionId = $request->integer('reception_id') ?: null;
+        $q = trim((string) $request->get('q'));
+        $okFilter = $request->get('ok'); // '', '1', '0'
+        $audience = (string) $request->get('audience', '');
+        $statusKey = trim((string) $request->get('status_key', ''));
+
+        $logsBase = SmsLog::query()
             ->whereDate('created_at', '>=', $from)
-            ->whereDate('created_at', '<=', $to);
+            ->whereDate('created_at', '<=', $to)
+            ->when($receptionId, fn ($query) => $query->where('reception_id', $receptionId))
+            ->when($audience !== '', fn ($query) => $query->where('audience', $audience))
+            ->when($statusKey !== '', fn ($query) => $query->where('status_key', $statusKey))
+            ->when($okFilter === '1', fn ($query) => $query->where('ok', true))
+            ->when($okFilter === '0', fn ($query) => $query->where('ok', false))
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($inner) use ($q) {
+                    $inner->where('phone', 'like', "%{$q}%")
+                        ->orWhere('message', 'like', "%{$q}%")
+                        ->orWhere('provider_message', 'like', "%{$q}%")
+                        ->orWhereHas('reception', fn ($r) => $r->where('ticket_no', 'like', "%{$q}%")->orWhere('receipt_no', 'like', "%{$q}%"))
+                        ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', "%{$q}%")->orWhere('phone', 'like', "%{$q}%"));
+                });
+            });
 
         $summary = [
-            'total' => (clone $logs)->count(),
-            'ok' => (clone $logs)->where('ok', true)->count(),
-            'fail' => (clone $logs)->where('ok', false)->count(),
-            'customer' => (clone $logs)->where('audience', 'customer')->count(),
-            'coworker' => (clone $logs)->where('audience', 'coworker')->count(),
+            'total' => (clone $logsBase)->count(),
+            'ok' => (clone $logsBase)->where('ok', true)->count(),
+            'fail' => (clone $logsBase)->where('ok', false)->count(),
+            'customer' => (clone $logsBase)->where('audience', 'customer')->count(),
+            'coworker' => (clone $logsBase)->where('audience', 'coworker')->count(),
         ];
 
-        $byStatus = (clone $logs)
+        $byStatus = (clone $logsBase)
             ->select('status_key', DB::raw('COUNT(*) as total'), DB::raw('SUM(CASE WHEN ok = 1 THEN 1 ELSE 0 END) as ok_count'))
             ->groupBy('status_key')
             ->orderByDesc('total')
             ->get();
 
-        $fails = SmsLog::query()
+        $fails = (clone $logsBase)
             ->with(['customer', 'reception', 'costApproval'])
-            ->whereDate('created_at', '>=', $from)
-            ->whereDate('created_at', '<=', $to)
             ->where('ok', false)
             ->latest('id')
             ->limit(30)
             ->get();
 
+        $entries = (clone $logsBase)
+            ->with(['customer', 'reception', 'rule', 'sender', 'costApproval'])
+            ->latest('id')
+            ->paginate(40)
+            ->withQueryString();
+
+        $reception = $receptionId
+            ? \App\Models\Reception::query()->with('customer')->find($receptionId)
+            : null;
+
+        $statusKeys = SmsLog::query()
+            ->whereNotNull('status_key')
+            ->where('status_key', '!=', '')
+            ->distinct()
+            ->orderBy('status_key')
+            ->pluck('status_key');
+
         $approvalsQuery = \App\Models\CostApproval::query()
             ->where(function ($q) use ($from, $to) {
                 $q->whereDate('sent_at', '>=', $from)->whereDate('sent_at', '<=', $to);
-            });
+            })
+            ->when($receptionId, fn ($query) => $query->where('reception_id', $receptionId));
 
         $approvalSummary = [
             'sent' => (clone $approvalsQuery)->count(),
@@ -292,8 +328,16 @@ class ReportController extends Controller
             'summary' => $summary,
             'byStatus' => $byStatus,
             'fails' => $fails,
+            'entries' => $entries,
             'approvals' => $approvals,
             'approvalSummary' => $approvalSummary,
+            'reception' => $reception,
+            'receptionId' => $receptionId,
+            'q' => $q,
+            'okFilter' => $okFilter,
+            'audience' => $audience,
+            'statusKey' => $statusKey,
+            'statusKeys' => $statusKeys,
             'chartSmsLabels' => ['موفق', 'ناموفق'],
             'chartSmsValues' => [(int) $summary['ok'], (int) $summary['fail']],
         ]);

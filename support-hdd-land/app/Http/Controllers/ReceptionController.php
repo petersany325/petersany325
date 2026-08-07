@@ -487,11 +487,15 @@ class ReceptionController extends Controller
                 $part->save();
 
                 StockMovement::create([
+                    'doc_no' => StockMovement::nextDocNo('OUT'),
                     'part_id' => $part->id,
                     'reception_id' => $reception->id,
                     'user_id' => Auth::id(),
                     'type' => 'out',
+                    'doc_type' => 'consumption',
                     'quantity' => -1 * (int) $data['quantity'],
+                    'unit_cost' => (int) $part->purchase_price,
+                    'total_cost' => abs((int) $data['quantity']) * (int) $part->purchase_price,
                     'stock_after' => $part->stock,
                     'note' => 'مصرف در قبض '.$reception->ticket_no,
                 ]);

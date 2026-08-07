@@ -1098,7 +1098,89 @@ html[data-ui-mode="mobile"] .staff-drawer:not([hidden]) .staff-tab-more{color:#f
   .daybook-cats{grid-template-columns:1fr 1fr}
 }
 
-/* ===== Reception lifecycle timeline / cost stages ===== */
+/* ===== Warehouse / accounting-style inventory ===== */
+.wh-shell{display:grid;gap:10px;margin-bottom:12px}
+.wh-hero{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;padding:12px 14px;border:1px solid #c5ccd6;border-radius:3px;background:
+  linear-gradient(135deg,rgba(42,120,180,.10),transparent 42%),
+  linear-gradient(180deg,#fff,#f4f7fa)}
+.wh-eyebrow{font-size:10.5px;font-weight:800;color:#1d4f7a;margin:0 0 4px}
+.wh-title{margin:0;font-size:18px}
+.wh-sub{margin:4px 0 0;color:var(--muted);font-size:12px;line-height:1.6;max-width:52ch}
+.wh-hero-actions{display:flex;gap:6px;flex-wrap:wrap}
+.wh-nav{display:flex;flex-wrap:wrap;gap:6px}
+.wh-nav-item{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid #9aa5b5;border-radius:3px;background:#fff;font-size:12px;font-weight:700;text-decoration:none;color:inherit}
+.wh-nav-item.is-on{border-color:#2f6fed;background:#e7f0ff;color:#1e3a8a}
+.wh-nav-mark{width:22px;height:22px;border-radius:3px;display:grid;place-items:center;background:#3a4454;color:#fff;font-size:10px;font-weight:800}
+.wh-nav-item.tone-teal .wh-nav-mark{background:#0f766e}
+.wh-nav-item.tone-blue .wh-nav-mark{background:#2563eb}
+.wh-nav-item.tone-rose .wh-nav-mark{background:#be123c}
+.wh-nav-item.tone-amber .wh-nav-mark{background:#b45309}
+.wh-nav-item.tone-green .wh-nav-mark{background:#15803d}
+.wh-desk{display:grid;gap:10px}
+.wh-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.wh-kpi{border:1px solid #c5ccd6;border-radius:3px;padding:10px 12px;background:linear-gradient(180deg,#fff,#f7f8fa)}
+.wh-kpi span{display:block;font-size:10.5px;color:var(--muted);font-weight:700}
+.wh-kpi strong{display:block;font-size:18px;margin-top:2px}
+.wh-kpi small{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+.wh-kpi.tone-teal{border-color:#99d5cf;background:linear-gradient(180deg,#f2fffc,#e6f7f4)}
+.wh-kpi.tone-blue{border-color:#bfdbfe;background:linear-gradient(180deg,#f5f9ff,#eaf2ff)}
+.wh-kpi.tone-amber{border-color:#f5d59a;background:linear-gradient(180deg,#fffaf0,#fff4df)}
+.wh-kpi.tone-rose{border-color:#fecaca;background:linear-gradient(180deg,#fff5f5,#ffe8e8)}
+.wh-toolbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:end}
+.wh-filters{display:flex;flex-wrap:wrap;gap:6px;align-items:end}
+.wh-filters input,.wh-filters select{min-height:30px}
+.wh-toolbar-actions{display:flex;gap:6px;flex-wrap:wrap}
+.wh-panels{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,.9fr);gap:10px}
+.wh-panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.wh-panel-head h3{margin:0;font-size:14px}
+.wh-row-low{background:#fff8eb}
+.wh-row-actions{display:flex;gap:4px;flex-wrap:wrap}
+.wh-pos{color:#166534;font-weight:800}
+.wh-neg{color:#9f1239;font-weight:800}
+.sms-report-filters{display:flex;flex-wrap:wrap;gap:6px;align-items:end;margin-bottom:12px}
+.sms-report-filters input,.sms-report-filters select{min-height:30px}
+.sms-report-hero{margin-bottom:12px}
+@media (max-width:960px){
+  .wh-panels{grid-template-columns:1fr}
+}
+
+/* ===== Accounting shell (shared look) ===== */
+.acc-shell{display:grid;gap:10px;margin-bottom:12px}
+.acc-hero{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;padding:12px 14px;border:1px solid #c5ccd6;border-radius:3px;background:
+  linear-gradient(135deg,rgba(15,118,110,.10),transparent 42%),
+  linear-gradient(180deg,#fff,#f3f8f7)}
+.acc-hero-eyebrow{font-size:10.5px;font-weight:800;color:#0f766e;margin:0 0 4px}
+.acc-hero-title{margin:0;font-size:18px}
+.acc-hero-sub{margin:4px 0 0;color:var(--muted);font-size:12px}
+.acc-hero-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.acc-period{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.acc-period-sep{font-size:11px;color:var(--muted)}
+.acc-nav{display:flex;flex-wrap:wrap;gap:6px}
+.acc-nav-item{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid #9aa5b5;border-radius:3px;background:#fff;font-size:12px;font-weight:700;text-decoration:none;color:inherit}
+.acc-nav-item.is-on{border-color:#0f766e;background:#e6f7f4;color:#115e59}
+.acc-nav-ico{width:22px;height:22px;border-radius:3px;display:grid;place-items:center;background:#3a4454;color:#fff;font-size:11px}
+.acc-desk{display:grid;gap:10px}
+.acc-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px}
+.acc-kpi{border:1px solid #c5ccd6;border-radius:3px;padding:10px 12px;background:#fff}
+.acc-kpi-label{display:block;font-size:10.5px;color:var(--muted);font-weight:700}
+.acc-kpi-value{display:block;font-size:18px;margin-top:2px}
+.acc-kpi-foot{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+.acc-kpi.tone-teal{background:linear-gradient(180deg,#f2fffc,#e6f7f4);border-color:#99d5cf}
+.acc-kpi.tone-blue{background:linear-gradient(180deg,#f5f9ff,#eaf2ff);border-color:#bfdbfe}
+.acc-kpi.tone-rose{background:linear-gradient(180deg,#fff5f5,#ffe8e8);border-color:#fecaca}
+.acc-kpi.tone-amber{background:linear-gradient(180deg,#fffaf0,#fff4df);border-color:#f5d59a}
+.acc-mini-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:6px}
+.acc-mini{border:1px solid #d9dee6;border-radius:3px;padding:8px;background:#fff}
+.acc-mini span{display:block;font-size:10px;color:var(--muted)}
+.acc-mini strong{font-size:13px}
+.acc-panels{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.acc-panel{border:1px solid #c5ccd6;border-radius:3px;background:#fff;padding:10px}
+.acc-panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.acc-panel-head h3{margin:0;font-size:13px}
+.acc-num{font-variant-numeric:tabular-nums;font-weight:700}
+.acc-link{font-weight:700}
+@media (max-width:900px){.acc-panels{grid-template-columns:1fr}}
+
 .rx-timeline{display:grid;gap:0}
 .rx-timeline-item{position:relative;display:grid;grid-template-columns:18px 1fr;gap:8px;padding:0 0 12px 0}
 .rx-timeline-item:last-child{padding-bottom:0}
