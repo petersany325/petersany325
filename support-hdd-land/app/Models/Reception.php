@@ -18,6 +18,7 @@ class Reception extends Model
         'reported_fault', 'final_fault', 'technician_notes', 'status',
         'deposit', 'pos_amount', 'admission_fee', 'estimated_cost', 'payment_method',
         'labor_cost', 'parts_cost', 'discount', 'total_amount', 'paid_amount', 'cost_confirmed_at',
+        'cost_approval_status', 'customer_cost_approved_at', 'customer_cost_approved_amount',
         'estimated_delivery_at', 'next_visit_at', 'received_at', 'delivered_at',
     ];
 
@@ -27,6 +28,7 @@ class Reception extends Model
             'received_at' => 'datetime',
             'delivered_at' => 'datetime',
             'cost_confirmed_at' => 'datetime',
+            'customer_cost_approved_at' => 'datetime',
             'estimated_delivery_at' => 'date',
             'next_visit_at' => 'date',
             'warranty_end_date' => 'date',
@@ -67,6 +69,16 @@ class Reception extends Model
     public function customerMessages(): HasMany
     {
         return $this->hasMany(CustomerMessage::class);
+    }
+
+    public function costApprovals(): HasMany
+    {
+        return $this->hasMany(CostApproval::class)->latest('id');
+    }
+
+    public function latestCostApproval()
+    {
+        return $this->hasOne(CostApproval::class)->latestOfMany();
     }
 
     public function custodyLabel(): string

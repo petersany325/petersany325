@@ -41,6 +41,18 @@ Route::get('/', function () {
 Route::redirect('/gate', '/');
 Route::redirect('/portal', '/cartable');
 
+Route::get('/a/{token}', [\App\Http\Controllers\CostApprovalController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]{20,80}')
+    ->name('approvals.show');
+Route::post('/a/{token}/approve', [\App\Http\Controllers\CostApprovalController::class, 'approve'])
+    ->where('token', '[A-Za-z0-9]{20,80}')
+    ->middleware('throttle:20,1')
+    ->name('approvals.approve');
+Route::post('/a/{token}/reject', [\App\Http\Controllers\CostApprovalController::class, 'reject'])
+    ->where('token', '[A-Za-z0-9]{20,80}')
+    ->middleware('throttle:20,1')
+    ->name('approvals.reject');
+
 Route::get('/payments/zarinpal/callback/{trx}', [ZarinPalController::class, 'callback'])
     ->name('payments.zarinpal.callback');
 
@@ -101,6 +113,7 @@ Route::middleware('auth')->group(function () {
         Route::post('receptions/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('receptions.zarinpal');
         Route::get('receptions/{reception}/print', [ReceptionController::class, 'print'])->name('receptions.print');
         Route::post('receptions/{reception}/handoffs', [HandoffController::class, 'store'])->name('receptions.handoffs.store');
+        Route::post('receptions/{reception}/cost-approval', [ReceptionController::class, 'requestCostApproval'])->name('receptions.cost-approval');
     });
 
     Route::middleware(EnsurePermission::class.':handoffs')->group(function () {

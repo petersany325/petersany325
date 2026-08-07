@@ -260,7 +260,7 @@ class ReportController extends Controller
             ->get();
 
         $fails = SmsLog::query()
-            ->with(['customer', 'reception'])
+            ->with(['customer', 'reception', 'costApproval'])
             ->whereDate('created_at', '>=', $from)
             ->whereDate('created_at', '<=', $to)
             ->where('ok', false)
@@ -268,12 +268,30 @@ class ReportController extends Controller
             ->limit(30)
             ->get();
 
+        $approvals = \App\Models\CostApproval::query()
+            ->with(['reception', 'customer'])
+            ->where(function ($q) use ($from, $to) {
+                $q->whereDate('sent_at', '>=', $from)->whereDate('sent_at', '<=', $to);
+            })
+            ->latest('id')
+            ->limit(40)
+            ->get();
+
+        $approvalSummary = [
+            'sent' => (clone $approvals)->count(),
+            'approved' => $approvals->where('status', 'approved')->count(),
+            'rejected' => $approvals->where('status', 'rejected')->count(),
+            'viewed' => $approvals->whereIn('status', ['viewed', 'approved', 'rejected'])->count(),
+        ];
+
         return view('reports.sms', [
             'from' => $from,
             'to' => $to,
             'summary' => $summary,
             'byStatus' => $byStatus,
             'fails' => $fails,
+            'approvals' => $approvals,
+            'approvalSummary' => $approvalSummary,
             'chartSmsLabels' => ['موفق', 'ناموفق'],
             'chartSmsValues' => [(int) $summary['ok'], (int) $summary['fail']],
         ]);

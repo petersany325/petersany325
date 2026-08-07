@@ -15,6 +15,7 @@ use App\Models\SmsStatusRule;
 use App\Models\StockMovement;
 use App\Models\Technician;
 use App\Services\AccountingService;
+use App\Services\CostApprovalService;
 use App\Services\SmsNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -289,6 +290,7 @@ class ReceptionController extends Controller
         $reception->load([
             'customer.referralSource', 'technician', 'custodyTechnician', 'faultType',
             'parts.part', 'payments.receiver', 'creator',
+            'costApprovals' => fn ($q) => $q->latest('id')->limit(12),
             'handoffs' => fn ($q) => $q->with(['fromUser', 'toTechnician', 'toUser'])->latest('id')->limit(20),
         ]);
         $rules = SmsStatusRule::activeOrdered();
@@ -308,12 +310,33 @@ class ReceptionController extends Controller
             'smsRules' => $rules,
             'smsPreviews' => $previews,
             'smsMasterEnabled' => $smsNotifications->masterEnabled(),
-            'smsLogs' => SmsLog::query()->where('reception_id', $reception->id)->latest()->limit(10)->get(),
+            'smsLogs' => SmsLog::query()->where('reception_id', $reception->id)->latest()->limit(15)->get(),
+            'costApprovals' => $reception->costApprovals,
             'paymentMethods' => Payment::METHODS,
             'paymentTypes' => Payment::TYPES,
             'parts' => Part::where('is_active', true)->orderBy('name')->get(),
             'pendingHandoff' => $reception->handoffs->firstWhere('status', \App\Models\DeviceHandoff::STATUS_PENDING),
         ]));
+    }
+
+    public function requestCostApproval(Request $request, Reception $reception, CostApprovalService $approvals)
+    {
+        $data = $request->validate([
+            'description' => ['nullable', 'string', 'max:1000'],
+            'send_sms' => ['nullable', 'boolean'],
+        ]);
+
+        $result = $approvals->requestAndSend(
+            $reception->fresh(['customer', 'parts', 'faultType', 'technician']),
+            $data['description'] ?? null,
+            $request->boolean('send_sms', true)
+        );
+
+        if (! ($result['ok'] ?? false)) {
+            return back()->withErrors(['cost_approval' => $result['message'] ?? 'ارسال لینک تأیید ناموفق بود.']);
+        }
+
+        return back()->with('success', $result['message'] ?? 'لینک تأیید هزینه ارسال شد.');
     }
 
     public function updateStatus(Request $request, Reception $reception, SmsNotificationService $smsNotifications)

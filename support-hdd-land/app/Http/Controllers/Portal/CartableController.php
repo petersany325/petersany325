@@ -101,11 +101,19 @@ class CartableController extends Controller
 
         $reception->load([
             'parts', 'payments', 'faultType', 'technician', 'custodyTechnician',
+            'latestCostApproval',
             'handoffs' => fn ($q) => $q->with('toTechnician')->where('status', 'accepted')->latest('id')->limit(12),
         ]);
         $payLinks = $reception->status === 'ready' ? PaymentGateways::active() : [];
+        $smsLogs = \App\Models\SmsLog::query()
+            ->with('rule')
+            ->where('reception_id', $reception->id)
+            ->where('audience', 'customer')
+            ->latest('id')
+            ->limit(20)
+            ->get();
 
-        return view('portal.show', compact('customer', 'reception', 'payLinks'));
+        return view('portal.show', compact('customer', 'reception', 'payLinks', 'smsLogs'));
     }
 
     public function report(Request $request)

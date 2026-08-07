@@ -84,7 +84,44 @@
         <div><span>پرداخت‌شده</span><strong>{{ number_format((int) $reception->paid_amount) }}</strong></div>
         <div class="remain"><span>مانده</span><strong>{{ number_format($reception->remainingAmount()) }}</strong></div>
     </div>
+    @php
+        $latestAp = $reception->latestCostApproval;
+        $apLabels = \App\Models\CostApproval::statusLabels();
+    @endphp
+    @if($latestAp || $reception->customer_cost_approved_at)
+        <div class="p-empty soft" style="margin-top:10px;text-align:right;">
+            وضعیت تأیید مشتری:
+            <strong>{{ $apLabels[$reception->cost_approval_status] ?? ($reception->cost_approval_status ?: '—') }}</strong>
+            @if($reception->customer_cost_approved_at)
+                <div>مبلغ تأییدشده: {{ number_format((int) $reception->customer_cost_approved_amount) }} تومان</div>
+                <div>زمان تأیید: {{ $reception->customer_cost_approved_at->format('Y/m/d H:i') }}</div>
+                @if($latestAp?->approval_code)
+                    <div>کد: <span dir="ltr">{{ $latestAp->approval_code }}</span></div>
+                @endif
+            @elseif($latestAp)
+                <div>ارسال لینک: {{ $latestAp->sent_at?->format('Y/m/d H:i') ?: '—' }}</div>
+                <div>مشاهده: {{ $latestAp->viewed_at?->format('Y/m/d H:i') ?: 'هنوز باز نشده' }}</div>
+            @endif
+        </div>
+    @endif
 </section>
+
+@if(($smsLogs ?? collect())->count())
+<section class="p-section">
+    <h2>پیامک‌های این قبض</h2>
+    <div class="p-parts">
+        @foreach($smsLogs as $log)
+            <div class="p-part-row">
+                <div>
+                    <strong>{{ $log->status_key === 'cost_approval' ? 'لینک تأیید هزینه' : ($log->rule?->title ?: ($log->status_key ?: 'پیامک')) }}</strong>
+                    <small>{{ $log->created_at?->format('Y/m/d H:i') }} — {{ $log->ok ? 'موفق' : 'ناموفق' }}</small>
+                </div>
+                <span>{{ $log->ok ? '✓' : '!' }}</span>
+            </div>
+        @endforeach
+    </div>
+</section>
+@endif
 
 @if($reception->status === 'ready')
 <section class="p-section">

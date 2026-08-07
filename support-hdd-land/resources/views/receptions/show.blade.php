@@ -178,7 +178,7 @@
                     <div>
                         @include('partials.toggle', [
                             'name' => 'send_price_sms',
-                            'label' => 'پیامک مبلغ (سریال + قبض + قیمت)',
+                            'label' => 'پیامک مبلغ + لینک تأیید هزینه',
                             'checked' => false,
                             'on' => 'برود',
                             'off' => 'نرود',
@@ -250,12 +250,79 @@
                             <li>
                                 <span class="{{ $log->ok ? 'pill pill-ok' : 'pill pill-off' }}">{{ $log->ok ? 'موفق' : 'ناموفق' }}</span>
                                 <span class="muted">{{ $log->created_at?->format('Y/m/d H:i') }}</span>
-                                — {{ $log->rule?->title ?: $log->status_key }}
+                                — {{ $log->status_key === 'cost_approval' ? 'لینک تأیید هزینه' : ($log->rule?->title ?: $log->status_key) }}
+                                <div class="muted" style="font-size:11px;white-space:pre-wrap;margin-top:2px;">{{ \Illuminate\Support\Str::limit($log->message, 180) }}</div>
                             </li>
                         @endforeach
                     </ul>
                 </div>
             @endif
+
+            <div class="cost-approval-box" style="margin-top:12px;border-top:1px solid #d7dde6;padding-top:10px;">
+                <h4 style="margin:0 0 8px;font-size:12.5px;">تأیید هزینه توسط مشتری</h4>
+                @php
+                    $latestApproval = ($costApprovals ?? collect())->first();
+                    $apStatus = $reception->cost_approval_status;
+                    $apLabels = \App\Models\CostApproval::statusLabels();
+                @endphp
+                <div class="muted" style="font-size:11.5px;margin-bottom:8px;line-height:1.7;">
+                    وضعیت فعلی:
+                    <strong>{{ $apLabels[$apStatus] ?? ($apStatus ?: 'ارسال نشده') }}</strong>
+                    @if($reception->customer_cost_approved_at)
+                        — تأیید {{ number_format((int) $reception->customer_cost_approved_amount) }} تومان
+                        در {{ $reception->customer_cost_approved_at->format('Y/m/d H:i') }}
+                    @endif
+                </div>
+                <form method="POST" action="{{ route('receptions.cost-approval', $reception) }}" class="accept-row accept-row-2" style="margin-bottom:8px;">
+                    @csrf
+                    <div class="full">
+                        <label>شرح کار برای مشتری (اختیاری)</label>
+                        <textarea name="description" rows="2" placeholder="مثلاً جراحی هارد / بازیابی اطلاعات / تعویض قطعه…">{{ old('description', $reception->final_fault) }}</textarea>
+                    </div>
+                    <div>
+                        @include('partials.toggle', [
+                            'name' => 'send_sms',
+                            'label' => 'ارسال SMS لینک یک‌بارمصرف',
+                            'checked' => true,
+                            'on' => 'برود',
+                            'off' => 'نرود',
+                        ])
+                    </div>
+                    <div class="actions" style="align-items:end;">
+                        <button class="btn btn-primary" type="submit">ارسال لینک تأیید هزینه</button>
+                    </div>
+                </form>
+                @if(($costApprovals ?? collect())->count())
+                    <div class="table-wrap">
+                        <table class="data compact-table">
+                            <thead>
+                                <tr>
+                                    <th>نسخه</th>
+                                    <th>مبلغ</th>
+                                    <th>وضعیت</th>
+                                    <th>ارسال</th>
+                                    <th>مشاهده</th>
+                                    <th>تصمیم</th>
+                                    <th>کد</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach($costApprovals as $ap)
+                                <tr>
+                                    <td>V{{ $ap->version }}</td>
+                                    <td>{{ number_format((int) $ap->amount) }}</td>
+                                    <td>{{ $ap->statusLabel() }}</td>
+                                    <td>{{ $ap->sent_at?->format('Y/m/d H:i') ?: '—' }}</td>
+                                    <td>{{ $ap->viewed_at?->format('Y/m/d H:i') ?: '—' }}</td>
+                                    <td>{{ $ap->decided_at?->format('Y/m/d H:i') ?: '—' }}</td>
+                                    <td dir="ltr">{{ $ap->approval_code ?: '—' }}</td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
         </div>
 
         <div class="panel">
@@ -312,7 +379,7 @@
                 <div style="margin-top:8px;">
                     @include('partials.toggle', [
                         'name' => 'send_price_sms',
-                        'label' => 'پیامک مبلغ به مشتری (سریال + قبض + قیمت)',
+                        'label' => 'پیامک مبلغ + لینک تأیید هزینه',
                         'checked' => true,
                         'on' => 'برود',
                         'off' => 'نرود',

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SmsLog extends Model
 {
     protected $fillable = [
-        'reception_id', 'customer_id', 'sms_status_rule_id', 'sent_by',
+        'reception_id', 'customer_id', 'sms_status_rule_id', 'cost_approval_id', 'sent_by',
         'phone', 'status_key', 'audience', 'message', 'ok', 'provider_message',
     ];
 
@@ -32,6 +32,11 @@ class SmsLog extends Model
     public function rule(): BelongsTo
     {
         return $this->belongsTo(SmsStatusRule::class, 'sms_status_rule_id');
+    }
+
+    public function costApproval(): BelongsTo
+    {
+        return $this->belongsTo(CostApproval::class);
     }
 
     public function sender(): BelongsTo

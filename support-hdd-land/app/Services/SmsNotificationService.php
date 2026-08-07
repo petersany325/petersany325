@@ -48,6 +48,8 @@ class SmsNotificationService
             '{price}' => $amount,
             '{shop_name}' => $shop,
             '{technician}' => $reception->technician?->name ?? '—',
+            '{approval_url}' => '',
+            '{approval_code}' => '',
         ];
     }
 
@@ -184,6 +186,26 @@ class SmsNotificationService
     {
         if (! $reception->hasCostSet()) {
             return ['ok' => false, 'skipped' => true, 'message' => 'مبلغ هنوز مشخص نیست.'];
+        }
+
+        // New flow: create one-time approval link + SMS (includes amount + URL)
+        try {
+            $result = app(CostApprovalService::class)->requestAndSend($reception, null, true);
+            if ($result['ok'] ?? false) {
+                return [
+                    'ok' => true,
+                    'message' => $result['message'] ?? 'لینک تأیید هزینه ارسال شد.',
+                    'log' => $result['log'] ?? null,
+                    'approval' => $result['approval'] ?? null,
+                ];
+            }
+
+            return [
+                'ok' => false,
+                'message' => $result['message'] ?? 'ساخت لینک تأیید ناموفق بود.',
+            ];
+        } catch (\Throwable $e) {
+            // fall through to legacy price SMS
         }
 
         $rule = SmsStatusRule::findOnPrice();

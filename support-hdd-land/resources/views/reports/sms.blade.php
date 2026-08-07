@@ -69,5 +69,51 @@
         </div>
     </div>
 </div>
+
+<div class="panel" style="margin-top:12px;">
+    <h2 style="margin-top:0;">تأیید هزینه مشتری (لینک یک‌بارمصرف)</h2>
+    <div class="stats stats-compact">
+        <div class="stat"><div class="label">ارسال‌شده</div><div class="value">{{ number_format($approvalSummary['sent'] ?? 0) }}</div></div>
+        <div class="stat"><div class="label">مشاهده‌شده+</div><div class="value">{{ number_format($approvalSummary['viewed'] ?? 0) }}</div></div>
+        <div class="stat"><div class="label">تأییدشده</div><div class="value">{{ number_format($approvalSummary['approved'] ?? 0) }}</div></div>
+        <div class="stat"><div class="label">ردشده</div><div class="value">{{ number_format($approvalSummary['rejected'] ?? 0) }}</div></div>
+    </div>
+    <div class="table-wrap" style="margin-top:10px;">
+        <table class="compact-table">
+            <thead>
+                <tr>
+                    <th>قبض</th>
+                    <th>مشتری</th>
+                    <th>مبلغ</th>
+                    <th>وضعیت</th>
+                    <th>ارسال</th>
+                    <th>مشاهده</th>
+                    <th>تصمیم</th>
+                    <th>کد</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse(($approvals ?? []) as $ap)
+                <tr>
+                    <td>
+                        @if($ap->reception_id)
+                            <a href="{{ route('receptions.show', $ap->reception_id) }}">{{ $ap->reception?->ticket_no }}</a>
+                        @else — @endif
+                    </td>
+                    <td>{{ $ap->customer?->name ?: '—' }}</td>
+                    <td>{{ number_format((int) $ap->amount) }}</td>
+                    <td>{{ $ap->statusLabel() }}</td>
+                    <td>{{ $ap->sent_at?->format('Y/m/d H:i') ?: '—' }}</td>
+                    <td>{{ $ap->viewed_at?->format('Y/m/d H:i') ?: '—' }}</td>
+                    <td>{{ $ap->decided_at?->format('Y/m/d H:i') ?: '—' }}</td>
+                    <td dir="ltr">{{ $ap->approval_code ?: '—' }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="8">در این بازه لینک تأییدی نیست.</td></tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
 @endsection
 @include('reports._charts-boot')
