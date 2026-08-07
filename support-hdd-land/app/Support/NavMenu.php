@@ -201,6 +201,7 @@ class NavMenu
                     ['label' => 'عملیات کارگاه', 'route' => 'reports.operations', 'match' => 'reports.operations', 'permission' => 'reports.operations', 'hint' => '', 'mark' => 'ع'],
                     ['label' => 'ارجاع / محل دستگاه', 'route' => 'reports.custody', 'match' => 'reports.custody', 'permission' => 'reports.custody', 'hint' => '', 'mark' => 'ا'],
                     ['label' => 'صندوق و دریافت‌ها', 'route' => 'reports.payments', 'match' => 'reports.payments', 'permission' => 'reports.payments', 'hint' => '', 'mark' => 'ص'],
+                    ['label' => 'تأیید فیش بانکی', 'route' => 'payment-receipts.index', 'match' => 'payment-receipts.*', 'permission' => 'reports.payments', 'hint' => 'فیش کارت‌به‌کارت پرتال', 'mark' => 'ف'],
                     ['label' => 'پیام مشتری', 'route' => 'reports.messages', 'match' => 'reports.messages', 'permission' => 'reports.messages', 'hint' => '', 'mark' => 'م'],
                     ['label' => 'گزارش پیامک', 'route' => 'reports.sms', 'match' => 'reports.sms', 'permission' => 'reports.sms', 'hint' => 'از منوی پیامک‌ها هم هست', 'mark' => 'پ'],
                 ],

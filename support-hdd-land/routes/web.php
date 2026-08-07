@@ -19,6 +19,8 @@ use App\Http\Controllers\BackupCloudController;
 use App\Http\Controllers\SystemToolsController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
+use App\Http\Controllers\PaymentReceiptController;
+use App\Http\Controllers\Portal\PaymentReceiptController as PortalPaymentReceiptController;
 use App\Http\Controllers\HandoffController;
 use App\Http\Controllers\InternController;
 use App\Http\Controllers\InternPortalController;
@@ -84,6 +86,8 @@ Route::prefix('cartable')->name('portal.')->group(function () {
         Route::get('/approvals/{approval}', [PortalCartableController::class, 'approvalShow'])->name('approvals.show');
         Route::get('/pay', [PortalCartableController::class, 'pay'])->name('pay');
         Route::post('/pay/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('zarinpal.start');
+        Route::post('/tickets/{reception}/receipts', [PortalPaymentReceiptController::class, 'store'])->name('receipts.store');
+        Route::get('/receipts/{receipt}/image', [PortalPaymentReceiptController::class, 'image'])->name('receipts.image');
         Route::get('/messages', [PortalMessageController::class, 'index'])->name('messages');
         Route::post('/messages', [PortalMessageController::class, 'store'])->name('messages.store');
     });
@@ -211,6 +215,14 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/payments', [ReportController::class, 'payments'])
         ->middleware(EnsurePermission::class.':reports.payments')
         ->name('reports.payments');
+
+    Route::middleware(EnsurePermission::class.':reports.payments')->prefix('payment-receipts')->name('payment-receipts.')->group(function () {
+        Route::get('/', [PaymentReceiptController::class, 'index'])->name('index');
+        Route::get('{receipt}', [PaymentReceiptController::class, 'show'])->name('show');
+        Route::get('{receipt}/image', [PaymentReceiptController::class, 'image'])->name('image');
+        Route::post('{receipt}/approve', [PaymentReceiptController::class, 'approve'])->name('approve');
+        Route::post('{receipt}/reject', [PaymentReceiptController::class, 'reject'])->name('reject');
+    });
     Route::get('reports/technicians', [ReportController::class, 'technicians'])
         ->middleware(EnsurePermission::class.':reports.technicians')
         ->name('reports.technicians');

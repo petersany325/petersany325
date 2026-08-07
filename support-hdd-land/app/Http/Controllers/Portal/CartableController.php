@@ -117,8 +117,13 @@ class CartableController extends Controller
             ->latest('id')
             ->limit(20)
             ->get();
+        $receipts = \App\Models\PaymentReceipt::query()
+            ->where('reception_id', $reception->id)
+            ->where('customer_id', $customer->id)
+            ->latest('id')
+            ->get();
 
-        return view('portal.show', compact('customer', 'reception', 'payLinks', 'smsLogs'));
+        return view('portal.show', compact('customer', 'reception', 'payLinks', 'smsLogs', 'receipts'));
     }
 
     public function report(Request $request)
@@ -196,8 +201,16 @@ class CartableController extends Controller
             ->where('status', 'ready')
             ->latest('id')
             ->get();
+        $payable = $customer->receptions()
+            ->withCount('parts')
+            ->where('status', '!=', 'cancelled')
+            ->whereColumn('total_amount', '>', 'paid_amount')
+            ->latest('id')
+            ->limit(20)
+            ->get();
+        $bankTransfer = \App\Support\BankTransferSettings::all();
 
-        return view('portal.pay', compact('customer', 'payLinks', 'ready'));
+        return view('portal.pay', compact('customer', 'payLinks', 'ready', 'payable', 'bankTransfer'));
     }
 
     private function customer(Request $request): Customer

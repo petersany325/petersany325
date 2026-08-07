@@ -343,6 +343,43 @@
                     @include('partials.toggle', ['name' => 'pay_links_show_invoice', 'label' => 'نمایش لینک بانک روی فاکتور چاپ', 'checked' => $paymentLinksShow['invoice']])
                     @include('partials.toggle', ['name' => 'portal_otp_debug', 'label' => 'نمایش کد OTP کارتابل مشتری (فقط تست)', 'checked' => $paymentLinksShow['otp_debug']])
                 </div>
+
+                <h3 style="margin-top:18px;">واریز کارت‌به‌کارت (پرتال مشتری)</h3>
+                <p class="lead">شماره کارت شرکت برای نمایش در کارتابل مشتری. فیش‌ها فقط توسط مدیر و حسابدار تأیید می‌شوند.</p>
+                <div class="toggle-grid" style="margin-top:8px;">
+                    @include('partials.toggle', ['name' => 'bank_transfer_enabled', 'label' => 'فعال‌سازی نمایش کارت و آپلود فیش در پرتال', 'checked' => $bankTransfer['enabled']])
+                </div>
+                <div class="pay-settings-grid" style="margin-top:10px;">
+                    <div class="pay-settings-card tone-amber">
+                        <label for="bank_card_number">شماره کارت</label>
+                        <small>۱۶ رقم کارت مقصد شرکت</small>
+                        <input id="bank_card_number" type="text" name="bank_card_number"
+                               value="{{ old('bank_card_number', $bankTransfer['card_number']) }}"
+                               placeholder="6037...." dir="ltr" maxlength="32">
+                    </div>
+                    <div class="pay-settings-card tone-amber">
+                        <label for="bank_card_holder">نام صاحب کارت</label>
+                        <small>همان‌طور که روی کارت/حساب است</small>
+                        <input id="bank_card_holder" type="text" name="bank_card_holder"
+                               value="{{ old('bank_card_holder', $bankTransfer['card_holder']) }}">
+                    </div>
+                    <div class="pay-settings-card">
+                        <label for="bank_name">نام بانک</label>
+                        <input id="bank_name" type="text" name="bank_name"
+                               value="{{ old('bank_name', $bankTransfer['bank_name']) }}" placeholder="مثلاً ملت">
+                    </div>
+                    <div class="pay-settings-card">
+                        <label for="bank_iban">شبا (اختیاری)</label>
+                        <input id="bank_iban" type="text" name="bank_iban"
+                               value="{{ old('bank_iban', $bankTransfer['iban']) }}" placeholder="IR..." dir="ltr">
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label for="bank_transfer_instructions">راهنمای مشتری</label>
+                    <textarea id="bank_transfer_instructions" name="bank_transfer_instructions" rows="3"
+                              placeholder="مثلاً بعد از واریز، تصویر فیش را از همین صفحه ارسال کنید.">{{ old('bank_transfer_instructions', $bankTransfer['instructions']) }}</textarea>
+                </div>
+
                 <div class="actions">
                     <button class="btn btn-primary" type="submit">ذخیره تنظیمات پرداخت</button>
                 </div>

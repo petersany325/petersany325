@@ -10,6 +10,13 @@
     </div>
 </header>
 
+@if(session('success'))
+    <div class="p-alert ok" style="margin:10px 12px 0;">{{ session('success') }}</div>
+@endif
+@if($errors->any())
+    <div class="p-alert err" style="margin:10px 12px 0;">{{ $errors->first() }}</div>
+@endif
+
 <section class="p-detail-hero tone-{{ $reception->status === 'ready' ? 'green' : ($reception->status === 'repairing' ? 'amber' : 'teal') }}">
     <h1>{{ $reception->product_name ?: 'دستگاه تعمیراتی' }}</h1>
     <p>
@@ -186,6 +193,8 @@
     @endif
 </section>
 @endif
+
+@include('portal._bank-transfer', ['reception' => $reception, 'receipts' => $receipts ?? collect()])
 
 @if($reception->payments->count())
 <section class="p-section">

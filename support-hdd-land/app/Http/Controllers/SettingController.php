@@ -9,6 +9,7 @@ use App\Models\ReferralSource;
 use App\Models\User;
 use App\Services\NiazpardazSmsService;
 use App\Support\BackupSettings;
+use App\Support\BankTransferSettings;
 use App\Support\PaymentGateways;
 use App\Support\Permissions;
 use Illuminate\Http\Request;
@@ -74,6 +75,7 @@ class SettingController extends Controller
                 'otp_debug' => AppSetting::getValue('portal_otp_debug', '0') === '1',
             ],
             'zarinpal' => PaymentGateways::zarinpal(),
+            'bankTransfer' => BankTransferSettings::all(),
             'portalUrl' => url('/cartable'),
             'permissions' => Permissions::ALL,
             'backup' => BackupSettings::all(),
@@ -359,6 +361,12 @@ class SettingController extends Controller
             'zarinpal_merchant_id' => ['nullable', 'string', 'max:64'],
             'zarinpal_sandbox' => ['nullable', 'boolean'],
             'zarinpal_currency' => ['nullable', 'in:IRT,IRR'],
+            'bank_transfer_enabled' => ['nullable', 'boolean'],
+            'bank_card_number' => ['nullable', 'string', 'max:32'],
+            'bank_card_holder' => ['nullable', 'string', 'max:120'],
+            'bank_name' => ['nullable', 'string', 'max:120'],
+            'bank_iban' => ['nullable', 'string', 'max:34'],
+            'bank_transfer_instructions' => ['nullable', 'string', 'max:1000'],
         ];
         foreach (PaymentGateways::definitions() as $def) {
             $rules[PaymentGateways::settingKey($def['key'])] = ['nullable', 'string', 'max:500'];
@@ -378,6 +386,14 @@ class SettingController extends Controller
         AppSetting::setValue('zarinpal_merchant_id', trim((string) ($data['zarinpal_merchant_id'] ?? '')));
         AppSetting::setValue('zarinpal_sandbox', $request->boolean('zarinpal_sandbox') ? '1' : '0');
         AppSetting::setValue('zarinpal_currency', (string) ($data['zarinpal_currency'] ?? 'IRT'));
+
+        $cardDigits = preg_replace('/\D+/', '', (string) ($data['bank_card_number'] ?? '')) ?? '';
+        AppSetting::setValue('bank_transfer_enabled', $request->boolean('bank_transfer_enabled') ? '1' : '0');
+        AppSetting::setValue('bank_card_number', $cardDigits);
+        AppSetting::setValue('bank_card_holder', trim((string) ($data['bank_card_holder'] ?? '')));
+        AppSetting::setValue('bank_name', trim((string) ($data['bank_name'] ?? '')));
+        AppSetting::setValue('bank_iban', trim((string) ($data['bank_iban'] ?? '')));
+        AppSetting::setValue('bank_transfer_instructions', trim((string) ($data['bank_transfer_instructions'] ?? '')));
 
         return $this->settingsRedirect($request, 'payments', 'success', 'تنظیمات پرداخت ذخیره شد.');
     }
