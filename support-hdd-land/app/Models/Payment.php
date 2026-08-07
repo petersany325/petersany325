@@ -25,10 +25,10 @@ class Payment extends Model
     ];
 
     public const METHODS = [
-        'cash' => 'نقد',
-        'card' => 'کارت',
+        'cash' => 'نقدی',
+        'card' => 'کارتخوان',
         'transfer' => 'کارت‌به‌کارت',
-        'zarinpal' => 'زرین‌پال',
+        'zarinpal' => 'درگاه اینترنتی (زرین‌پال)',
     ];
 
     public function reception(): BelongsTo

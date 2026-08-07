@@ -105,6 +105,8 @@ class CartableController extends Controller
         $reception->load([
             'parts', 'payments', 'faultType', 'technician', 'custodyTechnician',
             'latestCostApproval',
+            'costStages',
+            'statusLogs' => fn ($q) => $q->with('actor')->latest('id')->limit(40),
             'handoffs' => fn ($q) => $q->with('toTechnician')->where('status', 'accepted')->latest('id')->limit(12),
         ]);
         $payLinks = $reception->status === 'ready' ? PaymentGateways::active() : [];

@@ -18,6 +18,7 @@ class CostApproval extends Model
 
     protected $fillable = [
         'reception_id', 'customer_id', 'created_by', 'version',
+        'reception_cost_stage_id', 'stage_key',
         'amount', 'labor_cost', 'parts_cost', 'discount',
         'description', 'terms_text', 'status', 'token_hash', 'approval_code',
         'expires_at', 'sent_at', 'viewed_at', 'decided_at', 'reject_reason',
@@ -60,6 +61,11 @@ class CostApproval extends Model
     public function reception(): BelongsTo
     {
         return $this->belongsTo(Reception::class);
+    }
+
+    public function costStage(): BelongsTo
+    {
+        return $this->belongsTo(ReceptionCostStage::class, 'reception_cost_stage_id');
     }
 
     public function customer(): BelongsTo

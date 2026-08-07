@@ -16,6 +16,9 @@
                 <div class="report-head-actions">
                     <span class="badge badge-{{ $reception->status }}">{{ $reception->statusLabel() }}</span>
                     <a class="btn btn-secondary" href="{{ route('receptions.print', $reception) }}" target="_blank">چاپ قبض</a>
+                    @if($reception->isDelivered())
+                        <button class="btn btn-primary" type="button" onclick="document.getElementById('cancel-delivery-box').scrollIntoView({behavior:'smooth'})">لغو تحویل</button>
+                    @endif
                 </div>
             </div>
             <div class="detail-kv">
@@ -114,6 +117,58 @@
             @endif
         </div>
         @endif
+
+        @if($reception->isDelivered())
+        <div class="panel" id="cancel-delivery-box" style="border-color:#f5d59a;background:linear-gradient(180deg,#fffaf0,#fff);">
+            <h3 style="margin-top:0;">لغو تحویل / بازگشت به چرخه تعمیر</h3>
+            <p class="lead" style="margin:0 0 8px;">مشتری قطعه/دستگاه را برگردانده؟ بدون قبض جدید — همان سریال روی همین قبض به تعمیر برمی‌گردد. قطعات و هزینه‌های ثبت‌شده حفظ می‌شوند.</p>
+            <form method="POST" action="{{ route('receptions.cancel-delivery', $reception) }}" class="accept-row accept-row-3" style="align-items:end;" data-confirm="تحویل لغو شود و دستگاه به چرخه تعمیر برگردد؟">
+                @csrf
+                <div>
+                    <label>بازگشت به وضعیت</label>
+                    <select name="restore_to">
+                        <option value="repairing">در حال تعمیر</option>
+                        <option value="waiting_part">منتظر قطعه</option>
+                        <option value="ready">آماده تحویل</option>
+                        <option value="received">پذیرش‌شده</option>
+                    </select>
+                </div>
+                <div class="full">
+                    <label>دلیل لغو تحویل</label>
+                    <input type="text" name="reason" placeholder="مثلاً قطعه خراب بود / مشتری برگشت داد" required>
+                </div>
+                <div class="actions" style="margin:0;">
+                    <button class="btn btn-primary" type="submit">ثبت لغو تحویل</button>
+                </div>
+            </form>
+            @if($reception->delivery_cancel_count)
+                <p class="muted" style="margin:8px 0 0;font-size:11px;">تعداد لغو تحویل قبلی: {{ $reception->delivery_cancel_count }}</p>
+            @endif
+        </div>
+        @endif
+
+        <div class="panel">
+            <h3 style="margin-top:0;">تاریخچه وضعیت دستگاه</h3>
+            @forelse(($statusLogs ?? collect()) as $log)
+                <div class="rx-timeline-item">
+                    <div class="rx-timeline-dot"></div>
+                    <div>
+                        <strong>{{ $log->displayTitle() }}</strong>
+                        <div class="muted" style="font-size:11px;">
+                            {{ $log->created_at?->timezone('Asia/Tehran')->format('Y/m/d H:i') }}
+                            @if($log->actor) · {{ $log->actor->name }} @endif
+                            @if($log->fromStatusLabel()) · از {{ $log->fromStatusLabel() }} @endif
+                            → {{ $log->toStatusLabel() }}
+                        </div>
+                        @if($log->note)
+                            <div style="font-size:12px;margin-top:2px;">{{ $log->note }}</div>
+                        @endif
+                    </div>
+                </div>
+            @empty
+                <p class="lead" style="margin:0;">هنوز تاریخچه‌ای ثبت نشده. از این به بعد تغییرات اینجا دیده می‌شود.</p>
+            @endforelse
+        </div>
 
         <div class="panel status-sms-panel" id="status-sms-panel"
              data-previews='@json($smsPreviews)'
@@ -223,6 +278,10 @@
                     <div>
                         <label>تخفیف</label>
                         <input type="number" name="discount" min="0" value="{{ $reception->discount }}">
+                    </div>
+                    <div>
+                        <label>دلیل تخفیف</label>
+                        <input type="text" name="discount_reason" value="{{ $reception->discount_reason }}" placeholder="اختیاری">
                     </div>
                     <div class="full">
                         <label>ایراد نهایی / شرح کار</label>
@@ -356,6 +415,75 @@
         </div>
 
         <div class="panel">
+            <h3>مراحل هزینه (چندمرحله‌ای)</h3>
+            <p class="lead" style="margin:0 0 8px;">مثلاً خرید برد، بازیابی و تست — هر کدام مبلغ جدا. جمع در فاکتور خروج لحاظ می‌شود.</p>
+            <div class="table-wrap">
+                <table class="data compact-table">
+                    <thead><tr><th>مرحله</th><th>مبلغ</th><th>وضعیت</th><th>یادداشت</th><th></th></tr></thead>
+                    <tbody>
+                    @forelse(($costStages ?? collect()) as $stage)
+                        <tr>
+                            <td><span class="chip">{{ $stage->mark() }}</span> {{ $stage->stage_label }}</td>
+                            <td>{{ toman($stage->amount) }}</td>
+                            <td>{{ $stage->statusLabel() }}</td>
+                            <td>{{ $stage->note ?: '—' }}</td>
+                            <td>
+                                @unless($reception->isDelivered())
+                                <form method="POST" action="{{ route('receptions.cost-stages.destroy', [$reception, $stage]) }}" data-confirm="این مرحله هزینه حذف شود؟">
+                                    @csrf @method('DELETE')
+                                    <button class="btn btn-danger" type="submit">حذف</button>
+                                </form>
+                                @endunless
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="5">مرحله هزینه‌ای ثبت نشده.</td></tr>
+                    @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @unless($reception->isDelivered())
+            <form method="POST" action="{{ route('receptions.cost-stages', $reception) }}" style="margin-top:10px;" class="accept-row accept-row-4" >
+                @csrf
+                <div>
+                    <label>نوع مرحله</label>
+                    <select name="stage_key" id="stage-key-select">
+                        @foreach($stageDefs as $key => $def)
+                            <option value="{{ $key }}">{{ $def['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div id="custom-label-wrap" style="display:none;">
+                    <label>عنوان سفارشی</label>
+                    <input type="text" name="custom_label" placeholder="مثلاً تعمیر PCB">
+                </div>
+                <div>
+                    <label>مبلغ (تومان)</label>
+                    <input type="number" name="amount" min="0" value="0" required>
+                </div>
+                <div>
+                    <label>وضعیت تأیید</label>
+                    <select name="status">
+                        <option value="waived">ثبت مستقیم (بدون تأیید)</option>
+                        <option value="pending_approval">منتظر تأیید مشتری</option>
+                        <option value="approved">تأییدشده</option>
+                        <option value="draft">پیش‌نویس</option>
+                    </select>
+                </div>
+                <div class="full">
+                    <label>یادداشت</label>
+                    <input type="text" name="note" placeholder="توضیح مرحله">
+                </div>
+                <div class="actions" style="margin:0;">
+                    <button class="btn btn-secondary" type="submit">افزودن مرحله هزینه</button>
+                </div>
+            </form>
+            @else
+                <p class="muted" style="margin:8px 0 0;">برای ویرایش هزینه‌ها ابتدا لغو تحویل بزنید.</p>
+            @endunless
+        </div>
+
+        <div class="panel">
             <h3>قطعات خرج‌شده</h3>
             <div class="table-wrap">
                 <table>
@@ -377,6 +505,7 @@
                     </tbody>
                 </table>
             </div>
+            @if($reception->canEditParts())
             <form method="POST" action="{{ route('receptions.parts', $reception) }}" style="margin-top:1rem;">
                 @csrf
                 <div class="form-grid">
@@ -419,17 +548,23 @@
                     <button class="btn btn-secondary" type="submit">افزودن قطعه</button>
                 </div>
             </form>
+            @else
+                <div class="alert" style="margin-top:10px;background:#fff6e5;border-color:#efd7a4;color:#8a5a12;">
+                    این قبض تحویل شده و قطعات قفل هستند. برای بازگشت به چرخه تعمیر از «لغو تحویل» استفاده کنید.
+                </div>
+            @endif
         </div>
     </div>
 
     <div class="stack">
         <div class="panel">
-            <h3>خلاصه مالی</h3>
+            <h3>خلاصه مالی / فاکتور خروج</h3>
             <div class="form-grid" style="grid-template-columns:1fr;">
                 <div><span class="muted">بیعانه</span><div>{{ toman($reception->deposit) }}</div></div>
                 <div><span class="muted">اجرت</span><div>{{ toman($reception->labor_cost) }}</div></div>
-                <div><span class="muted">قطعات</span><div>{{ toman($reception->parts_cost) }}</div></div>
-                <div><span class="muted">تخفیف</span><div>{{ toman($reception->discount) }}</div></div>
+                <div><span class="muted">قطعات انبار</span><div>{{ toman($reception->parts_cost) }}</div></div>
+                <div><span class="muted">مراحل هزینه</span><div>{{ toman($reception->stages_cost) }}</div></div>
+                <div><span class="muted">تخفیف</span><div>{{ toman($reception->discount) }}@if($reception->discount_reason)<small class="muted"> — {{ $reception->discount_reason }}</small>@endif</div></div>
                 <div><span class="muted">جمع کل</span><div style="font-size:1.2rem;font-weight:700;">{{ toman($reception->total_amount) }}</div></div>
                 <div><span class="muted">پرداخت‌شده</span><div>{{ toman($reception->paid_amount) }}</div></div>
                 <div><span class="muted">مانده</span><div style="font-weight:700;">{{ toman($reception->remainingAmount()) }}</div></div>
@@ -437,7 +572,7 @@
         </div>
 
         <div class="panel">
-            <h3>ثبت پرداخت / تحویل</h3>
+            <h3>ثبت پرداخت / تخفیف / تحویل</h3>
             @if(\App\Support\PaymentGateways::showOnReception())
                 @include('partials.payment-links', ['payTitle' => 'لینک بانک‌ها'])
             @endif
@@ -445,7 +580,7 @@
                 <form method="POST" action="{{ route('receptions.zarinpal', $reception) }}" style="margin-bottom:10px;">
                     @csrf
                     <button class="btn btn-primary" type="submit" style="width:100%;">
-                        پرداخت زرین‌پال — {{ number_format($reception->remainingAmount()) }} تومان
+                        درگاه اینترنتی (زرین‌پال) — {{ number_format($reception->remainingAmount()) }} تومان
                     </button>
                 </form>
             @endif
@@ -453,7 +588,7 @@
                 @csrf
                 <div class="form-grid" style="grid-template-columns:1fr;">
                     <div>
-                        <label>نوع</label>
+                        <label>نوع پرداخت</label>
                         <select name="type">
                             @foreach($paymentTypes as $key => $label)
                                 <option value="{{ $key }}">{{ $label }}</option>
@@ -461,7 +596,7 @@
                         </select>
                     </div>
                     <div>
-                        <label>روش</label>
+                        <label>روش پرداخت</label>
                         <select name="method">
                             @foreach($paymentMethods as $key => $label)
                                 <option value="{{ $key }}">{{ $label }}</option>
@@ -469,12 +604,20 @@
                         </select>
                     </div>
                     <div>
-                        <label>مبلغ</label>
+                        <label>مبلغ دریافتی</label>
                         <input type="number" name="amount" min="1" value="{{ $reception->remainingAmount() ?: 0 }}" required>
                     </div>
                     <div>
+                        <label>تخفیف (تومان)</label>
+                        <input type="number" name="discount" min="0" value="{{ (int) $reception->discount }}">
+                    </div>
+                    <div>
+                        <label>دلیل تخفیف</label>
+                        <input type="text" name="discount_reason" value="{{ $reception->discount_reason }}" placeholder="اختیاری">
+                    </div>
+                    <div>
                         <label>توضیح</label>
-                        <input type="text" name="note">
+                        <input type="text" name="note" placeholder="شماره پیگیری کارت‌به‌کارت و …">
                     </div>
                 </div>
                 <div class="actions">
@@ -505,6 +648,15 @@
 @push('scripts')
 <script>
 (function () {
+    var stageSel = document.getElementById('stage-key-select');
+    var customWrap = document.getElementById('custom-label-wrap');
+    if (stageSel && customWrap) {
+        var sync = function () {
+            customWrap.style.display = stageSel.value === 'custom' ? '' : 'none';
+        };
+        stageSel.addEventListener('change', sync);
+        sync();
+    }
     var panel = document.getElementById('status-sms-panel');
     if (!panel) return;
     var previews = {};

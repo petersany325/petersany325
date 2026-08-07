@@ -78,14 +78,64 @@
             <div><span class="muted">تخمینی</span><div>{{ toman($reception->estimated_cost) }}</div></div>
             <div><span class="muted">اجرت</span><div>{{ toman($reception->labor_cost) }}</div></div>
             <div><span class="muted">قطعات</span><div>{{ toman($reception->parts_cost) }}</div></div>
-            <div><span class="muted">تخفیف</span><div>{{ toman($reception->discount) }}</div></div>
+            <div><span class="muted">مراحل هزینه</span><div>{{ toman($reception->stages_cost ?? 0) }}</div></div>
+            <div><span class="muted">تخفیف</span><div>{{ toman($reception->discount) }}@if($reception->discount_reason)<small class="muted"> — {{ $reception->discount_reason }}</small>@endif</div></div>
             <div><span class="muted">پورسانت</span><div>{{ toman($reception->commission) }}</div></div>
             <div><span class="muted">جمع کل</span><div class="report-money">{{ toman($reception->total_amount) }}</div></div>
             <div><span class="muted">پرداخت‌شده</span><div>{{ toman($reception->paid_amount) }}</div></div>
             <div><span class="muted">مانده</span><div class="report-remain">{{ toman($reception->remainingAmount()) }}</div></div>
             <div><span class="muted">روش پرداخت</span><div>{{ $reception->payment_method ?: '—' }}</div></div>
+            @if($reception->delivery_cancel_count)
+                <div><span class="muted">لغو تحویل</span><div>{{ $reception->delivery_cancel_count }} بار</div></div>
+            @endif
         </div>
     </div>
+
+    @if(($reception->costStages ?? collect())->count())
+    <div class="report-section">
+        <h3>مراحل هزینه</h3>
+        <div class="table-wrap">
+            <table style="min-width:0;">
+                <thead><tr><th>مرحله</th><th>مبلغ</th><th>وضعیت</th><th>یادداشت</th></tr></thead>
+                <tbody>
+                @foreach($reception->costStages as $stage)
+                    <tr>
+                        <td>{{ $stage->stage_label }}</td>
+                        <td>{{ toman($stage->amount) }}</td>
+                        <td>{{ $stage->statusLabel() }}</td>
+                        <td>{{ $stage->note ?: '—' }}</td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
+    @if(($reception->statusLogs ?? collect())->count())
+    <div class="report-section">
+        <h3>تاریخچه وضعیت</h3>
+        <div class="rx-timeline">
+            @foreach($reception->statusLogs->take(20) as $log)
+                <div class="rx-timeline-item">
+                    <div class="rx-timeline-dot"></div>
+                    <div>
+                        <strong>{{ $log->displayTitle() }}</strong>
+                        <div class="muted" style="font-size:11px;">
+                            {{ $log->created_at?->timezone('Asia/Tehran')->format('Y/m/d H:i') }}
+                            @if($log->actor) · {{ $log->actor->name }} @endif
+                            @if($log->fromStatusLabel()) · از {{ $log->fromStatusLabel() }} @endif
+                            → {{ $log->toStatusLabel() }}
+                        </div>
+                        @if($log->note)
+                            <div style="font-size:12px;margin-top:2px;">{{ $log->note }}</div>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
 
     <div class="report-section split-2" style="margin-bottom:0;">
         <div>

@@ -144,6 +144,7 @@ class DeliveryController extends Controller
             ]);
 
             foreach ($receptions as $r) {
+                $from = $r->status;
                 $r->fill([
                     'status' => 'delivered',
                     'delivered_at' => $r->delivered_at ?: now(),
@@ -156,6 +157,15 @@ class DeliveryController extends Controller
                     $r->cost_confirmed_at = now();
                 }
                 $r->save();
+                app(\App\Services\ReceptionLifecycleService::class)->log(
+                    $r,
+                    'delivered',
+                    'delivery',
+                    $from,
+                    'تحویل گروهی '.$batch->batch_code,
+                    $data['pickup_name'] ?? null,
+                    ['delivery_batch_id' => $batch->id]
+                );
             }
 
             return $batch;

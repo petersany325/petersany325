@@ -61,6 +61,8 @@ class ReceptionController extends Controller
                     'parts.part',
                     'payments.receiver',
                     'creator',
+                    'costStages',
+                    'statusLogs' => fn ($q) => $q->with('actor')->latest('id')->limit(25),
                 ])
                 ->latest()
                 ->limit(50)
@@ -291,6 +293,8 @@ class ReceptionController extends Controller
             'customer.referralSource', 'technician', 'custodyTechnician', 'faultType',
             'parts.part', 'payments.receiver', 'creator',
             'costApprovals' => fn ($q) => $q->latest('id')->limit(12),
+            'costStages',
+            'statusLogs' => fn ($q) => $q->with('actor')->latest('id')->limit(40),
             'handoffs' => fn ($q) => $q->with(['fromUser', 'toTechnician', 'toUser'])->latest('id')->limit(20),
         ]);
         $rules = SmsStatusRule::activeOrdered();
@@ -312,7 +316,10 @@ class ReceptionController extends Controller
             'smsMasterEnabled' => $smsNotifications->masterEnabled(),
             'smsLogs' => SmsLog::query()->where('reception_id', $reception->id)->latest()->limit(15)->get(),
             'costApprovals' => $reception->costApprovals,
-            'paymentMethods' => Payment::METHODS,
+            'costStages' => $reception->costStages,
+            'statusLogs' => $reception->statusLogs,
+            'stageDefs' => \App\Models\ReceptionCostStage::STAGES,
+            'paymentMethods' => collect(Payment::METHODS)->except('zarinpal')->all(),
             'paymentTypes' => Payment::TYPES,
             'parts' => Part::where('is_active', true)->orderBy('name')->get(),
             'pendingHandoff' => $reception->handoffs->firstWhere('status', \App\Models\DeviceHandoff::STATUS_PENDING),
@@ -352,12 +359,20 @@ class ReceptionController extends Controller
             'technician_notes' => ['nullable', 'string', 'max:2000'],
             'labor_cost' => ['nullable', 'integer', 'min:0'],
             'discount' => ['nullable', 'integer', 'min:0'],
+            'discount_reason' => ['nullable', 'string', 'max:255'],
             'send_sms' => ['nullable', 'boolean'],
             'send_price_sms' => ['nullable', 'boolean'],
             'force_without_cost' => ['nullable', 'boolean'],
         ]);
 
+        if ($reception->isDelivered() && $data['status'] !== 'delivered') {
+            throw ValidationException::withMessages([
+                'status' => 'قبض تحویل‌شده را نمی‌توان مستقیم تغییر وضعیت داد. ابتدا «لغو تحویل» بزنید تا دستگاه به چرخه تعمیر برگردد.',
+            ]);
+        }
+
         $prevTotal = (int) $reception->total_amount;
+        $fromStatus = $reception->status;
 
         $reception->fill([
             'status' => $data['status'],
@@ -367,6 +382,9 @@ class ReceptionController extends Controller
             'technician_notes' => $data['technician_notes'] ?? $reception->technician_notes,
             'labor_cost' => $data['labor_cost'] ?? $reception->labor_cost,
             'discount' => $data['discount'] ?? $reception->discount,
+            'discount_reason' => array_key_exists('discount_reason', $data)
+                ? $data['discount_reason']
+                : $reception->discount_reason,
         ]);
 
         $reception->save();
@@ -389,6 +407,15 @@ class ReceptionController extends Controller
                 $reception->save();
             }
         }
+
+        app(\App\Services\ReceptionLifecycleService::class)->log(
+            $reception,
+            $data['status'],
+            $data['status'] === 'delivered' ? 'delivery' : 'status_change',
+            $fromStatus,
+            null,
+            $data['technician_notes'] ?? null
+        );
 
         $msg = 'وضعیت قبض به‌روزرسانی شد.';
 
@@ -423,6 +450,10 @@ class ReceptionController extends Controller
 
     public function addPart(Request $request, Reception $reception, SmsNotificationService $smsNotifications)
     {
+        if (! $reception->canEditParts()) {
+            return back()->withErrors(['part' => 'قبض تحویل‌شده قابل ویرایش قطعه نیست. ابتدا لغو تحویل بزنید.']);
+        }
+
         $data = $request->validate([
             'part_id' => ['nullable', 'exists:parts,id'],
             'part_name' => ['required_without:part_id', 'nullable', 'string', 'max:120'],
@@ -518,9 +549,18 @@ class ReceptionController extends Controller
             'method' => ['required', 'in:cash,card,transfer'],
             'amount' => ['required', 'integer', 'min:1'],
             'note' => ['nullable', 'string', 'max:500'],
+            'discount' => ['nullable', 'integer', 'min:0'],
+            'discount_reason' => ['nullable', 'string', 'max:255'],
         ]);
 
         DB::transaction(function () use ($data, $reception) {
+            if (array_key_exists('discount', $data) && $data['discount'] !== null) {
+                $reception->discount = (int) $data['discount'];
+                $reception->discount_reason = $data['discount_reason'] ?? $reception->discount_reason;
+                $reception->save();
+                $reception->recalculateTotals();
+            }
+
             $amount = (int) $data['amount'];
             if ($data['type'] === 'refund') {
                 $amount = -1 * abs($amount);
@@ -541,10 +581,19 @@ class ReceptionController extends Controller
 
             if ($data['type'] === 'final' || $reception->remainingAmount() === 0) {
                 if ($reception->status === 'ready') {
+                    $from = $reception->status;
                     $reception->update([
                         'status' => 'delivered',
                         'delivered_at' => now(),
                     ]);
+                    app(\App\Services\ReceptionLifecycleService::class)->log(
+                        $reception->fresh(),
+                        'delivered',
+                        'payment_auto_deliver',
+                        $from,
+                        'تحویل خودکار پس از تسویه',
+                        $payment->methodLabel()
+                    );
                 }
             }
 
@@ -554,9 +603,101 @@ class ReceptionController extends Controller
         return back()->with('success', 'پرداخت ثبت شد.');
     }
 
+    public function cancelDelivery(Request $request, Reception $reception, \App\Services\ReceptionLifecycleService $lifecycle)
+    {
+        $data = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+            'restore_to' => ['nullable', 'in:repairing,ready,waiting_part,received'],
+        ]);
+
+        $result = $lifecycle->cancelDelivery(
+            $reception,
+            $data['restore_to'] ?? 'repairing',
+            $data['reason'] ?? null
+        );
+
+        return back()->with($result['ok'] ? 'success' : 'error', $result['message']);
+    }
+
+    public function storeCostStage(Request $request, Reception $reception)
+    {
+        if ($reception->isDelivered()) {
+            return back()->withErrors(['stage' => 'قبض تحویل‌شده را نمی‌توان ویرایش کرد. ابتدا لغو تحویل بزنید.']);
+        }
+
+        $keys = array_keys(\App\Models\ReceptionCostStage::STAGES);
+        $data = $request->validate([
+            'stage_key' => ['required', Rule::in($keys)],
+            'amount' => ['required', 'integer', 'min:0'],
+            'note' => ['nullable', 'string', 'max:500'],
+            'status' => ['nullable', Rule::in(array_keys(\App\Models\ReceptionCostStage::STATUSES))],
+            'custom_label' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $def = \App\Models\ReceptionCostStage::STAGES[$data['stage_key']];
+        $label = $data['stage_key'] === 'custom' && ! empty($data['custom_label'])
+            ? $data['custom_label']
+            : $def['label'];
+
+        $stage = \App\Models\ReceptionCostStage::create([
+            'reception_id' => $reception->id,
+            'stage_key' => $data['stage_key'],
+            'stage_label' => $label,
+            'amount' => (int) $data['amount'],
+            'status' => $data['status'] ?? 'waived',
+            'sort_order' => $def['sort'],
+            'note' => $data['note'] ?? null,
+            'created_by' => Auth::id(),
+            'approved_at' => in_array(($data['status'] ?? 'waived'), ['approved', 'waived'], true) ? now() : null,
+        ]);
+
+        $reception->recalculateTotals();
+        if ($reception->hasCostSet() && ! $reception->cost_confirmed_at) {
+            $reception->confirmCost();
+        }
+
+        app(\App\Services\ReceptionLifecycleService::class)->log(
+            $reception->fresh(),
+            $reception->status,
+            'cost_stage',
+            $reception->status,
+            'ثبت هزینه: '.$stage->stage_label,
+            number_format((int) $stage->amount).' تومان'
+        );
+
+        $msg = 'مرحله هزینه «'.$stage->stage_label.'» ثبت شد.';
+
+        if (($data['status'] ?? '') === 'pending_approval' && (int) $stage->amount > 0) {
+            $approvalResult = app(\App\Services\CostApprovalService::class)->requestAndSend(
+                $reception->fresh(['customer', 'parts', 'faultType', 'technician', 'costStages']),
+                'تأیید هزینه مرحله: '.$stage->stage_label.($stage->note ? ' — '.$stage->note : ''),
+                true,
+                true,
+                $stage
+            );
+            $msg .= ' '.($approvalResult['message'] ?? '');
+        }
+
+        return back()->with('success', $msg);
+    }
+
+    public function destroyCostStage(Reception $reception, \App\Models\ReceptionCostStage $stage)
+    {
+        abort_unless((int) $stage->reception_id === (int) $reception->id, 404);
+        if ($reception->isDelivered()) {
+            return back()->withErrors(['stage' => 'قبض تحویل‌شده قابل ویرایش نیست.']);
+        }
+
+        $label = $stage->stage_label;
+        $stage->delete();
+        $reception->recalculateTotals();
+
+        return back()->with('success', 'مرحله هزینه «'.$label.'» حذف شد.');
+    }
+
     public function print(Reception $reception)
     {
-        $reception->load(['customer', 'technician', 'faultType', 'parts', 'payments']);
+        $reception->load(['customer', 'technician', 'faultType', 'parts', 'payments', 'costStages']);
 
         $invoice = [
             'shop_name' => \App\Models\AppSetting::getValue('invoice_shop_name', 'سرزمین هارد'),

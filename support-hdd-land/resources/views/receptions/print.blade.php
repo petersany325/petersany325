@@ -156,8 +156,27 @@
         </table>
     @endif
 
+    @if($reception->costStages->count())
+        <table>
+            <thead><tr><th>مرحله هزینه</th><th>وضعیت</th><th>مبلغ</th></tr></thead>
+            <tbody>
+            @foreach($reception->costStages as $stage)
+                <tr>
+                    <td>{{ $stage->stage_label }}</td>
+                    <td>{{ $stage->statusLabel() }}</td>
+                    <td>{{ number_format($stage->amount) }}</td>
+                </tr>
+            @endforeach
+            </tbody>
+        </table>
+    @endif
+
     @if($invoice['show_payments'])
         <div class="grid">
+            <div class="field"><label>اجرت</label><div>{{ number_format($reception->labor_cost) }} تومان</div></div>
+            <div class="field"><label>قطعات</label><div>{{ number_format($reception->parts_cost) }} تومان</div></div>
+            <div class="field"><label>مراحل هزینه</label><div>{{ number_format($reception->stages_cost ?? 0) }} تومان</div></div>
+            <div class="field"><label>تخفیف</label><div>{{ number_format($reception->discount) }} تومان@if($reception->discount_reason) — {{ $reception->discount_reason }}@endif</div></div>
             <div class="field"><label>جمع کل</label><div>{{ number_format($reception->total_amount) }} تومان</div></div>
             <div class="field"><label>پرداخت‌شده</label><div>{{ number_format($reception->paid_amount) }} تومان</div></div>
             <div class="field"><label>مانده</label><div>{{ number_format($reception->remainingAmount()) }} تومان</div></div>

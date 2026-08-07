@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 use App\Support\CostApprovalSettings;
+use App\Services\ReceptionLifecycleService;
 
 class CostApprovalService
 {
@@ -47,18 +48,27 @@ class CostApprovalService
      *
      * @return array{ok:bool,message:string,approval?:CostApproval,url?:string,log?:SmsLog}
      */
-    public function requestAndSend(Reception $reception, ?string $description = null, bool $sendSms = true, bool $force = false): array
+    public function requestAndSend(
+        Reception $reception,
+        ?string $description = null,
+        bool $sendSms = true,
+        bool $force = false,
+        ?\App\Models\ReceptionCostStage $stage = null
+    ): array
     {
-        $reception->loadMissing(['customer', 'faultType', 'technician', 'parts']);
+        $reception->loadMissing(['customer', 'faultType', 'technician', 'parts', 'costStages']);
 
-        if (! $force && ! $this->receptionRequiresApproval($reception)) {
+        if (! $force && ! $this->receptionRequiresApproval($reception) && ! $stage) {
             return [
                 'ok' => false,
                 'message' => 'این خدمت در فهرست مشمول تأیید هزینه نیست. از منوی «تأیید هزینه → خدمات مشمول» تنظیم کنید یا با اجبار ارسال کنید.',
             ];
         }
-        if (! $reception->hasCostSet() && (int) $reception->estimated_cost <= 0) {
+        if (! $stage && ! $reception->hasCostSet() && (int) $reception->estimated_cost <= 0) {
             return ['ok' => false, 'message' => 'ابتدا مبلغ/برآورد هزینه را روی قبض ثبت کنید.'];
+        }
+        if ($stage && (int) $stage->amount <= 0) {
+            return ['ok' => false, 'message' => 'مبلغ مرحله هزینه باید بیشتر از صفر باشد.'];
         }
 
         if (! $reception->customer?->phone) {
@@ -66,24 +76,47 @@ class CostApprovalService
         }
 
         $plainToken = Str::random(48);
-        $amount = (int) $reception->total_amount > 0
-            ? (int) $reception->total_amount
-            : (int) $reception->estimated_cost;
+        if ($stage) {
+            $amount = (int) $stage->amount;
+        } else {
+            $amount = (int) $reception->total_amount > 0
+                ? (int) $reception->total_amount
+                : (int) $reception->estimated_cost;
+        }
 
-        $approval = DB::transaction(function () use ($reception, $description, $plainToken, $amount) {
-            CostApproval::query()
+        $approval = DB::transaction(function () use ($reception, $description, $plainToken, $amount, $stage) {
+            $openQuery = CostApproval::query()
                 ->where('reception_id', $reception->id)
-                ->whereIn('status', [CostApproval::STATUS_DRAFT, CostApproval::STATUS_SENT, CostApproval::STATUS_VIEWED])
-                ->update(['status' => CostApproval::STATUS_SUPERSEDED]);
+                ->whereIn('status', [CostApproval::STATUS_DRAFT, CostApproval::STATUS_SENT, CostApproval::STATUS_VIEWED]);
+
+            if ($stage) {
+                $openQuery->where(function ($q) use ($stage) {
+                    $q->where('reception_cost_stage_id', $stage->id)
+                        ->orWhere(function ($q2) use ($stage) {
+                            $q2->whereNull('reception_cost_stage_id')
+                                ->where('stage_key', $stage->stage_key);
+                        });
+                });
+            } else {
+                $openQuery->whereNull('reception_cost_stage_id');
+            }
+
+            $openQuery->update(['status' => CostApproval::STATUS_SUPERSEDED]);
 
             $version = (int) CostApproval::query()->where('reception_id', $reception->id)->max('version') + 1;
-            $desc = trim((string) ($description ?: $reception->final_fault ?: $reception->reported_fault ?: $reception->technician_notes));
+            $desc = trim((string) ($description
+                ?: ($stage?->stage_label)
+                ?: $reception->final_fault
+                ?: $reception->reported_fault
+                ?: $reception->technician_notes));
 
             $approval = CostApproval::create([
                 'reception_id' => $reception->id,
                 'customer_id' => $reception->customer_id,
                 'created_by' => Auth::id(),
                 'version' => max(1, $version),
+                'reception_cost_stage_id' => $stage?->id,
+                'stage_key' => $stage?->stage_key,
                 'amount' => $amount,
                 'labor_cost' => (int) $reception->labor_cost,
                 'parts_cost' => (int) $reception->parts_cost,
@@ -104,6 +137,18 @@ class CostApprovalService
                     'serial_number' => $reception->serial_number,
                     'customer_name' => $reception->customer?->name,
                     'customer_phone' => $reception->customer?->phone,
+                    'stages_cost' => (int) $reception->stages_cost,
+                    'stage' => $stage ? [
+                        'id' => $stage->id,
+                        'key' => $stage->stage_key,
+                        'label' => $stage->stage_label,
+                        'amount' => (int) $stage->amount,
+                    ] : null,
+                    'cost_stages' => $reception->costStages->map(fn ($s) => [
+                        'label' => $s->stage_label,
+                        'amount' => (int) $s->amount,
+                        'status' => $s->status,
+                    ])->values()->all(),
                     'parts' => $reception->parts->map(fn ($p) => [
                         'name' => $p->part_name,
                         'qty' => $p->quantity,
@@ -111,6 +156,13 @@ class CostApprovalService
                     ])->values()->all(),
                 ],
             ]);
+
+            if ($stage) {
+                $stage->forceFill([
+                    'status' => 'pending_approval',
+                    'cost_approval_id' => $approval->id,
+                ])->save();
+            }
 
             $reception->forceFill([
                 'cost_approval_status' => CostApproval::STATUS_SENT,
@@ -126,7 +178,9 @@ class CostApprovalService
             $smsResult = $this->sendApprovalSms($reception, $approval, $url);
         }
 
-        $msg = 'لینک تأیید هزینه ساخته شد (نسخه '.$approval->version.').';
+        $msg = $stage
+            ? 'لینک تأیید مرحله «'.$stage->stage_label.'» ساخته شد (نسخه '.$approval->version.').'
+            : 'لینک تأیید هزینه ساخته شد (نسخه '.$approval->version.').';
         if ($sendSms) {
             $msg .= ($smsResult['ok'] ?? false)
                 ? ' پیامک لینک برای مشتری ارسال شد.'
@@ -215,6 +269,20 @@ class CostApprovalService
             ])->save();
         }
 
+        $this->syncLinkedStage($approval, 'approved');
+
+        try {
+            app(ReceptionLifecycleService::class)->log(
+                $reception ?? $approval->reception,
+                $reception?->status ?? 'ready',
+                'cost_stage',
+                $reception?->status,
+                'تأیید مشتری روی هزینه'.($approval->stage_key ? ' (مرحله)' : ''),
+                number_format((int) $approval->amount).' تومان — کد '.$approval->approval_code
+            );
+        } catch (\Throwable) {
+        }
+
         try {
             $this->notifier->notifyMany(
                 $this->notifier->deskUsers(),
@@ -266,6 +334,20 @@ class CostApprovalService
         $reception = $approval->reception;
         $reception?->forceFill(['cost_approval_status' => CostApproval::STATUS_REJECTED])->save();
 
+        $this->syncLinkedStage($approval, 'rejected');
+
+        try {
+            app(ReceptionLifecycleService::class)->log(
+                $reception ?? $approval->reception,
+                $reception?->status ?? 'repairing',
+                'cost_stage',
+                $reception?->status,
+                'رد هزینه توسط مشتری',
+                $reason
+            );
+        } catch (\Throwable) {
+        }
+
         try {
             $this->notifier->notifyMany(
                 $this->notifier->deskUsers(),
@@ -288,6 +370,26 @@ class CostApprovalService
             'message' => 'رد هزینه ثبت شد.',
             'approval' => $approval->fresh(['reception', 'customer']),
         ];
+    }
+
+    private function syncLinkedStage(CostApproval $approval, string $stageStatus): void
+    {
+        $stage = null;
+        if ($approval->reception_cost_stage_id) {
+            $stage = \App\Models\ReceptionCostStage::query()->find($approval->reception_cost_stage_id);
+        }
+
+        if (! $stage) {
+            return;
+        }
+
+        $stage->forceFill([
+            'status' => $stageStatus,
+            'approved_at' => $stageStatus === 'approved' ? now() : $stage->approved_at,
+            'cost_approval_id' => $approval->id,
+        ])->save();
+
+        $approval->reception?->recalculateTotals();
     }
 
     private function sendApprovalSms(Reception $reception, CostApproval $approval, string $url): array

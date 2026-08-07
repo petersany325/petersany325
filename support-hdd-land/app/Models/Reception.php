@@ -17,9 +17,10 @@ class Reception extends Model
         'hdd_capacity', 'warranty_return', 'warranty_type', 'card_number', 'warranty_end_date',
         'reported_fault', 'final_fault', 'technician_notes', 'status',
         'deposit', 'pos_amount', 'admission_fee', 'estimated_cost', 'payment_method',
-        'labor_cost', 'parts_cost', 'discount', 'total_amount', 'paid_amount', 'cost_confirmed_at',
+        'labor_cost', 'parts_cost', 'stages_cost', 'discount', 'discount_reason', 'total_amount', 'paid_amount', 'cost_confirmed_at',
         'cost_approval_status', 'customer_cost_approved_at', 'customer_cost_approved_amount',
         'estimated_delivery_at', 'next_visit_at', 'received_at', 'delivered_at',
+        'delivery_cancelled_at', 'delivery_cancel_count',
     ];
 
     protected function casts(): array
@@ -27,6 +28,7 @@ class Reception extends Model
         return [
             'received_at' => 'datetime',
             'delivered_at' => 'datetime',
+            'delivery_cancelled_at' => 'datetime',
             'cost_confirmed_at' => 'datetime',
             'customer_cost_approved_at' => 'datetime',
             'estimated_delivery_at' => 'date',
@@ -110,6 +112,26 @@ class Reception extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function statusLogs(): HasMany
+    {
+        return $this->hasMany(ReceptionStatusLog::class)->latest('id');
+    }
+
+    public function costStages(): HasMany
+    {
+        return $this->hasMany(ReceptionCostStage::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function isDelivered(): bool
+    {
+        return $this->status === 'delivered';
+    }
+
+    public function canEditParts(): bool
+    {
+        return ! $this->isDelivered();
+    }
+
     public function statusLabel(): string
     {
         return SmsStatusRule::statusMap()[$this->status]
@@ -134,7 +156,8 @@ class Reception extends Model
 
         return ((int) $this->total_amount) > 0
             || ((int) $this->labor_cost) > 0
-            || ((int) $this->parts_cost) > 0;
+            || ((int) $this->parts_cost) > 0
+            || ((int) $this->stages_cost) > 0;
     }
 
     public function confirmCost(): void
@@ -150,11 +173,15 @@ class Reception extends Model
     public function recalculateTotals(): void
     {
         $partsCost = (int) $this->parts()->sum('total_price');
-        $total = $partsCost + (int) $this->labor_cost + (int) $this->admission_fee - (int) $this->discount;
+        $stagesCost = (int) $this->costStages()
+            ->whereIn('status', ['draft', 'pending_approval', 'approved', 'waived'])
+            ->sum('amount');
+        $total = $partsCost + $stagesCost + (int) $this->labor_cost + (int) $this->admission_fee - (int) $this->discount;
         $paid = (int) $this->payments()->sum('amount');
 
         $this->forceFill([
             'parts_cost' => $partsCost,
+            'stages_cost' => $stagesCost,
             'total_amount' => max(0, $total),
             'paid_amount' => $paid,
         ])->save();

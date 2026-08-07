@@ -56,6 +56,31 @@
 </section>
 
 <section class="p-section">
+    <h2>تاریخچه وضعیت</h2>
+    @forelse($reception->statusLogs as $log)
+        <div class="p-timeline-item">
+            <div class="p-timeline-dot"></div>
+            <div>
+                <strong>{{ $log->displayTitle() }}</strong>
+                <small>
+                    {{ $log->created_at?->format('Y/m/d H:i') }}
+                    @if($log->fromStatusLabel()) · از {{ $log->fromStatusLabel() }} @endif
+                    → {{ $log->toStatusLabel() }}
+                </small>
+                @if($log->note)
+                    <small style="display:block;margin-top:2px;">{{ $log->note }}</small>
+                @endif
+            </div>
+        </div>
+    @empty
+        <div class="p-empty soft">هنوز تغییر وضعیتی ثبت نشده.</div>
+    @endforelse
+    @if($reception->delivery_cancel_count)
+        <div class="p-empty soft" style="margin-top:8px;">لغو تحویل قبلی: {{ $reception->delivery_cancel_count }} بار — دستگاه روی همین سریال برگشته است.</div>
+    @endif
+</section>
+
+<section class="p-section">
     <h2>قطعات ({{ $reception->parts->count() }} ردیف · {{ $reception->parts->sum('quantity') }} عدد)</h2>
     @if($reception->parts->count())
         <div class="p-parts">
@@ -74,12 +99,33 @@
     @endif
 </section>
 
+@if($reception->costStages->count())
 <section class="p-section">
-    <h2>هزینه</h2>
+    <h2>مراحل هزینه</h2>
+    <div class="p-parts">
+        @foreach($reception->costStages as $stage)
+            <div class="p-part-row">
+                <div>
+                    <strong>{{ $stage->stage_label }}</strong>
+                    <small>{{ $stage->statusLabel() }}@if($stage->note) — {{ $stage->note }}@endif</small>
+                </div>
+                <span>{{ number_format((int) $stage->amount) }}</span>
+            </div>
+        @endforeach
+    </div>
+</section>
+@endif
+
+<section class="p-section">
+    <h2>هزینه / فاکتور</h2>
     <div class="p-cost-card">
         <div><span>اجرت</span><strong>{{ number_format((int) $reception->labor_cost) }}</strong></div>
         <div><span>قطعات</span><strong>{{ number_format((int) $reception->parts_cost) }}</strong></div>
+        <div><span>مراحل هزینه</span><strong>{{ number_format((int) $reception->stages_cost) }}</strong></div>
         <div><span>تخفیف</span><strong>{{ number_format((int) $reception->discount) }}</strong></div>
+        @if($reception->discount_reason)
+            <div><span>دلیل تخفیف</span><strong>{{ $reception->discount_reason }}</strong></div>
+        @endif
         <div class="total"><span>جمع کل</span><strong>{{ number_format((int) $reception->total_amount) }}</strong></div>
         <div><span>پرداخت‌شده</span><strong>{{ number_format((int) $reception->paid_amount) }}</strong></div>
         <div class="remain"><span>مانده</span><strong>{{ number_format($reception->remainingAmount()) }}</strong></div>

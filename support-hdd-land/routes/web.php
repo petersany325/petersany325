@@ -116,6 +116,9 @@ Route::middleware('auth')->group(function () {
         Route::post('receptions/{reception}/status', [ReceptionController::class, 'updateStatus'])->name('receptions.status');
         Route::post('receptions/{reception}/parts', [ReceptionController::class, 'addPart'])->name('receptions.parts');
         Route::post('receptions/{reception}/payments', [ReceptionController::class, 'addPayment'])->name('receptions.payments');
+        Route::post('receptions/{reception}/cancel-delivery', [ReceptionController::class, 'cancelDelivery'])->name('receptions.cancel-delivery');
+        Route::post('receptions/{reception}/cost-stages', [ReceptionController::class, 'storeCostStage'])->name('receptions.cost-stages');
+        Route::delete('receptions/{reception}/cost-stages/{stage}', [ReceptionController::class, 'destroyCostStage'])->name('receptions.cost-stages.destroy');
         Route::post('receptions/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('receptions.zarinpal');
         Route::get('receptions/{reception}/print', [ReceptionController::class, 'print'])->name('receptions.print');
         Route::post('receptions/{reception}/handoffs', [HandoffController::class, 'store'])->name('receptions.handoffs.store');
