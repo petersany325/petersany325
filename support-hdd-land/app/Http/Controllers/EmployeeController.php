@@ -53,9 +53,15 @@ class EmployeeController extends Controller
         ]);
 
         if ($data['role'] === 'technician') {
-            Technician::firstOrCreate(
+            Technician::updateOrCreate(
                 ['user_id' => $user->id],
-                ['name' => $user->name, 'phone' => $user->phone, 'is_active' => true]
+                [
+                    'name' => $user->name,
+                    'phone' => $user->phone,
+                    'specialty' => $data['specialty'] ?? null,
+                    'commission_percent' => (int) ($data['commission_percent'] ?? 0),
+                    'is_active' => true,
+                ]
             );
         }
 
@@ -64,6 +70,8 @@ class EmployeeController extends Controller
 
     public function edit(User $employee)
     {
+        $employee->load('technician');
+
         return view('employees.edit', [
             'employee' => $employee,
             'permissions' => Permissions::ALL,
@@ -92,6 +100,19 @@ class EmployeeController extends Controller
 
         $employee->update($payload);
 
+        if ($data['role'] === 'technician') {
+            Technician::updateOrCreate(
+                ['user_id' => $employee->id],
+                [
+                    'name' => $employee->name,
+                    'phone' => $employee->phone,
+                    'specialty' => $data['specialty'] ?? null,
+                    'commission_percent' => (int) ($data['commission_percent'] ?? 0),
+                    'is_active' => (bool) $employee->is_active,
+                ]
+            );
+        }
+
         return redirect()->route('employees.index')->with('success', 'اطلاعات کارمند به‌روزرسانی شد.');
     }
 
@@ -105,6 +126,8 @@ class EmployeeController extends Controller
             'password' => [$employee ? 'nullable' : 'nullable', 'string', 'min:6'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string', Rule::in(array_keys(Permissions::ALL))],
+            'specialty' => ['nullable', 'string', 'max:120'],
+            'commission_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
         ]);
 
         return $data;

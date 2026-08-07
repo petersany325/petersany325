@@ -80,41 +80,44 @@
             display: flex;
             gap: 14px;
             align-items: center;
-            padding: 18px 16px;
-            border-radius: 20px;
+            padding: 14px 12px;
+            border-radius: 3px;
             text-decoration: none;
             color: inherit;
-            background: rgba(255,255,255,.96);
-            border: 1px solid rgba(255,255,255,.5);
-            box-shadow: 0 16px 36px rgba(8,30,36,.22);
-            transition: transform .14s ease, box-shadow .14s ease;
+            background: linear-gradient(180deg, #fff, #eef1f5);
+            border: 1px solid #9aa5b5;
+            box-shadow: none;
+            transition: border-color .12s ease, background .12s ease;
         }
-        .gate-card:active { transform: scale(.985); }
+        .gate-card:active { transform: none; }
         .gate-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 20px 40px rgba(8,30,36,.28);
+            transform: none;
+            border-color: #2f6fed;
+            background: #f3f7ff;
+            box-shadow: none;
         }
         .gate-ico {
-            width: 56px; height: 56px;
-            border-radius: 16px;
+            width: 42px; height: 42px;
+            border-radius: 3px;
             display: grid; place-items: center;
-            font-size: 24px;
+            font-size: 18px;
             font-weight: 800;
             color: #fff;
             flex-shrink: 0;
         }
         .gate-card.customer .gate-ico {
-            background: linear-gradient(135deg, #14b8a6, #0f766e);
+            background: #3a4454;
         }
         .gate-card.staff .gate-ico {
-            background: linear-gradient(135deg, #38bdf8, #0369a1);
+            background: #2f6fed;
         }
         .gate-text { min-width: 0; flex: 1; }
         .gate-text strong {
             display: block;
-            font-size: 17px;
+            font-size: 15px;
             font-weight: 800;
             margin-bottom: 4px;
+            color: #1f2933;
         }
         .gate-text span {
             display: block;
@@ -123,13 +126,14 @@
             line-height: 1.55;
         }
         .gate-go {
-            font-size: 20px;
+            font-size: 18px;
             color: #94a3b8;
             font-weight: 700;
         }
         .gate-foot {
             text-align: center;
-            margin-top: 18px;
+            margin: 0;
+            padding: 0 16px 14px;
             color: #5f6b7a;
             font-size: 11px;
             animation: rise .5s ease-out .1s both;

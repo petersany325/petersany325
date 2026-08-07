@@ -43,6 +43,10 @@ class SettingController extends Controller
                 'footer' => AppSetting::getValue('invoice_footer', 'مدیریت تعمیرکاران — قبض پذیرش'),
                 'terms' => AppSetting::getValue('invoice_terms', ''),
                 'auto_print' => AppSetting::getValue('invoice_auto_print', '0') === '1',
+                'show_logo' => AppSetting::getValue('invoice_show_logo', '1') !== '0',
+                'font_size' => (int) AppSetting::getValue('invoice_font_size', '11'),
+                'page_size' => AppSetting::getValue('invoice_page_size', 'A4'),
+                'margin_mm' => (int) AppSetting::getValue('invoice_margin_mm', '10'),
                 'show_deposit' => AppSetting::getValue('invoice_show_deposit', '1') !== '0',
                 'show_estimated_cost' => AppSetting::getValue('invoice_show_estimated_cost', '1') !== '0',
                 'show_accessories' => AppSetting::getValue('invoice_show_accessories', '1') !== '0',
@@ -193,6 +197,10 @@ class SettingController extends Controller
             'invoice_footer' => ['nullable', 'string', 'max:500'],
             'invoice_terms' => ['nullable', 'string', 'max:10000'],
             'invoice_auto_print' => ['nullable', 'boolean'],
+            'invoice_show_logo' => ['nullable', 'boolean'],
+            'invoice_font_size' => ['nullable', 'integer', 'min:8', 'max:18'],
+            'invoice_page_size' => ['nullable', 'in:A4,A5,Letter'],
+            'invoice_margin_mm' => ['nullable', 'integer', 'min:4', 'max:25'],
             'invoice_show_deposit' => ['nullable', 'boolean'],
             'invoice_show_estimated_cost' => ['nullable', 'boolean'],
             'invoice_show_accessories' => ['nullable', 'boolean'],
@@ -216,8 +224,13 @@ class SettingController extends Controller
             AppSetting::setValue($key, (string) ($data[$key] ?? ''));
         }
 
+        AppSetting::setValue('invoice_font_size', (string) ((int) ($data['invoice_font_size'] ?? 11)));
+        AppSetting::setValue('invoice_page_size', (string) ($data['invoice_page_size'] ?? 'A4'));
+        AppSetting::setValue('invoice_margin_mm', (string) ((int) ($data['invoice_margin_mm'] ?? 10)));
+
         $boolKeys = [
             'invoice_auto_print',
+            'invoice_show_logo',
             'invoice_show_deposit',
             'invoice_show_estimated_cost',
             'invoice_show_accessories',

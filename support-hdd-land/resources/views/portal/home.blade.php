@@ -2,10 +2,13 @@
 @section('title', 'میز کار مشتری | سرزمین هارد')
 
 @section('content')
-<header class="p-top"><meta charset="utf-8">
-    <div>
-        <div class="p-hello">سلام {{ $customer->name }}</div>
-        <div class="p-sub" dir="ltr">{{ $customer->phone }}</div>
+<header class="p-top">
+    <div class="p-brand-mini">
+        <img src="{{ asset('images/logo-header.png') }}?v=hd1" alt="HDD LAND" width="96" height="22">
+        <div>
+            <div class="p-hello">سلام {{ $customer->name }}</div>
+            <div class="p-sub" dir="ltr">{{ $customer->phone }}</div>
+        </div>
     </div>
     <form method="POST" action="{{ route('portal.logout') }}">
         @csrf

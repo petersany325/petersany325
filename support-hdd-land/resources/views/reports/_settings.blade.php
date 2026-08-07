@@ -34,11 +34,13 @@
                     <option value="doughnut" @selected(($rs['chart_type'] ?? '') === 'doughnut')>حلقه‌ای</option>
                 </select>
             </label>
-            <label class="report-check">
-                <input type="hidden" name="show_charts" value="0">
-                <input type="checkbox" name="show_charts" value="1" @checked(!empty($rs['show_charts']))>
-                نمایش گراف در گزارش‌ها
-            </label>
+            <div>
+                @include('partials.toggle', [
+                    'name' => 'show_charts',
+                    'label' => 'نمایش گراف در گزارش‌ها',
+                    'checked' => !empty($rs['show_charts']),
+                ])
+            </div>
         </div>
     </form>
 </div>

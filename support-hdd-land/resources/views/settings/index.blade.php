@@ -144,8 +144,31 @@
                     </div>
                 </div>
 
+                <h3 style="margin-top:12px;">تنظیمات صفحه چاپ</h3>
+                <div class="accept-row accept-row-4">
+                    <div>
+                        <label>اندازه فونت (pt)</label>
+                        <input type="number" name="invoice_font_size" min="8" max="18" value="{{ old('invoice_font_size', $invoice['font_size'] ?? 11) }}">
+                    </div>
+                    <div>
+                        <label>اندازه کاغذ</label>
+                        <select name="invoice_page_size">
+                            @foreach(['A4' => 'A4', 'A5' => 'A5', 'Letter' => 'Letter'] as $val => $label)
+                                <option value="{{ $val }}" @selected(old('invoice_page_size', $invoice['page_size'] ?? 'A4') === $val)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>حاشیه چاپ (mm)</label>
+                        <input type="number" name="invoice_margin_mm" min="4" max="25" value="{{ old('invoice_margin_mm', $invoice['margin_mm'] ?? 10) }}">
+                    </div>
+                    <div>
+                        @include('partials.toggle', ['name' => 'invoice_show_logo', 'label' => 'نمایش لوگوی HDD LAND', 'checked' => $invoice['show_logo'] ?? true])
+                    </div>
+                </div>
+
                 <h3 style="margin-top:12px;">نمایش فیلدها روی فاکتور</h3>
-                <div class="accept-row accept-row-3">
+                <div class="toggle-grid">
                     @include('partials.toggle', ['name' => 'invoice_show_serial', 'label' => 'سریال دستگاه', 'checked' => $invoice['show_serial']])
                     @include('partials.toggle', ['name' => 'invoice_show_fault', 'label' => 'عیب اظهار مشتری', 'checked' => $invoice['show_fault']])
                     @include('partials.toggle', ['name' => 'invoice_show_accessories', 'label' => 'لوازم همراه', 'checked' => $invoice['show_accessories']])

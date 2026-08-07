@@ -7,35 +7,35 @@
 @section('content')
 <div class="split-2">
     <div class="stack">
-        <div class="panel">
-            <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+        <div class="panel detail-box">
+            <div class="detail-box-head">
                 <div>
                     <h2>{{ $reception->ticket_no }}</h2>
-                    <p class="lead">{{ $reception->product_name }} — {{ $reception->brand }} {{ $reception->model }}</p>
+                    <p class="lead" style="margin:2px 0 0;">{{ $reception->product_name }} — {{ $reception->brand }} {{ $reception->model }}</p>
                 </div>
-                <div>
+                <div class="report-head-actions">
                     <span class="badge badge-{{ $reception->status }}">{{ $reception->statusLabel() }}</span>
                     <a class="btn btn-secondary" href="{{ route('receptions.print', $reception) }}" target="_blank">چاپ قبض</a>
                 </div>
             </div>
-            <div class="form-grid">
+            <div class="detail-kv">
                 <div><span class="muted">مشتری</span><div>{{ $reception->customer->name }}</div></div>
-                <div><span class="muted">تلفن</span><div>{{ $reception->customer->phone }}</div></div>
+                <div><span class="muted">تلفن</span><div dir="ltr">{{ $reception->customer->phone }}</div></div>
                 <div><span class="muted">شماره قبض</span><div>{{ $reception->receipt_no ?: '—' }}</div></div>
                 <div><span class="muted">نوع پذیرش</span><div>{{ $reception->admission_type ?: '—' }}</div></div>
-                <div><span class="muted">سریال</span><div>{{ $reception->serial_number ?: '—' }}</div></div>
+                <div><span class="muted">سریال</span><div dir="ltr">{{ $reception->serial_number ?: '—' }}</div></div>
                 <div><span class="muted">مدل</span><div>{{ $reception->brand }} {{ $reception->model }}</div></div>
-                <div><span class="muted">نوع خدمات</span><div>{{ $reception->service_type ?: '—' }} / {{ $reception->repair_type ?: '—' }}</div></div>
-                <div><span class="muted">ظرفیت هارد</span><div>{{ $reception->hdd_capacity ?: '—' }}</div></div>
+                <div><span class="muted">خدمات / تعمیر</span><div>{{ $reception->service_type ?: '—' }} / {{ $reception->repair_type ?: '—' }}</div></div>
+                <div><span class="muted">ظرفیت</span><div>{{ $reception->hdd_capacity ?: '—' }}</div></div>
                 <div><span class="muted">گارانتی</span><div>{{ $reception->warranty_type ?: '—' }}</div></div>
                 <div><span class="muted">تعمیرکار</span><div>{{ $reception->technician?->name ?: '—' }}</div></div>
-                <div><span class="muted">محل دستگاه (Custody)</span><div>{{ $reception->custodyLabel() }}</div></div>
+                <div><span class="muted">محل دستگاه</span><div>{{ $reception->custodyLabel() }}</div></div>
                 <div><span class="muted">پذیرش</span><div>{{ jalali_like($reception->received_at) }}</div></div>
-                <div class="full"><span class="muted">عیب اظهار مشتری</span><div>{{ $reception->reported_fault ?: '—' }}</div></div>
-                <div class="full"><span class="muted">لوازم همراه</span><div>{{ $reception->accessories ?: '—' }}</div></div>
-                <div class="full"><span class="muted">وضعیت ظاهری</span><div>{{ $reception->appearance_notes ?: '—' }}</div></div>
+                <div style="grid-column:1/-1"><span class="muted">عیب اظهار مشتری</span><div>{{ $reception->reported_fault ?: '—' }}</div></div>
+                <div style="grid-column:1/-1"><span class="muted">لوازم همراه</span><div>{{ $reception->accessories ?: '—' }}</div></div>
+                <div style="grid-column:1/-1"><span class="muted">وضعیت ظاهری</span><div>{{ $reception->appearance_notes ?: '—' }}</div></div>
                 @if($reception->photo_path)
-                    <div class="full"><span class="muted">عکس</span><div><img src="{{ asset('storage/'.$reception->photo_path) }}" alt="photo" style="max-width:280px;border-radius:10px;"></div></div>
+                    <div style="grid-column:1/-1"><span class="muted">عکس</span><div><img src="{{ asset('storage/'.$reception->photo_path) }}" alt="photo" style="max-width:220px;border:1px solid #c5ccd6;border-radius:2px;"></div></div>
                 @endif
             </div>
         </div>
