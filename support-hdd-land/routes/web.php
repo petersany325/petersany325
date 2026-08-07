@@ -15,6 +15,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SmsStatusController;
 use App\Http\Controllers\BackupCronController;
+use App\Http\Controllers\BackupCloudController;
 use App\Http\Controllers\SystemToolsController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
@@ -269,6 +270,18 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/invoice', [SettingController::class, 'updateInvoice'])->name('settings.invoice');
         Route::post('settings/payments', [SettingController::class, 'updatePayments'])->name('settings.payments');
         Route::post('settings/backup', [SettingController::class, 'updateBackup'])->name('settings.backup');
+        Route::get('settings/backup/cloud/{provider}/connect', [BackupCloudController::class, 'connect'])
+            ->whereIn('provider', ['google', 'onedrive', 'mega'])
+            ->name('settings.backup.cloud.connect');
+        Route::get('settings/backup/cloud/{provider}/callback', [BackupCloudController::class, 'callback'])
+            ->whereIn('provider', ['google', 'onedrive'])
+            ->name('settings.backup.cloud.callback');
+        Route::post('settings/backup/cloud/{provider}/disconnect', [BackupCloudController::class, 'disconnect'])
+            ->whereIn('provider', ['google', 'onedrive', 'mega'])
+            ->name('settings.backup.cloud.disconnect');
+        Route::post('settings/backup/cloud/{provider}/test', [BackupCloudController::class, 'test'])
+            ->whereIn('provider', ['google', 'onedrive', 'mega'])
+            ->name('settings.backup.cloud.test');
         Route::post('settings/lookups', [SettingController::class, 'storeLookup'])->name('settings.lookups');
         Route::put('settings/lookups/{lookup}', [SettingController::class, 'updateLookup'])->name('settings.lookups.update');
         Route::delete('settings/lookups/{lookup}', [SettingController::class, 'destroyLookup'])->name('settings.lookups.destroy');

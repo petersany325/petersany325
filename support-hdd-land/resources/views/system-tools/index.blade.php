@@ -182,11 +182,21 @@
             <article class="sys-card tone-migrate">
                 <div class="sys-card-mark">اتو</div>
                 <h3>اجرای بکاپ خودکار الآن</h3>
-                <p>طبق تنظیمات (محدوده + آپلود ریموت در صورت فعال بودن)</p>
+                <p>طبق تنظیمات (محدوده + FTP + کلودهای فعال)</p>
                 <form method="POST" action="{{ route('system-tools.run') }}">
                     @csrf
                     <input type="hidden" name="action" value="backup_run_now">
                     <button class="btn btn-ghost" type="submit">اجرا الآن</button>
+                </form>
+            </article>
+            <article class="sys-card tone-db">
+                <div class="sys-card-mark">کلود</div>
+                <h3>آپلود به کلودها</h3>
+                <p>ساخت بکاپ کامل و ارسال به Google / OneDrive / MEGA فعال‌شده</p>
+                <form method="POST" action="{{ route('system-tools.run') }}">
+                    @csrf
+                    <input type="hidden" name="action" value="backup_upload_clouds">
+                    <button class="btn btn-secondary" type="submit">ساخت و آپلود به کلود</button>
                 </form>
             </article>
         </div>

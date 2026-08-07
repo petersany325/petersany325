@@ -81,7 +81,10 @@ class SettingController extends Controller
             'backupIntervals' => BackupSettings::INTERVALS,
             'backupWeekdays' => BackupSettings::WEEKDAYS,
             'backupProtocols' => BackupSettings::PROTOCOLS,
+            'backupCloudLabels' => BackupSettings::CLOUD_LABELS,
             'backupCronUrl' => url('/cron/backup?token='.BackupSettings::all()['cron_token']),
+            'googleRedirectUri' => url('/settings/backup/cloud/google/callback'),
+            'onedriveRedirectUri' => url('/settings/backup/cloud/onedrive/callback'),
         ]);
     }
 
@@ -395,6 +398,19 @@ class SettingController extends Controller
             'remote_user' => ['nullable', 'string', 'max:120'],
             'remote_password' => ['nullable', 'string', 'max:200'],
             'remote_path' => ['nullable', 'string', 'max:255'],
+            'clouds' => ['nullable', 'array'],
+            'clouds.google.enabled' => ['nullable'],
+            'clouds.google.client_id' => ['nullable', 'string', 'max:300'],
+            'clouds.google.client_secret' => ['nullable', 'string', 'max:300'],
+            'clouds.google.folder' => ['nullable', 'string', 'max:160'],
+            'clouds.onedrive.enabled' => ['nullable'],
+            'clouds.onedrive.client_id' => ['nullable', 'string', 'max:300'],
+            'clouds.onedrive.client_secret' => ['nullable', 'string', 'max:300'],
+            'clouds.onedrive.folder' => ['nullable', 'string', 'max:160'],
+            'clouds.mega.enabled' => ['nullable'],
+            'clouds.mega.email' => ['nullable', 'string', 'max:190'],
+            'clouds.mega.password' => ['nullable', 'string', 'max:200'],
+            'clouds.mega.folder' => ['nullable', 'string', 'max:160'],
         ]);
 
         BackupSettings::save([
@@ -411,6 +427,26 @@ class SettingController extends Controller
             'remote_user' => $data['remote_user'] ?? '',
             'remote_password' => $data['remote_password'] ?? null,
             'remote_path' => $data['remote_path'] ?? '/backups',
+            'clouds' => [
+                'google' => [
+                    'enabled' => $request->boolean('clouds.google.enabled'),
+                    'client_id' => $data['clouds']['google']['client_id'] ?? '',
+                    'client_secret' => $data['clouds']['google']['client_secret'] ?? null,
+                    'folder' => $data['clouds']['google']['folder'] ?? 'HDDLAND-Backups',
+                ],
+                'onedrive' => [
+                    'enabled' => $request->boolean('clouds.onedrive.enabled'),
+                    'client_id' => $data['clouds']['onedrive']['client_id'] ?? '',
+                    'client_secret' => $data['clouds']['onedrive']['client_secret'] ?? null,
+                    'folder' => $data['clouds']['onedrive']['folder'] ?? 'HDDLAND-Backups',
+                ],
+                'mega' => [
+                    'enabled' => $request->boolean('clouds.mega.enabled'),
+                    'email' => $data['clouds']['mega']['email'] ?? '',
+                    'password' => $data['clouds']['mega']['password'] ?? null,
+                    'folder' => $data['clouds']['mega']['folder'] ?? 'HDDLAND-Backups',
+                ],
+            ],
         ]);
 
         return $this->settingsRedirect($request, 'backup', 'success', 'تنظیمات بکاپ خودکار ذخیره شد.');

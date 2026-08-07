@@ -486,6 +486,148 @@
                     </div>
                 </div>
 
+                <div class="panel" style="margin-bottom:10px;" id="backup-clouds">
+                    <h3 style="margin-top:0;">کلودها (Google / Microsoft / MEGA)</h3>
+                    <p class="muted" style="margin-top:0;">
+                        بعد از اتصال، بکاپ‌های خودکار (طبق زمان‌بندی) و دستی به کلودهای فعال آپلود می‌شوند.
+                        ابتدا مشخصات را ذخیره کنید، سپس دکمه اتصال را بزنید.
+                    </p>
+
+                    <div class="split-2" style="gap:12px;">
+                        {{-- Google Drive --}}
+                        <div class="panel" style="margin:0;padding:10px;border:1px solid #d9dee7;">
+                            <h3 style="margin:0 0 6px;">{{ $backupCloudLabels['google'] }}</h3>
+                            <p class="muted" style="margin:0 0 8px;font-size:12px;">
+                                در Google Cloud Console یک OAuth Client از نوع Web بسازید و Redirect URI زیر را ثبت کنید.
+                            </p>
+                            <div style="margin-bottom:8px;">
+                                <label>Redirect URI</label>
+                                <input type="text" readonly dir="ltr" style="text-align:left;font-size:11px;" value="{{ $googleRedirectUri }}">
+                            </div>
+                            <div class="accept-row accept-row-2">
+                                <div>
+                                    <label>Client ID</label>
+                                    <input type="text" name="clouds[google][client_id]" value="{{ $backup['clouds']['google']['client_id'] }}" dir="ltr" style="text-align:left;" autocomplete="off">
+                                </div>
+                                <div>
+                                    <label>Client Secret</label>
+                                    <input type="password" name="clouds[google][client_secret]" value="" placeholder="{{ $backup['clouds']['google']['client_secret'] ? '•••••• (خالی = بدون تغییر)' : 'Secret' }}" dir="ltr" style="text-align:left;" autocomplete="new-password">
+                                </div>
+                                <div>
+                                    <label>پوشه مقصد</label>
+                                    <input type="text" name="clouds[google][folder]" value="{{ $backup['clouds']['google']['folder'] }}" dir="ltr" style="text-align:left;">
+                                </div>
+                                <div>
+                                    @include('partials.toggle', [
+                                        'name' => 'clouds[google][enabled]',
+                                        'label' => 'آپلود خودکار به گوگل',
+                                        'checked' => $backup['clouds']['google']['enabled'],
+                                    ])
+                                </div>
+                            </div>
+                            <p class="muted" style="margin:6px 0;">
+                                وضعیت:
+                                @if($backup['clouds']['google']['connected'])
+                                    <span class="pill pill-ok">متصل{{ $backup['clouds']['google']['account_email'] ? ' — '.$backup['clouds']['google']['account_email'] : '' }}</span>
+                                @else
+                                    <span class="pill pill-off">متصل نشده</span>
+                                @endif
+                            </p>
+                            <div class="actions" style="margin:0;">
+                                <a class="btn btn-primary" href="{{ route('settings.backup.cloud.connect', 'google') }}">اتصال به گوگل</a>
+                                <button class="btn btn-secondary" form="backup-cloud-test-google" type="submit">تست</button>
+                                <button class="btn btn-ghost" form="backup-cloud-disconnect-google" type="submit">قطع اتصال</button>
+                            </div>
+                        </div>
+
+                        {{-- OneDrive --}}
+                        <div class="panel" style="margin:0;padding:10px;border:1px solid #d9dee7;">
+                            <h3 style="margin:0 0 6px;">{{ $backupCloudLabels['onedrive'] }}</h3>
+                            <p class="muted" style="margin:0 0 8px;font-size:12px;">
+                                در Azure Portal یک App Registration بسازید و Redirect URI زیر را به‌عنوان Web ثبت کنید.
+                            </p>
+                            <div style="margin-bottom:8px;">
+                                <label>Redirect URI</label>
+                                <input type="text" readonly dir="ltr" style="text-align:left;font-size:11px;" value="{{ $onedriveRedirectUri }}">
+                            </div>
+                            <div class="accept-row accept-row-2">
+                                <div>
+                                    <label>Application (client) ID</label>
+                                    <input type="text" name="clouds[onedrive][client_id]" value="{{ $backup['clouds']['onedrive']['client_id'] }}" dir="ltr" style="text-align:left;" autocomplete="off">
+                                </div>
+                                <div>
+                                    <label>Client Secret</label>
+                                    <input type="password" name="clouds[onedrive][client_secret]" value="" placeholder="{{ $backup['clouds']['onedrive']['client_secret'] ? '•••••• (خالی = بدون تغییر)' : 'Secret' }}" dir="ltr" style="text-align:left;" autocomplete="new-password">
+                                </div>
+                                <div>
+                                    <label>پوشه مقصد</label>
+                                    <input type="text" name="clouds[onedrive][folder]" value="{{ $backup['clouds']['onedrive']['folder'] }}" dir="ltr" style="text-align:left;">
+                                </div>
+                                <div>
+                                    @include('partials.toggle', [
+                                        'name' => 'clouds[onedrive][enabled]',
+                                        'label' => 'آپلود خودکار به OneDrive',
+                                        'checked' => $backup['clouds']['onedrive']['enabled'],
+                                    ])
+                                </div>
+                            </div>
+                            <p class="muted" style="margin:6px 0;">
+                                وضعیت:
+                                @if($backup['clouds']['onedrive']['connected'])
+                                    <span class="pill pill-ok">متصل{{ $backup['clouds']['onedrive']['account_email'] ? ' — '.$backup['clouds']['onedrive']['account_email'] : '' }}</span>
+                                @else
+                                    <span class="pill pill-off">متصل نشده</span>
+                                @endif
+                            </p>
+                            <div class="actions" style="margin:0;">
+                                <a class="btn btn-primary" href="{{ route('settings.backup.cloud.connect', 'onedrive') }}">اتصال به مایکروسافت</a>
+                                <button class="btn btn-secondary" form="backup-cloud-test-onedrive" type="submit">تست</button>
+                                <button class="btn btn-ghost" form="backup-cloud-disconnect-onedrive" type="submit">قطع اتصال</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- MEGA --}}
+                    <div class="panel" style="margin-top:12px;padding:10px;border:1px solid #d9dee7;">
+                        <h3 style="margin:0 0 6px;">{{ $backupCloudLabels['mega'] }}</h3>
+                        <p class="muted" style="margin:0 0 8px;font-size:12px;">با ایمیل و رمز حساب MEGA وصل شوید. برای هاست اشتراکی افزونه GMP توصیه می‌شود.</p>
+                        <div class="accept-row accept-row-4" style="align-items:end;">
+                            <div>
+                                <label>ایمیل MEGA</label>
+                                <input type="email" name="clouds[mega][email]" value="{{ $backup['clouds']['mega']['email'] }}" dir="ltr" style="text-align:left;" autocomplete="off">
+                            </div>
+                            <div>
+                                <label>رمز عبور</label>
+                                <input type="password" name="clouds[mega][password]" value="" placeholder="{{ $backup['clouds']['mega']['password'] ? '•••••• (خالی = بدون تغییر)' : 'رمز MEGA' }}" dir="ltr" style="text-align:left;" autocomplete="new-password">
+                            </div>
+                            <div>
+                                <label>پوشه مقصد</label>
+                                <input type="text" name="clouds[mega][folder]" value="{{ $backup['clouds']['mega']['folder'] }}" dir="ltr" style="text-align:left;">
+                            </div>
+                            <div>
+                                @include('partials.toggle', [
+                                    'name' => 'clouds[mega][enabled]',
+                                    'label' => 'آپلود خودکار به MEGA',
+                                    'checked' => $backup['clouds']['mega']['enabled'],
+                                ])
+                            </div>
+                        </div>
+                        <p class="muted" style="margin:6px 0;">
+                            وضعیت:
+                            @if($backup['clouds']['mega']['connected'])
+                                <span class="pill pill-ok">متصل{{ $backup['clouds']['mega']['account_email'] ? ' — '.$backup['clouds']['mega']['account_email'] : '' }}</span>
+                            @else
+                                <span class="pill pill-off">متصل نشده</span>
+                            @endif
+                        </p>
+                        <div class="actions" style="margin:0;">
+                            <a class="btn btn-primary" href="{{ route('settings.backup.cloud.connect', 'mega') }}">تست و اتصال MEGA</a>
+                            <button class="btn btn-secondary" form="backup-cloud-test-mega" type="submit">تست دوباره</button>
+                            <button class="btn btn-ghost" form="backup-cloud-disconnect-mega" type="submit">قطع اتصال</button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="panel" style="margin-bottom:10px;">
                     <h3 style="margin-top:0;">هاست ریموت (FTP)</h3>
                     <p class="muted" style="margin-top:0;">آدرس هاستی که بکاپ باید هر هفته آنجا آپلود شود — مثلاً بکاپ‌سرور یا فضای FTP دیگر.</p>
@@ -551,9 +693,25 @@
 
                 <div class="actions">
                     <button class="btn btn-primary" type="submit">ذخیره تنظیمات بکاپ</button>
-                    <a class="btn btn-secondary" href="{{ route('system-tools.index') }}">رفتن به ابزار بکاپ / ریستور</a>
+                    <button class="btn btn-secondary" form="backup-upload-clouds-now" type="submit">ساخت بکاپ و آپلود به کلودها الآن</button>
+                    <a class="btn btn-ghost" href="{{ route('system-tools.index') }}">ابزار بکاپ / ریستور</a>
                 </div>
             </form>
+
+            {{-- Forms خارج از فرم اصلی (HTML فرم تو در تو مجاز نیست) --}}
+            <form id="backup-cloud-test-google" method="POST" action="{{ route('settings.backup.cloud.test', 'google') }}" class="hidden">@csrf</form>
+            <form id="backup-cloud-disconnect-google" method="POST" action="{{ route('settings.backup.cloud.disconnect', 'google') }}" class="hidden">@csrf</form>
+            <form id="backup-cloud-test-onedrive" method="POST" action="{{ route('settings.backup.cloud.test', 'onedrive') }}" class="hidden">@csrf</form>
+            <form id="backup-cloud-disconnect-onedrive" method="POST" action="{{ route('settings.backup.cloud.disconnect', 'onedrive') }}" class="hidden">@csrf</form>
+            <form id="backup-cloud-test-mega" method="POST" action="{{ route('settings.backup.cloud.test', 'mega') }}" class="hidden">@csrf</form>
+            <form id="backup-cloud-disconnect-mega" method="POST" action="{{ route('settings.backup.cloud.disconnect', 'mega') }}" class="hidden">@csrf</form>
+            @if(auth()->user()->canAccess('system.tools'))
+            <form id="backup-upload-clouds-now" method="POST" action="{{ route('system-tools.run') }}" class="hidden">
+                @csrf
+                <input type="hidden" name="settings_tab" value="backup">
+                <input type="hidden" name="action" value="backup_upload_clouds">
+            </form>
+            @endif
         </div>
 
         <div class="ws-pane {{ $activeTab === 'users' ? 'active' : '' }}" data-ws-pane="users">

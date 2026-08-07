@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\CloudBackup\CloudBackupManager;
 use App\Services\DatabaseBackupService;
 use App\Services\SystemMaintenanceService;
 use App\Support\BackupSettings;
@@ -13,6 +14,7 @@ class SystemToolsController extends Controller
     public function __construct(
         private SystemMaintenanceService $maintenance,
         private DatabaseBackupService $backups,
+        private CloudBackupManager $clouds,
     ) {
     }
 
@@ -30,7 +32,7 @@ class SystemToolsController extends Controller
     public function run(Request $request)
     {
         $data = $request->validate([
-            'action' => ['required', 'string', 'in:clear_cache,rebuild_cache,db_health,db_repair,db_optimize,db_rebuild,migrate,backup_full,backup_accounting,backup_save_pc,backup_delete,backup_restore_local,backup_restore_upload,backup_upload_remote,backup_run_now,backup_test_remote'],
+            'action' => ['required', 'string', 'in:clear_cache,rebuild_cache,db_health,db_repair,db_optimize,db_rebuild,migrate,backup_full,backup_accounting,backup_save_pc,backup_delete,backup_restore_local,backup_restore_upload,backup_upload_remote,backup_upload_clouds,backup_run_now,backup_test_remote'],
             'file' => ['nullable', 'string', 'max:200'],
             'scope' => ['nullable', 'in:full,accounting'],
             'confirm_restore' => ['nullable'],
@@ -88,6 +90,27 @@ class SystemToolsController extends Controller
                 }
 
                 return $this->backups->uploadToRemote($path);
+            })(),
+            'backup_upload_clouds' => (function () use ($data) {
+                $path = $this->backups->absolutePath((string) ($data['file'] ?? ''));
+                if (! $path) {
+                    // If no file chosen, create a fresh full backup then upload.
+                    $created = $this->backups->create('full', true);
+                    if (! ($created['ok'] ?? false)) {
+                        return $created;
+                    }
+                    $path = (string) ($created['path'] ?? '');
+                    $cloud = $this->clouds->uploadToEnabled($path);
+
+                    return [
+                        'ok' => ($cloud['ok'] ?? false),
+                        'message' => ($created['message'] ?? '').' | '.($cloud['message'] ?? ''),
+                        'file' => $created['file'] ?? null,
+                        'details' => array_merge($created['details'] ?? [], $cloud['details'] ?? []),
+                    ];
+                }
+
+                return $this->clouds->uploadToEnabled($path);
             })(),
             'backup_run_now' => $this->backups->runScheduled(),
             'backup_test_remote' => $this->backups->testRemote(),

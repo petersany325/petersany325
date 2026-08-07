@@ -46,6 +46,14 @@ class BackupSettings
         'ftps' => 'FTPS (TLS)',
     ];
 
+    public const CLOUD_KEYS = ['google', 'onedrive', 'mega'];
+
+    public const CLOUD_LABELS = [
+        'google' => 'Google Drive (کلود گوگل)',
+        'onedrive' => 'OneDrive (کلود مایکروسافت)',
+        'mega' => 'MEGA',
+    ];
+
     public static function all(): array
     {
         $token = (string) AppSetting::getValue('backup_cron_token', '');
@@ -68,11 +76,37 @@ class BackupSettings
             'remote_user' => (string) AppSetting::getValue('backup_remote_user', ''),
             'remote_password' => (string) AppSetting::getValue('backup_remote_password', ''),
             'remote_path' => (string) AppSetting::getValue('backup_remote_path', '/backups'),
+            'clouds' => [
+                'google' => self::cloud('google'),
+                'onedrive' => self::cloud('onedrive'),
+                'mega' => self::cloud('mega'),
+            ],
             'cron_token' => $token,
             'last_run_at' => AppSetting::getValue('backup_last_run_at'),
             'last_ok' => AppSetting::getValue('backup_last_ok', '') === '1',
             'last_message' => (string) AppSetting::getValue('backup_last_message', ''),
             'last_file' => (string) AppSetting::getValue('backup_last_file', ''),
+        ];
+    }
+
+    /** @return array<string,mixed> */
+    public static function cloud(string $key): array
+    {
+        $key = in_array($key, self::CLOUD_KEYS, true) ? $key : 'google';
+        $p = 'backup_cloud_'.$key.'_';
+
+        return [
+            'enabled' => AppSetting::getValue($p.'enabled', '0') === '1',
+            'client_id' => (string) AppSetting::getValue($p.'client_id', ''),
+            'client_secret' => (string) AppSetting::getValue($p.'client_secret', ''),
+            'access_token' => (string) AppSetting::getValue($p.'access_token', ''),
+            'refresh_token' => (string) AppSetting::getValue($p.'refresh_token', ''),
+            'token_expires' => (int) AppSetting::getValue($p.'token_expires', '0'),
+            'account_email' => (string) AppSetting::getValue($p.'account_email', ''),
+            'folder' => (string) AppSetting::getValue($p.'folder', 'HDDLAND-Backups') ?: 'HDDLAND-Backups',
+            'email' => (string) AppSetting::getValue($p.'email', ''),
+            'password' => (string) AppSetting::getValue($p.'password', ''),
+            'connected' => AppSetting::getValue($p.'connected', '0') === '1',
         ];
     }
 
@@ -93,6 +127,71 @@ class BackupSettings
             AppSetting::setValue('backup_remote_password', (string) $data['remote_password']);
         }
         AppSetting::setValue('backup_remote_path', trim((string) ($data['remote_path'] ?? '/backups')) ?: '/backups');
+
+        foreach (self::CLOUD_KEYS as $key) {
+            $cloud = is_array($data['clouds'][$key] ?? null) ? $data['clouds'][$key] : [];
+            self::saveCloudConfig($key, $cloud);
+        }
+    }
+
+    /** @param array<string,mixed> $data */
+    public static function saveCloudConfig(string $key, array $data): void
+    {
+        if (! in_array($key, self::CLOUD_KEYS, true)) {
+            return;
+        }
+        $p = 'backup_cloud_'.$key.'_';
+        AppSetting::setValue($p.'enabled', ! empty($data['enabled']) ? '1' : '0');
+        if (array_key_exists('client_id', $data)) {
+            AppSetting::setValue($p.'client_id', trim((string) $data['client_id']));
+        }
+        if (array_key_exists('client_secret', $data) && $data['client_secret'] !== null && $data['client_secret'] !== '') {
+            AppSetting::setValue($p.'client_secret', (string) $data['client_secret']);
+        }
+        if (array_key_exists('folder', $data)) {
+            AppSetting::setValue($p.'folder', trim((string) $data['folder']) ?: 'HDDLAND-Backups');
+        }
+        if (array_key_exists('email', $data)) {
+            AppSetting::setValue($p.'email', trim((string) $data['email']));
+        }
+        if (array_key_exists('password', $data) && $data['password'] !== null && $data['password'] !== '') {
+            AppSetting::setValue($p.'password', (string) $data['password']);
+        }
+    }
+
+    /** @param array<string,mixed> $tokens */
+    public static function saveCloudTokens(string $key, array $tokens): void
+    {
+        if (! in_array($key, self::CLOUD_KEYS, true)) {
+            return;
+        }
+        $p = 'backup_cloud_'.$key.'_';
+        foreach (['access_token', 'refresh_token', 'account_email'] as $field) {
+            if (array_key_exists($field, $tokens)) {
+                AppSetting::setValue($p.$field, (string) $tokens[$field]);
+            }
+        }
+        if (array_key_exists('token_expires', $tokens)) {
+            AppSetting::setValue($p.'token_expires', (string) (int) $tokens['token_expires']);
+        }
+        if (array_key_exists('connected', $tokens)) {
+            AppSetting::setValue($p.'connected', ! empty($tokens['connected']) ? '1' : '0');
+        }
+    }
+
+    public static function disconnectCloud(string $key): void
+    {
+        if (! in_array($key, self::CLOUD_KEYS, true)) {
+            return;
+        }
+        $p = 'backup_cloud_'.$key.'_';
+        foreach (['access_token', 'refresh_token', 'account_email', 'token_expires'] as $field) {
+            AppSetting::setValue($p.$field, '');
+        }
+        AppSetting::setValue($p.'connected', '0');
+        if ($key === 'mega') {
+            // keep email; clear password optional — keep for reconnect
+        }
     }
 
     public static function markResult(bool $ok, string $message, ?string $file = null): void

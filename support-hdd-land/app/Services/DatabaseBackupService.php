@@ -329,20 +329,30 @@ class DatabaseBackupService
         }
 
         $messages = [$created['message']];
+        $details = $created['details'] ?? [];
+        $ok = true;
+
         if ($cfg['remote_enabled']) {
             $up = $this->uploadToRemote($created['path']);
             $messages[] = $up['message'];
             if (! ($up['ok'] ?? false)) {
-                BackupSettings::markResult(false, implode(' | ', $messages), $created['file'] ?? null);
+                $ok = false;
+            }
+        }
 
-                return ['ok' => false, 'message' => implode(' | ', $messages), 'file' => $created['file'] ?? null, 'details' => $created['details'] ?? []];
+        $cloud = app(\App\Services\CloudBackup\CloudBackupManager::class)->uploadToEnabled((string) $created['path']);
+        if (($cloud['details'] ?? []) !== []) {
+            $messages[] = $cloud['message'];
+            $details = array_merge($details, $cloud['details']);
+            if (! ($cloud['ok'] ?? false)) {
+                $ok = false;
             }
         }
 
         $msg = implode(' | ', $messages);
-        BackupSettings::markResult(true, $msg, $created['file'] ?? null);
+        BackupSettings::markResult($ok, $msg, $created['file'] ?? null);
 
-        return ['ok' => true, 'message' => $msg, 'file' => $created['file'] ?? null, 'details' => $created['details'] ?? []];
+        return ['ok' => $ok, 'message' => $msg, 'file' => $created['file'] ?? null, 'details' => $details];
     }
 
     /** @return array{ok:bool,message:string} */
