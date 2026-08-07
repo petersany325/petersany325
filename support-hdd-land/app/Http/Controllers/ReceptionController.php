@@ -10,7 +10,6 @@ use App\Models\Payment;
 use App\Models\Reception;
 use App\Models\ReceptionPart;
 use App\Models\ReferralSource;
-use App\Models\SmsLog;
 use App\Models\SmsStatusRule;
 use App\Models\StockMovement;
 use App\Models\Technician;
@@ -314,7 +313,6 @@ class ReceptionController extends Controller
             'smsRules' => $rules,
             'smsPreviews' => $previews,
             'smsMasterEnabled' => $smsNotifications->masterEnabled(),
-            'smsLogs' => SmsLog::query()->where('reception_id', $reception->id)->latest()->limit(15)->get(),
             'costApprovals' => $reception->costApprovals,
             'costStages' => $reception->costStages,
             'statusLogs' => $reception->statusLogs,
