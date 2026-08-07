@@ -214,7 +214,7 @@ class NavMenu
                 'mark' => 'س',
                 'hint' => 'کش، تعمیر و بازسازی دیتابیس',
                 'children' => [
-                    ['label' => 'نگهداری و کش', 'route' => 'system-tools.index', 'match' => 'system-tools.*', 'hint' => 'کش سایت، سلامت، تعمیر', 'mark' => 'ن'],
+                    ['label' => 'نگهداری و بکاپ', 'route' => 'system-tools.index', 'match' => 'system-tools.*', 'hint' => 'کش، تعمیر، بکاپ و ریستور', 'mark' => 'ن'],
                 ],
             ],
             [

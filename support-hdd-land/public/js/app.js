@@ -153,7 +153,18 @@
             if (!tab) return;
             e.preventDefault();
             activateWorkspaceTab(tab);
+            var key = tab.getAttribute('data-ws-tab');
+            if (key && history.replaceState) {
+                try { history.replaceState(null, '', '#' + key); } catch (err) {}
+            }
         });
+
+        // Open tab from URL hash (#backup)
+        var hash = (location.hash || '').replace(/^#/, '');
+        if (hash) {
+            var tab = document.querySelector('[data-ws-tab="' + hash + '"]');
+            if (tab) activateWorkspaceTab(tab);
+        }
     }
 
     /* =========================================================

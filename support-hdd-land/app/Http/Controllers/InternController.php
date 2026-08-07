@@ -245,7 +245,13 @@ class InternController extends Controller
     private function validated(Request $request, ?Intern $intern = null): array
     {
         $phone = User::normalizePhone((string) $request->input('phone', ''));
-        $request->merge(['phone' => $phone]);
+        $startG = parse_jalali_or_gregorian_date((string) $request->input('start_date', ''));
+        $endG = parse_jalali_or_gregorian_date((string) $request->input('end_date', ''));
+        $request->merge([
+            'phone' => $phone,
+            'start_date' => $startG ?: $request->input('start_date'),
+            'end_date' => $endG ?: $request->input('end_date'),
+        ]);
 
         return $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -263,7 +269,9 @@ class InternController extends Controller
             'name.required' => 'نام کارآموز الزامی است.',
             'phone.required' => 'موبایل الزامی است.',
             'start_date.required' => 'تاریخ شروع کارآموزی الزامی است.',
+            'start_date.date' => 'تاریخ شروع را به‌صورت شمسی وارد کنید (مثال: 1404/05/16).',
             'end_date.required' => 'تاریخ پایان کارآموزی الزامی است.',
+            'end_date.date' => 'تاریخ پایان را به‌صورت شمسی وارد کنید (مثال: 1404/06/16).',
             'end_date.after_or_equal' => 'تاریخ پایان باید بعد از شروع باشد.',
         ]);
     }

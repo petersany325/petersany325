@@ -11,6 +11,7 @@
         <button type="button" data-ws-tab="invoice">فاکتور / چاپ</button>
         <button type="button" data-ws-tab="payments">پرداخت / زرین‌پال</button>
         <button type="button" data-ws-tab="sms">پیامک نیازپرداز</button>
+        <button type="button" data-ws-tab="backup">بکاپ دیتابیس</button>
         <button type="button" data-ws-tab="users">کارتابل کارمند</button>
     </div>
     <div class="ws-panes">
@@ -369,6 +370,130 @@
                     </div>
                 </form>
             </div>
+        </div>
+
+        <div class="ws-pane" data-ws-pane="backup" id="backup">
+            <h2>بکاپ خودکار دیتابیس</h2>
+            <p class="lead">
+                بکاپ بدون mysqldump (سازگار با هاست اشتراکی cPanel). می‌توانید بکاپ حسابداری را هفتگی به هاست FTP بفرستید.
+                عملیات دستی دانلود/ریستور در <a href="{{ route('system-tools.index') }}">ابزارهای سیستم</a> است.
+            </p>
+
+            <form method="POST" action="{{ route('settings.backup') }}">
+                @csrf
+                <div class="panel" style="margin-bottom:10px;">
+                    <h3 style="margin-top:0;">زمان‌بندی</h3>
+                    <div class="accept-row accept-row-4" style="align-items:end;">
+                        <div>
+                            @include('partials.toggle', [
+                                'name' => 'enabled',
+                                'label' => 'بکاپ خودکار فعال باشد',
+                                'checked' => $backup['enabled'],
+                            ])
+                        </div>
+                        <div>
+                            <label>محدوده بکاپ</label>
+                            <select name="scope">
+                                @foreach($backupScopes as $key => $label)
+                                    <option value="{{ $key }}" @selected($backup['scope'] === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label>بازه تکرار</label>
+                            <select name="interval">
+                                @foreach($backupIntervals as $key => $label)
+                                    <option value="{{ $key }}" @selected($backup['interval'] === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label>روز هفته (برای هفتگی)</label>
+                            <select name="weekday">
+                                @foreach($backupWeekdays as $key => $label)
+                                    <option value="{{ $key }}" @selected((int)$backup['weekday'] === (int)$key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label>ساعت اجرا (۰–۲۳ تهران)</label>
+                            <input type="number" name="hour" min="0" max="23" value="{{ $backup['hour'] }}">
+                        </div>
+                        <div>
+                            <label>نگهداری محلی (تعداد فایل)</label>
+                            <input type="number" name="keep_local" min="1" max="60" value="{{ $backup['keep_local'] }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-bottom:10px;">
+                    <h3 style="margin-top:0;">هاست ریموت (FTP)</h3>
+                    <p class="muted" style="margin-top:0;">آدرس هاستی که بکاپ باید هر هفته آنجا آپلود شود — مثلاً بکاپ‌سرور یا فضای FTP دیگر.</p>
+                    <div class="accept-row accept-row-4" style="align-items:end;">
+                        <div>
+                            @include('partials.toggle', [
+                                'name' => 'remote_enabled',
+                                'label' => 'آپلود خودکار به هاست',
+                                'checked' => $backup['remote_enabled'],
+                            ])
+                        </div>
+                        <div>
+                            <label>پروتکل</label>
+                            <select name="remote_protocol">
+                                @foreach($backupProtocols as $key => $label)
+                                    <option value="{{ $key }}" @selected($backup['remote_protocol'] === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label>آدرس هاست</label>
+                            <input type="text" name="remote_host" value="{{ $backup['remote_host'] }}" placeholder="ftp.example.com" dir="ltr" style="text-align:left;">
+                        </div>
+                        <div>
+                            <label>پورت</label>
+                            <input type="number" name="remote_port" min="1" max="65535" value="{{ $backup['remote_port'] }}">
+                        </div>
+                        <div>
+                            <label>نام کاربری</label>
+                            <input type="text" name="remote_user" value="{{ $backup['remote_user'] }}" dir="ltr" style="text-align:left;" autocomplete="off">
+                        </div>
+                        <div>
+                            <label>رمز عبور</label>
+                            <input type="password" name="remote_password" value="" placeholder="{{ $backup['remote_password'] ? '•••••• (خالی = بدون تغییر)' : 'رمز FTP' }}" dir="ltr" style="text-align:left;" autocomplete="new-password">
+                        </div>
+                        <div style="grid-column:1/-1">
+                            <label>مسیر پوشه روی هاست</label>
+                            <input type="text" name="remote_path" value="{{ $backup['remote_path'] }}" placeholder="/backups" dir="ltr" style="text-align:left;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel" style="margin-bottom:10px;">
+                    <h3 style="margin-top:0;">کرون هاست (cPanel)</h3>
+                    <p class="muted" style="margin:0 0 6px;">در cPanel → Cron Jobs این آدرس را هر ساعت صدا بزنید. سیستم خودش تشخیص می‌دهد آیا وقت بکاپ هفتگی/روزانه رسیده یا نه.</p>
+                    <div class="accept-row accept-row-2">
+                        <div style="grid-column:1/-1">
+                            <label>دستور پیشنهادی Cron</label>
+                            <input type="text" readonly dir="ltr" style="text-align:left;font-family:monospace;font-size:11px;"
+                                   value="curl -fsS '{{ $backupCronUrl }}'">
+                        </div>
+                        <div>
+                            <label>آخرین اجرا</label>
+                            <div>{{ $backup['last_run_at'] ? jalali_like($backup['last_run_at']) : '—' }}</div>
+                        </div>
+                        <div>
+                            <label>آخرین نتیجه</label>
+                            <div>{{ $backup['last_message'] ?: '—' }}</div>
+                        </div>
+                    </div>
+                    <p class="hint" style="margin-top:6px;">اجرای اجباری تست: <code dir="ltr">{{ $backupCronUrl }}&amp;force=1</code></p>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" type="submit">ذخیره تنظیمات بکاپ</button>
+                    <a class="btn btn-secondary" href="{{ route('system-tools.index') }}">رفتن به ابزار بکاپ / ریستور</a>
+                </div>
+            </form>
         </div>
 
         <div class="ws-pane" data-ws-pane="users">

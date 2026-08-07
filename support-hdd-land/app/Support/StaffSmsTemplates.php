@@ -71,8 +71,8 @@ class StaffSmsTemplates
     public static function renderIntern(Intern $intern): string
     {
         $shop = trim((string) AppSetting::getValue('invoice_shop_name', 'سرزمین هارد')) ?: 'سرزمین هارد';
-        $start = $intern->start_date?->format('Y/m/d') ?: '—';
-        $end = $intern->end_date?->format('Y/m/d') ?: '—';
+        $start = $intern->start_date ? jalali_date($intern->start_date) : '—';
+        $end = $intern->end_date ? jalali_date($intern->end_date) : '—';
 
         return strtr(self::internTemplate(), [
             '{name}' => trim((string) $intern->name) ?: 'کارآموز',

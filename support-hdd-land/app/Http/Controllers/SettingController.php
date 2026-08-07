@@ -8,6 +8,7 @@ use App\Models\LookupOption;
 use App\Models\ReferralSource;
 use App\Models\User;
 use App\Services\NiazpardazSmsService;
+use App\Support\BackupSettings;
 use App\Support\PaymentGateways;
 use App\Support\Permissions;
 use Illuminate\Http\Request;
@@ -67,6 +68,12 @@ class SettingController extends Controller
             'zarinpal' => PaymentGateways::zarinpal(),
             'portalUrl' => url('/cartable'),
             'permissions' => Permissions::ALL,
+            'backup' => BackupSettings::all(),
+            'backupScopes' => BackupSettings::SCOPES,
+            'backupIntervals' => BackupSettings::INTERVALS,
+            'backupWeekdays' => BackupSettings::WEEKDAYS,
+            'backupProtocols' => BackupSettings::PROTOCOLS,
+            'backupCronUrl' => url('/cron/backup?token='.BackupSettings::all()['cron_token']),
         ]);
     }
 
@@ -339,5 +346,42 @@ class SettingController extends Controller
         AppSetting::setValue('zarinpal_currency', (string) ($data['zarinpal_currency'] ?? 'IRT'));
 
         return back()->with('success', 'تنظیمات پرداخت ذخیره شد.');
+    }
+
+    public function updateBackup(Request $request)
+    {
+        $data = $request->validate([
+            'enabled' => ['nullable'],
+            'scope' => ['nullable', 'in:full,accounting'],
+            'interval' => ['nullable', 'in:daily,weekly,monthly'],
+            'weekday' => ['nullable', 'integer', 'min:0', 'max:6'],
+            'hour' => ['nullable', 'integer', 'min:0', 'max:23'],
+            'keep_local' => ['nullable', 'integer', 'min:1', 'max:60'],
+            'remote_enabled' => ['nullable'],
+            'remote_protocol' => ['nullable', 'in:ftp,ftps'],
+            'remote_host' => ['nullable', 'string', 'max:200'],
+            'remote_port' => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'remote_user' => ['nullable', 'string', 'max:120'],
+            'remote_password' => ['nullable', 'string', 'max:200'],
+            'remote_path' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        BackupSettings::save([
+            'enabled' => $request->boolean('enabled'),
+            'scope' => $data['scope'] ?? 'accounting',
+            'interval' => $data['interval'] ?? 'weekly',
+            'weekday' => $data['weekday'] ?? 5,
+            'hour' => $data['hour'] ?? 3,
+            'keep_local' => $data['keep_local'] ?? 8,
+            'remote_enabled' => $request->boolean('remote_enabled'),
+            'remote_protocol' => $data['remote_protocol'] ?? 'ftp',
+            'remote_host' => $data['remote_host'] ?? '',
+            'remote_port' => $data['remote_port'] ?? 21,
+            'remote_user' => $data['remote_user'] ?? '',
+            'remote_password' => $data['remote_password'] ?? null,
+            'remote_path' => $data['remote_path'] ?? '/backups',
+        ]);
+
+        return back()->with('success', 'تنظیمات بکاپ خودکار ذخیره شد.');
     }
 }

@@ -45,14 +45,25 @@
         <p>همین تاریخ‌ها در پیامک تأیید برای کارآموز ارسال می‌شود.</p>
     </div>
     <div class="accept-row accept-row-2">
+        @php
+            $startOld = old('start_date', isset($intern) && $intern->start_date ? jalali_input($intern->start_date) : jalali_input(now('Asia/Tehran')));
+            $endOld = old('end_date', isset($intern) && $intern->end_date ? jalali_input($intern->end_date) : jalali_input(now('Asia/Tehran')->addMonth()));
+            if (is_string($startOld) && preg_match('/^20\d{2}-/', $startOld)) {
+                $startOld = jalali_input($startOld);
+            }
+            if (is_string($endOld) && preg_match('/^20\d{2}-/', $endOld)) {
+                $endOld = jalali_input($endOld);
+            }
+        @endphp
         <div>
-            <label>از تاریخ</label>
-            <input type="date" name="start_date" value="{{ old('start_date', optional($intern->start_date ?? null)->format('Y-m-d') ?: now('Asia/Tehran')->toDateString()) }}" required>
+            <label>از تاریخ (شمسی)</label>
+            <input type="text" name="start_date" value="{{ $startOld }}" required placeholder="1404/05/16" dir="ltr" style="text-align:left;" inputmode="numeric" autocomplete="off">
+            <p class="hint" style="margin:2px 0 0;">مثال: ۱۴۰۴/۰۵/۱۶ — در پیامک هم شمسی ارسال می‌شود</p>
             @error('start_date')<div class="alert alert-error" style="margin-top:4px;padding:4px 6px;">{{ $message }}</div>@enderror
         </div>
         <div>
-            <label>تا تاریخ</label>
-            <input type="date" name="end_date" value="{{ old('end_date', optional($intern->end_date ?? null)->format('Y-m-d') ?: now('Asia/Tehran')->addMonth()->toDateString()) }}" required>
+            <label>تا تاریخ (شمسی)</label>
+            <input type="text" name="end_date" value="{{ $endOld }}" required placeholder="1404/06/16" dir="ltr" style="text-align:left;" inputmode="numeric" autocomplete="off">
             @error('end_date')<div class="alert alert-error" style="margin-top:4px;padding:4px 6px;">{{ $message }}</div>@enderror
         </div>
     </div>

@@ -34,7 +34,7 @@
         <section class="emp-section">
             <div class="emp-section-head">
                 <h3>پیامک کارآموز جدید</h3>
-                <p>جایگاه‌ها: {name} {shop} {phone} {start_date} {end_date} {notes}</p>
+                <p>جایگاه‌ها: {name} {shop} {phone} {start_date} {end_date} {notes} — تاریخ‌ها شمسی ارسال می‌شوند</p>
             </div>
             <textarea name="intern_template" rows="8" required style="font-family:ui-monospace,Menlo,Consolas,monospace;direction:rtl;">{{ old('intern_template', $internTemplate) }}</textarea>
             @error('intern_template')<div class="alert alert-error">{{ $message }}</div>@enderror

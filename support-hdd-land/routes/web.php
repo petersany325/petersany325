@@ -14,6 +14,7 @@ use App\Http\Controllers\ReceptionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SmsStatusController;
+use App\Http\Controllers\BackupCronController;
 use App\Http\Controllers\SystemToolsController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
@@ -61,6 +62,10 @@ Route::post('/a/{token}/reject', [\App\Http\Controllers\CostApprovalController::
 
 Route::get('/payments/zarinpal/callback/{trx}', [ZarinPalController::class, 'callback'])
     ->name('payments.zarinpal.callback');
+
+Route::get('/cron/backup', BackupCronController::class)
+    ->middleware('throttle:30,1')
+    ->name('cron.backup');
 
 Route::prefix('cartable')->name('portal.')->group(function () {
     Route::get('/', [PortalAuthController::class, 'showLogin'])->name('login');
@@ -263,6 +268,7 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/sms/test', [SettingController::class, 'testSms'])->name('settings.sms.test');
         Route::post('settings/invoice', [SettingController::class, 'updateInvoice'])->name('settings.invoice');
         Route::post('settings/payments', [SettingController::class, 'updatePayments'])->name('settings.payments');
+        Route::post('settings/backup', [SettingController::class, 'updateBackup'])->name('settings.backup');
         Route::post('settings/lookups', [SettingController::class, 'storeLookup'])->name('settings.lookups');
         Route::put('settings/lookups/{lookup}', [SettingController::class, 'updateLookup'])->name('settings.lookups.update');
         Route::delete('settings/lookups/{lookup}', [SettingController::class, 'destroyLookup'])->name('settings.lookups.destroy');
@@ -271,5 +277,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware(EnsurePermission::class.':system.tools')->group(function () {
         Route::get('system-tools', [SystemToolsController::class, 'index'])->name('system-tools.index');
         Route::post('system-tools/run', [SystemToolsController::class, 'run'])->name('system-tools.run');
+        Route::get('system-tools/backups/{file}', [SystemToolsController::class, 'downloadBackup'])
+            ->where('file', '[A-Za-z0-9._-]+')
+            ->name('system-tools.backups.download');
     });
 });
