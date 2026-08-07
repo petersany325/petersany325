@@ -1,11 +1,11 @@
 /* Law firm PWA service worker */
-const CACHE = 'aryan-pwa-v4';
+const CACHE = 'aryan-pwa-v5';
 const PRECACHE = [
   '/app',
   '/assets/css/style.css?v=11',
-  '/assets/css/app.css?v=4',
+  '/assets/css/app.css?v=5',
   '/assets/js/main.js?v=11',
-  '/assets/js/app.js?v=4',
+  '/assets/js/app.js?v=5',
   '/assets/icons/icon-192.png',
   '/assets/icons/icon-512.png',
 ];

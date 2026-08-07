@@ -168,7 +168,7 @@ body.is-webapp {
   color: #ffe6bc !important;
 }
 
-.app-hero .hero-brand span {
+.app-hero .hero-brand span:not(.hero-brand-main) {
   display: inline !important;
   font-size: inherit !important;
   letter-spacing: 0.04em !important;
@@ -176,8 +176,13 @@ body.is-webapp {
   color: #ffe6bc !important;
 }
 
+.app-hero .hero-brand .hero-brand-main,
 .app-hero .hero-brand-main {
   display: none !important;
+  font-size: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
 }
 
 .app-hero .hero-lead {
