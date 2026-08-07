@@ -1,17 +1,16 @@
 @extends('layouts.app')
 
 @section('content')
-  <section class="hero app-hero {{ ($siteSettings['app_banner_show_lead'] ?? '1') === '1' ? '' : 'is-hide-lead' }}">
+  <section class="hero app-hero">
     <div class="hero-media" aria-hidden="true">
       <img src="{{ asset('assets/img/hero.jpg') }}" alt="" width="1920" height="1080" />
       <div class="hero-overlay"></div>
     </div>
     <div class="hero-content">
       <h1 class="hero-brand">
-        <span>{{ $settings['site_tagline'] }}</span>
-        {{ $settings['site_name'] }}
+        <span>{{ $settings['site_tagline'] ?: 'وکالت · مشاوره · دفاع' }}</span>
+        <span class="hero-brand-main">{{ $settings['site_name'] }}</span>
       </h1>
-      <p class="hero-lead">{{ $settings['hero_lead'] }}</p>
       <div class="hero-actions">
         <a class="btn btn-primary" href="#appointment">{{ $siteSettings['cta_text'] ?? 'درخواست نوبت' }}</a>
         <a class="btn btn-ghost" href="#services">خدمات</a>
