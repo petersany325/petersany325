@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Portal;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\CostApproval;
 use App\Models\Reception;
+use App\Models\SmsLog;
 use App\Support\PaymentGateways;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +25,7 @@ class CartableController extends Controller
             ['route' => 'portal.tickets', 'params' => ['status' => 'ready'], 'label' => 'آماده تحویل', 'hint' => 'هزینه و لینک پرداخت', 'icon' => '✓', 'tone' => 'green'],
             ['route' => 'portal.tickets', 'params' => ['status' => 'waiting_part'], 'label' => 'منتظر قطعه', 'hint' => $stats['waiting_part'].' مورد', 'icon' => '◈', 'tone' => 'rose'],
             ['route' => 'portal.report', 'params' => [], 'label' => 'گزارش وضعیت', 'hint' => 'خلاصه تعمیرات', 'icon' => '▦', 'tone' => 'violet'],
+            ['route' => 'portal.approvals', 'params' => [], 'label' => 'تأیید هزینه‌ها', 'hint' => 'لینک جراحی / بازیابی', 'icon' => '✔', 'tone' => 'amber'],
             ['route' => 'portal.tickets', 'params' => ['status' => 'delivered'], 'label' => 'تحویل‌شده‌ها', 'hint' => $stats['delivered'].' قبض', 'icon' => '↩', 'tone' => 'slate'],
             ['route' => 'portal.pay', 'params' => [], 'label' => 'پرداخت آنلاین', 'hint' => 'درگاه‌های بانکی', 'icon' => '₿', 'tone' => 'gold'],
         ];
@@ -133,6 +136,53 @@ class CartableController extends Controller
             ->get();
 
         return view('portal.report', compact('customer', 'stats', 'byStatus', 'open'));
+    }
+
+    public function approvals(Request $request)
+    {
+        $customer = $this->customer($request);
+        $status = (string) $request->query('status', '');
+
+        $query = CostApproval::query()
+            ->with(['reception'])
+            ->where('customer_id', $customer->id)
+            ->latest('id');
+
+        if ($status === 'pending') {
+            $query->whereIn('status', ['sent', 'viewed']);
+        } elseif ($status === 'approved') {
+            $query->where('status', 'approved');
+        } elseif ($status === 'rejected') {
+            $query->where('status', 'rejected');
+        } else {
+            $status = '';
+        }
+
+        $approvals = $query->paginate(15)->withQueryString();
+
+        return view('portal.approvals', compact('customer', 'approvals', 'status'));
+    }
+
+    public function approvalShow(Request $request, CostApproval $approval)
+    {
+        $customer = $this->customer($request);
+        abort_unless((int) $approval->customer_id === (int) $customer->id, 404);
+
+        $approval->load(['reception']);
+        $smsLogs = SmsLog::query()
+            ->where(function ($q) use ($approval, $customer) {
+                $q->where('cost_approval_id', $approval->id)
+                    ->orWhere(function ($inner) use ($approval, $customer) {
+                        $inner->where('reception_id', $approval->reception_id)
+                            ->where('customer_id', $customer->id)
+                            ->where('status_key', 'cost_approval');
+                    });
+            })
+            ->latest('id')
+            ->limit(20)
+            ->get();
+
+        return view('portal.approvals-show', compact('customer', 'approval', 'smsLogs'));
     }
 
     public function pay(Request $request)

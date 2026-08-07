@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/portal.css') }}?v=p3">
+    <link rel="stylesheet" href="{{ asset('css/portal.css') }}?v=p4">
 </head>
 <body class="@yield('body_class', 'portal-body')">
 @yield('content')
@@ -31,6 +31,9 @@
     </a>
     <a href="{{ route('portal.tickets', ['status' => 'ready']) }}" class="{{ request()->query('status') === 'ready' ? 'is-on' : '' }}">
         <span>✓</span><small>آماده</small>
+    </a>
+    <a href="{{ route('portal.approvals') }}" class="{{ request()->routeIs('portal.approvals*') ? 'is-on' : '' }}">
+        <span>✔</span><small>تأیید</small>
     </a>
     <a href="{{ route('portal.messages') }}" class="{{ request()->routeIs('portal.messages') ? 'is-on' : '' }}">
         <span>✉</span><small>پیام</small>

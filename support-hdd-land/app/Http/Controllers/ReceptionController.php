@@ -324,12 +324,14 @@ class ReceptionController extends Controller
         $data = $request->validate([
             'description' => ['nullable', 'string', 'max:1000'],
             'send_sms' => ['nullable', 'boolean'],
+            'force' => ['nullable', 'boolean'],
         ]);
 
         $result = $approvals->requestAndSend(
             $reception->fresh(['customer', 'parts', 'faultType', 'technician']),
             $data['description'] ?? null,
-            $request->boolean('send_sms', true)
+            $request->boolean('send_sms', true),
+            $request->boolean('force') || \App\Support\CostApprovalSettings::receptionRequiresApproval($reception)
         );
 
         if (! ($result['ok'] ?? false)) {

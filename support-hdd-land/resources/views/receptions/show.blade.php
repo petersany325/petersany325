@@ -261,10 +261,26 @@
             <div class="cost-approval-box" style="margin-top:12px;border-top:1px solid #d7dde6;padding-top:10px;">
                 <h4 style="margin:0 0 8px;font-size:12.5px;">تأیید هزینه توسط مشتری</h4>
                 @php
+                    $requiresApproval = \App\Support\CostApprovalSettings::receptionRequiresApproval($reception);
                     $latestApproval = ($costApprovals ?? collect())->first();
                     $apStatus = $reception->cost_approval_status;
                     $apLabels = \App\Models\CostApproval::statusLabels();
                 @endphp
+                @if($requiresApproval)
+                    <div class="alert" style="background:#fff6e5;border-color:#efd7a4;color:#8a5a12;margin-bottom:8px;">
+                        این قبض خدمت مشمول تأیید است
+                        ({{ $reception->service_type ?: $reception->repair_type ?: '—' }}).
+                        قبل از ادامه کار پرهزینه لینک تأیید بفرستید.
+                        <a href="{{ route('cost-approvals.index') }}">کارتابل تأیید هزینه</a>
+                    </div>
+                @else
+                    <div class="muted" style="font-size:11.5px;margin-bottom:8px;">
+                        این خدمت در فهرست مشمول تأیید نیست.
+                        برای جراحی/بازیابی از منوی
+                        <a href="{{ route('cost-approvals.settings') }}">خدمات مشمول</a>
+                        فعال کنید، یا در صورت نیاز با اجبار ارسال کنید.
+                    </div>
+                @endif
                 <div class="muted" style="font-size:11.5px;margin-bottom:8px;line-height:1.7;">
                     وضعیت فعلی:
                     <strong>{{ $apLabels[$apStatus] ?? ($apStatus ?: 'ارسال نشده') }}</strong>
@@ -288,8 +304,22 @@
                             'off' => 'نرود',
                         ])
                     </div>
+                    @unless($requiresApproval)
+                    <div>
+                        @include('partials.toggle', [
+                            'name' => 'force',
+                            'label' => 'ارسال اجباری (خارج از فهرست خدمات)',
+                            'checked' => false,
+                            'on' => 'اجبار',
+                            'off' => 'خیر',
+                        ])
+                    </div>
+                    @else
+                        <input type="hidden" name="force" value="1">
+                    @endunless
                     <div class="actions" style="align-items:end;">
                         <button class="btn btn-primary" type="submit">ارسال لینک تأیید هزینه</button>
+                        <a class="btn btn-ghost" href="{{ route('cost-approvals.index') }}">منوی تأیید هزینه</a>
                     </div>
                 </form>
                 @if(($costApprovals ?? collect())->count())

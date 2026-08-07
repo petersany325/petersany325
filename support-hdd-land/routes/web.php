@@ -68,6 +68,8 @@ Route::prefix('cartable')->name('portal.')->group(function () {
         Route::get('/search', [PortalCartableController::class, 'search'])->name('search');
         Route::get('/tickets/{reception}', [PortalCartableController::class, 'show'])->name('show');
         Route::get('/report', [PortalCartableController::class, 'report'])->name('report');
+        Route::get('/approvals', [PortalCartableController::class, 'approvals'])->name('approvals');
+        Route::get('/approvals/{approval}', [PortalCartableController::class, 'approvalShow'])->name('approvals.show');
         Route::get('/pay', [PortalCartableController::class, 'pay'])->name('pay');
         Route::post('/pay/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('zarinpal.start');
         Route::get('/messages', [PortalMessageController::class, 'index'])->name('messages');
@@ -114,6 +116,10 @@ Route::middleware('auth')->group(function () {
         Route::get('receptions/{reception}/print', [ReceptionController::class, 'print'])->name('receptions.print');
         Route::post('receptions/{reception}/handoffs', [HandoffController::class, 'store'])->name('receptions.handoffs.store');
         Route::post('receptions/{reception}/cost-approval', [ReceptionController::class, 'requestCostApproval'])->name('receptions.cost-approval');
+        Route::get('cost-approvals', [\App\Http\Controllers\CostApprovalsManageController::class, 'index'])->name('cost-approvals.index');
+        Route::get('cost-approvals/settings', [\App\Http\Controllers\CostApprovalsManageController::class, 'settings'])->name('cost-approvals.settings');
+        Route::post('cost-approvals/settings', [\App\Http\Controllers\CostApprovalsManageController::class, 'saveSettings'])->name('cost-approvals.settings.save');
+        Route::post('cost-approvals/{reception}/send', [\App\Http\Controllers\CostApprovalsManageController::class, 'send'])->name('cost-approvals.send');
     });
 
     Route::middleware(EnsurePermission::class.':handoffs')->group(function () {

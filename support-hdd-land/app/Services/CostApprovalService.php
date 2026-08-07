@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
+use App\Support\CostApprovalSettings;
+
 class CostApprovalService
 {
     public const LINK_TTL_HOURS = 48;
@@ -25,12 +27,19 @@ class CostApprovalService
 
     public function defaultTerms(): string
     {
-        return AppSetting::getValue(
-            'cost_approval_terms',
-            "با تأیید این مبلغ، اجازه می‌دهم تعمیرگاه سرزمین هارد طبق شرح کار اعلام‌شده اقدام کند.\n"
+        $custom = AppSetting::getValue('cost_approval_terms');
+        if (is_string($custom) && trim($custom) !== '') {
+            return $custom;
+        }
+
+        return "با تأیید این مبلغ، اجازه می‌دهم تعمیرگاه سرزمین هارد طبق شرح کار اعلام‌شده اقدام کند.\n"
             ."تأیید هزینه به‌معنی ضمانت موفقیت بازیابی/تعمیر نیست.\n"
-            ."اگر مبلغ نهایی از این رقم بیشتر شود، تأیید جداگانه لازم است."
-        );
+            ."اگر مبلغ نهایی از این رقم بیشتر شود، تأیید جداگانه لازم است.";
+    }
+
+    public function receptionRequiresApproval(Reception $reception): bool
+    {
+        return CostApprovalSettings::receptionRequiresApproval($reception);
     }
 
     /**
@@ -38,10 +47,16 @@ class CostApprovalService
      *
      * @return array{ok:bool,message:string,approval?:CostApproval,url?:string,log?:SmsLog}
      */
-    public function requestAndSend(Reception $reception, ?string $description = null, bool $sendSms = true): array
+    public function requestAndSend(Reception $reception, ?string $description = null, bool $sendSms = true, bool $force = false): array
     {
         $reception->loadMissing(['customer', 'faultType', 'technician', 'parts']);
 
+        if (! $force && ! $this->receptionRequiresApproval($reception)) {
+            return [
+                'ok' => false,
+                'message' => 'این خدمت در فهرست مشمول تأیید هزینه نیست. از منوی «تأیید هزینه → خدمات مشمول» تنظیم کنید یا با اجبار ارسال کنید.',
+            ];
+        }
         if (! $reception->hasCostSet() && (int) $reception->estimated_cost <= 0) {
             return ['ok' => false, 'message' => 'ابتدا مبلغ/برآورد هزینه را روی قبض ثبت کنید.'];
         }

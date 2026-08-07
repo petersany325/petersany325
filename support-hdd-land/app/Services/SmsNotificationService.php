@@ -188,9 +188,28 @@ class SmsNotificationService
             return ['ok' => false, 'skipped' => true, 'message' => 'مبلغ هنوز مشخص نیست.'];
         }
 
-        // New flow: create one-time approval link + SMS (includes amount + URL)
+        // Only auto-create approval links for configured services (surgery/recovery/…)
+        $requires = app(CostApprovalService::class)->receptionRequiresApproval($reception);
+        if (! $requires && ! $force) {
+            // Legacy plain price SMS without approval link
+            $rule = SmsStatusRule::findOnPrice();
+            if (! $rule) {
+                return null;
+            }
+            if (! $rule->auto_send && ! $rule->on_price) {
+                return null;
+            }
+
+            return $this->sendForReception($reception, $rule, force: true);
+        }
+
         try {
-            $result = app(CostApprovalService::class)->requestAndSend($reception, null, true);
+            $result = app(CostApprovalService::class)->requestAndSend(
+                $reception,
+                null,
+                true,
+                force: $force || $requires
+            );
             if ($result['ok'] ?? false) {
                 return [
                     'ok' => true,

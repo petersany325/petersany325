@@ -63,6 +63,19 @@ class NavMenu
                 'children' => [],
             ],
             [
+                'key' => 'cost_approvals',
+                'label' => 'تأیید هزینه',
+                'permission' => 'receptions',
+                'route' => null,
+                'match' => 'cost-approvals.*',
+                'mark' => 'ت',
+                'hint' => 'جراحی، بازیابی، لینک تأیید',
+                'children' => [
+                    ['label' => 'کارتابل تأییدها', 'route' => 'cost-approvals.index', 'match' => 'cost-approvals.index', 'hint' => 'در انتظار و تاریخچه', 'mark' => 'ک'],
+                    ['label' => 'خدمات مشمول', 'route' => 'cost-approvals.settings', 'match' => 'cost-approvals.settings', 'hint' => 'جراحی / بازیابی و…', 'mark' => 'خ'],
+                ],
+            ],
+            [
                 'key' => 'customers',
                 'label' => 'مشتریان',
                 'permission' => 'customers',
@@ -248,6 +261,7 @@ class NavMenu
             'reception' => 'blue',
             'handoffs' => 'green',
             'notifications' => 'violet',
+            'cost_approvals' => 'amber',
             'customers' => 'teal',
             'parts' => 'amber',
             'technicians' => 'green',
