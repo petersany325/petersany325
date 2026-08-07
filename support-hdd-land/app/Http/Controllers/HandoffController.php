@@ -107,10 +107,14 @@ class HandoffController extends Controller
             return back()->with('success', 'ارجاع به تعمیرکار ثبت شد. منتظر تأیید دریافت بمانید.');
         }
 
-        // to_front_desk — technician returns device
+        // to_front_desk — technician returns device (or desk records physical return)
         $tech = $user->technician;
-        abort_unless($tech, 403);
-        abort_unless((int) $reception->custody_technician_id === (int) $tech->id, 403);
+        $isOwningTech = $tech && (int) $reception->custody_technician_id === (int) $tech->id;
+        $isDeskProxy = $user->canAccess('receptions')
+            && ($reception->custody ?? '') === 'with_technician'
+            && $reception->custody_technician_id;
+
+        abort_unless($isOwningTech || $isDeskProxy, 403);
 
         $existing = DeviceHandoff::query()
             ->where('reception_id', $reception->id)
@@ -120,11 +124,39 @@ class HandoffController extends Controller
             return back()->withErrors(['note' => 'ارجاع باز دیگری برای این قبض وجود دارد.']);
         }
 
+        $techId = $isOwningTech ? $tech->id : (int) $reception->custody_technician_id;
+        $techName = $isOwningTech
+            ? $tech->name
+            : (Technician::query()->find($techId)?->name ?? 'تعمیرکار');
+
+        // Desk recording a physical return: accept immediately (receiver = desk)
+        if ($isDeskProxy && ! $isOwningTech) {
+            $handoff = DeviceHandoff::query()->create([
+                'reception_id' => $reception->id,
+                'from_user_id' => $user->id,
+                'to_user_id' => $user->id,
+                'to_technician_id' => $techId,
+                'direction' => DeviceHandoff::DIR_TO_FRONT,
+                'serial_snapshot' => $reception->serial_number,
+                'status' => DeviceHandoff::STATUS_ACCEPTED,
+                'note' => $data['note'] ?? 'ثبت بازگشت فیزیکی توسط پذیرش',
+                'response_note' => 'تأیید دریافت توسط پذیرش',
+                'responded_at' => now(),
+            ]);
+
+            $reception->forceFill([
+                'custody' => 'front_desk',
+                'custody_technician_id' => null,
+            ])->save();
+
+            return back()->with('success', "بازگشت دستگاه از {$techName} در پذیرش ثبت شد.");
+        }
+
         $handoff = DeviceHandoff::query()->create([
             'reception_id' => $reception->id,
             'from_user_id' => $user->id,
             'to_user_id' => null,
-            'to_technician_id' => $tech->id,
+            'to_technician_id' => $techId,
             'direction' => DeviceHandoff::DIR_TO_FRONT,
             'serial_snapshot' => $reception->serial_number,
             'status' => DeviceHandoff::STATUS_PENDING,
@@ -138,7 +170,7 @@ class HandoffController extends Controller
             $desk,
             'handoff_pending',
             'بازگشت دستگاه از تعمیرکار',
-            "قبض {$reception->ticket_no} توسط {$tech->name} برای پذیرش برگشت داده شد. دریافت را تأیید کنید.",
+            "قبض {$reception->ticket_no} توسط {$techName} برای پذیرش برگشت داده شد. دریافت را تأیید کنید.",
             route('handoffs.index'),
             ['handoff_id' => $handoff->id, 'reception_id' => $reception->id]
         );

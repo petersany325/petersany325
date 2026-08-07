@@ -82,6 +82,13 @@
                     <input type="text" name="note" placeholder="یادداشت بازگشت به منشی" style="min-width:220px;">
                     <button class="btn btn-primary" type="submit">ارجاع به پذیرش برای تحویل مشتری</button>
                 </form>
+            @elseif(auth()->user()->canAccess('receptions') && ($reception->custody ?? '') === 'with_technician' && empty($pendingHandoff))
+                <form method="POST" action="{{ route('receptions.handoffs.store', $reception) }}" class="actions" style="margin-top:8px;">
+                    @csrf
+                    <input type="hidden" name="direction" value="to_front_desk">
+                    <input type="text" name="note" placeholder="دستگاه از تعمیرکار برگشت؟" style="min-width:220px;">
+                    <button class="btn btn-primary" type="submit">ثبت بازگشت به پذیرش (تحویل از تعمیرکار)</button>
+                </form>
             @endif
 
             @if($reception->handoffs->count())
