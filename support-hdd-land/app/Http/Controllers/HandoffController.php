@@ -24,8 +24,14 @@ class HandoffController extends Controller
                     $q->orWhere('to_technician_id', $user->technician->id);
                 }
                 if ($user->canAccess('receptions')) {
+                    // بازگشت به پذیرش (بدون گیرنده مشخص)
                     $q->orWhere(function ($q2) {
                         $q2->where('direction', DeviceHandoff::DIR_TO_FRONT)
+                            ->whereNull('to_user_id');
+                    });
+                    // ارجاع به تعمیرکار بدون حساب کاربری لینک‌شده — پذیرش می‌تواند تأیید نیابتی بزند
+                    $q->orWhere(function ($q2) {
+                        $q2->where('direction', DeviceHandoff::DIR_TO_BENCH)
                             ->whereNull('to_user_id');
                     });
                 }
@@ -153,7 +159,8 @@ class HandoffController extends Controller
         $canRespond = false;
         if ($handoff->direction === DeviceHandoff::DIR_TO_BENCH) {
             $canRespond = (int) $handoff->to_user_id === (int) $user->id
-                || ($user->technician && (int) $handoff->to_technician_id === (int) $user->technician->id);
+                || ($user->technician && (int) $handoff->to_technician_id === (int) $user->technician->id)
+                || ($user->canAccess('receptions') && ! $handoff->to_user_id);
         } else {
             $canRespond = $user->canAccess('receptions');
         }

@@ -7,7 +7,7 @@
 @section('content')
 <div class="panel" style="margin-bottom:12px;">
     <h3 style="margin:0 0 8px;">در انتظار تأیید دریافت</h3>
-    <p class="muted" style="margin:0 0 12px;">طبق استاندارد Chain of Custody: هر انتقال دستگاه باید با تأیید گیرنده ثبت شود.</p>
+    <p class="muted" style="margin:0 0 12px;">طبق استاندارد Chain of Custody: هر انتقال دستگاه باید با تأیید گیرنده ثبت شود. اگر تعمیرکار حساب کاربری لینک‌شده نداشته باشد، پذیرش می‌تواند تأیید دریافت را ثبت کند.</p>
     <div class="table-wrap">
         <table class="compact-table">
             <thead>
