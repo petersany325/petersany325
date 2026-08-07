@@ -943,7 +943,9 @@ tbody tr:nth-child(even) { background: #f3f5f8; }
 .lookup-editor .accept-row { gap:6px; }
 .perm-tile.is-priority { box-shadow: inset 0 0 0 1px #0f766e; }
 .handoff-toolbar .handoff-search { margin:0; }
-.intern-portal .daybook-cat { cursor:pointer; }
+.backup-pc-card{min-height:200px}
+.backup-pc-form input[type=file]{width:100%;font-size:12px}
+.backup-pc-panel .alert-success{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 10px;border:1px solid #86efac;background:#f0fdf4;border-radius:2px}
 .lookup-form-edit, .lookup-form-create { display:grid; grid-template-columns:1.4fr .5fr auto auto; gap:6px; align-items:end; }
 @media (max-width:900px){ .lookup-form-edit, .lookup-form-create { grid-template-columns:1fr; } }
 

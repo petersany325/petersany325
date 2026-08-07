@@ -376,8 +376,53 @@
             <h2>بکاپ خودکار دیتابیس</h2>
             <p class="lead">
                 بکاپ بدون mysqldump (سازگار با هاست اشتراکی cPanel). می‌توانید بکاپ حسابداری را هفتگی به هاست FTP بفرستید.
-                عملیات دستی دانلود/ریستور در <a href="{{ route('system-tools.index') }}">ابزارهای سیستم</a> است.
             </p>
+
+            @if(auth()->user()->canAccess('system.tools'))
+            <div class="split-2" style="gap:10px;margin-bottom:12px;">
+                <div class="panel" style="padding:10px;">
+                    <h3 style="margin:0 0 6px;">ذخیره بکاپ روی کامپیوتر</h3>
+                    <p class="muted" style="margin:0 0 8px;">ساخت بکاپ و دانلود فوری فایل روی سیستم شما.</p>
+                    <form method="POST" action="{{ route('system-tools.run') }}">
+                        @csrf
+                        <input type="hidden" name="action" value="backup_save_pc">
+                        <div class="accept-row accept-row-2" style="align-items:end;">
+                            <div>
+                                <label>نوع بکاپ</label>
+                                <select name="scope">
+                                    <option value="accounting" selected>حسابداری و مالی</option>
+                                    <option value="full">کل دیتابیس</option>
+                                </select>
+                            </div>
+                            <div class="actions" style="margin:0;">
+                                <button class="btn btn-primary" type="submit">ساخت و ذخیره روی کامپیوتر</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="panel" style="padding:10px;">
+                    <h3 style="margin:0 0 6px;">ریستور بکاپ از کامپیوتر</h3>
+                    <p class="muted" style="margin:0 0 8px;">فایل `.sql` / `.sql.gz` را از کامپیوتر انتخاب کنید.</p>
+                    <form method="POST" action="{{ route('system-tools.run') }}" enctype="multipart/form-data"
+                          data-confirm="ریستور از فایل کامپیوتر؟ جداول داخل فایل جایگزین می‌شوند.">
+                        @csrf
+                        <input type="hidden" name="action" value="backup_restore_upload">
+                        <div style="margin-bottom:8px;">
+                            <input type="file" name="backup_file" accept=".sql,.gz,application/gzip" required>
+                        </div>
+                        @include('partials.toggle', [
+                            'name' => 'confirm_restore',
+                            'label' => 'تأیید ریستور از این فایل',
+                            'checked' => false,
+                        ])
+                        <div class="actions" style="margin-top:8px;">
+                            <button class="btn btn-danger" type="submit">ریستور از کامپیوتر</button>
+                            <a class="btn btn-ghost" href="{{ route('system-tools.index') }}">ابزار کامل بکاپ</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            @endif
 
             <form method="POST" action="{{ route('settings.backup') }}">
                 @csrf

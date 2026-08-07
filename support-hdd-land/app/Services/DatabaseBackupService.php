@@ -220,14 +220,21 @@ class DatabaseBackupService
     /** @return array{ok:bool,message:string,details?:list<string>} */
     public function restoreUpload(UploadedFile $file, bool $confirm): array
     {
+        $original = strtolower($file->getClientOriginalName());
         $ext = strtolower($file->getClientOriginalExtension());
-        if (! in_array($ext, ['sql', 'gz'], true) && ! str_ends_with(strtolower($file->getClientOriginalName()), '.sql.gz')) {
-            return ['ok' => false, 'message' => 'فقط فایل .sql یا .sql.gz پذیرفته می‌شود.'];
+        $isGz = str_ends_with($original, '.sql.gz') || $ext === 'gz';
+        $isSql = $ext === 'sql' || str_ends_with($original, '.sql');
+        if (! $isGz && ! $isSql) {
+            return ['ok' => false, 'message' => 'فقط فایل .sql یا .sql.gz از کامپیوتر پذیرفته می‌شود.'];
+        }
+        if (! $confirm) {
+            return ['ok' => false, 'message' => 'برای ریستور از کامپیوتر، گزینه تأیید را روشن کنید.'];
         }
 
-        $tmp = $this->directory().'/upload_'.Str::random(8).'_'.$file->getClientOriginalName();
+        $safeName = 'upload_'.Str::random(12).($isGz ? '.sql.gz' : '.sql');
+        $tmp = $this->directory().'/'.$safeName;
         $file->move(dirname($tmp), basename($tmp));
-        $result = $this->restoreFromPath($tmp, $confirm);
+        $result = $this->restoreFromPath($tmp, true);
         @unlink($tmp);
 
         return $result;
