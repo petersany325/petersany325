@@ -672,10 +672,54 @@ class WebInstaller
                 $details[] = 'config:clear soft-fail: '.$e->getMessage();
             }
 
-            $code = $kernel->call('migrate', ['--force' => true]);
-            $details[] = trim($kernel->output()) ?: ('migrate exit '.$code);
-            if ($code !== 0) {
-                return ['ok' => false, 'message' => 'مایگریشن ناموفق بود.', 'details' => $details];
+            $wipe = ! empty($admin['wipe_database']);
+            $hasSchema = false;
+            try {
+                $hasSchema = \Illuminate\Support\Facades\Schema::hasTable('users')
+                    || \Illuminate\Support\Facades\Schema::hasTable('migrations');
+            } catch (Throwable $e) {
+                $details[] = 'schema probe: '.$e->getMessage();
+            }
+
+            // Re-install / half-failed install: tables already exist → migrate:fresh
+            try {
+                if ($wipe || $hasSchema) {
+                    $details[] = $hasSchema
+                        ? 'existing tables detected — running migrate:fresh'
+                        : 'wipe_database requested — running migrate:fresh';
+                    $code = $kernel->call('migrate:fresh', ['--force' => true]);
+                } else {
+                    $code = $kernel->call('migrate', ['--force' => true]);
+                }
+                $details[] = trim($kernel->output()) ?: ('migrate exit '.$code);
+            } catch (Throwable $e) {
+                $msg = $e->getMessage();
+                $details[] = 'migrate exception: '.$msg;
+                if (str_contains($msg, 'already exists') || str_contains($msg, '42S01') || str_contains($msg, '1050')) {
+                    $details[] = 'existing tables — retry migrate:fresh';
+                    $code = $kernel->call('migrate:fresh', ['--force' => true]);
+                    $details[] = trim($kernel->output()) ?: ('migrate:fresh exit '.$code);
+                } else {
+                    throw $e;
+                }
+            }
+
+            // Fallback if plain migrate returned non-zero with "already exists"
+            if (($code ?? 1) !== 0 && ! $wipe && ! $hasSchema) {
+                $out = trim($kernel->output());
+                if (str_contains($out, 'already exists') || str_contains($out, '42S01') || str_contains($out, '1050')) {
+                    $details[] = 'migrate failed with existing tables — retry migrate:fresh';
+                    $code = $kernel->call('migrate:fresh', ['--force' => true]);
+                    $details[] = trim($kernel->output()) ?: ('migrate:fresh exit '.$code);
+                }
+            }
+
+            if (($code ?? 1) !== 0) {
+                return [
+                    'ok' => false,
+                    'message' => 'مایگریشن ناموفق بود. اگر دیتابیس از نصب قبلی پر است، گزینه «پاک کردن جداول قبلی» را بزنید.',
+                    'details' => $details,
+                ];
             }
 
             // Fresh seed: admin + company brand only (menus/lookups left empty)
