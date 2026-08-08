@@ -250,8 +250,9 @@
         return isLatinDeviceField && el.matches && el.matches('[data-barcode], [data-ascii-en]');
     }
 
-    function convertAsciiField(el) {
+    function convertAsciiField(el, opts) {
         if (!el || typeof el.value !== 'string') return;
+        opts = opts || {};
         // Serial/model (manual + barcode): Windows Persian layout → English QWERTY, then digits.
         // Other data-ascii-en fields (phone, Persian search text): digits only.
         var converted = isSerialOrModelField(el)
@@ -260,30 +261,63 @@
         if (isSerialOrModelField(el)) {
             converted = converted.toUpperCase();
         }
-        if (converted !== el.value) {
-            var start = el.selectionStart;
-            var end = el.selectionEnd;
-            el.value = converted;
-            if (typeof start === 'number' && typeof end === 'number') {
-                try {
-                    var pos = Math.min(converted.length, start);
-                    el.setSelectionRange(pos, pos);
-                } catch (err) {}
-            }
+        if (converted === el.value) return;
+
+        el.value = converted;
+        // Barcode wedges append at end — keep caret at end to avoid dropped chars.
+        if (opts.caret === 'end') {
+            try { el.setSelectionRange(converted.length, converted.length); } catch (err) {}
+            return;
+        }
+        if (typeof el.selectionStart === 'number') {
+            try {
+                var pos = Math.min(converted.length, el.selectionStart);
+                el.setSelectionRange(pos, pos);
+            } catch (err2) {}
         }
     }
 
     function convertAsciiFieldsIn(scope) {
-        (scope || document).querySelectorAll('[data-ascii-en], [data-barcode]').forEach(convertAsciiField);
+        (scope || document).querySelectorAll('[data-ascii-en], [data-barcode]').forEach(function (el) {
+            convertAsciiField(el, { caret: 'end' });
+        });
+    }
+
+    function focusNextAfterBarcode(el) {
+        var root = el.closest('form') || document;
+        var focusables = Array.prototype.slice.call(
+            root.querySelectorAll('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])')
+        ).filter(function (node) {
+            if (node === el) return true;
+            if (node.tabIndex < 0) return false;
+            if (node.offsetParent === null && node.type !== 'file') return false;
+            return true;
+        });
+        var idx = focusables.indexOf(el);
+        if (idx >= 0 && idx < focusables.length - 1) {
+            focusables[idx + 1].focus();
+            if (typeof focusables[idx + 1].select === 'function') {
+                try { focusables[idx + 1].select(); } catch (err) {}
+            }
+        }
     }
 
     function initAsciiFields() {
+        // Live typing: digits only. Full FA→EN remap on blur/Enter/submit so
+        // fast barcode wedges are not corrupted by mid-keystroke value rewrites.
         document.addEventListener('input', function (e) {
             var el = e.target;
             if (!el || !el.matches) return;
-            if (el.matches('[data-ascii-en]') || el.matches('[data-barcode]')) {
-                convertAsciiField(el);
+            if (!(el.matches('[data-ascii-en]') || el.matches('[data-barcode]'))) return;
+            if (isSerialOrModelField(el)) {
+                var digitsOnly = convertDigits(el.value);
+                if (digitsOnly !== el.value) {
+                    el.value = digitsOnly;
+                    try { el.setSelectionRange(digitsOnly.length, digitsOnly.length); } catch (err) {}
+                }
+                return;
             }
+            convertAsciiField(el, { caret: 'end' });
         }, true);
 
         // 'blur' does not bubble, but capturing listeners on ancestors still fire.
@@ -291,8 +325,23 @@
             var el = e.target;
             if (!el || !el.matches) return;
             if (el.matches('[data-ascii-en]') || el.matches('[data-barcode]')) {
-                convertAsciiField(el);
+                convertAsciiField(el, { caret: 'end' });
             }
+        }, true);
+
+        // Scanner suffix Enter must NOT submit the reception form mid-scan.
+        // GET search forms still submit on Enter (normal search UX).
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter') return;
+            var el = e.target;
+            if (!el || !el.matches || !el.matches('input[data-barcode], textarea[data-barcode]')) return;
+            if (el.getAttribute('data-barcode-submit') === '1') return;
+            var form = el.form || el.closest('form');
+            if (form && String(form.getAttribute('method') || 'get').toLowerCase() === 'get') return;
+
+            e.preventDefault();
+            convertAsciiField(el, { caret: 'end' });
+            focusNextAfterBarcode(el);
         }, true);
     }
 
@@ -538,6 +587,19 @@
             if (modeModal) modeModal.classList.add('hidden');
         }
 
+        function setWorkspaceEnabled(root, enabled) {
+            if (!root) return;
+            root.querySelectorAll('input, select, textarea, button').forEach(function (el) {
+                // Keep structural controls clickable when visible; only gate named fields for submit.
+                if (el.tagName === 'BUTTON') {
+                    el.disabled = !enabled;
+                    return;
+                }
+                if (!el.name) return;
+                el.disabled = !enabled;
+            });
+        }
+
         function chooseMode(mode) {
             mode = mode === 'group' ? 'group' : 'single';
             state.modeChosen = true;
@@ -552,10 +614,14 @@
             if (mode === 'group') {
                 if (modeSingle) modeSingle.classList.add('hidden');
                 if (modeGroup) modeGroup.classList.remove('hidden');
+                setWorkspaceEnabled(modeSingle, false);
+                setWorkspaceEnabled(modeGroup, true);
                 ensureMinimumDeviceCards();
             } else {
                 if (modeGroup) modeGroup.classList.add('hidden');
                 if (modeSingle) modeSingle.classList.remove('hidden');
+                setWorkspaceEnabled(modeGroup, false);
+                setWorkspaceEnabled(modeSingle, true);
             }
         }
 

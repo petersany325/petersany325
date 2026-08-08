@@ -39,7 +39,7 @@
     <input type="hidden" name="customer_phone" value="{{ old('customer_phone') }}">
     <input type="hidden" name="intake_mode" id="intake-mode" value="{{ $oldMode }}">
     <input type="hidden" name="action" id="form-action" value="save_close">
-    {{-- default submit target: Enter / barcode must never hit print --}}
+    {{-- Fallback submit target for non-barcode Enter (barcode Enter is handled in app.js and does not submit). --}}
     <button type="submit" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">ثبت</button>
 
     <div id="step-phone" class="phone-step {{ $skipPhone ? 'hidden' : '' }}">
