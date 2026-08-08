@@ -596,25 +596,31 @@ class ReceptionController extends Controller
                 ? (int) $data['discount']
                 : null;
 
-            // اگر مبلغ دریافتی کمتر از ماندهٔ هزینه‌هاست، اختلاف = تخفیف تسویه
-            if ($data['type'] !== 'refund' && $request->boolean('auto_discount', true) && $amount > 0) {
+            // تخفیف خودکار فقط در تسویه نهایی؛ پرداخت جزئی/بیعانه باقیمانده را تخفیف نمی‌زند.
+            if ($data['type'] === 'final' && $request->boolean('auto_discount', true) && $amount > 0) {
                 $dueBeforeDiscount = max(0, $gross - $paidBefore);
                 if ($amount < $dueBeforeDiscount) {
                     $auto = $dueBeforeDiscount - $amount;
+                    $reason = trim((string) ($data['discount_reason'] ?? ''));
                     $reception->discount = $auto;
-                    $reception->discount_reason = $data['discount_reason']
-                        ?: ('تخفیف تسویه — دریافت '.number_format($amount).' از '.number_format($dueBeforeDiscount));
+                    $reception->discount_reason = $reason !== ''
+                        ? $reason
+                        : ('تخفیف تسویه — دریافت '.number_format($amount).' از '.number_format($dueBeforeDiscount));
                     $reception->save();
                     $reception->recalculateTotals();
                 } elseif ($explicitDiscount !== null) {
                     $reception->discount = $explicitDiscount;
-                    $reception->discount_reason = $data['discount_reason'] ?? $reception->discount_reason;
+                    if (array_key_exists('discount_reason', $data)) {
+                        $reception->discount_reason = $data['discount_reason'];
+                    }
                     $reception->save();
                     $reception->recalculateTotals();
                 }
-            } elseif ($explicitDiscount !== null) {
+            } elseif ($explicitDiscount !== null && $data['type'] !== 'refund') {
                 $reception->discount = $explicitDiscount;
-                $reception->discount_reason = $data['discount_reason'] ?? $reception->discount_reason;
+                if (array_key_exists('discount_reason', $data)) {
+                    $reception->discount_reason = $data['discount_reason'];
+                }
                 $reception->save();
                 $reception->recalculateTotals();
             }

@@ -704,9 +704,9 @@
                         <input type="number" name="amount" id="rx-pay-amount" min="1" value="{{ max(0, $gross - (int) $reception->paid_amount) }}" required>
                     </div>
                     <div>
-                        <label>تخفیف خودکار (تومان)</label>
+                        <label>تخفیف تسویه نهایی (تومان)</label>
                         <input type="number" name="discount" id="rx-pay-discount" min="0" value="{{ (int) $reception->discount }}" readonly>
-                        <div class="muted" style="font-size:11px;margin-top:3px;">اگر کمتر از جمع هزینه بگیرید، اختلاف اینجا می‌نشیند.</div>
+                        <div class="muted" style="font-size:11px;margin-top:3px;">فقط وقتی نوع پرداخت «تسویه نهایی» است؛ اگر کمتر بگیرید اختلاف تخفیف می‌شود. پرداخت جزئی باقیمانده را صفر نمی‌کند.</div>
                     </div>
                     <div>
                         <label>دلیل تخفیف</label>
@@ -759,17 +759,20 @@
     var discountEl = document.getElementById('rx-pay-discount');
     var reasonEl = document.getElementById('rx-pay-discount-reason');
     var dueEl = document.querySelector('[data-due-gross]');
+    var typeEl = document.querySelector('#rx-payment-form select[name="type"]');
     if (amountEl && discountEl && dueEl) {
         var due = parseInt(dueEl.getAttribute('data-due-gross') || '0', 10) || 0;
         var syncDiscount = function () {
             var amount = parseInt(amountEl.value || '0', 10) || 0;
-            var diff = Math.max(0, due - amount);
+            var isFinal = !typeEl || typeEl.value === 'final';
+            var diff = isFinal ? Math.max(0, due - amount) : 0;
             discountEl.value = String(diff);
             if (diff > 0 && reasonEl && !reasonEl.value) {
                 reasonEl.placeholder = 'تخفیف تسویه خودکار';
             }
         };
         amountEl.addEventListener('input', syncDiscount);
+        if (typeEl) typeEl.addEventListener('change', syncDiscount);
         syncDiscount();
     }
 
