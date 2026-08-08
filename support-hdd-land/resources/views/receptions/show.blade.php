@@ -15,8 +15,15 @@
                 </div>
                 <div class="report-head-actions">
                     <span class="badge badge-{{ $reception->status }}">{{ $reception->statusLabel() }}</span>
+                    <a class="btn btn-primary" href="{{ route('receptions.edit', $reception) }}">ویرایش قبض</a>
                     <a class="btn btn-secondary" href="{{ route('receptions.history', $reception) }}" target="_blank" rel="noopener">تاریخچه / گزارش</a>
                     <a class="btn btn-secondary" href="{{ route('receptions.print', $reception) }}" target="_blank">چاپ قبض</a>
+                    <form method="POST" action="{{ route('receptions.destroy', $reception) }}" style="display:inline;" data-confirm="این قبض به سطل زباله برود؟ بعداً قابل بازیابی است.">
+                        @csrf
+                        @method('DELETE')
+                        <input type="hidden" name="delete_reason" value="حذف از صفحه قبض">
+                        <button class="btn btn-danger" type="submit">حذف قبض</button>
+                    </form>
                     @if($reception->isDelivered())
                         <form method="POST" action="{{ route('receptions.cancel-delivery', $reception) }}" style="display:inline;" data-confirm="تحویل لغو شود و دستگاه به چرخه تعمیر برگردد؟">
                             @csrf

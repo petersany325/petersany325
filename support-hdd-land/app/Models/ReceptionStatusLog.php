@@ -26,6 +26,9 @@ class ReceptionStatusLog extends Model
         'payment_auto_deliver' => 'تحویل خودکار پس از پرداخت',
         'exit_otp' => 'کد تأیید خروج',
         'cost_stage' => 'مرحله هزینه',
+        'ticket_edit' => 'ویرایش قبض',
+        'trash' => 'انتقال به سطل زباله',
+        'trash_restore' => 'بازیابی از سطل زباله',
         'system' => 'سیستم',
     ];
 

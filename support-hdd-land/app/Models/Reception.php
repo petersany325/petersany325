@@ -5,9 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Reception extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'ticket_no', 'receipt_no', 'batch_code', 'delivery_batch_id', 'account_code', 'admission_type', 'service_type', 'repair_type',
         'customer_id', 'technician_id', 'custody_technician_id', 'fault_type_id', 'created_by',
@@ -24,6 +27,7 @@ class Reception extends Model
         'cost_approval_status', 'customer_cost_approved_at', 'customer_cost_approved_amount',
         'estimated_delivery_at', 'next_visit_at', 'received_at', 'delivered_at',
         'delivery_cancelled_at', 'delivery_cancel_count',
+        'deleted_by', 'delete_reason',
     ];
 
     protected function casts(): array
@@ -41,7 +45,13 @@ class Reception extends Model
             'next_visit_at' => 'date',
             'warranty_end_date' => 'date',
             'warranty_return' => 'boolean',
+            'deleted_at' => 'datetime',
         ];
+    }
+
+    public function deleter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
     }
 
     public const STATUSES = [

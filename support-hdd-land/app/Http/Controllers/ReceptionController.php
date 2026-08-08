@@ -17,8 +17,10 @@ use App\Models\Technician;
 use App\Services\AccountingService;
 use App\Services\CostApprovalService;
 use App\Services\ReceptionCustodyGate;
+use App\Services\ReceptionLifecycleService;
 use App\Services\ReceptionSettlementService;
 use App\Services\SmsNotificationService;
+use App\Services\TrashService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -346,6 +348,153 @@ class ReceptionController extends Controller
             'custodyChecklist' => $gate->checklist($reception),
             'workReports' => $reception->workReports,
         ]));
+    }
+
+    public function edit(Reception $reception)
+    {
+        $reception->load(['customer.referralSource', 'technician', 'faultType']);
+
+        return view('receptions.edit', array_merge($this->editLookups(), [
+            'reception' => $reception,
+            'customer' => $reception->customer,
+            'paymentMethods' => collect(Payment::METHODS)->except('zarinpal')->all(),
+        ]));
+    }
+
+    public function update(Request $request, Reception $reception, SmsNotificationService $smsNotifications, ReceptionLifecycleService $lifecycle)
+    {
+        merge_jalali_dates($request, [
+            'warranty_end_date', 'estimated_delivery_at', 'next_visit_at', 'received_at',
+        ]);
+
+        $data = $request->validate(array_merge($this->customerRules(), $this->deviceRules(), [
+            'photo' => ['nullable', 'image', 'max:4096'],
+            'final_fault' => ['nullable', 'string', 'max:5000'],
+            'technician_notes' => ['nullable', 'string', 'max:5000'],
+            'pickup_name' => ['nullable', 'string', 'max:120'],
+            'pickup_phone' => ['nullable', 'string', 'max:20'],
+            'send_sms' => ['nullable', 'boolean'],
+            'sms_note' => ['nullable', 'string', 'max:300'],
+        ]));
+
+        $customer = $this->resolveCustomer($data);
+
+        if (! empty($data['brand_model'])) {
+            $converted = $this->toAsciiEnglish((string) $data['brand_model']);
+            $data['brand_model'] = $converted !== null ? strtoupper($converted) : null;
+        }
+        foreach (['brand', 'model', 'serial_number'] as $asciiField) {
+            if (! empty($data[$asciiField])) {
+                $converted = $this->toAsciiEnglish((string) $data[$asciiField]);
+                if ($asciiField === 'brand') {
+                    $data[$asciiField] = $converted;
+                } else {
+                    $data[$asciiField] = $converted !== null ? strtoupper($converted) : null;
+                }
+            }
+        }
+
+        $brandModel = trim((string) ($data['brand_model'] ?? trim(($data['brand'] ?? '').' '.($data['model'] ?? ''))));
+        $productName = trim((string) ($data['product_name'] ?? '')) ?: ($brandModel !== '' ? $brandModel : $reception->product_name);
+
+        $receivedAt = $reception->received_at;
+        if (! empty($data['received_at'])) {
+            $time = $data['received_time'] ?? ($reception->received_at?->format('H:i') ?: now()->format('H:i'));
+            $receivedAt = \Illuminate\Support\Carbon::parse($data['received_at'].' '.$time);
+        }
+
+        if ($request->hasFile('photo')) {
+            if ($reception->photo_path) {
+                Storage::disk('public')->delete($reception->photo_path);
+            }
+            $reception->photo_path = $request->file('photo')->store('receptions', 'public');
+        }
+
+        $reception->fill([
+            'customer_id' => $customer->id,
+            'account_code' => $data['account_code'] ?? null,
+            'admission_type' => $data['admission_type'] ?? null,
+            'service_type' => $data['service_type'] ?? null,
+            'repair_type' => $data['repair_type'] ?? null,
+            'technician_id' => $data['technician_id'] ?? null,
+            'fault_type_id' => $data['fault_type_id'] ?? null,
+            'product_name' => $productName,
+            'brand' => $data['brand'] ?? null,
+            'model' => $data['model'] ?? null,
+            'serial_number' => $data['serial_number'] ?? null,
+            'delivered_by' => $data['delivered_by'] ?? $customer->name,
+            'referrer' => $data['referrer'] ?? null,
+            'commission' => (int) ($data['commission'] ?? 0),
+            'accessories' => $data['accessories'] ?? null,
+            'reported_fault' => $data['reported_fault'] ?? null,
+            'appearance_notes' => $data['appearance_notes'] ?? null,
+            'final_fault' => $data['final_fault'] ?? $reception->final_fault,
+            'technician_notes' => $data['technician_notes'] ?? $reception->technician_notes,
+            'hdd_capacity' => $data['hdd_capacity'] ?? null,
+            'warranty_return' => $request->boolean('warranty_return'),
+            'warranty_type' => $data['warranty_type'] ?? null,
+            'card_number' => $data['card_number'] ?? null,
+            'warranty_end_date' => $data['warranty_end_date'] ?? null,
+            'deposit' => (int) ($data['deposit'] ?? $reception->deposit),
+            'pos_amount' => (int) ($data['pos_amount'] ?? $reception->pos_amount),
+            'admission_fee' => (int) ($data['admission_fee'] ?? $reception->admission_fee),
+            'estimated_cost' => (int) ($data['estimated_cost'] ?? $reception->estimated_cost),
+            'estimated_delivery_at' => $data['estimated_delivery_at'] ?? null,
+            'next_visit_at' => $data['next_visit_at'] ?? null,
+            'received_at' => $receivedAt,
+            'payment_method' => $data['payment_method'] ?? $reception->payment_method,
+            'pickup_name' => $data['pickup_name'] ?? $reception->pickup_name,
+            'pickup_phone' => isset($data['pickup_phone'])
+                ? $this->normalizePhone((string) $data['pickup_phone'])
+                : $reception->pickup_phone,
+        ])->save();
+
+        $reception->recalculateTotals();
+        try {
+            app(AccountingService::class)->syncReceptionRevenue($reception->fresh());
+        } catch (\Throwable) {
+        }
+
+        $lifecycle->log(
+            $reception->fresh(),
+            $reception->status,
+            'ticket_edit',
+            $reception->status,
+            'ویرایش مشخصات قبض',
+            null,
+            ['edited_by' => Auth::id()]
+        );
+
+        $flash = 'قبض ذخیره شد.';
+        if ($request->boolean('send_sms', true)) {
+            $sms = $smsNotifications->sendOnTicketUpdated(
+                $reception->fresh(['customer', 'faultType', 'technician']),
+                $data['sms_note'] ?? null
+            );
+            if ($sms['ok'] ?? false) {
+                $flash .= ' پیامک به مشتری ارسال شد.';
+            } elseif (! ($sms['skipped'] ?? false)) {
+                $flash .= ' پیامک ناموفق: '.($sms['message'] ?? '');
+            }
+        }
+
+        return redirect()
+            ->route('receptions.show', $reception)
+            ->with('success', $flash);
+    }
+
+    public function destroy(Request $request, Reception $reception, TrashService $trash)
+    {
+        $data = $request->validate([
+            'delete_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $ticket = $reception->ticket_no;
+        $trash->softDeleteReception($reception, $data['delete_reason'] ?? null);
+
+        return redirect()
+            ->route('receptions.index')
+            ->with('success', "قبض {$ticket} به سطل زباله منتقل شد. از منوی سطل زباله قابل بازیابی است.");
     }
 
     public function history(Reception $reception)

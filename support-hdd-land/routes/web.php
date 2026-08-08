@@ -17,6 +17,7 @@ use App\Http\Controllers\SmsStatusController;
 use App\Http\Controllers\BackupCronController;
 use App\Http\Controllers\BackupCloudController;
 use App\Http\Controllers\SystemToolsController;
+use App\Http\Controllers\TrashController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
 use App\Http\Controllers\PaymentReceiptController;
@@ -124,7 +125,7 @@ Route::middleware('auth')->group(function () {
         Route::get('deliveries/group', [DeliveryController::class, 'create'])->name('deliveries.group');
         Route::post('deliveries/lookup', [DeliveryController::class, 'lookup'])->name('deliveries.lookup');
         Route::post('deliveries/group', [DeliveryController::class, 'store'])->name('deliveries.store');
-        Route::resource('receptions', ReceptionController::class)->only(['index', 'create', 'store', 'show']);
+        Route::resource('receptions', ReceptionController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
         Route::get('receptions/{reception}/report-partial', [ReceptionController::class, 'reportPartial'])->name('receptions.report-partial');
         Route::get('receptions/{reception}/history', [ReceptionController::class, 'history'])->name('receptions.history');
         Route::post('receptions/{reception}/status', [ReceptionController::class, 'updateStatus'])->name('receptions.status');
@@ -316,5 +317,11 @@ Route::middleware('auth')->group(function () {
         Route::get('system-tools/backups/{file}', [SystemToolsController::class, 'downloadBackup'])
             ->where('file', '[A-Za-z0-9._-]+')
             ->name('system-tools.backups.download');
+    });
+
+    Route::middleware(EnsurePermission::class.':receptions')->prefix('trash')->name('trash.')->group(function () {
+        Route::get('/', [TrashController::class, 'index'])->name('index');
+        Route::post('/restore', [TrashController::class, 'restore'])->name('restore');
+        Route::post('/force', [TrashController::class, 'forceDestroy'])->name('force');
     });
 });

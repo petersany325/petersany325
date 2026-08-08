@@ -68,7 +68,7 @@ class AccountingService
         if ($total <= 0) {
             if ($existing) {
                 $existing->lines()->delete();
-                $existing->delete();
+                $existing->forceDelete();
             }
 
             return null;
@@ -158,7 +158,7 @@ class AccountingService
             return;
         }
         $entry->lines()->delete();
-        $entry->delete();
+        $entry->forceDelete();
     }
 
     public function postReceptionPart(ReceptionPart $part): ?JournalEntry
@@ -291,8 +291,9 @@ class AccountingService
         ?string $date = null
     ): JournalEntry {
         if ($existing) {
+            // Auto-regenerated entries are replaced permanently (not recycled).
             $existing->lines()->delete();
-            $existing->delete();
+            $existing->forceDelete();
         }
 
         return $this->writeEntry(null, $sourceType, $sourceId, $description, $reception, $lines, $customerId, $date);

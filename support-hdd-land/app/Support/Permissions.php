@@ -27,6 +27,7 @@ class Permissions
         'reports.messages' => 'گزارش پیام مشتری',
         'settings' => 'تنظیمات سیستم',
         'system.tools' => 'ابزارهای سیستم (کش / دیتابیس)',
+        'trash' => 'سطل زباله (بازیابی / حذف دائم)',
         'profile' => 'پروفایل و تغییر رمز',
     ];
 
@@ -89,7 +90,7 @@ class Permissions
             'admin' => array_keys(self::ALL),
             'receptionist' => [
                 'dashboard', 'receptions', 'handoffs', 'notifications', 'daily_logs', 'customers', 'parts', 'sms.statuses',
-                'reports.operations', 'reports.custody', 'reports.sms', 'reports.messages', 'profile',
+                'reports.operations', 'reports.custody', 'reports.sms', 'reports.messages', 'trash', 'profile',
             ],
             'technician' => [
                 'dashboard', 'receptions', 'handoffs', 'notifications', 'daily_logs', 'parts',
@@ -99,7 +100,7 @@ class Permissions
                 'dashboard', 'receptions', 'handoffs', 'notifications',
                 'reports.accounting', 'reports.operations', 'reports.payments',
                 'reports.technicians', 'reports.customers', 'reports.parts', 'reports.custody',
-                'customers', 'daily_logs', 'profile',
+                'customers', 'daily_logs', 'trash', 'profile',
             ],
             'intern' => ['dashboard', 'daily_logs', 'notifications', 'profile'],
             default => ['dashboard', 'notifications', 'daily_logs', 'profile'],

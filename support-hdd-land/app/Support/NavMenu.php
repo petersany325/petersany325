@@ -33,14 +33,15 @@ class NavMenu
                 'label' => 'پذیرش',
                 'permission' => 'receptions',
                 'route' => null,
-                'match' => 'receptions.*|deliveries.*',
+                'match' => 'receptions.*|deliveries.*|trash.*',
                 'mark' => 'پ',
                 'hint' => 'قبض، جستجو، تحویل',
                 'children' => [
                     ['label' => 'پذیرش جدید', 'route' => 'receptions.create', 'match' => 'receptions.create', 'hint' => 'ثبت قبض تکی/گروهی', 'mark' => 'جد'],
                     ['label' => 'جستجوی قبض', 'route' => 'receptions.search', 'match' => 'receptions.search', 'hint' => 'سریال، موبایل، شماره', 'mark' => 'ج'],
-                    ['label' => 'لیست قبض‌ها', 'route' => 'receptions.index', 'match' => 'receptions.index|receptions.show', 'hint' => 'همه پذیرش‌ها', 'mark' => 'لی'],
+                    ['label' => 'لیست قبض‌ها', 'route' => 'receptions.index', 'match' => 'receptions.index|receptions.show|receptions.edit', 'hint' => 'همه پذیرش‌ها', 'mark' => 'لی'],
                     ['label' => 'تحویل گروهی', 'route' => 'deliveries.group', 'match' => 'deliveries.*', 'hint' => 'خروج چند قبض', 'mark' => 'تح'],
+                    ['label' => 'سطل زباله', 'route' => 'trash.index', 'match' => 'trash.*', 'hint' => 'بازیابی یا حذف دائم', 'mark' => 'سط'],
                 ],
             ],
             [

@@ -168,6 +168,65 @@ class SmsNotificationService
         return $this->sendForReception($reception, $rule);
     }
 
+    /**
+     * Notify customer after ticket fields were edited/corrected.
+     *
+     * @return array{ok:bool,skipped?:bool,message:string,log?:SmsLog}
+     */
+    public function sendOnTicketUpdated(Reception $reception, ?string $note = null): array
+    {
+        if (! $this->masterEnabled()) {
+            return ['ok' => false, 'skipped' => true, 'message' => 'ارسال پیامک در سطح سیستم خاموش است.'];
+        }
+
+        $reception->loadMissing(['customer', 'faultType', 'technician']);
+        $phone = $reception->customer?->phone;
+        if (! $phone) {
+            return ['ok' => false, 'message' => 'شماره موبایل مشتری موجود نیست.'];
+        }
+
+        $device = trim(implode(' ', array_filter([
+            $reception->product_name,
+            $reception->brand,
+            $reception->model,
+        ]))) ?: 'دستگاه تعمیری';
+        $shop = AppSetting::getValue('invoice_shop_name', 'سرزمین هارد');
+        $lines = [
+            $shop,
+            'قبض '.$reception->ticket_no.' به‌روزرسانی شد.',
+            'وضعیت: '.$reception->statusLabel(),
+            'دستگاه: '.$device,
+            'سریال: '.($reception->serial_number ?: '—'),
+        ];
+        if ($reception->hasCostSet()) {
+            $lines[] = 'مبلغ: '.number_format((int) $reception->total_amount).' تومان';
+        }
+        if (trim((string) $note) !== '') {
+            $lines[] = trim((string) $note);
+        }
+        $message = implode("\n", $lines);
+
+        $result = $this->sms->send($phone, $message);
+        $log = SmsLog::create([
+            'reception_id' => $reception->id,
+            'customer_id' => $reception->customer_id,
+            'sms_status_rule_id' => null,
+            'sent_by' => Auth::id(),
+            'phone' => $phone,
+            'status_key' => 'ticket_updated',
+            'audience' => 'customer',
+            'message' => $message,
+            'ok' => (bool) ($result['ok'] ?? false),
+            'provider_message' => $result['message'] ?? null,
+        ]);
+
+        return [
+            'ok' => (bool) ($result['ok'] ?? false),
+            'message' => $result['message'] ?? (($result['ok'] ?? false) ? 'پیامک به‌روزرسانی ارسال شد.' : 'ارسال پیامک ناموفق بود.'),
+            'log' => $log,
+        ];
+    }
+
     public function sendOnStatusChange(Reception $reception, string $statusKey, bool $sendSms): ?array
     {
         if (! $sendSms) {
