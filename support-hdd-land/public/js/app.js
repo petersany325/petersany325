@@ -1166,6 +1166,39 @@
      * Boot
      * ========================================================= */
 
+    /* =========================================================
+     * Jalali date text inputs (YYYY/MM/DD)
+     * ========================================================= */
+
+    function formatJalaliTyped(raw) {
+        var digits = convertDigits(raw).replace(/\D+/g, '').slice(0, 8);
+        if (digits.length <= 4) return digits;
+        if (digits.length <= 6) return digits.slice(0, 4) + '/' + digits.slice(4);
+        return digits.slice(0, 4) + '/' + digits.slice(4, 6) + '/' + digits.slice(6);
+    }
+
+    function initJalaliDateInputs(root) {
+        var scope = root && root.querySelectorAll ? root : document;
+        scope.querySelectorAll('input.jalali-date').forEach(function (el) {
+            if (el.dataset.jalaliReady === '1') return;
+            el.dataset.jalaliReady = '1';
+            el.setAttribute('placeholder', el.getAttribute('placeholder') || '1404/05/16');
+            el.setAttribute('dir', 'ltr');
+            el.style.textAlign = el.style.textAlign || 'left';
+            el.addEventListener('input', function () {
+                var next = formatJalaliTyped(el.value);
+                if (el.value !== next) {
+                    var pos = next.length;
+                    el.value = next;
+                    try { el.setSelectionRange(pos, pos); } catch (e) {}
+                }
+            });
+            el.addEventListener('blur', function () {
+                el.value = formatJalaliTyped(el.value);
+            });
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         initToggles();
         initWorkspaceTabs();
@@ -1176,5 +1209,13 @@
         initStaffShell();
         initStaffLoginDeviceHint();
         initLookupEditors();
+        initJalaliDateInputs();
+    });
+
+    // Group admission clones device cards dynamically
+    document.addEventListener('focusin', function (e) {
+        if (e.target && e.target.matches && e.target.matches('input.jalali-date')) {
+            initJalaliDateInputs(e.target.parentNode || document);
+        }
     });
 })();

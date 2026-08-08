@@ -21,11 +21,11 @@
     <form method="GET" class="panel daybook-toolbar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:end;">
         <div>
             <label>از تاریخ</label>
-            <input type="date" name="from" value="{{ $from->toDateString() }}">
+            @include('partials.jalali-date', ['name' => 'from', 'value' => $from])
         </div>
         <div>
             <label>تا تاریخ</label>
-            <input type="date" name="to" value="{{ $to->toDateString() }}">
+            @include('partials.jalali-date', ['name' => 'to', 'value' => $to])
         </div>
         <div>
             <label>کارمند</label>

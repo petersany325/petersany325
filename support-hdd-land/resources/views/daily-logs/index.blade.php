@@ -31,7 +31,7 @@
         <form method="GET" class="daybook-filters" action="{{ route('daily-logs.index') }}">
             <div class="daybook-nav">
                 <a class="btn btn-ghost" href="{{ route('daily-logs.index', ['date' => $prev, 'user_id' => $employee->id]) }}">روز قبل</a>
-                <input type="date" name="date" value="{{ $dateStr }}" onchange="this.form.submit()">
+                @include('partials.jalali-date', ['name' => 'date', 'value' => $dateStr, 'attrs' => 'onchange="this.form.submit()"'])
                 <a class="btn btn-ghost" href="{{ route('daily-logs.index', ['date' => $next, 'user_id' => $employee->id]) }}">روز بعد</a>
                 @if($dateStr !== $today)
                     <a class="btn btn-secondary" href="{{ route('daily-logs.index', ['date' => $today, 'user_id' => $employee->id]) }}">امروز</a>

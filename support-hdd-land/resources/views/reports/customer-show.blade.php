@@ -49,7 +49,7 @@
     @include('reports._chart', [
         'id' => 'chartCustPay',
         'title' => 'پرداخت‌ها در طول زمان',
-        'labels' => $payDaily->keys()->values()->all(),
+        'labels' => jalali_day_labels($payDaily->keys()->values()->all()),
         'values' => $payDaily->values()->values()->all(),
         'type' => 'line',
     ])

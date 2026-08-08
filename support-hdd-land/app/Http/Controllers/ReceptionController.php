@@ -164,6 +164,10 @@ class ReceptionController extends Controller
             return $this->storeBatch($request);
         }
 
+        merge_jalali_dates($request, [
+            'warranty_end_date', 'estimated_delivery_at', 'next_visit_at', 'received_at',
+        ]);
+
         $data = $request->validate(array_merge($this->customerRules(), $this->deviceRules(), [
             'action' => ['nullable', 'in:save_close,save_continue,save_print'],
             'photo' => ['nullable', 'image', 'max:4096'],
@@ -200,6 +204,12 @@ class ReceptionController extends Controller
 
     public function storeBatch(Request $request)
     {
+        merge_jalali_dates($request, [
+            'received_at',
+            'items.*.warranty_end_date',
+            'items.*.estimated_delivery_at',
+        ]);
+
         $data = $request->validate(array_merge($this->customerRules(), [
             'admission_type' => ['nullable', 'string', 'max:80'],
             'received_at' => ['nullable', 'date'],
@@ -492,6 +502,8 @@ class ReceptionController extends Controller
         if (! $reception->canEditParts()) {
             return back()->withErrors(['part' => 'قبض تحویل‌شده قابل ویرایش قطعه نیست. ابتدا لغو تحویل بزنید.']);
         }
+
+        merge_jalali_dates($request, ['used_at']);
 
         $data = $request->validate([
             'part_id' => ['nullable', 'exists:parts,id'],

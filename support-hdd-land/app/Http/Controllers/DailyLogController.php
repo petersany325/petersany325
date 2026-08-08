@@ -323,6 +323,11 @@ class DailyLogController extends Controller
     {
         try {
             if ($value) {
+                $parsed = is_string($value) ? parse_jalali_or_gregorian_date($value) : null;
+                if ($parsed) {
+                    return Carbon::parse($parsed, 'Asia/Tehran')->startOfDay();
+                }
+
                 return Carbon::parse($value, 'Asia/Tehran')->startOfDay();
             }
         } catch (\Throwable) {

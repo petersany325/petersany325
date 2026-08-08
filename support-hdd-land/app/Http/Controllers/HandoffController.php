@@ -299,7 +299,7 @@ class HandoffController extends Controller
 
         if ($tech && trim((string) ($data['summary'] ?? '')) !== '') {
             $notes = trim((string) $reception->technician_notes);
-            $line = '['.now('Asia/Tehran')->format('Y-m-d H:i').'] '.$data['summary'];
+            $line = '['.jalali_like(now('Asia/Tehran')).'] '.$data['summary'];
             $reception->forceFill([
                 'technician_notes' => $notes === '' ? $line : ($notes."\n".$line),
             ])->save();

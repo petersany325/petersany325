@@ -273,7 +273,7 @@ class ReportController extends Controller
 
         $chartMethodLabels = $byMethod->map(fn ($r) => Payment::METHODS[$r->method] ?? $r->method)->values()->all();
         $chartMethodValues = $byMethod->pluck('amount')->map(fn ($v) => (int) $v)->values()->all();
-        $chartDailyLabels = $daily->pluck('day')->values()->all();
+        $chartDailyLabels = jalali_day_labels($daily->pluck('day')->values()->all());
         $chartDailyValues = $daily->pluck('net')->map(fn ($v) => (int) $v)->values()->all();
 
         return view('reports.payments', compact(

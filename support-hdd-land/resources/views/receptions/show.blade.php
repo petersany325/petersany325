@@ -591,7 +591,7 @@
                     </div>
                     <div>
                         <label>تاریخ مصرف</label>
-                        <input type="date" name="used_at" value="{{ now()->toDateString() }}">
+                        @include('partials.jalali-date', ['name' => 'used_at', 'value' => jalali_input(now())])
                     </div>
                 </div>
                 <div style="margin-top:8px;">

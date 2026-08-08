@@ -44,6 +44,17 @@
 </nav>
 @endif
 
+<script>
+(function () {
+    var map = {'۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9','٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
+    function digits(v){ return String(v||'').replace(/[۰-۹٠-٩]/g, function(c){ return map[c]||c; }).replace(/\D+/g,'').slice(0,8); }
+    function fmt(v){ var d=digits(v); if(d.length<=4) return d; if(d.length<=6) return d.slice(0,4)+'/'+d.slice(4); return d.slice(0,4)+'/'+d.slice(4,6)+'/'+d.slice(6); }
+    document.addEventListener('input', function(e){
+        if(!e.target || !e.target.classList || !e.target.classList.contains('jalali-date')) return;
+        var n=fmt(e.target.value); if(e.target.value!==n){ e.target.value=n; }
+    });
+})();
+</script>
 @stack('scripts')
 </body>
 </html>

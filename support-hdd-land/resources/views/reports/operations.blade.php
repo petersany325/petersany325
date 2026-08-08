@@ -22,7 +22,7 @@
 @if(\App\Support\ReportSettings::showCharts())
 <div class="report-charts-row" style="margin-bottom:12px;">
     @include('reports._chart', ['id'=>'chartOpsStatus','title'=>'توزیع وضعیت','labels'=>$chartStatusLabels,'values'=>$chartStatusValues,'type'=>'doughnut'])
-    @include('reports._chart', ['id'=>'chartOpsDaily','title'=>'پذیرش روزانه','labels'=>$daily->pluck('day')->values()->all(),'values'=>$daily->pluck('total')->map(fn($v)=>(int)$v)->values()->all()])
+    @include('reports._chart', ['id'=>'chartOpsDaily','title'=>'پذیرش روزانه','labels'=>jalali_day_labels($daily->pluck('day')->values()->all()),'values'=>$daily->pluck('total')->map(fn($v)=>(int)$v)->values()->all()])
 </div>
 @endif
 

@@ -39,7 +39,7 @@
                 </label>
                 <label>
                     تاریخ واریز
-                    <input type="date" name="transfer_date" value="{{ old('transfer_date', now()->toDateString()) }}" max="{{ now()->toDateString() }}">
+                    @include('partials.jalali-date', ['name' => 'transfer_date', 'value' => old('transfer_date', jalali_input(now())), 'required' => true])
                 </label>
                 <label>
                     تصویر فیش بانکی

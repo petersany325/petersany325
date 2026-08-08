@@ -151,3 +151,161 @@ if (! function_exists('jalali_input')) {
         return $v === '—' ? '' : $v;
     }
 }
+
+if (! function_exists('merge_jalali_dates')) {
+    /**
+     * Convert request date fields (Jalali or Gregorian) to Gregorian Y-m-d before validation.
+     * Supports dotted nested keys like items.*.warranty_end_date.
+     *
+     * @param  list<string>  $keys
+     */
+    function merge_jalali_dates(\Illuminate\Http\Request $request, array $keys): void
+    {
+        foreach ($keys as $key) {
+            if (str_contains($key, '.*')) {
+                $parts = explode('.*.', $key, 2);
+                if (count($parts) !== 2) {
+                    continue;
+                }
+                [$root, $child] = $parts;
+                $rows = $request->input($root);
+                if (! is_array($rows)) {
+                    continue;
+                }
+                foreach ($rows as $i => $row) {
+                    if (! is_array($row) || ! array_key_exists($child, $row)) {
+                        continue;
+                    }
+                    $raw = $row[$child];
+                    if ($raw === null || $raw === '') {
+                        continue;
+                    }
+                    $rows[$i][$child] = parse_jalali_or_gregorian_date(is_string($raw) ? $raw : null);
+                }
+                $request->merge([$root => $rows]);
+
+                continue;
+            }
+
+            if (! $request->exists($key)) {
+                continue;
+            }
+            $raw = $request->input($key);
+            if ($raw === null || $raw === '') {
+                continue;
+            }
+            if (! is_string($raw)) {
+                continue;
+            }
+            $request->merge([$key => parse_jalali_or_gregorian_date($raw)]);
+        }
+    }
+}
+
+if (! function_exists('jalali_today_parts')) {
+    /** @return array{0:int,1:int,2:int} jy,jm,jd */
+    function jalali_today_parts(?\DateTimeInterface $date = null): array
+    {
+        $dt = $date
+            ? \Illuminate\Support\Carbon::parse($date)->timezone(config('app.timezone', 'Asia/Tehran'))
+            : now(config('app.timezone', 'Asia/Tehran'));
+
+        return jalali_convert((int) $dt->format('Y'), (int) $dt->format('n'), (int) $dt->format('j'));
+    }
+}
+
+if (! function_exists('jalali_period_range')) {
+    /**
+     * Iranian calendar periods → [from Y-m-d, to Y-m-d] Gregorian.
+     *
+     * @return array{0:string,1:string}
+     */
+    function jalali_period_range(string $period): array
+    {
+        $tz = config('app.timezone', 'Asia/Tehran');
+        $now = now($tz);
+        [$jy, $jm, $jd] = jalali_today_parts($now);
+        $to = $now->toDateString();
+
+        $toGreg = static function (int $y, int $m, int $d): string {
+            [$gy, $gm, $gd] = jalali_to_gregorian($y, $m, $d);
+
+            return sprintf('%04d-%02d-%02d', $gy, $gm, $gd);
+        };
+
+        return match ($period) {
+            'today' => [$to, $to],
+            'this_week' => (static function () use ($now, $to) {
+                // هفته ایرانی: شنبه تا جمعه
+                $dow = (int) $now->dayOfWeek; // 0=Sun … 6=Sat
+                $daysFromSat = ($dow + 1) % 7;
+                $from = $now->copy()->subDays($daysFromSat)->toDateString();
+
+                return [$from, $to];
+            })(),
+            'this_month' => [$toGreg($jy, $jm, 1), $to],
+            'last_month' => (static function () use ($jy, $jm, $toGreg) {
+                if ($jm <= 1) {
+                    $y = $jy - 1;
+                    $m = 12;
+                } else {
+                    $y = $jy;
+                    $m = $jm - 1;
+                }
+                $from = $toGreg($y, $m, 1);
+                // last day of that jalali month
+                if ($m <= 6) {
+                    $last = 31;
+                } elseif ($m <= 11) {
+                    $last = 30;
+                } else {
+                    // Esfand: 29 or 30 (jalali leap)
+                    $last = 29;
+                    for ($d = 30; $d >= 29; $d--) {
+                        [$gy, $gm, $gd] = jalali_to_gregorian($y, $m, $d);
+                        if (checkdate($gm, $gd, $gy)) {
+                            $last = $d;
+                            break;
+                        }
+                    }
+                }
+
+                return [$from, $toGreg($y, $m, $last)];
+            })(),
+            'last_30' => [$now->copy()->subDays(29)->toDateString(), $to],
+            'this_year' => [$toGreg($jy, 1, 1), $to],
+            default => [$toGreg($jy, $jm, 1), $to],
+        };
+    }
+}
+
+if (! function_exists('resolve_request_date')) {
+    /** Parse Jalali/Gregorian request value → Gregorian Y-m-d or fallback. */
+    function resolve_request_date(?string $input, ?string $fallback = null): ?string
+    {
+        if ($input === null || trim($input) === '') {
+            return $fallback;
+        }
+        $parsed = parse_jalali_or_gregorian_date($input);
+
+        return $parsed ?? $fallback;
+    }
+}
+
+if (! function_exists('jalali_day_labels')) {
+    /**
+     * Map a list of Gregorian day strings (Y-m-d) to Jalali labels.
+     *
+     * @param  iterable<int|string, mixed>  $days
+     * @return list<string>
+     */
+    function jalali_day_labels(iterable $days): array
+    {
+        $out = [];
+        foreach ($days as $day) {
+            $out[] = jalali_date($day);
+        }
+
+        return $out;
+    }
+}

@@ -22,10 +22,10 @@
                 </select>
             </label>
             <label>از تاریخ
-                <input type="date" name="from" value="{{ $rs['from'] }}">
+                @include('partials.jalali-date', ['name' => 'from', 'value' => $rs['from']])
             </label>
             <label>تا تاریخ
-                <input type="date" name="to" value="{{ $rs['to'] }}">
+                @include('partials.jalali-date', ['name' => 'to', 'value' => $rs['to']])
             </label>
             <label>نوع گراف
                 <select name="chart_type">

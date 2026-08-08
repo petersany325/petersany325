@@ -16,7 +16,7 @@
         <div><span>تخصص</span><strong>{{ $technician->specialty ?: '—' }}</strong></div>
         <div><span>کمیسیون</span><strong>{{ $technician->commission_percent }}٪</strong></div>
         <div><span>وضعیت</span><strong>{{ $technician->is_active ? 'فعال' : 'غیرفعال' }}</strong></div>
-        <div><span>بازه گزارش</span><strong>{{ $from }} تا {{ $to }}</strong></div>
+        <div><span>بازه گزارش</span><strong>{{ jalali_date($from) }} تا {{ jalali_date($to) }}</strong></div>
         <div><span>میانگین روز تعمیر</span><strong>{{ $avgDays !== null ? number_format((float) $avgDays, 1) : '—' }}</strong></div>
     </div>
 </div>
@@ -44,7 +44,7 @@
     @include('reports._chart', [
         'id' => 'chartTechDaily',
         'title' => 'پذیرش روزانه منتسب',
-        'labels' => $daily->keys()->values()->all(),
+        'labels' => jalali_day_labels($daily->keys()->values()->all()),
         'values' => $daily->values()->values()->all(),
         'type' => 'bar',
     ])

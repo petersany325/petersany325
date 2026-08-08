@@ -22,9 +22,9 @@
         <div class="acc-hero-actions">
             @if($accShowPeriod)
                 <form method="GET" action="{{ route('accounting.index') }}" class="acc-period">
-                    <input type="date" name="from" value="{{ $from ?? now()->startOfMonth()->toDateString() }}">
+                    @include('partials.jalali-date', ['name' => 'from', 'value' => $from ?? jalali_period_range('this_month')[0]])
                     <span class="acc-period-sep">تا</span>
-                    <input type="date" name="to" value="{{ $to ?? now()->toDateString() }}">
+                    @include('partials.jalali-date', ['name' => 'to', 'value' => $to ?? now()])
                     <button class="btn btn-sm btn-primary" type="submit">اعمال</button>
                 </form>
                 @can('reports.accounting')

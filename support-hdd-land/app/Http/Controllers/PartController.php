@@ -120,8 +120,9 @@ class PartController extends Controller
         $q = trim((string) $request->get('q'));
         $type = (string) $request->get('type', '');
         $docType = (string) $request->get('doc_type', '');
-        $from = $request->get('from') ?: now()->startOfMonth()->toDateString();
-        $to = $request->get('to') ?: now()->toDateString();
+        [$defaultFrom] = jalali_period_range('this_month');
+        $from = resolve_request_date($request->get('from'), $defaultFrom);
+        $to = resolve_request_date($request->get('to'), now()->toDateString());
 
         $movements = StockMovement::query()
             ->with(['part', 'user', 'reception'])

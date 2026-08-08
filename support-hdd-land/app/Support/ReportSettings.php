@@ -11,9 +11,10 @@ class ReportSettings
 
     public static function all(): array
     {
+        [$from, $to] = jalali_period_range('this_month');
         $defaults = [
-            'from' => now()->startOfMonth()->toDateString(),
-            'to' => now()->toDateString(),
+            'from' => $from,
+            'to' => $to,
             'period' => 'this_month',
             'show_charts' => true,
             'chart_type' => 'bar', // bar|line|doughnut
@@ -63,12 +64,18 @@ class ReportSettings
             $current['to'] = $to;
         } else {
             if ($request->filled('from')) {
-                $current['from'] = (string) $request->get('from');
-                $current['period'] = 'custom';
+                $parsed = parse_jalali_or_gregorian_date((string) $request->get('from'));
+                if ($parsed) {
+                    $current['from'] = $parsed;
+                    $current['period'] = 'custom';
+                }
             }
             if ($request->filled('to')) {
-                $current['to'] = (string) $request->get('to');
-                $current['period'] = 'custom';
+                $parsed = parse_jalali_or_gregorian_date((string) $request->get('to'));
+                if ($parsed) {
+                    $current['to'] = $parsed;
+                    $current['period'] = 'custom';
+                }
             }
             if ($request->filled('period')) {
                 $current['period'] = (string) $request->get('period');
@@ -85,7 +92,7 @@ class ReportSettings
             }
         }
 
-        // Keep dates sane
+        // Keep dates sane (stored as Gregorian Y-m-d for DB queries)
         try {
             $from = Carbon::parse($current['from'])->startOfDay();
             $to = Carbon::parse($current['to'])->endOfDay();
@@ -95,8 +102,9 @@ class ReportSettings
             $current['from'] = $from->toDateString();
             $current['to'] = $to->toDateString();
         } catch (\Throwable) {
-            $current['from'] = now()->startOfMonth()->toDateString();
-            $current['to'] = now()->toDateString();
+            [$from, $to] = jalali_period_range('this_month');
+            $current['from'] = $from;
+            $current['to'] = $to;
             $current['period'] = 'this_month';
         }
 
@@ -118,19 +126,7 @@ class ReportSettings
     /** @return array{0:string,1:string} */
     public static function resolvePeriod(string $period): array
     {
-        $now = now();
-
-        return match ($period) {
-            'today' => [$now->toDateString(), $now->toDateString()],
-            'this_week' => [$now->copy()->startOfWeek()->toDateString(), $now->toDateString()],
-            'last_30' => [$now->copy()->subDays(29)->toDateString(), $now->toDateString()],
-            'this_year' => [$now->copy()->startOfYear()->toDateString(), $now->toDateString()],
-            'last_month' => [
-                $now->copy()->subMonthNoOverflow()->startOfMonth()->toDateString(),
-                $now->copy()->subMonthNoOverflow()->endOfMonth()->toDateString(),
-            ],
-            default => [$now->copy()->startOfMonth()->toDateString(), $now->toDateString()], // this_month
-        };
+        return jalali_period_range($period);
     }
 
     public static function periodLabels(): array

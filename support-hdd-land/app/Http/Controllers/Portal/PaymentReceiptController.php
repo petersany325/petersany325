@@ -36,6 +36,8 @@ class PaymentReceiptController extends Controller
             return back()->withErrors(['receipt' => 'یک فیش در انتظار تأیید دارید؛ تا بررسی حسابداری فیش جدید ارسال نکنید.']);
         }
 
+        merge_jalali_dates($request, ['transfer_date']);
+
         $data = $request->validate([
             'amount' => ['required', 'integer', 'min:1000', 'max:'.$remaining],
             'transfer_date' => ['nullable', 'date', 'before_or_equal:today'],

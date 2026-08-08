@@ -19,10 +19,19 @@ class AccountingController extends Controller
     {
     }
 
+    /** @return array{0:string,1:string} */
+    private function period(Request $request): array
+    {
+        [$defaultFrom] = jalali_period_range('this_month');
+        $from = resolve_request_date($request->get('from'), $defaultFrom) ?: $defaultFrom;
+        $to = resolve_request_date($request->get('to'), now()->toDateString()) ?: now()->toDateString();
+
+        return [$from, $to];
+    }
+
     public function index(Request $request)
     {
-        $from = $request->get('from', now()->startOfMonth()->toDateString());
-        $to = $request->get('to', now()->toDateString());
+        [$from, $to] = $this->period($request);
 
         $cash = $this->sumAccount(AccountingService::CASH, $from, $to);
         $card = $this->sumAccount(AccountingService::CARD, $from, $to);
@@ -93,8 +102,7 @@ class AccountingController extends Controller
 
     public function journals(Request $request)
     {
-        $from = $request->get('from', now()->startOfMonth()->toDateString());
-        $to = $request->get('to', now()->toDateString());
+        [$from, $to] = $this->period($request);
         $q = trim((string) $request->get('q', ''));
 
         $entries = JournalEntry::with(['customer', 'reception', 'lines.account'])
@@ -125,8 +133,7 @@ class AccountingController extends Controller
     public function ledger(Request $request)
     {
         $code = $request->get('account', AccountingService::CASH);
-        $from = $request->get('from', now()->startOfMonth()->toDateString());
-        $to = $request->get('to', now()->toDateString());
+        [$from, $to] = $this->period($request);
         $account = Account::byCode($code) ?: Account::query()->orderBy('code')->firstOrFail();
 
         $lines = JournalLine::with(['entry.reception', 'entry.customer'])
@@ -152,8 +159,8 @@ class AccountingController extends Controller
 
     public function trialBalance(Request $request)
     {
-        $from = $request->get('from');
-        $to = $request->get('to', now()->toDateString());
+        $from = resolve_request_date($request->get('from'));
+        $to = resolve_request_date($request->get('to'), now()->toDateString());
         $trial = $this->accounting->trialBalance($from ?: null, $to);
 
         return view('accounting.trial', [
@@ -208,6 +215,8 @@ class AccountingController extends Controller
 
     public function storeManual(Request $request)
     {
+        merge_jalali_dates($request, ['entry_date']);
+
         $data = $request->validate([
             'description' => ['required', 'string', 'max:255'],
             'entry_date' => ['required', 'date'],

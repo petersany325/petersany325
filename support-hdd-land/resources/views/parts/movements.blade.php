@@ -18,8 +18,8 @@
     </div>
 
     <form method="GET" class="panel wh-filters" style="margin-bottom:10px;">
-        <input type="date" name="from" value="{{ $from }}">
-        <input type="date" name="to" value="{{ $to }}">
+        @include('partials.jalali-date', ['name' => 'from', 'value' => $from])
+        @include('partials.jalali-date', ['name' => 'to', 'value' => $to])
         <input type="text" name="q" value="{{ $q }}" placeholder="شماره سند / کالا / شرح">
         <select name="type">
             <option value="">همه انواع</option>

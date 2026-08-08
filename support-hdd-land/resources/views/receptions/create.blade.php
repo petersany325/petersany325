@@ -226,7 +226,7 @@
                             </select>
                         </div>
                         <div><label>شماره کارت</label><input type="text" name="card_number" value="{{ old('card_number') }}"></div>
-                        <div><label>پایان گارانتی</label><input type="date" name="warranty_end_date" value="{{ old('warranty_end_date') }}"></div>
+                        <div><label>پایان گارانتی</label>@include('partials.jalali-date', ['name' => 'warranty_end_date', 'value' => old('warranty_end_date')])</div>
                     </div>
                 </div>
                 <div class="ws-pane" data-ws-pane="money">
@@ -244,8 +244,8 @@
                             </select>
                         </div>
                         <div><label>پورسانت</label><input type="number" name="commission" min="0" value="{{ old('commission', 0) }}"></div>
-                        <div><label>تاریخ تخمینی تحویل</label><input type="date" name="estimated_delivery_at" value="{{ old('estimated_delivery_at') }}"></div>
-                        <div><label>مراجعه بعدی</label><input type="date" name="next_visit_at" value="{{ old('next_visit_at') }}"></div>
+                        <div><label>تاریخ تخمینی تحویل</label>@include('partials.jalali-date', ['name' => 'estimated_delivery_at', 'value' => old('estimated_delivery_at')])</div>
+                        <div><label>مراجعه بعدی</label>@include('partials.jalali-date', ['name' => 'next_visit_at', 'value' => old('next_visit_at')])</div>
                     </div>
                 </div>
                 <div class="ws-pane" data-ws-pane="meta">
@@ -262,7 +262,7 @@
                         </div>
                         <div><label>کد پذیرش</label><input type="text" value="{{ $nextTicket }}" readonly></div>
                         <div><label>شماره قبض</label><input type="text" value="{{ $nextReceipt }}" readonly dir="ltr" placeholder="T-20N1000"></div>
-                        <div><label>تاریخ پذیرش</label><input type="date" name="received_at" value="{{ old('received_at', now()->toDateString()) }}"></div>
+                        <div><label>تاریخ پذیرش</label>@include('partials.jalali-date', ['name' => 'received_at', 'value' => old('received_at', jalali_input(now()))])</div>
                         <div><label>ساعت</label><input type="time" name="received_time" value="{{ old('received_time', now()->format('H:i')) }}"></div>
                     </div>
                 </div>
@@ -289,7 +289,7 @@
                         </select>
                     </label>
                     <label>تاریخ
-                        <input type="date" name="received_at" data-group-shared value="{{ old('received_at', now()->toDateString()) }}">
+                        @include('partials.jalali-date', ['name' => 'received_at', 'value' => old('received_at', jalali_input(now())), 'attrs' => 'data-group-shared'])
                     </label>
                     <label>ساعت
                         <input type="time" name="received_time" data-group-shared value="{{ old('received_time', now()->format('H:i')) }}">
@@ -403,7 +403,7 @@
                 <label>تخمینی<input type="number" data-name="estimated_cost" min="0" value="0"></label>
                 <label>کارت‌خوان<input type="number" data-name="pos_amount" min="0" value="0"></label>
                 <label>پذیرش<input type="number" data-name="admission_fee" min="0" value="0"></label>
-                <label>تحویل<input type="date" data-name="estimated_delivery_at"></label>
+                <label>تحویل<input type="text" class="jalali-date" data-name="estimated_delivery_at" placeholder="1404/05/16" dir="ltr" style="text-align:left;" inputmode="numeric" autocomplete="off"></label>
                 <label>کارت گارانتی<input type="text" data-name="card_number"></label>
             </div>
             <div class="dense-notes">
