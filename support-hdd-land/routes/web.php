@@ -331,6 +331,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware(EnsurePermission::class.':system.tools')->prefix('licenses')->name('licenses.')->group(function () {
         Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');
         Route::get('/online', [\App\Http\Controllers\LicenseAdminController::class, 'online'])->name('online');
+        Route::get('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'plans'])->name('plans');
+        Route::post('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'savePlans'])->name('plans.save');
         Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
         Route::post('/{license}/sms', [\App\Http\Controllers\LicenseAdminController::class, 'sendSms'])->name('sms');
         Route::post('/{license}/revoke', [\App\Http\Controllers\LicenseAdminController::class, 'revoke'])->name('revoke');

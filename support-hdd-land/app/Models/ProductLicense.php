@@ -8,6 +8,7 @@ class ProductLicense extends Model
 {
     protected $fillable = [
         'license_key', 'customer_name', 'customer_phone', 'customer_email', 'domain', 'product',
+        'plan_code', 'plan_label', 'plan_months', 'price_toman',
         'status', 'token', 'activated_at', 'expires_at', 'last_check_at',
         'check_count', 'last_check_ip', 'last_check_version', 'meta', 'notes',
     ];
@@ -20,7 +21,33 @@ class ProductLicense extends Model
             'last_check_at' => 'datetime',
             'meta' => 'array',
             'check_count' => 'integer',
+            'plan_months' => 'integer',
+            'price_toman' => 'integer',
         ];
+    }
+
+    public function planSummary(): string
+    {
+        $label = trim((string) ($this->plan_label ?: ''));
+        if ($label === '') {
+            return $this->expires_at ? 'تاریخ‌دار' : 'بدون پلن';
+        }
+        $price = (int) $this->price_toman;
+        if ($price > 0) {
+            return $label.' — '.number_format($price).' تومان';
+        }
+
+        return $label;
+    }
+
+    /** Set expires_at from plan months starting at $from (usually activation time). */
+    public function applyPlanExpiry(?\DateTimeInterface $from = null): void
+    {
+        if ($this->plan_months === null || (int) $this->plan_months <= 0) {
+            return;
+        }
+        $from = $from ? \Illuminate\Support\Carbon::parse($from) : now();
+        $this->expires_at = $from->copy()->addMonths((int) $this->plan_months);
     }
 
     public static function generateKey(): string

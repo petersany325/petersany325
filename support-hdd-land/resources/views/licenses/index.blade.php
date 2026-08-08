@@ -12,6 +12,7 @@
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <a class="btn btn-primary" href="#issue-box">+ ساخت لایسنس</a>
+            <a class="btn" href="{{ route('licenses.plans') }}">پلن و قیمت</a>
             <a class="btn" href="{{ route('licenses.online') }}">گزارش آنلاین</a>
         </div>
     </div>
@@ -20,7 +21,7 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
     @if(session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
+        <div class="alert alert-error">{{ session('error') }}</div>
     @endif
 
     <div class="accept-row accept-row-4" style="margin-bottom:16px;">
@@ -76,11 +77,32 @@
                     <input type="email" name="customer_email" value="{{ old('customer_email') }}" dir="ltr" style="text-align:left;">
                 </div>
                 <div>
+                    <label>پلن زمانی / قیمت</label>
+                    <select name="plan_code" required>
+                        @foreach($plans as $plan)
+                            <option value="{{ $plan['code'] }}" @selected(old('plan_code', 'y1') === $plan['code'])>
+                                {{ $plan['label'] }}
+                                — {{ $plan['price'] > 0 ? number_format($plan['price']).' تومان' : 'قیمت تنظیم نشده' }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <div class="muted" style="font-size:11px;margin-top:4px;">
+                        <a href="{{ route('licenses.plans') }}">ویرایش پلن و قیمت‌ها</a>
+                    </div>
+                </div>
+                <div>
+                    <label>شروع اعتبار</label>
+                    <select name="start_from">
+                        <option value="activate" @selected(old('start_from', 'activate') === 'activate')>از زمان نصب / فعال‌سازی</option>
+                        <option value="issue" @selected(old('start_from') === 'issue')>از همین الان (صدور)</option>
+                    </select>
+                </div>
+                <div>
                     <label>دامنه پیشنهادی (اختیاری)</label>
                     <input type="text" name="domain_hint" value="{{ old('domain_hint') }}" dir="ltr" style="text-align:left;" placeholder="shop.example.com">
                 </div>
                 <div>
-                    <label>انقضا (اختیاری)</label>
+                    <label>انقضای دستی (اختیاری — جایگزین پلن)</label>
                     <input type="date" name="expires_at" value="{{ old('expires_at') }}">
                 </div>
                 <div>
@@ -136,11 +158,11 @@
             <tr>
                 <th>سریال</th>
                 <th>مشتری</th>
+                <th>پلن / قیمت</th>
                 <th>دامنه</th>
                 <th>وضعیت</th>
+                <th>انقضا</th>
                 <th>آنلاین</th>
-                <th>فعال‌سازی</th>
-                <th>آخرین چک</th>
                 <th>عملیات</th>
             </tr>
             </thead>
@@ -158,25 +180,36 @@
                         <div class="muted" dir="ltr" style="font-size:11px;">{{ $row->customer_phone }}</div>
                         <div class="muted" dir="ltr" style="font-size:11px;">{{ $row->customer_email }}</div>
                     </td>
+                    <td>
+                        <div>{{ $row->plan_label ?: '—' }}</div>
+                        <div class="muted" style="font-size:11px;">
+                            @if($row->price_toman)
+                                {{ number_format((int) $row->price_toman) }} تومان
+                            @else
+                                —
+                            @endif
+                        </div>
+                    </td>
                     <td dir="ltr">{{ $row->domain ?: ($row->meta['domain_hint'] ?? '—') }}</td>
                     <td>{{ $row->statusLabel() }}</td>
                     <td>
+                        @if($row->expires_at)
+                            {{ jalali_date($row->expires_at) }}
+                        @elseif($row->plan_months)
+                            <span class="muted">{{ $row->plan_months }} ماه از نصب</span>
+                        @else
+                            مادام‌العمر
+                        @endif
+                    </td>
+                    <td>
                         @if($row->status === 'active')
                             <span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:{{ $row->isOnline() ? '#e8f8ef' : '#fff7ed' }};color:{{ $row->isOnline() ? '#0f6b3a' : '#9a3412' }};">{{ $row->onlineLabel() }}</span>
-                            <div class="muted" style="font-size:11px;">{{ (int) $row->check_count }} بار چک</div>
                         @else
                             —
                         @endif
                     </td>
-                    <td>{{ $row->activated_at ? jalali_like($row->activated_at) : '—' }}</td>
-                    <td>
-                        {{ $row->last_check_at ? jalali_like($row->last_check_at) : '—' }}
-                        @if($row->last_check_version)
-                            <div class="muted" style="font-size:11px;" dir="ltr">v{{ $row->last_check_version }}</div>
-                        @endif
-                    </td>
-                    <td style="min-width:180px;">
-                        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                    <td style="min-width:210px;">
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">
                             @if($row->customer_phone)
                                 <form method="POST" action="{{ route('licenses.sms', $row) }}">
                                     @csrf
@@ -196,6 +229,18 @@
                                 </form>
                             @endif
                         </div>
+                        @if(in_array($row->status, ['active','expired'], true))
+                            <form method="POST" action="{{ route('licenses.extend', $row) }}" style="display:flex;gap:4px;align-items:center;">
+                                @csrf
+                                <input type="hidden" name="add_plan" value="1">
+                                <select name="plan_code" style="padding:4px;font-size:11px;">
+                                    @foreach($plans as $plan)
+                                        <option value="{{ $plan['code'] }}">تمدید {{ $plan['label'] }}</option>
+                                    @endforeach
+                                </select>
+                                <button class="btn" type="submit" style="padding:4px 8px;font-size:11px;">تمدید</button>
+                            </form>
+                        @endif
                     </td>
                 </tr>
             @empty

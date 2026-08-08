@@ -52,11 +52,20 @@ class LicenseApiController extends Controller
             (string) config('license.issuer_secret', config('app.key'))
         );
 
+        $wasUnused = $license->status === 'unused' || ! $license->activated_at;
+        $activatedAt = $license->activated_at ?: now();
+
+        // Timed plans: start countdown at first activation (unless expires_at already set at issue).
+        $startFrom = (string) (($license->meta['start_from'] ?? 'activate'));
+        if ($wasUnused && $startFrom !== 'issue' && ! $license->expires_at && ! empty($license->plan_months)) {
+            $license->applyPlanExpiry($activatedAt);
+        }
+
         $license->fill([
             'domain' => $domain,
             'status' => 'active',
             'token' => $token,
-            'activated_at' => $license->activated_at ?: now(),
+            'activated_at' => $activatedAt,
             'last_check_at' => now(),
             'last_check_ip' => $request->ip(),
             'last_check_version' => $data['version'] ?? null,
@@ -73,6 +82,7 @@ class LicenseApiController extends Controller
             'token' => $token,
             'domain' => $domain,
             'expires_at' => optional($license->expires_at)?->toDateString(),
+            'plan' => $license->plan_label,
         ]);
     }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ProductLicense;
 use App\Services\NiazpardazSmsService;
+use App\Support\LicensePlans;
 use Illuminate\Http\Request;
 
 /**
@@ -47,8 +48,35 @@ class LicenseAdminController extends Controller
 
         $licenses = $q->paginate(40)->withQueryString();
         $stats = $this->stats();
+        $plans = LicensePlans::all();
 
-        return view('licenses.index', compact('licenses', 'stats', 'status', 'online', 'search'));
+        return view('licenses.index', compact('licenses', 'stats', 'status', 'online', 'search', 'plans'));
+    }
+
+    public function plans(Request $request)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $plans = array_values(LicensePlans::all());
+
+        return view('licenses.plans', compact('plans'));
+    }
+
+    public function savePlans(Request $request)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $data = $request->validate([
+            'plans' => ['required', 'array', 'min:1'],
+            'plans.*.code' => ['required', 'string', 'max:30'],
+            'plans.*.label' => ['required', 'string', 'max:80'],
+            'plans.*.months' => ['nullable', 'integer', 'min:0', 'max:1200'],
+            'plans.*.price' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        LicensePlans::save($data['plans']);
+
+        return redirect()->route('licenses.plans')->with('success', 'پلن‌ها و قیمت‌ها ذخیره شد.');
     }
 
     public function online(Request $request)
@@ -84,15 +112,28 @@ class LicenseAdminController extends Controller
             'customer_phone' => ['nullable', 'string', 'max:30'],
             'customer_email' => ['nullable', 'email', 'max:160'],
             'domain_hint' => ['nullable', 'string', 'max:190'],
+            'plan_code' => ['required', 'string', 'max:30'],
             'expires_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'send_sms' => ['nullable', 'boolean'],
+            'start_from' => ['nullable', 'in:issue,activate'],
         ]);
+
+        $plan = LicensePlans::find($data['plan_code']);
+        if (! $plan) {
+            return back()->with('error', 'پلن انتخاب‌شده معتبر نیست.')->withInput();
+        }
 
         $key = ProductLicense::generateKey();
         $domainHint = ! empty($data['domain_hint'])
             ? ProductLicense::normalizeDomain($data['domain_hint'])
             : null;
+
+        $startFrom = $data['start_from'] ?? 'activate';
+        $expiresAt = $data['expires_at'] ?? null;
+        if (! $expiresAt && $startFrom === 'issue' && ! empty($plan['months'])) {
+            $expiresAt = now()->addMonths((int) $plan['months'])->toDateString();
+        }
 
         $row = ProductLicense::query()->create([
             'license_key' => $key,
@@ -100,17 +141,22 @@ class LicenseAdminController extends Controller
             'customer_phone' => $data['customer_phone'] ?? null,
             'customer_email' => $data['customer_email'] ?? null,
             'product' => 'hddland-repair',
+            'plan_code' => $plan['code'],
+            'plan_label' => $plan['label'],
+            'plan_months' => $plan['months'],
+            'price_toman' => (int) $plan['price'],
             'status' => 'unused',
-            'expires_at' => $data['expires_at'] ?? null,
+            'expires_at' => $expiresAt,
             'notes' => $data['notes'] ?? null,
             'meta' => array_filter([
                 'domain_hint' => $domainHint,
                 'issued_by' => $request->user()->id,
                 'issued_by_name' => $request->user()->name,
+                'start_from' => $startFrom,
             ]),
         ]);
 
-        $msg = 'سریال صادر شد: '.$row->license_key;
+        $msg = 'سریال صادر شد: '.$row->license_key.' ('.$row->planSummary().')';
 
         if ($request->boolean('send_sms') && ! empty($row->customer_phone)) {
             $sms = $this->sendLicenseSms($row);
@@ -170,7 +216,34 @@ class LicenseAdminController extends Controller
 
         $data = $request->validate([
             'expires_at' => ['nullable', 'date'],
+            'plan_code' => ['nullable', 'string', 'max:30'],
+            'add_plan' => ['nullable', 'boolean'],
         ]);
+
+        if (! empty($data['plan_code']) && $request->boolean('add_plan')) {
+            $plan = LicensePlans::find($data['plan_code']);
+            if (! $plan) {
+                return back()->with('error', 'پلن تمدید معتبر نیست.');
+            }
+            $base = $license->expires_at && $license->expires_at->isFuture()
+                ? $license->expires_at->copy()
+                : now();
+            if (! empty($plan['months'])) {
+                $license->expires_at = $base->addMonths((int) $plan['months']);
+            } else {
+                $license->expires_at = null;
+            }
+            $license->plan_code = $plan['code'];
+            $license->plan_label = $plan['label'];
+            $license->plan_months = $plan['months'];
+            $license->price_toman = (int) (($license->price_toman ?: 0) + (int) $plan['price']);
+            if ($license->status === 'expired') {
+                $license->status = 'active';
+            }
+            $license->save();
+
+            return back()->with('success', 'با پلن '.$plan['label'].' تمدید شد.');
+        }
 
         $license->update([
             'expires_at' => $data['expires_at'] ?? null,
@@ -221,8 +294,16 @@ class LicenseAdminController extends Controller
             $license->license_key,
             'در ویزارد نصب وارد کنید.',
         ];
+        if ($license->plan_label) {
+            $lines[] = 'پلن: '.$license->plan_label;
+        }
+        if ($license->price_toman) {
+            $lines[] = 'مبلغ: '.number_format((int) $license->price_toman).' تومان';
+        }
         if ($license->expires_at) {
             $lines[] = 'انقضا: '.jalali_date($license->expires_at);
+        } elseif (! empty($license->plan_months)) {
+            $lines[] = 'مدت: '.$license->plan_months.' ماه از زمان نصب';
         }
 
         $sms = $sms ?: app(NiazpardazSmsService::class);
