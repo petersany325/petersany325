@@ -86,16 +86,33 @@ class WebInstaller
         return true;
     }
 
+    /** Seller site that validates licenses and sends install OTP SMS. */
+    public const SELLER_LICENSE_SERVER = 'https://support.hdd-land.ir';
+
+    public const SELLER_PURCHASE_URL = 'https://hdd-land.ir';
+
+    /** OTP SMS is always requested from the seller site (not the customer host). */
+    public static function sellerSmsOtpUrl(): string
+    {
+        return self::SELLER_LICENSE_SERVER.'/license/request-otp';
+    }
+
+    public static function sellerConfirmOtpUrl(): string
+    {
+        return self::SELLER_LICENSE_SERVER.'/license/confirm-otp';
+    }
+
     /**
      * Step A: validate serial and ask seller to SMS an OTP.
      *
      * @return array{ok:bool,message:string,demo?:bool,payload?:array,phone_masked?:string,phone?:string,purchase_url?:string}
      */
-    public function requestLicenseOtp(string $licenseKey, string $domain, string $licenseServer, string $phone = ''): array
+    public function requestLicenseOtp(string $licenseKey, string $domain, string $licenseServer = '', string $phone = ''): array
     {
         $licenseKey = strtoupper(trim($licenseKey));
         $domain = strtolower(preg_replace('/^www\./', '', trim($domain)) ?? '');
-        $licenseServer = rtrim(trim($licenseServer), '/');
+        // Always use seller site so SMS goes through HDD Land gateway.
+        $licenseServer = self::SELLER_LICENSE_SERVER;
         $phone = preg_replace('/\D+/', '', $phone) ?: '';
 
         if ($licenseKey === '' || ! preg_match('/^[A-Z0-9]{4}(?:-[A-Z0-9]{4}){3}$/', $licenseKey)) {
@@ -103,9 +120,6 @@ class WebInstaller
         }
         if ($domain === '' || ! str_contains($domain, '.')) {
             return ['ok' => false, 'message' => 'دامنه معتبر نیست.'];
-        }
-        if ($licenseServer === '' || ! preg_match('#^https?://#i', $licenseServer)) {
-            return ['ok' => false, 'message' => 'آدرس سرور لایسنس نامعتبر است.'];
         }
 
         // Offline bypass for seller QA only (never document publicly as customer path).
@@ -128,7 +142,7 @@ class WebInstaller
             ];
         }
 
-        $url = $licenseServer.'/license/request-otp';
+        $url = self::sellerSmsOtpUrl();
         $body = http_build_query([
             'license_key' => $licenseKey,
             'domain' => $domain,
@@ -140,8 +154,8 @@ class WebInstaller
         if (! ($result['ok'] ?? false)) {
             return [
                 'ok' => false,
-                'message' => $result['message'] ?? 'ارتباط با سرور لایسنس برقرار نشد.',
-                'purchase_url' => 'https://hdd-land.ir',
+                'message' => $result['message'] ?? 'ارتباط با سرور لایسنس/پیامک سرزمین هارد برقرار نشد.',
+                'purchase_url' => self::SELLER_PURCHASE_URL,
             ];
         }
 
@@ -150,16 +164,17 @@ class WebInstaller
             return [
                 'ok' => false,
                 'message' => (string) ($json['message'] ?? 'سریال نامعتبر است.'),
-                'purchase_url' => (string) ($json['purchase_url'] ?? 'https://hdd-land.ir'),
+                'purchase_url' => (string) ($json['purchase_url'] ?? self::SELLER_PURCHASE_URL),
             ];
         }
 
         return [
             'ok' => true,
-            'message' => (string) ($json['message'] ?? 'کد تأیید پیامک شد.'),
+            'message' => (string) ($json['message'] ?? 'کد تأیید از سرور سرزمین هارد پیامک شد.'),
             'phone_masked' => (string) ($json['phone_masked'] ?? ''),
             'phone' => $phone,
-            'purchase_url' => (string) ($json['purchase_url'] ?? 'https://hdd-land.ir'),
+            'purchase_url' => (string) ($json['purchase_url'] ?? self::SELLER_PURCHASE_URL),
+            'sms_url' => $url,
         ];
     }
 
@@ -177,7 +192,7 @@ class WebInstaller
     ): array {
         $licenseKey = strtoupper(trim($licenseKey));
         $domain = strtolower(preg_replace('/^www\./', '', trim($domain)) ?? '');
-        $licenseServer = rtrim(trim($licenseServer), '/');
+        $licenseServer = self::SELLER_LICENSE_SERVER;
         $phone = preg_replace('/\D+/', '', $phone) ?: '';
         $code = trim($code);
 
@@ -185,7 +200,7 @@ class WebInstaller
             return ['ok' => false, 'message' => 'کد تأیید را درست وارد کنید.'];
         }
 
-        $url = $licenseServer.'/license/confirm-otp';
+        $url = self::sellerConfirmOtpUrl();
         $body = http_build_query([
             'license_key' => $licenseKey,
             'domain' => $domain,
@@ -199,8 +214,8 @@ class WebInstaller
         if (! ($result['ok'] ?? false)) {
             return [
                 'ok' => false,
-                'message' => $result['message'] ?? 'ارتباط با سرور لایسنس برقرار نشد.',
-                'purchase_url' => 'https://hdd-land.ir',
+                'message' => $result['message'] ?? 'ارتباط با سرور لایسنس سرزمین هارد برقرار نشد.',
+                'purchase_url' => self::SELLER_PURCHASE_URL,
             ];
         }
 
@@ -209,7 +224,7 @@ class WebInstaller
             return [
                 'ok' => false,
                 'message' => (string) ($json['message'] ?? 'کد تأیید یا سریال نامعتبر است.'),
-                'purchase_url' => (string) ($json['purchase_url'] ?? 'https://hdd-land.ir'),
+                'purchase_url' => (string) ($json['purchase_url'] ?? self::SELLER_PURCHASE_URL),
             ];
         }
 
