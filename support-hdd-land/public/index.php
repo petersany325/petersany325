@@ -26,7 +26,11 @@ if ($needsInstall && is_file($envFile)) {
 }
 
 if ($needsInstall && ! $isInstall) {
-    header('Location: /install.php');
+    // Prefer /install.php (root wrapper). Fallback path works if docroot is project root
+    // and rewrite is disabled: /public/install.php
+    $rootInstall = dirname(__DIR__).'/install.php';
+    $target = is_file($rootInstall) ? '/install.php' : '/public/install.php';
+    header('Location: '.$target);
     exit;
 }
 
