@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Reception;
 use App\Models\Technician;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
@@ -83,5 +85,40 @@ class TechnicianController extends Controller
         ]);
 
         return redirect()->route('technicians.index')->with('success', 'اطلاعات تعمیرکار به‌روزرسانی شد.');
+    }
+
+    public function destroy(Technician $technician)
+    {
+        $inCustody = Reception::query()
+            ->where('custody_technician_id', $technician->id)
+            ->whereIn('custody', ['with_technician', 'returning'])
+            ->where('status', '!=', 'delivered')
+            ->exists();
+
+        if ($inCustody) {
+            return back()->withErrors([
+                'technician' => 'این تعمیرکار هنوز دستگاه در اختیار دارد. ابتدا دستگاه‌ها را به پذیرش برگردانید، بعد حذف کنید.',
+            ]);
+        }
+
+        $name = $technician->name;
+
+        DB::transaction(function () use ($technician) {
+            $user = $technician->user;
+            // Historical receptions keep null technician_id via FK nullOnDelete.
+            $technician->delete();
+
+            if ($user && $user->role === 'technician') {
+                // Remove orphaned technician login if no other profile points to it.
+                $stillLinked = Technician::query()->where('user_id', $user->id)->exists();
+                if (! $stillLinked && (int) $user->id !== (int) auth()->id()) {
+                    $user->delete();
+                }
+            }
+        });
+
+        return redirect()
+            ->route('technicians.index')
+            ->with('success', 'تعمیرکار «'.$name.'» حذف شد.');
     }
 }

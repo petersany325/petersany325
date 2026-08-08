@@ -193,7 +193,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware(EnsurePermission::class.':technicians')->group(function () {
-        Route::resource('technicians', TechnicianController::class)->except(['show', 'destroy']);
+        Route::resource('technicians', TechnicianController::class)->except(['show']);
     });
 
     Route::middleware(EnsurePermission::class.':employees')->group(function () {
