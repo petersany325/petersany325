@@ -122,8 +122,59 @@ if (! is_file($base.'/index.php')) {
     $msgs[] = 'index.php ریشه ساخته شد.';
 }
 
+// Ensure storage dirs exist/writable
+foreach (['storage/framework/cache', 'storage/framework/sessions', 'storage/framework/views', 'storage/logs', 'storage/app/public', 'bootstrap/cache'] as $rel) {
+    $p = $base.'/'.$rel;
+    if (! is_dir($p)) {
+        @mkdir($p, 0775, true);
+    }
+}
+
+// Generate APP_KEY if missing (common cause of opaque 500)
+if (is_file($envPath)) {
+    $envNow = (string) file_get_contents($envPath);
+    if (! preg_match('/^APP_KEY=base64:.+/m', $envNow)) {
+        $key = 'base64:'.base64_encode(random_bytes(32));
+        if (preg_match('/^APP_KEY=.*$/m', $envNow)) {
+            $envNow = preg_replace('/^APP_KEY=.*$/m', 'APP_KEY="'.$key.'"', $envNow);
+        } else {
+            $envNow = rtrim($envNow)."\nAPP_KEY=\"".$key."\"\n";
+        }
+        if (file_put_contents($envPath, $envNow) !== false) {
+            $msgs[] = 'APP_KEY خالی بود و ساخته شد.';
+        }
+    }
+}
+
+// Probe Laravel boot error (so 500 reason is visible here)
+$bootError = null;
+try {
+    if (is_file($base.'/vendor/autoload.php') && is_file($base.'/bootstrap/app.php')) {
+        require $base.'/vendor/autoload.php';
+        $app = require $base.'/bootstrap/app.php';
+        $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+        $request = Illuminate\Http\Request::create('/', 'GET');
+        $response = $kernel->handle($request);
+        $status = $response->getStatusCode();
+        if ($status >= 500) {
+            $bootError = 'Laravel پاسخ '.$status.' داد. فایل public/debug-500.php را باز کنید یا لاگ storage/logs را ببینید.';
+            $ok = false;
+        } else {
+            $msgs[] = 'تست Laravel روی / وضعیت '.$status.' گرفت.';
+        }
+        $kernel->terminate($request, $response);
+    }
+} catch (Throwable $e) {
+    $bootError = $e->getMessage().' @ '.$e->getFile().':'.$e->getLine();
+    $ok = false;
+}
+if ($bootError) {
+    $msgs[] = 'خطای فعلی برنامه: '.$bootError;
+}
+
 $login = $appUrl !== '' ? $appUrl.'/login' : '/login';
 $loginAlt = $appUrl !== '' ? $appUrl.'/index.php/login' : '/index.php/login';
+$debugUrl = ($appUrl !== '' ? $appUrl : '').'/public/debug-500.php';
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
