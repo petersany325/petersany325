@@ -88,6 +88,15 @@ class User extends Authenticatable
         return in_array($permission, $this->permissionList(), true);
     }
 
+    /**
+     * OTP-only staff (no password login yet) must create a password first,
+     * without knowing the random hash stored at account creation.
+     */
+    public function needsInitialPassword(): bool
+    {
+        return ! $this->can_login_password;
+    }
+
     public static function normalizePhone(?string $phone): ?string
     {
         if (! $phone) {
