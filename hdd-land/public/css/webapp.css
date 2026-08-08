@@ -371,7 +371,9 @@ img, video, svg, canvas { max-width: 100%; height: auto; display: block; }
   transform: translateX(-104%);
   box-shadow: 12px 0 40px rgba(15, 23, 42, .18);
 }
-.wa-drawer.is-open { transform: translateX(0); }
+.wa-drawer.wa-drawer-right.is-open,
+.wa-drawer.wa-drawer-left.is-open,
+.wa-drawer.is-open { transform: translateX(0) !important; }
 body.wa-drawer-open { overflow: hidden; }
 
 .wa-drawer-head {

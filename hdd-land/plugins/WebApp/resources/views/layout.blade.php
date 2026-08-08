@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="{{ $iconSrc }}">
   <link rel="icon" type="image/png" sizes="192x192" href="{{ $iconSrc }}">
   <title>{{ $title ?? ($s['app_name'] ?? 'سرزمین هارد') }}</title>
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=9">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=10">
 </head>
 @php
   $anim = !empty($s['animations']);
@@ -37,7 +37,7 @@
       </button>
     @endif
     <a class="wa-brand" href="{{ url('/app') }}">
-      <img class="wa-logo" src="{{ $iconSrc }}?v=9" width="40" height="40" alt="{{ $s['app_name'] ?? 'سرزمین هارد' }}" onerror="this.onerror=null;this.src='{{ asset('images/hdd-land-icon-192.png') }}'">
+      <img class="wa-logo" src="{{ $iconSrc }}?v=10" width="40" height="40" alt="{{ $s['app_name'] ?? 'سرزمین هارد' }}" onerror="this.onerror=null;this.src='{{ asset('images/hdd-land-icon-192.png') }}'">
       <strong>{{ $s['app_name'] ?? 'سرزمین هارد' }}</strong>
     </a>
   </div>
@@ -58,7 +58,7 @@
   <div class="wa-drawer-head">
     @if(!empty($s['drawer_show_brand']))
       <div class="wa-drawer-brand">
-        <img src="{{ $iconSrc }}?v=9" width="36" height="36" alt="" onerror="this.style.display='none'">
+        <img src="{{ $iconSrc }}?v=10" width="36" height="36" alt="" onerror="this.style.display='none'">
         <div>
           <strong>{{ $s['app_name'] ?? 'سرزمین هارد' }}</strong>
           <small>{{ $s['drawer_subtitle'] ?? ($s['drawer_title'] ?? 'منوی وب‌اپ') }}</small>
@@ -215,7 +215,7 @@
     drawerEnabled: @json($drawerOn)
   };
 </script>
-<script src="{{ asset('js/webapp.js') }}?v=9" defer></script>
+<script src="{{ asset('js/webapp.js') }}?v=10" defer></script>
 @php
   \Illuminate\Support\Facades\View::addNamespace('smart-chat', base_path('plugins/SmartChat/resources/views'));
 @endphp
