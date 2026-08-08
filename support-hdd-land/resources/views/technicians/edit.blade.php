@@ -21,7 +21,18 @@
                 ])
             </div>
         </div>
-        <div class="actions"><button class="btn btn-primary" type="submit">ذخیره</button></div>
+        <div class="actions">
+            <button class="btn btn-primary" type="submit">ذخیره</button>
+            <a class="btn btn-ghost" href="{{ route('technicians.index') }}">بازگشت</a>
+        </div>
+    </form>
+    <form method="POST"
+          action="{{ route('technicians.destroy', $technician) }}"
+          style="margin-top:12px;"
+          data-confirm="تعمیرکار «{{ $technician->name }}» حذف شود؟ این عمل برگشت‌ناپذیر است.">
+        @csrf
+        @method('DELETE')
+        <button class="btn btn-danger" type="submit">حذف تعمیرکار</button>
     </form>
 </div>
 @endsection
