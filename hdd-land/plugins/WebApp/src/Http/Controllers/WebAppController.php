@@ -317,6 +317,7 @@ JS;
             'siteMenu' => SiteSync::resolveMenu($s),
             'quickLinks' => SiteSync::resolveQuickLinks($s),
             'waFooter' => SiteSync::resolveFooter($s),
+            'drawerMenu' => Plugin::resolveDrawerMenu($s),
         ], $extra);
     }
 

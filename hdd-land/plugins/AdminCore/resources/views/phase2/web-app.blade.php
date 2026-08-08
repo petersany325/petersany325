@@ -137,16 +137,62 @@
     </div>
 
     <div class="vb-block">
+      <div class="vb-block-head"><span>منوی کشویی اختصاصی وب‌اپ</span><span class="tag">Drawer</span></div>
+      <div class="vb-block-body">
+        <div class="vb-opt"><div><span class="vb-title">فعال بودن منوی کشویی</span><span class="vb-desc">دکمه ☰ کنار برند — منوی مخصوص موبایل/وب‌اپ</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="drawer_menu_enabled" value="1" @checked($on('drawer_menu_enabled'))><span class="vb-slider"></span></label></div></div>
+        <div class="vb-opt"><div><span class="vb-title">جهت باز شدن</span></div><div class="vb-ctrl">
+          <select name="drawer_side">
+            <option value="right" @selected($f('drawer_side','right')==='right')>از سمت راست</option>
+            <option value="left" @selected($f('drawer_side')==='left')>از سمت چپ</option>
+          </select>
+        </div></div>
+        <div class="vb-opt"><div><span class="vb-title">عنوان منو</span></div><div class="vb-ctrl"><input type="text" name="drawer_title" value="{{ $f('drawer_title','منوی وب‌اپ') }}"></div></div>
+        <div class="vb-opt"><div><span class="vb-title">زیرعنوان</span></div><div class="vb-ctrl"><input type="text" name="drawer_subtitle" value="{{ $f('drawer_subtitle','دسترسی سریع فروشگاه موبایل') }}"></div></div>
+        <div class="vb-opt"><div><span class="vb-title">نمایش برند در سر منو</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="drawer_show_brand" value="1" @checked($on('drawer_show_brand'))><span class="vb-slider"></span></label></div></div>
+        <div class="vb-opt"><div><span class="vb-title">لینک نسخه کامل سایت در پایین کشو</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="drawer_show_full_site" value="1" @checked($on('drawer_show_full_site'))><span class="vb-slider"></span></label></div></div>
+        <div class="vb-opt"><div><span class="vb-title">متن لینک سایت کامل</span></div><div class="vb-ctrl"><input type="text" name="drawer_full_site_label" value="{{ $f('drawer_full_site_label','نسخه کامل سایت') }}"></div></div>
+        <div class="vb-opt"><div><span class="vb-title">آدرس لینک سایت کامل</span></div><div class="vb-ctrl"><input type="text" name="drawer_full_site_url" value="{{ $f('drawer_full_site_url','/') }}" dir="ltr"></div></div>
+
+        <p class="vb-desc" style="margin:.85rem 0 .35rem;color:#64748b;font-weight:800">آیتم‌های منو (فعال / برچسب / آدرس / آیکون)</p>
+        @foreach([
+          'home' => 'خانه',
+          'shop' => 'فروشگاه',
+          'cart' => 'سبد خرید',
+          'account' => 'حساب من',
+          'track' => 'پیگیری سفارش',
+          'warranty' => 'استعلام گارانتی',
+          'support' => 'پشتیبانی',
+          'contact' => 'تماس با ما',
+        ] as $key => $lab)
+          <div class="vb-opt">
+            <div><span class="vb-title">{{ $lab }}</span></div>
+            <div class="vb-ctrl" style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+              <label class="vb-switch"><input type="checkbox" name="drawer_item_{{ $key }}" value="1" @checked($on('drawer_item_'.$key))><span class="vb-slider"></span></label>
+              <input type="text" name="drawer_{{ $key }}_label" value="{{ $f('drawer_'.$key.'_label',$lab) }}" style="width:7rem" placeholder="برچسب">
+              <input type="text" name="drawer_{{ $key }}_url" value="{{ $f('drawer_'.$key.'_url') }}" style="width:9rem" dir="ltr" placeholder="/url">
+              <input type="text" name="drawer_{{ $key }}_icon" value="{{ $f('drawer_'.$key.'_icon') }}" style="width:3rem;text-align:center" placeholder="⌂">
+            </div>
+          </div>
+        @endforeach
+
+        <div class="vb-opt vb-opt-stack">
+          <div><span class="vb-title">لینک‌های اضافه</span><span class="vb-desc">هر خط: برچسب|آدرس|آیکون — مثال: درباره ما|/about|ℹ</span></div>
+          <div class="vb-ctrl"><textarea name="drawer_extra_links" rows="3" dir="rtl" placeholder="درباره ما|/about|ℹ">{{ $f('drawer_extra_links') }}</textarea></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="vb-block">
       <div class="vb-block-head"><span>همگام‌سازی خودکار با سایت</span><span class="tag">Sync</span></div>
       <div class="vb-block-body">
-        <div class="vb-opt"><div><span class="vb-title">منوی مگامنو → وب‌اپ</span><span class="vb-desc">با آپدیت منو در افزونه مگامنو، وب‌اپ هم عوض می‌شود</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="sync_menu_from_site" value="1" @checked($on('sync_menu_from_site'))><span class="vb-slider"></span></label></div></div>
-        <div class="vb-opt"><div><span class="vb-title">نمایش نوار منوی سایت در وب‌اپ</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="show_site_menu" value="1" @checked($on('show_site_menu'))><span class="vb-slider"></span></label></div></div>
-        <div class="vb-opt"><div><span class="vb-title">حداکثر آیتم منو</span></div><div class="vb-ctrl"><input type="number" name="menu_limit" min="4" max="24" value="{{ $f('menu_limit',12) }}"></div></div>
+        <div class="vb-opt"><div><span class="vb-title">منوی مگامنو → نوار چیپ افقی</span><span class="vb-desc">اختیاری؛ منوی اصلی وب‌اپ همان کشوی اختصاصی است</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="sync_menu_from_site" value="1" @checked($on('sync_menu_from_site'))><span class="vb-slider"></span></label></div></div>
+        <div class="vb-opt"><div><span class="vb-title">نمایش نوار چیپ افقی (سبک سایت دسکتاپ)</span><span class="vb-desc">معمولاً خاموش بماند</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="show_site_menu" value="1" @checked($on('show_site_menu'))><span class="vb-slider"></span></label></div></div>
+        <div class="vb-opt"><div><span class="vb-title">حداکثر آیتم نوار چیپ</span></div><div class="vb-ctrl"><input type="number" name="menu_limit" min="4" max="24" value="{{ $f('menu_limit',12) }}"></div></div>
         <div class="vb-opt"><div><span class="vb-title">لینک سریع از قالب (top menu)</span><span class="vb-desc">از ThemeBuilder؛ در غیر این صورت از مگامنو</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="sync_quick_links_from_theme" value="1" @checked($on('sync_quick_links_from_theme'))><span class="vb-slider"></span></label></div></div>
         <div class="vb-opt"><div><span class="vb-title">نام/رنگ برند از تنظیمات سایت</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="sync_brand_from_site" value="1" @checked($on('sync_brand_from_site'))><span class="vb-slider"></span></label></div></div>
         <div class="vb-opt"><div><span class="vb-title">نمایش فوتر در وب‌اپ</span><span class="vb-desc">فوتر فشرده زیر محتوا (بالای نوار پایین)</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="show_footer" value="1" @checked($on('show_footer'))><span class="vb-slider"></span></label></div></div>
         <div class="vb-opt"><div><span class="vb-title">همگام‌سازی فوتر از تنظیمات فوتر سایت</span><span class="vb-desc">از «تنظیمات فوتر مدرن»؛ لینک‌ها برای /app نگاشت می‌شوند</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="sync_footer_from_site" value="1" @checked($on('sync_footer_from_site'))><span class="vb-slider"></span></label></div></div>
-        <p class="vb-desc" style="margin:.5rem 0 0;color:#64748b">منو و فوتر با کارتابل مشتری هم‌خوان می‌شوند؛ لینک‌های مرده (#) و «زیرمنو» خودکار حذف می‌گردند. لینک‌های دستی زیر فقط وقتی استفاده می‌شوند که همگام‌سازی خاموش باشد یا منبع خالی باشد.</p>
+        <p class="vb-desc" style="margin:.5rem 0 0;color:#64748b">منوی اصلی وب‌اپ از بخش «منوی کشویی اختصاصی» کنترل می‌شود. نوار چیپ افقی فقط در صورت نیاز روشن شود.</p>
       </div>
     </div>
 

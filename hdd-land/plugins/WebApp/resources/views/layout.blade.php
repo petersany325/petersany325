@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="{{ $iconSrc }}">
   <link rel="icon" type="image/png" sizes="192x192" href="{{ $iconSrc }}">
   <title>{{ $title ?? ($s['app_name'] ?? 'سرزمین هارد') }}</title>
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=8">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=9">
 </head>
 @php
   $anim = !empty($s['animations']);
@@ -21,15 +21,26 @@
   $siteMenu = $siteMenu ?? [];
   $quickLinks = $quickLinks ?? [];
   $waFooter = $waFooter ?? null;
+  $drawerMenu = $drawerMenu ?? [];
+  $drawerOn = !empty($s['drawer_menu_enabled']) && !empty($drawerMenu);
+  $drawerSide = (($s['drawer_side'] ?? 'right') === 'left') ? 'left' : 'right';
+  $tab = $tab ?? 'home';
 @endphp
-<body class="wa-body {{ $anim ? 'wa-anim' : '' }} {{ $compact ? 'wa-compact' : '' }}"
+<body class="wa-body {{ $anim ? 'wa-anim' : '' }} {{ $compact ? 'wa-compact' : '' }} {{ $drawerOn ? 'has-wa-drawer' : '' }}"
   style="--wa-brand:{{ $s['theme_color'] ?? '#e23d12' }};--wa-bg:{{ $s['background_color'] ?? '#f4f6f9' }};--wa-surface:{{ $s['surface_color'] ?? '#ffffff' }};--wa-ink:{{ $s['text_color'] ?? '#1a1d23' }}">
 
 <header class="wa-top">
-  <a class="wa-brand" href="{{ url('/app') }}">
-    <img class="wa-logo" src="{{ $iconSrc }}?v=7" width="40" height="40" alt="{{ $s['app_name'] ?? 'سرزمین هارد' }}" onerror="this.onerror=null;this.src='{{ asset('images/hdd-land-icon-192.png') }}'">
-    <strong>{{ $s['app_name'] ?? 'سرزمین هارد' }}</strong>
-  </a>
+  <div class="wa-top-start">
+    @if($drawerOn)
+      <button type="button" class="wa-menu-btn" id="waMenuOpen" aria-label="باز کردن منو" aria-controls="waDrawer" aria-expanded="false">
+        <span aria-hidden="true"></span>
+      </button>
+    @endif
+    <a class="wa-brand" href="{{ url('/app') }}">
+      <img class="wa-logo" src="{{ $iconSrc }}?v=9" width="40" height="40" alt="{{ $s['app_name'] ?? 'سرزمین هارد' }}" onerror="this.onerror=null;this.src='{{ asset('images/hdd-land-icon-192.png') }}'">
+      <strong>{{ $s['app_name'] ?? 'سرزمین هارد' }}</strong>
+    </a>
+  </div>
   <div class="wa-top-actions">
     @if(!empty($s['show_search']) && ($tab ?? '') !== 'shop')
       <a class="wa-icon-btn" href="{{ url('/app/shop') }}" aria-label="جستجو">⌕</a>
@@ -40,6 +51,57 @@
     </a>
   </div>
 </header>
+
+@if($drawerOn)
+<div class="wa-drawer-backdrop" id="waDrawerBackdrop" hidden></div>
+<aside class="wa-drawer wa-drawer-{{ $drawerSide }}" id="waDrawer" data-side="{{ $drawerSide }}" aria-hidden="true" aria-label="{{ $s['drawer_title'] ?? 'منوی وب‌اپ' }}">
+  <div class="wa-drawer-head">
+    @if(!empty($s['drawer_show_brand']))
+      <div class="wa-drawer-brand">
+        <img src="{{ $iconSrc }}?v=9" width="36" height="36" alt="" onerror="this.style.display='none'">
+        <div>
+          <strong>{{ $s['app_name'] ?? 'سرزمین هارد' }}</strong>
+          <small>{{ $s['drawer_subtitle'] ?? ($s['drawer_title'] ?? 'منوی وب‌اپ') }}</small>
+        </div>
+      </div>
+    @else
+      <div class="wa-drawer-brand">
+        <div>
+          <strong>{{ $s['drawer_title'] ?? 'منوی وب‌اپ' }}</strong>
+          @if(!empty($s['drawer_subtitle']))
+            <small>{{ $s['drawer_subtitle'] }}</small>
+          @endif
+        </div>
+      </div>
+    @endif
+    <button type="button" class="wa-drawer-close" id="waMenuClose" aria-label="بستن منو">×</button>
+  </div>
+  <nav class="wa-drawer-nav">
+    @foreach($drawerMenu as $item)
+      @php
+        $href = str_starts_with($item['url'], 'http') ? $item['url'] : url($item['url']);
+        $active = false;
+        if (($item['key'] ?? '') === 'home' && ($tab ?? '') === 'home') $active = true;
+        if (($item['key'] ?? '') === 'shop' && ($tab ?? '') === 'shop') $active = true;
+        if (($item['key'] ?? '') === 'cart' && ($tab ?? '') === 'cart') $active = true;
+        if (($item['key'] ?? '') === 'account' && ($tab ?? '') === 'account') $active = true;
+      @endphp
+      <a href="{{ $href }}" class="{{ $active ? 'active' : '' }}">
+        <i class="wa-drawer-ico" aria-hidden="true">{{ $item['icon'] ?? '•' }}</i>
+        <span>{{ $item['label'] }}</span>
+        @if(($item['key'] ?? '') === 'cart' && ($cartCount ?? 0) > 0)
+          <b class="wa-drawer-badge">{{ $cartCount }}</b>
+        @endif
+      </a>
+    @endforeach
+  </nav>
+  @if(!empty($s['drawer_show_full_site']))
+    <div class="wa-drawer-foot">
+      <a href="{{ url($s['drawer_full_site_url'] ?? '/') }}">{{ $s['drawer_full_site_label'] ?? 'نسخه کامل سایت' }}</a>
+    </div>
+  @endif
+</aside>
+@endif
 
 @if(!empty($s['show_install_banner']) && ! session('webapp_banner_dismissed'))
 <div class="wa-install" id="waInstall" hidden data-smart="{{ !empty($s['smart_install']) ? '1' : '0' }}">
@@ -119,7 +181,6 @@
 @endif
 
 @if(!empty($s['mobile_bottom_nav']))
-@php $tab = $tab ?? 'home'; @endphp
 <nav class="wa-tabbar">
   @if(!empty($s['show_nav_home']))
     <a class="{{ $tab==='home'?'active':'' }}" href="{{ url('/app') }}"><span class="wa-ico">⌂</span>{{ $s['nav_home_label'] ?? 'خانه' }}</a>
@@ -150,10 +211,11 @@
     installOnlyMobile: @json(!empty($s['install_only_mobile'])),
     installedText: @json($s['installed_badge_text'] ?? 'نصب‌شده روی این دستگاه'),
     readyText: @json($s['install_ready_text'] ?? 'آماده نصب روی گوشی'),
-    bannerText: @json($s['install_banner_text'] ?? 'نصب اپ سرزمین هارد')
+    bannerText: @json($s['install_banner_text'] ?? 'نصب اپ سرزمین هارد'),
+    drawerEnabled: @json($drawerOn)
   };
 </script>
-<script src="{{ asset('js/webapp.js') }}?v=8" defer></script>
+<script src="{{ asset('js/webapp.js') }}?v=9" defer></script>
 @php
   \Illuminate\Support\Facades\View::addNamespace('smart-chat', base_path('plugins/SmartChat/resources/views'));
 @endphp

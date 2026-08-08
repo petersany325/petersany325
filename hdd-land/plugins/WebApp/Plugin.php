@@ -26,7 +26,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '2.2.0';
+        return '2.3.0';
     }
 
     public function isCore(): bool
@@ -101,11 +101,54 @@ class Plugin extends BasePlugin
             'quick_link_3_label' => 'پشتیبانی',
             'quick_link_3_url' => '/account/tickets',
             // Live sync from site template/plugins
-            'sync_menu_from_site' => true,
+            'sync_menu_from_site' => false,
             'sync_quick_links_from_theme' => true,
             'sync_brand_from_site' => true,
-            'show_site_menu' => true,
+            // Legacy horizontal chip strip (desktop-like) — off by default
+            'show_site_menu' => false,
             'menu_limit' => 12,
+            // Dedicated right drawer menu for WebApp
+            'drawer_menu_enabled' => true,
+            'drawer_side' => 'right',
+            'drawer_title' => 'منوی وب‌اپ',
+            'drawer_subtitle' => 'دسترسی سریع فروشگاه موبایل',
+            'drawer_show_brand' => true,
+            'drawer_show_full_site' => true,
+            'drawer_full_site_label' => 'نسخه کامل سایت',
+            'drawer_full_site_url' => '/',
+            'drawer_item_home' => true,
+            'drawer_home_label' => 'خانه',
+            'drawer_home_url' => '/app',
+            'drawer_home_icon' => '⌂',
+            'drawer_item_shop' => true,
+            'drawer_shop_label' => 'فروشگاه',
+            'drawer_shop_url' => '/app/shop',
+            'drawer_shop_icon' => '▣',
+            'drawer_item_cart' => true,
+            'drawer_cart_label' => 'سبد خرید',
+            'drawer_cart_url' => '/app/cart',
+            'drawer_cart_icon' => '▢',
+            'drawer_item_account' => true,
+            'drawer_account_label' => 'حساب من',
+            'drawer_account_url' => '/app/account',
+            'drawer_account_icon' => '☺',
+            'drawer_item_track' => true,
+            'drawer_track_label' => 'پیگیری سفارش',
+            'drawer_track_url' => '/orders/track',
+            'drawer_track_icon' => '⌕',
+            'drawer_item_warranty' => true,
+            'drawer_warranty_label' => 'استعلام گارانتی',
+            'drawer_warranty_url' => '/serial-check',
+            'drawer_warranty_icon' => '⛨',
+            'drawer_item_support' => true,
+            'drawer_support_label' => 'پشتیبانی',
+            'drawer_support_url' => '/account/tickets',
+            'drawer_support_icon' => '✉',
+            'drawer_item_contact' => true,
+            'drawer_contact_label' => 'تماس با ما',
+            'drawer_contact_url' => '/contact',
+            'drawer_contact_icon' => '☎',
+            'drawer_extra_links' => '',
             // Footer (sync from modern FooterConfig)
             'show_footer' => true,
             'sync_footer_from_site' => true,
@@ -194,6 +237,9 @@ class Plugin extends BasePlugin
             'animations', 'compact_cards',
             'sync_menu_from_site', 'sync_quick_links_from_theme', 'sync_brand_from_site',
             'show_site_menu', 'show_footer', 'sync_footer_from_site',
+            'drawer_menu_enabled', 'drawer_show_brand', 'drawer_show_full_site',
+            'drawer_item_home', 'drawer_item_shop', 'drawer_item_cart', 'drawer_item_account',
+            'drawer_item_track', 'drawer_item_warranty', 'drawer_item_support', 'drawer_item_contact',
             'smart_install', 'hide_install_when_installed', 'install_only_mobile',
         ], [
             'app_name' => fn ($v) => $label($v, 60, 'سرزمین هارد'),
@@ -242,6 +288,87 @@ class Plugin extends BasePlugin
             'menu_limit' => fn ($v) => max(4, min(24, (int) $v)),
             'installed_badge_text' => fn ($v) => $label($v, 80, 'نصب‌شده روی این دستگاه'),
             'install_ready_text' => fn ($v) => $label($v, 80, 'آماده نصب روی گوشی'),
+            'drawer_side' => fn ($v) => in_array($v, ['right', 'left'], true) ? $v : 'right',
+            'drawer_title' => fn ($v) => $label($v, 60, 'منوی وب‌اپ'),
+            'drawer_subtitle' => fn ($v) => $label($v, 120, 'دسترسی سریع فروشگاه موبایل'),
+            'drawer_full_site_label' => fn ($v) => $label($v, 40, 'نسخه کامل سایت'),
+            'drawer_full_site_url' => fn ($v) => $url($v, '/'),
+            'drawer_home_label' => fn ($v) => $label($v, 30, 'خانه'),
+            'drawer_home_url' => fn ($v) => $url($v, '/app'),
+            'drawer_home_icon' => fn ($v) => $label($v, 8, '⌂'),
+            'drawer_shop_label' => fn ($v) => $label($v, 30, 'فروشگاه'),
+            'drawer_shop_url' => fn ($v) => $url($v, '/app/shop'),
+            'drawer_shop_icon' => fn ($v) => $label($v, 8, '▣'),
+            'drawer_cart_label' => fn ($v) => $label($v, 30, 'سبد خرید'),
+            'drawer_cart_url' => fn ($v) => $url($v, '/app/cart'),
+            'drawer_cart_icon' => fn ($v) => $label($v, 8, '▢'),
+            'drawer_account_label' => fn ($v) => $label($v, 30, 'حساب من'),
+            'drawer_account_url' => fn ($v) => $url($v, '/app/account'),
+            'drawer_account_icon' => fn ($v) => $label($v, 8, '☺'),
+            'drawer_track_label' => fn ($v) => $label($v, 30, 'پیگیری سفارش'),
+            'drawer_track_url' => fn ($v) => $url($v, '/orders/track'),
+            'drawer_track_icon' => fn ($v) => $label($v, 8, '⌕'),
+            'drawer_warranty_label' => fn ($v) => $label($v, 30, 'استعلام گارانتی'),
+            'drawer_warranty_url' => fn ($v) => $url($v, '/serial-check'),
+            'drawer_warranty_icon' => fn ($v) => $label($v, 8, '⛨'),
+            'drawer_support_label' => fn ($v) => $label($v, 30, 'پشتیبانی'),
+            'drawer_support_url' => fn ($v) => $url($v, '/account/tickets'),
+            'drawer_support_icon' => fn ($v) => $label($v, 8, '✉'),
+            'drawer_contact_label' => fn ($v) => $label($v, 30, 'تماس با ما'),
+            'drawer_contact_url' => fn ($v) => $url($v, '/contact'),
+            'drawer_contact_icon' => fn ($v) => $label($v, 8, '☎'),
+            'drawer_extra_links' => fn ($v) => mb_substr(trim((string) $v), 0, 3000),
         ]);
+    }
+
+    /**
+     * Dedicated WebApp drawer items from admin settings (not MegaMenu clone).
+     *
+     * @param  array<string,mixed>|null  $s
+     * @return list<array{key:string,label:string,url:string,icon:string}>
+     */
+    public static function resolveDrawerMenu(?array $s = null): array
+    {
+        $s = $s ?? static::settings();
+        if (empty($s['drawer_menu_enabled'])) {
+            return [];
+        }
+
+        $keys = ['home', 'shop', 'cart', 'account', 'track', 'warranty', 'support', 'contact'];
+        $out = [];
+        foreach ($keys as $key) {
+            if (empty($s['drawer_item_'.$key])) {
+                continue;
+            }
+            $label = trim((string) ($s['drawer_'.$key.'_label'] ?? ''));
+            $url = trim((string) ($s['drawer_'.$key.'_url'] ?? ''));
+            if ($label === '' || $url === '') {
+                continue;
+            }
+            $out[] = [
+                'key' => $key,
+                'label' => $label,
+                'url' => $url,
+                'icon' => trim((string) ($s['drawer_'.$key.'_icon'] ?? '•')) ?: '•',
+            ];
+        }
+
+        $extra = (string) ($s['drawer_extra_links'] ?? '');
+        foreach (preg_split('/\R/u', $extra) ?: [] as $line) {
+            [$lab, $href, $ico] = array_pad(explode('|', $line, 3), 3, '');
+            $lab = trim($lab);
+            $href = trim($href);
+            if ($lab === '' || $href === '' || $href === '#') {
+                continue;
+            }
+            $out[] = [
+                'key' => 'extra',
+                'label' => mb_substr($lab, 0, 40),
+                'url' => mb_substr($href, 0, 200),
+                'icon' => trim($ico) !== '' ? mb_substr(trim($ico), 0, 8) : '•',
+            ];
+        }
+
+        return $out;
     }
 }
