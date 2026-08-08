@@ -846,6 +846,8 @@ class ReceptionController extends Controller
             'confirm_goods_exit' => ['accepted'],
             'accessories_exit_note' => ['nullable', 'string', 'max:500'],
             'send_sms' => ['nullable', 'boolean'],
+        ], [
+            'confirm_goods_exit.accepted' => 'برای تحویل، کلید «تأیید خروج دستگاه و قطعات همراه از کارگاه» را روشن کنید.',
         ]);
         $data['confirm_goods_exit'] = true;
 

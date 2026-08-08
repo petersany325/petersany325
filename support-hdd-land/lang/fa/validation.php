@@ -28,5 +28,12 @@ return [
         'role' => 'وظیفه',
         'login' => 'ایمیل یا موبایل',
         'code' => 'کد تأیید',
+        'confirm_goods_exit' => 'تأیید خروج کالا',
+        'exit_otp_code' => 'کد تأیید خروج',
+        'exit_otp_required' => 'الزام کد تأیید خروج',
+        'bypass_reason' => 'دلیل عبور مدیر',
+        'settlement_mode' => 'نحوه تسویه',
+        'pickup_name' => 'نام تحویل‌گیرنده',
+        'pickup_phone' => 'موبایل تحویل‌گیرنده',
     ],
 ];

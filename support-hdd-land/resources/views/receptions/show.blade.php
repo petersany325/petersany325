@@ -813,10 +813,14 @@
                         @include('partials.toggle', [
                             'name' => 'confirm_goods_exit',
                             'label' => 'تأیید خروج دستگاه و قطعات همراه از کارگاه',
-                            'checked' => (bool) old('confirm_goods_exit'),
+                            // Default ON: submit + browser confirm already ask; keep toggle for explicit opt-out.
+                            'checked' => (string) old('confirm_goods_exit', '1') === '1',
                             'on' => 'تأیید',
                             'off' => 'خیر',
                         ])
+                        @error('confirm_goods_exit')
+                            <p class="muted" style="margin:4px 0 0;color:#b42318;font-size:11.5px;">{{ $message }}</p>
+                        @enderror
                     </div>
                     <div>
                         @include('partials.toggle', [
