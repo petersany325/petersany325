@@ -1,8 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="HDD LAND">
-  <g transform="translate(120,92)">
-    <text text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="800" font-size="78" fill="#5a5a5a" transform="skewX(-12)">HDD</text>
-  </g>
-  <rect x="22" y="148" width="196" height="52" rx="12" fill="#5a5a5a"/>
-  <text x="120" y="184" text-anchor="middle" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="800" font-size="42" fill="#ffffff">LAND</text>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+<rect width="128" height="128" rx="16" fill="#fff" stroke="#c5ccd6"/>
+<rect x="20" y="32" width="88" height="22" rx="6" fill="#3a4454"/>
+<rect x="36" y="62" width="56" height="40" rx="8" fill="#c8922a"/>
 </svg>

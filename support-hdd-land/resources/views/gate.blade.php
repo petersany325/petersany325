@@ -187,7 +187,7 @@
         </a>
     </div>
 
-    <div class="gate-foot">support.hdd-land.ir · تشخیص خودکار موبایل / کامپیوتر</div>
+    <div class="gate-foot">{{ request()->getHost() }} · تشخیص خودکار موبایل / کامپیوتر</div>
 </div>
 <script>
 (function () {

@@ -78,7 +78,7 @@ class DatabaseBackupService
             }
 
             $db = DB::connection()->getDatabaseName();
-            $this->write($fh, "-- HDD LAND database backup\n");
+            $this->write($fh, "-- database backup\n");
             $this->write($fh, '-- Generated: '.now('Asia/Tehran')->toDateTimeString()." (Asia/Tehran)\n");
             $this->write($fh, "-- Database: {$db}\n");
             $this->write($fh, "-- Scope: {$scope}\n");
