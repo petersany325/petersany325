@@ -677,7 +677,7 @@
                             @foreach($reception->parts as $rp)
                                 <tr>
                                     <td>{{ $rp->part?->name ?: ($rp->part_name ?: '—') }}</td>
-                                    <td>{{ $rp->qty }}</td>
+                                    <td>{{ $rp->quantity }}</td>
                                     <td>{{ toman($rp->total_price) }}</td>
                                 </tr>
                             @endforeach
