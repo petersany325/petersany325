@@ -11,6 +11,7 @@
     $reception = collect($menuGroups)->firstWhere('key', 'reception');
 @endphp
 
+@php $licenseStatus = \App\Support\LicenseStatus::current(); @endphp
 <div class="shortcut-desk">
     <div class="shortcut-top">
         <div class="stats stats-compact">
@@ -19,6 +20,29 @@
             <div class="stat"><div class="label">دریافتی امروز</div><div class="value">{{ number_format($todayIncome) }}</div></div>
             <div class="stat"><div class="label">کم‌موجود</div><div class="value">{{ $lowStockCount }}</div></div>
         </div>
+        @if(!empty($licenseStatus['enabled']))
+            <div class="panel" style="margin:10px 0 0;padding:12px 14px;">
+                <div style="font-weight:800;margin-bottom:4px;">لایسنس نصب</div>
+                <div style="font-size:13px;line-height:1.8;">
+                    <div>پلن خریداری‌شده: <strong>{{ $licenseStatus['plan_text'] }}</strong>
+                        @if(!empty($licenseStatus['plan_months']))
+                            ({{ $licenseStatus['plan_months'] }} ماه)
+                        @endif
+                    </div>
+                    @if(!empty($licenseStatus['activated_jalali']))
+                        <div>شروع اعتبار: {{ $licenseStatus['activated_jalali'] }}</div>
+                    @endif
+                    @if(!empty($licenseStatus['expires_jalali']))
+                        <div>پایان اعتبار: {{ $licenseStatus['expires_jalali'] }}</div>
+                    @elseif(!empty($licenseStatus['lifetime']))
+                        <div>پایان اعتبار: مادام‌العمر</div>
+                    @endif
+                    @if(!empty($licenseStatus['price_toman']))
+                        <div>مبلغ پلن: {{ number_format((int) $licenseStatus['price_toman']) }} تومان</div>
+                    @endif
+                </div>
+            </div>
+        @endif
         <p class="lead shortcut-hint">شورت‌کارت‌ها و منوی بالا با زیرمنوی هر بخش — جمع‌وجور مثل میز کار ویندوز.</p>
     </div>
 

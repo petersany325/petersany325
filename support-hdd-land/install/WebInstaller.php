@@ -114,6 +114,11 @@ class WebInstaller
                     'license_key' => $licenseKey,
                     'domain' => $domain,
                     'token' => 'demo-'.substr(hash('sha256', $licenseKey.'|'.$domain), 0, 32),
+                    'plan' => 'دمو',
+                    'plan_code' => 'demo',
+                    'plan_months' => null,
+                    'price_toman' => 0,
+                    'activated_at' => date('Y-m-d'),
                     'expires_at' => null,
                 ],
             ];
@@ -150,6 +155,11 @@ class WebInstaller
                 'license_key' => $licenseKey,
                 'domain' => $domain,
                 'token' => (string) ($json['token'] ?? ''),
+                'plan' => $json['plan'] ?? null,
+                'plan_code' => $json['plan_code'] ?? null,
+                'plan_months' => $json['plan_months'] ?? null,
+                'price_toman' => $json['price_toman'] ?? null,
+                'activated_at' => $json['activated_at'] ?? null,
                 'expires_at' => $json['expires_at'] ?? null,
             ],
         ];
@@ -572,6 +582,21 @@ class WebInstaller
             $details[] = 'Seed admin + company brand OK (lookups empty)';
 
             try {
+                \App\Support\LicenseStatus::store([
+                    'ok' => true,
+                    'plan' => $license['plan'] ?? null,
+                    'plan_code' => $license['plan_code'] ?? null,
+                    'plan_months' => $license['plan_months'] ?? null,
+                    'price_toman' => $license['price_toman'] ?? null,
+                    'activated_at' => $license['activated_at'] ?? date('Y-m-d'),
+                    'expires_at' => $license['expires_at'] ?? null,
+                ]);
+                $details[] = 'license status snapshot saved';
+            } catch (Throwable $e) {
+                $details[] = 'license status soft-fail: '.$e->getMessage();
+            }
+
+            try {
                 $kernel->call('storage:link', ['--force' => true]);
                 $details[] = trim($kernel->output()) ?: 'storage:link OK';
             } catch (Throwable $e) {
@@ -593,6 +618,9 @@ class WebInstaller
                 'license_key' => $license['license_key'] ?? null,
                 'domain' => $license['domain'] ?? null,
                 'license_token' => $license['token'] ?? null,
+                'plan' => $license['plan'] ?? null,
+                'plan_months' => $license['plan_months'] ?? null,
+                'expires_at' => $license['expires_at'] ?? null,
             ];
             $dir = dirname($this->lockPath());
             if (! is_dir($dir)) {

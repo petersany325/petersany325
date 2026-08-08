@@ -155,7 +155,13 @@
 
     <div class="app-statusbar desktop-only">
         <div>آماده · تشخیص خودکار موبایل/کامپیوتر</div>
-        <div>کاربر: {{ auth()->user()->name }} | {{ shop_name() }}</div>
+        <div>
+            کاربر: {{ auth()->user()->name }} | {{ shop_name() }}
+            @php $licBar = \App\Support\LicenseStatus::current(); @endphp
+            @if(!empty($licBar['enabled']))
+                <span style="margin-right:10px;opacity:.9;">· لایسنس: {{ $licBar['plan_text'] }}@if(!empty($licBar['expires_jalali'])) تا {{ $licBar['expires_jalali'] }}@elseif(!empty($licBar['lifetime'])) (مادام‌العمر)@endif</span>
+            @endif
+        </div>
     </div>
 
     {{-- تب‌بار موبایل --}}

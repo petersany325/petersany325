@@ -235,6 +235,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'LICENSE_DOMAIN' => (string) ($license['domain'] ?? ''),
                         'LICENSE_TOKEN' => (string) ($license['token'] ?? ''),
                         'LICENSE_SERVER' => (string) ($state['license_server'] ?? 'https://support.hdd-land.ir'),
+                        'LICENSE_PLAN' => (string) ($license['plan'] ?? ''),
+                        'LICENSE_PLAN_CODE' => (string) ($license['plan_code'] ?? ''),
+                        'LICENSE_MONTHS' => (string) ($license['plan_months'] ?? ''),
+                        'LICENSE_PRICE' => (string) ($license['price_toman'] ?? ''),
+                        'LICENSE_ACTIVATED_AT' => (string) ($license['activated_at'] ?? ''),
+                        'LICENSE_EXPIRES_AT' => (string) ($license['expires_at'] ?? ''),
                     ]);
 
                     $result = $installer->runInstall($admin, $license, $db, $company, $logo);
@@ -530,6 +536,15 @@ $reqs = $installer->checkRequirements();
             <h2>نصب تمام شد</h2>
             <?php if (! empty($state['done']) || $installer->isInstalled()): ?>
                 <div class="alert ok">سیستم آماده است.</div>
+                <?php $lic = $state['license'] ?? []; ?>
+                <?php if (! empty($lic['plan']) || ! empty($lic['plan_months']) || ! empty($lic['expires_at'])): ?>
+                    <div class="alert ok" style="background:#eef6ff;color:#1d4f91;border-color:#bfdbfe;">
+                        لایسنس:
+                        <?php if (! empty($lic['plan'])): ?><strong><?= h((string) $lic['plan']) ?></strong><?php endif; ?>
+                        <?php if (! empty($lic['plan_months'])): ?> (<?= (int) $lic['plan_months'] ?> ماه)<?php endif; ?>
+                        <?php if (! empty($lic['expires_at'])): ?> — تا <?= h((string) $lic['expires_at']) ?><?php elseif (empty($lic['plan_months'])): ?> — مادام‌العمر<?php endif; ?>
+                    </div>
+                <?php endif; ?>
                 <p>
                     ورود مدیر:
                     <code dir="ltr"><?= h($state['admin_email'] ?? 'ایمیل مدیر') ?></code>

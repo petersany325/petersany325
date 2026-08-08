@@ -90,6 +90,19 @@ class EnsureLicensed
                 $result = ['block' => false, 'message' => (string) ($json['message'] ?? 'معتبر')];
                 Cache::put($cacheKey, $result, now()->addHours(2));
                 Cache::forget($cacheKey.'_last_block');
+                try {
+                    \App\Support\LicenseStatus::store([
+                        'ok' => true,
+                        'message' => $result['message'],
+                        'plan' => $json['plan'] ?? null,
+                        'plan_code' => $json['plan_code'] ?? null,
+                        'plan_months' => $json['plan_months'] ?? null,
+                        'price_toman' => $json['price_toman'] ?? null,
+                        'activated_at' => $json['activated_at'] ?? null,
+                        'expires_at' => $json['expires_at'] ?? null,
+                    ]);
+                } catch (\Throwable) {
+                }
 
                 return $result;
             }

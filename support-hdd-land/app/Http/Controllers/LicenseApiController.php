@@ -81,8 +81,12 @@ class LicenseApiController extends Controller
             'message' => 'لایسنس فعال شد.',
             'token' => $token,
             'domain' => $domain,
-            'expires_at' => optional($license->expires_at)?->toDateString(),
             'plan' => $license->plan_label,
+            'plan_code' => $license->plan_code,
+            'plan_months' => $license->plan_months,
+            'price_toman' => (int) $license->price_toman,
+            'activated_at' => optional($license->activated_at)?->toDateString(),
+            'expires_at' => optional($license->expires_at)?->toDateString(),
         ]);
     }
 
@@ -121,6 +125,11 @@ class LicenseApiController extends Controller
         return response()->json([
             'ok' => true,
             'message' => 'معتبر',
+            'plan' => $license->plan_label,
+            'plan_code' => $license->plan_code,
+            'plan_months' => $license->plan_months,
+            'price_toman' => (int) $license->price_toman,
+            'activated_at' => optional($license->activated_at)?->toDateString(),
             'expires_at' => optional($license->expires_at)?->toDateString(),
         ]);
     }

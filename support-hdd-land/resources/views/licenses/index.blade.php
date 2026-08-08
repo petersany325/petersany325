@@ -161,7 +161,8 @@
                 <th>پلن / قیمت</th>
                 <th>دامنه</th>
                 <th>وضعیت</th>
-                <th>انقضا</th>
+                <th>شروع (شمسی)</th>
+                <th>پایان (شمسی)</th>
                 <th>آنلاین</th>
                 <th>عملیات</th>
             </tr>
@@ -193,9 +194,21 @@
                     <td dir="ltr">{{ $row->domain ?: ($row->meta['domain_hint'] ?? '—') }}</td>
                     <td>{{ $row->statusLabel() }}</td>
                     <td>
+                        @if($row->startsAt())
+                            {{ jalali_date($row->startsAt()) }}
+                            @if(! $row->activated_at)
+                                <div class="muted" style="font-size:11px;">صدور</div>
+                            @else
+                                <div class="muted" style="font-size:11px;">فعال‌سازی</div>
+                            @endif
+                        @else
+                            —
+                        @endif
+                    </td>
+                    <td>
                         @if($row->expires_at)
                             {{ jalali_date($row->expires_at) }}
-                        @elseif($row->plan_months)
+                        @elseif($row->plan_months && ! $row->activated_at)
                             <span class="muted">{{ $row->plan_months }} ماه از نصب</span>
                         @else
                             مادام‌العمر
@@ -208,8 +221,12 @@
                             —
                         @endif
                     </td>
-                    <td style="min-width:210px;">
-                        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px;">
+                    <td style="min-width:220px;">
+                        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+                            <a class="btn" href="{{ route('licenses.edit', $row) }}" style="padding:4px 8px;font-size:11px;text-decoration:none;">ویرایش</a>
+                            @if($row->status !== 'revoked')
+                                <a class="btn btn-primary" href="{{ route('licenses.renew', $row) }}" style="padding:4px 8px;font-size:11px;text-decoration:none;">تمدید</a>
+                            @endif
                             @if($row->customer_phone)
                                 <form method="POST" action="{{ route('licenses.sms', $row) }}">
                                     @csrf
@@ -229,22 +246,10 @@
                                 </form>
                             @endif
                         </div>
-                        @if(in_array($row->status, ['active','expired'], true))
-                            <form method="POST" action="{{ route('licenses.extend', $row) }}" style="display:flex;gap:4px;align-items:center;">
-                                @csrf
-                                <input type="hidden" name="add_plan" value="1">
-                                <select name="plan_code" style="padding:4px;font-size:11px;">
-                                    @foreach($plans as $plan)
-                                        <option value="{{ $plan['code'] }}">تمدید {{ $plan['label'] }}</option>
-                                    @endforeach
-                                </select>
-                                <button class="btn" type="submit" style="padding:4px 8px;font-size:11px;">تمدید</button>
-                            </form>
-                        @endif
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="8">سریالی نیست. از فرم بالا بسازید.</td></tr>
+                <tr><td colspan="9">سریالی نیست. از فرم بالا بسازید.</td></tr>
             @endforelse
             </tbody>
         </table>
