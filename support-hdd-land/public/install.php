@@ -46,6 +46,16 @@ $error = null;
 $success = null;
 $state = $_SESSION['install'] ?? [];
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string) ($_POST['action'] ?? '') === 'reset_install') {
+    $lock = $installer->lockPath();
+    if (is_file($lock)) {
+        @unlink($lock);
+    }
+    unset($_SESSION['install']);
+    header('Location: install.php?step=1');
+    exit;
+}
+
 if ($installer->isInstalled() && $step !== 5) {
     $step = 5;
     $success = 'این سایت قبلاً نصب شده است.';
@@ -163,6 +173,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'password' => (string) ($_POST['admin_password'] ?? ''),
                 'app_url' => $appUrl,
                 'app_name' => $appName,
+                // Default on: safe for re-install on same DB after a failed attempt
+                'wipe_database' => ! isset($_POST['wipe_database']) || (string) $_POST['wipe_database'] === '1',
             ];
             $logo = null;
             if (! empty($_FILES['shop_logo']['tmp_name']) && is_uploaded_file((string) $_FILES['shop_logo']['tmp_name'])) {
@@ -523,6 +535,16 @@ $reqs = $installer->checkRequirements();
                         <input type="password" name="admin_password" required minlength="6">
                     </div>
                 </div>
+                <div class="alert ok" style="background:#fff7ed;color:#9a3412;border-color:#fdba74;">
+                    <label style="display:flex;gap:8px;align-items:flex-start;margin:0;cursor:pointer;">
+                        <input type="hidden" name="wipe_database" value="0">
+                        <input type="checkbox" name="wipe_database" value="1" <?= (! isset($_POST['wipe_database']) || (string) ($_POST['wipe_database'] ?? '1') === '1') ? 'checked' : '' ?> style="width:auto;margin-top:3px;">
+                        <span>
+                            اگر از نصب قبلی جدول در دیتابیس مانده، جداول را پاک کن و از نو نصب کن
+                            <div style="font-size:11px;color:#7c2d12;margin-top:4px;">برای نصب مجدد روی همان دیتابیس لازم است (خطای users already exists را رفع می‌کند).</div>
+                        </span>
+                    </label>
+                </div>
                 <button class="btn" type="submit">نصب نهایی با برند شرکت</button>
             </form>
 
@@ -536,6 +558,10 @@ $reqs = $installer->checkRequirements();
                 </p>
                 <p>برای امنیت، بعد از ورود موفق می‌توانید فایل <code>public/install.php</code> را حذف یا تغییرنام دهید.</p>
                 <p><a class="btn" href="/login" style="display:inline-block;text-decoration:none;">رفتن به صفحه ورود</a></p>
+                <form method="post" style="margin-top:18px;" onsubmit="return confirm('نصب از نو شروع شود؟ (قفل نصب پاک می‌شود)');">
+                    <input type="hidden" name="action" value="reset_install">
+                    <button type="submit" class="btn" style="background:#9a3412;">نصب مجدد از ابتدا</button>
+                </form>
             <?php else: ?>
                 <p>هنوز نصب کامل نشده. از مرحله ۱ شروع کنید.</p>
                 <p><a href="install.php?step=1">شروع نصب</a></p>

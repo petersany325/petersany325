@@ -561,10 +561,38 @@ class WebInstaller
                 $details[] = 'config:clear soft-fail: '.$e->getMessage();
             }
 
-            $code = $kernel->call('migrate', ['--force' => true]);
+            $wipe = ! empty($admin['wipe_database']);
+            $hasSchema = false;
+            try {
+                $hasSchema = \Illuminate\Support\Facades\Schema::hasTable('users')
+                    || \Illuminate\Support\Facades\Schema::hasTable('migrations');
+            } catch (Throwable $e) {
+                $details[] = 'schema probe: '.$e->getMessage();
+            }
+
+            // Re-install / half-failed install: tables already exist → migrate:fresh
+            if ($wipe || $hasSchema) {
+                $details[] = $hasSchema
+                    ? 'existing tables detected — running migrate:fresh'
+                    : 'wipe_database requested — running migrate:fresh';
+                $code = $kernel->call('migrate:fresh', ['--force' => true]);
+            } else {
+                $code = $kernel->call('migrate', ['--force' => true]);
+            }
             $details[] = trim($kernel->output()) ?: ('migrate exit '.$code);
+
+            // Fallback if plain migrate hit "already exists"
+            if ($code !== 0 && ! $wipe && ! $hasSchema) {
+                $out = trim($kernel->output());
+                if (str_contains($out, 'already exists') || str_contains($out, '42S01') || str_contains($out, '1050')) {
+                    $details[] = 'migrate failed with existing tables — retry migrate:fresh';
+                    $code = $kernel->call('migrate:fresh', ['--force' => true]);
+                    $details[] = trim($kernel->output()) ?: ('migrate:fresh exit '.$code);
+                }
+            }
+
             if ($code !== 0) {
-                return ['ok' => false, 'message' => 'مایگریشن ناموفق بود.', 'details' => $details];
+                return ['ok' => false, 'message' => 'مایگریشن ناموفق بود. اگر دیتابیس از نصب قبلی پر است، گزینه «پاک کردن جداول قبلی» را بزنید.', 'details' => $details];
             }
 
             // Fresh seed: admin + company brand only (menus/lookups left empty)
