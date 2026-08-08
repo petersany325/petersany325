@@ -30,6 +30,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Customer installers activate/verify licenses without a browser CSRF session.
         $middleware->validateCsrfTokens(except: [
+            'license/request-otp',
+            'license/confirm-otp',
             'license/activate',
             'license/verify',
         ]);

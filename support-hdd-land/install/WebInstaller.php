@@ -87,13 +87,16 @@ class WebInstaller
     }
 
     /**
-     * @return array{ok:bool,message:string,payload?:array}
+     * Step A: validate serial and ask seller to SMS an OTP.
+     *
+     * @return array{ok:bool,message:string,demo?:bool,payload?:array,phone_masked?:string,phone?:string,purchase_url?:string}
      */
-    public function activateLicense(string $licenseKey, string $domain, string $licenseServer): array
+    public function requestLicenseOtp(string $licenseKey, string $domain, string $licenseServer, string $phone = ''): array
     {
         $licenseKey = strtoupper(trim($licenseKey));
         $domain = strtolower(preg_replace('/^www\./', '', trim($domain)) ?? '');
         $licenseServer = rtrim(trim($licenseServer), '/');
+        $phone = preg_replace('/\D+/', '', $phone) ?: '';
 
         if ($licenseKey === '' || ! preg_match('/^[A-Z0-9]{4}(?:-[A-Z0-9]{4}){3}$/', $licenseKey)) {
             return ['ok' => false, 'message' => 'فرمت سریال نامعتبر است. مثال: ABCD-1234-EFGH-5678'];
@@ -109,7 +112,8 @@ class WebInstaller
         if (hash_equals('HDDL-DEMO-TEST-0001', $licenseKey)) {
             return [
                 'ok' => true,
-                'message' => 'لایسنس دمو فعال شد.',
+                'demo' => true,
+                'message' => 'لایسنس دمو فعال شد (بدون پیامک).',
                 'payload' => [
                     'license_key' => $licenseKey,
                     'domain' => $domain,
@@ -124,10 +128,69 @@ class WebInstaller
             ];
         }
 
-        $url = $licenseServer.'/license/activate';
+        $url = $licenseServer.'/license/request-otp';
         $body = http_build_query([
             'license_key' => $licenseKey,
             'domain' => $domain,
+            'phone' => $phone,
+            'product' => 'hddland-repair',
+        ]);
+
+        $result = $this->httpPost($url, $body);
+        if (! ($result['ok'] ?? false)) {
+            return [
+                'ok' => false,
+                'message' => $result['message'] ?? 'ارتباط با سرور لایسنس برقرار نشد.',
+                'purchase_url' => 'https://hdd-land.ir',
+            ];
+        }
+
+        $json = $result['json'] ?? [];
+        if (! ($json['ok'] ?? false)) {
+            return [
+                'ok' => false,
+                'message' => (string) ($json['message'] ?? 'سریال نامعتبر است.'),
+                'purchase_url' => (string) ($json['purchase_url'] ?? 'https://hdd-land.ir'),
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'message' => (string) ($json['message'] ?? 'کد تأیید پیامک شد.'),
+            'phone_masked' => (string) ($json['phone_masked'] ?? ''),
+            'phone' => $phone,
+            'purchase_url' => (string) ($json['purchase_url'] ?? 'https://hdd-land.ir'),
+        ];
+    }
+
+    /**
+     * Step B: confirm SMS code and activate license on seller.
+     *
+     * @return array{ok:bool,message:string,payload?:array,purchase_url?:string}
+     */
+    public function confirmLicenseOtp(
+        string $licenseKey,
+        string $domain,
+        string $licenseServer,
+        string $phone,
+        string $code
+    ): array {
+        $licenseKey = strtoupper(trim($licenseKey));
+        $domain = strtolower(preg_replace('/^www\./', '', trim($domain)) ?? '');
+        $licenseServer = rtrim(trim($licenseServer), '/');
+        $phone = preg_replace('/\D+/', '', $phone) ?: '';
+        $code = trim($code);
+
+        if ($code === '' || ! preg_match('/^\d{4,8}$/', $code)) {
+            return ['ok' => false, 'message' => 'کد تأیید را درست وارد کنید.'];
+        }
+
+        $url = $licenseServer.'/license/confirm-otp';
+        $body = http_build_query([
+            'license_key' => $licenseKey,
+            'domain' => $domain,
+            'phone' => $phone,
+            'code' => $code,
             'product' => 'hddland-repair',
             'version' => '1.0.0',
         ]);
@@ -137,6 +200,7 @@ class WebInstaller
             return [
                 'ok' => false,
                 'message' => $result['message'] ?? 'ارتباط با سرور لایسنس برقرار نشد.',
+                'purchase_url' => 'https://hdd-land.ir',
             ];
         }
 
@@ -144,7 +208,8 @@ class WebInstaller
         if (! ($json['ok'] ?? false)) {
             return [
                 'ok' => false,
-                'message' => (string) ($json['message'] ?? 'سریال نامعتبر یا برای این دامنه فعال نیست.'),
+                'message' => (string) ($json['message'] ?? 'کد تأیید یا سریال نامعتبر است.'),
+                'purchase_url' => (string) ($json['purchase_url'] ?? 'https://hdd-land.ir'),
             ];
         }
 
@@ -163,6 +228,27 @@ class WebInstaller
                 'expires_at' => $json['expires_at'] ?? null,
             ],
         ];
+    }
+
+    /**
+     * Demo / legacy helper — real installs must use OTP steps.
+     *
+     * @return array{ok:bool,message:string,payload?:array}
+     */
+    public function activateLicense(string $licenseKey, string $domain, string $licenseServer): array
+    {
+        $res = $this->requestLicenseOtp($licenseKey, $domain, $licenseServer);
+        if (($res['demo'] ?? false) === true) {
+            return $res;
+        }
+        if (($res['ok'] ?? false) === true) {
+            return [
+                'ok' => false,
+                'message' => 'فعال‌سازی فقط پس از تأیید پیامک مجاز است. از مرحله کد تأیید استفاده کنید.',
+            ];
+        }
+
+        return $res;
     }
 
     /**

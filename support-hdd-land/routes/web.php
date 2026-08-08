@@ -36,6 +36,12 @@ use App\Http\Middleware\EnsurePortalCustomer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
+Route::post('/license/request-otp', [LicenseApiController::class, 'requestOtp'])
+    ->middleware('throttle:10,1')
+    ->name('license.request-otp');
+Route::post('/license/confirm-otp', [LicenseApiController::class, 'confirmOtp'])
+    ->middleware('throttle:20,1')
+    ->name('license.confirm-otp');
 Route::post('/license/activate', [LicenseApiController::class, 'activate'])
     ->middleware('throttle:30,1')
     ->name('license.activate');

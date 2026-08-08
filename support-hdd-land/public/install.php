@@ -65,20 +65,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    if ($action === 'license' && $step === 2) {
+    if ($action === 'license_request_otp' && $step === 2) {
         $key = (string) ($_POST['license_key'] ?? '');
         $domain = trim((string) ($_POST['domain'] ?? detect_domain()));
         $server = trim((string) ($_POST['license_server'] ?? 'https://support.hdd-land.ir'));
-        $res = $installer->activateLicense($key, $domain, $server);
+        $phone = trim((string) ($_POST['phone'] ?? ''));
+        $res = $installer->requestLicenseOtp($key, $domain, $server, $phone);
         if (! ($res['ok'] ?? false)) {
             $error = $res['message'] ?? 'لایسنس نامعتبر است.';
+            $state['purchase_url'] = $res['purchase_url'] ?? 'https://hdd-land.ir';
+        } elseif (($res['demo'] ?? false) === true) {
+            $state['license'] = $res['payload'];
+            $state['license_server'] = rtrim($server, '/');
+            unset($state['license_otp']);
+            $_SESSION['install'] = $state;
+            header('Location: install.php?step=3');
+            exit;
+        } else {
+            $state['license_otp'] = [
+                'license_key' => strtoupper(trim($key)),
+                'domain' => $domain,
+                'phone' => preg_replace('/\D+/', '', $phone) ?: '',
+                'phone_masked' => (string) ($res['phone_masked'] ?? ''),
+                'awaiting_code' => true,
+            ];
+            $state['license_server'] = rtrim($server, '/');
+            $state['purchase_url'] = $res['purchase_url'] ?? 'https://hdd-land.ir';
+            $_SESSION['install'] = $state;
+            $success = $res['message'] ?? 'کد تأیید پیامک شد.';
+        }
+    }
+
+    if ($action === 'license_confirm_otp' && $step === 2) {
+        $otp = $state['license_otp'] ?? [];
+        $key = (string) ($_POST['license_key'] ?? ($otp['license_key'] ?? ''));
+        $domain = trim((string) ($_POST['domain'] ?? ($otp['domain'] ?? detect_domain())));
+        $server = trim((string) ($_POST['license_server'] ?? ($state['license_server'] ?? 'https://support.hdd-land.ir')));
+        $phone = trim((string) ($_POST['phone'] ?? ($otp['phone'] ?? '')));
+        $code = trim((string) ($_POST['code'] ?? ''));
+        $res = $installer->confirmLicenseOtp($key, $domain, $server, $phone, $code);
+        if (! ($res['ok'] ?? false)) {
+            $error = $res['message'] ?? 'کد تأیید نامعتبر است.';
+            $state['license_otp'] = array_merge($otp, [
+                'license_key' => strtoupper(trim($key)),
+                'domain' => $domain,
+                'phone' => preg_replace('/\D+/', '', $phone) ?: '',
+                'awaiting_code' => true,
+            ]);
+            $state['license_server'] = rtrim($server, '/');
+            $_SESSION['install'] = $state;
         } else {
             $state['license'] = $res['payload'];
             $state['license_server'] = rtrim($server, '/');
+            unset($state['license_otp']);
             $_SESSION['install'] = $state;
             header('Location: install.php?step=3');
             exit;
         }
+    }
+
+    if ($action === 'license_reset' && $step === 2) {
+        unset($state['license_otp'], $state['license']);
+        $_SESSION['install'] = $state;
+        header('Location: install.php?step=2');
+        exit;
     }
 
     if ($action === 'database' && $step === 3) {
@@ -235,6 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'LICENSE_DOMAIN' => (string) ($license['domain'] ?? ''),
                         'LICENSE_TOKEN' => (string) ($license['token'] ?? ''),
                         'LICENSE_SERVER' => (string) ($state['license_server'] ?? 'https://support.hdd-land.ir'),
+                        'LICENSE_PURCHASE_URL' => (string) ($state['purchase_url'] ?? 'https://hdd-land.ir'),
                         'LICENSE_PLAN' => (string) ($license['plan'] ?? ''),
                         'LICENSE_PLAN_CODE' => (string) ($license['plan_code'] ?? ''),
                         'LICENSE_MONTHS' => (string) ($license['plan_months'] ?? ''),
@@ -350,25 +401,54 @@ $reqs = $installer->checkRequirements();
             </form>
 
         <?php elseif ($step === 2): ?>
-            <h2>فعال‌سازی لایسنس</h2>
-            <p>سریال نصب را وارد کنید. لایسنس به دامنه قفل می‌شود (مثل ویبولیتین).</p>
+            <?php
+                $otpState = $state['license_otp'] ?? [];
+                $awaitingCode = ! empty($otpState['awaiting_code']);
+                $purchaseUrl = (string) ($state['purchase_url'] ?? 'https://hdd-land.ir');
+            ?>
+            <h2>فعال‌سازی لایسنس (دو مرحله)</h2>
+            <p>۱) سریال را تأیید کنید تا پیامک کد بیاید — ۲) کد را وارد کنید تا لایسنس روی این دامنه قفل شود. انتقال به هاست/دامنه دیگر لایسنس را بلاک می‌کند.</p>
+            <p style="margin-bottom:14px;font-size:12px;color:#667788;">خرید لایسنس: <a href="<?= h($purchaseUrl) ?>" target="_blank" rel="noopener"><?= h(preg_replace('#^https?://#', '', $purchaseUrl)) ?></a></p>
+
+            <?php if (! $awaitingCode): ?>
             <form method="post">
                 <input type="hidden" name="step" value="2">
-                <input type="hidden" name="action" value="license">
+                <input type="hidden" name="action" value="license_request_otp">
                 <label>سریال لایسنس</label>
-                <input name="license_key" required placeholder="XXXX-XXXX-XXXX-XXXX" value="<?= h($_POST['license_key'] ?? '') ?>" dir="ltr" style="text-align:left;letter-spacing:.06em;">
+                <input name="license_key" required placeholder="XXXX-XXXX-XXXX-XXXX" value="<?= h($_POST['license_key'] ?? ($otpState['license_key'] ?? '')) ?>" dir="ltr" style="text-align:left;letter-spacing:.06em;">
                 <div class="grid">
                     <div>
                         <label>دامنه این نصب</label>
-                        <input name="domain" required value="<?= h($_POST['domain'] ?? detect_domain()) ?>" dir="ltr" style="text-align:left;">
+                        <input name="domain" required value="<?= h($_POST['domain'] ?? ($otpState['domain'] ?? detect_domain())) ?>" dir="ltr" style="text-align:left;">
                     </div>
                     <div>
-                        <label>سرور لایسنس</label>
-                        <input name="license_server" required value="<?= h($_POST['license_server'] ?? ($state['license_server'] ?? 'https://support.hdd-land.ir')) ?>" dir="ltr" style="text-align:left;">
+                        <label>موبایل خریدار (اگر روی لایسنس نیست)</label>
+                        <input name="phone" placeholder="09xxxxxxxxx" value="<?= h($_POST['phone'] ?? ($otpState['phone'] ?? '')) ?>" dir="ltr" style="text-align:left;">
                     </div>
                 </div>
-                <button class="btn" type="submit">بررسی و فعال‌سازی سریال</button>
+                <label>سرور لایسنس</label>
+                <input name="license_server" required value="<?= h($_POST['license_server'] ?? ($state['license_server'] ?? 'https://support.hdd-land.ir')) ?>" dir="ltr" style="text-align:left;">
+                <button class="btn" type="submit">تأیید سریال و ارسال پیامک</button>
             </form>
+            <?php else: ?>
+            <form method="post">
+                <input type="hidden" name="step" value="2">
+                <input type="hidden" name="action" value="license_confirm_otp">
+                <input type="hidden" name="license_key" value="<?= h($otpState['license_key'] ?? '') ?>">
+                <input type="hidden" name="domain" value="<?= h($otpState['domain'] ?? detect_domain()) ?>">
+                <input type="hidden" name="phone" value="<?= h($otpState['phone'] ?? '') ?>">
+                <input type="hidden" name="license_server" value="<?= h($state['license_server'] ?? 'https://support.hdd-land.ir') ?>">
+                <p style="margin-bottom:12px;">کد به <?= h($otpState['phone_masked'] ?? 'موبایل ثبت‌شده') ?> ارسال شد. دامنه قفل: <strong dir="ltr"><?= h($otpState['domain'] ?? '') ?></strong></p>
+                <label>کد تأیید پیامک</label>
+                <input name="code" required inputmode="numeric" autocomplete="one-time-code" placeholder="مثلاً 12345" value="<?= h($_POST['code'] ?? '') ?>" dir="ltr" style="text-align:left;letter-spacing:.12em;font-size:18px;">
+                <button class="btn" type="submit">تأیید کد و ادامه نصب</button>
+            </form>
+            <form method="post" style="margin-top:10px;">
+                <input type="hidden" name="step" value="2">
+                <input type="hidden" name="action" value="license_reset">
+                <button type="submit" style="background:#fff;color:#334;border:1px solid #c9d0da;">تغییر سریال / ارسال مجدد</button>
+            </form>
+            <?php endif; ?>
 
         <?php elseif ($step === 3): ?>
             <?php

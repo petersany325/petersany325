@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
  * License gate for customer installs.
  * Seller site (no LICENSE_KEY) is not blocked.
  * Periodically verifies with seller server so revoke/expiry/renewal is enforced.
+ * Domain / host change blocks and points to purchase URL.
  */
 class EnsureLicensed
 {
@@ -31,23 +32,32 @@ class EnsureLicensed
         $domain = \App\Models\ProductLicense::normalizeDomain($request->getHost());
         $configured = \App\Models\ProductLicense::normalizeDomain((string) config('license.domain'));
         $token = (string) config('license.token');
+        $purchaseUrl = (string) config('license.purchase_url', 'https://hdd-land.ir');
 
         if ($configured !== '' && $configured !== $domain) {
             return response()->view('errors.license', [
-                'message' => 'لایسنس این نصب برای دامنه دیگری ثبت شده است.',
+                'message' => 'لایسنس این نصب برای دامنه دیگری ثبت شده است'
+                    .($configured ? ' ('.$configured.')' : '')
+                    .' و روی این هاست/دامنه بلاک شده است.',
+                'reason' => 'domain_mismatch',
+                'purchase_url' => $purchaseUrl,
             ], 403);
         }
 
         if ($key === '' || $token === '') {
             return response()->view('errors.license', [
-                'message' => 'لایسنس نصب نشده است. فایل install.php را اجرا کنید.',
+                'message' => 'لایسنس نصب نشده است. فایل install.php را اجرا کنید یا لایسنس بخرید.',
+                'reason' => 'inactive',
+                'purchase_url' => $purchaseUrl,
             ], 403);
         }
 
         $check = $this->verifyWithServer($key, $domain, $token);
         if (($check['block'] ?? false) === true) {
             return response()->view('errors.license', [
-                'message' => (string) ($check['message'] ?? 'لایسنس معتبر نیست. برای تمدید با فروشنده تماس بگیرید.'),
+                'message' => (string) ($check['message'] ?? 'لایسنس معتبر نیست. برای تمدید یا خرید به سرزمین هارد مراجعه کنید.'),
+                'reason' => (string) ($check['reason'] ?? 'inactive'),
+                'purchase_url' => (string) ($check['purchase_url'] ?? $purchaseUrl),
             ], 403);
         }
 
@@ -55,11 +65,12 @@ class EnsureLicensed
     }
 
     /**
-     * @return array{block:bool,message?:string}
+     * @return array{block:bool,message?:string,reason?:string,purchase_url?:string}
      */
     private function verifyWithServer(string $key, string $domain, string $token): array
     {
         $cacheKey = 'license_verify_'.sha1($key.'|'.$domain.'|'.$token);
+        $purchaseUrl = (string) config('license.purchase_url', 'https://hdd-land.ir');
 
         // Cache positive result briefly; negative/block results shorter so renew takes effect sooner.
         $cached = Cache::get($cacheKey);
@@ -110,9 +121,18 @@ class EnsureLicensed
             $message = is_array($json)
                 ? (string) ($json['message'] ?? 'لایسنس معتبر نیست.')
                 : 'ارتباط با سرور لایسنس نامعتبر بود.';
+            $reason = is_array($json) ? (string) ($json['reason'] ?? 'inactive') : 'inactive';
+            $url = is_array($json) && ! empty($json['purchase_url'])
+                ? (string) $json['purchase_url']
+                : $purchaseUrl;
 
-            // Revoked / expired / invalid → block; short cache so seller renew unlocks soon
-            $result = ['block' => true, 'message' => $message];
+            // Revoked / expired / domain mismatch → block; short cache so seller renew unlocks soon
+            $result = [
+                'block' => true,
+                'message' => $message,
+                'reason' => $reason,
+                'purchase_url' => $url,
+            ];
             Cache::put($cacheKey, $result, now()->addMinutes(10));
             Cache::put($cacheKey.'_last_block', $result, now()->addDays(7));
 
