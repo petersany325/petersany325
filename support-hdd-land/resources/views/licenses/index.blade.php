@@ -9,7 +9,7 @@
     <p class="muted">سریال را به مشتری بدهید؛ موقع نصب در ویزارد وارد می‌کند و به دامنه قفل می‌شود.</p>
 
     @if(session('success'))
-        <div class="alert alert-ok">{{ session('success') }}</div>
+        <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
     <form method="POST" action="{{ route('licenses.issue') }}" class="accept-row accept-row-3" style="align-items:end;margin-bottom:16px;">
