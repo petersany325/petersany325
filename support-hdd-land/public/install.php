@@ -162,15 +162,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $result = $installer->runInstall($admin, $license);
                     if (! ($result['ok'] ?? false)) {
-                        $raw = $result['message'] ?? 'نصب ناموفق بود.';
-                        $error = $installer->friendlyDbError($raw);
-                        if ($error === 'خطای دیتابیس: '.$raw || str_starts_with($error, 'خطای دیتابیس:')) {
-                            // keep friendly only for DB; otherwise original
-                        }
-                        if (! str_contains($raw, '1045') && ! str_contains($raw, 'Access denied')
-                            && ! str_contains($raw, '1049') && ! str_contains($raw, '2002')) {
-                            $error = $raw;
-                        }
+                        $raw = (string) ($result['message'] ?? 'نصب ناموفق بود.');
+                        $error = (str_contains($raw, '1045') || str_contains($raw, 'Access denied')
+                            || str_contains($raw, '1049') || str_contains($raw, '2002'))
+                            ? $installer->friendlyDbError($raw)
+                            : $raw;
                         $state['details'] = $result['details'] ?? [];
                         $_SESSION['install'] = $state;
                     } else {
