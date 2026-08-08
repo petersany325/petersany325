@@ -86,6 +86,7 @@
                         <th>پرداخت‌شده</th>
                         <th>مانده نسیه</th>
                         <th>یادداشت تسویه</th>
+                        <th></th>
                     </tr>
                     </thead>
                     <tbody>
@@ -104,9 +105,12 @@
                             <td class="acc-num">{{ number_format((int) $rx->paid_amount) }}</td>
                             <td class="acc-num" style="color:#b42318;font-weight:800;">{{ number_format($rx->remainingAmount()) }}</td>
                             <td>{{ $rx->settlement_note ?: ($rx->settlement_mode === 'credit' ? 'نسیه' : '—') }}</td>
+                            <td>
+                                <a class="btn btn-primary btn-sm" href="{{ route('receptions.show', $rx) }}#rx-collect">ثبت دریافت</a>
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7">قبض نسیه باز نیست.</td></tr>
+                        <tr><td colspan="8">قبض نسیه باز نیست.</td></tr>
                     @endforelse
                     </tbody>
                 </table>

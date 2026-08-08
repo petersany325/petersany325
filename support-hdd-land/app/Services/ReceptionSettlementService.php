@@ -244,4 +244,116 @@ class ReceptionSettlementService
             return ['ok' => true, 'message' => $msg];
         });
     }
+
+    /**
+     * Collect cash/card/transfer against an open receivable after credit delivery.
+     * Journal: Dr cash / Cr 1210 via AccountingService::postPayment — no second revenue.
+     *
+     * @param  array{method:string,amount:int,note?:string}  $data
+     * @return array{ok:bool,message:string}
+     */
+    public function collectReceivable(Reception $reception, array $data): array
+    {
+        if ($reception->status === 'cancelled') {
+            return ['ok' => false, 'message' => 'قبض لغو شده قابل دریافت نیست.'];
+        }
+
+        $remaining = $reception->remainingAmount();
+        if ($remaining <= 0) {
+            return ['ok' => false, 'message' => 'مانده‌ای برای دریافت نیست.'];
+        }
+
+        $method = (string) ($data['method'] ?? 'cash');
+        if (! array_key_exists($method, Payment::METHODS) || $method === 'zarinpal') {
+            throw ValidationException::withMessages([
+                'method' => 'روش دریافت را انتخاب کنید (نقد / کارت / کارت‌به‌کارت).',
+            ]);
+        }
+
+        $amount = (int) ($data['amount'] ?? 0);
+        if ($amount < 1) {
+            throw ValidationException::withMessages([
+                'amount' => 'مبلغ دریافتی را وارد کنید.',
+            ]);
+        }
+        if ($amount > $remaining) {
+            throw ValidationException::withMessages([
+                'amount' => 'مبلغ نمی‌تواند از مانده ('.number_format($remaining).' تومان) بیشتر باشد.',
+            ]);
+        }
+
+        $note = trim((string) ($data['note'] ?? ''));
+
+        return DB::transaction(function () use ($reception, $method, $amount, $note, $remaining) {
+            $reception = Reception::query()->lockForUpdate()->findOrFail($reception->id);
+            $reception->loadMissing(['customer']);
+
+            $freshRemain = $reception->remainingAmount();
+            if ($freshRemain <= 0) {
+                return ['ok' => false, 'message' => 'مانده‌ای برای دریافت نیست.'];
+            }
+            if ($amount > $freshRemain) {
+                throw ValidationException::withMessages([
+                    'amount' => 'مبلغ نمی‌تواند از مانده ('.number_format($freshRemain).' تومان) بیشتر باشد.',
+                ]);
+            }
+
+            $type = $amount >= $freshRemain ? 'final' : 'partial';
+            $defaultNote = $reception->isDelivered()
+                ? 'دریافت بدهی پس از تحویل'
+                : 'دریافت مانده قبض';
+
+            $payment = Payment::create([
+                'reception_id' => $reception->id,
+                'customer_id' => $reception->customer_id,
+                'received_by' => Auth::id(),
+                'type' => $type,
+                'method' => $method,
+                'amount' => $amount,
+                'note' => $note !== '' ? $note : $defaultNote,
+                'paid_at' => now(),
+            ]);
+
+            $reception->recalculateTotals();
+            $this->accounting->postPayment($payment->fresh(['reception', 'customer']));
+
+            $reception->refresh();
+            $left = $reception->remainingAmount();
+            $wasCredit = $reception->settlement_mode === self::MODE_CREDIT || $reception->isDelivered();
+
+            if ($left === 0) {
+                $reception->forceFill([
+                    'settled_at' => now(),
+                    'settlement_note' => $note !== ''
+                        ? $note
+                        : (($reception->settlement_note ? $reception->settlement_note.' | ' : '').'تسویه بدهی پس از دریافت'),
+                ])->save();
+            }
+
+            $this->lifecycle->log(
+                $reception->fresh(),
+                $reception->status,
+                'debt_collection',
+                $reception->status,
+                $left === 0
+                    ? 'تسویه کامل بدهی — '.number_format($amount).' تومان'
+                    : 'دریافت بخشی از بدهی — '.number_format($amount).' تومان',
+                $payment->note,
+                [
+                    'payment_id' => $payment->id,
+                    'amount' => $amount,
+                    'method' => $method,
+                    'remaining_after' => $left,
+                    'was_credit' => $wasCredit,
+                    'fully_settled' => $left === 0,
+                ]
+            );
+
+            $msg = $left === 0
+                ? 'بدهی قبض کامل تسویه شد. مبلغ '.number_format($amount).' تومان به صندوق نشست (بستانکار ۱۲۱۰).'
+                : 'مبلغ '.number_format($amount).' تومان دریافت شد. مانده بدهی: '.number_format($left).' تومان.';
+
+            return ['ok' => true, 'message' => $msg];
+        });
+    }
 }

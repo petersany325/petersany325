@@ -15,6 +15,11 @@
                 </div>
                 <div class="report-head-actions">
                     <span class="badge badge-{{ $reception->status }}">{{ $reception->statusLabel() }}</span>
+                    @php $fin = $reception->financeStatus(); @endphp
+                    <span class="pill"
+                          style="@if(in_array($fin, ['credit_open','credit_partial','unpaid'], true)) background:#fde8e8;color:#9f1239; @elseif(in_array($fin, ['settled','credit_settled'], true)) background:#e8f8ef;color:#0f6b3a; @elseif($fin === 'partial') background:#fff4e5;color:#9a5b00; @else background:#eef2f6;color:#334155; @endif">
+                        {{ $reception->financeStatusLabel() }}
+                    </span>
                     <a class="btn btn-primary" href="{{ route('receptions.edit', $reception) }}">ویرایش قبض</a>
                     <a class="btn btn-secondary" href="{{ route('receptions.history', $reception) }}" target="_blank" rel="noopener">تاریخچه / گزارش</a>
                     <a class="btn btn-secondary" href="{{ route('receptions.print', $reception) }}" target="_blank">چاپ قبض</a>
@@ -649,6 +654,7 @@
                 <div class="rx-cost-row grand"><span>جمع فاکتور</span><strong>{{ toman($reception->total_amount) }}</strong></div>
                 <div class="rx-cost-row"><span>پرداخت‌شده</span><strong>{{ toman($reception->paid_amount) }}</strong></div>
                 <div class="rx-cost-row remain"><span>مانده</span><strong>{{ toman($reception->remainingAmount()) }}</strong></div>
+                <div class="rx-cost-row soft"><span>وضعیت تسویه</span><strong>{{ $reception->financeStatusLabel() }}</strong></div>
             </div>
         </div>
 
@@ -656,7 +662,69 @@
             $dueGross = max(0, $gross - (int) $reception->paid_amount);
             $remain = $reception->remainingAmount();
             $canDeliverNow = ! $reception->isDelivered();
+            $canCollectDebt = $reception->canCollectDebt();
         @endphp
+
+        @if($canCollectDebt)
+        <div class="panel" id="rx-collect" style="border-color:#e8a0a8;background:linear-gradient(180deg,#fff5f5,#fff);">
+            <h3 style="margin-top:0;">ثبت دریافت / تسویه بدهی</h3>
+            <p class="muted" style="margin:0 0 10px;">
+                دستگاه تحویل شده و مانده به‌عنوان بدهی مشتری (حساب ۱۲۱۰) مانده است.
+                با دریافت نقد / کارت / کارت‌به‌کارت، صندوق بدهکار و دریافتنی بستانکار می‌شود — درآمد دوباره شناسایی نمی‌شود.
+            </p>
+            <div class="rx-pay-due">
+                <span>مانده بدهی این قبض</span>
+                <strong>{{ number_format($remain) }} تومان</strong>
+            </div>
+            @if($reception->settlement_mode === 'credit' && $reception->settlement_note)
+                <p class="muted" style="margin:0 0 10px;font-size:11.5px;">یادداشت نسیه هنگام تحویل: {{ $reception->settlement_note }}</p>
+            @endif
+            <form method="POST" action="{{ route('receptions.collect-debt', $reception) }}" data-confirm="مبلغ دریافتی ثبت و از بدهی قبض کم شود؟">
+                @csrf
+                <div class="form-grid" style="grid-template-columns:1fr;">
+                    <div>
+                        <label>روش دریافت</label>
+                        <select name="method" required>
+                            @foreach($paymentMethods as $key => $label)
+                                @if($key !== 'zarinpal')
+                                    <option value="{{ $key }}" @selected(old('method', 'cash') === $key)>{{ $label }}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>مبلغ دریافتی</label>
+                        <input type="number" name="amount" min="1" max="{{ $remain }}" value="{{ old('amount', $remain) }}" required>
+                        <div class="muted" style="font-size:11px;margin-top:3px;">برای تسویه کامل همان مانده را بگذارید؛ کمتر = پرداخت جزئی.</div>
+                    </div>
+                    <div>
+                        <label>توضیح / پیگیری</label>
+                        <input type="text" name="note" value="{{ old('note') }}" placeholder="مثلاً: نقد در محل / شماره پیگیری کارت">
+                    </div>
+                </div>
+                <div class="actions" style="margin-top:8px;">
+                    <button class="btn btn-primary" type="submit" style="width:100%;">ثبت دریافت و کاهش بدهی</button>
+                </div>
+            </form>
+            @if(\App\Support\PaymentGateways::zarinpal()['configured'] && $remain >= 1000)
+                <form method="POST" action="{{ route('receptions.zarinpal', $reception) }}" style="margin-top:10px;">
+                    @csrf
+                    <button class="btn btn-secondary" type="submit" style="width:100%;">
+                        درگاه اینترنتی (زرین‌پال) — {{ number_format($remain) }} تومان
+                    </button>
+                </form>
+            @endif
+        </div>
+        @elseif($reception->isDelivered() && $remain === 0)
+        <div class="panel" id="rx-collect" style="border-color:#9dcfb0;background:linear-gradient(180deg,#f3fbf6,#fff);">
+            <h3 style="margin-top:0;">وضعیت تسویه</h3>
+            <p style="margin:0;">{{ $reception->financeStatusLabel() }} — مانده صفر است.
+                @if($reception->settlement_mode)
+                    (نحوه تحویل: {{ \App\Services\ReceptionSettlementService::MODES[$reception->settlement_mode] ?? $reception->settlement_mode }})
+                @endif
+            </p>
+        </div>
+        @endif
 
         @if($canDeliverNow)
         <div class="panel" id="rx-settle" style="border-color:#9ec3e8;background:linear-gradient(180deg,#f4f9ff,#fff);">
@@ -876,7 +944,7 @@
                     </button>
                 </form>
             @endif
-            @unless($reception->isDelivered())
+            @if(! $reception->isDelivered())
             <form method="POST" action="{{ route('receptions.payments', $reception) }}" id="rx-payment-form">
                 @csrf
                 <input type="hidden" name="auto_discount" value="1">
@@ -919,9 +987,11 @@
                     <button class="btn btn-secondary" type="submit">ثبت پرداخت</button>
                 </div>
             </form>
+            @elseif($canCollectDebt)
+                <p class="muted">قبض تحویل‌شده با بدهی باز است — برای دریافت نقدی از پنل <a href="#rx-collect">ثبت دریافت / تسویه بدهی</a> استفاده کنید (بدون لغو تحویل).</p>
             @else
-                <p class="muted">قبض تحویل شده — برای تغییر مالی ابتدا لغو تحویل بزنید.</p>
-            @endunless
+                <p class="muted">قبض تحویل و تسویه شده. برای اصلاح پرداخت‌های قبلی از جدول زیر استفاده کنید؛ برای بازگرداندن دستگاه «لغو تحویل» بزنید.</p>
+            @endif
             <div class="table-wrap" style="margin-top:1rem;">
                 <table style="min-width:0;">
                     <thead><tr><th>نوع</th><th>مبلغ</th><th>زمان</th><th>عملیات</th></tr></thead>

@@ -54,24 +54,35 @@
     <h3 style="margin-top:10px;font-size:12.5px;">تاریخچه قبض‌ها</h3>
     <div class="table-wrap">
         <table class="data">
-            <thead><tr><th>شماره</th><th>کالا</th><th>وضعیت</th><th>مانده</th><th>تاریخ</th></tr></thead>
+            <thead><tr><th>شماره</th><th>کالا</th><th>وضعیت</th><th>تسویه</th><th>مانده</th><th>تاریخ</th><th></th></tr></thead>
             <tbody>
             @forelse($customer->receptions as $item)
-                @php $remain = $item->remainingAmount(); @endphp
+                @php
+                    $remain = $item->remainingAmount();
+                    $fin = $item->financeStatus();
+                @endphp
                 <tr>
                     <td><a href="{{ route('receptions.show', $item) }}">{{ $item->ticket_no }}</a></td>
                     <td>{{ $item->product_name }}</td>
                     <td>
                         <span class="badge badge-{{ $item->status }}">{{ $item->statusLabel() }}</span>
-                        @if($item->settlement_mode === 'credit' && $remain > 0)
-                            <span class="pill" style="background:#fde8e8;color:#9f1239;">نسیه</span>
-                        @endif
+                    </td>
+                    <td>
+                        <span class="pill"
+                              style="@if(in_array($fin, ['credit_open','credit_partial','unpaid'], true)) background:#fde8e8;color:#9f1239; @elseif(in_array($fin, ['settled','credit_settled'], true)) background:#e8f8ef;color:#0f6b3a; @elseif($fin === 'partial') background:#fff4e5;color:#9a5b00; @else background:#eef2f6;color:#334155; @endif">
+                            {{ $item->financeStatusLabel() }}
+                        </span>
                     </td>
                     <td style="{{ $remain > 0 ? 'color:#b42318;font-weight:700;' : '' }}">{{ number_format($remain) }}</td>
                     <td>{{ jalali_like($item->created_at) }}</td>
+                    <td>
+                        @if($item->canCollectDebt())
+                            <a class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" href="{{ route('receptions.show', $item) }}#rx-collect">ثبت دریافت</a>
+                        @endif
+                    </td>
                 </tr>
             @empty
-                <tr><td colspan="5">قبضی ندارد.</td></tr>
+                <tr><td colspan="7">قبضی ندارد.</td></tr>
             @endforelse
             </tbody>
         </table>

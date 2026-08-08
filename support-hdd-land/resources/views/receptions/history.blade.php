@@ -49,7 +49,8 @@
             <div><span class="muted">جمع فاکتور</span><div>{{ toman($reception->total_amount) }}</div></div>
             <div><span class="muted">پرداخت‌شده</span><div>{{ toman($reception->paid_amount) }}</div></div>
             <div><span class="muted">مانده</span><div>{{ toman($reception->remainingAmount()) }}</div></div>
-            <div><span class="muted">تسویه</span><div>{{ \App\Services\ReceptionSettlementService::MODES[$reception->settlement_mode] ?? ($reception->settlement_mode ?: '—') }}</div></div>
+            <div><span class="muted">وضعیت تسویه</span><div>{{ $reception->financeStatusLabel() }}</div></div>
+            <div><span class="muted">نحوه تحویل</span><div>{{ \App\Services\ReceptionSettlementService::MODES[$reception->settlement_mode] ?? ($reception->settlement_mode ?: '—') }}</div></div>
             <div><span class="muted">تحویل</span><div>{{ $reception->delivered_at ? jalali_like($reception->delivered_at) : '—' }}</div></div>
         </div>
     </div>

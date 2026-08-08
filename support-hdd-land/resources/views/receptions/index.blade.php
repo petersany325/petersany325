@@ -55,11 +55,21 @@
                     <td>{{ $item->serial_number ?: '—' }}</td>
                     <td>{{ $item->technician?->name ?? '—' }}</td>
                     <td>{{ toman($item->deposit) }}</td>
-                    <td>{{ toman($item->remainingAmount()) }}</td>
-                    <td><span class="badge badge-{{ $item->status }}">{{ $item->statusLabel() }}</span></td>
+                    <td style="{{ $item->remainingAmount() > 0 ? 'color:#b42318;font-weight:700;' : '' }}">{{ toman($item->remainingAmount()) }}</td>
+                    <td>
+                        <span class="badge badge-{{ $item->status }}">{{ $item->statusLabel() }}</span>
+                        @if(in_array($item->financeStatus(), ['credit_open', 'credit_partial'], true))
+                            <div class="pill" style="margin-top:3px;background:#fde8e8;color:#9f1239;">{{ $item->financeStatusLabel() }}</div>
+                        @elseif($item->financeStatus() === 'credit_settled')
+                            <div class="pill" style="margin-top:3px;background:#e8f8ef;color:#0f6b3a;">نسیه تسویه</div>
+                        @endif
+                    </td>
                     <td>
                         <a class="btn btn-secondary" href="{{ route('receptions.show', $item) }}">جزئیات</a>
                         <a class="btn btn-ghost" href="{{ route('receptions.search', ['q' => $item->ticket_no]) }}">گزارش</a>
+                        @if($item->canCollectDebt())
+                            <a class="btn btn-ghost" href="{{ route('receptions.show', $item) }}#rx-collect">ثبت دریافت</a>
+                        @endif
                     </td>
                 </tr>
             @empty

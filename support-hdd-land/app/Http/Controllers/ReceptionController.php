@@ -1032,6 +1032,22 @@ class ReceptionController extends Controller
         return back()->with('success', $msg);
     }
 
+    /**
+     * Post-delivery (or open credit) cash collection against AR 1210.
+     */
+    public function collectDebt(Request $request, Reception $reception, ReceptionSettlementService $settlement)
+    {
+        $data = $request->validate([
+            'method' => ['required', Rule::in(['cash', 'card', 'transfer'])],
+            'amount' => ['required', 'integer', 'min:1'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $result = $settlement->collectReceivable($reception->fresh(['customer']), $data);
+
+        return back()->with($result['ok'] ? 'success' : 'error', $result['message'] ?? 'ثبت دریافت ناموفق بود.');
+    }
+
     public function cancelDelivery(Request $request, Reception $reception, \App\Services\ReceptionLifecycleService $lifecycle)
     {
         $data = $request->validate([

@@ -84,6 +84,7 @@
             <div><span class="muted">جمع کل</span><div class="report-money">{{ toman($reception->total_amount) }}</div></div>
             <div><span class="muted">پرداخت‌شده</span><div>{{ toman($reception->paid_amount) }}</div></div>
             <div><span class="muted">مانده</span><div class="report-remain">{{ toman($reception->remainingAmount()) }}</div></div>
+            <div><span class="muted">وضعیت تسویه</span><div>{{ $reception->financeStatusLabel() }}</div></div>
             <div><span class="muted">روش پرداخت</span><div>{{ $reception->payment_method ?: '—' }}</div></div>
             @if($reception->delivery_cancel_count)
                 <div><span class="muted">لغو تحویل</span><div>{{ $reception->delivery_cancel_count }} بار</div></div>

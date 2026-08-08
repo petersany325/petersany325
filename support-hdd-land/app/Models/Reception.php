@@ -194,6 +194,69 @@ class Reception extends Model
         return max(0, (int) $this->total_amount - (int) $this->paid_amount);
     }
 
+    /**
+     * Operational finance status for staff UI (independent of workflow status badge).
+     *
+     * settled | credit_settled | credit_open | credit_partial |
+     * unpaid | partial | waived | no_charge | cancelled
+     */
+    public function financeStatus(): string
+    {
+        if ($this->status === 'cancelled') {
+            return 'cancelled';
+        }
+
+        $remain = $this->remainingAmount();
+        $paid = (int) $this->paid_amount;
+        $total = (int) $this->total_amount;
+        $wasWaive = $this->settlement_mode === \App\Services\ReceptionSettlementService::MODE_WAIVE;
+
+        if ($remain <= 0) {
+            if ($total <= 0 && $paid <= 0) {
+                return $wasWaive ? 'waived' : 'no_charge';
+            }
+            if ($wasWaive) {
+                return 'waived';
+            }
+            if ($this->settlement_mode === \App\Services\ReceptionSettlementService::MODE_CREDIT) {
+                return 'credit_settled';
+            }
+
+            return 'settled';
+        }
+
+        if ($this->isDelivered() || $this->settlement_mode === \App\Services\ReceptionSettlementService::MODE_CREDIT) {
+            return $paid > 0 ? 'credit_partial' : 'credit_open';
+        }
+
+        return $paid > 0 ? 'partial' : 'unpaid';
+    }
+
+    public function financeStatusLabel(): string
+    {
+        return match ($this->financeStatus()) {
+            'settled' => 'تسویه‌شده',
+            'credit_settled' => 'نسیه تسویه‌شده',
+            'credit_open' => 'نسیه — بدهی باز',
+            'credit_partial' => 'نسیه — پرداخت جزئی',
+            'unpaid' => 'پرداخت‌نشده',
+            'partial' => 'پرداخت جزئی',
+            'waived' => 'بخشش‌شده',
+            'no_charge' => 'بدون مبلغ',
+            'cancelled' => 'لغو',
+            default => '—',
+        };
+    }
+
+    /** Delivered (or credit) ticket that still has receivable remaining — can collect cash later. */
+    public function canCollectDebt(): bool
+    {
+        return $this->status !== 'cancelled'
+            && $this->remainingAmount() > 0
+            && ($this->isDelivered()
+                || $this->settlement_mode === \App\Services\ReceptionSettlementService::MODE_CREDIT);
+    }
+
     public function hasCostSet(): bool
     {
         if ($this->cost_confirmed_at) {
