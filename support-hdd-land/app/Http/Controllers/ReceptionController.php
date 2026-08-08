@@ -185,6 +185,7 @@ class ReceptionController extends Controller
         ]));
 
         $data['customer_phone'] = $this->normalizePhone((string) ($data['customer_phone'] ?? ''));
+        $this->assertSerialAvailable($data['serial_number'] ?? null);
 
         $reception = DB::transaction(function () use ($data, $request) {
             $customer = $this->resolveCustomer($data);
@@ -255,6 +256,7 @@ class ReceptionController extends Controller
         ]));
 
         $data['customer_phone'] = $this->normalizePhone((string) ($data['customer_phone'] ?? ''));
+        $this->assertBatchSerialsUnique($data['items'] ?? []);
         $batchCode = 'BATCH-'.now()->format('ymdHis').'-'.random_int(100, 999);
 
         $receptions = DB::transaction(function () use ($data, $request, $batchCode) {
@@ -393,6 +395,8 @@ class ReceptionController extends Controller
                 }
             }
         }
+
+        $this->assertSerialAvailable($data['serial_number'] ?? null, (int) $reception->id);
 
         $brandModel = trim((string) ($data['brand_model'] ?? trim(($data['brand'] ?? '').' '.($data['model'] ?? ''))));
         $productName = trim((string) ($data['product_name'] ?? '')) ?: ($brandModel !== '' ? $brandModel : $reception->product_name);
@@ -1443,6 +1447,8 @@ class ReceptionController extends Controller
             $data['serial_number'] = $converted !== null ? strtoupper($converted) : null;
         }
 
+        $this->assertSerialAvailable($data['serial_number'] ?? null);
+
         $brandModel = trim((string) ($data['brand_model'] ?? trim(($data['brand'] ?? '').' '.($data['model'] ?? ''))));
         $productName = trim((string) ($data['product_name'] ?? '')) ?: ($brandModel !== '' ? $brandModel : 'دستگاه تعمیری');
 
@@ -1559,6 +1565,64 @@ class ReceptionController extends Controller
         }
 
         return $digits;
+    }
+
+    private function normalizeSerialNumber(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $converted = $this->toAsciiEnglish((string) $value);
+
+        return $converted !== null ? strtoupper($converted) : null;
+    }
+
+    /**
+     * One active ticket per device serial. Soft-deleted/cancelled tickets do not block reuse.
+     */
+    private function assertSerialAvailable(?string $serial, ?int $ignoreReceptionId = null, string $field = 'serial_number'): void
+    {
+        $serial = $this->normalizeSerialNumber($serial);
+        if ($serial === null) {
+            return;
+        }
+
+        $query = Reception::query()
+            ->where('status', '!=', 'cancelled')
+            ->whereRaw('UPPER(TRIM(serial_number)) = ?', [$serial]);
+
+        if ($ignoreReceptionId) {
+            $query->where('id', '!=', $ignoreReceptionId);
+        }
+
+        $existing = $query->orderByDesc('id')->first(['id', 'ticket_no', 'serial_number', 'status']);
+        if (! $existing) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            $field => 'این سریال قبلاً ثبت شده است (قبض '.$existing->ticket_no.'). هر سریال فقط یک قبض می‌تواند داشته باشد.',
+        ]);
+    }
+
+    /** @param  array<int, array<string, mixed>>  $items */
+    private function assertBatchSerialsUnique(array $items): void
+    {
+        $seen = [];
+        foreach ($items as $index => $item) {
+            $serial = $this->normalizeSerialNumber(isset($item['serial_number']) ? (string) $item['serial_number'] : null);
+            if ($serial === null) {
+                continue;
+            }
+            $field = 'items.'.$index.'.serial_number';
+            if (isset($seen[$serial])) {
+                throw ValidationException::withMessages([
+                    $field => 'سریال تکراری در همین پذیرش گروهی است. هر سریال فقط یک قبض می‌تواند داشته باشد.',
+                ]);
+            }
+            $seen[$serial] = $index;
+            $this->assertSerialAvailable($serial, null, $field);
+        }
     }
 
     private function toAsciiEnglish(string $value): ?string
