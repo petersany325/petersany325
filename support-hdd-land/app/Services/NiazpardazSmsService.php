@@ -88,7 +88,7 @@ class NiazpardazSmsService
     private function sendViaPanel(string $username, string $password, string $from, string $to, string $message): array
     {
         try {
-            $response = Http::asForm()->timeout(20)->post('https://panel.niazpardaz-sms.com/SMSInOutBox/Send', [
+            $response = Http::asForm()->timeout(8)->connectTimeout(4)->post('https://panel.niazpardaz-sms.com/SMSInOutBox/Send', [
                 'UserName' => $username,
                 'Password' => $password,
                 'From' => $from,

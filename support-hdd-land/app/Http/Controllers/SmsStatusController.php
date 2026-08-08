@@ -43,6 +43,8 @@ class SmsStatusController extends Controller
             SmsStatusRule::query()->where('id', '!=', $created->id)->update(['on_create' => false]);
         }
 
+        SmsStatusRule::clearStatusCache();
+
         return back()->with('success', 'وضعیت جدید افزوده شد.');
     }
 
@@ -62,12 +64,15 @@ class SmsStatusController extends Controller
             SmsStatusRule::query()->where('id', '!=', $smsStatus->id)->update(['on_create' => false]);
         }
 
+        SmsStatusRule::clearStatusCache();
+
         return back()->with('success', 'وضعیت ویرایش شد.');
     }
 
     public function destroy(SmsStatusRule $smsStatus)
     {
         $smsStatus->delete();
+        SmsStatusRule::clearStatusCache();
 
         return back()->with('success', 'وضعیت حذف شد.');
     }
@@ -75,6 +80,7 @@ class SmsStatusController extends Controller
     public function hide(SmsStatusRule $smsStatus)
     {
         $smsStatus->update(['is_hidden' => ! $smsStatus->is_hidden]);
+        SmsStatusRule::clearStatusCache();
 
         return back()->with('success', $smsStatus->is_hidden ? 'وضعیت مخفی شد.' : 'وضعیت از حالت مخفی خارج شد.');
     }

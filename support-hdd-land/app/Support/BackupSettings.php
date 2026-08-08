@@ -56,6 +56,8 @@ class BackupSettings
 
     public static function all(): array
     {
+        self::ensureAutoDefaults();
+
         $token = (string) AppSetting::getValue('backup_cron_token', '');
         if ($token === '') {
             $token = Str::random(40);
@@ -63,12 +65,12 @@ class BackupSettings
         }
 
         return [
-            'enabled' => AppSetting::getValue('backup_auto_enabled', '0') === '1',
+            'enabled' => AppSetting::getValue('backup_auto_enabled', '1') === '1',
             'scope' => AppSetting::getValue('backup_auto_scope', 'full') ?: 'full',
-            'interval' => AppSetting::getValue('backup_auto_interval', 'weekly') ?: 'weekly',
+            'interval' => AppSetting::getValue('backup_auto_interval', 'daily') ?: 'daily',
             'weekday' => (int) AppSetting::getValue('backup_auto_weekday', '5'),
             'hour' => (int) AppSetting::getValue('backup_auto_hour', '3'),
-            'keep_local' => max(1, (int) AppSetting::getValue('backup_keep_local', '8')),
+            'keep_local' => max(1, (int) AppSetting::getValue('backup_keep_local', '14')),
             'remote_enabled' => AppSetting::getValue('backup_remote_enabled', '0') === '1',
             'remote_protocol' => AppSetting::getValue('backup_remote_protocol', 'ftp') ?: 'ftp',
             'remote_host' => (string) AppSetting::getValue('backup_remote_host', ''),
@@ -110,14 +112,28 @@ class BackupSettings
         ];
     }
 
+    /** Seed safe defaults once: daily full auto-backup for the receipt system. */
+    public static function ensureAutoDefaults(): void
+    {
+        if (AppSetting::query()->where('key', 'backup_auto_enabled')->exists()) {
+            return;
+        }
+        AppSetting::setValue('backup_auto_enabled', '1');
+        AppSetting::setValue('backup_auto_scope', 'full');
+        AppSetting::setValue('backup_auto_interval', 'daily');
+        AppSetting::setValue('backup_auto_weekday', '5');
+        AppSetting::setValue('backup_auto_hour', '3');
+        AppSetting::setValue('backup_keep_local', '14');
+    }
+
     public static function save(array $data): void
     {
         AppSetting::setValue('backup_auto_enabled', ! empty($data['enabled']) ? '1' : '0');
         AppSetting::setValue('backup_auto_scope', in_array($data['scope'] ?? '', array_keys(self::SCOPES), true) ? $data['scope'] : 'full');
-        AppSetting::setValue('backup_auto_interval', in_array($data['interval'] ?? '', array_keys(self::INTERVALS), true) ? $data['interval'] : 'weekly');
+        AppSetting::setValue('backup_auto_interval', in_array($data['interval'] ?? '', array_keys(self::INTERVALS), true) ? $data['interval'] : 'daily');
         AppSetting::setValue('backup_auto_weekday', (string) max(0, min(6, (int) ($data['weekday'] ?? 5))));
         AppSetting::setValue('backup_auto_hour', (string) max(0, min(23, (int) ($data['hour'] ?? 3))));
-        AppSetting::setValue('backup_keep_local', (string) max(1, min(60, (int) ($data['keep_local'] ?? 8))));
+        AppSetting::setValue('backup_keep_local', (string) max(1, min(60, (int) ($data['keep_local'] ?? 14))));
         AppSetting::setValue('backup_remote_enabled', ! empty($data['remote_enabled']) ? '1' : '0');
         AppSetting::setValue('backup_remote_protocol', in_array($data['remote_protocol'] ?? '', array_keys(self::PROTOCOLS), true) ? $data['remote_protocol'] : 'ftp');
         AppSetting::setValue('backup_remote_host', trim((string) ($data['remote_host'] ?? '')));

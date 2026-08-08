@@ -348,9 +348,9 @@ class NavMenu
      *
      * @return list<array{key:string,label:string,mark:string,route:?string,match:string,tone:string}>
      */
-    public static function mobilePrimary(User $user): array
+    public static function mobilePrimary(User $user, ?array $groups = null): array
     {
-        $groups = collect(self::forUser($user))->keyBy('key');
+        $groups = collect($groups ?? self::forUser($user))->keyBy('key');
         $order = [
             'home', 'daily_logs', 'reception', 'handoffs', 'notifications',
             'customers', 'parts', 'cost_approvals', 'accounting', 'reports',

@@ -6,6 +6,7 @@ use App\Models\CustomerMessage;
 use App\Models\StaffNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class NotificationController extends Controller
@@ -30,6 +31,7 @@ class NotificationController extends Controller
         abort_unless((int) $notification->user_id === (int) $request->user()->id, 403);
         if (! $notification->read_at) {
             $notification->forceFill(['read_at' => now()])->save();
+            Cache::forget('unread_notes_'.$request->user()->id);
         }
 
         if ($notification->link) {
@@ -45,6 +47,7 @@ class NotificationController extends Controller
             ->where('user_id', $request->user()->id)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
+        Cache::forget('unread_notes_'.$request->user()->id);
 
         return back()->with('success', 'همه اعلان‌ها خوانده شد.');
     }

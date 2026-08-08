@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\StaffNotification;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class StaffNotifier
 {
@@ -27,6 +28,7 @@ class StaffNotifier
                 'link' => $link,
                 'data' => $data ?: null,
             ]);
+            Cache::forget('unread_notes_'.$userId);
         }
     }
 

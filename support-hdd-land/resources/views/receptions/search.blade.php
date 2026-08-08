@@ -37,8 +37,8 @@
     <div style="margin:8px 0 4px;font-size:11.5px;">
         <strong>{{ $receptions->count() }}</strong>
         <span class="muted">نتیجه برای «{{ $q }}»</span>
-        @if($receptions->count() >= 50)
-            <span class="muted">— حداکثر ۵۰ مورد</span>
+        @if($receptions->count() >= 40)
+            <span class="muted">— حداکثر ۴۰ مورد</span>
         @endif
     </div>
 
@@ -46,7 +46,8 @@
         @forelse($receptions as $reception)
             <button type="button"
                     class="search-hit"
-                    data-open-modal="#report-modal-{{ $reception->id }}">
+                    data-open-modal="#report-modal-{{ $reception->id }}"
+                    data-report-url="{{ route('receptions.report-partial', $reception) }}">
                 <span class="search-hit-main">
                     <strong>{{ $reception->customer?->name ?: 'بدون نام' }}</strong>
                     <span class="meta">
@@ -69,14 +70,15 @@
     </div>
 
     @foreach($receptions as $reception)
-        <div class="app-modal" id="report-modal-{{ $reception->id }}" hidden>
+        <div class="app-modal" id="report-modal-{{ $reception->id }}" hidden
+             data-report-url="{{ route('receptions.report-partial', $reception) }}">
             <div class="app-modal-dialog" role="dialog" aria-modal="true">
                 <div class="app-modal-head">
                     <strong>{{ $reception->customer?->name ?: 'قبض' }} — {{ $reception->ticket_no }}</strong>
                     <button type="button" class="app-modal-close" data-close-modal aria-label="بستن">×</button>
                 </div>
-                <div class="app-modal-body">
-                    @include('receptions._report', ['reception' => $reception])
+                <div class="app-modal-body" data-report-body>
+                    <p class="muted" style="margin:0;">برای مشاهده جزئیات کلیک کنید…</p>
                 </div>
             </div>
         </div>

@@ -213,11 +213,13 @@ class Reception extends Model
     public static function nextTicketNo(): string
     {
         $prefix = 'SH-'.now()->format('ymd');
-        $last = static::where('ticket_no', 'like', $prefix.'%')
-            ->orderByDesc('id')
+        // Padded 4-digit suffix → lexical MAX matches numeric MAX.
+        $last = static::query()
+            ->where('ticket_no', 'like', $prefix.'-%')
+            ->orderByDesc('ticket_no')
             ->value('ticket_no');
 
-        $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
+        $seq = $last ? ((int) substr((string) $last, -4)) + 1 : 1;
 
         return $prefix.'-'.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
     }
@@ -227,16 +229,12 @@ class Reception extends Model
         $prefix = 'T-20N';
         $max = 999; // next => T-20N1000
 
-        $existing = static::query()
+        // Numeric MAX via SQL — never load every receipt_no into PHP.
+        $dbMax = (int) (static::query()
             ->where('receipt_no', 'like', $prefix.'%')
-            ->pluck('receipt_no');
+            ->selectRaw('MAX(CAST(SUBSTRING(receipt_no, ?) AS UNSIGNED)) as m', [strlen($prefix) + 1])
+            ->value('m') ?? 0);
 
-        foreach ($existing as $receiptNo) {
-            if (preg_match('/^'.preg_quote($prefix, '/').'(\d+)$/', (string) $receiptNo, $m)) {
-                $max = max($max, (int) $m[1]);
-            }
-        }
-
-        return $prefix.($max + 1);
+        return $prefix.(max($max, $dbMax) + 1);
     }
 }

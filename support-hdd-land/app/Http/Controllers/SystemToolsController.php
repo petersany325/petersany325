@@ -112,7 +112,7 @@ class SystemToolsController extends Controller
 
                 return $this->clouds->uploadToEnabled($path);
             })(),
-            'backup_run_now' => $this->backups->runScheduled(),
+            'backup_run_now' => $this->backups->runFullNow(),
             'backup_test_remote' => $this->backups->testRemote(),
             default => ['ok' => false, 'message' => 'عملیات نامعتبر است.'],
         };

@@ -37,9 +37,14 @@
 @auth
 @php
     $menuGroups = \App\Support\NavMenu::forUser(auth()->user());
-    $mobileTabs = \App\Support\NavMenu::mobilePrimary(auth()->user());
+    $mobileTabs = \App\Support\NavMenu::mobilePrimary(auth()->user(), $menuGroups);
     $unreadNotes = auth()->user()->canAccess('notifications')
-        ? \App\Models\StaffNotification::query()->where('user_id', auth()->id())->whereNull('read_at')->count()
+        ? \Illuminate\Support\Facades\Cache::remember('unread_notes_'.auth()->id(), 20, function () {
+            return \App\Models\StaffNotification::query()
+                ->where('user_id', auth()->id())
+                ->whereNull('read_at')
+                ->count();
+        })
         : 0;
 @endphp
 <div class="app-shell">
@@ -229,7 +234,7 @@
 @else
     @yield('content')
 @endauth
-<script src="{{ asset('js/app.js') }}?v=erp8"></script>
+<script src="{{ asset('js/app.js') }}?v=erp12"></script>
 <script>
 (function () {
     var bar = document.getElementById('win-menubar');

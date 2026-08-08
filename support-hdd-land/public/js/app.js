@@ -300,12 +300,28 @@
      * 6) App modal helpers
      * ========================================================= */
 
-    function openAppModal(selector) {
+    function openAppModal(selector, opener) {
         if (!selector) return;
         var modal = document.querySelector(selector);
         if (!modal) return;
         modal.removeAttribute('hidden');
         modal.classList.add('is-open');
+
+        // Lazy-load heavy report HTML only when the modal is opened.
+        var url = (opener && opener.getAttribute('data-report-url')) || modal.getAttribute('data-report-url');
+        var body = modal.querySelector('[data-report-body]');
+        if (url && body && !body.getAttribute('data-loaded')) {
+            body.innerHTML = '<p class="muted" style="margin:0;">در حال بارگذاری…</p>';
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' }, credentials: 'same-origin' })
+                .then(function (r) { if (!r.ok) throw new Error('load failed'); return r.text(); })
+                .then(function (html) {
+                    body.innerHTML = html;
+                    body.setAttribute('data-loaded', '1');
+                })
+                .catch(function () {
+                    body.innerHTML = '<p class="muted" style="margin:0;">بارگذاری جزئیات ناموفق بود. صفحه قبض را باز کنید.</p>';
+                });
+        }
     }
 
     function closeAppModal(modal) {
@@ -318,7 +334,7 @@
             var opener = e.target.closest('[data-open-modal]');
             if (opener) {
                 e.preventDefault();
-                openAppModal(opener.getAttribute('data-open-modal'));
+                openAppModal(opener.getAttribute('data-open-modal'), opener);
                 return;
             }
 

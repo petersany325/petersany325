@@ -125,6 +125,7 @@ Route::middleware('auth')->group(function () {
         Route::post('deliveries/lookup', [DeliveryController::class, 'lookup'])->name('deliveries.lookup');
         Route::post('deliveries/group', [DeliveryController::class, 'store'])->name('deliveries.store');
         Route::resource('receptions', ReceptionController::class)->only(['index', 'create', 'store', 'show']);
+        Route::get('receptions/{reception}/report-partial', [ReceptionController::class, 'reportPartial'])->name('receptions.report-partial');
         Route::get('receptions/{reception}/history', [ReceptionController::class, 'history'])->name('receptions.history');
         Route::post('receptions/{reception}/status', [ReceptionController::class, 'updateStatus'])->name('receptions.status');
         Route::post('receptions/{reception}/parts', [ReceptionController::class, 'addPart'])->name('receptions.parts');
@@ -287,6 +288,7 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/invoice', [SettingController::class, 'updateInvoice'])->name('settings.invoice');
         Route::post('settings/payments', [SettingController::class, 'updatePayments'])->name('settings.payments');
         Route::post('settings/backup', [SettingController::class, 'updateBackup'])->name('settings.backup');
+        Route::post('settings/backup/run-now', [SettingController::class, 'runBackupNow'])->name('settings.backup.run-now');
         Route::get('settings/backup/cloud/{provider}/connect', [BackupCloudController::class, 'connect'])
             ->whereIn('provider', ['google', 'onedrive', 'mega'])
             ->name('settings.backup.cloud.connect');

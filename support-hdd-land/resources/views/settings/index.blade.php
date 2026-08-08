@@ -422,8 +422,38 @@
         <div class="ws-pane {{ $activeTab === 'backup' ? 'active' : '' }}" data-ws-pane="backup" id="backup">
             <h2>بکاپ خودکار دیتابیس</h2>
             <p class="lead">
-                بکاپ بدون mysqldump (سازگار با هاست اشتراکی cPanel). برای انتقال سایت به هاست دیگر از بکاپ «کامل سیستم» استفاده کنید.
+                بکاپ کامل سیستم (تمام جداول قبض، مشتری، کارمند، تنظیمات) به‌صورت خودکار طبق زمان‌بندی ساخته می‌شود تا سیستم قبض کند نشود و داده امن بماند.
             </p>
+
+            <div class="panel" style="margin-bottom:12px;padding:12px;border:1px solid #c5d4e8;background:linear-gradient(180deg,#f7fbff,#eef4fb);">
+                <h3 style="margin:0 0 6px;">بکاپ کامل خودکار</h3>
+                <p class="muted" style="margin:0 0 10px;">
+                    پیشنهاد: «فعال» + محدوده «کامل سیستم» + بازه «هر روز».
+                    کرون هاست را هر ساعت صدا بزنید؛ سیستم خودش در ساعت تعیین‌شده بکاپ کامل می‌گیرد.
+                </p>
+                <div class="accept-row accept-row-3" style="align-items:end;margin-bottom:8px;">
+                    <div>
+                        <label>وضعیت فعلی</label>
+                        <div>
+                            @if($backup['enabled'])
+                                <span class="pill pill-ok">خودکار روشن — {{ $backupScopes[$backup['scope']] ?? $backup['scope'] }} / {{ $backupIntervals[$backup['interval']] ?? $backup['interval'] }}</span>
+                            @else
+                                <span class="pill pill-off">خودکار خاموش است</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div>
+                        <label>آخرین فایل</label>
+                        <div dir="ltr" style="text-align:left;font-size:12px;">{{ $backup['last_file'] ?: '—' }}</div>
+                    </div>
+                    <div class="actions" style="margin:0;">
+                        <form method="POST" action="{{ route('settings.backup.run-now') }}" data-confirm="بکاپ کامل دیتابیس الآن ساخته شود؟">
+                            @csrf
+                            <button class="btn btn-primary" type="submit">اجرای فوری بکاپ کامل</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
 
             @if(auth()->user()->canAccess('system.tools'))
             <div class="split-2" style="gap:10px;margin-bottom:12px;">

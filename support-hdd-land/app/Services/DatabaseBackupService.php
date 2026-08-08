@@ -313,6 +313,48 @@ class DatabaseBackupService
             : ['ok' => false, 'message' => 'آپلود FTP ناموفق بود.'];
     }
 
+    /**
+     * Admin "run now": always full DB dump (+ optional remote/cloud upload).
+     *
+     * @return array{ok:bool,message:string,file?:string,details?:list<string>}
+     */
+    public function runFullNow(): array
+    {
+        $cfg = BackupSettings::all();
+        $created = $this->create('full', true);
+        if (! ($created['ok'] ?? false)) {
+            BackupSettings::markResult(false, $created['message'] ?? 'خطا');
+
+            return $created;
+        }
+
+        $messages = [$created['message']];
+        $details = $created['details'] ?? [];
+        $ok = true;
+
+        if ($cfg['remote_enabled']) {
+            $up = $this->uploadToRemote($created['path']);
+            $messages[] = $up['message'];
+            if (! ($up['ok'] ?? false)) {
+                $ok = false;
+            }
+        }
+
+        $cloud = app(\App\Services\CloudBackup\CloudBackupManager::class)->uploadToEnabled((string) $created['path']);
+        if (($cloud['details'] ?? []) !== []) {
+            $messages[] = $cloud['message'];
+            $details = array_merge($details, $cloud['details']);
+            if (! ($cloud['ok'] ?? false)) {
+                $ok = false;
+            }
+        }
+
+        $msg = implode(' | ', $messages);
+        BackupSettings::markResult($ok, $msg, $created['file'] ?? null);
+
+        return ['ok' => $ok, 'message' => $msg, 'file' => $created['file'] ?? null, 'details' => $details];
+    }
+
     /** @return array{ok:bool,message:string,file?:string,details?:list<string>} */
     public function runScheduled(): array
     {
@@ -321,7 +363,7 @@ class DatabaseBackupService
             return ['ok' => false, 'message' => 'بکاپ خودکار خاموش است.'];
         }
 
-        $created = $this->create($cfg['scope'], true);
+        $created = $this->create($cfg['scope'] ?: 'full', true);
         if (! ($created['ok'] ?? false)) {
             BackupSettings::markResult(false, $created['message'] ?? 'خطا');
 

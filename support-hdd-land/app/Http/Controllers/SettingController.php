@@ -398,6 +398,19 @@ class SettingController extends Controller
         return $this->settingsRedirect($request, 'payments', 'success', 'تنظیمات پرداخت ذخیره شد.');
     }
 
+    public function runBackupNow(\App\Services\DatabaseBackupService $backups)
+    {
+        @set_time_limit(0);
+        $result = $backups->runFullNow();
+
+        return $this->settingsRedirect(
+            request(),
+            'backup',
+            ($result['ok'] ?? false) ? 'success' : 'error',
+            $result['message'] ?? 'بکاپ انجام نشد.'
+        );
+    }
+
     public function updateBackup(Request $request)
     {
         $data = $request->validate([
@@ -432,10 +445,10 @@ class SettingController extends Controller
         BackupSettings::save([
             'enabled' => $request->boolean('enabled'),
             'scope' => $data['scope'] ?? 'full',
-            'interval' => $data['interval'] ?? 'weekly',
+            'interval' => $data['interval'] ?? 'daily',
             'weekday' => $data['weekday'] ?? 5,
             'hour' => $data['hour'] ?? 3,
-            'keep_local' => $data['keep_local'] ?? 8,
+            'keep_local' => $data['keep_local'] ?? 14,
             'remote_enabled' => $request->boolean('remote_enabled'),
             'remote_protocol' => $data['remote_protocol'] ?? 'ftp',
             'remote_host' => $data['remote_host'] ?? '',

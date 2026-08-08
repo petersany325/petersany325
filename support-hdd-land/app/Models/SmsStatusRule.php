@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class SmsStatusRule extends Model
@@ -82,22 +83,32 @@ class SmsStatusRule extends Model
 
     public static function activeOrdered()
     {
-        return static::query()
-            ->where('is_active', true)
-            ->where('is_hidden', false)
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get();
+        return Cache::remember('sms_status_rules_active_v1', 120, function () {
+            return static::query()
+                ->where('is_active', true)
+                ->where('is_hidden', false)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get();
+        });
     }
 
     public static function statusMap(): array
     {
-        $map = Reception::STATUSES;
-        foreach (static::activeOrdered() as $rule) {
-            $map[$rule->status_key] = $rule->title;
-        }
+        return Cache::remember('sms_status_map_v1', 120, function () {
+            $map = Reception::STATUSES;
+            foreach (static::activeOrdered() as $rule) {
+                $map[$rule->status_key] = $rule->title;
+            }
 
-        return $map;
+            return $map;
+        });
+    }
+
+    public static function clearStatusCache(): void
+    {
+        Cache::forget('sms_status_rules_active_v1');
+        Cache::forget('sms_status_map_v1');
     }
 
     public static function findForStatus(string $statusKey): ?self

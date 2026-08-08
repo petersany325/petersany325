@@ -21,6 +21,7 @@ use App\Services\ReceptionSettlementService;
 use App\Services\SmsNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -55,20 +56,12 @@ class ReceptionController extends Controller
 
         $receptions = collect();
         if ($searched && $q !== '') {
+            // Light list payload — full report loads on demand when modal opens.
             $receptions = $this->searchQuery($q, $status)
-                ->with([
-                    'customer.referralSource',
-                    'technician',
-                    'faultType',
-                    'parts.part',
-                    'payments.receiver',
-                    'creator',
-                    'costStages',
-                    'statusLogs' => fn ($q) => $q->with('actor')->latest('id')->limit(25),
-                ])
-                ->latest()
-                ->limit(50)
-                ->get();
+                ->with(['customer:id,name,phone', 'technician:id,name'])
+                ->latest('id')
+                ->limit(40)
+                ->get(['id', 'ticket_no', 'receipt_no', 'serial_number', 'product_name', 'status', 'customer_id', 'technician_id', 'created_at']);
         }
 
         return view('receptions.search', [
@@ -78,6 +71,22 @@ class ReceptionController extends Controller
             'searched' => $searched,
             'receptions' => $receptions,
         ]);
+    }
+
+    public function reportPartial(Reception $reception)
+    {
+        $reception->load([
+            'customer.referralSource',
+            'technician',
+            'faultType',
+            'parts.part',
+            'payments.receiver',
+            'creator',
+            'costStages',
+            'statusLogs' => fn ($q) => $q->with('actor')->latest('id')->limit(25),
+        ]);
+
+        return view('receptions._report', ['reception' => $reception]);
     }
 
     public function create()
@@ -188,10 +197,10 @@ class ReceptionController extends Controller
             ]);
         });
 
-        $smsNote = $this->notifyReceptionCreated($reception);
+        $this->queueReceptionCreatedSms($reception);
 
         $action = $data['action'] ?? 'save_close';
-        $flash = 'قبض پذیرش با موفقیت ثبت شد.'.($smsNote ? ' '.$smsNote : '');
+        $flash = 'قبض پذیرش با موفقیت ثبت شد. پیامک در پس‌زمینه ارسال می‌شود.';
         if ($action === 'save_print') {
             return redirect()->route('receptions.print', $reception)->with('success', $flash);
         }
@@ -279,16 +288,11 @@ class ReceptionController extends Controller
         $first = $receptions->first();
         $action = $data['action'] ?? 'save_close';
 
-        $smsNote = '';
-        if ($first) {
-            $smsNote = $this->notifyReceptionCreated($first);
-            // for remaining tickets in batch, also send if configured
-            foreach ($receptions->slice(1) as $item) {
-                $this->notifyReceptionCreated($item);
-            }
+        foreach ($receptions as $item) {
+            $this->queueReceptionCreatedSms($item);
         }
 
-        $flash = "{$count} قبض گروهی با کد {$batchCode} ثبت شد.".($smsNote ? ' '.$smsNote : '');
+        $flash = "{$count} قبض گروهی با کد {$batchCode} ثبت شد. پیامک‌ها در پس‌زمینه ارسال می‌شوند.";
 
         if ($action === 'save_print' && $first) {
             return redirect()->route('receptions.print', $first)->with('success', $flash);
@@ -321,7 +325,7 @@ class ReceptionController extends Controller
             ];
         }
 
-        return view('receptions.show', array_merge($this->formData(), [
+        return view('receptions.show', array_merge($this->editLookups(), [
             'reception' => $reception,
             'statuses' => Reception::availableStatuses(),
             'smsRules' => $rules,
@@ -334,7 +338,7 @@ class ReceptionController extends Controller
             'paymentMethods' => collect(Payment::METHODS)->except('zarinpal')->all(),
             'paymentTypes' => Payment::TYPES,
             'settlementModes' => ReceptionSettlementService::MODES,
-            'parts' => Part::where('is_active', true)->orderBy('name')->get(),
+            'parts' => Cache::remember('parts_active_list_v1', 60, fn () => Part::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code', 'stock', 'sale_price'])),
             'pendingHandoff' => $reception->handoffs->firstWhere('status', \App\Models\DeviceHandoff::STATUS_PENDING),
             'custodyChecklist' => $gate->checklist($reception),
             'workReports' => $reception->workReports,
@@ -475,23 +479,31 @@ class ReceptionController extends Controller
         }
 
         $sendSms = $request->boolean('send_sms');
-        $smsResult = $smsNotifications->sendOnStatusChange($reception, $data['status'], $sendSms);
-        if ($sendSms) {
-            if ($smsResult['ok'] ?? false) {
-                $msg .= ' پیامک وضعیت ارسال شد.';
-            } elseif (! ($smsResult['skipped'] ?? false)) {
-                $msg .= ' پیامک وضعیت ناموفق: '.($smsResult['message'] ?? '');
-            }
-        }
-
-        // پیامک مبلغ: وقتی مبلغ تازه مشخص شد یا کاربر تیک ارسال مبلغ را زد
+        $sendPrice = $request->boolean('send_price_sms');
         $newTotal = (int) $reception->total_amount;
         $priceJustSet = $newTotal > 0 && $prevTotal <= 0;
-        if ($request->boolean('send_price_sms') || $priceJustSet) {
-            $priceResult = $smsNotifications->sendOnPriceSet($reception, $request->boolean('send_price_sms') || $priceJustSet);
-            if ($priceResult && ($priceResult['ok'] ?? false)) {
-                $msg .= ' پیامک مبلغ برای مشتری ارسال شد.';
-            }
+        $shouldPriceSms = $sendPrice || $priceJustSet;
+        $statusKey = $data['status'];
+        $receptionId = (int) $reception->id;
+
+        if ($sendSms || $shouldPriceSms) {
+            $msg .= ' پیامک در پس‌زمینه ارسال می‌شود.';
+            dispatch(function () use ($receptionId, $statusKey, $sendSms, $shouldPriceSms) {
+                try {
+                    $row = Reception::query()->with(['customer', 'faultType', 'technician'])->find($receptionId);
+                    if (! $row) {
+                        return;
+                    }
+                    $sms = app(SmsNotificationService::class);
+                    if ($sendSms) {
+                        $sms->sendOnStatusChange($row, $statusKey, true);
+                    }
+                    if ($shouldPriceSms) {
+                        $sms->sendOnPriceSet($row, true);
+                    }
+                } catch (\Throwable $e) {
+                }
+            })->afterResponse();
         }
 
         return back()->with('success', $msg);
@@ -933,20 +945,27 @@ class ReceptionController extends Controller
             ->orderByDesc('id')
             ->first(['id', 'ticket_no', 'receipt_no', 'serial_number']);
 
+        return array_merge($this->editLookups(), [
+            'customers' => Customer::query()->latest('id')->limit(80)->get(['id', 'name', 'phone']),
+            'nextTicket' => Reception::nextTicketNo(),
+            'nextReceipt' => Reception::nextReceiptNo(),
+            'lastReception' => $lastReception,
+        ]);
+    }
+
+    /** Lookups needed on show/edit without expensive next-receipt scans. */
+    private function editLookups(): array
+    {
         return [
-            'customers' => Customer::latest()->limit(80)->get(),
-            'technicians' => Technician::where('is_active', true)->orderBy('name')->get(),
-            'faultTypes' => FaultType::where('is_active', true)->orderBy('name')->get(),
-            'referralSources' => ReferralSource::where('is_active', true)->orderBy('name')->get(),
+            'technicians' => Cache::remember('techs_active_v1', 60, fn () => Technician::where('is_active', true)->orderBy('name')->get(['id', 'name'])),
+            'faultTypes' => Cache::remember('faults_active_v1', 60, fn () => FaultType::where('is_active', true)->orderBy('name')->get(['id', 'name'])),
+            'referralSources' => Cache::remember('referrals_active_v1', 60, fn () => ReferralSource::where('is_active', true)->orderBy('name')->get(['id', 'name'])),
             'admissionTypes' => LookupOption::options('admission_type'),
             'serviceTypes' => LookupOption::options('service_type'),
             'repairTypes' => LookupOption::options('repair_type'),
             'warrantyTypes' => LookupOption::options('warranty_type'),
             'hddCapacities' => LookupOption::options('hdd_capacity'),
             'brandModels' => LookupOption::options('brand_model'),
-            'nextTicket' => Reception::nextTicketNo(),
-            'nextReceipt' => Reception::nextReceiptNo(),
-            'lastReception' => $lastReception,
         ];
     }
 
@@ -954,27 +973,43 @@ class ReceptionController extends Controller
     {
         $phone = $this->normalizePhone($q);
         $phoneTail = strlen($phone) >= 10 ? substr($phone, -10) : $phone;
+        $qUpper = mb_strtoupper($q);
 
         return Reception::query()
             ->when($status, fn ($query) => $query->where('status', $status))
-            ->when($q !== '', function ($query) use ($q, $phone, $phoneTail) {
-                $query->where(function ($inner) use ($q, $phone, $phoneTail) {
-                    $inner->where('ticket_no', 'like', "%{$q}%")
-                        ->orWhere('receipt_no', 'like', "%{$q}%")
-                        ->orWhere('batch_code', 'like', "%{$q}%")
-                        ->orWhere('serial_number', 'like', "%{$q}%")
-                        ->orWhere('product_name', 'like', "%{$q}%")
-                        ->orWhere('brand', 'like', "%{$q}%")
-                        ->orWhere('model', 'like', "%{$q}%")
+            ->when($q !== '', function ($query) use ($q, $qUpper, $phone, $phoneTail) {
+                $query->where(function ($inner) use ($q, $qUpper, $phone, $phoneTail) {
+                    // Prefer exact / prefix matches that can use indexes.
+                    $inner->where('ticket_no', $q)
+                        ->orWhere('ticket_no', 'like', $q.'%')
+                        ->orWhere('receipt_no', $q)
+                        ->orWhere('receipt_no', 'like', $q.'%')
+                        ->orWhere('batch_code', $q)
+                        ->orWhere('batch_code', 'like', $q.'%')
+                        ->orWhere('serial_number', $q)
+                        ->orWhere('serial_number', $qUpper)
+                        ->orWhere('serial_number', 'like', $qUpper.'%')
+                        ->orWhere('product_name', 'like', $q.'%')
+                        ->orWhere('brand', 'like', $q.'%')
+                        ->orWhere('model', 'like', $q.'%')
                         ->orWhereHas('customer', function ($c) use ($q, $phone, $phoneTail) {
-                            $c->where('name', 'like', "%{$q}%")
-                                ->orWhere('phone', 'like', "%{$q}%");
+                            $c->where('name', 'like', $q.'%')
+                                ->orWhere('phone', $phone !== '' ? $phone : $q);
 
-                            if ($phone !== '') {
-                                $c->orWhere('phone', $phone)
-                                    ->orWhere('phone', 'like', '%'.$phoneTail.'%');
+                            if ($phoneTail !== '' && strlen($phoneTail) >= 10) {
+                                $c->orWhere('phone', 'like', '%'.$phoneTail);
+                            } elseif (mb_strlen($q) >= 3) {
+                                $c->orWhere('name', 'like', '%'.$q.'%')
+                                    ->orWhere('phone', 'like', '%'.$q.'%');
                             }
                         });
+
+                    // Fallback contains-search for short serial/ticket fragments.
+                    if (mb_strlen($q) >= 4) {
+                        $inner->orWhere('serial_number', 'like', '%'.$qUpper.'%')
+                            ->orWhere('ticket_no', 'like', '%'.$q.'%')
+                            ->orWhere('receipt_no', 'like', '%'.$q.'%');
+                    }
                 });
             });
     }
@@ -1205,25 +1240,23 @@ class ReceptionController extends Controller
         return $reception;
     }
 
-    private function notifyReceptionCreated(Reception $reception): string
+    /**
+     * Send create-SMS after the HTTP response so FPM workers are not blocked
+     * by the SMS panel (up to ~20s) during peak reception traffic.
+     */
+    private function queueReceptionCreatedSms(Reception $reception): void
     {
-        try {
-            $sms = app(SmsNotificationService::class);
-            $result = $sms->sendOnCreate($reception->fresh(['customer', 'faultType']));
-            if (! $result) {
-                return '';
+        $id = (int) $reception->id;
+        dispatch(function () use ($id) {
+            try {
+                $row = Reception::query()->with(['customer', 'faultType'])->find($id);
+                if (! $row) {
+                    return;
+                }
+                app(SmsNotificationService::class)->sendOnCreate($row);
+            } catch (\Throwable $e) {
             }
-            if ($result['ok'] ?? false) {
-                return 'پیامک پذیرش برای مشتری ارسال شد.';
-            }
-            if ($result['skipped'] ?? false) {
-                return '';
-            }
-
-            return 'پیامک پذیرش ارسال نشد: '.($result['message'] ?? '');
-        } catch (\Throwable $e) {
-            return 'خطا در ارسال پیامک پذیرش.';
-        }
+        })->afterResponse();
     }
 
     private function normalizePhone(string $value): string
