@@ -10,9 +10,9 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Soft license gate for customer installs.
- * Seller's own site (no LICENSE_KEY) is not blocked.
- * Periodically heartbeats verify() so seller can see online status.
+ * License gate for customer installs.
+ * Seller site (no LICENSE_KEY) is not blocked.
+ * Periodically verifies with seller server so revoke/expiry/renewal is enforced.
  */
 class EnsureLicensed
 {
@@ -44,28 +44,36 @@ class EnsureLicensed
             ], 403);
         }
 
-        $this->heartbeat($key, $domain, $token);
+        $check = $this->verifyWithServer($key, $domain, $token);
+        if (($check['block'] ?? false) === true) {
+            return response()->view('errors.license', [
+                'message' => (string) ($check['message'] ?? 'لایسنس معتبر نیست. برای تمدید با فروشنده تماس بگیرید.'),
+            ], 403);
+        }
 
         return $next($request);
     }
 
-    private function heartbeat(string $key, string $domain, string $token): void
+    /**
+     * @return array{block:bool,message?:string}
+     */
+    private function verifyWithServer(string $key, string $domain, string $token): array
     {
-        $cacheKey = 'license_heartbeat_'.sha1($key.'|'.$domain);
-        if (Cache::get($cacheKey)) {
-            return;
-        }
+        $cacheKey = 'license_verify_'.sha1($key.'|'.$domain.'|'.$token);
 
-        // At most once per 12 hours per install
-        Cache::put($cacheKey, 1, now()->addHours(12));
+        // Cache positive result briefly; negative/block results shorter so renew takes effect sooner.
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached) && array_key_exists('block', $cached)) {
+            return $cached;
+        }
 
         $server = rtrim((string) config('license.server', 'https://support.hdd-land.ir'), '/');
         if ($server === '') {
-            return;
+            return ['block' => false];
         }
 
         try {
-            Http::timeout(6)
+            $response = Http::timeout(8)
                 ->asForm()
                 ->acceptJson()
                 ->post($server.'/license/verify', [
@@ -74,8 +82,38 @@ class EnsureLicensed
                     'token' => $token,
                     'version' => '1.0.0',
                 ]);
+
+            $json = $response->json();
+            $ok = is_array($json) && ($json['ok'] ?? false) === true;
+
+            if ($ok) {
+                $result = ['block' => false, 'message' => (string) ($json['message'] ?? 'معتبر')];
+                Cache::put($cacheKey, $result, now()->addHours(2));
+                Cache::forget($cacheKey.'_last_block');
+
+                return $result;
+            }
+
+            $message = is_array($json)
+                ? (string) ($json['message'] ?? 'لایسنس معتبر نیست.')
+                : 'ارتباط با سرور لایسنس نامعتبر بود.';
+
+            // Revoked / expired / invalid → block; short cache so seller renew unlocks soon
+            $result = ['block' => true, 'message' => $message];
+            Cache::put($cacheKey, $result, now()->addMinutes(10));
+            Cache::put($cacheKey.'_last_block', $result, now()->addDays(7));
+
+            return $result;
         } catch (\Throwable $e) {
-            Log::debug('license heartbeat failed: '.$e->getMessage());
+            Log::debug('license verify failed: '.$e->getMessage());
+
+            // Soft-fail offline: keep shop up unless we recently knew license was blocked.
+            $lastBlock = Cache::get($cacheKey.'_last_block');
+            if (is_array($lastBlock) && ($lastBlock['block'] ?? false)) {
+                return $lastBlock;
+            }
+
+            return ['block' => false, 'message' => 'offline-soft'];
         }
     }
 }
