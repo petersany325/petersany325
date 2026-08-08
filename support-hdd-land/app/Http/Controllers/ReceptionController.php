@@ -341,7 +341,7 @@ class ReceptionController extends Controller
             'paymentMethods' => collect(Payment::METHODS)->except('zarinpal')->all(),
             'paymentTypes' => Payment::TYPES,
             'settlementModes' => ReceptionSettlementService::MODES,
-            'parts' => Cache::remember('parts_active_list_v1', 60, fn () => Part::where('is_active', true)->orderBy('name')->get(['id', 'name', 'code', 'stock', 'sale_price'])),
+            'parts' => $this->cachedActiveRows('parts_active_list_v2', Part::class, ['id', 'name', 'code', 'stock', 'sale_price']),
             'pendingHandoff' => $reception->handoffs->firstWhere('status', \App\Models\DeviceHandoff::STATUS_PENDING),
             'custodyChecklist' => $gate->checklist($reception),
             'workReports' => $reception->workReports,
@@ -1020,9 +1020,9 @@ class ReceptionController extends Controller
     private function editLookups(): array
     {
         return [
-            'technicians' => Cache::remember('techs_active_v1', 60, fn () => Technician::where('is_active', true)->orderBy('name')->get(['id', 'name'])),
-            'faultTypes' => Cache::remember('faults_active_v1', 60, fn () => FaultType::where('is_active', true)->orderBy('name')->get(['id', 'name'])),
-            'referralSources' => Cache::remember('referrals_active_v1', 60, fn () => ReferralSource::where('is_active', true)->orderBy('name')->get(['id', 'name'])),
+            'technicians' => $this->cachedActiveRows('techs_active_v2', Technician::class, ['id', 'name']),
+            'faultTypes' => $this->cachedActiveRows('faults_active_v2', FaultType::class, ['id', 'name']),
+            'referralSources' => $this->cachedActiveRows('referrals_active_v2', ReferralSource::class, ['id', 'name']),
             'admissionTypes' => LookupOption::options('admission_type'),
             'serviceTypes' => LookupOption::options('service_type'),
             'repairTypes' => LookupOption::options('repair_type'),
@@ -1030,6 +1030,46 @@ class ReceptionController extends Controller
             'hddCapacities' => LookupOption::options('hdd_capacity'),
             'brandModels' => LookupOption::options('brand_model'),
         ];
+    }
+
+    /**
+     * Cache lookup rows as plain arrays (database cache corrupts Eloquent models).
+     *
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $modelClass
+     * @param  list<string>  $columns
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    private function cachedActiveRows(string $cacheKey, string $modelClass, array $columns, int $ttl = 60)
+    {
+        $rows = Cache::remember($cacheKey, $ttl, function () use ($modelClass, $columns) {
+            return $modelClass::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get($columns)
+                ->map(fn ($row) => $row->only($columns))
+                ->all();
+        });
+
+        if (! is_array($rows)) {
+            Cache::forget($cacheKey);
+            $rows = $modelClass::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get($columns)
+                ->map(fn ($row) => $row->only($columns))
+                ->all();
+        }
+
+        return collect($rows)->map(function ($row) {
+            if (is_object($row) && ! $row instanceof \Illuminate\Database\Eloquent\Model) {
+                return $row;
+            }
+            if ($row instanceof \Illuminate\Database\Eloquent\Model) {
+                return (object) $row->toArray();
+            }
+
+            return (object) (is_array($row) ? $row : []);
+        })->filter(fn ($row) => isset($row->id))->values();
     }
 
     private function searchQuery(string $q, ?string $status = null)
