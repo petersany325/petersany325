@@ -39,7 +39,7 @@
             <div><span class="muted">کالا</span><div>{{ $reception->product_name }}</div></div>
             <div><span class="muted">برند / مدل</span><div>{{ trim(($reception->brand.' '.$reception->model)) ?: '—' }}</div></div>
             <div><span class="muted">سریال</span><div>{{ $reception->serial_number ?: '—' }}</div></div>
-            <div><span class="muted">ظرفیت</span><div>{{ $reception->hdd_capacity ?: '—' }}</div></div>
+            <div><span class="muted">ظرفیت</span><div>{{ $reception->capacityLabel() }}</div></div>
             <div><span class="muted">خدمات</span><div>{{ $reception->service_type ?: '—' }}</div></div>
             <div><span class="muted">تعمیر</span><div>{{ $reception->repair_type ?: '—' }}</div></div>
             <div><span class="muted">تعمیرکار</span><div>{{ $reception->technician?->name ?: '—' }}</div></div>

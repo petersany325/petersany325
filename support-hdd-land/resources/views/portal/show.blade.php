@@ -34,10 +34,17 @@
 <div class="p-kv">
     <div><span>شماره رسید</span><strong>{{ $reception->receipt_no ?: '—' }}</strong></div>
     <div><span>پذیرش</span><strong>{{ jalali_like($reception->received_at) }}</strong></div>
+    <div><span>ظرفیت هارد</span><strong>{{ $reception->capacityLabel() }}</strong></div>
     <div><span>عیب اظهار شده</span><strong>{{ $reception->reported_fault ?: ($reception->faultType?->name ?: '—') }}</strong></div>
     <div><span>تعمیرکار</span><strong>{{ $reception->technician?->name ?: '—' }}</strong></div>
     <div><span>محل دستگاه</span><strong>{{ $reception->custodyLabel() }}</strong></div>
 </div>
+@if($reception->capacity_changed && $reception->hdd_capacity_after)
+    <div class="p-alert" style="margin:10px 12px 0;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;">
+        فضای هارد بعد از تعمیر تغییر کرده:
+        <strong>{{ $reception->hdd_capacity ?: 'نامشخص' }} → {{ $reception->hdd_capacity_after }}</strong>
+    </div>
+@endif
 
 <section class="p-section">
     <h2>ردیابی ارجاع</h2>

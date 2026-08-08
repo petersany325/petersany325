@@ -116,7 +116,7 @@
             <div class="field"><label>سریال</label><div dir="ltr">{{ $reception->serial_number ?: '—' }}</div></div>
         @endif
         <div class="field"><label>نوع خدمات</label><div>{{ $reception->service_type ?: '—' }} / {{ $reception->repair_type ?: '—' }}</div></div>
-        <div class="field"><label>ظرفیت هارد</label><div>{{ $reception->hdd_capacity ?: '—' }}</div></div>
+        <div class="field"><label>ظرفیت هارد</label><div>{{ $reception->capacityLabel() }}</div></div>
         @if($invoice['show_fault'])
             <div class="field full"><label>عیب اظهار مشتری</label><div>{{ $reception->reported_fault ?: ($reception->faultType?->name ?: '—') }}</div></div>
         @endif

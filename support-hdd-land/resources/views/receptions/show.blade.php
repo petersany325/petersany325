@@ -47,7 +47,7 @@
                 <div><span class="muted">سریال</span><div dir="ltr">{{ $reception->serial_number ?: '—' }}</div></div>
                 <div><span class="muted">مدل</span><div>{{ $reception->brand }} {{ $reception->model }}</div></div>
                 <div><span class="muted">خدمات / تعمیر</span><div>{{ $reception->service_type ?: '—' }} / {{ $reception->repair_type ?: '—' }}</div></div>
-                <div><span class="muted">ظرفیت</span><div>{{ $reception->hdd_capacity ?: '—' }}</div></div>
+                <div><span class="muted">ظرفیت</span><div>{{ $reception->capacityLabel() }}</div></div>
                 <div><span class="muted">گارانتی</span><div>{{ $reception->warranty_type ?: '—' }}</div></div>
                 <div><span class="muted">تعمیرکار</span><div>{{ $reception->technician?->name ?: '—' }}</div></div>
                 <div><span class="muted">محل دستگاه</span><div>{{ $reception->custodyLabel() }}</div></div>
@@ -364,6 +364,33 @@
                     <div class="full">
                         <label>یادداشت تعمیرکار</label>
                         <textarea name="technician_notes">{{ $reception->technician_notes }}</textarea>
+                    </div>
+                    <div class="full" id="rx-capacity-change" style="padding:10px;border:1px solid #c5d4e8;border-radius:3px;background:#f7faff;">
+                        <strong style="font-size:12.5px;">تغییر فضای هارد بعد از تعمیر</strong>
+                        <p class="muted" style="margin:4px 0 8px;font-size:11px;">
+                            بعضی هاردها بعد از تعمیر ظرفیتشان کمتر می‌شود (مثلاً ۱ ترابایت → ۵۰۰ گیگ).
+                            ظرفیت پذیرش: <strong>{{ $reception->hdd_capacity ?: 'ثبت نشده' }}</strong>
+                        </p>
+                        @include('partials.toggle', [
+                            'name' => 'capacity_changed',
+                            'label' => 'هارد تغییر فضا داده است؟',
+                            'checked' => (bool) old('capacity_changed', $reception->capacity_changed),
+                            'on' => 'بله',
+                            'off' => 'خیر',
+                            'id' => 'capacity_changed_toggle',
+                        ])
+                        <div data-capacity-after style="margin-top:8px;{{ old('capacity_changed', $reception->capacity_changed) ? '' : 'display:none;' }}">
+                            <label>ظرفیت جدید بعد از تعمیر</label>
+                            <select name="hdd_capacity_after">
+                                <option value="">— انتخاب کنید —</option>
+                                @foreach($hddCapacities as $name)
+                                    <option value="{{ $name }}" @selected(old('hdd_capacity_after', $reception->hdd_capacity_after) == $name)>{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            @error('hdd_capacity_after')
+                                <p class="muted" style="margin:4px 0 0;color:#b42318;font-size:11.5px;">{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
                 </div>
 
@@ -1146,6 +1173,27 @@
             }
         });
     });
+
+    var capacityBox = document.getElementById('rx-capacity-change');
+    if (capacityBox) {
+        var capacityAfter = capacityBox.querySelector('[data-capacity-after]');
+        var capacityInput = capacityBox.querySelector('#capacity_changed_toggle');
+        var syncCapacity = function () {
+            if (!capacityAfter || !capacityInput) return;
+            capacityAfter.style.display = capacityInput.checked ? '' : 'none';
+            var sel = capacityAfter.querySelector('select[name="hdd_capacity_after"]');
+            if (sel) sel.required = !!capacityInput.checked;
+        };
+        if (capacityInput) {
+            capacityInput.addEventListener('change', syncCapacity);
+            capacityBox.addEventListener('click', function (e) {
+                if (e.target && e.target.closest('[data-toggle-btn]')) {
+                    setTimeout(syncCapacity, 0);
+                }
+            });
+        }
+        syncCapacity();
+    }
 
     var panel = document.getElementById('status-sms-panel');
     if (!panel) return;

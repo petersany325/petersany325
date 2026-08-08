@@ -45,6 +45,7 @@
         <div class="accept-row accept-row-4">
             <div><span class="muted">وضعیت</span><div>{{ $reception->statusLabel() }}</div></div>
             <div><span class="muted">محل دستگاه</span><div>{{ $reception->custodyLabel() }}</div></div>
+            <div><span class="muted">ظرفیت هارد</span><div>{{ $reception->capacityLabel() }}</div></div>
             <div><span class="muted">تعمیرکار</span><div>{{ $reception->technician?->name ?: '—' }}</div></div>
             <div><span class="muted">جمع فاکتور</span><div>{{ toman($reception->total_amount) }}</div></div>
             <div><span class="muted">پرداخت‌شده</span><div>{{ toman($reception->paid_amount) }}</div></div>

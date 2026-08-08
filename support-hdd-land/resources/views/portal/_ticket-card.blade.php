@@ -32,6 +32,11 @@
         <span>قطعه: {{ $partsCount }} ردیف@if($partsQty !== $partsCount) ({{ $partsQty }} عدد)@endif</span>
         <span>جمع: {{ number_format((int) $ticket->total_amount) }}</span>
     </div>
+    @if($ticket->capacity_changed && $ticket->hdd_capacity_after)
+        <div class="p-ticket-meta" style="color:#9a3412;">
+            <span>تغییر فضا: {{ $ticket->hdd_capacity ?: '—' }} → {{ $ticket->hdd_capacity_after }}</span>
+        </div>
+    @endif
     @if($remain > 0 && ($ticket->status === 'ready' || $showDebt || !empty($highlightPay)))
         <div class="p-ticket-pay {{ $showDebt ? 'is-debt' : '' }}">
             <span>{{ $showDebt ? 'بدهی' : 'مانده' }}: <b>{{ number_format($remain) }}</b> تومان</span>

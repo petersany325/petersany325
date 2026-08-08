@@ -17,7 +17,8 @@ class Reception extends Model
         'custody',
         'product_name', 'brand', 'model', 'serial_number', 'accessories', 'appearance_notes',
         'delivered_by', 'pickup_name', 'pickup_phone', 'referrer', 'commission', 'photo_path',
-        'hdd_capacity', 'warranty_return', 'warranty_type', 'card_number', 'warranty_end_date',
+        'hdd_capacity', 'capacity_changed', 'hdd_capacity_after',
+        'warranty_return', 'warranty_type', 'card_number', 'warranty_end_date',
         'reported_fault', 'final_fault', 'technician_notes', 'status',
         'deposit', 'pos_amount', 'admission_fee', 'estimated_cost', 'payment_method',
         'labor_cost', 'parts_cost', 'stages_cost', 'discount', 'discount_reason', 'total_amount', 'paid_amount',
@@ -45,6 +46,7 @@ class Reception extends Model
             'next_visit_at' => 'date',
             'warranty_end_date' => 'date',
             'warranty_return' => 'boolean',
+            'capacity_changed' => 'boolean',
             'deleted_at' => 'datetime',
         ];
     }
@@ -192,6 +194,29 @@ class Reception extends Model
     public function remainingAmount(): int
     {
         return max(0, (int) $this->total_amount - (int) $this->paid_amount);
+    }
+
+    /** Effective capacity after repair when it changed; otherwise intake capacity. */
+    public function effectiveHddCapacity(): ?string
+    {
+        if ($this->capacity_changed && filled($this->hdd_capacity_after)) {
+            return (string) $this->hdd_capacity_after;
+        }
+
+        return $this->hdd_capacity ? (string) $this->hdd_capacity : null;
+    }
+
+    /** Human summary for reports / portal: "1TB → 500GB" or original. */
+    public function capacityLabel(): string
+    {
+        $before = $this->hdd_capacity ?: null;
+        if ($this->capacity_changed && filled($this->hdd_capacity_after)) {
+            $from = $before ?: 'نامشخص';
+
+            return $from.' → '.$this->hdd_capacity_after.' (تغییر فضا)';
+        }
+
+        return $before ?: '—';
     }
 
     /**

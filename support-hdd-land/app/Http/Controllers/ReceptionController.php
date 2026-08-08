@@ -556,10 +556,25 @@ class ReceptionController extends Controller
             'labor_cost' => ['nullable', 'integer', 'min:0'],
             'discount' => ['nullable', 'integer', 'min:0'],
             'discount_reason' => ['nullable', 'string', 'max:255'],
+            'capacity_changed' => ['nullable', 'boolean'],
+            'hdd_capacity_after' => ['nullable', 'string', 'max:80'],
             'send_sms' => ['nullable', 'boolean'],
             'send_price_sms' => ['nullable', 'boolean'],
             'force_without_cost' => ['nullable', 'boolean'],
         ]);
+
+        $capacityChanged = $request->boolean('capacity_changed');
+        if ($capacityChanged) {
+            $after = trim((string) ($data['hdd_capacity_after'] ?? ''));
+            if ($after === '') {
+                throw ValidationException::withMessages([
+                    'hdd_capacity_after' => 'اگر هارد تغییر فضا داده، ظرفیت جدید را انتخاب کنید.',
+                ]);
+            }
+            $data['hdd_capacity_after'] = $after;
+        } else {
+            $data['hdd_capacity_after'] = null;
+        }
 
         if ($reception->isDelivered() && $data['status'] !== 'delivered') {
             throw ValidationException::withMessages([
@@ -606,6 +621,8 @@ class ReceptionController extends Controller
             'discount_reason' => array_key_exists('discount_reason', $data)
                 ? $data['discount_reason']
                 : $reception->discount_reason,
+            'capacity_changed' => $capacityChanged,
+            'hdd_capacity_after' => $capacityChanged ? ($data['hdd_capacity_after'] ?? null) : null,
         ]);
 
         $reception->save();
@@ -617,13 +634,29 @@ class ReceptionController extends Controller
             $reception->refresh();
         }
 
+        $capacityNote = null;
+        if ($capacityChanged && ! empty($data['hdd_capacity_after'])) {
+            $capacityNote = 'تغییر فضای هارد: '
+                .($reception->hdd_capacity ?: 'نامشخص')
+                .' → '.$data['hdd_capacity_after'];
+        }
+        $logNote = trim((string) ($data['technician_notes'] ?? ''));
+        if ($capacityNote) {
+            $logNote = $logNote !== '' ? ($logNote.' | '.$capacityNote) : $capacityNote;
+        }
+
         app(\App\Services\ReceptionLifecycleService::class)->log(
             $reception,
             $data['status'],
             'status_change',
             $fromStatus,
-            null,
-            $data['technician_notes'] ?? null
+            $capacityNote ?: null,
+            $logNote !== '' ? $logNote : null,
+            $capacityChanged ? [
+                'capacity_changed' => true,
+                'hdd_capacity_before' => $reception->hdd_capacity,
+                'hdd_capacity_after' => $data['hdd_capacity_after'] ?? null,
+            ] : []
         );
 
         $msg = 'وضعیت قبض به‌روزرسانی شد.';
