@@ -71,8 +71,9 @@ if ($appUrl === '') {
 }
 
 // 3) Root .htaccess for shared hosting (docroot = project root)
+// Route pretty URLs via root index.php so /login is not Apache 404.
 $goodRoot = <<<'HT'
-# Shared hosting: project root as Document Root → route into /public
+# Shared hosting: project root as Document Root → Laravel front controller
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^(\.env|\.env\..*|composer\.(json|lock)|artisan|phpunit\.xml)(/|$) - [F,L,NC]
@@ -80,9 +81,14 @@ $goodRoot = <<<'HT'
     RewriteRule ^install\.php$ public/install.php [L]
     RewriteRule ^fix-install\.php$ public/fix-install.php [L]
     RewriteRule ^repair-domain\.php$ public/repair-domain.php [L]
-    RewriteRule ^public/ - [L]
-    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^debug-500\.php$ public/debug-500.php [L]
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
     RewriteRule ^(.*)$ public/$1 [L]
+    RewriteRule ^ index.php [L]
 </IfModule>
 DirectoryIndex index.php
 Options -Indexes
@@ -201,8 +207,9 @@ $debugUrl = ($appUrl !== '' ? $appUrl : '').'/public/debug-500.php';
     <p>
         <a class="btn" href="<?= htmlspecialchars($login) ?>">ورود</a>
         <a class="btn" style="background:#445" href="<?= htmlspecialchars($loginAlt) ?>">ورود (مسیر جایگزین)</a>
+        <a class="btn" style="background:#9a3412" href="<?= htmlspecialchars($debugUrl) ?>">تشخیص خطای ۵۰۰</a>
     </p>
-    <p style="font-size:12px;color:#667">بعد از ورود موفق این فایل را حذف کنید: <code>public/repair-domain.php</code></p>
+    <p style="font-size:12px;color:#667">بعد از ورود موفق این فایل‌ها را حذف کنید: <code>public/repair-domain.php</code> و <code>public/debug-500.php</code></p>
 </div>
 </body>
 </html>
