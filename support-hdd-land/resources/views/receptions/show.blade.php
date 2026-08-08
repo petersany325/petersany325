@@ -258,6 +258,9 @@
             <form method="POST" action="{{ route('receptions.status', $reception) }}" id="status-sms-form">
                 @csrf
                 <input type="hidden" name="status" id="selected-status" value="{{ $reception->status }}">
+                @if($errors->any())
+                    <div class="alert alert-error" style="margin-bottom:10px;">{{ $errors->first() }}</div>
+                @endif
 
                 <div class="status-chips" role="listbox" aria-label="وضعیت قبض">
                     @foreach($smsRules as $rule)
