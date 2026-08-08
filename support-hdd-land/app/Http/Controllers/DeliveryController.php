@@ -6,6 +6,7 @@ use App\Models\DeliveryBatch;
 use App\Models\Reception;
 use App\Services\AccountingService;
 use App\Services\ReceptionCustodyGate;
+use App\Services\ReceptionSettlementService;
 use App\Services\SmsNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -62,6 +63,8 @@ class DeliveryController extends Controller
                 'status_label' => $r->statusLabel(),
                 'custody' => $r->custodyLabel(),
                 'total_amount' => (int) $r->total_amount,
+                'paid_amount' => (int) $r->paid_amount,
+                'remaining' => $r->remainingAmount(),
                 'labor_cost' => (int) $r->labor_cost,
                 'parts_cost' => (int) $r->parts_cost,
                 'has_cost' => $r->hasCostSet(),
@@ -75,12 +78,13 @@ class DeliveryController extends Controller
             'ok' => true,
             'count' => $payload->count(),
             'missing_cost' => $payload->where('has_cost', false)->count(),
+            'unsettled' => $payload->where('remaining', '>', 0)->where('already_delivered', false)->count(),
             'custody_blocked' => $payload->where('custody_ok', false)->where('already_delivered', false)->count(),
             'items' => $payload,
         ]);
     }
 
-    public function store(Request $request, SmsNotificationService $sms, ReceptionCustodyGate $gate)
+    public function store(Request $request, SmsNotificationService $sms, ReceptionCustodyGate $gate, ReceptionSettlementService $settlement)
     {
         $data = $request->validate([
             'pickup_name' => ['required', 'string', 'max:120'],
@@ -90,6 +94,7 @@ class DeliveryController extends Controller
             'costs' => ['nullable', 'array'],
             'costs.*' => ['nullable', 'integer', 'min:0'],
             'force_without_cost' => ['nullable', 'boolean'],
+            'settlement_mode' => ['nullable', 'in:paid,credit,waive'],
             'send_sms' => ['nullable', 'boolean'],
             'note' => ['nullable', 'string', 'max:500'],
         ]);
@@ -145,16 +150,43 @@ class DeliveryController extends Controller
             ]);
         }
 
-        $missing = $receptions->filter(fn (Reception $r) => ! $r->hasCostSet());
-        if ($missing->isNotEmpty() && ! $request->boolean('force_without_cost')) {
-            $list = $missing->pluck('ticket_no')->implode('، ');
+        $missing = $receptions->filter(fn (Reception $r) => ! $r->hasCostSet() && $r->status !== 'delivered');
+        $mode = $data['settlement_mode'] ?? null;
+        if ($missing->isNotEmpty()) {
+            if ($mode !== ReceptionSettlementService::MODE_WAIVE && ! $request->boolean('force_without_cost')) {
+                $list = $missing->pluck('ticket_no')->implode('، ');
 
-            throw ValidationException::withMessages([
-                'ticket_ids' => "هزینه این قبض‌ها مشخص نیست: {$list}. مبلغ را ثبت کنید یا «تحویل بدون هزینه» را تایید کنید.",
-            ]);
+                throw ValidationException::withMessages([
+                    'ticket_ids' => "هزینه این قبض‌ها مشخص نیست: {$list}. مبلغ را ثبت کنید یا تسویه گروهی «بخشش» را انتخاب کنید.",
+                ]);
+            }
+            if ($mode !== ReceptionSettlementService::MODE_WAIVE) {
+                $mode = ReceptionSettlementService::MODE_WAIVE;
+            }
+            if (trim((string) ($data['note'] ?? '')) === '') {
+                throw ValidationException::withMessages([
+                    'note' => 'برای تحویل بدون هزینه / بخشش، یادداشت دلیل الزامی است.',
+                ]);
+            }
         }
 
-        $batch = DB::transaction(function () use ($data, $phone, $receptions) {
+        $unsettled = $receptions->filter(fn (Reception $r) => $r->status !== 'delivered' && $r->remainingAmount() > 0);
+        if ($unsettled->isNotEmpty()) {
+            if (! in_array($mode, [ReceptionSettlementService::MODE_CREDIT, ReceptionSettlementService::MODE_WAIVE], true)) {
+                $list = $unsettled->map(fn (Reception $r) => $r->ticket_no.' (مانده '.number_format($r->remainingAmount()).')')->implode('، ');
+
+                throw ValidationException::withMessages([
+                    'settlement_mode' => "قبل از تحویل گروهی، تسویه را مشخص کنید. قبض‌های تسویه‌نشده: {$list}. گزینه نسیه یا بخشش را انتخاب کنید، یا ابتدا در صفحه هر قبض دریافت کامل ثبت کنید.",
+                ]);
+            }
+            if ($mode === ReceptionSettlementService::MODE_WAIVE && trim((string) ($data['note'] ?? '')) === '') {
+                throw ValidationException::withMessages([
+                    'note' => 'برای بخشش مانده در تحویل گروهی، دلیل الزامی است.',
+                ]);
+            }
+        }
+
+        $batch = DB::transaction(function () use ($data, $phone, $receptions, $settlement, $mode) {
             $batch = DeliveryBatch::create([
                 'batch_code' => DeliveryBatch::nextCode(),
                 'pickup_name' => $data['pickup_name'],
@@ -167,28 +199,31 @@ class DeliveryController extends Controller
             ]);
 
             foreach ($receptions as $r) {
-                $from = $r->status;
-                $r->fill([
-                    'status' => 'delivered',
-                    'delivered_at' => $r->delivered_at ?: now(),
+                if ($r->status === 'delivered') {
+                    continue;
+                }
+
+                $ticketMode = $mode;
+                if ($r->remainingAmount() <= 0 && $r->hasCostSet()) {
+                    $ticketMode = ReceptionSettlementService::MODE_PAID;
+                } elseif (! $ticketMode) {
+                    $ticketMode = ReceptionSettlementService::MODE_PAID;
+                }
+
+                $result = $settlement->settleAndDeliver($r, [
+                    'settlement_mode' => $ticketMode,
+                    'note' => $data['note'] ?? null,
                     'pickup_name' => $data['pickup_name'],
                     'pickup_phone' => $phone,
-                    'delivery_batch_id' => $batch->id,
-                    'delivered_by' => $data['pickup_name'],
                 ]);
-                if ($r->hasCostSet() && ! $r->cost_confirmed_at) {
-                    $r->cost_confirmed_at = now();
+                if (! ($result['ok'] ?? false)) {
+                    throw ValidationException::withMessages([
+                        'ticket_ids' => ($r->ticket_no).': '.($result['message'] ?? 'خطا در تحویل'),
+                    ]);
                 }
-                $r->save();
-                app(\App\Services\ReceptionLifecycleService::class)->log(
-                    $r,
-                    'delivered',
-                    'delivery',
-                    $from,
-                    'تحویل گروهی '.$batch->batch_code,
-                    $data['pickup_name'] ?? null,
-                    ['delivery_batch_id' => $batch->id]
-                );
+
+                $r->refresh();
+                $r->forceFill(['delivery_batch_id' => $batch->id])->save();
             }
 
             return $batch;

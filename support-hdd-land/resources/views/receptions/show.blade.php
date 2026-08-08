@@ -17,7 +17,12 @@
                     <span class="badge badge-{{ $reception->status }}">{{ $reception->statusLabel() }}</span>
                     <a class="btn btn-secondary" href="{{ route('receptions.print', $reception) }}" target="_blank">چاپ قبض</a>
                     @if($reception->isDelivered())
-                        <button class="btn btn-primary" type="button" onclick="document.getElementById('cancel-delivery-box').scrollIntoView({behavior:'smooth'})">لغو تحویل</button>
+                        <form method="POST" action="{{ route('receptions.cancel-delivery', $reception) }}" style="display:inline;" data-confirm="تحویل لغو شود و دستگاه به چرخه تعمیر برگردد؟">
+                            @csrf
+                            <input type="hidden" name="restore_to" value="repairing">
+                            <input type="hidden" name="reason" value="لغو تحویل از صفحه قبض">
+                            <button class="btn btn-primary" type="submit">لغو تحویل</button>
+                        </form>
                     @endif
                 </div>
             </div>
@@ -192,7 +197,10 @@
         @if($reception->isDelivered())
         <div class="panel" id="cancel-delivery-box" style="border-color:#f5d59a;background:linear-gradient(180deg,#fffaf0,#fff);">
             <h3 style="margin-top:0;">لغو تحویل / بازگشت به چرخه تعمیر</h3>
-            <p class="lead" style="margin:0 0 8px;">مشتری قطعه/دستگاه را برگردانده؟ بدون قبض جدید — همان سریال روی همین قبض به تعمیر برمی‌گردد. قطعات و هزینه‌های ثبت‌شده حفظ می‌شوند.</p>
+            <p class="lead" style="margin:0 0 8px;">مشتری قطعه/دستگاه را برگردانده؟ بدون قبض جدید — همان سریال روی همین قبض به تعمیر برمی‌گردد. قطعات و هزینه‌های ثبت‌شده حفظ می‌شوند. دکمه «لغو تحویل» بالای صفحه هم همین کار را می‌کند.</p>
+            @if($reception->settlement_mode)
+                <p class="muted" style="margin:0 0 8px;">تسویه هنگام تحویل: {{ \App\Services\ReceptionSettlementService::MODES[$reception->settlement_mode] ?? $reception->settlement_mode }}@if($reception->settlement_note) — {{ $reception->settlement_note }}@endif</p>
+            @endif
             <form method="POST" action="{{ route('receptions.cancel-delivery', $reception) }}" class="accept-row accept-row-3" style="align-items:end;" data-confirm="تحویل لغو شود و دستگاه به چرخه تعمیر برگردد؟">
                 @csrf
                 <div>
@@ -205,8 +213,8 @@
                     </select>
                 </div>
                 <div class="full">
-                    <label>دلیل لغو تحویل</label>
-                    <input type="text" name="reason" placeholder="مثلاً قطعه خراب بود / مشتری برگشت داد" required>
+                    <label>دلیل لغو تحویل (اختیاری)</label>
+                    <input type="text" name="reason" placeholder="مثلاً قطعه خراب بود / مشتری برگشت داد" value="{{ old('reason') }}">
                 </div>
                 <div class="actions" style="margin:0;">
                     <button class="btn btn-primary" type="submit">ثبت لغو تحویل</button>
@@ -311,13 +319,7 @@
                         ])
                     </div>
                     <div>
-                        @include('partials.toggle', [
-                            'name' => 'force_without_cost',
-                            'label' => 'تحویل حتی بدون هزینه مشخص',
-                            'checked' => false,
-                            'on' => 'اجازه',
-                            'off' => 'خیر',
-                        ])
+                        <div class="muted" style="font-size:11px;padding-top:18px;">تحویل فقط از پنل «تسویه و تحویل» یا وقتی مانده صفر باشد.</div>
                     </div>
                     <div>
                         <label>تعمیرکار</label>
@@ -662,11 +664,81 @@
             </div>
         </div>
 
+        @php
+            $dueGross = max(0, $gross - (int) $reception->paid_amount);
+            $remain = $reception->remainingAmount();
+            $canDeliverNow = ! $reception->isDelivered();
+        @endphp
+
+        @if($canDeliverNow)
+        <div class="panel" id="rx-settle" style="border-color:#9ec3e8;background:linear-gradient(180deg,#f4f9ff,#fff);">
+            <h3 style="margin-top:0;">تسویه و تحویل</h3>
+            <p class="muted" style="margin:0 0 10px;">قبل از خروج دستگاه، حساب‌کتاب را مشخص کنید: دریافت کامل، نسیه (بدهکار مشتری)، یا بخشش مانده.</p>
+            <div class="rx-pay-due">
+                <span>مانده قابل تسویه</span>
+                <strong>{{ number_format($remain) }} تومان</strong>
+            </div>
+            <form method="POST" action="{{ route('receptions.settle-deliver', $reception) }}" id="rx-settle-form" data-confirm="تسویه و تحویل ثبت شود؟">
+                @csrf
+                <div class="form-grid" style="grid-template-columns:1fr;">
+                    <div>
+                        <label>نحوه تسویه</label>
+                        <select name="settlement_mode" id="rx-settle-mode" required>
+                            @foreach($settlementModes as $key => $label)
+                                <option value="{{ $key }}" @selected(old('settlement_mode', $remain > 0 ? 'paid' : 'paid') === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div data-settle-paid>
+                        <label>روش دریافت</label>
+                        <select name="method">
+                            @foreach($paymentMethods as $key => $label)
+                                <option value="{{ $key }}" @selected(old('method') === $key)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div data-settle-paid>
+                        <label>مبلغ دریافتی (برای دریافت کامل = مانده)</label>
+                        <input type="number" name="amount" min="0" value="{{ old('amount', $remain) }}" @if($remain > 0) required @endif>
+                    </div>
+                    <div>
+                        <label>نام تحویل‌گیرنده</label>
+                        <input type="text" name="pickup_name" value="{{ old('pickup_name', $reception->customer->name) }}" placeholder="نام شخص">
+                    </div>
+                    <div>
+                        <label>موبایل تحویل‌گیرنده</label>
+                        <input type="text" name="pickup_phone" value="{{ old('pickup_phone', $reception->customer->phone) }}" dir="ltr" style="text-align:left;">
+                    </div>
+                    <div>
+                        <label>توضیح / دلیل (برای نسیه یا بخشش مهم است)</label>
+                        <input type="text" name="note" id="rx-settle-note" value="{{ old('note') }}" placeholder="شماره پیگیری / دلیل نسیه یا بخشش">
+                    </div>
+                    <div>
+                        @include('partials.toggle', [
+                            'name' => 'send_sms',
+                            'label' => 'پیامک تحویل به مشتری',
+                            'checked' => true,
+                            'on' => 'برود',
+                            'off' => 'نرود',
+                        ])
+                    </div>
+                </div>
+                <div class="actions" style="margin-top:8px;">
+                    <button class="btn btn-primary" type="submit" style="width:100%;">ثبت تسویه و تحویل</button>
+                </div>
+                <p class="muted" style="margin:8px 0 0;font-size:11px;" id="rx-settle-hint">
+                    دریافت کامل: مبلغ به صندوق/حساب مشتری می‌رود و قبض تحویل می‌شود.
+                </p>
+            </form>
+        </div>
+        @endif
+
         <div class="panel" id="rx-pay">
-            <h3>ثبت پرداخت / تخفیف / تحویل</h3>
+            <h3>ثبت پرداخت / بیعانه</h3>
+            <p class="muted" style="margin:0 0 8px;">برای بیعانه یا پرداخت جزئی. تحویل نهایی فقط از پنل بالا پس از مشخص شدن حساب‌کتاب.</p>
             <div class="rx-pay-due">
                 <span>مبلغ قابل دریافت از مشتری</span>
-                <strong data-due-gross="{{ max(0, $gross - (int) $reception->paid_amount) }}">{{ number_format(max(0, $gross - (int) $reception->paid_amount)) }} تومان</strong>
+                <strong data-due-gross="{{ $dueGross }}">{{ number_format($dueGross) }} تومان</strong>
             </div>
             @if(\App\Support\PaymentGateways::showOnReception())
                 @include('partials.payment-links', ['payTitle' => 'لینک بانک‌ها'])
@@ -679,6 +751,7 @@
                     </button>
                 </form>
             @endif
+            @unless($reception->isDelivered())
             <form method="POST" action="{{ route('receptions.payments', $reception) }}" id="rx-payment-form">
                 @csrf
                 <input type="hidden" name="auto_discount" value="1">
@@ -687,7 +760,7 @@
                         <label>نوع پرداخت</label>
                         <select name="type">
                             @foreach($paymentTypes as $key => $label)
-                                <option value="{{ $key }}" @selected($key === 'final')>{{ $label }}</option>
+                                <option value="{{ $key }}" @selected($key === 'partial')>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -701,16 +774,16 @@
                     </div>
                     <div>
                         <label>مبلغ دریافتی</label>
-                        <input type="number" name="amount" id="rx-pay-amount" min="1" value="{{ max(0, $gross - (int) $reception->paid_amount) }}" required>
+                        <input type="number" name="amount" id="rx-pay-amount" min="1" value="{{ $dueGross }}" required>
                     </div>
                     <div>
                         <label>تخفیف تسویه نهایی (تومان)</label>
                         <input type="number" name="discount" id="rx-pay-discount" min="0" value="{{ (int) $reception->discount }}" readonly>
-                        <div class="muted" style="font-size:11px;margin-top:3px;">فقط وقتی نوع پرداخت «تسویه نهایی» است؛ اگر کمتر بگیرید اختلاف تخفیف می‌شود. پرداخت جزئی باقیمانده را صفر نمی‌کند.</div>
+                        <div class="muted" style="font-size:11px;margin-top:3px;">فقط وقتی نوع پرداخت «تسویه نهایی» است؛ اگر کمتر بگیرید اختلاف تخفیف می‌شود.</div>
                     </div>
                     <div>
                         <label>دلیل تخفیف</label>
-                        <input type="text" name="discount_reason" id="rx-pay-discount-reason" value="{{ $reception->discount_reason }}" placeholder="اختیاری — در تخفیف خودکار پر می‌شود">
+                        <input type="text" name="discount_reason" id="rx-pay-discount-reason" value="{{ $reception->discount_reason }}" placeholder="اختیاری">
                     </div>
                     <div>
                         <label>توضیح / پیگیری</label>
@@ -718,9 +791,12 @@
                     </div>
                 </div>
                 <div class="actions">
-                    <button class="btn btn-primary" type="submit">ثبت پرداخت</button>
+                    <button class="btn btn-secondary" type="submit">ثبت پرداخت</button>
                 </div>
             </form>
+            @else
+                <p class="muted">قبض تحویل شده — برای تغییر مالی ابتدا لغو تحویل بزنید.</p>
+            @endunless
             <div class="table-wrap" style="margin-top:1rem;">
                 <table style="min-width:0;">
                     <thead><tr><th>نوع</th><th>مبلغ</th><th>زمان</th></tr></thead>
@@ -755,6 +831,31 @@
         syncCustom();
     }
 
+    var settleMode = document.getElementById('rx-settle-mode');
+    var settleHint = document.getElementById('rx-settle-hint');
+    var settleNote = document.getElementById('rx-settle-note');
+    if (settleMode) {
+        var paidBlocks = document.querySelectorAll('[data-settle-paid]');
+        var hints = {
+            paid: 'دریافت کامل: مبلغ به صندوق می‌رود و قبض تحویل می‌شود.',
+            credit: 'نسیه: دستگاه تحویل می‌شود و مانده در حساب مشتری بدهکار می‌ماند.',
+            waive: 'بخشش: مانده صفر می‌شود (تخفیف) — ذکر دلیل الزامی است.'
+        };
+        var syncSettle = function () {
+            var mode = settleMode.value;
+            paidBlocks.forEach(function (el) {
+                el.style.display = mode === 'paid' ? '' : 'none';
+                el.querySelectorAll('input,select').forEach(function (inp) {
+                    if (inp.name === 'amount') inp.required = mode === 'paid' && parseInt(inp.value || '0', 10) >= 0;
+                });
+            });
+            if (settleHint) settleHint.textContent = hints[mode] || '';
+            if (settleNote) settleNote.required = mode === 'waive';
+        };
+        settleMode.addEventListener('change', syncSettle);
+        syncSettle();
+    }
+
     var amountEl = document.getElementById('rx-pay-amount');
     var discountEl = document.getElementById('rx-pay-discount');
     var reasonEl = document.getElementById('rx-pay-discount-reason');
@@ -775,6 +876,16 @@
         if (typeEl) typeEl.addEventListener('change', syncDiscount);
         syncDiscount();
     }
+
+    document.querySelectorAll('[data-status-chip]').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            if (chip.getAttribute('data-status-chip') !== 'delivered') return;
+            var settle = document.getElementById('rx-settle');
+            if (settle) {
+                settle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
 
     var panel = document.getElementById('status-sms-panel');
     if (!panel) return;

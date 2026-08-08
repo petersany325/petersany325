@@ -50,6 +50,8 @@ class ReceptionLifecycleService
             'previous_delivery_batch_id' => $reception->delivery_batch_id,
             'previous_pickup_name' => $reception->pickup_name,
             'previous_pickup_phone' => $reception->pickup_phone,
+            'previous_settlement_mode' => $reception->settlement_mode,
+            'previous_settled_at' => optional($reception->settled_at)?->toDateTimeString(),
         ];
 
         $reception->forceFill([
@@ -58,6 +60,9 @@ class ReceptionLifecycleService
             'delivery_batch_id' => null,
             'pickup_name' => null,
             'pickup_phone' => null,
+            'settlement_mode' => null,
+            'settled_at' => null,
+            'settlement_note' => null,
             'custody' => 'front_desk',
             'delivery_cancelled_at' => now(),
             'delivery_cancel_count' => (int) $reception->delivery_cancel_count + 1,

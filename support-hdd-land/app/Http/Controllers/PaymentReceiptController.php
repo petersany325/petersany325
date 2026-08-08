@@ -6,6 +6,7 @@ use App\Models\Payment;
 use App\Models\PaymentReceipt;
 use App\Models\Reception;
 use App\Services\AccountingService;
+use App\Services\ReceptionSettlementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -113,6 +114,9 @@ class PaymentReceiptController extends Controller
                 $reception->update([
                     'status' => 'delivered',
                     'delivered_at' => now(),
+                    'settlement_mode' => ReceptionSettlementService::MODE_PAID,
+                    'settled_at' => now(),
+                    'settlement_note' => 'تسویه با تأیید فیش کارت‌به‌کارت',
                 ]);
             }
 

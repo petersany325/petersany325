@@ -9,7 +9,7 @@
     <div class="compact-head">
         <div>
             <h2 style="margin:0;font-size:15px;">تحویل گروهی</h2>
-            <p class="lead" style="margin:2px 0 0;">نام و موبایل تحویل‌گیرنده + شماره قبض‌ها → کارتابل هزینه → تایید و خروج نهایی</p>
+            <p class="lead" style="margin:2px 0 0;">نام و موبایل تحویل‌گیرنده + شماره قبض‌ها → هزینه → تسویه (نقد/نسیه/بخشش) → خروج نهایی</p>
         </div>
     </div>
 
@@ -44,25 +44,31 @@
                     <th>سریال</th>
                     <th>وضعیت</th>
                     <th>هزینه (تومان)</th>
+                    <th>مانده</th>
                     <th>وضعیت مبلغ</th>
                 </tr>
                 </thead>
                 <tbody id="delivery-cart-body">
-                <tr class="empty-row"><td colspan="7" class="muted">هنوز قبضی بارگذاری نشده.</td></tr>
+                <tr class="empty-row"><td colspan="8" class="muted">هنوز قبضی بارگذاری نشده.</td></tr>
                 </tbody>
             </table>
         </div>
 
         <div class="accept-row accept-row-3" style="margin-top:8px;">
             <div>
+                <label>تسویه قبض‌های مانده‌دار</label>
+                <select name="settlement_mode">
+                    <option value="">فقط قبض‌های تسویه‌شده (مانده صفر)</option>
+                    <option value="credit" @selected(old('settlement_mode') === 'credit')>نسیه — بدهکار شدن مشتری</option>
+                    <option value="waive" @selected(old('settlement_mode') === 'waive')>بخشش مانده / بدون هزینه</option>
+                </select>
+            </div>
+            <div>
                 @include('partials.toggle', ['name' => 'send_sms', 'label' => 'ارسال پیامک تحویل', 'checked' => true, 'on' => 'برود', 'off' => 'نرود'])
             </div>
             <div>
-                @include('partials.toggle', ['name' => 'force_without_cost', 'label' => 'تحویل حتی اگر هزینه مشخص نیست', 'checked' => false, 'on' => 'اجازه', 'off' => 'خیر'])
-            </div>
-            <div>
-                <label>یادداشت</label>
-                <input type="text" name="note" value="{{ old('note') }}" placeholder="اختیاری">
+                <label>یادداشت / دلیل نسیه یا بخشش</label>
+                <input type="text" name="note" value="{{ old('note') }}" placeholder="برای نسیه یا بخشش الزامی است">
             </div>
         </div>
 
@@ -115,15 +121,17 @@
     function render(items) {
         body.innerHTML = '';
         if (!items.length) {
-            body.innerHTML = '<tr class="empty-row"><td colspan="7" class="muted">قبضی پیدا نشد.</td></tr>';
+            body.innerHTML = '<tr class="empty-row"><td colspan="8" class="muted">قبضی پیدا نشد.</td></tr>';
             summary.textContent = '۰ قبض';
             return;
         }
         var missing = 0;
+        var unsettled = 0;
         items.forEach(function (it) {
             if (!it.has_cost) missing++;
+            if ((it.remaining || 0) > 0 && !it.already_delivered) unsettled++;
             var tr = document.createElement('tr');
-            if (!it.has_cost) tr.className = 'row-warn';
+            if (!it.has_cost || (it.remaining || 0) > 0) tr.className = 'row-warn';
             if (it.already_delivered) tr.className += ' row-done';
             tr.innerHTML =
                 '<td><input type="checkbox" name="ticket_ids[]" value="' + it.id + '" checked></td>' +
@@ -132,14 +140,21 @@
                 '<td dir="ltr" style="text-align:left;">' + (it.serial || '—') + '</td>' +
                 '<td>' + (it.status_label || it.status) + '</td>' +
                 '<td><input type="number" name="costs[' + it.id + ']" min="0" value="' + (it.total_amount || it.labor_cost || 0) + '" style="width:110px;direction:ltr;text-align:left;"></td>' +
+                '<td>' + ((it.remaining || 0) > 0 ? '<strong>' + Number(it.remaining).toLocaleString('en-US') + '</strong>' : '۰') + '</td>' +
                 '<td>' + (it.has_cost
-                    ? '<span class="pill pill-ok">ثبت شده</span>'
+                    ? ((it.remaining || 0) > 0 ? '<span class="pill pill-off">مانده‌دار</span>' : '<span class="pill pill-ok">تسویه</span>')
                     : '<span class="pill pill-off">نامشخص</span>') +
                   (it.already_delivered ? ' <span class="pill">قبلاً تحویل</span>' : '') + '</td>';
             body.appendChild(tr);
         });
-        summary.textContent = items.length + ' قبض' + (missing ? ' — ' + missing + ' بدون هزینه' : '');
-        setStatus(missing ? 'قبل از تحویل، هزینه را در ستون مبلغ ثبت کنید.' : 'آماده تایید نهایی.', missing ? 'warn' : 'ok');
+        summary.textContent = items.length + ' قبض'
+            + (missing ? ' — ' + missing + ' بدون هزینه' : '')
+            + (unsettled ? ' — ' + unsettled + ' مانده‌دار' : '');
+        setStatus(
+            unsettled ? 'قبض مانده‌دار: نسیه/بخشش را انتخاب کنید یا اول در صفحه قبض دریافت کامل بزنید.'
+                : (missing ? 'قبل از تحویل، هزینه را ثبت کنید یا بخشش را انتخاب کنید.' : 'آماده تایید نهایی.'),
+            (missing || unsettled) ? 'warn' : 'ok'
+        );
     }
 
     function lookup() {
@@ -177,16 +192,16 @@
             setStatus('حداقل یک قبض را تیک بزنید.', 'error');
             return;
         }
-        var force = document.querySelector('input[name="force_without_cost"][type="checkbox"]');
-        var missing = false;
+        var modeEl = document.querySelector('select[name="settlement_mode"]');
+        var mode = modeEl ? modeEl.value : '';
+        var unsettled = false;
         checked.forEach(function (cb) {
             var row = cb.closest('tr');
-            if (row && row.querySelector('.pill-off')) missing = true;
+            if (row && row.querySelector('.pill-off')) unsettled = true;
         });
-        if (missing && force && !force.checked) {
-            if (!window.confirm('بعضی قبض‌ها هزینه مشخص ندارند. ادامه می‌دهید؟ (یا مبلغ را وارد/ثبت کنید)')) {
-                e.preventDefault();
-            }
+        if (unsettled && !mode) {
+            e.preventDefault();
+            setStatus('قبض مانده‌دار یا بدون هزینه دارید. نسیه/بخشش را انتخاب کنید یا اول تسویه کنید.', 'error');
         }
     });
 })();
