@@ -73,7 +73,7 @@
         </div>
 
         <div class="sms-actions" style="margin-top:8px;">
-            <button class="btn btn-primary" type="submit" id="final-deliver-btn">تایید منو و خروج نهایی</button>
+            <button class="btn btn-primary" type="submit" id="final-deliver-btn" data-confirm="تسویه گروهی، خروج کالا و تحویل نهایی ثبت شود؟">تأیید تسویه / خروج کالا / تحویل</button>
             <span class="muted" id="cart-summary">۰ قبض</span>
         </div>
     </form>

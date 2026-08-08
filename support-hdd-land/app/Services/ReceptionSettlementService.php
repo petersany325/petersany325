@@ -177,7 +177,7 @@ class ReceptionSettlementService
             $from = $reception->status;
             $partsExit = $reception->parts->map(fn ($rp) => [
                 'name' => $rp->part?->name ?: ($rp->part_name ?? 'قطعه'),
-                'qty' => (int) $rp->qty,
+                'qty' => (int) $rp->quantity,
                 'total' => (int) $rp->total_price,
             ])->values()->all();
 
