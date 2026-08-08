@@ -109,7 +109,7 @@ class LicenseAdminController extends Controller
 
         $data = $request->validate([
             'customer_name' => ['nullable', 'string', 'max:120'],
-            'customer_phone' => ['nullable', 'string', 'max:30'],
+            'customer_phone' => ['required', 'string', 'max:30', 'regex:/^09\d{9}$/'],
             'customer_email' => ['nullable', 'email', 'max:160'],
             'domain_hint' => ['nullable', 'string', 'max:190'],
             'plan_code' => ['required', 'string', 'max:30'],
@@ -117,7 +117,11 @@ class LicenseAdminController extends Controller
             'notes' => ['nullable', 'string', 'max:2000'],
             'send_sms' => ['nullable', 'boolean'],
             'start_from' => ['nullable', 'in:issue,activate'],
+        ], [
+            'customer_phone.required' => 'موبایل صاحب لایسنس الزامی است؛ پیامک نصب فقط به همین خط می‌رود.',
+            'customer_phone.regex' => 'موبایل صاحب لایسنس را به‌صورت 09xxxxxxxxx وارد کنید.',
         ]);
+        $data['customer_phone'] = preg_replace('/\D+/', '', (string) $data['customer_phone']) ?: '';
 
         $plan = LicensePlans::find($data['plan_code']);
         if (! $plan) {
@@ -225,7 +229,7 @@ class LicenseAdminController extends Controller
 
         $data = $request->validate([
             'customer_name' => ['nullable', 'string', 'max:120'],
-            'customer_phone' => ['nullable', 'string', 'max:30'],
+            'customer_phone' => ['required', 'string', 'max:30', 'regex:/^09\d{9}$/'],
             'customer_email' => ['nullable', 'email', 'max:160'],
             'domain' => ['nullable', 'string', 'max:190'],
             'plan_code' => ['nullable', 'string', 'max:30'],
@@ -234,7 +238,11 @@ class LicenseAdminController extends Controller
             'expires_at' => ['nullable', 'string', 'max:20'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'price_toman' => ['nullable', 'integer', 'min:0'],
+        ], [
+            'customer_phone.required' => 'موبایل صاحب لایسنس الزامی است؛ پیامک نصب فقط به همین خط می‌رود.',
+            'customer_phone.regex' => 'موبایل صاحب لایسنس را به‌صورت 09xxxxxxxxx وارد کنید.',
         ]);
+        $data['customer_phone'] = preg_replace('/\D+/', '', (string) $data['customer_phone']) ?: '';
 
         $starts = resolve_request_date($data['starts_at'] ?? null);
         $ends = resolve_request_date($data['expires_at'] ?? null);

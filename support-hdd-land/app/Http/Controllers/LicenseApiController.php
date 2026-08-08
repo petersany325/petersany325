@@ -12,14 +12,15 @@ use Illuminate\Support\Facades\Cache;
  */
 class LicenseApiController extends Controller
 {
-    /** Step 1: validate serial + send SMS code to license phone. */
+    /** Step 1: validate serial + send SMS only to owner phone set in seller admin. */
     public function requestOtp(Request $request, NiazpardazSmsService $sms)
     {
         $data = $request->validate([
             'license_key' => ['required', 'string', 'max:64'],
             'domain' => ['required', 'string', 'max:190'],
-            'phone' => ['nullable', 'string', 'max:30'],
             'product' => ['nullable', 'string', 'max:60'],
+            // Ignored on purpose: installer must NOT choose the SMS destination.
+            'phone' => ['nullable', 'string', 'max:30'],
         ]);
 
         $key = ProductLicense::normalizeKey($data['license_key']);
@@ -33,17 +34,16 @@ class LicenseApiController extends Controller
 
         /** @var ProductLicense $license */
         $license = $check['license'];
-        $phone = preg_replace('/\D+/', '', (string) ($data['phone'] ?: $license->customer_phone)) ?: '';
+
+        // Owner phone is ONLY the number registered on the license in admin.
+        // Any phone posted by the installer/customer is ignored.
+        $phone = preg_replace('/\D+/', '', (string) $license->customer_phone) ?: '';
         if (strlen($phone) < 10) {
             return response()->json([
                 'ok' => false,
-                'message' => 'برای این سریال موبایل ثبت نشده. موبایل خریدار را وارد کنید یا در پنل فروشنده روی لایسنس موبایل بگذارید.',
+                'message' => 'برای این سریال موبایل صاحب لایسنس در پنل ادمین سرزمین هارد ثبت نشده است. مدیر فروشنده باید موبایل را روی لایسنس ذخیره کند؛ سپس دوباره تلاش کنید.',
+                'purchase_url' => config('license.purchase_url', 'https://hdd-land.ir'),
             ], 422);
-        }
-
-        // Keep phone on license for future renewals
-        if (! $license->customer_phone) {
-            $license->forceFill(['customer_phone' => $phone])->save();
         }
 
         $code = (string) random_int(10000, 99999);
@@ -51,12 +51,14 @@ class LicenseApiController extends Controller
         Cache::put($cacheKey, [
             'code' => $code,
             'phone' => $phone,
+            'license_id' => $license->id,
             'domain' => $domain,
             'attempts' => 0,
         ], now()->addMinutes(10));
 
         $shop = shop_name();
-        $message = "{$shop}\nکد تأیید نصب لایسنس:\n{$code}\nدامنه: {$domain}\nاعتبار ۱۰ دقیقه";
+        $owner = trim((string) ($license->customer_name ?: 'صاحب لایسنس'));
+        $message = "{$shop}\nکد تأیید نصب لایسنس ({$owner}):\n{$code}\nدامنه: {$domain}\nاعتبار ۱۰ دقیقه";
         $sent = $sms->send($phone, $message, $code);
         if (! ($sent['ok'] ?? false)) {
             return response()->json([
@@ -67,7 +69,7 @@ class LicenseApiController extends Controller
 
         return response()->json([
             'ok' => true,
-            'message' => 'کد تأیید پیامک شد.',
+            'message' => 'کد تأیید فقط به موبایل صاحب لایسنس (ثبت‌شده در ادمین) پیامک شد.',
             'phone_masked' => $this->maskPhone($phone),
             'expires_in' => 600,
             'purchase_url' => config('license.purchase_url', 'https://hdd-land.ir'),
@@ -80,15 +82,15 @@ class LicenseApiController extends Controller
         $data = $request->validate([
             'license_key' => ['required', 'string', 'max:64'],
             'domain' => ['required', 'string', 'max:190'],
-            'phone' => ['nullable', 'string', 'max:30'],
             'code' => ['required', 'string', 'max:12'],
             'product' => ['nullable', 'string', 'max:60'],
             'version' => ['nullable', 'string', 'max:30'],
+            // Ignored — owner phone comes from the license record only.
+            'phone' => ['nullable', 'string', 'max:30'],
         ]);
 
         $key = ProductLicense::normalizeKey($data['license_key']);
         $domain = ProductLicense::normalizeDomain($data['domain']);
-        $phone = preg_replace('/\D+/', '', (string) $data['phone']) ?: '';
         $code = trim((string) $data['code']);
         $product = $data['product'] ?? 'hddland-repair';
 
@@ -98,12 +100,17 @@ class LicenseApiController extends Controller
             return response()->json(['ok' => false, 'message' => 'کد منقضی شده. دوباره درخواست پیامک بدهید.'], 410);
         }
 
+        // Re-check owner phone still matches license (admin may have changed it).
+        $license = ProductLicense::query()->where('license_key', $key)->first();
+        $ownerPhone = preg_replace('/\D+/', '', (string) ($license?->customer_phone ?? '')) ?: '';
         $cachedPhone = preg_replace('/\D+/', '', (string) ($payload['phone'] ?? '')) ?: '';
-        if ($phone !== '' && $cachedPhone !== '' && $phone !== $cachedPhone) {
-            return response()->json(['ok' => false, 'message' => 'شماره موبایل با درخواست پیامک هم‌خوان نیست.'], 422);
-        }
-        if ($phone === '') {
-            $phone = $cachedPhone;
+        if ($ownerPhone === '' || $cachedPhone === '' || ! hash_equals($ownerPhone, $cachedPhone)) {
+            Cache::forget($cacheKey);
+
+            return response()->json([
+                'ok' => false,
+                'message' => 'موبایل صاحب لایسنس تغییر کرده یا نامعتبر است. از پنل ادمین موبایل را درست کنید و دوباره کد بگیرید.',
+            ], 422);
         }
 
         $attempts = (int) ($payload['attempts'] ?? 0) + 1;

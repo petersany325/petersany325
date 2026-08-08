@@ -26,7 +26,8 @@
             </div>
             <div>
                 <label>موبایل</label>
-                <input type="text" name="customer_phone" value="{{ old('customer_phone', $license->customer_phone) }}" dir="ltr" style="text-align:left;">
+                <input type="text" name="customer_phone" value="{{ old('customer_phone', $license->customer_phone) }}" required dir="ltr" style="text-align:left;" placeholder="09xxxxxxxxx" pattern="09[0-9]{9}" inputmode="numeric">
+                <div class="muted" style="font-size:11px;margin-top:4px;">پیامک کد نصب فقط به این شماره می‌رود؛ مشتری نمی‌تواند شماره دیگری بدهد.</div>
             </div>
             <div>
                 <label>ایمیل</label>

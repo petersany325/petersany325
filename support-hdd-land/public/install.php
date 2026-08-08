@@ -79,8 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $key = (string) ($_POST['license_key'] ?? '');
         $domain = trim((string) ($_POST['domain'] ?? detect_domain()));
         $server = WebInstaller::SELLER_LICENSE_SERVER;
-        $phone = trim((string) ($_POST['phone'] ?? ''));
-        $res = $installer->requestLicenseOtp($key, $domain, $server, $phone);
+        $res = $installer->requestLicenseOtp($key, $domain, $server);
         if (! ($res['ok'] ?? false)) {
             $error = $res['message'] ?? 'لایسنس نامعتبر است.';
             $state['purchase_url'] = $res['purchase_url'] ?? WebInstaller::SELLER_PURCHASE_URL;
@@ -95,7 +94,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $state['license_otp'] = [
                 'license_key' => strtoupper(trim($key)),
                 'domain' => $domain,
-                'phone' => preg_replace('/\D+/', '', $phone) ?: '',
                 'phone_masked' => (string) ($res['phone_masked'] ?? ''),
                 'awaiting_code' => true,
             ];
@@ -111,15 +109,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $key = (string) ($_POST['license_key'] ?? ($otp['license_key'] ?? ''));
         $domain = trim((string) ($_POST['domain'] ?? ($otp['domain'] ?? detect_domain())));
         $server = WebInstaller::SELLER_LICENSE_SERVER;
-        $phone = trim((string) ($_POST['phone'] ?? ($otp['phone'] ?? '')));
         $code = trim((string) ($_POST['code'] ?? ''));
-        $res = $installer->confirmLicenseOtp($key, $domain, $server, $phone, $code);
+        $res = $installer->confirmLicenseOtp($key, $domain, $server, '', $code);
         if (! ($res['ok'] ?? false)) {
             $error = $res['message'] ?? 'کد تأیید نامعتبر است.';
             $state['license_otp'] = array_merge($otp, [
                 'license_key' => strtoupper(trim($key)),
                 'domain' => $domain,
-                'phone' => preg_replace('/\D+/', '', $phone) ?: '',
                 'awaiting_code' => true,
             ]);
             $state['license_server'] = $server;
@@ -432,17 +428,10 @@ $reqs = $installer->checkRequirements();
                 <input type="hidden" name="license_server" value="<?= h(WebInstaller::SELLER_LICENSE_SERVER) ?>">
                 <label>سریال لایسنس</label>
                 <input name="license_key" required placeholder="XXXX-XXXX-XXXX-XXXX" value="<?= h($_POST['license_key'] ?? ($otpState['license_key'] ?? '')) ?>" dir="ltr" style="text-align:left;letter-spacing:.06em;">
-                <div class="grid">
-                    <div>
-                        <label>دامنه این نصب</label>
-                        <input name="domain" required value="<?= h($_POST['domain'] ?? ($otpState['domain'] ?? detect_domain())) ?>" dir="ltr" style="text-align:left;">
-                    </div>
-                    <div>
-                        <label>موبایل خریدار (اگر روی لایسنس نیست)</label>
-                        <input name="phone" placeholder="09xxxxxxxxx" value="<?= h($_POST['phone'] ?? ($otpState['phone'] ?? '')) ?>" dir="ltr" style="text-align:left;">
-                    </div>
-                </div>
-                <button class="btn" type="submit">تأیید سریال و ارسال پیامک از سرزمین هارد</button>
+                <label>دامنه این نصب</label>
+                <input name="domain" required value="<?= h($_POST['domain'] ?? ($otpState['domain'] ?? detect_domain())) ?>" dir="ltr" style="text-align:left;">
+                <p style="font-size:12px;color:#667788;margin:0 0 12px;">پیامک فقط به موبایلی می‌رود که فروشنده روی همین سریال در ادمین ثبت کرده؛ اینجا شماره موبایل گرفته نمی‌شود.</p>
+                <button class="btn" type="submit">تأیید سریال و ارسال پیامک به صاحب لایسنس</button>
             </form>
             <?php else: ?>
             <form method="post">
@@ -450,9 +439,8 @@ $reqs = $installer->checkRequirements();
                 <input type="hidden" name="action" value="license_confirm_otp">
                 <input type="hidden" name="license_key" value="<?= h($otpState['license_key'] ?? '') ?>">
                 <input type="hidden" name="domain" value="<?= h($otpState['domain'] ?? detect_domain()) ?>">
-                <input type="hidden" name="phone" value="<?= h($otpState['phone'] ?? '') ?>">
                 <input type="hidden" name="license_server" value="<?= h(WebInstaller::SELLER_LICENSE_SERVER) ?>">
-                <p style="margin-bottom:12px;">کد از سرور سرزمین هارد به <?= h($otpState['phone_masked'] ?? 'موبایل ثبت‌شده') ?> ارسال شد. دامنه قفل: <strong dir="ltr"><?= h($otpState['domain'] ?? '') ?></strong></p>
+                <p style="margin-bottom:12px;">کد فقط به موبایل صاحب لایسنس <?= h($otpState['phone_masked'] ?? '') ?> ارسال شد. دامنه قفل: <strong dir="ltr"><?= h($otpState['domain'] ?? '') ?></strong></p>
                 <label>کد تأیید پیامک</label>
                 <input name="code" required inputmode="numeric" autocomplete="one-time-code" placeholder="مثلاً 12345" value="<?= h($_POST['code'] ?? '') ?>" dir="ltr" style="text-align:left;letter-spacing:.12em;font-size:18px;">
                 <button class="btn" type="submit">تأیید کد و ادامه نصب</button>

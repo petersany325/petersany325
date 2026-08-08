@@ -69,8 +69,8 @@
                     <input type="text" name="customer_name" value="{{ old('customer_name') }}" placeholder="مثلاً تعمیرگاه آریا">
                 </div>
                 <div>
-                    <label>موبایل</label>
-                    <input type="text" name="customer_phone" value="{{ old('customer_phone') }}" dir="ltr" style="text-align:left;" placeholder="09xxxxxxxxx">
+                    <label>موبایل صاحب لایسنس (فقط همین خط پیامک نصب می‌گیرد)</label>
+                    <input type="text" name="customer_phone" value="{{ old('customer_phone') }}" required dir="ltr" style="text-align:left;" placeholder="09xxxxxxxxx" pattern="09[0-9]{9}" inputmode="numeric">
                 </div>
                 <div>
                     <label>ایمیل</label>

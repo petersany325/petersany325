@@ -143,10 +143,10 @@ class WebInstaller
         }
 
         $url = self::sellerSmsOtpUrl();
+        // Never send a customer-entered phone — seller admin owns the SMS destination.
         $body = http_build_query([
             'license_key' => $licenseKey,
             'domain' => $domain,
-            'phone' => $phone,
             'product' => 'hddland-repair',
         ]);
 
@@ -204,7 +204,6 @@ class WebInstaller
         $body = http_build_query([
             'license_key' => $licenseKey,
             'domain' => $domain,
-            'phone' => $phone,
             'code' => $code,
             'product' => 'hddland-repair',
             'version' => '1.0.0',
@@ -780,10 +779,14 @@ class WebInstaller
             ];
         } catch (Throwable $e) {
             $details[] = $e->getMessage();
+            $msg = $e->getMessage();
+            if (str_contains($msg, 'already exists') || str_contains($msg, '42S01') || str_contains($msg, '1050')) {
+                $msg = 'جداول دیتابیس از قبل وجود دارد. گزینه «پاک کردن جداول قبلی» را تیک بزنید و دوباره نصب کنید.';
+            }
 
             return [
                 'ok' => false,
-                'message' => 'نصب ناموفق: '.$e->getMessage(),
+                'message' => 'نصب ناموفق: '.$msg,
                 'details' => $details,
             ];
         }
