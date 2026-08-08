@@ -826,20 +826,80 @@
             @endunless
             <div class="table-wrap" style="margin-top:1rem;">
                 <table style="min-width:0;">
-                    <thead><tr><th>نوع</th><th>مبلغ</th><th>زمان</th></tr></thead>
+                    <thead><tr><th>نوع</th><th>مبلغ</th><th>زمان</th><th>عملیات</th></tr></thead>
                     <tbody>
                     @forelse($reception->payments as $payment)
                         <tr>
-                            <td>{{ $payment->typeLabel() }} / {{ $payment->methodLabel() }}</td>
+                            <td>
+                                {{ $payment->typeLabel() }} / {{ $payment->methodLabel() }}
+                                @if($payment->note)
+                                    <div class="muted" style="font-size:11px;">{{ $payment->note }}</div>
+                                @endif
+                            </td>
                             <td>{{ toman($payment->amount) }}</td>
                             <td>{{ jalali_like($payment->paid_at) }}</td>
+                            <td style="white-space:nowrap;">
+                                <button type="button" class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" data-open-modal="#pay-edit-{{ $payment->id }}">ویرایش</button>
+                                <form method="POST" action="{{ route('receptions.payments.destroy', [$reception, $payment]) }}" style="display:inline;" data-confirm="این پرداخت حذف شود؟ مانده قبض دوباره محاسبه می‌شود.">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-danger" type="submit" style="padding:4px 8px;font-size:11px;">حذف</button>
+                                </form>
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="3">پرداختی نیست.</td></tr>
+                        <tr><td colspan="4">پرداختی نیست.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
             </div>
+
+            @foreach($reception->payments as $payment)
+                <div class="app-modal" id="pay-edit-{{ $payment->id }}" hidden>
+                    <div class="app-modal-dialog" role="dialog" aria-modal="true">
+                        <div class="app-modal-head">
+                            <strong>ویرایش پرداخت — {{ toman($payment->amount) }}</strong>
+                            <button type="button" class="app-modal-close" data-close-modal aria-label="بستن">×</button>
+                        </div>
+                        <div class="app-modal-body">
+                            <form method="POST" action="{{ route('receptions.payments.update', [$reception, $payment]) }}">
+                                @csrf
+                                @method('PUT')
+                                <div class="form-grid" style="grid-template-columns:1fr;">
+                                    <div>
+                                        <label>نوع پرداخت</label>
+                                        <select name="type" required>
+                                            @foreach($paymentTypes as $key => $label)
+                                                <option value="{{ $key }}" @selected($payment->type === $key)>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label>روش پرداخت</label>
+                                        <select name="method" required>
+                                            @foreach($paymentMethods as $key => $label)
+                                                <option value="{{ $key }}" @selected($payment->method === $key)>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label>مبلغ</label>
+                                        <input type="number" name="amount" min="1" value="{{ abs((int) $payment->amount) }}" required>
+                                    </div>
+                                    <div>
+                                        <label>توضیح / پیگیری</label>
+                                        <input type="text" name="note" value="{{ $payment->note }}" placeholder="اختیاری">
+                                    </div>
+                                </div>
+                                <div class="actions" style="margin-top:10px;">
+                                    <button class="btn btn-primary" type="submit">ذخیره اصلاح</button>
+                                    <button class="btn btn-ghost" type="button" data-close-modal>انصراف</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
         </div>
     </div>
 </div>

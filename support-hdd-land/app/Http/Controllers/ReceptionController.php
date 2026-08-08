@@ -7,6 +7,7 @@ use App\Models\FaultType;
 use App\Models\LookupOption;
 use App\Models\Part;
 use App\Models\Payment;
+use App\Models\PaymentReceipt;
 use App\Models\Reception;
 use App\Models\ReceptionPart;
 use App\Models\ReferralSource;
@@ -681,6 +682,65 @@ class ReceptionController extends Controller
         });
 
         return back()->with('success', 'پرداخت ثبت شد.');
+    }
+
+    public function updatePayment(Request $request, Reception $reception, Payment $payment)
+    {
+        abort_unless((int) $payment->reception_id === (int) $reception->id, 404);
+
+        $data = $request->validate([
+            'type' => ['required', 'in:deposit,partial,final,refund'],
+            'method' => ['required', 'in:cash,card,transfer'],
+            'amount' => ['required', 'integer', 'min:1'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($data, $reception, $payment) {
+            $amount = (int) $data['amount'];
+            if ($data['type'] === 'refund') {
+                $amount = -1 * abs($amount);
+            }
+
+            $payment->update([
+                'type' => $data['type'],
+                'method' => $data['method'],
+                'amount' => $amount,
+                'note' => $data['note'] ?? null,
+            ]);
+
+            $reception->recalculateTotals();
+            app(AccountingService::class)->postPayment($payment->fresh(['reception', 'customer']));
+
+            try {
+                app(AccountingService::class)->syncReceptionRevenue($reception->fresh());
+            } catch (\Throwable) {
+            }
+        });
+
+        return back()->with('success', 'پرداخت ویرایش شد و مانده قبض به‌روز شد.');
+    }
+
+    public function destroyPayment(Reception $reception, Payment $payment)
+    {
+        abort_unless((int) $payment->reception_id === (int) $reception->id, 404);
+
+        DB::transaction(function () use ($reception, $payment) {
+            app(AccountingService::class)->voidPayment($payment);
+
+            PaymentReceipt::query()
+                ->where('payment_id', $payment->id)
+                ->update(['payment_id' => null]);
+
+            $payment->delete();
+            $reception->recalculateTotals();
+
+            try {
+                app(AccountingService::class)->syncReceptionRevenue($reception->fresh());
+            } catch (\Throwable) {
+            }
+        });
+
+        return back()->with('success', 'پرداخت حذف شد و مانده قبض به‌روز شد.');
     }
 
     public function settleAndDeliver(Request $request, Reception $reception, ReceptionSettlementService $settlement, SmsNotificationService $smsNotifications)

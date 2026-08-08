@@ -104,6 +104,8 @@ class AccountingService
         $payment->loadMissing(['reception', 'customer']);
         $amount = (int) $payment->amount;
         if ($amount === 0) {
+            $this->voidPayment($payment);
+
             return null;
         }
 
@@ -138,6 +140,20 @@ class AccountingService
             $payment->customer_id,
             optional($payment->paid_at)->toDateString()
         );
+    }
+
+    /** Remove accounting journal tied to a payment (edit/delete). */
+    public function voidPayment(Payment $payment): void
+    {
+        $entry = JournalEntry::query()
+            ->where('source_type', 'payment')
+            ->where('source_id', $payment->id)
+            ->first();
+        if (! $entry) {
+            return;
+        }
+        $entry->lines()->delete();
+        $entry->delete();
     }
 
     public function postReceptionPart(ReceptionPart $part): ?JournalEntry
