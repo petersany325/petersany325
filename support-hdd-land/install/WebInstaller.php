@@ -175,6 +175,33 @@ class WebInstaller
         }
     }
 
+    /**
+     * Try common MySQL host variants used on shared hosting.
+     *
+     * @return array{ok:bool,message:string,host?:string}
+     */
+    public function testDatabaseWithHostFallback(string $host, string $port, string $database, string $username, string $password): array
+    {
+        $hosts = [];
+        foreach ([$host, 'localhost', '127.0.0.1'] as $h) {
+            $h = trim((string) $h);
+            if ($h !== '' && ! in_array($h, $hosts, true)) {
+                $hosts[] = $h;
+            }
+        }
+
+        $last = 'اتصال دیتابیس ناموفق.';
+        foreach ($hosts as $h) {
+            $res = $this->testDatabase($h, $port, $database, $username, $password);
+            if ($res['ok'] ?? false) {
+                return ['ok' => true, 'message' => $res['message'], 'host' => $h];
+            }
+            $last = (string) ($res['message'] ?? $last);
+        }
+
+        return ['ok' => false, 'message' => $last];
+    }
+
     public function generateAppKey(): string
     {
         return 'base64:'.base64_encode(random_bytes(32));
@@ -203,18 +230,80 @@ class WebInstaller
     {
         if (str_contains($message, '1045') || stripos($message, 'Access denied') !== false) {
             return 'دسترسی دیتابیس رد شد (Access denied). '
-                .'در cPanel → MySQL Databases چک کنید: ۱) نام دیتابیس ۲) نام کاربر ۳) رمز درست باشد '
-                .'۴) کاربر به همان دیتابیس با ALL PRIVILEGES وصل شده باشد. '
-                .'هاست را هم یک‌بار 127.0.0.1 و یک‌بار localhost امتحان کنید.';
+                .'برگردید به مرحله دیتابیس و «ساخت خودکار با cPanel» را بزنید '
+                .'(یوزر/رمز ورود cPanel — نه فقط کاربر MySQL). '
+                .'اگر دستی می‌زنید: نام کامل DB، کاربر، رمز، و ALL PRIVILEGES را در cPanel چک کنید.';
         }
         if (str_contains($message, '1049') || stripos($message, 'Unknown database') !== false) {
-            return 'نام دیتابیس یافت نشد. ابتدا دیتابیس را در cPanel بسازید.';
+            return 'نام دیتابیس یافت نشد. برگردید به مرحله دیتابیس و ساخت خودکار با cPanel را بزنید.';
         }
         if (str_contains($message, '2002') || stripos($message, 'Connection refused') !== false) {
             return 'اتصال به MySQL برقرار نشد. مقدار هاست را 127.0.0.1 یا localhost بگذارید.';
         }
 
         return 'خطای دیتابیس: '.$message;
+    }
+
+    /** Remove Laravel cached config so a previous failed install cannot override new .env */
+    public function clearBootstrapCaches(): void
+    {
+        foreach ([
+            'bootstrap/cache/config.php',
+            'bootstrap/cache/routes.php',
+            'bootstrap/cache/routes-v7.php',
+            'bootstrap/cache/services.php',
+            'bootstrap/cache/packages.php',
+        ] as $rel) {
+            $path = $this->basePath.'/'.$rel;
+            if (is_file($path)) {
+                @unlink($path);
+            }
+        }
+    }
+
+    /**
+     * Force runtime DB credentials (avoids stale dotenv/config cache).
+     *
+     * @param  array{host?:string,port?:string,database?:string,username?:string,password?:string}  $db
+     */
+    public function forceDatabaseConfig(array $db): void
+    {
+        $host = (string) ($db['host'] ?? '127.0.0.1');
+        $port = (string) ($db['port'] ?? '3306');
+        $database = (string) ($db['database'] ?? '');
+        $username = (string) ($db['username'] ?? '');
+        $password = (string) ($db['password'] ?? '');
+
+        foreach ([
+            'DB_CONNECTION' => 'mysql',
+            'DB_HOST' => $host,
+            'DB_PORT' => $port,
+            'DB_DATABASE' => $database,
+            'DB_USERNAME' => $username,
+            'DB_PASSWORD' => $password,
+        ] as $key => $value) {
+            putenv($key.'='.$value);
+            $_ENV[$key] = $value;
+            $_SERVER[$key] = $value;
+        }
+
+        if (class_exists(\Illuminate\Support\Facades\Config::class)) {
+            \Illuminate\Support\Facades\Config::set('database.default', 'mysql');
+            \Illuminate\Support\Facades\Config::set('database.connections.mysql.host', $host);
+            \Illuminate\Support\Facades\Config::set('database.connections.mysql.port', $port);
+            \Illuminate\Support\Facades\Config::set('database.connections.mysql.database', $database);
+            \Illuminate\Support\Facades\Config::set('database.connections.mysql.username', $username);
+            \Illuminate\Support\Facades\Config::set('database.connections.mysql.password', $password);
+        }
+
+        if (class_exists(\Illuminate\Support\Facades\DB::class)) {
+            try {
+                \Illuminate\Support\Facades\DB::purge('mysql');
+                \Illuminate\Support\Facades\DB::reconnect('mysql');
+            } catch (Throwable $e) {
+                // reconnect may fail until credentials are valid; migrate will surface it
+            }
+        }
     }
 
     /**
@@ -444,15 +533,20 @@ class WebInstaller
      *
      * @param  array<string, mixed>  $admin
      * @param  array<string, mixed>  $license
+     * @param  array{host?:string,port?:string,database?:string,username?:string,password?:string}|null  $db
      * @return array{ok:bool,message:string,details?:list<string>}
      */
-    public function runInstall(array $admin, array $license): array
+    public function runInstall(array $admin, array $license, ?array $db = null): array
     {
         $details = [];
         try {
             if (! is_file($this->basePath.'/vendor/autoload.php')) {
                 return ['ok' => false, 'message' => 'پوشه vendor یافت نشد.'];
             }
+
+            // Critical on shared hosting re-installs: stale config.php keeps old DB password.
+            $this->clearBootstrapCaches();
+            $details[] = 'bootstrap caches cleared';
 
             require $this->basePath.'/vendor/autoload.php';
             $app = require $this->basePath.'/bootstrap/app.php';
@@ -461,6 +555,17 @@ class WebInstaller
             $kernel->bootstrap();
 
             $details[] = 'Laravel bootstrap OK';
+
+            if (is_array($db)) {
+                $this->forceDatabaseConfig($db);
+                $details[] = 'DB config forced: '.($db['username'] ?? '').'@'.($db['database'] ?? '').' host='.($db['host'] ?? '');
+            }
+
+            try {
+                $kernel->call('config:clear');
+            } catch (Throwable $e) {
+                $details[] = 'config:clear soft-fail: '.$e->getMessage();
+            }
 
             $code = $kernel->call('migrate', ['--force' => true]);
             $details[] = trim($kernel->output()) ?: ('migrate exit '.$code);

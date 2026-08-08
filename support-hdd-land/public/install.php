@@ -124,12 +124,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'username' => trim((string) ($_POST['db_username'] ?? '')),
                 'password' => (string) ($_POST['db_password'] ?? ''),
             ];
-            $res = $installer->testDatabase($db['host'], $db['port'], $db['database'], $db['username'], $db['password']);
+            $res = $installer->testDatabaseWithHostFallback($db['host'], $db['port'], $db['database'], $db['username'], $db['password']);
             if (! ($res['ok'] ?? false)) {
                 $error = $installer->friendlyDbError($res['message'] ?? 'اتصال دیتابیس ناموفق.');
                 $state['db'] = $db;
                 $_SESSION['install'] = $state;
             } else {
+                if (! empty($res['host'])) {
+                    $db['host'] = (string) $res['host'];
+                }
                 $state['db'] = $db;
                 $_SESSION['install'] = $state;
                 header('Location: install.php?step=4');
@@ -159,8 +162,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $license = $state['license'];
                 $appKey = $installer->generateAppKey();
                 try {
+                    $installer->clearBootstrapCaches();
+
                     // Re-test right before writing .env / migrate (catches wrong password early).
-                    $dbTest = $installer->testDatabase(
+                    $dbTest = $installer->testDatabaseWithHostFallback(
                         (string) $db['host'],
                         (string) $db['port'],
                         (string) $db['database'],
@@ -168,7 +173,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         (string) $db['password']
                     );
                     if (! ($dbTest['ok'] ?? false)) {
-                        throw new RuntimeException($installer->friendlyDbError($dbTest['message'] ?? 'اتصال دیتابیس ناموفق.'));
+                        $hint = ' — در حال استفاده: '
+                            .(string) ($db['username'] ?? '?').' @ '.(string) ($db['database'] ?? '?')
+                            .' / host='.(string) ($db['host'] ?? '?');
+                        throw new RuntimeException($installer->friendlyDbError($dbTest['message'] ?? 'اتصال دیتابیس ناموفق.').$hint);
+                    }
+                    if (! empty($dbTest['host'])) {
+                        $db['host'] = (string) $dbTest['host'];
+                        $state['db'] = $db;
+                        $_SESSION['install'] = $state;
                     }
 
                     $installer->writeEnv([
@@ -196,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'LICENSE_SERVER' => (string) ($state['license_server'] ?? 'https://support.hdd-land.ir'),
                     ]);
 
-                    $result = $installer->runInstall($admin, $license);
+                    $result = $installer->runInstall($admin, $license, $db);
                     if (! ($result['ok'] ?? false)) {
                         $raw = (string) ($result['message'] ?? 'نصب ناموفق بود.');
                         $error = (str_contains($raw, '1045') || str_contains($raw, 'Access denied')
@@ -417,7 +430,15 @@ $reqs = $installer->checkRequirements();
         <?php elseif ($step === 4): ?>
             <h2>اطلاعات سایت و مدیر</h2>
             <p>اطلاعات تعمیرگاه جدید را وارد کنید. دادهٔ دمو ساخته نمی‌شود.</p>
-            <p style="margin-bottom:12px;"><a href="?step=3">← برگشت به تنظیم دیتابیس</a></p>
+            <?php if (! empty($state['db'])): ?>
+                <p style="margin-bottom:10px;font-size:12px;color:#445;">
+                    دیتابیس ذخیره‌شده:
+                    <code dir="ltr"><?= h((string) ($state['db']['username'] ?? '')) ?>@<?= h((string) ($state['db']['database'] ?? '')) ?></code>
+                    /
+                    <code dir="ltr"><?= h((string) ($state['db']['host'] ?? '')) ?></code>
+                </p>
+            <?php endif; ?>
+            <p style="margin-bottom:12px;"><a href="?step=3">← برگشت به تنظیم دیتابیس (ساخت خودکار cPanel)</a></p>
             <form method="post">
                 <input type="hidden" name="step" value="4">
                 <input type="hidden" name="action" value="install">
