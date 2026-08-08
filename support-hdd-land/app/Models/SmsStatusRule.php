@@ -83,21 +83,47 @@ class SmsStatusRule extends Model
 
     public static function activeOrdered()
     {
-        return Cache::remember('sms_status_rules_active_v1', 120, function () {
+        // Cache only IDs — serializing Eloquent models into database cache can
+        // corrupt into plain strings/arrays and break receptions/show.
+        $ids = Cache::remember('sms_status_rules_active_ids_v2', 120, function () {
+            return static::query()
+                ->where('is_active', true)
+                ->where('is_hidden', false)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all();
+        });
+
+        if (! is_array($ids) || $ids === []) {
+            Cache::forget('sms_status_rules_active_ids_v2');
+
             return static::query()
                 ->where('is_active', true)
                 ->where('is_hidden', false)
                 ->orderBy('sort_order')
                 ->orderBy('id')
                 ->get();
-        });
+        }
+
+        $rules = static::query()->whereIn('id', $ids)->get()->keyBy('id');
+
+        return collect($ids)
+            ->map(fn ($id) => $rules->get((int) $id))
+            ->filter(fn ($rule) => $rule instanceof self)
+            ->values();
     }
 
     public static function statusMap(): array
     {
-        return Cache::remember('sms_status_map_v1', 120, function () {
+        return Cache::remember('sms_status_map_v2', 120, function () {
             $map = Reception::STATUSES;
             foreach (static::activeOrdered() as $rule) {
+                if (! $rule instanceof self) {
+                    continue;
+                }
                 $map[$rule->status_key] = $rule->title;
             }
 
@@ -108,7 +134,9 @@ class SmsStatusRule extends Model
     public static function clearStatusCache(): void
     {
         Cache::forget('sms_status_rules_active_v1');
+        Cache::forget('sms_status_rules_active_ids_v2');
         Cache::forget('sms_status_map_v1');
+        Cache::forget('sms_status_map_v2');
     }
 
     public static function findForStatus(string $statusKey): ?self

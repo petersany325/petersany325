@@ -317,6 +317,9 @@ class ReceptionController extends Controller
         $rules = SmsStatusRule::activeOrdered();
         $previews = [];
         foreach ($rules as $rule) {
+            if (! $rule instanceof SmsStatusRule) {
+                continue;
+            }
             $previews[$rule->status_key] = [
                 'title' => $rule->title,
                 'auto_send' => $rule->auto_send,

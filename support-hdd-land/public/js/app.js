@@ -192,6 +192,15 @@
         document.addEventListener('submit', function (e) {
             var form = e.target;
             if (!form || !form.hasAttribute || !form.hasAttribute('data-confirm')) return;
+            if (form.getAttribute('data-exit-otp-blocked') === '1') {
+                e.preventDefault();
+                window.alert('برای خروج این قبض ابتدا کد تأیید مشتری را ارسال و تأیید کنید (یا مدیر عبور بزند).');
+                var otpBox = document.getElementById('rx-exit-otp');
+                if (otpBox && otpBox.scrollIntoView) {
+                    otpBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+            }
             if (form.getAttribute('data-confirm-accepted') === '1') {
                 form.removeAttribute('data-confirm-accepted');
                 return;

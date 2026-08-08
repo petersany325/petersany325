@@ -71,6 +71,11 @@ class DeliveryController extends Controller
                 'already_delivered' => $r->status === 'delivered',
                 'custody_ok' => $block === null,
                 'custody_block' => $block,
+                'exit_otp_required' => (bool) $r->exit_otp_required,
+                'exit_otp_ready' => ! $r->needsExitOtp(),
+                'exit_otp_block' => $r->needsExitOtp()
+                    ? 'کد تأیید خروج مشتری هنوز تأیید نشده — از صفحه قبض ارسال/تأیید کنید.'
+                    : null,
             ];
         });
 
@@ -80,6 +85,7 @@ class DeliveryController extends Controller
             'missing_cost' => $payload->where('has_cost', false)->count(),
             'unsettled' => $payload->where('remaining', '>', 0)->where('already_delivered', false)->count(),
             'custody_blocked' => $payload->where('custody_ok', false)->where('already_delivered', false)->count(),
+            'exit_otp_blocked' => $payload->where('exit_otp_ready', false)->where('already_delivered', false)->count(),
             'items' => $payload,
         ]);
     }
