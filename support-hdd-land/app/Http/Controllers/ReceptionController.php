@@ -1111,16 +1111,19 @@ class ReceptionController extends Controller
     private function createReceptionRecord(Customer $customer, array $data, Request $request, array $extra = []): Reception
     {
         if (! empty($data['brand_model'])) {
-            $data['brand_model'] = $this->toAsciiEnglish((string) $data['brand_model']);
+            $converted = $this->toAsciiEnglish((string) $data['brand_model']);
+            $data['brand_model'] = $converted !== null ? strtoupper($converted) : null;
         }
         if (! empty($data['brand'])) {
             $data['brand'] = $this->toAsciiEnglish((string) $data['brand']);
         }
         if (! empty($data['model'])) {
-            $data['model'] = $this->toAsciiEnglish((string) $data['model']);
+            $converted = $this->toAsciiEnglish((string) $data['model']);
+            $data['model'] = $converted !== null ? strtoupper($converted) : null;
         }
         if (! empty($data['serial_number'])) {
-            $data['serial_number'] = $this->toAsciiEnglish((string) $data['serial_number']);
+            $converted = $this->toAsciiEnglish((string) $data['serial_number']);
+            $data['serial_number'] = $converted !== null ? strtoupper($converted) : null;
         }
 
         $brandModel = trim((string) ($data['brand_model'] ?? trim(($data['brand'] ?? '').' '.($data['model'] ?? ''))));
@@ -1148,8 +1151,8 @@ class ReceptionController extends Controller
             'created_by' => Auth::id(),
             'product_name' => $productName,
             'brand' => $data['brand'] ?? null,
-            'model' => $this->toAsciiEnglish((string) ($data['model'] ?? ($brandModel ?: ''))),
-            'serial_number' => $this->toAsciiEnglish((string) ($data['serial_number'] ?? '')),
+            'model' => (($m = $this->toAsciiEnglish((string) ($data['model'] ?? ($brandModel ?: '')))) !== null ? strtoupper($m) : null),
+            'serial_number' => (($s = $this->toAsciiEnglish((string) ($data['serial_number'] ?? ''))) !== null ? strtoupper($s) : null),
             'delivered_by' => $data['delivered_by'] ?? $customer->name,
             'referrer' => $data['referrer'] ?? null,
             'commission' => (int) ($data['commission'] ?? 0),
@@ -1245,16 +1248,43 @@ class ReceptionController extends Controller
 
     private function toAsciiEnglish(string $value): ?string
     {
-        $map = [
+        // Windows Persian (ISIRI) keyboard → English QWERTY, then digit normalization.
+        $faKeyboard = [
+            'ض' => 'q', 'ص' => 'w', 'ث' => 'e', 'ق' => 'r', 'ف' => 't', 'غ' => 'y', 'ع' => 'u', 'ه' => 'i', 'خ' => 'o', 'ح' => 'p',
+            'ج' => '[', 'چ' => ']',
+            'ش' => 'a', 'س' => 's', 'ی' => 'd', 'ي' => 'd', 'ب' => 'f', 'ل' => 'g', 'ا' => 'h', 'ت' => 'j', 'ن' => 'k', 'م' => 'l',
+            'ک' => ';', 'ك' => ';', 'گ' => "'",
+            'ظ' => 'z', 'ط' => 'x', 'ز' => 'c', 'ر' => 'v', 'ذ' => 'b', 'د' => 'n', 'پ' => 'm', 'و' => ',',
+            'ْ' => '`', 'ٓ' => '~', 'ٰ' => 'Q', 'ـ' => 'W', 'ژ' => 'C',
+            'آ' => 'H', 'ة' => 'M', 'ء' => 'X', 'ئ' => 'S', 'ؤ' => 'A',
+            '؟' => '?', '،' => ',', '؛' => ';',
+        ];
+        $digits = [
             '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
             '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
             '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
             '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
-            'ك' => 'ک', 'ي' => 'ی',
         ];
-        $text = strtr(trim($value), $map);
+
+        $text = trim($value);
+        $out = '';
+        $len = mb_strlen($text, 'UTF-8');
+        for ($i = 0; $i < $len; $i++) {
+            $ch = mb_substr($text, $i, 1, 'UTF-8');
+            if (isset($faKeyboard[$ch])) {
+                $out .= $faKeyboard[$ch];
+            } elseif (isset($digits[$ch])) {
+                $out .= $digits[$ch];
+            } elseif (preg_match('/^[\x{0600}-\x{06FF}]$/u', $ch)) {
+                // Unknown Arabic/Persian glyph: drop (serial/model must be Latin)
+                continue;
+            } else {
+                $out .= $ch;
+            }
+        }
+
         // Keep printable ASCII for serial/model (letters, digits, punctuation)
-        $text = preg_replace('/[^\x20-\x7E]+/u', '', $text) ?? '';
+        $text = preg_replace('/[^\x20-\x7E]+/u', '', $out) ?? '';
         $text = trim($text);
 
         return $text === '' ? null : $text;

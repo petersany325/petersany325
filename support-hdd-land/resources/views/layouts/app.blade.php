@@ -229,7 +229,7 @@
 @else
     @yield('content')
 @endauth
-<script src="{{ asset('js/app.js') }}?v=erp7"></script>
+<script src="{{ asset('js/app.js') }}?v=erp8"></script>
 <script>
 (function () {
     var bar = document.getElementById('win-menubar');

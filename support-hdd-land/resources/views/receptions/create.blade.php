@@ -145,7 +145,7 @@
             <div class="ws-panes">
                 <div class="ws-pane active" data-ws-pane="device">
                     <div class="accept-row accept-row-5">
-                        <div><label>سریال دستگاه</label><input type="text" name="serial_number" value="{{ old('serial_number') }}" data-barcode data-ascii-en autocomplete="off" dir="ltr" style="text-align:left;"></div>
+                        <div><label>سریال دستگاه</label><input type="text" name="serial_number" value="{{ old('serial_number') }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></div>
                         <div>
                             <label>نوع خدمات</label>
                             <select name="service_type">
@@ -166,7 +166,7 @@
                         </div>
                         <div>
                             <label>برند و مدل</label>
-                            <input type="text" name="brand_model" value="{{ old('brand_model') }}" list="brand-models" data-barcode data-ascii-en autocomplete="off" dir="ltr" style="text-align:left;">
+                            <input type="text" name="brand_model" value="{{ old('brand_model') }}" list="brand-models" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;">
                         </div>
                         <div>
                             <label>ظرفیت هارد</label>
@@ -178,7 +178,7 @@
                             </select>
                         </div>
                         <div><label>برند</label><input type="text" name="brand" value="{{ old('brand') }}" data-ascii-en dir="ltr" style="text-align:left;"></div>
-                        <div><label>مدل</label><input type="text" name="model" value="{{ old('model') }}" data-barcode data-ascii-en autocomplete="off" dir="ltr" style="text-align:left;"></div>
+                        <div><label>مدل</label><input type="text" name="model" value="{{ old('model') }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></div>
                         <div><label>تحویل‌دهنده</label><input type="text" name="delivered_by" value="{{ old('delivered_by') }}"></div>
                         <div><label>معرف</label><input type="text" name="referrer" value="{{ old('referrer') }}"></div>
                         <div>
@@ -358,7 +358,7 @@
         </div>
         <div class="device-card-body">
             <div class="dense-grid">
-                <label>سریال<input type="text" data-name="serial_number" data-barcode data-ascii-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
+                <label>سریال<input type="text" data-name="serial_number" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
                 <label>خدمات
                     <select data-name="service_type">
                         <option value="">—</option>
@@ -371,7 +371,7 @@
                         @foreach($repairTypes as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
                     </select>
                 </label>
-                <label>برند/مدل<input type="text" data-name="brand_model" list="brand-models" data-barcode data-ascii-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
+                <label>برند/مدل<input type="text" data-name="brand_model" list="brand-models" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
                 <label>ظرفیت
                     <select data-name="hdd_capacity">
                         <option value="">—</option>
@@ -379,7 +379,7 @@
                     </select>
                 </label>
                 <label>برند<input type="text" data-name="brand" data-ascii-en dir="ltr" style="text-align:left;"></label>
-                <label>مدل<input type="text" data-name="model" data-barcode data-ascii-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
+                <label>مدل<input type="text" data-name="model" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
                 <label>تعمیرکار
                     <select data-name="technician_id">
                         <option value="">—</option>

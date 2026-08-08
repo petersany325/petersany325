@@ -14,7 +14,7 @@
         </div>
         <div>
             <label>سریال</label>
-            <input type="text" name="serial" value="{{ $serial ?? '' }}" dir="ltr" style="text-align:left;">
+            <input type="text" name="serial" value="{{ $serial ?? '' }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;">
         </div>
         <div>
             <label>جستجوی کلی</label>

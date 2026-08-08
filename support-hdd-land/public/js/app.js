@@ -206,29 +206,92 @@
     }
 
     /* =========================================================
-     * 5) ASCII / barcode digit helpers
+     * 5) ASCII / barcode + Persian-keyboard → English helpers
      * ========================================================= */
 
-    function convertFieldDigits(el) {
+    // Windows Persian keyboard (unshifted) → English QWERTY key
+    var FA_KEYBOARD_TO_EN = {
+        'ض': 'q', 'ص': 'w', 'ث': 'e', 'ق': 'r', 'ف': 't', 'غ': 'y', 'ع': 'u', 'ه': 'i', 'خ': 'o', 'ح': 'p',
+        'ج': '[', 'چ': ']',
+        'ش': 'a', 'س': 's', 'ی': 'd', 'ي': 'd', 'ب': 'f', 'ل': 'g', 'ا': 'h', 'ت': 'j', 'ن': 'k', 'م': 'l',
+        'ک': ';', 'ك': ';', 'گ': "'",
+        'ظ': 'z', 'ط': 'x', 'ز': 'c', 'ر': 'v', 'ذ': 'b', 'د': 'n', 'پ': 'm', 'و': ',',
+        // shifted / common extras when user meant Latin
+        'ْ': '`', 'ٓ': '~', 'ٰ': 'Q', 'ـ': 'W', 'ژ': 'C',
+        'آ': 'H', 'ة': 'M', 'ء': 'X', 'ئ': 'S', 'ؤ': 'A',
+        '؟': '?', '،': ',', '؛': ';'
+    };
+
+    function persianKeyboardToEnglish(value) {
+        var raw = convertDigits(String(value == null ? '' : value));
+        var out = '';
+        for (var i = 0; i < raw.length; i++) {
+            var ch = raw.charAt(i);
+            if (Object.prototype.hasOwnProperty.call(FA_KEYBOARD_TO_EN, ch)) {
+                out += FA_KEYBOARD_TO_EN[ch];
+            } else if (/[\u0600-\u06FF]/.test(ch)) {
+                // unknown Arabic/Persian glyph: drop (serial/model must be Latin)
+                continue;
+            } else {
+                out += ch;
+            }
+        }
+        return out;
+    }
+
+    function isSerialOrModelField(el) {
+        if (!el) return false;
+        // Opt-in attribute, or reception serial/model fields (barcode-enabled Latin fields).
+        if (el.matches && el.matches('[data-fa-en]')) return true;
+        var name = (el.getAttribute('name') || el.getAttribute('data-name') || '').toLowerCase();
+        var isLatinDeviceField = name.indexOf('serial') !== -1
+            || name === 'model'
+            || name === 'brand_model';
+        return isLatinDeviceField && el.matches && el.matches('[data-barcode], [data-ascii-en]');
+    }
+
+    function convertAsciiField(el) {
         if (!el || typeof el.value !== 'string') return;
-        var converted = convertDigits(el.value);
+        // Serial/model (manual + barcode): Windows Persian layout → English QWERTY, then digits.
+        // Other data-ascii-en fields (phone, Persian search text): digits only.
+        var converted = isSerialOrModelField(el)
+            ? persianKeyboardToEnglish(el.value)
+            : convertDigits(el.value);
+        if (isSerialOrModelField(el)) {
+            converted = converted.toUpperCase();
+        }
         if (converted !== el.value) {
+            var start = el.selectionStart;
+            var end = el.selectionEnd;
             el.value = converted;
-            el.dispatchEvent(new Event('input', { bubbles: true }));
+            if (typeof start === 'number' && typeof end === 'number') {
+                try {
+                    var pos = Math.min(converted.length, start);
+                    el.setSelectionRange(pos, pos);
+                } catch (err) {}
+            }
         }
     }
 
     function convertAsciiFieldsIn(scope) {
-        (scope || document).querySelectorAll('[data-ascii-en], [data-barcode]').forEach(convertFieldDigits);
+        (scope || document).querySelectorAll('[data-ascii-en], [data-barcode]').forEach(convertAsciiField);
     }
 
     function initAsciiFields() {
+        document.addEventListener('input', function (e) {
+            var el = e.target;
+            if (!el || !el.matches) return;
+            if (el.matches('[data-ascii-en]') || el.matches('[data-barcode]')) {
+                convertAsciiField(el);
+            }
+        }, true);
+
         // 'blur' does not bubble, but capturing listeners on ancestors still fire.
         document.addEventListener('blur', function (e) {
             var el = e.target;
             if (!el || !el.matches) return;
             if (el.matches('[data-ascii-en]') || el.matches('[data-barcode]')) {
-                convertFieldDigits(el);
+                convertAsciiField(el);
             }
         }, true);
     }
