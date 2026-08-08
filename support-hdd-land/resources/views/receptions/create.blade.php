@@ -10,6 +10,10 @@
     $oldMode = old('intake_mode', 'single');
 @endphp
 
+@if($errors->any())
+    <div class="alert alert-error" style="margin-bottom:10px;">{{ $errors->first() }}</div>
+@endif
+
 <div class="receipt-seq-bar" aria-label="شماره قبض">
     <div class="receipt-seq-item">
         <span class="receipt-seq-label">آخرین قبض</span>
