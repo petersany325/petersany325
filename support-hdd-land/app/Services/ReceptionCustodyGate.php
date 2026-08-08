@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\DeviceHandoff;
 use App\Models\Reception;
 use App\Models\ReceptionWorkReport;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -13,9 +15,18 @@ use Illuminate\Validation\ValidationException;
  * Required happy path:
  * reception → desk assigns to named tech → tech confirms → work report
  * → tech returns to desk → desk confirms receive → then cost/delivery.
+ *
+ * Main admin can bypass the handoff chain and manage repairs directly.
  */
 class ReceptionCustodyGate
 {
+    public function actorCanBypass(?User $actor = null): bool
+    {
+        $actor ??= Auth::user();
+
+        return (bool) $actor?->isAdmin();
+    }
+
     public function hasAcceptedBenchHandoff(Reception $reception): bool
     {
         return DeviceHandoff::query()
@@ -57,9 +68,13 @@ class ReceptionCustodyGate
     }
 
     /** Persian reason blocking delivery/exit, or null if allowed. */
-    public function deliveryBlockReason(Reception $reception): ?string
+    public function deliveryBlockReason(Reception $reception, ?User $actor = null): ?string
     {
         if ($reception->status === 'delivered') {
+            return null;
+        }
+
+        if ($this->actorCanBypass($actor)) {
             return null;
         }
 
@@ -104,8 +119,12 @@ class ReceptionCustodyGate
     }
 
     /** Persian reason blocking cost announcement, or null if allowed. */
-    public function costBlockReason(Reception $reception): ?string
+    public function costBlockReason(Reception $reception, ?User $actor = null): ?string
     {
+        if ($this->actorCanBypass($actor)) {
+            return null;
+        }
+
         if (! $this->wentToTechnician($reception)) {
             // Cost can be set at desk for tickets that never left reception.
             return null;
@@ -129,40 +148,43 @@ class ReceptionCustodyGate
         return null;
     }
 
-    public function assertCanDeliver(Reception $reception): void
+    public function assertCanDeliver(Reception $reception, ?User $actor = null): void
     {
-        $reason = $this->deliveryBlockReason($reception);
+        $reason = $this->deliveryBlockReason($reception, $actor);
         if ($reason) {
             throw ValidationException::withMessages(['status' => $reason]);
         }
     }
 
-    public function assertCanSetCost(Reception $reception): void
+    public function assertCanSetCost(Reception $reception, ?User $actor = null): void
     {
-        $reason = $this->costBlockReason($reception);
+        $reason = $this->costBlockReason($reception, $actor);
         if ($reason) {
             throw ValidationException::withMessages(['labor_cost' => $reason]);
         }
     }
 
     /** Checklist for UI. */
-    public function checklist(Reception $reception): array
+    public function checklist(Reception $reception, ?User $actor = null): array
     {
+        $actor ??= Auth::user();
         $bench = $this->hasAcceptedBenchHandoff($reception);
         $report = $this->hasWorkReport($reception);
         $ret = $this->hasAcceptedReturnHandoff($reception);
         $pending = $this->hasPendingHandoff($reception);
         $atDesk = ($reception->custody ?? 'front_desk') === 'front_desk' && ! $pending;
+        $bypass = $this->actorCanBypass($actor);
 
         return [
             'assigned_confirmed' => $bench,
             'work_report' => $report,
             'return_confirmed' => $ret,
             'at_front_desk' => $atDesk,
-            'ready_for_cost' => $this->costBlockReason($reception) === null,
-            'ready_for_delivery' => $this->deliveryBlockReason($reception) === null,
-            'delivery_block' => $this->deliveryBlockReason($reception),
-            'cost_block' => $this->costBlockReason($reception),
+            'admin_bypass' => $bypass,
+            'ready_for_cost' => $this->costBlockReason($reception, $actor) === null,
+            'ready_for_delivery' => $this->deliveryBlockReason($reception, $actor) === null,
+            'delivery_block' => $this->deliveryBlockReason($reception, $actor),
+            'cost_block' => $this->costBlockReason($reception, $actor),
         ];
     }
 }

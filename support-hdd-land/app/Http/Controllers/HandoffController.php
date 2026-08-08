@@ -259,8 +259,12 @@ class HandoffController extends Controller
         $owns = $tech && (int) $reception->custody_technician_id === (int) $tech->id;
         abort_unless($owns || $user->isAdmin(), 403);
 
-        if (($reception->custody ?? '') !== 'with_technician') {
+        // Admin may log work directly at the desk without the handoff chain.
+        if (($reception->custody ?? '') !== 'with_technician' && ! $user->isAdmin()) {
             return back()->withErrors(['summary' => 'گزارش کار فقط وقتی دستگاه نزد تعمیرکار است ثبت می‌شود.']);
+        }
+        if ($reception->isDelivered()) {
+            return back()->withErrors(['summary' => 'قبض تحویل‌شده قفل است. ابتدا لغو تحویل بزنید.']);
         }
 
         $data = $request->validate([

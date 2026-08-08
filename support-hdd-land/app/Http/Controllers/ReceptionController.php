@@ -330,6 +330,25 @@ class ReceptionController extends Controller
         ]));
     }
 
+    public function history(Reception $reception)
+    {
+        $reception->load([
+            'customer', 'technician', 'custodyTechnician', 'faultType', 'creator',
+            'parts.part',
+            'statusLogs' => fn ($q) => $q->with('actor')->latest('id')->limit(100),
+            'handoffs' => fn ($q) => $q->with(['fromUser', 'toTechnician', 'toUser'])->latest('id')->limit(50),
+            'workReports' => fn ($q) => $q->with(['user', 'technician'])->latest('id')->limit(30),
+            'payments.receiver',
+        ]);
+
+        return view('receptions.history', [
+            'reception' => $reception,
+            'statusLogs' => $reception->statusLogs,
+            'workReports' => $reception->workReports,
+            'handoffs' => $reception->handoffs,
+        ]);
+    }
+
     public function requestCostApproval(Request $request, Reception $reception, CostApprovalService $approvals, ReceptionCustodyGate $gate)
     {
         $data = $request->validate([
@@ -354,7 +373,7 @@ class ReceptionController extends Controller
         return back()->with('success', $result['message'] ?? 'لینک تأیید هزینه ارسال شد.');
     }
 
-    public function updateStatus(Request $request, Reception $reception, SmsNotificationService $smsNotifications, ReceptionCustodyGate $gate, ReceptionSettlementService $settlement)
+    public function updateStatus(Request $request, Reception $reception, SmsNotificationService $smsNotifications, ReceptionCustodyGate $gate)
     {
         $statusKeys = array_keys(Reception::availableStatuses());
         $data = $request->validate([
@@ -385,35 +404,15 @@ class ReceptionController extends Controller
         }
 
         if ($data['status'] === 'delivered') {
-            $gate->assertCanDeliver($reception);
-            // Preview settlement after pending cost fields would apply
-            $preview = $reception->replicate();
-            $preview->labor_cost = $newLabor;
-            $preview->discount = (int) ($data['discount'] ?? $reception->discount);
-            $preview->total_amount = max(0,
-                (int) $preview->parts_cost
-                + (int) $preview->stages_cost
-                + (int) $preview->labor_cost
-                + (int) $preview->admission_fee
-                - (int) $preview->discount
-            );
-            $preview->paid_amount = (int) $reception->paid_amount;
-            $preview->cost_confirmed_at = $reception->cost_confirmed_at;
-            $mode = null;
-            if ($request->boolean('force_without_cost') && ! $preview->hasCostSet()) {
-                throw ValidationException::withMessages([
-                    'status' => 'برای تحویل بدون هزینه، از پنل «تسویه و تحویل» گزینه بخشش/بدون دریافت را با دلیل انتخاب کنید.',
-                ]);
-            }
-            if ($block = $settlement->deliverySettlementBlock($preview, $mode)) {
-                throw ValidationException::withMessages([
-                    'status' => $block.' از پنل «تسویه و تحویل» در سمت راست استفاده کنید.',
-                ]);
-            }
+            throw ValidationException::withMessages([
+                'status' => 'وضعیت «تحویل‌شده» فقط از پنل «تسویه و تحویل» بعد از ثبت تسویه و تأیید خروج کالا قابل اجراست.',
+            ]);
         }
 
-        // Soft assign of technician_id without handoff is blocked once custody workflow started.
-        if (! empty($data['technician_id'])
+        // Soft assign of technician_id without handoff is blocked once custody workflow started
+        // (main admin may manage repairs directly without the referral chain).
+        if (! $gate->actorCanBypass()
+            && ! empty($data['technician_id'])
             && (int) $data['technician_id'] !== (int) $reception->technician_id
             && ($reception->custody ?? 'front_desk') === 'front_desk'
             && ! $gate->hasAcceptedBenchHandoff($reception)) {
@@ -447,28 +446,10 @@ class ReceptionController extends Controller
             $reception->refresh();
         }
 
-        if ($data['status'] === 'delivered') {
-            if (! $reception->hasCostSet()) {
-                throw ValidationException::withMessages([
-                    'status' => 'قبل از تحویل، هزینه قبض را مشخص کنید یا از پنل تسویه گزینه بخشش را انتخاب کنید.',
-                ]);
-            }
-            if ($reception->remainingAmount() > 0) {
-                throw ValidationException::withMessages([
-                    'status' => 'مانده تسویه نشده است. از پنل «تسویه و تحویل» پرداخت، نسیه یا بخشش را ثبت کنید.',
-                ]);
-            }
-            $reception->forceFill([
-                'delivered_at' => $reception->delivered_at ?: now(),
-                'settlement_mode' => $reception->settlement_mode ?: ReceptionSettlementService::MODE_PAID,
-                'settled_at' => $reception->settled_at ?: now(),
-            ])->save();
-        }
-
         app(\App\Services\ReceptionLifecycleService::class)->log(
             $reception,
             $data['status'],
-            $data['status'] === 'delivered' ? 'delivery' : 'status_change',
+            'status_change',
             $fromStatus,
             null,
             $data['technician_notes'] ?? null
@@ -715,8 +696,11 @@ class ReceptionController extends Controller
             'note' => ['nullable', 'string', 'max:500'],
             'pickup_name' => ['nullable', 'string', 'max:120'],
             'pickup_phone' => ['nullable', 'string', 'max:20'],
+            'confirm_goods_exit' => ['accepted'],
+            'accessories_exit_note' => ['nullable', 'string', 'max:500'],
             'send_sms' => ['nullable', 'boolean'],
         ]);
+        $data['confirm_goods_exit'] = true;
 
         $result = $settlement->settleAndDeliver($reception, $data);
 

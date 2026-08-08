@@ -15,6 +15,7 @@
                 </div>
                 <div class="report-head-actions">
                     <span class="badge badge-{{ $reception->status }}">{{ $reception->statusLabel() }}</span>
+                    <a class="btn btn-secondary" href="{{ route('receptions.history', $reception) }}" target="_blank" rel="noopener">تاریخچه / گزارش</a>
                     <a class="btn btn-secondary" href="{{ route('receptions.print', $reception) }}" target="_blank">چاپ قبض</a>
                     @if($reception->isDelivered())
                         <form method="POST" action="{{ route('receptions.cancel-delivery', $reception) }}" style="display:inline;" data-confirm="تحویل لغو شود و دستگاه به چرخه تعمیر برگردد؟">
@@ -49,23 +50,59 @@
         </div>
 
         @if(auth()->user()->canAccess('receptions') || auth()->user()->canAccess('handoffs'))
+        @php $c = $custodyChecklist ?? []; $isAdmin = auth()->user()->isAdmin(); @endphp
         <div class="panel" style="margin-bottom:12px;">
-            <h3 style="margin-top:0;">ارجاع قبض — زنجیره تأیید اجباری</h3>
-            <p class="muted">پذیرش → ارجاع به تعمیرکار → تأیید تعمیرکار → گزارش کار → ارجاع بازگشت → تأیید منشی/حسابدار → اعلام هزینه / تحویل</p>
-
-            @php
-                $c = $custodyChecklist ?? [];
-            @endphp
-            <div class="accept-row accept-row-4" style="margin-bottom:10px;gap:8px;">
-                <div><span class="pill {{ !empty($c['assigned_confirmed']) ? 'pill-ok' : 'pill-off' }}">۱) تأیید دریافت تعمیرکار</span></div>
-                <div><span class="pill {{ !empty($c['work_report']) ? 'pill-ok' : 'pill-off' }}">۲) گزارش کار</span></div>
-                <div><span class="pill {{ !empty($c['return_confirmed']) ? 'pill-ok' : 'pill-off' }}">۳) تأیید بازگشت پذیرش</span></div>
-                <div><span class="pill {{ !empty($c['ready_for_delivery']) ? 'pill-ok' : 'pill-off' }}">۴) آماده تحویل</span></div>
-            </div>
-            @if(!empty($c['delivery_block']))
-                <div class="alert alert-error" style="margin-bottom:10px;">{{ $c['delivery_block'] }}</div>
-            @elseif(!empty($c['cost_block']))
-                <div class="alert alert-error" style="margin-bottom:10px;">{{ $c['cost_block'] }}</div>
+            @if($isAdmin)
+                <h3 style="margin-top:0;">مدیریت مستقیم تعمیر (بدون ارجاع اجباری)</h3>
+                <p class="muted">به‌عنوان مدیر اصلی می‌توانید تعمیر، گزارش کار، هزینه و وضعیت را مستقیم ثبت کنید. ارجاع برای بقیه کارمندان همچنان اختیاری/کارتابلی است.</p>
+                @unless($reception->isDelivered())
+                <form method="POST" action="{{ route('receptions.work-report', $reception) }}" style="margin-top:8px;">
+                    @csrf
+                    <div class="accept-row accept-row-2">
+                        <div style="grid-column:1/-1">
+                            <label>گزارش کار / شرح تعمیر</label>
+                            <input type="text" name="summary" required maxlength="500" placeholder="مثلاً: تعمیر PCB و تست نهایی توسط مدیر">
+                        </div>
+                        <div style="grid-column:1/-1">
+                            <label>جزئیات</label>
+                            <textarea name="details" rows="2" placeholder="اختیاری"></textarea>
+                        </div>
+                        <div>
+                            <label>وضعیت بعد از کار</label>
+                            <select name="result_status">
+                                <option value="repairing">در حال تعمیر</option>
+                                <option value="waiting_part">منتظر قطعه</option>
+                                <option value="ready" selected>آماده تحویل</option>
+                                <option value="unrepairable">غیرقابل تعمیر</option>
+                            </select>
+                        </div>
+                        <div>
+                            @include('partials.toggle', ['name' => 'needs_part', 'label' => 'نیاز به قطعه دارد', 'checked' => false])
+                        </div>
+                    </div>
+                    <div class="actions" style="margin-top:8px;">
+                        <button class="btn btn-primary" type="submit">ثبت گزارش و ادامه</button>
+                        <a class="btn btn-ghost" href="{{ route('receptions.history', $reception) }}" target="_blank" rel="noopener">مشاهده تاریخچه</a>
+                    </div>
+                </form>
+                @endunless
+                <details style="margin-top:12px;">
+                    <summary class="muted" style="cursor:pointer;">ارجاع اختیاری به تعمیرکار / کارتابل</summary>
+                    <div style="margin-top:8px;">
+            @else
+                <h3 style="margin-top:0;">ارجاع قبض — زنجیره تأیید</h3>
+                <p class="muted">پذیرش → ارجاع به تعمیرکار → تأیید تعمیرکار → گزارش کار → ارجاع بازگشت → تأیید منشی/حسابدار → اعلام هزینه / تحویل</p>
+                <div class="accept-row accept-row-4" style="margin-bottom:10px;gap:8px;">
+                    <div><span class="pill {{ !empty($c['assigned_confirmed']) ? 'pill-ok' : 'pill-off' }}">۱) تأیید دریافت تعمیرکار</span></div>
+                    <div><span class="pill {{ !empty($c['work_report']) ? 'pill-ok' : 'pill-off' }}">۲) گزارش کار</span></div>
+                    <div><span class="pill {{ !empty($c['return_confirmed']) ? 'pill-ok' : 'pill-off' }}">۳) تأیید بازگشت پذیرش</span></div>
+                    <div><span class="pill {{ !empty($c['ready_for_delivery']) ? 'pill-ok' : 'pill-off' }}">۴) آماده تحویل</span></div>
+                </div>
+                @if(!empty($c['delivery_block']))
+                    <div class="alert alert-error" style="margin-bottom:10px;">{{ $c['delivery_block'] }}</div>
+                @elseif(!empty($c['cost_block']))
+                    <div class="alert alert-error" style="margin-bottom:10px;">{{ $c['cost_block'] }}</div>
+                @endif
             @endif
 
             @if(!empty($pendingHandoff))
@@ -145,52 +182,18 @@
                         <p class="muted" style="margin:4px 0 0;">برای ارجاع بازگشت، اول گزارش کار را ثبت کنید.</p>
                     @endif
                 @endif
-            @elseif(auth()->user()->canAccess('receptions') && ($reception->custody ?? '') === 'with_technician')
+            @elseif(! $isAdmin && auth()->user()->canAccess('receptions') && ($reception->custody ?? '') === 'with_technician')
                 <p class="muted" style="margin-top:8px;">دستگاه نزد تعمیرکار است. بازگشت فقط با ارجاع خود تعمیرکار و تأیید شما در کارتابل ارجاع انجام می‌شود.</p>
             @endif
 
-            @if(($workReports ?? collect())->count())
-                <div class="table-wrap" style="margin-top:12px;">
-                    <h3 style="margin:0 0 6px;">گزارش‌های کار</h3>
-                    <table class="compact-table">
-                        <thead>
-                        <tr><th>زمان</th><th>تعمیرکار</th><th>خلاصه</th><th>قطعه</th></tr>
-                        </thead>
-                        <tbody>
-                        @foreach($workReports as $wr)
-                            <tr>
-                                <td>{{ jalali_like($wr->created_at) }}</td>
-                                <td>{{ $wr->technician?->name ?: $wr->user?->name }}</td>
-                                <td>{{ $wr->summary }}@if($wr->details)<div class="muted">{{ $wr->details }}</div>@endif</td>
-                                <td>{{ $wr->needs_part ? 'نیاز دارد' : '—' }}</td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
+            @if($isAdmin)
+                    </div>
+                </details>
             @endif
 
-            @if($reception->handoffs->count())
-                <div class="table-wrap" style="margin-top:12px;">
-                    <table class="compact-table">
-                        <thead>
-                        <tr><th>زمان</th><th>نوع</th><th>از</th><th>به</th><th>سریال</th><th>وضعیت</th></tr>
-                        </thead>
-                        <tbody>
-                        @foreach($reception->handoffs as $h)
-                            <tr>
-                                <td>{{ jalali_like($h->created_at) }}</td>
-                                <td>{{ $h->directionLabel() }}</td>
-                                <td>{{ $h->fromUser?->name }}</td>
-                                <td>{{ $h->toTechnician?->name ?: ($h->toUser?->name ?: 'پذیرش') }}</td>
-                                <td dir="ltr">{{ $h->serial_snapshot ?: '—' }}</td>
-                                <td>{{ $h->statusLabel() }}</td>
-                            </tr>
-                        @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @endif
+            <div class="actions" style="margin-top:10px;">
+                <a class="btn btn-ghost" href="{{ route('receptions.history', $reception) }}" target="_blank" rel="noopener">تاریخچه کامل در پنجره جدا</a>
+            </div>
         </div>
         @endif
 
@@ -226,29 +229,6 @@
         </div>
         @endif
 
-        <div class="panel">
-            <h3 style="margin-top:0;">تاریخچه وضعیت دستگاه</h3>
-            @forelse(($statusLogs ?? collect()) as $log)
-                <div class="rx-timeline-item">
-                    <div class="rx-timeline-dot"></div>
-                    <div>
-                        <strong>{{ $log->displayTitle() }}</strong>
-                        <div class="muted" style="font-size:11px;">
-                            {{ jalali_like($log->created_at) }}
-                            @if($log->actor) · {{ $log->actor->name }} @endif
-                            @if($log->fromStatusLabel()) · از {{ $log->fromStatusLabel() }} @endif
-                            → {{ $log->toStatusLabel() }}
-                        </div>
-                        @if($log->note)
-                            <div style="font-size:12px;margin-top:2px;">{{ $log->note }}</div>
-                        @endif
-                    </div>
-                </div>
-            @empty
-                <p class="lead" style="margin:0;">هنوز تاریخچه‌ای ثبت نشده. از این به بعد تغییرات اینجا دیده می‌شود.</p>
-            @endforelse
-        </div>
-
         <div class="panel status-sms-panel" id="status-sms-panel"
              data-previews='@json($smsPreviews)'
              data-current="{{ $reception->status }}"
@@ -269,6 +249,9 @@
 
                 <div class="status-chips" role="listbox" aria-label="وضعیت قبض">
                     @foreach($smsRules as $rule)
+                        @if($rule->status_key === 'delivered')
+                            @continue
+                        @endif
                         <button type="button"
                                 class="status-chip color-{{ $rule->color }} {{ $reception->status === $rule->status_key ? 'is-active' : '' }}"
                                 data-status-chip="{{ $rule->status_key }}"
@@ -278,6 +261,9 @@
                         </button>
                     @endforeach
                     @foreach($statuses as $key => $label)
+                        @if($key === 'delivered')
+                            @continue
+                        @endif
                         @if(!$smsRules->contains(fn ($r) => $r->status_key === $key))
                             <button type="button"
                                     class="status-chip color-slate {{ $reception->status === $key ? 'is-active' : '' }}"
@@ -289,6 +275,9 @@
                         @endif
                     @endforeach
                 </div>
+                <p class="muted" style="margin:8px 0 0;font-size:11.5px;">
+                    وضعیت «تحویل‌شده» از اینجا اجرا نمی‌شود — فقط بعد از ثبت تسویه و تأیید خروج کالا در پنل «تسویه و تحویل».
+                </p>
 
                 <div class="sms-preview-box">
                     <div class="sms-preview-top">
@@ -319,7 +308,7 @@
                         ])
                     </div>
                     <div>
-                        <div class="muted" style="font-size:11px;padding-top:18px;">تحویل فقط از پنل «تسویه و تحویل» یا وقتی مانده صفر باشد.</div>
+                        <div class="muted" style="font-size:11px;padding-top:18px;">تحویل فقط از پنل «تسویه و تحویل».</div>
                     </div>
                     <div>
                         <label>تعمیرکار</label>
@@ -627,14 +616,6 @@
     </div>
 
     <div class="stack rx-finance-rail">
-        <nav class="rx-mini-nav" aria-label="میانبر قبض">
-            <a href="#rx-finance" class="rx-mini-item tone-amber"><span>ف</span>فاکتور</a>
-            <a href="#rx-pay" class="rx-mini-item tone-teal"><span>پ</span>پرداخت</a>
-            <a href="#cost-stages-box" class="rx-mini-item tone-blue"><span>ه</span>هزینه</a>
-            <a href="#status-sms-panel" class="rx-mini-item tone-violet"><span>و</span>وضعیت</a>
-            <a href="#parts-box" class="rx-mini-item tone-green"><span>ق</span>قطعات</a>
-        </nav>
-
         <div class="panel" id="rx-finance">
             <h3>خلاصه مالی / فاکتور خروج</h3>
             @php
@@ -672,20 +653,53 @@
 
         @if($canDeliverNow)
         <div class="panel" id="rx-settle" style="border-color:#9ec3e8;background:linear-gradient(180deg,#f4f9ff,#fff);">
-            <h3 style="margin-top:0;">تسویه و تحویل</h3>
-            <p class="muted" style="margin:0 0 10px;">قبل از خروج دستگاه، حساب‌کتاب را مشخص کنید: دریافت کامل، نسیه (بدهکار مشتری)، یا بخشش مانده.</p>
+            <h3 style="margin-top:0;">تسویه و تحویل / خروج کالا</h3>
+            <p class="muted" style="margin:0 0 10px;">اینجا حساب‌کتاب، تأیید خروج دستگاه و قطعات، و تحویل نهایی با هم ثبت می‌شود.</p>
             <div class="rx-pay-due">
                 <span>مانده قابل تسویه</span>
                 <strong>{{ number_format($remain) }} تومان</strong>
             </div>
-            <form method="POST" action="{{ route('receptions.settle-deliver', $reception) }}" id="rx-settle-form" data-confirm="تسویه و تحویل ثبت شود؟">
+
+            <div style="margin-bottom:10px;padding:8px 10px;border:1px solid #c5ccd6;border-radius:3px;background:#fff;">
+                <strong style="font-size:12px;">خروج کالا از کارگاه</strong>
+                <div class="muted" style="font-size:11px;margin:4px 0 6px;">
+                    دستگاه:
+                    {{ $reception->product_name }} {{ $reception->brand }} {{ $reception->model }}
+                    @if($reception->serial_number)
+                        · سریال <span dir="ltr">{{ $reception->serial_number }}</span>
+                    @endif
+                </div>
+                @if($reception->parts->count())
+                    <div class="table-wrap">
+                        <table class="compact-table">
+                            <thead><tr><th>قطعه خروجی</th><th>تعداد</th><th>مبلغ</th></tr></thead>
+                            <tbody>
+                            @foreach($reception->parts as $rp)
+                                <tr>
+                                    <td>{{ $rp->part?->name ?: ($rp->part_name ?: '—') }}</td>
+                                    <td>{{ $rp->qty }}</td>
+                                    <td>{{ toman($rp->total_price) }}</td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <p class="muted" style="margin:0;font-size:11px;">قطعه انباری روی این قبض نیست — فقط خروج خود دستگاه تأیید می‌شود.</p>
+                @endif
+                @if($reception->accessories)
+                    <p class="muted" style="margin:6px 0 0;font-size:11px;">لوازم همراه پذیرش: {{ $reception->accessories }}</p>
+                @endif
+            </div>
+
+            <form method="POST" action="{{ route('receptions.settle-deliver', $reception) }}" id="rx-settle-form" data-confirm="تسویه، خروج کالا و تحویل ثبت شود؟">
                 @csrf
                 <div class="form-grid" style="grid-template-columns:1fr;">
                     <div>
                         <label>نحوه تسویه</label>
                         <select name="settlement_mode" id="rx-settle-mode" required>
                             @foreach($settlementModes as $key => $label)
-                                <option value="{{ $key }}" @selected(old('settlement_mode', $remain > 0 ? 'paid' : 'paid') === $key)>{{ $label }}</option>
+                                <option value="{{ $key }}" @selected(old('settlement_mode', 'paid') === $key)>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -710,8 +724,21 @@
                         <input type="text" name="pickup_phone" value="{{ old('pickup_phone', $reception->customer->phone) }}" dir="ltr" style="text-align:left;">
                     </div>
                     <div>
-                        <label>توضیح / دلیل (برای نسیه یا بخشش مهم است)</label>
+                        <label>یادداشت خروج / لوازم همراه</label>
+                        <input type="text" name="accessories_exit_note" value="{{ old('accessories_exit_note', $reception->accessories) }}" placeholder="مثلاً: کابل + جعبه همراه تحویل شد">
+                    </div>
+                    <div>
+                        <label>توضیح تسویه (برای نسیه یا بخشش مهم است)</label>
                         <input type="text" name="note" id="rx-settle-note" value="{{ old('note') }}" placeholder="شماره پیگیری / دلیل نسیه یا بخشش">
+                    </div>
+                    <div>
+                        @include('partials.toggle', [
+                            'name' => 'confirm_goods_exit',
+                            'label' => 'تأیید خروج دستگاه و قطعات همراه از کارگاه',
+                            'checked' => (bool) old('confirm_goods_exit'),
+                            'on' => 'تأیید',
+                            'off' => 'خیر',
+                        ])
                     </div>
                     <div>
                         @include('partials.toggle', [
@@ -724,10 +751,10 @@
                     </div>
                 </div>
                 <div class="actions" style="margin-top:8px;">
-                    <button class="btn btn-primary" type="submit" style="width:100%;">ثبت تسویه و تحویل</button>
+                    <button class="btn btn-primary" type="submit" style="width:100%;">ثبت تسویه + خروج کالا + تحویل</button>
                 </div>
                 <p class="muted" style="margin:8px 0 0;font-size:11px;" id="rx-settle-hint">
-                    دریافت کامل: مبلغ به صندوق/حساب مشتری می‌رود و قبض تحویل می‌شود.
+                    دریافت کامل: مبلغ به صندوق می‌رود، خروج کالا تأیید و قبض تحویل می‌شود.
                 </p>
             </form>
         </div>

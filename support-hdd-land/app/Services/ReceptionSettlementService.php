@@ -82,6 +82,8 @@ class ReceptionSettlementService
      *   note?:string,
      *   pickup_name?:string,
      *   pickup_phone?:string,
+     *   confirm_goods_exit?:bool,
+     *   accessories_exit_note?:string,
      *   send_sms?:bool
      * }  $data
      * @return array{ok:bool,message:string}
@@ -99,11 +101,18 @@ class ReceptionSettlementService
             ]);
         }
 
-        $note = trim((string) ($data['note'] ?? ''));
+        if (empty($data['confirm_goods_exit'])) {
+            throw ValidationException::withMessages([
+                'confirm_goods_exit' => 'قبل از تحویل، تأیید خروج دستگاه و قطعات همراه الزامی است.',
+            ]);
+        }
 
-        return DB::transaction(function () use ($reception, $data, $mode, $note) {
+        $note = trim((string) ($data['note'] ?? ''));
+        $accessoriesNote = trim((string) ($data['accessories_exit_note'] ?? ''));
+
+        return DB::transaction(function () use ($reception, $data, $mode, $note, $accessoriesNote) {
             $reception = Reception::query()->lockForUpdate()->findOrFail($reception->id);
-            $reception->loadMissing(['customer', 'custodyTechnician']);
+            $reception->loadMissing(['customer', 'custodyTechnician', 'parts.part']);
 
             if ($mode === self::MODE_PAID) {
                 $remaining = $reception->remainingAmount();
@@ -166,6 +175,12 @@ class ReceptionSettlementService
             }
 
             $from = $reception->status;
+            $partsExit = $reception->parts->map(fn ($rp) => [
+                'name' => $rp->part?->name ?: ($rp->part_name ?? 'قطعه'),
+                'qty' => (int) $rp->qty,
+                'total' => (int) $rp->total_price,
+            ])->values()->all();
+
             $reception->forceFill([
                 'status' => 'delivered',
                 'delivered_at' => now(),
@@ -178,23 +193,35 @@ class ReceptionSettlementService
             ])->save();
 
             $label = self::MODES[$mode] ?? $mode;
+            $exitSummary = count($partsExit)
+                ? ('خروج '.count($partsExit).' قلم قطعه انبار')
+                : 'خروج دستگاه بدون قطعه انبار';
+            if ($accessoriesNote !== '') {
+                $exitSummary .= ' — '.$accessoriesNote;
+            }
+
             $this->lifecycle->log(
                 $reception->fresh(),
                 'delivered',
                 'delivery',
                 $from,
-                'تحویل پس از تسویه — '.$label,
+                'تحویل پس از تسویه — '.$label.' | '.$exitSummary,
                 $note !== '' ? $note : $label,
                 [
                     'settlement_mode' => $mode,
                     'remaining_at_delivery' => $reception->remainingAmount(),
+                    'goods_exit_confirmed' => true,
+                    'parts_exit' => $partsExit,
+                    'accessories_exit_note' => $accessoriesNote !== '' ? $accessoriesNote : null,
+                    'device' => trim(($reception->product_name ?? '').' '.($reception->brand ?? '').' '.($reception->model ?? '')),
+                    'serial' => $reception->serial_number,
                 ]
             );
 
             $msg = match ($mode) {
-                self::MODE_CREDIT => 'تحویل با نسیه ثبت شد؛ مانده به بدهکاری مشتری منتقل شد.',
-                self::MODE_WAIVE => 'تحویل با بخشش مانده ثبت شد.',
-                default => 'تسویه و تحویل با موفقیت ثبت شد.',
+                self::MODE_CREDIT => 'تسویه نسیه، خروج کالا و تحویل ثبت شد؛ مانده به بدهکاری مشتری منتقل شد.',
+                self::MODE_WAIVE => 'بخشش مانده، خروج کالا و تحویل ثبت شد.',
+                default => 'تسویه، خروج کالا و تحویل با موفقیت ثبت شد.',
             };
 
             return ['ok' => true, 'message' => $msg];

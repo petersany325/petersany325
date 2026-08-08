@@ -215,6 +215,8 @@ class DeliveryController extends Controller
                     'note' => $data['note'] ?? null,
                     'pickup_name' => $data['pickup_name'],
                     'pickup_phone' => $phone,
+                    'confirm_goods_exit' => true,
+                    'accessories_exit_note' => $data['note'] ?? null,
                 ]);
                 if (! ($result['ok'] ?? false)) {
                     throw ValidationException::withMessages([

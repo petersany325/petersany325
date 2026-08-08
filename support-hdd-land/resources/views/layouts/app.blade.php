@@ -126,10 +126,6 @@
     {{-- نوار ابزار --}}
     <div class="app-toolbar">
         <div class="page-caption">@yield('page_title', 'میز کار')</div>
-        <div class="user-chip desktop-only">
-            <div class="avatar">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
-            <div>{{ auth()->user()->name }}</div>
-        </div>
         <button type="button" class="btn btn-ghost mobile-only staff-more-btn" data-staff-drawer-open>منوها</button>
     </div>
 
