@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
         $res = $installer->testDatabase($db['host'], $db['port'], $db['database'], $db['username'], $db['password']);
         if (! ($res['ok'] ?? false)) {
-            $error = $res['message'] ?? 'اتصال دیتابیس ناموفق.';
+            $error = $installer->friendlyDbError($res['message'] ?? 'اتصال دیتابیس ناموفق.');
             $state['db'] = $db;
             $_SESSION['install'] = $state;
         } else {
@@ -123,6 +123,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $license = $state['license'];
                 $appKey = $installer->generateAppKey();
                 try {
+                    // Re-test right before writing .env / migrate (catches wrong password early).
+                    $dbTest = $installer->testDatabase(
+                        (string) $db['host'],
+                        (string) $db['port'],
+                        (string) $db['database'],
+                        (string) $db['username'],
+                        (string) $db['password']
+                    );
+                    if (! ($dbTest['ok'] ?? false)) {
+                        throw new RuntimeException($installer->friendlyDbError($dbTest['message'] ?? 'اتصال دیتابیس ناموفق.'));
+                    }
+
                     $installer->writeEnv([
                         'APP_NAME' => $appName,
                         'APP_ENV' => 'production',
@@ -150,7 +162,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $result = $installer->runInstall($admin, $license);
                     if (! ($result['ok'] ?? false)) {
-                        $error = $result['message'] ?? 'نصب ناموفق بود.';
+                        $raw = $result['message'] ?? 'نصب ناموفق بود.';
+                        $error = $installer->friendlyDbError($raw);
+                        if ($error === 'خطای دیتابیس: '.$raw || str_starts_with($error, 'خطای دیتابیس:')) {
+                            // keep friendly only for DB; otherwise original
+                        }
+                        if (! str_contains($raw, '1045') && ! str_contains($raw, 'Access denied')
+                            && ! str_contains($raw, '1049') && ! str_contains($raw, '2002')) {
+                            $error = $raw;
+                        }
                         $state['details'] = $result['details'] ?? [];
                         $_SESSION['install'] = $state;
                     } else {
@@ -303,6 +323,7 @@ $reqs = $installer->checkRequirements();
         <?php elseif ($step === 4): ?>
             <h2>اطلاعات سایت و مدیر</h2>
             <p>اطلاعات تعمیرگاه جدید را وارد کنید. دادهٔ دمو ساخته نمی‌شود.</p>
+            <p style="margin-bottom:12px;"><a href="?step=3">← برگشت به تنظیم دیتابیس</a></p>
             <form method="post">
                 <input type="hidden" name="step" value="4">
                 <input type="hidden" name="action" value="install">

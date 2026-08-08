@@ -188,17 +188,33 @@ class WebInstaller
         $path = $this->basePath.'/.env';
         $lines = [];
         foreach ($values as $key => $value) {
-            $v = (string) $value;
-            if ($v === '' || preg_match('/\\s|#|"|\'/', $v)) {
-                $v = '"'.str_replace(['\\', '"'], ['\\\\', '\\"'], $v).'"';
-            }
-            $lines[] = $key.'='.$v;
+            // Always quote: passwords often contain # $ ; " and break unquoted .env parsing.
+            $v = str_replace(['\\', '"', '$'], ['\\\\', '\\"', '\\$'], (string) $value);
+            $lines[] = $key.'="'.$v.'"';
         }
         $content = implode("\n", $lines)."\n";
         if (file_put_contents($path, $content) === false) {
             throw new \RuntimeException('نوشتن فایل .env ممکن نشد. دسترسی پوشه را بررسی کنید.');
         }
         @chmod($path, 0600);
+    }
+
+    public function friendlyDbError(string $message): string
+    {
+        if (str_contains($message, '1045') || stripos($message, 'Access denied') !== false) {
+            return 'دسترسی دیتابیس رد شد (Access denied). '
+                .'در cPanel → MySQL Databases چک کنید: ۱) نام دیتابیس ۲) نام کاربر ۳) رمز درست باشد '
+                .'۴) کاربر به همان دیتابیس با ALL PRIVILEGES وصل شده باشد. '
+                .'هاست را هم یک‌بار 127.0.0.1 و یک‌بار localhost امتحان کنید.';
+        }
+        if (str_contains($message, '1049') || stripos($message, 'Unknown database') !== false) {
+            return 'نام دیتابیس یافت نشد. ابتدا دیتابیس را در cPanel بسازید.';
+        }
+        if (str_contains($message, '2002') || stripos($message, 'Connection refused') !== false) {
+            return 'اتصال به MySQL برقرار نشد. مقدار هاست را 127.0.0.1 یا localhost بگذارید.';
+        }
+
+        return 'خطای دیتابیس: '.$message;
     }
 
     /**
