@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->web(prepend: [
             \App\Http\Middleware\ForceCanonicalUrl::class,
+            \App\Http\Middleware\EnsureLicensed::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

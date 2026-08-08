@@ -30,10 +30,18 @@ use App\Http\Controllers\StaffSmsTemplateController;
 use App\Http\Controllers\Portal\AuthController as PortalAuthController;
 use App\Http\Controllers\Portal\CartableController as PortalCartableController;
 use App\Http\Controllers\Portal\MessageController as PortalMessageController;
+use App\Http\Controllers\LicenseApiController;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsurePortalCustomer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/license/activate', [LicenseApiController::class, 'activate'])
+    ->middleware('throttle:30,1')
+    ->name('license.activate');
+Route::post('/license/verify', [LicenseApiController::class, 'verify'])
+    ->middleware('throttle:60,1')
+    ->name('license.verify');
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -318,6 +326,11 @@ Route::middleware('auth')->group(function () {
         Route::get('system-tools/backups/{file}', [SystemToolsController::class, 'downloadBackup'])
             ->where('file', '[A-Za-z0-9._-]+')
             ->name('system-tools.backups.download');
+    });
+
+    Route::middleware(EnsurePermission::class.':system.tools')->group(function () {
+        Route::get('licenses', [LicenseApiController::class, 'index'])->name('licenses.index');
+        Route::post('licenses', [LicenseApiController::class, 'issue'])->name('licenses.issue');
     });
 
     Route::middleware(EnsurePermission::class.':receptions')->prefix('trash')->name('trash.')->group(function () {

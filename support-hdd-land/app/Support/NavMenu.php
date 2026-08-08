@@ -217,6 +217,7 @@ class NavMenu
                 'hint' => 'کش، تعمیر و بازسازی دیتابیس',
                 'children' => [
                     ['label' => 'نگهداری و بکاپ', 'route' => 'system-tools.index', 'match' => 'system-tools.*', 'hint' => 'کش، تعمیر، بکاپ و ریستور', 'mark' => 'ن'],
+                    ['label' => 'لایسنس نصب مشتریان', 'route' => 'licenses.index', 'match' => 'licenses.*', 'hint' => 'صدور سریال نصب', 'mark' => 'ل'],
                 ],
             ],
             [
