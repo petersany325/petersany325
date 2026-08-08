@@ -328,9 +328,14 @@ Route::middleware('auth')->group(function () {
             ->name('system-tools.backups.download');
     });
 
-    Route::middleware(EnsurePermission::class.':system.tools')->group(function () {
-        Route::get('licenses', [LicenseApiController::class, 'index'])->name('licenses.index');
-        Route::post('licenses', [LicenseApiController::class, 'issue'])->name('licenses.issue');
+    Route::middleware(EnsurePermission::class.':system.tools')->prefix('licenses')->name('licenses.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');
+        Route::get('/online', [\App\Http\Controllers\LicenseAdminController::class, 'online'])->name('online');
+        Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
+        Route::post('/{license}/sms', [\App\Http\Controllers\LicenseAdminController::class, 'sendSms'])->name('sms');
+        Route::post('/{license}/revoke', [\App\Http\Controllers\LicenseAdminController::class, 'revoke'])->name('revoke');
+        Route::post('/{license}/unbind', [\App\Http\Controllers\LicenseAdminController::class, 'unbind'])->name('unbind');
+        Route::post('/{license}/extend', [\App\Http\Controllers\LicenseAdminController::class, 'extend'])->name('extend');
     });
 
     Route::middleware(EnsurePermission::class.':receptions')->prefix('trash')->name('trash.')->group(function () {

@@ -10,15 +10,6 @@ use Illuminate\Http\Request;
  */
 class LicenseApiController extends Controller
 {
-    public function index()
-    {
-        abort_unless(auth()->user()?->isAdmin(), 403);
-
-        $licenses = ProductLicense::query()->latest('id')->paginate(30);
-
-        return view('licenses.index', compact('licenses'));
-    }
-
     public function activate(Request $request)
     {
         $data = $request->validate([
@@ -67,6 +58,9 @@ class LicenseApiController extends Controller
             'token' => $token,
             'activated_at' => $license->activated_at ?: now(),
             'last_check_at' => now(),
+            'last_check_ip' => $request->ip(),
+            'last_check_version' => $data['version'] ?? null,
+            'check_count' => max(1, (int) $license->check_count),
             'meta' => array_merge($license->meta ?? [], [
                 'version' => $data['version'] ?? null,
                 'activated_ip' => $request->ip(),
@@ -88,6 +82,7 @@ class LicenseApiController extends Controller
             'license_key' => ['required', 'string', 'max:64'],
             'domain' => ['required', 'string', 'max:190'],
             'token' => ['required', 'string', 'max:128'],
+            'version' => ['nullable', 'string', 'max:30'],
         ]);
 
         $key = ProductLicense::normalizeKey($data['license_key']);
@@ -106,38 +101,17 @@ class LicenseApiController extends Controller
             return response()->json(['ok' => false, 'message' => 'اعتبار لایسنس گذشته است.'], 423);
         }
 
-        $license->forceFill(['last_check_at' => now()])->save();
+        $license->forceFill([
+            'last_check_at' => now(),
+            'check_count' => (int) $license->check_count + 1,
+            'last_check_ip' => $request->ip(),
+            'last_check_version' => (string) ($request->input('version') ?: ($license->meta['version'] ?? null)),
+        ])->save();
 
-        return response()->json(['ok' => true, 'message' => 'معتبر']);
-    }
-
-    /** Admin helper: issue a new unused key. */
-    public function issue(Request $request)
-    {
-        abort_unless($request->user()?->isAdmin(), 403);
-
-        $data = $request->validate([
-            'customer_name' => ['nullable', 'string', 'max:120'],
-            'customer_phone' => ['nullable', 'string', 'max:30'],
-            'expires_at' => ['nullable', 'date'],
+        return response()->json([
+            'ok' => true,
+            'message' => 'معتبر',
+            'expires_at' => optional($license->expires_at)?->toDateString(),
         ]);
-
-        $key = strtoupper(
-            substr(bin2hex(random_bytes(2)), 0, 4).'-'.
-            substr(bin2hex(random_bytes(2)), 0, 4).'-'.
-            substr(bin2hex(random_bytes(2)), 0, 4).'-'.
-            substr(bin2hex(random_bytes(2)), 0, 4)
-        );
-
-        $row = ProductLicense::query()->create([
-            'license_key' => $key,
-            'customer_name' => $data['customer_name'] ?? null,
-            'customer_phone' => $data['customer_phone'] ?? null,
-            'product' => 'hddland-repair',
-            'status' => 'unused',
-            'expires_at' => $data['expires_at'] ?? null,
-        ]);
-
-        return back()->with('success', 'سریال صادر شد: '.$row->license_key);
     }
 }

@@ -208,6 +208,20 @@ class NavMenu
                 ],
             ],
             [
+                'key' => 'licenses',
+                'label' => 'لایسنس‌ها',
+                'permission' => 'system.tools',
+                'route' => 'licenses.index',
+                'match' => 'licenses.*',
+                'mark' => 'ل',
+                'hint' => 'ساخت سریال و گزارش آنلاین نصب مشتریان',
+                'admin_only' => true,
+                'children' => [
+                    ['label' => 'مرکز لایسنس', 'route' => 'licenses.index', 'match' => 'licenses.index|licenses.issue|licenses.sms|licenses.revoke|licenses.unbind|licenses.extend', 'hint' => 'ساخت، ارسال SMS، باطل‌سازی', 'mark' => 'ل'],
+                    ['label' => 'گزارش آنلاین', 'route' => 'licenses.online', 'match' => 'licenses.online', 'hint' => 'نصب‌های آنلاین / آفلاین', 'mark' => 'آ'],
+                ],
+            ],
+            [
                 'key' => 'system_tools',
                 'label' => 'ابزارهای سیستم',
                 'permission' => 'system.tools',
@@ -217,7 +231,6 @@ class NavMenu
                 'hint' => 'کش، تعمیر و بازسازی دیتابیس',
                 'children' => [
                     ['label' => 'نگهداری و بکاپ', 'route' => 'system-tools.index', 'match' => 'system-tools.*', 'hint' => 'کش، تعمیر، بکاپ و ریستور', 'mark' => 'ن'],
-                    ['label' => 'لایسنس نصب مشتریان', 'route' => 'licenses.index', 'match' => 'licenses.*', 'hint' => 'صدور سریال نصب', 'mark' => 'ل'],
                 ],
             ],
             [
@@ -239,6 +252,9 @@ class NavMenu
 
         $out = [];
         foreach ($groups as $group) {
+            if (! empty($group['admin_only']) && ! $user->isAdmin()) {
+                continue;
+            }
             if (! empty($group['any_of'])) {
                 $allowed = collect($group['any_of'])->contains(fn ($p) => $user->canAccess($p));
                 if (! $allowed) {
@@ -318,6 +334,7 @@ class NavMenu
             'accounting' => 'teal',
             'reports' => 'green',
             'system_tools' => 'teal',
+            'licenses' => 'violet',
             'settings' => 'slate',
             default => 'slate',
         };
