@@ -286,7 +286,21 @@ $reqs = $installer->checkRequirements();
 
         <?php elseif ($step === 3): ?>
             <h2>اطلاعات دیتابیس</h2>
-            <p>دیتابیس MySQL را از قبل در cPanel بسازید و مشخصات را وارد کنید.</p>
+            <div class="alert err" style="background:#fff7ed;color:#9a3412;border-color:#fdba74;">
+                مهم: در هاست اشتراکی این ویزارد <strong>دیتابیس نمی‌سازد</strong>.
+                اول در cPanel بساز، بعد اینجا مشخصات را وارد کن.
+            </div>
+            <p style="margin-bottom:10px;">
+                مسیر cPanel:
+                <strong>MySQL® Databases</strong>
+            </p>
+            <ol style="margin:0 0 14px;padding-right:18px;color:#445;font-size:13px;line-height:1.8;">
+                <li>یک <strong>Database</strong> بساز (مثلاً <code>Ghabz</code>)</li>
+                <li>یک <strong>User</strong> بساز و رمز قوی بده</li>
+                <li>از بخش <strong>Add User To Database</strong> همان کاربر را به همان دیتابیس وصل کن</li>
+                <li>دسترسی را <strong>ALL PRIVILEGES</strong> بگذار و Make Changes بزن</li>
+                <li>نام‌های کامل را از cPanel کپی کن (معمولاً با پیشوند مثل <code>fyhxqvni_</code>)</li>
+            </ol>
             <?php $db = $state['db'] ?? []; ?>
             <form method="post">
                 <input type="hidden" name="step" value="3">
@@ -295,21 +309,22 @@ $reqs = $installer->checkRequirements();
                     <div>
                         <label>هاست دیتابیس</label>
                         <input name="db_host" value="<?= h($db['host'] ?? '127.0.0.1') ?>" required dir="ltr" style="text-align:left;">
+                        <div style="font-size:11px;color:#778;margin:-6px 0 10px;">اگر نشد، <code>localhost</code> بگذار</div>
                     </div>
                     <div>
                         <label>پورت</label>
                         <input name="db_port" value="<?= h($db['port'] ?? '3306') ?>" required dir="ltr" style="text-align:left;">
                     </div>
                 </div>
-                <label>نام دیتابیس</label>
-                <input name="db_database" value="<?= h($db['database'] ?? '') ?>" required dir="ltr" style="text-align:left;">
+                <label>نام کامل دیتابیس (از cPanel کپی شود)</label>
+                <input name="db_database" value="<?= h($db['database'] ?? '') ?>" required dir="ltr" style="text-align:left;" placeholder="مثلاً fyhxqvni_Ghabz">
                 <div class="grid">
                     <div>
-                        <label>نام کاربری</label>
-                        <input name="db_username" value="<?= h($db['username'] ?? '') ?>" required dir="ltr" style="text-align:left;">
+                        <label>نام کامل کاربر MySQL</label>
+                        <input name="db_username" value="<?= h($db['username'] ?? '') ?>" required dir="ltr" style="text-align:left;" placeholder="مثلاً fyhxqvni_Ghabz_user">
                     </div>
                     <div>
-                        <label>رمز عبور</label>
+                        <label>رمز عبور همان کاربر</label>
                         <input type="password" name="db_password" value="<?= h($db['password'] ?? '') ?>" dir="ltr" style="text-align:left;">
                     </div>
                 </div>
