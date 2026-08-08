@@ -680,8 +680,9 @@ class ReceptionController extends Controller
                 $gate = app(ReceptionCustodyGate::class);
                 $fresh = $reception->fresh(['custodyTechnician']);
                 $block = $gate->deliveryBlockReason($fresh);
-                if ($block) {
-                    // پرداخت ثبت می‌شود؛ تحویل فقط وقتی گیت‌ها آزاد باشند
+                // Never auto-deliver when exit OTP is required — must go through settle panel.
+                if ($block || $fresh->needsExitOtp()) {
+                    // پرداخت ثبت می‌شود؛ تحویل فقط وقتی گیت‌ها / کد خروج آزاد باشند
                 } elseif ($data['type'] === 'final' || $request->boolean('auto_deliver')) {
                     $from = $reception->status;
                     $reception->update([
@@ -767,6 +768,65 @@ class ReceptionController extends Controller
         return back()->with('success', 'پرداخت حذف شد و مانده قبض به‌روز شد.');
     }
 
+    public function updateExitOtpRequired(Request $request, Reception $reception, \App\Services\DeliveryExitOtpService $exitOtp)
+    {
+        if ($reception->isDelivered()) {
+            return back()->with('error', 'قبض تحویل‌شده قابل تغییر نیست.');
+        }
+
+        $data = $request->validate([
+            'exit_otp_required' => ['nullable', 'boolean'],
+        ]);
+
+        $exitOtp->setRequired($reception, $request->boolean('exit_otp_required'));
+
+        return back()->with(
+            'success',
+            $request->boolean('exit_otp_required')
+                ? 'کد تأیید خروج برای این قبض فعال شد.'
+                : 'کد تأیید خروج برای این قبض غیرفعال شد.'
+        );
+    }
+
+    public function sendExitOtp(Request $request, Reception $reception, \App\Services\DeliveryExitOtpService $exitOtp)
+    {
+        $data = $request->validate([
+            'pickup_phone' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        if ($request->filled('pickup_phone')) {
+            $reception->forceFill([
+                'pickup_phone' => $this->normalizePhone((string) $data['pickup_phone']),
+            ])->save();
+        }
+
+        $result = $exitOtp->send($reception->fresh(['customer']), $reception->pickup_phone);
+
+        return back()->with($result['ok'] ? 'success' : 'error', $result['message'] ?? 'ارسال کد ناموفق بود.');
+    }
+
+    public function verifyExitOtp(Request $request, Reception $reception, \App\Services\DeliveryExitOtpService $exitOtp)
+    {
+        $data = $request->validate([
+            'exit_otp_code' => ['required', 'string', 'max:12'],
+        ]);
+
+        $result = $exitOtp->verify($reception, (string) $data['exit_otp_code']);
+
+        return back()->with($result['ok'] ? 'success' : 'error', $result['message'] ?? 'تأیید کد ناموفق بود.');
+    }
+
+    public function bypassExitOtp(Request $request, Reception $reception, \App\Services\DeliveryExitOtpService $exitOtp)
+    {
+        $data = $request->validate([
+            'bypass_reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $result = $exitOtp->bypass($reception, (string) $data['bypass_reason']);
+
+        return back()->with($result['ok'] ? 'success' : 'error', $result['message'] ?? 'عبور ناموفق بود.');
+    }
+
     public function settleAndDeliver(Request $request, Reception $reception, ReceptionSettlementService $settlement, SmsNotificationService $smsNotifications)
     {
         if ($reception->isDelivered()) {
@@ -786,7 +846,7 @@ class ReceptionController extends Controller
         ]);
         $data['confirm_goods_exit'] = true;
 
-        $result = $settlement->settleAndDeliver($reception, $data);
+        $result = $settlement->settleAndDeliver($reception->fresh(['customer', 'parts.part', 'custodyTechnician']), $data);
 
         if (! ($result['ok'] ?? false)) {
             return back()->with('error', $result['message'] ?? 'ثبت تسویه ناموفق بود.');

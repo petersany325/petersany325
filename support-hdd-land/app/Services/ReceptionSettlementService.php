@@ -30,6 +30,7 @@ class ReceptionSettlementService
         private readonly ReceptionCustodyGate $gate,
         private readonly AccountingService $accounting,
         private readonly ReceptionLifecycleService $lifecycle,
+        private readonly DeliveryExitOtpService $exitOtp,
     ) {}
 
     /** Persian block reason, or null if delivery settlement is OK. */
@@ -165,6 +166,9 @@ class ReceptionSettlementService
             $reception->refresh();
             $this->assertCanDeliver($reception, $mode === self::MODE_PAID ? null : $mode);
 
+            // Optional customer exit OTP — after settlement math, before marking delivered.
+            $this->exitOtp->assertReadyForDelivery($reception);
+
             if (! $reception->hasCostSet()) {
                 $reception->confirmCost();
             }
@@ -211,6 +215,9 @@ class ReceptionSettlementService
                     'settlement_mode' => $mode,
                     'remaining_at_delivery' => $reception->remainingAmount(),
                     'goods_exit_confirmed' => true,
+                    'exit_otp_required' => (bool) $reception->exit_otp_required,
+                    'exit_otp_verified' => (bool) $reception->exit_otp_verified_at,
+                    'exit_otp_bypass' => $reception->exit_otp_bypass_reason,
                     'parts_exit' => $partsExit,
                     'accessories_exit_note' => $accessoriesNote !== '' ? $accessoriesNote : null,
                     'device' => trim(($reception->product_name ?? '').' '.($reception->brand ?? '').' '.($reception->model ?? '')),

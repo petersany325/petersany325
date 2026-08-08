@@ -692,7 +692,85 @@
                 @endif
             </div>
 
-            <form method="POST" action="{{ route('receptions.settle-deliver', $reception) }}" id="rx-settle-form" data-confirm="تسویه، خروج کالا و تحویل ثبت شود؟">
+            @php
+                $exitOtpRequired = (bool) old('exit_otp_required', $reception->exit_otp_required);
+                $exitOtpVerified = (bool) $reception->exit_otp_verified_at;
+                $exitOtpReady = ! $exitOtpRequired || $exitOtpVerified;
+            @endphp
+
+            <div style="margin-bottom:10px;padding:10px;border:1px solid #c5d4e8;border-radius:3px;background:#fff;" id="rx-exit-otp">
+                <strong style="font-size:12.5px;">کد تأیید خروج مشتری (اختیاری)</strong>
+                <p class="muted" style="margin:4px 0 8px;font-size:11px;">
+                    برای بعضی مشتری‌ها لازم نیست. اگر فعال باشد، قبل از خروج باید کد پیامکی مشتری تأیید شود.
+                    حسابداری جداگانه است؛ این فقط قفل هویت تحویل‌گیرنده است.
+                </p>
+
+                <form method="POST" action="{{ route('receptions.exit-otp.required', $reception) }}" style="margin-bottom:8px;">
+                    @csrf
+                    @include('partials.toggle', [
+                        'name' => 'exit_otp_required',
+                        'label' => 'برای این قبض کد تأیید خروج لازم باشد',
+                        'checked' => $exitOtpRequired,
+                        'on' => 'لازم',
+                        'off' => 'لازم نیست',
+                    ])
+                    <div class="actions" style="margin-top:6px;">
+                        <button class="btn btn-secondary" type="submit">ذخیره تنظیم کد خروج</button>
+                    </div>
+                </form>
+
+                @if($exitOtpRequired)
+                    @if($exitOtpVerified)
+                        <div class="pill pill-ok" style="display:inline-block;">
+                            کد خروج تأیید شد
+                            @if($reception->exit_otp_bypass_reason)
+                                (عبور مدیر: {{ $reception->exit_otp_bypass_reason }})
+                            @endif
+                            — {{ jalali_like($reception->exit_otp_verified_at) }}
+                        </div>
+                    @else
+                        <div style="padding:8px;border:1px dashed #c8922a;border-radius:3px;background:#fffaf0;margin-top:6px;">
+                            <p class="muted" style="margin:0 0 8px;font-size:11.5px;">
+                                هنوز کد تأیید نشده. ابتدا کد را به موبایل بفرستید، سپس عدد را وارد کنید.
+                            </p>
+                            <form method="POST" action="{{ route('receptions.exit-otp.send', $reception) }}" class="accept-row accept-row-2" style="align-items:end;margin-bottom:8px;">
+                                @csrf
+                                <div>
+                                    <label>موبایل دریافت‌کننده کد</label>
+                                    <input type="text" name="pickup_phone" value="{{ old('pickup_phone', $reception->pickup_phone ?: $reception->customer->phone) }}" dir="ltr" style="text-align:left;" placeholder="09xxxxxxxxx">
+                                </div>
+                                <div class="actions" style="margin:0;">
+                                    <button class="btn btn-primary" type="submit">ارسال کد تأیید</button>
+                                </div>
+                            </form>
+                            <form method="POST" action="{{ route('receptions.exit-otp.verify', $reception) }}" class="accept-row accept-row-2" style="align-items:end;margin-bottom:8px;">
+                                @csrf
+                                <div>
+                                    <label>کد دریافتی مشتری</label>
+                                    <input type="text" name="exit_otp_code" inputmode="numeric" maxlength="8" autocomplete="one-time-code" dir="ltr" style="text-align:left;letter-spacing:.2em;font-weight:700;" placeholder="مثلاً 48291" required>
+                                </div>
+                                <div class="actions" style="margin:0;">
+                                    <button class="btn btn-secondary" type="submit">تأیید کد</button>
+                                </div>
+                            </form>
+                            @if(auth()->user()?->isAdmin())
+                                <form method="POST" action="{{ route('receptions.exit-otp.bypass', $reception) }}" data-confirm="بدون کد مشتری عبور داده شود؟">
+                                    @csrf
+                                    <div>
+                                        <label>عبور مدیر (اگر SMS نرسید)</label>
+                                        <input type="text" name="bypass_reason" required placeholder="دلیل عبور بدون کد">
+                                    </div>
+                                    <div class="actions" style="margin-top:6px;">
+                                        <button class="btn btn-ghost" type="submit">عبور مدیر بدون کد</button>
+                                    </div>
+                                </form>
+                            @endif
+                        </div>
+                    @endif
+                @endif
+            </div>
+
+            <form method="POST" action="{{ route('receptions.settle-deliver', $reception) }}" id="rx-settle-form" data-confirm="تسویه، خروج کالا و تحویل ثبت شود؟" @if(! $exitOtpReady) data-exit-otp-blocked="1" @endif>
                 @csrf
                 <div class="form-grid" style="grid-template-columns:1fr;">
                     <div>
@@ -721,7 +799,7 @@
                     </div>
                     <div>
                         <label>موبایل تحویل‌گیرنده</label>
-                        <input type="text" name="pickup_phone" value="{{ old('pickup_phone', $reception->customer->phone) }}" dir="ltr" style="text-align:left;">
+                        <input type="text" name="pickup_phone" value="{{ old('pickup_phone', $reception->pickup_phone ?: $reception->customer->phone) }}" dir="ltr" style="text-align:left;">
                     </div>
                     <div>
                         <label>یادداشت خروج / لوازم همراه</label>
@@ -751,10 +829,19 @@
                     </div>
                 </div>
                 <div class="actions" style="margin-top:8px;">
-                    <button class="btn btn-primary" type="submit" style="width:100%;">ثبت تسویه + خروج کالا + تحویل</button>
+                    <button class="btn btn-primary" type="submit" style="width:100%;" @disabled(! $exitOtpReady)>
+                        @if($exitOtpReady)
+                            ثبت تسویه + خروج کالا + تحویل
+                        @else
+                            ابتدا کد تأیید خروج را بگیرید
+                        @endif
+                    </button>
                 </div>
                 <p class="muted" style="margin:8px 0 0;font-size:11px;" id="rx-settle-hint">
                     دریافت کامل: مبلغ به صندوق می‌رود، خروج کالا تأیید و قبض تحویل می‌شود.
+                    @if(! $exitOtpReady)
+                        · برای این قبض کد تأیید مشتری هنوز ثبت نشده است.
+                    @endif
                 </p>
             </form>
         </div>

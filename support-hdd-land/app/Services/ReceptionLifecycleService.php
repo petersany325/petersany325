@@ -63,10 +63,14 @@ class ReceptionLifecycleService
             'settlement_mode' => null,
             'settled_at' => null,
             'settlement_note' => null,
+            'exit_otp_verified_at' => null,
+            'exit_otp_bypass_reason' => null,
             'custody' => 'front_desk',
             'delivery_cancelled_at' => now(),
             'delivery_cancel_count' => (int) $reception->delivery_cancel_count + 1,
         ])->save();
+
+        app(DeliveryExitOtpService::class)->clearForCancel($reception->fresh());
 
         $this->log(
             $reception,

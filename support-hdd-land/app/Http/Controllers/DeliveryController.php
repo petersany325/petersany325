@@ -186,6 +186,14 @@ class DeliveryController extends Controller
             }
         }
 
+        $otpBlocked = $receptions->filter(fn (Reception $r) => $r->status !== 'delivered' && $r->needsExitOtp());
+        if ($otpBlocked->isNotEmpty()) {
+            $list = $otpBlocked->pluck('ticket_no')->implode('، ');
+            throw ValidationException::withMessages([
+                'ticket_ids' => "این قبض‌ها کد تأیید خروج مشتری لازم دارند و هنوز تأیید نشده‌اند: {$list}. ابتدا در صفحه هر قبض کد را تأیید کنید، یا کد خروج را غیرفعال کنید.",
+            ]);
+        }
+
         $batch = DB::transaction(function () use ($data, $phone, $receptions, $settlement, $mode) {
             $batch = DeliveryBatch::create([
                 'batch_code' => DeliveryBatch::nextCode(),

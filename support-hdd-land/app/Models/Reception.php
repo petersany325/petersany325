@@ -19,6 +19,7 @@ class Reception extends Model
         'deposit', 'pos_amount', 'admission_fee', 'estimated_cost', 'payment_method',
         'labor_cost', 'parts_cost', 'stages_cost', 'discount', 'discount_reason', 'total_amount', 'paid_amount',
         'settlement_mode', 'settled_at', 'settlement_note',
+        'exit_otp_required', 'exit_otp_verified_at', 'exit_otp_bypass_reason',
         'cost_confirmed_at',
         'cost_approval_status', 'customer_cost_approved_at', 'customer_cost_approved_amount',
         'estimated_delivery_at', 'next_visit_at', 'received_at', 'delivered_at',
@@ -32,6 +33,8 @@ class Reception extends Model
             'delivered_at' => 'datetime',
             'delivery_cancelled_at' => 'datetime',
             'settled_at' => 'datetime',
+            'exit_otp_verified_at' => 'datetime',
+            'exit_otp_required' => 'boolean',
             'cost_confirmed_at' => 'datetime',
             'customer_cost_approved_at' => 'datetime',
             'estimated_delivery_at' => 'date',
@@ -128,6 +131,16 @@ class Reception extends Model
     public function statusLogs(): HasMany
     {
         return $this->hasMany(ReceptionStatusLog::class)->latest('id');
+    }
+
+    public function exitOtps(): HasMany
+    {
+        return $this->hasMany(ReceptionExitOtp::class)->latest('id');
+    }
+
+    public function needsExitOtp(): bool
+    {
+        return (bool) $this->exit_otp_required && ! $this->exit_otp_verified_at;
     }
 
     public function costStages(): HasMany

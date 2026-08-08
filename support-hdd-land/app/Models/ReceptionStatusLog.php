@@ -24,6 +24,7 @@ class ReceptionStatusLog extends Model
         'delivery' => 'تحویل به مشتری',
         'delivery_cancel' => 'لغو تحویل',
         'payment_auto_deliver' => 'تحویل خودکار پس از پرداخت',
+        'exit_otp' => 'کد تأیید خروج',
         'cost_stage' => 'مرحله هزینه',
         'system' => 'سیستم',
     ];

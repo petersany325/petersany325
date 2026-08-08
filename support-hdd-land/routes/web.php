@@ -134,6 +134,10 @@ Route::middleware('auth')->group(function () {
         Route::delete('receptions/{reception}/payments/{payment}', [ReceptionController::class, 'destroyPayment'])->name('receptions.payments.destroy');
         Route::post('receptions/{reception}/settle-deliver', [ReceptionController::class, 'settleAndDeliver'])->name('receptions.settle-deliver');
         Route::post('receptions/{reception}/cancel-delivery', [ReceptionController::class, 'cancelDelivery'])->name('receptions.cancel-delivery');
+        Route::post('receptions/{reception}/exit-otp/required', [ReceptionController::class, 'updateExitOtpRequired'])->name('receptions.exit-otp.required');
+        Route::post('receptions/{reception}/exit-otp/send', [ReceptionController::class, 'sendExitOtp'])->name('receptions.exit-otp.send');
+        Route::post('receptions/{reception}/exit-otp/verify', [ReceptionController::class, 'verifyExitOtp'])->name('receptions.exit-otp.verify');
+        Route::post('receptions/{reception}/exit-otp/bypass', [ReceptionController::class, 'bypassExitOtp'])->name('receptions.exit-otp.bypass');
         Route::post('receptions/{reception}/cost-stages', [ReceptionController::class, 'storeCostStage'])->name('receptions.cost-stages');
         Route::delete('receptions/{reception}/cost-stages/{stage}', [ReceptionController::class, 'destroyCostStage'])->name('receptions.cost-stages.destroy');
         Route::post('receptions/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('receptions.zarinpal');
