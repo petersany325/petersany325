@@ -5,6 +5,8 @@ return [
     'domain' => env('LICENSE_DOMAIN'),
     'token' => env('LICENSE_TOKEN'),
     'server' => rtrim((string) env('LICENSE_SERVER', 'https://support.hdd-land.ir'), '/'),
+    // OTP SMS is sent by the seller site (not the customer host)
+    'sms_otp_url' => rtrim((string) env('LICENSE_SERVER', 'https://support.hdd-land.ir'), '/').'/license/request-otp',
     // Public storefront for purchase / transfer when license is blocked
     'purchase_url' => rtrim((string) env('LICENSE_PURCHASE_URL', 'https://hdd-land.ir'), '/'),
     // Seller-side secret for signing issued license tokens
