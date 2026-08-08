@@ -716,9 +716,9 @@ class WebInstaller
                 ];
             }
 
-            // Fresh seed: admin + company brand only (menus/lookups left empty)
+            // Same product defaults as seller app; only admin/company/license differ.
             $this->seedFresh($admin, $company, $logo);
-            $details[] = 'Seed admin + company brand OK (lookups empty)';
+            $details[] = 'Seed admin + product defaults OK';
 
             try {
                 \App\Support\LicenseStatus::store([
@@ -794,10 +794,16 @@ class WebInstaller
      */
     private function seedFresh(array $admin, array $company = [], ?array $logo = null): void
     {
+        // Keep full product defaults (lookups/menus) — do NOT strip the app empty.
+        $this->seedProductDefaults();
+
         $name = trim((string) ($admin['name'] ?? 'مدیر'));
         $email = trim((string) ($admin['email'] ?? 'admin@example.com'));
         $phone = preg_replace('/\D+/', '', (string) ($admin['phone'] ?? '09120000000')) ?: '09120000000';
         $password = (string) ($admin['password'] ?? 'password');
+
+        // Replace any placeholder admin with the customer-chosen credentials only.
+        \App\Models\User::query()->where('email', 'admin@example.com')->delete();
 
         \App\Models\User::query()->updateOrCreate(
             ['email' => $email],
@@ -812,15 +818,6 @@ class WebInstaller
                 'is_active' => true,
             ]
         );
-
-        // White-label empty shop: wipe migration-seeded menu definitions.
-        \App\Models\LookupOption::query()->delete();
-        \App\Models\FaultType::query()->delete();
-        \App\Models\ReferralSource::query()->delete();
-        if (class_exists(\App\Models\DailyLogCategory::class)) {
-            \App\Models\DailyLogCategory::query()->delete();
-        }
-        \App\Models\AppSetting::setValue('cost_approval_services', '[]');
 
         $shopName = trim((string) ($company['shop_name'] ?? $admin['app_name'] ?? 'تعمیرگاه')) ?: 'تعمیرگاه';
         $tagline = trim((string) ($company['tagline'] ?? 'سیستم مدیریت تعمیرات')) ?: 'سیستم مدیریت تعمیرات';
@@ -843,6 +840,39 @@ class WebInstaller
         }
 
         $this->writePwaManifests($shopName);
+    }
+
+    /** Seed the same operational defaults the full app expects (no seller customer data). */
+    private function seedProductDefaults(): void
+    {
+        collect(['اینستاگرام', 'گوگل', 'معرفی دوستان', 'تابلو مغازه', 'سایت'])
+            ->each(fn ($n) => \App\Models\ReferralSource::query()->firstOrCreate(['name' => $n]));
+
+        $lookupSeed = [
+            'admission_type' => ['حضوری', 'پستی', 'پیک', 'نمایندگی'],
+            'service_type' => ['تعمیر', 'بازیابی اطلاعات', 'تعویض قطعه', 'عیب‌یابی', 'نصب سیستم'],
+            'repair_type' => ['سخت‌افزاری', 'نرم‌افزاری', 'دیتا ریکاوری', 'گارانتی'],
+            'warranty_type' => ['فاقد گارانتی و بیمه', 'گارانتی شرکتی', 'گارانتی تعمیرگاه', 'بیمه'],
+            'hdd_capacity' => ['120GB', '250GB', '320GB', '500GB', '1TB', '2TB', '4TB'],
+            'brand_model' => ['WD My Passport', 'Seagate Backup Plus', 'Toshiba Canvio', 'Samsung T7', 'Laptop Generic'],
+        ];
+        foreach ($lookupSeed as $group => $names) {
+            foreach ($names as $i => $name) {
+                \App\Models\LookupOption::query()->firstOrCreate(
+                    ['group_key' => $group, 'name' => $name],
+                    ['sort_order' => $i + 1, 'is_active' => true]
+                );
+            }
+        }
+
+        collect([
+            'روشن نمی‌شود',
+            'صدای غیرعادی',
+            'عدم شناسایی',
+            'بازیابی اطلاعات',
+            'آسیب فیزیکی',
+            'نرم‌افزاری',
+        ])->each(fn ($n) => \App\Models\FaultType::query()->firstOrCreate(['name' => $n]));
     }
 
     /** Copy uploaded logo into public brand image slots. */
