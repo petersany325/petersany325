@@ -221,9 +221,19 @@ class Reception extends Model
 
     public static function nextReceiptNo(): string
     {
-        $last = static::orderByDesc('id')->value('receipt_no');
-        $num = $last && ctype_digit((string) $last) ? ((int) $last + 1) : 10001;
+        $prefix = 'T-20N';
+        $max = 999; // next => T-20N1000
 
-        return (string) $num;
+        $existing = static::query()
+            ->where('receipt_no', 'like', $prefix.'%')
+            ->pluck('receipt_no');
+
+        foreach ($existing as $receiptNo) {
+            if (preg_match('/^'.preg_quote($prefix, '/').'(\d+)$/', (string) $receiptNo, $m)) {
+                $max = max($max, (int) $m[1]);
+            }
+        }
+
+        return $prefix.($max + 1);
     }
 }

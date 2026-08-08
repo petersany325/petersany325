@@ -261,7 +261,7 @@
                             </select>
                         </div>
                         <div><label>کد پذیرش</label><input type="text" value="{{ $nextTicket }}" readonly></div>
-                        <div><label>شماره قبض</label><input type="text" value="{{ $nextReceipt }}" readonly></div>
+                        <div><label>شماره قبض</label><input type="text" value="{{ $nextReceipt }}" readonly dir="ltr" placeholder="T-20N1000"></div>
                         <div><label>تاریخ پذیرش</label><input type="date" name="received_at" value="{{ old('received_at', now()->toDateString()) }}"></div>
                         <div><label>ساعت</label><input type="time" name="received_time" value="{{ old('received_time', now()->format('H:i')) }}"></div>
                     </div>

@@ -10,7 +10,7 @@
         <form method="GET" action="{{ route('handoffs.index') }}" class="handoff-search accept-row accept-row-4" style="align-items:end;">
             <div>
                 <label>شماره قبض</label>
-                <input type="text" name="ticket_no" value="{{ $ticket }}" placeholder="مثلاً R-1404..." dir="ltr" style="text-align:left;">
+                <input type="text" name="ticket_no" value="{{ $ticket }}" placeholder="مثلاً T-20N1000 یا SH-..." dir="ltr" style="text-align:left;">
             </div>
             <div>
                 <label>سریال</label>
