@@ -14,9 +14,22 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/portal.css') }}?v=p5">
+    <link rel="stylesheet" href="{{ asset('css/portal.css') }}?v=p6">
 </head>
 <body class="@yield('body_class', 'portal-body')">
+@if(session('success') || session('error') || $errors->any())
+    <div class="p-flash-wrap">
+        @if(session('success'))
+            <div class="p-alert ok">{{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+            <div class="p-alert err">{{ session('error') }}</div>
+        @endif
+        @foreach($errors->all() as $err)
+            <div class="p-alert err">{{ $err }}</div>
+        @endforeach
+    </div>
+@endif
 @yield('content')
 
 @hasSection('nav')

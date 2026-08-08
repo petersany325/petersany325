@@ -13,7 +13,12 @@
         ? (int) $ticket->parts->sum('quantity')
         : $partsCount;
 @endphp
-<a class="p-ticket {{ !empty($highlightPay) ? 'is-pay' : '' }}" href="{{ route('portal.show', $ticket) }}">
+@php
+    $remain = $ticket->remainingAmount();
+    $showDebt = !empty($highlightDebt) || ($remain > 0 && $ticket->status === 'delivered');
+    $showPay = !empty($highlightPay) || $ticket->status === 'ready' || $showDebt;
+@endphp
+<a class="p-ticket {{ $showPay ? 'is-pay' : '' }} {{ $showDebt ? 'is-debt' : '' }}" href="{{ route('portal.show', $ticket) }}">
     <div class="p-ticket-top">
         <strong>{{ $ticket->ticket_no }}</strong>
         <span class="p-badge tone-{{ $statusTone }}">{{ $ticket->statusLabel() }}</span>
@@ -27,10 +32,10 @@
         <span>قطعه: {{ $partsCount }} ردیف@if($partsQty !== $partsCount) ({{ $partsQty }} عدد)@endif</span>
         <span>جمع: {{ number_format((int) $ticket->total_amount) }}</span>
     </div>
-    @if($ticket->status === 'ready')
-        <div class="p-ticket-pay">
-            <span>مانده: <b>{{ number_format($ticket->remainingAmount()) }}</b> تومان</span>
-            <em>لینک پرداخت ←</em>
+    @if($remain > 0 && ($ticket->status === 'ready' || $showDebt || !empty($highlightPay)))
+        <div class="p-ticket-pay {{ $showDebt ? 'is-debt' : '' }}">
+            <span>{{ $showDebt ? 'بدهی' : 'مانده' }}: <b>{{ number_format($remain) }}</b> تومان</span>
+            <em>{{ $showDebt ? 'تسویه نسیه ←' : 'لینک پرداخت ←' }}</em>
         </div>
     @endif
 </a>

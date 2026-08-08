@@ -157,10 +157,18 @@ class ReceptionSettlementService
                     $reception->confirmCost();
                 }
             } elseif ($mode === self::MODE_CREDIT) {
-                if ($reception->remainingAmount() <= 0) {
+                $remaining = $reception->remainingAmount();
+                if ($remaining <= 0) {
                     $mode = self::MODE_PAID;
+                } else {
+                    if ($note === '') {
+                        throw ValidationException::withMessages([
+                            'note' => 'برای تسویه نسیه، توضیح / تعهد پرداخت الزامی است (مثلاً مهلت یا توافق با مشتری).',
+                        ]);
+                    }
+                    // AR already recognized via syncReceptionRevenue (Dr 1210 / Cr income).
+                    // Credit delivery keeps remaining unpaid; collection later credits 1210.
                 }
-                // receivable already tracked via accounting revenue sync
             }
 
             $reception->refresh();
@@ -225,8 +233,10 @@ class ReceptionSettlementService
                 ]
             );
 
+            $debt = $reception->fresh()->remainingAmount();
             $msg = match ($mode) {
-                self::MODE_CREDIT => 'تسویه نسیه، خروج کالا و تحویل ثبت شد؛ مانده به بدهکاری مشتری منتقل شد.',
+                self::MODE_CREDIT => 'تسویه نسیه و تحویل ثبت شد. بدهی مشتری: '
+                    .number_format($debt).' تومان — در کارتابل مشتری و حساب بدهکاران (۱۲۱۰) دیده می‌شود.',
                 self::MODE_WAIVE => 'بخشش مانده، خروج کالا و تحویل ثبت شد.',
                 default => 'تسویه، خروج کالا و تحویل با موفقیت ثبت شد.',
             };

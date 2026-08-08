@@ -144,3 +144,16 @@ a{color:var(--accent);text-decoration:none}
 }
 .p-timeline-item strong{display:block;font-size:12px}
 .p-timeline-item small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
+.p-flash-wrap{padding:10px 12px 0}
+.p-debt-banner{
+  margin:0 0 12px;padding:12px;border:1px solid #f1a8a8;border-radius:3px;
+  background:linear-gradient(180deg,#fff5f5,#ffe8e8);color:#9f1239
+}
+.p-debt-banner-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:6px}
+.p-debt-banner-top strong{font-size:13px}
+.p-debt-banner-top span{font-size:15px;font-weight:800;letter-spacing:.02em;dir:ltr}
+.p-debt-banner p{margin:0 0 10px;font-size:12px;line-height:1.65;color:#7f1d1d}
+.p-debt-banner .p-btn{width:100%}
+.p-ticket.is-debt{border-color:#f1a8a8;background:linear-gradient(180deg,#fff,#fff5f5)}
+.p-ticket-pay.is-debt{color:#9f1239;background:#fde8e8;border-color:#fecaca}
+.p-ticket-pay.is-debt em{color:#9f1239}

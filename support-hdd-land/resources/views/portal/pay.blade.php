@@ -6,18 +6,43 @@
     <a class="p-back" href="{{ route('portal.home') }}">→</a>
     <div>
         <div class="p-hello">پرداخت آنلاین</div>
-        <div class="p-sub">درگاه‌ها و قبض‌های آماده</div>
+        <div class="p-sub">تسویه بدهی و قبض‌های مانده‌دار</div>
     </div>
 </header>
+
+@if(!empty($debtSummary['has_debt']))
+<section class="p-debt-banner" role="alert">
+    <div class="p-debt-banner-top">
+        <strong>جمع بدهی شما</strong>
+        <span>{{ number_format($debtSummary['total']) }} تومان</span>
+    </div>
+    <p>{{ $debtSummary['ticket_count'] }} قبض مانده‌دار
+        @if(($debtSummary['credit_total'] ?? 0) > 0)
+            · از این مبلغ {{ number_format($debtSummary['credit_total']) }} تومان بابت تحویل نسیه است
+        @endif
+    </p>
+</section>
+@endif
 
 <section class="p-section">
     <h2>پرداخت آنلاین زرین‌پال</h2>
     @if(\App\Support\PaymentGateways::zarinpal()['configured'])
-        <p class="p-empty soft" style="margin-bottom:10px;">روی قبض آماده، دکمه پرداخت زرین‌پال مبلغ مانده را می‌گیرد و پس از موفقیت در گزارش مالی ثبت می‌شود.</p>
+        <p class="p-empty soft" style="margin-bottom:10px;">روی هر قبض مانده‌دار (آماده تحویل یا نسیه تحویل‌شده) دکمه پرداخت را بزنید؛ مبلغ در حسابداری ثبت می‌شود.</p>
     @else
         <div class="p-empty">Merchant ID زرین‌پال هنوز در تنظیمات وارد نشده.</div>
     @endif
 </section>
+
+@if(($creditDebt ?? collect())->count())
+<section class="p-section">
+    <h2>بدهی نسیه (تحویل‌شده)</h2>
+    <div class="p-ticket-list">
+        @foreach($creditDebt as $t)
+            @include('portal._ticket-card', ['ticket' => $t, 'highlightPay' => true, 'highlightDebt' => true])
+        @endforeach
+    </div>
+</section>
+@endif
 
 @if(\App\Support\BankTransferSettings::isEnabled())
 <section class="p-section">

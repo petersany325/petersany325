@@ -27,6 +27,37 @@
     </div>
 </section>
 
+@if(!empty($debtSummary['has_debt']))
+<section class="p-debt-banner" role="alert">
+    <div class="p-debt-banner-top">
+        <strong>بدهکاری فعال</strong>
+        <span>{{ number_format($debtSummary['total']) }} تومان</span>
+    </div>
+    <p>
+        @if(($debtSummary['credit_total'] ?? 0) > 0)
+            بخشی از بدهی بابت تحویل نسیه است ({{ number_format($debtSummary['credit_total']) }} تومان).
+        @else
+            مانده پرداخت‌نشده روی قبض‌های شما ثبت است.
+        @endif
+        تا تسویه کامل، این هشدار در کارتابل می‌ماند.
+    </p>
+    <a class="p-btn primary" href="{{ route('portal.pay') }}">پرداخت بدهی / درگاه بانکی</a>
+</section>
+@if(($debtTickets ?? collect())->count())
+<section class="p-section">
+    <div class="p-section-head">
+        <h2>قبض‌های بدهکار</h2>
+        <a href="{{ route('portal.pay') }}">تسویه</a>
+    </div>
+    <div class="p-ticket-list">
+        @foreach($debtTickets as $t)
+            @include('portal._ticket-card', ['ticket' => $t, 'highlightPay' => true, 'highlightDebt' => true])
+        @endforeach
+    </div>
+</section>
+@endif
+@endif
+
 <div class="p-chips">
     <a class="p-chip tone-amber" href="{{ route('portal.tickets', ['status' => 'repairing']) }}">تعمیر {{ $stats['repairing'] }}</a>
     <a class="p-chip tone-rose" href="{{ route('portal.tickets', ['status' => 'waiting_part']) }}">قطعه {{ $stats['waiting_part'] }}</a>

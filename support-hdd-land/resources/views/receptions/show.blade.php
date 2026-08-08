@@ -1016,7 +1016,7 @@
         var paidBlocks = document.querySelectorAll('[data-settle-paid]');
         var hints = {
             paid: 'دریافت کامل: مبلغ به صندوق می‌رود و قبض تحویل می‌شود.',
-            credit: 'نسیه: دستگاه تحویل می‌شود و مانده در حساب مشتری بدهکار می‌ماند.',
+            credit: 'نسیه: دستگاه خارج می‌شود؛ مانده در حساب بدهکاران (۱۲۱۰) و کارتابل مشتری با درگاه پرداخت می‌ماند.',
             waive: 'بخشش: مانده صفر می‌شود (تخفیف) — ذکر دلیل الزامی است.'
         };
         var syncSettle = function () {
@@ -1028,7 +1028,12 @@
                 });
             });
             if (settleHint) settleHint.textContent = hints[mode] || '';
-            if (settleNote) settleNote.required = mode === 'waive';
+            if (settleNote) {
+                settleNote.required = mode === 'waive' || mode === 'credit';
+                settleNote.placeholder = mode === 'credit'
+                    ? 'تعهد پرداخت / مهلت نسیه (الزامی)'
+                    : (mode === 'waive' ? 'دلیل بخشش (الزامی)' : 'شماره پیگیری / دلیل نسیه یا بخشش');
+            }
         };
         settleMode.addEventListener('change', syncSettle);
         syncSettle();

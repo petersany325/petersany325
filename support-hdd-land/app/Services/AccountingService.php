@@ -53,9 +53,11 @@ class AccountingService
         $reception->loadMissing(['parts']);
         $labor = (int) $reception->labor_cost;
         $parts = (int) $reception->parts_cost;
+        $stages = (int) ($reception->stages_cost ?? 0);
         $admission = (int) $reception->admission_fee;
         $discount = (int) $reception->discount;
-        $total = max(0, $labor + $parts + $admission - $discount);
+        // Keep AR aligned with reception.total_amount (includes stages).
+        $total = max(0, $labor + $parts + $stages + $admission - $discount);
 
         $sourceType = 'reception_revenue';
         $existing = JournalEntry::query()
@@ -76,6 +78,9 @@ class AccountingService
         $lines[] = [self::RECEIVABLE, $total, 0, 'بدهکار مشتری — '.$reception->ticket_no];
         if ($labor > 0) {
             $lines[] = [self::INC_SERVICE, 0, $labor, 'اجرت تعمیر'];
+        }
+        if ($stages > 0) {
+            $lines[] = [self::INC_SERVICE, 0, $stages, 'مراحل هزینه'];
         }
         if ($parts > 0) {
             $lines[] = [self::INC_PARTS, 0, $parts, 'فروش قطعه'];

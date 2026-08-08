@@ -200,9 +200,22 @@ class AccountingController extends Controller
             usort($rows, fn ($a, $b) => $b['balance'] <=> $a['balance']);
         }
 
+        // Operational نسیه list (delivered with remaining) — complements journal AR 1210.
+        $creditTickets = Reception::query()
+            ->with('customer')
+            ->where('status', 'delivered')
+            ->whereColumn('total_amount', '>', 'paid_amount')
+            ->orderByDesc('delivered_at')
+            ->limit(80)
+            ->get()
+            ->filter(fn (Reception $r) => $r->remainingAmount() > 0)
+            ->values();
+
         return view('accounting.receivables', [
             'rows' => $rows,
             'total' => collect($rows)->sum('balance'),
+            'creditTickets' => $creditTickets,
+            'creditTotal' => $creditTickets->sum(fn (Reception $r) => $r->remainingAmount()),
         ]);
     }
 

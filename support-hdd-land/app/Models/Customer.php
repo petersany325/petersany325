@@ -37,6 +37,12 @@ class Customer extends Model
         return $this->hasMany(CustomerMessage::class);
     }
 
+    /** Open receivable balance (operational: sum of remaining on non-cancelled tickets). */
+    public function openDebtTotal(): int
+    {
+        return (int) app(\App\Services\CustomerDebtService::class)->totalOpen($this);
+    }
+
     public static function findByPhone(?string $phone): ?self
     {
         $phone = User::normalizePhone($phone);

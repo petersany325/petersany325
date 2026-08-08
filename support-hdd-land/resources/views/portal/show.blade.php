@@ -176,12 +176,27 @@
 </section>
 @endif
 
-@if($reception->status === 'ready')
+@if(!empty($canPay))
 <section class="p-section">
-    <div class="p-ready-banner">
-        <strong>آماده تحویل / خروج</strong>
-        <p>مانده قابل پرداخت: {{ number_format($reception->remainingAmount()) }} تومان</p>
-    </div>
+    @if(!empty($isCreditDebt))
+        <div class="p-debt-banner" role="alert" style="margin-bottom:10px;">
+            <div class="p-debt-banner-top">
+                <strong>بدهی نسیه این قبض</strong>
+                <span>{{ number_format($reception->remainingAmount()) }} تومان</span>
+            </div>
+            <p>دستگاه تحویل شده و مانده به‌عنوان بدهکاری شما ثبت است. با پرداخت آنلاین یا کارت‌به‌کارت تسویه کنید.</p>
+        </div>
+    @elseif($reception->status === 'ready')
+        <div class="p-ready-banner">
+            <strong>آماده تحویل / خروج</strong>
+            <p>مانده قابل پرداخت: {{ number_format($reception->remainingAmount()) }} تومان</p>
+        </div>
+    @else
+        <div class="p-ready-banner">
+            <strong>مانده قابل پرداخت</strong>
+            <p>{{ number_format($reception->remainingAmount()) }} تومان</p>
+        </div>
+    @endif
     @if(\App\Support\PaymentGateways::zarinpal()['configured'] && $reception->remainingAmount() >= 1000)
         <form method="POST" action="{{ route('portal.zarinpal.start', $reception) }}" style="margin-bottom:10px;">
             @csrf

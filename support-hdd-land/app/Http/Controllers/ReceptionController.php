@@ -848,7 +848,19 @@ class ReceptionController extends Controller
             'send_sms' => ['nullable', 'boolean'],
         ], [
             'confirm_goods_exit.accepted' => 'برای تحویل، کلید «تأیید خروج دستگاه و قطعات همراه از کارگاه» را روشن کنید.',
+            'note.required' => 'برای نسیه یا بخشش، توضیح تسویه الزامی است.',
         ]);
+        if (in_array($data['settlement_mode'], [
+            \App\Services\ReceptionSettlementService::MODE_CREDIT,
+            \App\Services\ReceptionSettlementService::MODE_WAIVE,
+        ], true)) {
+            $request->validate([
+                'note' => ['required', 'string', 'max:500'],
+            ], [
+                'note.required' => 'برای نسیه یا بخشش، توضیح تسویه الزامی است.',
+            ]);
+            $data['note'] = (string) $request->input('note');
+        }
         $data['confirm_goods_exit'] = true;
 
         $result = $settlement->settleAndDeliver($reception->fresh(['customer', 'parts.part', 'custodyTechnician']), $data);

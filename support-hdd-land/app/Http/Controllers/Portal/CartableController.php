@@ -7,16 +7,18 @@ use App\Models\Customer;
 use App\Models\CostApproval;
 use App\Models\Reception;
 use App\Models\SmsLog;
+use App\Services\CustomerDebtService;
 use App\Support\PaymentGateways;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class CartableController extends Controller
 {
-    public function home(Request $request)
+    public function home(Request $request, CustomerDebtService $debt)
     {
         $customer = $this->customer($request);
         $stats = $this->stats($customer);
+        $debtSummary = $debt->summary($customer);
 
         $menus = [
             ['route' => 'portal.tickets', 'params' => [], 'label' => 'همه قبض‌ها', 'hint' => 'لیست کامل دستگاه‌ها', 'icon' => '▤', 'tone' => 'teal'],
@@ -27,7 +29,7 @@ class CartableController extends Controller
             ['route' => 'portal.report', 'params' => [], 'label' => 'گزارش وضعیت', 'hint' => 'خلاصه تعمیرات', 'icon' => '▦', 'tone' => 'violet'],
             ['route' => 'portal.approvals', 'params' => [], 'label' => 'تأیید هزینه‌ها', 'hint' => 'لینک جراحی / بازیابی', 'icon' => '✔', 'tone' => 'amber'],
             ['route' => 'portal.tickets', 'params' => ['status' => 'delivered'], 'label' => 'تحویل‌شده‌ها', 'hint' => $stats['delivered'].' قبض', 'icon' => '↩', 'tone' => 'slate'],
-            ['route' => 'portal.pay', 'params' => [], 'label' => 'پرداخت آنلاین', 'hint' => 'درگاه‌های بانکی', 'icon' => '₿', 'tone' => 'gold'],
+            ['route' => 'portal.pay', 'params' => [], 'label' => 'پرداخت آنلاین', 'hint' => $debtSummary['has_debt'] ? ('بدهی '.number_format($debtSummary['total']).' ت') : 'درگاه‌های بانکی', 'icon' => '₿', 'tone' => 'gold'],
         ];
 
         $ready = $customer->receptions()
@@ -44,7 +46,9 @@ class CartableController extends Controller
             ->limit(6)
             ->get();
 
-        return view('portal.home', compact('customer', 'stats', 'menus', 'ready', 'recent'));
+        $debtTickets = $debtSummary['tickets']->take(5);
+
+        return view('portal.home', compact('customer', 'stats', 'menus', 'ready', 'recent', 'debtSummary', 'debtTickets'));
     }
 
     public function tickets(Request $request)
@@ -109,7 +113,8 @@ class CartableController extends Controller
             'statusLogs' => fn ($q) => $q->with('actor')->latest('id')->limit(40),
             'handoffs' => fn ($q) => $q->with('toTechnician')->where('status', 'accepted')->latest('id')->limit(12),
         ]);
-        $payLinks = $reception->status === 'ready' ? PaymentGateways::active() : [];
+        $canPay = $reception->status !== 'cancelled' && $reception->remainingAmount() > 0;
+        $payLinks = $canPay ? PaymentGateways::active() : [];
         $smsLogs = \App\Models\SmsLog::query()
             ->with('rule')
             ->where('reception_id', $reception->id)
@@ -122,8 +127,12 @@ class CartableController extends Controller
             ->where('customer_id', $customer->id)
             ->latest('id')
             ->get();
+        $isCreditDebt = $canPay && (
+            $reception->status === 'delivered'
+            || $reception->settlement_mode === \App\Services\ReceptionSettlementService::MODE_CREDIT
+        );
 
-        return view('portal.show', compact('customer', 'reception', 'payLinks', 'smsLogs', 'receipts'));
+        return view('portal.show', compact('customer', 'reception', 'payLinks', 'smsLogs', 'receipts', 'canPay', 'isCreditDebt'));
     }
 
     public function report(Request $request)
@@ -192,25 +201,23 @@ class CartableController extends Controller
         return view('portal.approvals-show', compact('customer', 'approval', 'smsLogs'));
     }
 
-    public function pay(Request $request)
+    public function pay(Request $request, CustomerDebtService $debt)
     {
         $customer = $this->customer($request);
         $payLinks = PaymentGateways::active();
+        $debtSummary = $debt->summary($customer);
         $ready = $customer->receptions()
             ->withCount('parts')
             ->where('status', 'ready')
             ->latest('id')
             ->get();
-        $payable = $customer->receptions()
-            ->withCount('parts')
-            ->where('status', '!=', 'cancelled')
-            ->whereColumn('total_amount', '>', 'paid_amount')
-            ->latest('id')
-            ->limit(20)
-            ->get();
+        $payable = $debtSummary['tickets'];
+        $creditDebt = $payable->filter(fn (Reception $r) => $r->status === 'delivered')->values();
         $bankTransfer = \App\Support\BankTransferSettings::all();
 
-        return view('portal.pay', compact('customer', 'payLinks', 'ready', 'payable', 'bankTransfer'));
+        return view('portal.pay', compact(
+            'customer', 'payLinks', 'ready', 'payable', 'creditDebt', 'debtSummary', 'bankTransfer'
+        ));
     }
 
     private function customer(Request $request): Customer
