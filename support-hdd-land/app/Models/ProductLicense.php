@@ -86,6 +86,17 @@ class ProductLicense extends Model
         };
     }
 
+    /** Start of validity for admin display (activation, else issue date). */
+    public function startsAt(): ?\Illuminate\Support\Carbon
+    {
+        return $this->activated_at ?: $this->created_at;
+    }
+
+    public function endsAt(): ?\Illuminate\Support\Carbon
+    {
+        return $this->expires_at;
+    }
+
     public function isOnline(int $withinDays = 7): bool
     {
         return $this->status === 'active'

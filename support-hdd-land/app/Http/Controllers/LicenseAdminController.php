@@ -210,17 +210,91 @@ class LicenseAdminController extends Controller
         return back()->with('success', 'قفل دامنه برداشته شد. سریال دوباره قابل نصب است: '.$license->license_key);
     }
 
+    public function edit(Request $request, ProductLicense $license)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $plans = LicensePlans::all();
+
+        return view('licenses.edit', compact('license', 'plans'));
+    }
+
+    public function update(Request $request, ProductLicense $license)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $data = $request->validate([
+            'customer_name' => ['nullable', 'string', 'max:120'],
+            'customer_phone' => ['nullable', 'string', 'max:30'],
+            'customer_email' => ['nullable', 'email', 'max:160'],
+            'domain' => ['nullable', 'string', 'max:190'],
+            'plan_code' => ['nullable', 'string', 'max:30'],
+            'status' => ['required', 'in:unused,active,revoked,expired'],
+            'starts_at' => ['nullable', 'string', 'max:20'],
+            'expires_at' => ['nullable', 'string', 'max:20'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'price_toman' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $starts = resolve_request_date($data['starts_at'] ?? null);
+        $ends = resolve_request_date($data['expires_at'] ?? null);
+
+        if (! empty($data['plan_code'])) {
+            $plan = LicensePlans::find($data['plan_code']);
+            if ($plan) {
+                $license->plan_code = $plan['code'];
+                $license->plan_label = $plan['label'];
+                $license->plan_months = $plan['months'];
+                if (! array_key_exists('price_toman', $data) || $data['price_toman'] === null) {
+                    $license->price_toman = (int) $plan['price'];
+                }
+            }
+        }
+        if (array_key_exists('price_toman', $data) && $data['price_toman'] !== null) {
+            $license->price_toman = (int) $data['price_toman'];
+        }
+
+        $domain = trim((string) ($data['domain'] ?? ''));
+        $license->fill([
+            'customer_name' => $data['customer_name'] ?? null,
+            'customer_phone' => $data['customer_phone'] ?? null,
+            'customer_email' => $data['customer_email'] ?? null,
+            'domain' => $domain !== '' ? ProductLicense::normalizeDomain($domain) : null,
+            'status' => $data['status'],
+            'notes' => $data['notes'] ?? null,
+            'activated_at' => $starts,
+            'expires_at' => $ends,
+        ]);
+
+        if ($license->status === 'revoked') {
+            $license->token = null;
+        }
+
+        $license->save();
+
+        return redirect()->route('licenses.index')->with('success', 'لایسنس ویرایش شد: '.$license->license_key);
+    }
+
+    public function renewForm(Request $request, ProductLicense $license)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $plans = LicensePlans::all();
+
+        return view('licenses.renew', compact('license', 'plans'));
+    }
+
     public function extend(Request $request, ProductLicense $license)
     {
         abort_unless($request->user()?->isAdmin(), 403);
 
         $data = $request->validate([
-            'expires_at' => ['nullable', 'date'],
+            'expires_at' => ['nullable', 'string', 'max:20'],
             'plan_code' => ['nullable', 'string', 'max:30'],
             'add_plan' => ['nullable', 'boolean'],
         ]);
 
-        if (! empty($data['plan_code']) && $request->boolean('add_plan')) {
+        if (! empty($data['plan_code']) && ($request->boolean('add_plan') || $request->has('plan_code'))) {
             $plan = LicensePlans::find($data['plan_code']);
             if (! $plan) {
                 return back()->with('error', 'پلن تمدید معتبر نیست.');
@@ -237,20 +311,24 @@ class LicenseAdminController extends Controller
             $license->plan_label = $plan['label'];
             $license->plan_months = $plan['months'];
             $license->price_toman = (int) (($license->price_toman ?: 0) + (int) $plan['price']);
-            if ($license->status === 'expired') {
+            if (in_array($license->status, ['expired', 'unused'], true) || $license->domain) {
                 $license->status = 'active';
+            }
+            if (! $license->activated_at && $license->domain) {
+                $license->activated_at = now();
             }
             $license->save();
 
-            return back()->with('success', 'با پلن '.$plan['label'].' تمدید شد.');
+            return redirect()->route('licenses.index')->with('success', 'تمدید شد با پلن '.$plan['label'].' — پایان: '.($license->expires_at ? jalali_date($license->expires_at) : 'مادام‌العمر'));
         }
 
+        $ends = resolve_request_date($data['expires_at'] ?? null);
         $license->update([
-            'expires_at' => $data['expires_at'] ?? null,
+            'expires_at' => $ends,
             'status' => $license->status === 'expired' ? 'active' : $license->status,
         ]);
 
-        return back()->with('success', 'تاریخ انقضا به‌روز شد.');
+        return redirect()->route('licenses.index')->with('success', 'تاریخ انقضا به‌روز شد.');
     }
 
     /** @return array<string, int> */
