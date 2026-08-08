@@ -357,14 +357,9 @@ class WebInstaller
     /** Remove Laravel cached config so a previous failed install cannot override new .env */
     public function clearBootstrapCaches(): void
     {
-        foreach ([
-            'bootstrap/cache/config.php',
-            'bootstrap/cache/routes.php',
-            'bootstrap/cache/routes-v7.php',
-            'bootstrap/cache/services.php',
-            'bootstrap/cache/packages.php',
-        ] as $rel) {
-            $path = $this->basePath.'/'.$rel;
+        $dir = $this->basePath.'/bootstrap/cache';
+        // Always wipe compiled config — shipping seller cache redirects customers to support.hdd-land.ir
+        foreach (glob($dir.'/*.php') ?: [] as $path) {
             if (is_file($path)) {
                 @unlink($path);
             }

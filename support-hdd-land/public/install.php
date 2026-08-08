@@ -294,6 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'LICENSE_TOKEN' => (string) ($license['token'] ?? ''),
                         'LICENSE_SERVER' => WebInstaller::SELLER_LICENSE_SERVER,
                         'LICENSE_PURCHASE_URL' => WebInstaller::SELLER_PURCHASE_URL,
+                        'FORCE_CANONICAL_HOST' => 'false',
                         'LICENSE_PLAN' => (string) ($license['plan'] ?? ''),
                         'LICENSE_PLAN_CODE' => (string) ($license['plan_code'] ?? ''),
                         'LICENSE_MONTHS' => (string) ($license['plan_months'] ?? ''),

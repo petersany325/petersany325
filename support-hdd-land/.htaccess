@@ -8,8 +8,10 @@
     RewriteRule ^(\.env|\.env\..*|composer\.(json|lock)|artisan|phpunit\.xml)(/|$) - [F,L,NC]
     RewriteRule ^(storage|vendor|bootstrap|config|database|resources|routes|app|tests|install)/ - [F,L,NC]
 
-    # Allow installer entry at /install.php (file in /public)
+    # Allow installer / repair entry at project root
     RewriteRule ^install\.php$ public/install.php [L]
+    RewriteRule ^fix-install\.php$ public/fix-install.php [L]
+    RewriteRule ^repair-domain\.php$ public/repair-domain.php [L]
 
     # If already pointing into public, do nothing special
     RewriteRule ^public/ - [L]
