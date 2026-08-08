@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'تأیید هزینه / جراحی | سرزمین هارد')
+@section('title', 'تأیید هزینه / جراحی | '.shop_name())
 @section('page_title', 'کارتابل تأیید هزینه')
 @section('window_title', 'جراحی، بازیابی و خدمات مشمول تأیید مشتری')
 

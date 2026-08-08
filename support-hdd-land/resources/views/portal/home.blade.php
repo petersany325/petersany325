@@ -1,10 +1,10 @@
 @extends('layouts.portal')
-@section('title', 'میز کار مشتری | سرزمین هارد')
+@section('title', 'میز کار مشتری | '.shop_name())
 
 @section('content')
 <header class="p-top">
     <div class="p-brand-mini">
-        <img src="{{ asset('images/logo-header.png') }}?v=hd1" alt="HDD LAND" width="96" height="22">
+        <img src="{{ shop_logo_url('header') }}" alt="{{ shop_name() }}" width="96" height="22">
         <div>
             <div class="p-hello">سلام {{ $customer->name }}</div>
             <div class="p-sub" dir="ltr">{{ $customer->phone }}</div>

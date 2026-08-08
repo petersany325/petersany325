@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'ابزارهای سیستم | سرزمین هارد')
+@section('title', 'ابزارهای سیستم | '.shop_name())
 @section('page_title', 'ابزارهای سیستم')
 @section('window_title', 'نگهداری، کش، تعمیر و بکاپ دیتابیس')
 

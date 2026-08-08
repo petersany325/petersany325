@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'کارتکس '.$part->name.' | سرزمین هارد')
+@section('title', 'کارتکس '.$\2.' | '.shop_name())
 @section('page_title', 'کارتکس کالا')
 @section('window_title', 'کارت حساب انبار — '.$part->name)
 

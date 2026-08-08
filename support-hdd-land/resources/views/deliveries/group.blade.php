@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'تحویل گروهی | سرزمین هارد')
+@section('title', 'تحویل گروهی | '.shop_name())
 @section('page_title', 'تحویل گروهی')
 @section('window_title', 'تحویل گروهی قبض')
 

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'ویرایش '.$reception->ticket_no.' | سرزمین هارد')
+@section('title', 'ویرایش '.$\2.' | '.shop_name())
 @section('page_title', 'ویرایش قبض '.$reception->ticket_no)
 @section('window_title', 'ویرایش قبض — اصلاح مشخصات')
 

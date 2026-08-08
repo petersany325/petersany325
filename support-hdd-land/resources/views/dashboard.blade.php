@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'میز کار | سرزمین هارد')
+@section('title', 'میز کار | '.shop_name())
 @section('page_title', 'میز کار')
 @section('window_title', 'شورت‌کارت‌های کارتابل')
 

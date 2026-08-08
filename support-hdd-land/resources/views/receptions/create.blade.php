@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'پذیرش جدید | سرزمین هارد')
+@section('title', 'پذیرش جدید | '.shop_name())
 @section('page_title', 'پذیرش جدید')
 @section('window_title', 'پنجره پذیرش — تکی / گروهی')
 

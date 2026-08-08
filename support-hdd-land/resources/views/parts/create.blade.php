@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'کالای جدید | سرزمین هارد')
+@section('title', 'کالای جدید | '.shop_name())
 @section('page_title', 'تعریف کالای انبار')
 @section('window_title', 'کارت کالا — موجودی اول دوره')
 

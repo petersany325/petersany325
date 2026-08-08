@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'ویرایش کارمند | سرزمین هارد')
+@section('title', 'ویرایش کارمند | '.shop_name())
 @section('page_title', 'ویرایش کارمند و دسترسی‌ها')
 @section('window_title', 'ویرایش کارتابل کارمند')
 

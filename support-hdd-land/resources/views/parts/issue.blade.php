@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'حواله خروج انبار | سرزمین هارد')
+@section('title', 'حواله خروج انبار | '.shop_name())
 @section('page_title', 'حواله خروج انبار')
 @section('window_title', 'خروج غیرقبض — بهای تمام‌شده / COGS')
 

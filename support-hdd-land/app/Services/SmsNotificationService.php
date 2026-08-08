@@ -30,7 +30,7 @@ class SmsNotificationService
         ]))) ?: 'دستگاه تعمیری';
         $fault = $reception->reported_fault
             ?: ($reception->final_fault ?: ($reception->faultType?->name ?: '—'));
-        $shop = AppSetting::getValue('invoice_shop_name', 'سرزمین هارد');
+        $shop = AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه'));
         $amount = number_format((int) $reception->total_amount);
 
         return [
@@ -190,7 +190,7 @@ class SmsNotificationService
             $reception->brand,
             $reception->model,
         ]))) ?: 'دستگاه تعمیری';
-        $shop = AppSetting::getValue('invoice_shop_name', 'سرزمین هارد');
+        $shop = AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه'));
         $lines = [
             $shop,
             'قبض '.$reception->ticket_no.' به‌روزرسانی شد.',
@@ -307,7 +307,7 @@ class SmsNotificationService
             return ['ok' => false, 'skipped' => true, 'message' => 'ارسال پیامک خاموش است.'];
         }
 
-        $lines = ["سلام {$pickupName}", 'تحویل گروهی سرزمین هارد:'];
+        $lines = ["سلام {$pickupName}", 'تحویل گروهی '.AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه')).':'];
         $sum = 0;
         foreach ($receptions as $r) {
             $sum += (int) $r->total_amount;

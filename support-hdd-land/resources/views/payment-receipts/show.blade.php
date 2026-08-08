@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'بررسی فیش #'.$receipt->id.' | سرزمین هارد')
+@section('title', 'بررسی فیش #'.$\2.' | '.shop_name())
 @section('page_title', 'بررسی فیش بانکی')
 @section('window_title', 'تأیید یا رد فیش کارت‌به‌کارت')
 

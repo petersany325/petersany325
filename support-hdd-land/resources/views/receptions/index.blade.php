@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'لیست قبض‌ها | سرزمین هارد')
+@section('title', 'لیست قبض‌ها | '.shop_name())
 @section('page_title', 'قبض‌های ورودی و خروجی')
 @section('window_title', 'لیست قبض‌ها')
 

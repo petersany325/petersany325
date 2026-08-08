@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'لایسنس‌های محصول | سرزمین هارد')
+@section('title', 'لایسنس‌های محصول | '.shop_name())
 @section('page_title', 'صدور لایسنس نصب')
 @section('window_title', 'سریال نصب مشتریان')
 

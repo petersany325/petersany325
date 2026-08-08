@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'تراز آزمایشی | سرزمین هارد')
+@section('title', 'تراز آزمایشی | '.shop_name())
 @section('page_title', 'تراز آزمایشی')
 @section('window_title', 'تراز آزمایشی')
 

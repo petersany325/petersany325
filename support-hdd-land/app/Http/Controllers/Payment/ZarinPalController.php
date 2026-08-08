@@ -50,7 +50,8 @@ class ZarinPalController extends Controller
         ]);
 
         $callback = route('payments.zarinpal.callback', ['trx' => $trx->id]);
-        $desc = 'پرداخت قبض '.$reception->ticket_no.' — سرزمین هارد';
+        $shop = \App\Models\AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه'));
+        $desc = 'پرداخت قبض '.$reception->ticket_no.' — '.$shop;
         $mobile = $reception->customer?->phone;
 
         $result = $zarinpal->request($amount, $callback, $desc, $mobile);

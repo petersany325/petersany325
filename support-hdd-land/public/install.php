@@ -148,16 +148,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $appName = trim((string) ($_POST['app_name'] ?? 'تعمیرگاه'));
             $appUrl = rtrim(trim((string) ($_POST['app_url'] ?? detect_app_url())), '/');
+            $company = [
+                'shop_name' => $appName,
+                'tagline' => trim((string) ($_POST['shop_tagline'] ?? 'سیستم مدیریت تعمیرات')),
+                'phones' => trim((string) ($_POST['shop_phones'] ?? '')),
+                'address' => trim((string) ($_POST['shop_address'] ?? '')),
+                'footer' => trim((string) ($_POST['shop_footer'] ?? '')),
+                'terms' => trim((string) ($_POST['shop_terms'] ?? '')),
+            ];
             $admin = [
                 'name' => trim((string) ($_POST['admin_name'] ?? 'مدیر')),
                 'email' => trim((string) ($_POST['admin_email'] ?? '')),
                 'phone' => trim((string) ($_POST['admin_phone'] ?? '')),
                 'password' => (string) ($_POST['admin_password'] ?? ''),
                 'app_url' => $appUrl,
+                'app_name' => $appName,
             ];
-            if ($admin['email'] === '' || $admin['password'] === '' || strlen($admin['password']) < 6) {
+            $logo = null;
+            if (! empty($_FILES['shop_logo']['tmp_name']) && is_uploaded_file((string) $_FILES['shop_logo']['tmp_name'])) {
+                $mime = (string) ($_FILES['shop_logo']['type'] ?? '');
+                $okMime = in_array($mime, ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'], true)
+                    || preg_match('/\.(png|jpe?g|webp|gif)$/i', (string) ($_FILES['shop_logo']['name'] ?? ''));
+                if (! $okMime) {
+                    $error = 'لوگوی شرکت باید تصویر باشد (PNG/JPG/WEBP).';
+                } elseif ((int) ($_FILES['shop_logo']['size'] ?? 0) > 3 * 1024 * 1024) {
+                    $error = 'حجم لوگو حداکثر ۳ مگابایت باشد.';
+                } else {
+                    $logo = [
+                        'tmp' => (string) $_FILES['shop_logo']['tmp_name'],
+                        'name' => (string) ($_FILES['shop_logo']['name'] ?? 'logo.png'),
+                        'mime' => $mime,
+                    ];
+                }
+            }
+            if ($error === null && ($admin['email'] === '' || $admin['password'] === '' || strlen($admin['password']) < 6)) {
                 $error = 'ایمیل مدیر و رمز حداقل ۶ کاراکتری الزامی است.';
-            } else {
+            } elseif ($error === null && $appName === '') {
+                $error = 'نام شرکت / تعمیرگاه الزامی است.';
+            } elseif ($error === null) {
                 $db = $state['db'];
                 $license = $state['license'];
                 $appKey = $installer->generateAppKey();
@@ -209,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'LICENSE_SERVER' => (string) ($state['license_server'] ?? 'https://support.hdd-land.ir'),
                     ]);
 
-                    $result = $installer->runInstall($admin, $license, $db);
+                    $result = $installer->runInstall($admin, $license, $db, $company, $logo);
                     if (! ($result['ok'] ?? false)) {
                         $raw = (string) ($result['message'] ?? 'نصب ناموفق بود.');
                         $error = (str_contains($raw, '1045') || str_contains($raw, 'Access denied')
@@ -428,8 +456,8 @@ $reqs = $installer->checkRequirements();
             </script>
 
         <?php elseif ($step === 4): ?>
-            <h2>اطلاعات سایت و مدیر</h2>
-            <p>اطلاعات تعمیرگاه جدید را وارد کنید. دادهٔ دمو ساخته نمی‌شود.</p>
+            <h2>مشخصات شرکت و مدیر</h2>
+            <p>نام و لوگوی شرکت روی کل نرم‌افزار می‌نشیند. منوهای پذیرش و تعاریف خالی نصب می‌شوند.</p>
             <?php if (! empty($state['db'])): ?>
                 <p style="margin-bottom:10px;font-size:12px;color:#445;">
                     دیتابیس ذخیره‌شده:
@@ -439,19 +467,42 @@ $reqs = $installer->checkRequirements();
                 </p>
             <?php endif; ?>
             <p style="margin-bottom:12px;"><a href="?step=3">← برگشت به تنظیم دیتابیس (ساخت خودکار cPanel)</a></p>
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 <input type="hidden" name="step" value="4">
                 <input type="hidden" name="action" value="install">
+
+                <h2 style="font-size:15px;margin:8px 0 10px;">برند شرکت</h2>
                 <div class="grid">
                     <div>
-                        <label>نام تعمیرگاه / برند</label>
-                        <input name="app_name" value="<?= h($_POST['app_name'] ?? 'تعمیرگاه') ?>" required>
+                        <label>نام شرکت / تعمیرگاه</label>
+                        <input name="app_name" value="<?= h($_POST['app_name'] ?? '') ?>" required placeholder="مثلاً تعمیرگاه نمونه">
+                    </div>
+                    <div>
+                        <label>شعار کوتاه</label>
+                        <input name="shop_tagline" value="<?= h($_POST['shop_tagline'] ?? 'سیستم مدیریت تعمیرات') ?>">
+                    </div>
+                </div>
+                <label>لوگوی شرکت (PNG یا JPG)</label>
+                <input type="file" name="shop_logo" accept="image/png,image/jpeg,image/webp,image/gif">
+                <div style="font-size:11px;color:#778;margin:-6px 0 10px;">روی هدر، ورود، فاکتور و آیکون‌ها اعمال می‌شود.</div>
+                <div class="grid">
+                    <div>
+                        <label>تلفن‌های شرکت</label>
+                        <input name="shop_phones" value="<?= h($_POST['shop_phones'] ?? '') ?>" placeholder="۰۲۱-… / ۰۹۱۲…">
                     </div>
                     <div>
                         <label>آدرس سایت</label>
                         <input name="app_url" value="<?= h($_POST['app_url'] ?? detect_app_url()) ?>" required dir="ltr" style="text-align:left;">
                     </div>
                 </div>
+                <label>آدرس شرکت</label>
+                <input name="shop_address" value="<?= h($_POST['shop_address'] ?? '') ?>" placeholder="شهر، خیابان، پلاک">
+                <label>پاورقی فاکتور</label>
+                <input name="shop_footer" value="<?= h($_POST['shop_footer'] ?? '') ?>" placeholder="اختیاری">
+                <label>شرایط فاکتور / پذیرش</label>
+                <input name="shop_terms" value="<?= h($_POST['shop_terms'] ?? '') ?>" placeholder="اختیاری">
+
+                <h2 style="font-size:15px;margin:16px 0 10px;">مدیر سیستم</h2>
                 <div class="grid">
                     <div>
                         <label>نام مدیر</label>
@@ -472,7 +523,7 @@ $reqs = $installer->checkRequirements();
                         <input type="password" name="admin_password" required minlength="6">
                     </div>
                 </div>
-                <button class="btn" type="submit">نصب نهایی</button>
+                <button class="btn" type="submit">نصب نهایی با برند شرکت</button>
             </form>
 
         <?php else: ?>

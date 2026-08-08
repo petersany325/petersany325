@@ -123,7 +123,7 @@
                     'on' => 'ارسال',
                     'off' => 'بدون SMS',
                 ])
-                <p class="hint" style="margin:6px 0 0;">متن نمونه: شما کارمند سرزمین هارد هستید + لینک ورود کارتابل</p>
+                <p class="hint" style="margin:6px 0 0;">متن نمونه: شما کارمند {{ shop_name() }} هستید + لینک ورود کارتابل</p>
             </div>
         @endunless
     </section>

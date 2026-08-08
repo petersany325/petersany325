@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'رسید ورود انبار | سرزمین هارد')
+@section('title', 'رسید ورود انبار | '.shop_name())
 @section('page_title', 'رسید ورود انبار')
 @section('window_title', 'خرید / ورود قطعه — سند حسابداری ۱۳۱۰')
 

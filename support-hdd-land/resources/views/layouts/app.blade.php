@@ -3,7 +3,7 @@
 <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'سرزمین هارد')</title>
+    <title>@yield('title', shop_name())</title>
     <meta name="theme-color" content="#2b3340">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -51,9 +51,9 @@
     {{-- نوار عنوان ویندوز / موبایل --}}
     <div class="win-app-caption">
         <div class="win-app-caption-title">
-            <img class="brand-logo" src="{{ asset('images/logo-header.png') }}?v=hd1" alt="HDD LAND" width="120" height="28">
-            <span class="caption-full">سرزمین هارد — سیستم مدیریت تعمیرات</span>
-            <span class="caption-short">سرزمین هارد</span>
+            <img class="brand-logo" src="{{ shop_logo_url('header') }}" alt="{{ shop_name() }}" width="120" height="28">
+            <span class="caption-full">{{ shop_name() }} — {{ shop_tagline() }}</span>
+            <span class="caption-short">{{ shop_name() }}</span>
         </div>
         <div class="win-app-caption-user">
             <button type="button" class="win-caption-btn ui-mode-toggle" data-ui-mode-toggle title="تعویض نمای موبایل / کامپیوتر">⇄</button>
@@ -155,7 +155,7 @@
 
     <div class="app-statusbar desktop-only">
         <div>آماده · تشخیص خودکار موبایل/کامپیوتر</div>
-        <div>کاربر: {{ auth()->user()->name }} | سرزمین هارد</div>
+        <div>کاربر: {{ auth()->user()->name }} | {{ shop_name() }}</div>
     </div>
 
     {{-- تب‌بار موبایل --}}

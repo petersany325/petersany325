@@ -33,7 +33,9 @@ class CostApprovalService
             return $custom;
         }
 
-        return "با تأیید این مبلغ، اجازه می‌دهم تعمیرگاه سرزمین هارد طبق شرح کار اعلام‌شده اقدام کند.\n"
+        $shop = AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه'));
+
+        return "با تأیید این مبلغ، اجازه می‌دهم تعمیرگاه {$shop} طبق شرح کار اعلام‌شده اقدام کند.\n"
             ."تأیید هزینه به‌معنی ضمانت موفقیت بازیابی/تعمیر نیست.\n"
             ."اگر مبلغ نهایی از این رقم بیشتر شود، تأیید جداگانه لازم است.";
     }
@@ -404,7 +406,7 @@ class CostApprovalService
             return ['ok' => false, 'message' => 'شماره موبایل مشتری موجود نیست.'];
         }
 
-        $shop = AppSetting::getValue('invoice_shop_name', 'سرزمین هارد');
+        $shop = AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه'));
         $template = $rule?->message_template;
         if (! $template || ! str_contains($template, '{approval_url}')) {
             $template = "سلام {customer_name}\nقبض {ticket_no}\nسریال {serial}\nمبلغ پیشنهادی: {amount} تومان\nبرای تأیید هزینه:\n{approval_url}\n{$shop}";

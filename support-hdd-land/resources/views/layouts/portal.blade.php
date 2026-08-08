@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'کارتابل مشتری | سرزمین هارد')</title>
+    <title>@yield('title', 'کارتابل مشتری | '.shop_name())</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}?v=hd1" type="image/x-icon">
     <link rel="manifest" href="{{ asset('pwa/manifest.json') }}?v=hd1">
     <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}?v=hd1">

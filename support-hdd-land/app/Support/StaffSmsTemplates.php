@@ -57,7 +57,7 @@ class StaffSmsTemplates
 
     public static function renderEmployee(User $user): string
     {
-        $shop = trim((string) AppSetting::getValue('invoice_shop_name', 'سرزمین هارد')) ?: 'سرزمین هارد';
+        $shop = trim((string) AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه'))) ?: (string) config('app.name', 'تعمیرگاه');
 
         return strtr(self::employeeTemplate(), [
             '{name}' => trim((string) $user->name) ?: 'همکار',
@@ -70,7 +70,7 @@ class StaffSmsTemplates
 
     public static function renderIntern(Intern $intern): string
     {
-        $shop = trim((string) AppSetting::getValue('invoice_shop_name', 'سرزمین هارد')) ?: 'سرزمین هارد';
+        $shop = trim((string) AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه'))) ?: (string) config('app.name', 'تعمیرگاه');
         $start = $intern->start_date ? jalali_date($intern->start_date) : '—';
         $end = $intern->end_date ? jalali_date($intern->end_date) : '—';
 

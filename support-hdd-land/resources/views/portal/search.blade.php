@@ -1,5 +1,5 @@
 @extends('layouts.portal')
-@section('title', 'جستجوی قبض | سرزمین هارد')
+@section('title', 'جستجوی قبض | '.shop_name())
 
 @section('content')
 <header class="p-top">

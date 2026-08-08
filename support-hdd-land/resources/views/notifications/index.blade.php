@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'اعلان‌ها | سرزمین هارد')
+@section('title', 'اعلان‌ها | '.shop_name())
 @section('page_title', 'اعلان‌ها و پیام مشتری')
 @section('window_title', 'صندوق پیام تعمیرگاه')
 

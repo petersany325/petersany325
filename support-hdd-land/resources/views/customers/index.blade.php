@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'مشتریان | سرزمین هارد')
+@section('title', 'مشتریان | '.shop_name())
 @section('page_title', 'مدیریت مشتریان')
 @section('content')
 <div class="panel">

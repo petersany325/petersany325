@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'ارزش موجودی انبار | سرزمین هارد')
+@section('title', 'ارزش موجودی انبار | '.shop_name())
 @section('page_title', 'ارزش‌گذاری موجودی')
 @section('window_title', 'تراز انبار به بهای خرید و فروش')
 

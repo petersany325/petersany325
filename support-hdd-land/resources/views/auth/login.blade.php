@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'ورود | سرزمین هارد')
+@section('title', 'ورود | '.shop_name())
 
 @section('content')
 @php
@@ -10,8 +10,8 @@
 <div class="login-page">
     <div class="panel login-card login-card-modern">
         <div class="brand-center">
-            <img class="brand-logo-lg" src="{{ asset('images/logo.png') }}?v=hd1" alt="HDD LAND" width="96" height="96">
-            <h1>سرزمین هارد</h1>
+            <img class="brand-logo-lg" src="{{ shop_logo_url('main') }}" alt="{{ shop_name() }}" width="96" height="96">
+            <h1>{{ shop_name() }}</h1>
             <p>{{ $isInternLogin ? 'ورود کارآموز — پرتال خدمات و دفتر روز' : 'ورود کارمند — موبایل و کامپیوتر' }}</p>
         </div>
         @include('partials.flash')

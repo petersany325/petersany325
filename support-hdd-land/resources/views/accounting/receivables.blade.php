@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'بدهکاران | سرزمین هارد')
+@section('title', 'بدهکاران | '.shop_name())
 @section('page_title', 'بدهکاران مشتریان')
 @section('window_title', 'حساب بدهکاران (۱۲۱۰)')
 

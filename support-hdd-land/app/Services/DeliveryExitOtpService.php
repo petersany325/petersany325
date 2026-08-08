@@ -128,7 +128,8 @@ class DeliveryExitOtpService
         });
 
         $ticket = $reception->ticket_no ?: ('#'.$reception->id);
-        $message = "سرزمین هارد\nکد تأیید خروج دستگاه برای قبض {$ticket}:\n{$code}\nاعتبار: ".self::TTL_MINUTES." دقیقه";
+        $shop = \App\Models\AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه'));
+        $message = "{$shop}\nکد تأیید خروج دستگاه برای قبض {$ticket}:\n{$code}\nاعتبار: ".self::TTL_MINUTES.' دقیقه';
 
         $result = $this->sms->send($phone, $message);
 

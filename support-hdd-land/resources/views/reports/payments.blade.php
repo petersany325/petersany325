@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'گزارش صندوق و دریافت‌ها | سرزمین هارد')
+@section('title', 'گزارش صندوق و دریافت‌ها | '.shop_name())
 @section('page_title', 'گزارش صندوق / دریافت‌ها')
 @section('window_title', 'نقد، کارت، زرین‌پال و بدهکاران')
 

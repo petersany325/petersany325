@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'تأیید فیش کارت‌به‌کارت | سرزمین هارد')
+@section('title', 'تأیید فیش کارت‌به‌کارت | '.shop_name())
 @section('page_title', 'تأیید فیش بانکی')
 @section('window_title', 'بررسی فیش‌های واریزی پرتال مشتری')
 

@@ -15,7 +15,7 @@
 <div class="acc-shell">
     <div class="acc-hero">
         <div>
-            <div class="acc-hero-eyebrow">سرزمین هارد · حسابداری دوطرفه</div>
+            <div class="acc-hero-eyebrow">{{ shop_name() }} · حسابداری دوطرفه</div>
             <h2 class="acc-hero-title">{{ $accTitle }}</h2>
             <p class="acc-hero-sub">{{ $accSub }}</p>
         </div>

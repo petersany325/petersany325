@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex,nofollow">
-    <title>{{ $mode === 'approved' ? 'هزینه تأیید شد' : 'هزینه رد شد' }} | سرزمین هارد</title>
+    <title>{{ $mode === 'approved' ? 'هزینه تأیید شد' : 'هزینه رد شد' }} | {{ shop_name() }}</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}?v=hd1">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@600;800&display=swap" rel="stylesheet">
     <style>

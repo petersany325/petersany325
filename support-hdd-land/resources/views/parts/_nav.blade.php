@@ -14,7 +14,7 @@
 <div class="wh-shell">
     <div class="wh-hero">
         <div>
-            <div class="wh-eyebrow">سرزمین هارد · انبار حسابداری</div>
+            <div class="wh-eyebrow">{{ shop_name() }} · انبار حسابداری</div>
             <h2 class="wh-title">{{ $whTitle }}</h2>
             <p class="wh-sub">{{ $whSub }}</p>
         </div>

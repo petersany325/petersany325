@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'تنظیمات | سرزمین هارد')
+@section('title', 'تنظیمات | '.shop_name())
 @section('page_title', 'تنظیمات')
 @section('window_title', 'پنجره تنظیمات سیستم')
 @section('content')
@@ -251,7 +251,7 @@
                         <input type="number" name="invoice_margin_mm" min="4" max="25" value="{{ old('invoice_margin_mm', $invoice['margin_mm'] ?? 10) }}">
                     </div>
                     <div>
-                        @include('partials.toggle', ['name' => 'invoice_show_logo', 'label' => 'نمایش لوگوی HDD LAND', 'checked' => $invoice['show_logo'] ?? true])
+                        @include('partials.toggle', ['name' => 'invoice_show_logo', 'label' => 'نمایش لوگوی شرکت', 'checked' => $invoice['show_logo'] ?? true])
                     </div>
                 </div>
 

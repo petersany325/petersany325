@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'متن SMS خوش‌آمد | سرزمین هارد')
+@section('title', 'متن SMS خوش‌آمد | '.shop_name())
 @section('page_title', 'متن پیامک کارمند و کارآموز')
 @section('window_title', 'قالب پیامک خوش‌آمدگویی')
 

@@ -80,11 +80,11 @@
     <div class="letterhead">
         <div class="brand-block">
             @if($showLogo)
-                <img src="{{ asset('images/logo-invoice.png') }}?v=hd1" alt="HDD LAND">
+                <img src="{{ shop_logo_url('invoice') }}" alt="{{ shop_name() }}">
             @endif
             <div>
                 <h1>{{ $invoice['shop_name'] }}</h1>
-                <div class="sub">سیستم مدیریت تعمیرات — سرزمین هارد</div>
+                <div class="sub">{{ shop_tagline() }} — {{ shop_name() }}</div>
                 @if($invoice['footer'])
                     <div class="sub">{{ $invoice['footer'] }}</div>
                 @endif

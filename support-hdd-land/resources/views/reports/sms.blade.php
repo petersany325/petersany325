@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'گزارش پیامک | سرزمین هارد')
+@section('title', 'گزارش پیامک | '.shop_name())
 @section('page_title', 'گزارش پیامک قبض‌ها')
 @section('window_title', 'همه پیامک‌های سیستم — موفق / ناموفق / تأیید هزینه')
 
@@ -9,7 +9,7 @@
 <div class="sms-report-shell">
     <div class="sms-report-hero panel">
         <div>
-            <div class="wh-eyebrow">سرزمین هارد · کارتابل پیامک</div>
+            <div class="wh-eyebrow">{{ shop_name() }} · کارتابل پیامک</div>
             <h2 style="margin:0;">گزارش پیامک قبض‌ها</h2>
             <p class="lead" style="margin:4px 0 0;">
                 @if($reception)

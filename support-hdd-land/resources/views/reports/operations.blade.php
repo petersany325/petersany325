@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'گزارش عملیات کارگاه | سرزمین هارد')
+@section('title', 'گزارش عملیات کارگاه | '.shop_name())
 @section('page_title', 'گزارش عملیات / وضعیت قبض‌ها')
 @section('window_title', 'پذیرش، تحویل، WIP و درآمد دوره')
 

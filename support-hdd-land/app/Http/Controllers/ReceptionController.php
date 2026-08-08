@@ -1189,7 +1189,7 @@ class ReceptionController extends Controller
         $reception->load(['customer', 'technician', 'faultType', 'parts', 'payments', 'costStages']);
 
         $invoice = [
-            'shop_name' => \App\Models\AppSetting::getValue('invoice_shop_name', 'سرزمین هارد'),
+            'shop_name' => \App\Models\AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه')),
             'phones' => \App\Models\AppSetting::getValue('invoice_phones', ''),
             'address' => \App\Models\AppSetting::getValue('invoice_address', ''),
             'footer' => \App\Models\AppSetting::getValue('invoice_footer', 'مدیریت تعمیرکاران — قبض پذیرش'),

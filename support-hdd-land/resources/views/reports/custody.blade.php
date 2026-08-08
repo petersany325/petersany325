@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'گزارش ارجاع دستگاه | سرزمین هارد')
+@section('title', 'گزارش ارجاع دستگاه | '.shop_name())
 @section('page_title', 'گزارش ارجاع / محل دستگاه')
 @section('window_title', 'Chain of Custody و دست تعمیر')
 

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'دفتر معین | سرزمین هارد')
+@section('title', 'دفتر معین | '.shop_name())
 @section('page_title', 'دفتر معین')
 @section('window_title', 'دفتر معین '.$account->code)
 

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'پرتال کارآموز | سرزمین هارد')
+@section('title', 'پرتال کارآموز | '.shop_name())
 @section('page_title', 'پرتال کارآموز')
 @section('window_title', 'خدمات شرکت و دفتر روز')
 
@@ -7,7 +7,7 @@
 <div class="intern-portal">
     <section class="panel daybook-hero">
         <div>
-            <p class="daybook-eyebrow">پرتال کارآموز — سرزمین هارد</p>
+            <p class="daybook-eyebrow">پرتال کارآموز — {{ shop_name() }}</p>
             <h2 style="margin:0;">سلام {{ $user->name }}</h2>
             <p class="lead" style="margin:4px 0 0;">
                 @if($intern)

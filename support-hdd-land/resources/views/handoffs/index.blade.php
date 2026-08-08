@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'کارتابل ارجاع | سرزمین هارد')
+@section('title', 'کارتابل ارجاع | '.shop_name())
 @section('page_title', 'ارجاع دستگاه / کارتابل تعمیر')
 @section('window_title', 'جستجو، تأیید دریافت و گزارش محل دستگاه')
 

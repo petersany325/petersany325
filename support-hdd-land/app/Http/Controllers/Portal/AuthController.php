@@ -58,7 +58,8 @@ class AuthController extends Controller
         }
 
         $code = (string) random_int(100000, 999999);
-        $message = "کد ورود کارتابل مشتری سرزمین هارد: {$code}";
+        $shop = \App\Models\AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه'));
+        $message = "کد ورود کارتابل مشتری {$shop}: {$code}";
 
         LoginOtp::query()->where('phone', $phone)->delete();
         LoginOtp::create([

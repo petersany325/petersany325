@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'پرونده '.$customer->name.' | سرزمین هارد')
+@section('title', 'پرونده '.$\2.' | '.shop_name())
 @section('page_title', 'پرونده مشتری')
 @section('window_title', $customer->name)
 

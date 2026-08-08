@@ -1,5 +1,5 @@
 @extends('layouts.portal')
-@section('title', 'پرداخت آنلاین | سرزمین هارد')
+@section('title', 'پرداخت آنلاین | '.shop_name())
 
 @section('content')
 <header class="p-top compact"><meta charset="utf-8">

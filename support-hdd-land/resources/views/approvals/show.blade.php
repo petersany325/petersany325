@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#2b3340">
     <meta name="robots" content="noindex,nofollow">
-    <title>تأیید هزینه | سرزمین هارد</title>
+    <title>تأیید هزینه | {{ shop_name() }}</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}?v=hd1" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -82,8 +82,8 @@
 <body>
 <div class="wrap">
     <div class="brand">
-        <img src="{{ asset('images/logo-header.png') }}?v=hd1" alt="HDD LAND">
-        <span>سرزمین هارد</span>
+        <img src="{{ shop_logo_url('header') }}" alt="{{ shop_name() }}">
+        <span>{{ shop_name() }}</span>
     </div>
 
     <div class="card">

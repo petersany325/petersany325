@@ -436,24 +436,16 @@ class WebInstaller
             ['database' => $fullDb, 'username' => $fullUser],
             ['database' => $dbName, 'username' => $dbUser],
             ['database' => $fullDb, 'username' => $dbUser],
+            ['database' => $dbName, 'username' => $fullUser],
         ];
         $connected = null;
         foreach ($candidates as $c) {
-            $test = $this->testDatabase($mysqlHost, $mysqlPort, $c['database'], $c['username'], $dbPass);
-            $details[] = 'test '.$c['username'].'@'.$c['database'].': '.(($test['ok'] ?? false) ? 'OK' : ($test['message'] ?? 'fail'));
+            $test = $this->testDatabaseWithHostFallback($mysqlHost, $mysqlPort, $c['database'], $c['username'], $dbPass);
+            $details[] = 'test '.$c['username'].'@'.$c['database'].': '.(($test['ok'] ?? false) ? ('OK host='.($test['host'] ?? '')) : ($test['message'] ?? 'fail'));
             if ($test['ok'] ?? false) {
+                $mysqlHost = (string) ($test['host'] ?? $mysqlHost);
                 $connected = $c;
                 break;
-            }
-            // also try localhost
-            if ($mysqlHost === '127.0.0.1') {
-                $test2 = $this->testDatabase('localhost', $mysqlPort, $c['database'], $c['username'], $dbPass);
-                $details[] = 'test localhost '.$c['username'].'@'.$c['database'].': '.(($test2['ok'] ?? false) ? 'OK' : ($test2['message'] ?? 'fail'));
-                if ($test2['ok'] ?? false) {
-                    $mysqlHost = 'localhost';
-                    $connected = $c;
-                    break;
-                }
             }
         }
 
@@ -534,9 +526,11 @@ class WebInstaller
      * @param  array<string, mixed>  $admin
      * @param  array<string, mixed>  $license
      * @param  array{host?:string,port?:string,database?:string,username?:string,password?:string}|null  $db
+     * @param  array<string, mixed>  $company
+     * @param  array{tmp?:string,name?:string,mime?:string}|null  $logo
      * @return array{ok:bool,message:string,details?:list<string>}
      */
-    public function runInstall(array $admin, array $license, ?array $db = null): array
+    public function runInstall(array $admin, array $license, ?array $db = null, array $company = [], ?array $logo = null): array
     {
         $details = [];
         try {
@@ -573,9 +567,9 @@ class WebInstaller
                 return ['ok' => false, 'message' => 'مایگریشن ناموفق بود.', 'details' => $details];
             }
 
-            // Fresh seed: lookups + admin only
-            $this->seedFresh($admin);
-            $details[] = 'Seed admin + lookups OK';
+            // Fresh seed: admin + company brand only (menus/lookups left empty)
+            $this->seedFresh($admin, $company, $logo);
+            $details[] = 'Seed admin + company brand OK (lookups empty)';
 
             try {
                 $kernel->call('storage:link', ['--force' => true]);
@@ -622,15 +616,19 @@ class WebInstaller
         }
     }
 
-    /** @param  array<string, mixed>  $admin */
-    private function seedFresh(array $admin): void
+    /**
+     * @param  array<string, mixed>  $admin
+     * @param  array<string, mixed>  $company
+     * @param  array{tmp?:string,name?:string,mime?:string}|null  $logo
+     */
+    private function seedFresh(array $admin, array $company = [], ?array $logo = null): void
     {
         $name = trim((string) ($admin['name'] ?? 'مدیر'));
         $email = trim((string) ($admin['email'] ?? 'admin@example.com'));
         $phone = preg_replace('/\D+/', '', (string) ($admin['phone'] ?? '09120000000')) ?: '09120000000';
         $password = (string) ($admin['password'] ?? 'password');
 
-        $user = \App\Models\User::query()->updateOrCreate(
+        \App\Models\User::query()->updateOrCreate(
             ['email' => $email],
             [
                 'name' => $name,
@@ -644,45 +642,106 @@ class WebInstaller
             ]
         );
 
-        $sources = ['اینستاگرام', 'گوگل', 'معرفی دوستان', 'تابلو مغازه', 'سایت'];
-        foreach ($sources as $src) {
-            \App\Models\ReferralSource::query()->firstOrCreate(['name' => $src]);
+        // White-label empty shop: wipe migration-seeded menu definitions.
+        \App\Models\LookupOption::query()->delete();
+        \App\Models\FaultType::query()->delete();
+        \App\Models\ReferralSource::query()->delete();
+        if (class_exists(\App\Models\DailyLogCategory::class)) {
+            \App\Models\DailyLogCategory::query()->delete();
+        }
+        \App\Models\AppSetting::setValue('cost_approval_services', '[]');
+
+        $shopName = trim((string) ($company['shop_name'] ?? $admin['app_name'] ?? 'تعمیرگاه')) ?: 'تعمیرگاه';
+        $tagline = trim((string) ($company['tagline'] ?? 'سیستم مدیریت تعمیرات')) ?: 'سیستم مدیریت تعمیرات';
+        $phones = trim((string) ($company['phones'] ?? ''));
+        $address = trim((string) ($company['address'] ?? ''));
+        $footer = trim((string) ($company['footer'] ?? ('مدیریت تعمیرکاران — '.$shopName)));
+        $terms = trim((string) ($company['terms'] ?? ''));
+
+        \App\Models\AppSetting::setValue('invoice_shop_name', $shopName);
+        \App\Models\AppSetting::setValue('shop_tagline', $tagline);
+        \App\Models\AppSetting::setValue('invoice_phones', $phones);
+        \App\Models\AppSetting::setValue('invoice_address', $address);
+        \App\Models\AppSetting::setValue('invoice_footer', $footer);
+        \App\Models\AppSetting::setValue('invoice_terms', $terms);
+        \App\Models\AppSetting::setValue('invoice_show_logo', '1');
+        \App\Models\AppSetting::setValue('brand_logo_version', (string) time());
+
+        if (is_array($logo) && ! empty($logo['tmp']) && is_file((string) $logo['tmp'])) {
+            $this->installBrandLogo((string) $logo['tmp']);
         }
 
-        $lookupSeed = [
-            'admission_type' => ['حضوری', 'پستی', 'پیک', 'نمایندگی'],
-            'service_type' => ['تعمیر', 'بازیابی اطلاعات', 'تعویض قطعه', 'عیب‌یابی', 'نصب سیستم'],
-            'repair_type' => ['سخت‌افزاری', 'نرم‌افزاری', 'دیتا ریکاوری', 'گارانتی'],
-            'warranty_type' => ['فاقد گارانتی و بیمه', 'گارانتی شرکتی', 'گارانتی تعمیرگاه', 'بیمه'],
-            'hdd_capacity' => ['120GB', '250GB', '320GB', '500GB', '1TB', '2TB', '4TB'],
-            'brand_model' => ['WD My Passport', 'Seagate Backup Plus', 'Toshiba Canvio', 'Samsung T7', 'Laptop Generic'],
+        $this->writePwaManifests($shopName);
+    }
+
+    /** Copy uploaded logo into public brand image slots. */
+    public function installBrandLogo(string $tmpPath): void
+    {
+        $dir = $this->basePath.'/public/images';
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        $targets = [
+            $dir.'/logo.png',
+            $dir.'/logo-header.png',
+            $dir.'/logo-invoice.png',
+            $dir.'/logo-192.png',
+            $dir.'/logo-512.png',
+            $dir.'/apple-touch-icon.png',
         ];
-        foreach ($lookupSeed as $group => $names) {
-            foreach ($names as $i => $label) {
-                \App\Models\LookupOption::query()->firstOrCreate(
-                    ['group_key' => $group, 'name' => $label],
-                    ['sort_order' => $i + 1, 'is_active' => true]
-                );
-            }
+        foreach ($targets as $target) {
+            @copy($tmpPath, $target);
         }
+        // favicons best-effort
+        @copy($tmpPath, $dir.'/favicon-32.png');
+        @copy($tmpPath, $dir.'/favicon-16.png');
+    }
 
-        $faults = ['روشن نمی‌شود', 'صدای غیرعادی', 'عدم شناسایی', 'بازیابی اطلاعات', 'آسیب فیزیکی', 'نرم‌افزاری'];
-        foreach ($faults as $fault) {
-            \App\Models\FaultType::query()->firstOrCreate(['name' => $fault]);
+    public function writePwaManifests(string $shopName): void
+    {
+        $pwa = $this->basePath.'/public/pwa';
+        if (! is_dir($pwa)) {
+            return;
         }
-
-        // Ensure chart of accounts if service exists
-        try {
-            if (class_exists(\App\Services\AccountingService::class)) {
-                $ref = new \ReflectionClass(\App\Services\AccountingService::class);
-                if ($ref->hasMethod('ensureDefaults')) {
-                    app(\App\Services\AccountingService::class)->ensureDefaults();
+        $staff = [
+            'name' => $shopName.' | کارتابل کارمندان',
+            'short_name' => mb_substr($shopName, 0, 12),
+            'start_url' => '/login',
+            'display' => 'standalone',
+            'background_color' => '#e8eaee',
+            'theme_color' => '#2b3340',
+            'lang' => 'fa',
+            'dir' => 'rtl',
+            'icons' => [
+                ['src' => '/images/logo-192.png', 'sizes' => '192x192', 'type' => 'image/png'],
+                ['src' => '/images/logo-512.png', 'sizes' => '512x512', 'type' => 'image/png'],
+            ],
+        ];
+        $portal = [
+            'name' => $shopName.' | کارتابل مشتری',
+            'short_name' => mb_substr($shopName, 0, 12),
+            'start_url' => '/portal/login',
+            'display' => 'standalone',
+            'background_color' => '#e8eaee',
+            'theme_color' => '#2b3340',
+            'lang' => 'fa',
+            'dir' => 'rtl',
+            'icons' => [
+                ['src' => '/images/logo-192.png', 'sizes' => '192x192', 'type' => 'image/png'],
+                ['src' => '/images/logo-512.png', 'sizes' => '512x512', 'type' => 'image/png'],
+            ],
+        ];
+        // Preserve extra keys from existing manifests when present
+        foreach (['staff-manifest.json' => $staff, 'manifest.json' => $portal] as $file => $payload) {
+            $path = $pwa.'/'.$file;
+            if (is_file($path)) {
+                $old = json_decode((string) file_get_contents($path), true);
+                if (is_array($old)) {
+                    $payload = array_merge($old, $payload);
                 }
             }
-        } catch (Throwable) {
+            file_put_contents($path, json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
         }
-
-        unset($user);
     }
 
     /**

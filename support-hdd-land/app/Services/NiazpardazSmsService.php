@@ -11,14 +11,16 @@ class NiazpardazSmsService
 {
     public function sendOtp(string $phone, string $code): array
     {
-        $message = "کد ورود سرزمین هارد: {$code}";
+        $shop = AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه'));
+        $message = "کد ورود {$shop}: {$code}";
 
         return $this->send($phone, $message, $code);
     }
 
     public function sendTest(string $phone): array
     {
-        $message = 'تست پنل پیامک سرزمین هارد — ارسال موفق بود.';
+        $shop = AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه'));
+        $message = "تست پنل پیامک {$shop} — ارسال موفق بود.";
 
         return $this->send($phone, $message);
     }

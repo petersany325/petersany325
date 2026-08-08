@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'گزارش پیام مشتری | سرزمین هارد')
+@section('title', 'گزارش پیام مشتری | '.shop_name())
 @section('page_title', 'گزارش پیام‌های کارتابل مشتری')
 @section('window_title', 'تیکت پشتیبانی مشتریان')
 

@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'عملکرد '.$technician->name.' | سرزمین هارد')
+@section('title', 'عملکرد '.$\2.' | '.shop_name())
 @section('page_title', 'پرونده عملکرد تعمیرکار')
 @section('window_title', $technician->name)
 

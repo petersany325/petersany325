@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', $customer->name.' | سرزمین هارد')
+@section('title', $customer->name.' | '.shop_name())
 @section('page_title', 'پرونده مشتری')
 @section('content')
 <div class="panel detail-box">

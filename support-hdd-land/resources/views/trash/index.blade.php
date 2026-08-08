@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'سطل زباله | سرزمین هارد')
+@section('title', 'سطل زباله | '.shop_name())
 @section('page_title', 'سطل زباله')
 @section('window_title', 'سطل زباله — بازیابی / حذف دائم')
 

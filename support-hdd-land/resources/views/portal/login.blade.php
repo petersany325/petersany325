@@ -1,5 +1,5 @@
 @extends('layouts.portal')
-@section('title', 'ورود مشتری | سرزمین هارد')
+@section('title', 'ورود مشتری | '.shop_name())
 @section('body_class', 'portal-body portal-auth')
 
 @section('content')
@@ -8,9 +8,9 @@
     <div class="p-auth-orb orb-b"></div>
     <div class="p-auth-card">
         <div class="p-brand">
-            <div class="p-logo"><img src="{{ asset('images/logo.png') }}?v=hd1" alt="HDD LAND"></div>
+            <div class="p-logo"><img src="{{ shop_logo_url('main') }}" alt="{{ shop_name() }}"></div>
             <div>
-                <strong>سرزمین هارد</strong>
+                <strong>{{ shop_name() }}</strong>
                 <span>کارتابل مشتری</span>
             </div>
         </div>

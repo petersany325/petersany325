@@ -47,7 +47,7 @@ class SettingController extends Controller
                 'from' => AppSetting::getValue('niazpardaz_from', env('NIAZPARDAZ_FROM_NUMBER')),
             ],
             'invoice' => [
-                'shop_name' => AppSetting::getValue('invoice_shop_name', 'سرزمین هارد'),
+                'shop_name' => AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه')),
                 'phones' => AppSetting::getValue('invoice_phones', ''),
                 'address' => AppSetting::getValue('invoice_address', ''),
                 'footer' => AppSetting::getValue('invoice_footer', 'مدیریت تعمیرکاران — قبض پذیرش'),

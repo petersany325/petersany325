@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'تعریف انبارها | سرزمین هارد')
+@section('title', 'تعریف انبارها | '.shop_name())
 @section('page_title', 'انبارهای چندگانه')
 @section('window_title', 'تعریف و مدیریت انبار طبق استاندارد حسابداری')
 

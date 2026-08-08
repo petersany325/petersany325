@@ -1,5 +1,5 @@
 @extends('layouts.portal')
-@section('title', 'پیام به تعمیرگاه | سرزمین هارد')
+@section('title', 'پیام به تعمیرگاه | '.shop_name())
 
 @section('content')
 <div class="portal-shell">
