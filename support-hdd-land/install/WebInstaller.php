@@ -218,6 +218,228 @@ class WebInstaller
     }
 
     /**
+     * Create MySQL database + user + ALL privileges via cPanel UAPI (shared hosting).
+     *
+     * @param  array{
+     *   cpanel_host:string,
+     *   cpanel_user:string,
+     *   cpanel_password:string,
+     *   db_name:string,
+     *   db_user:string,
+     *   db_password:string,
+     *   mysql_host?:string,
+     *   mysql_port?:string
+     * }  $input
+     * @return array{ok:bool,message:string,db?:array{host:string,port:string,database:string,username:string,password:string},details?:list<string>}
+     */
+    public function createDatabaseViaCpanel(array $input): array
+    {
+        $details = [];
+        $cpanelHost = trim((string) ($input['cpanel_host'] ?? ''));
+        $cpanelUser = trim((string) ($input['cpanel_user'] ?? ''));
+        $cpanelPass = (string) ($input['cpanel_password'] ?? '');
+        $dbName = trim((string) ($input['db_name'] ?? ''));
+        $dbUser = trim((string) ($input['db_user'] ?? ''));
+        $dbPass = (string) ($input['db_password'] ?? '');
+        $mysqlHost = trim((string) ($input['mysql_host'] ?? '127.0.0.1')) ?: '127.0.0.1';
+        $mysqlPort = trim((string) ($input['mysql_port'] ?? '3306')) ?: '3306';
+
+        if ($cpanelHost === '' || $cpanelUser === '' || $cpanelPass === '') {
+            return ['ok' => false, 'message' => 'آدرس/یوزر/رمز cPanel را کامل وارد کنید.'];
+        }
+        if ($dbName === '' || $dbUser === '' || strlen($dbPass) < 6) {
+            return ['ok' => false, 'message' => 'نام دیتابیس، نام کاربر و رمز حداقل ۶ کاراکتری لازم است.'];
+        }
+
+        // Allow short names; cPanel usually prefixes with ACCOUNT_
+        $dbName = preg_replace('/[^A-Za-z0-9_]/', '', $dbName) ?? '';
+        $dbUser = preg_replace('/[^A-Za-z0-9_]/', '', $dbUser) ?? '';
+        if ($dbName === '' || $dbUser === '') {
+            return ['ok' => false, 'message' => 'نام دیتابیس/کاربر فقط حروف و عدد و _ باشد.'];
+        }
+
+        // Strip accidental full prefix if user pasted ACCOUNT_name
+        $prefix = $cpanelUser.'_';
+        if (str_starts_with($dbName, $prefix)) {
+            $dbName = substr($dbName, strlen($prefix));
+        }
+        if (str_starts_with($dbUser, $prefix)) {
+            $dbUser = substr($dbUser, strlen($prefix));
+        }
+
+        $cpanelHost = preg_replace('#^https?://#', '', $cpanelHost) ?? $cpanelHost;
+        $cpanelHost = rtrim($cpanelHost, '/');
+        // If they paste domain:2083 keep host only
+        if (str_contains($cpanelHost, ':')) {
+            $cpanelHost = explode(':', $cpanelHost)[0];
+        }
+
+        $createDb = $this->cpanelUapi($cpanelHost, $cpanelUser, $cpanelPass, 'Mysql', 'create_database', [
+            'name' => $dbName,
+        ]);
+        $details[] = 'create_database: '.($createDb['raw'] ?? ($createDb['message'] ?? ''));
+        if (! ($createDb['ok'] ?? false)) {
+            $msg = (string) ($createDb['message'] ?? '');
+            $low = strtolower($msg);
+            if (str_contains($low, 'auth') || str_contains($low, 'login') || str_contains($low, 'permission denied')
+                || str_contains($msg, 'ورود') || str_contains($msg, 'احراز')) {
+                return [
+                    'ok' => false,
+                    'message' => 'ورود به cPanel ناموفق بود. یوزر/رمز یا آدرس سرور cPanel را بررسی کنید: '.$msg,
+                    'details' => $details,
+                ];
+            }
+            // already exists / other recoverable — continue to privileges + connection test
+            $details[] = 'create_database_note: continue after non-ok (often already exists)';
+        }
+
+        $createUser = $this->cpanelUapi($cpanelHost, $cpanelUser, $cpanelPass, 'Mysql', 'create_user', [
+            'name' => $dbUser,
+            'password' => $dbPass,
+        ]);
+        $details[] = 'create_user: '.($createUser['raw'] ?? ($createUser['message'] ?? ''));
+        if (! ($createUser['ok'] ?? false)) {
+            // User may already exist — sync password so connection test uses the password entered here
+            $setPass = $this->cpanelUapi($cpanelHost, $cpanelUser, $cpanelPass, 'Mysql', 'set_password', [
+                'user' => $dbUser,
+                'password' => $dbPass,
+            ]);
+            $details[] = 'set_password: '.($setPass['raw'] ?? ($setPass['message'] ?? ''));
+            if (! ($setPass['ok'] ?? false)) {
+                $fullUserEarly = $prefix.$dbUser;
+                $setPass2 = $this->cpanelUapi($cpanelHost, $cpanelUser, $cpanelPass, 'Mysql', 'set_password', [
+                    'user' => $fullUserEarly,
+                    'password' => $dbPass,
+                ]);
+                $details[] = 'set_password_full: '.($setPass2['raw'] ?? ($setPass2['message'] ?? ''));
+            }
+            $details[] = 'create_user_note: continue (user may already exist)';
+        }
+
+        $fullDb = $prefix.$dbName;
+        $fullUser = $prefix.$dbUser;
+
+        $priv = $this->cpanelUapi($cpanelHost, $cpanelUser, $cpanelPass, 'Mysql', 'set_privileges_on_database', [
+            'user' => $dbUser,
+            'database' => $dbName,
+            'privileges' => 'ALL PRIVILEGES',
+        ]);
+        $details[] = 'set_privileges: '.($priv['raw'] ?? '');
+        if (! ($priv['ok'] ?? false)) {
+            // retry with full names
+            $priv2 = $this->cpanelUapi($cpanelHost, $cpanelUser, $cpanelPass, 'Mysql', 'set_privileges_on_database', [
+                'user' => $fullUser,
+                'database' => $fullDb,
+                'privileges' => 'ALL PRIVILEGES',
+            ]);
+            $details[] = 'set_privileges_full: '.($priv2['raw'] ?? '');
+            if (! ($priv2['ok'] ?? false)) {
+                return [
+                    'ok' => false,
+                    'message' => 'اعطای دسترسی ALL PRIVILEGES ناموفق بود: '.($priv2['message'] ?? $priv['message'] ?? ''),
+                    'details' => $details,
+                ];
+            }
+        }
+
+        // Prefer prefixed names for app connection (cPanel standard)
+        $candidates = [
+            ['database' => $fullDb, 'username' => $fullUser],
+            ['database' => $dbName, 'username' => $dbUser],
+            ['database' => $fullDb, 'username' => $dbUser],
+        ];
+        $connected = null;
+        foreach ($candidates as $c) {
+            $test = $this->testDatabase($mysqlHost, $mysqlPort, $c['database'], $c['username'], $dbPass);
+            $details[] = 'test '.$c['username'].'@'.$c['database'].': '.(($test['ok'] ?? false) ? 'OK' : ($test['message'] ?? 'fail'));
+            if ($test['ok'] ?? false) {
+                $connected = $c;
+                break;
+            }
+            // also try localhost
+            if ($mysqlHost === '127.0.0.1') {
+                $test2 = $this->testDatabase('localhost', $mysqlPort, $c['database'], $c['username'], $dbPass);
+                $details[] = 'test localhost '.$c['username'].'@'.$c['database'].': '.(($test2['ok'] ?? false) ? 'OK' : ($test2['message'] ?? 'fail'));
+                if ($test2['ok'] ?? false) {
+                    $mysqlHost = 'localhost';
+                    $connected = $c;
+                    break;
+                }
+            }
+        }
+
+        if (! $connected) {
+            return [
+                'ok' => false,
+                'message' => 'دیتابیس از طریق cPanel ساخته شد ولی اتصال MySQL هنوز برقرار نشد. رمز کاربر دیتابیس را قوی‌تر/بدون کاراکتر عجیب بگذارید و دوباره تلاش کنید.',
+                'details' => $details,
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'message' => 'دیتابیس و کاربر MySQL ساخته شد و دسترسی کامل داده شد.',
+            'db' => [
+                'host' => $mysqlHost,
+                'port' => $mysqlPort,
+                'database' => $connected['database'],
+                'username' => $connected['username'],
+                'password' => $dbPass,
+            ],
+            'details' => $details,
+        ];
+    }
+
+    /**
+     * @param  array<string, scalar>  $params
+     * @return array{ok:bool,message?:string,raw?:string,data?:mixed}
+     */
+    private function cpanelUapi(string $host, string $user, string $password, string $module, string $func, array $params = []): array
+    {
+        $query = http_build_query($params);
+        $url = 'https://'.$host.':2083/execute/'.$module.'/'.$func.($query !== '' ? ('?'.$query) : '');
+
+        if (! function_exists('curl_init')) {
+            return ['ok' => false, 'message' => 'افزونه curl روی هاست فعال نیست.'];
+        }
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_USERPWD => $user.':'.$password,
+            CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_SSL_VERIFYHOST => false,
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_TIMEOUT => 45,
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
+        ]);
+        $raw = curl_exec($ch);
+        $err = curl_error($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($raw === false) {
+            return ['ok' => false, 'message' => 'ارتباط با cPanel برقرار نشد: '.$err.' — آدرس سرور cPanel را درست وارد کنید (مثلاً server.irandns.com).'];
+        }
+
+        $json = json_decode($raw, true);
+        if (! is_array($json)) {
+            return ['ok' => false, 'message' => 'پاسخ نامعتبر cPanel (HTTP '.$code.'). شاید یوزر/رمز cPanel اشتباه باشد.', 'raw' => substr($raw, 0, 300)];
+        }
+
+        $status = (int) ($json['status'] ?? 0);
+        if ($status !== 1) {
+            $errors = $json['errors'] ?? null;
+            $msg = is_array($errors) ? implode(' | ', array_map('strval', $errors)) : (string) ($json['messages'][0] ?? 'خطای cPanel');
+
+            return ['ok' => false, 'message' => $msg, 'raw' => substr($raw, 0, 500), 'data' => $json['data'] ?? null];
+        }
+
+        return ['ok' => true, 'raw' => substr($raw, 0, 500), 'data' => $json['data'] ?? null];
+    }
+
+    /**
      * Bootstrap Laravel and run migrate + fresh seed + storage link.
      *
      * @param  array<string, mixed>  $admin

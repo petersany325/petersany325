@@ -82,23 +82,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'database' && $step === 3) {
-        $db = [
-            'host' => trim((string) ($_POST['db_host'] ?? '127.0.0.1')),
-            'port' => trim((string) ($_POST['db_port'] ?? '3306')),
-            'database' => trim((string) ($_POST['db_database'] ?? '')),
-            'username' => trim((string) ($_POST['db_username'] ?? '')),
-            'password' => (string) ($_POST['db_password'] ?? ''),
-        ];
-        $res = $installer->testDatabase($db['host'], $db['port'], $db['database'], $db['username'], $db['password']);
-        if (! ($res['ok'] ?? false)) {
-            $error = $installer->friendlyDbError($res['message'] ?? 'اتصال دیتابیس ناموفق.');
-            $state['db'] = $db;
-            $_SESSION['install'] = $state;
+        $mode = (string) ($_POST['db_mode'] ?? 'cpanel');
+        $state['db_mode'] = $mode;
+
+        if ($mode === 'cpanel') {
+            $cpanelInput = [
+                'cpanel_host' => trim((string) ($_POST['cpanel_host'] ?? '')),
+                'cpanel_user' => trim((string) ($_POST['cpanel_user'] ?? '')),
+                'cpanel_password' => (string) ($_POST['cpanel_password'] ?? ''),
+                'db_name' => trim((string) ($_POST['auto_db_name'] ?? '')),
+                'db_user' => trim((string) ($_POST['auto_db_user'] ?? '')),
+                'db_password' => (string) ($_POST['auto_db_password'] ?? ''),
+                'mysql_host' => trim((string) ($_POST['db_host'] ?? '127.0.0.1')),
+                'mysql_port' => trim((string) ($_POST['db_port'] ?? '3306')),
+            ];
+            $state['cpanel'] = [
+                'cpanel_host' => $cpanelInput['cpanel_host'],
+                'cpanel_user' => $cpanelInput['cpanel_user'],
+                'db_name' => $cpanelInput['db_name'],
+                'db_user' => $cpanelInput['db_user'],
+                'mysql_host' => $cpanelInput['mysql_host'],
+                'mysql_port' => $cpanelInput['mysql_port'],
+            ];
+            $res = $installer->createDatabaseViaCpanel($cpanelInput);
+            if (! ($res['ok'] ?? false)) {
+                $error = $res['message'] ?? 'ساخت دیتابیس از طریق cPanel ناموفق بود.';
+                $state['details'] = $res['details'] ?? [];
+                $_SESSION['install'] = $state;
+            } else {
+                $state['db'] = $res['db'];
+                $state['details'] = $res['details'] ?? [];
+                $_SESSION['install'] = $state;
+                header('Location: install.php?step=4');
+                exit;
+            }
         } else {
-            $state['db'] = $db;
-            $_SESSION['install'] = $state;
-            header('Location: install.php?step=4');
-            exit;
+            $db = [
+                'host' => trim((string) ($_POST['db_host'] ?? '127.0.0.1')),
+                'port' => trim((string) ($_POST['db_port'] ?? '3306')),
+                'database' => trim((string) ($_POST['db_database'] ?? '')),
+                'username' => trim((string) ($_POST['db_username'] ?? '')),
+                'password' => (string) ($_POST['db_password'] ?? ''),
+            ];
+            $res = $installer->testDatabase($db['host'], $db['port'], $db['database'], $db['username'], $db['password']);
+            if (! ($res['ok'] ?? false)) {
+                $error = $installer->friendlyDbError($res['message'] ?? 'اتصال دیتابیس ناموفق.');
+                $state['db'] = $db;
+                $_SESSION['install'] = $state;
+            } else {
+                $state['db'] = $db;
+                $_SESSION['install'] = $state;
+                header('Location: install.php?step=4');
+                exit;
+            }
         }
     }
 
@@ -239,6 +275,9 @@ $reqs = $installer->checkRequirements();
     <div class="card">
         <?php if ($error): ?>
             <div class="alert err"><?= h($error) ?></div>
+            <?php if ($step === 3 && ! empty($state['details']) && is_array($state['details'])): ?>
+                <pre style="direction:ltr;text-align:left;font-size:11px;background:#f8fafc;border:1px solid #e2e8f0;padding:10px;border-radius:8px;overflow:auto;max-height:180px;"><?= h(implode("\n", array_map('strval', $state['details']))) ?></pre>
+            <?php endif; ?>
         <?php endif; ?>
         <?php if ($success && $step === 5): ?>
             <div class="alert ok"><?= h($success) ?></div>
@@ -285,51 +324,95 @@ $reqs = $installer->checkRequirements();
             </form>
 
         <?php elseif ($step === 3): ?>
-            <h2>اطلاعات دیتابیس</h2>
-            <div class="alert err" style="background:#fff7ed;color:#9a3412;border-color:#fdba74;">
-                مهم: در هاست اشتراکی این ویزارد <strong>دیتابیس نمی‌سازد</strong>.
-                اول در cPanel بساز، بعد اینجا مشخصات را وارد کن.
-            </div>
-            <p style="margin-bottom:10px;">
-                مسیر cPanel:
-                <strong>MySQL® Databases</strong>
-            </p>
-            <ol style="margin:0 0 14px;padding-right:18px;color:#445;font-size:13px;line-height:1.8;">
-                <li>یک <strong>Database</strong> بساز (مثلاً <code>Ghabz</code>)</li>
-                <li>یک <strong>User</strong> بساز و رمز قوی بده</li>
-                <li>از بخش <strong>Add User To Database</strong> همان کاربر را به همان دیتابیس وصل کن</li>
-                <li>دسترسی را <strong>ALL PRIVILEGES</strong> بگذار و Make Changes بزن</li>
-                <li>نام‌های کامل را از cPanel کپی کن (معمولاً با پیشوند مثل <code>fyhxqvni_</code>)</li>
-            </ol>
-            <?php $db = $state['db'] ?? []; ?>
-            <form method="post">
+            <?php
+                $db = $state['db'] ?? [];
+                $cp = $state['cpanel'] ?? [];
+                $mode = (string) ($_POST['db_mode'] ?? ($state['db_mode'] ?? 'cpanel'));
+            ?>
+            <h2>ساخت / اتصال دیتابیس MySQL</h2>
+            <p>حالت پیشنهادی: با یوزر cPanel، دیتابیس و کاربر MySQL را همین‌جا می‌سازد و دسترسی کامل می‌دهد.</p>
+            <form method="post" id="db-form">
                 <input type="hidden" name="step" value="3">
                 <input type="hidden" name="action" value="database">
-                <div class="grid">
-                    <div>
-                        <label>هاست دیتابیس</label>
-                        <input name="db_host" value="<?= h($db['host'] ?? '127.0.0.1') ?>" required dir="ltr" style="text-align:left;">
-                        <div style="font-size:11px;color:#778;margin:-6px 0 10px;">اگر نشد، <code>localhost</code> بگذار</div>
+
+                <label>روش</label>
+                <select name="db_mode" id="db_mode" onchange="toggleDbMode()">
+                    <option value="cpanel" <?= $mode === 'cpanel' ? 'selected' : '' ?>>ساخت خودکار با cPanel (پیشنهادی)</option>
+                    <option value="manual" <?= $mode === 'manual' ? 'selected' : '' ?>>دستی — دیتابیس از قبل ساخته شده</option>
+                </select>
+
+                <div id="mode-cpanel" style="<?= $mode === 'manual' ? 'display:none' : '' ?>">
+                    <div class="alert ok" style="background:#ecfdf5;color:#065f46;border-color:#6ee7b7;">
+                        یوزر و رمز <strong>ورود cPanel</strong> لازم است (نه فقط کاربر MySQL).
+                        نصب‌کننده از API سی‌پنل دیتابیس و کاربر را می‌سازد.
                     </div>
-                    <div>
-                        <label>پورت</label>
-                        <input name="db_port" value="<?= h($db['port'] ?? '3306') ?>" required dir="ltr" style="text-align:left;">
+                    <div class="grid">
+                        <div>
+                            <label>آدرس سرور cPanel</label>
+                            <input name="cpanel_host" value="<?= h($_POST['cpanel_host'] ?? ($cp['cpanel_host'] ?? '')) ?>" dir="ltr" style="text-align:left;" placeholder="مثلاً server.irandns.com یا IP">
+                            <div style="font-size:11px;color:#778;margin:-6px 0 10px;">بدون https — فقط هاست (پورت 2083 خودکار است)</div>
+                        </div>
+                        <div>
+                            <label>یوزر cPanel</label>
+                            <input name="cpanel_user" value="<?= h($_POST['cpanel_user'] ?? ($cp['cpanel_user'] ?? '')) ?>" dir="ltr" style="text-align:left;" placeholder="مثلاً hddrecov">
+                        </div>
+                    </div>
+                    <label>رمز عبور cPanel</label>
+                    <input type="password" name="cpanel_password" dir="ltr" style="text-align:left;" autocomplete="off">
+                    <div class="grid">
+                        <div>
+                            <label>نام کوتاه دیتابیس</label>
+                            <input name="auto_db_name" value="<?= h($_POST['auto_db_name'] ?? ($cp['db_name'] ?? 'repair')) ?>" dir="ltr" style="text-align:left;" placeholder="repair">
+                            <div style="font-size:11px;color:#778;margin:-6px 0 10px;">سی‌پنل معمولاً به شکل <code>یوزر_نام</code> می‌سازد</div>
+                        </div>
+                        <div>
+                            <label>نام کوتاه کاربر MySQL</label>
+                            <input name="auto_db_user" value="<?= h($_POST['auto_db_user'] ?? ($cp['db_user'] ?? 'repair')) ?>" dir="ltr" style="text-align:left;" placeholder="repair">
+                        </div>
+                    </div>
+                    <label>رمز عبور کاربر MySQL (جدید)</label>
+                    <input type="password" name="auto_db_password" dir="ltr" style="text-align:left;" minlength="6" autocomplete="new-password">
+                </div>
+
+                <div id="mode-manual" style="<?= $mode === 'cpanel' ? 'display:none' : '' ?>">
+                    <div class="alert err" style="background:#fff7ed;color:#9a3412;border-color:#fdba74;">
+                        اگر دیتابیس را خودتان در cPanel ساخته‌اید، نام‌های کامل و رمز را اینجا وارد کنید.
+                    </div>
+                    <label>نام کامل دیتابیس</label>
+                    <input name="db_database" value="<?= h($db['database'] ?? '') ?>" dir="ltr" style="text-align:left;" placeholder="مثلاً hddrecov_repair">
+                    <div class="grid">
+                        <div>
+                            <label>نام کامل کاربر MySQL</label>
+                            <input name="db_username" value="<?= h($db['username'] ?? '') ?>" dir="ltr" style="text-align:left;">
+                        </div>
+                        <div>
+                            <label>رمز عبور کاربر MySQL</label>
+                            <input type="password" name="db_password" value="<?= h($db['password'] ?? '') ?>" dir="ltr" style="text-align:left;">
+                        </div>
                     </div>
                 </div>
-                <label>نام کامل دیتابیس (از cPanel کپی شود)</label>
-                <input name="db_database" value="<?= h($db['database'] ?? '') ?>" required dir="ltr" style="text-align:left;" placeholder="مثلاً fyhxqvni_Ghabz">
+
                 <div class="grid">
                     <div>
-                        <label>نام کامل کاربر MySQL</label>
-                        <input name="db_username" value="<?= h($db['username'] ?? '') ?>" required dir="ltr" style="text-align:left;" placeholder="مثلاً fyhxqvni_Ghabz_user">
+                        <label>هاست MySQL</label>
+                        <input name="db_host" value="<?= h($_POST['db_host'] ?? ($db['host'] ?? ($cp['mysql_host'] ?? '127.0.0.1'))) ?>" required dir="ltr" style="text-align:left;">
+                        <div style="font-size:11px;color:#778;margin:-6px 0 10px;">اگر نشد، <code>localhost</code></div>
                     </div>
                     <div>
-                        <label>رمز عبور همان کاربر</label>
-                        <input type="password" name="db_password" value="<?= h($db['password'] ?? '') ?>" dir="ltr" style="text-align:left;">
+                        <label>پورت MySQL</label>
+                        <input name="db_port" value="<?= h($_POST['db_port'] ?? ($db['port'] ?? ($cp['mysql_port'] ?? '3306'))) ?>" required dir="ltr" style="text-align:left;">
                     </div>
                 </div>
-                <button class="btn" type="submit">تست اتصال و ادامه</button>
+                <button class="btn" type="submit" id="db-submit"><?= $mode === 'manual' ? 'تست اتصال و ادامه' : 'ساخت دیتابیس و ادامه' ?></button>
             </form>
+            <script>
+            function toggleDbMode() {
+                var m = document.getElementById('db_mode').value;
+                document.getElementById('mode-cpanel').style.display = m === 'cpanel' ? '' : 'none';
+                document.getElementById('mode-manual').style.display = m === 'manual' ? '' : 'none';
+                document.getElementById('db-submit').textContent = m === 'manual' ? 'تست اتصال و ادامه' : 'ساخت دیتابیس و ادامه';
+            }
+            </script>
 
         <?php elseif ($step === 4): ?>
             <h2>اطلاعات سایت و مدیر</h2>
