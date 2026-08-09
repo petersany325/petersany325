@@ -333,7 +333,7 @@ class MediaLibrary
                 }
                 $broken = ! static::isValidUtf8($name)
                     || ! preg_match('/^[a-zA-Z0-9_\-\. \x{0600}-\x{06FF}]+$/u', $name)
-                    || preg_match('/^\+?\?+$/', $name);
+                    || preg_match('/^[+?؟]+$/u', $name);
                 if (! $broken) {
                     continue;
                 }
