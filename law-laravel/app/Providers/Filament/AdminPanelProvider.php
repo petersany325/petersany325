@@ -34,7 +34,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->profile(EditAdminProfile::class, isSimple: false)
-            ->brandName('Admin CP · آریان')
+            ->brandName('Admin CP')
             ->brandLogo(null)
             ->favicon(asset('favicon.ico'))
             ->colors([
@@ -47,8 +47,8 @@ class AdminPanelProvider extends PanelProvider
             ->themeSwitcher(false)
             ->defaultThemeMode(ThemeMode::Light)
             ->sidebarCollapsibleOnDesktop()
-            ->sidebarWidth('18rem')
-            ->collapsedSidebarWidth('4.5rem')
+            ->sidebarWidth('13.25rem')
+            ->collapsedSidebarWidth('3.25rem')
             ->navigationGroups([
                 NavigationGroup::make('خانه کنترل پنل')
                     ->icon(Heroicon::OutlinedHome),
@@ -82,13 +82,13 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
-                fn (): string => Blade::render('<link rel="stylesheet" href="{{ asset(\'css/vbulletin-admin.css\') }}?v=4" />')
+                fn (): string => Blade::render('<link rel="stylesheet" href="{{ asset(\'css/vbulletin-admin.css\') }}?v=5" />')
             )
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,
                 fn (): string => Blade::render(<<<'HTML'
-                    <div style="margin:0.75rem 0.5rem 0.25rem;padding:0.55rem 0.75rem;background:#152a45;color:#fff;font-size:0.75rem;font-weight:800;border:1px solid #0f2138;">
-                        منوی مدیریت · شبیه ACP
+                    <div style="margin:0.2rem 0.28rem 0.15rem;padding:0.28rem 0.4rem;background:#152a45;color:#ffe6a8;font-size:0.62rem;font-weight:800;border:1px solid #0f2138;line-height:1.2;">
+                        کنترل پنل · سبک انجمن
                     </div>
                 HTML)
             )

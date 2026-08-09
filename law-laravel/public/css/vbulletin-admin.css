@@ -1,4 +1,4 @@
-/* vBulletin-inspired Admin CP — always-readable sidebar labels */
+/* vBulletin ACP — compact high-density admin menu */
 @import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap");
 
 :root {
@@ -6,39 +6,71 @@
   --vb-navy-deep: #152a45;
   --vb-navy-mid: #2b5278;
   --vb-border: #9bb1c7;
-  --vb-sidebar: #e8eef5;
-  --vb-sidebar-hover: #d5e0ec;
+  --vb-sidebar: #e4ebf3;
+  --vb-sidebar-hover: #d0dce8;
   --vb-header: #234e75;
   --vb-accent: #c9a227;
-  --vb-content: #f4f7fb;
-  --vb-text: #152536;
+  --vb-content: #f2f5f9;
+  --vb-text: #1a2736;
+  --vb-menu-w: 13.25rem;
+  --vb-row-h: 1.55rem;
+  --vb-font: 0.72rem;
 }
 
+html,
 .fi-body,
 .fi-sidebar,
 .fi-topbar,
 .fi-main,
 .fi-sidebar-item-label,
-.fi-sidebar-group-label {
-  font-family: "Vazirmatn", Tahoma, sans-serif !important;
+.fi-sidebar-group-label,
+.fi-header-heading,
+.fi-btn,
+.fi-ta,
+.fi-input,
+.fi-fo,
+.fi-section {
+  font-family: "Vazirmatn", Tahoma, "Segoe UI", sans-serif !important;
 }
 
-/* Topbar */
+/* ---------- Topbar: short CP bar ---------- */
 .fi-topbar {
-  background: linear-gradient(180deg, var(--vb-navy-mid), var(--vb-navy)) !important;
-  border-bottom: 3px solid var(--vb-accent) !important;
+  min-height: 2.35rem !important;
+  height: auto !important;
+  background: linear-gradient(180deg, #2f5f8c, var(--vb-navy)) !important;
+  border-bottom: 2px solid var(--vb-accent) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.fi-topbar > * {
+  min-height: 2.35rem !important;
 }
 .fi-topbar .fi-logo,
+.fi-topbar .fi-logo span {
+  color: #fff !important;
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0;
+}
 .fi-topbar .fi-icon-btn,
 .fi-topbar a.fi-topbar-item-button,
 .fi-topbar .fi-avatar {
   color: #fff !important;
+  width: 1.7rem !important;
+  height: 1.7rem !important;
+}
+.fi-topbar .fi-icon-btn svg,
+.fi-topbar svg {
+  width: 0.95rem !important;
+  height: 0.95rem !important;
 }
 
-/* Sidebar: light panel, dark text (works even if dark class sneaks in) */
+/* ---------- Sidebar width & density ---------- */
 .fi-sidebar,
 .dark .fi-sidebar,
-html.dark .fi-sidebar {
+html.dark .fi-sidebar,
+.fi-sidebar-nav {
+  width: var(--vb-menu-w) !important;
+  max-width: var(--vb-menu-w) !important;
   background: var(--vb-sidebar) !important;
   border-inline-end: 1px solid var(--vb-border) !important;
   color: var(--vb-text) !important;
@@ -46,6 +78,8 @@ html.dark .fi-sidebar {
 
 .fi-sidebar-header,
 .dark .fi-sidebar-header {
+  min-height: 2.2rem !important;
+  padding: 0.25rem 0.45rem !important;
   background: var(--vb-navy-deep) !important;
   border-bottom: 2px solid var(--vb-accent) !important;
 }
@@ -54,28 +88,96 @@ html.dark .fi-sidebar {
 .fi-sidebar-header a,
 .fi-sidebar-header button {
   color: #fff !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+}
+.fi-sidebar-header .fi-icon-btn,
+.fi-sidebar-header svg {
+  width: 0.95rem !important;
+  height: 0.95rem !important;
 }
 
-/* Group headers */
+.fi-sidebar-nav {
+  padding: 0.2rem 0 0.5rem !important;
+  gap: 0 !important;
+}
+
+/* ACP banner strip */
+.fi-sidebar-nav > div:first-child {
+  margin: 0.2rem 0.28rem 0.15rem !important;
+  padding: 0.28rem 0.4rem !important;
+  font-size: 0.62rem !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0;
+}
+
+/* Group headers — classic ACP section bars */
+.fi-sidebar-group {
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
 .fi-sidebar-group-label,
 .fi-sidebar-group-btn,
 .fi-sidebar-group > .fi-sidebar-group-btn {
-  background: var(--vb-header) !important;
+  display: flex !important;
+  align-items: center !important;
+  min-height: 1.45rem !important;
+  background: linear-gradient(180deg, #2d5d8a, var(--vb-header)) !important;
   color: #fff !important;
-  font-size: 0.8rem !important;
+  font-size: 0.66rem !important;
   font-weight: 800 !important;
-  padding: 0.55rem 0.85rem !important;
-  margin: 0.65rem 0.5rem 0.25rem !important;
+  padding: 0.22rem 0.45rem !important;
+  margin: 0.35rem 0.28rem 0.08rem !important;
   border-radius: 0 !important;
   border: 1px solid var(--vb-navy-deep) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  text-transform: none !important;
+  letter-spacing: 0 !important;
 }
 .fi-sidebar-group-label,
 .fi-sidebar-group-btn .fi-sidebar-group-label {
   color: #fff !important;
   opacity: 1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.fi-sidebar-group-btn svg {
+  width: 0.75rem !important;
+  height: 0.75rem !important;
+  color: #ffe6a8 !important;
 }
 
-/* CRITICAL: item labels — Filament uses .fi-sidebar-item-btn / .fi-sidebar-item-label */
+/* Menu items — dense rows like classic ACP */
+.fi-sidebar-item {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.fi-sidebar-group .fi-sidebar-item,
+.fi-sidebar-nav .fi-sidebar-item {
+  margin-inline: 0.28rem !important;
+}
+
+.fi-sidebar-nav .fi-sidebar-item-btn,
+.fi-sidebar-item > .fi-sidebar-item-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.35rem !important;
+  min-height: var(--vb-row-h) !important;
+  height: auto !important;
+  padding: 0.12rem 0.4rem !important;
+  margin: 0 0 1px !important;
+  margin-inline: 0 !important;
+  border-radius: 0 !important;
+  border: 1px solid transparent !important;
+  border-bottom-color: rgba(155, 177, 199, 0.35) !important;
+  font-weight: 600 !important;
+  font-size: var(--vb-font) !important;
+  line-height: 1.25 !important;
+  background: transparent !important;
+}
+
 .fi-sidebar-nav .fi-sidebar-item-btn,
 .fi-sidebar-nav .fi-sidebar-item-label,
 .fi-sidebar-item > .fi-sidebar-item-btn,
@@ -89,13 +191,23 @@ html.dark .fi-sidebar-item-label {
   -webkit-text-fill-color: var(--vb-text) !important;
 }
 
-.fi-sidebar-item-btn {
-  border-radius: 0 !important;
-  margin-inline: 0.5rem !important;
-  border: 1px solid transparent !important;
-  font-weight: 700 !important;
-  font-size: 0.92rem !important;
-  background: transparent !important;
+.fi-sidebar-item-label {
+  font-size: var(--vb-font) !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.fi-sidebar-item-btn > .fi-icon,
+.fi-sidebar-item svg,
+.fi-sidebar-item-btn svg {
+  width: 0.78rem !important;
+  height: 0.78rem !important;
+  min-width: 0.78rem !important;
+  color: var(--vb-navy-mid) !important;
+  opacity: 1 !important;
+  flex-shrink: 0 !important;
 }
 
 .fi-sidebar-item-btn:hover,
@@ -109,28 +221,51 @@ html.dark .fi-sidebar-item-label {
 .fi-sidebar-item.fi-active > .fi-sidebar-item-btn > .fi-sidebar-item-label,
 .dark .fi-sidebar-item.fi-active > .fi-sidebar-item-btn > .fi-sidebar-item-label {
   background: #fff !important;
-  color: var(--vb-navy) !important;
-  -webkit-text-fill-color: var(--vb-navy) !important;
+  color: var(--vb-navy-deep) !important;
+  -webkit-text-fill-color: var(--vb-navy-deep) !important;
   border-color: var(--vb-border) !important;
-  box-shadow: inset 3px 0 0 var(--vb-accent);
+  box-shadow: inset 2px 0 0 var(--vb-accent);
   font-weight: 800 !important;
 }
 
-.fi-sidebar-item-btn > .fi-icon,
-.fi-sidebar-item svg {
-  color: var(--vb-navy-mid) !important;
-  opacity: 1 !important;
+/* Compact badges on menu */
+.fi-sidebar-item-badge,
+.fi-badge,
+.fi-sidebar-item .fi-badge {
+  min-width: 1rem !important;
+  height: 1rem !important;
+  padding: 0 0.28rem !important;
+  font-size: 0.58rem !important;
+  font-weight: 800 !important;
+  border-radius: 2px !important;
+  line-height: 1rem !important;
 }
 
+/* Collapsed rail still usable */
+.fi-sidebar-close-overlay + .fi-sidebar,
+.fi-main:has(+ *) {
+  /* keep Filament collapse behavior */
+}
+
+/* ---------- Main content density ---------- */
 .fi-main,
 .fi-main-ctn {
   background: var(--vb-content) !important;
 }
-
+.fi-page-header,
+.fi-header {
+  gap: 0.35rem !important;
+  margin-bottom: 0.65rem !important;
+}
 .fi-header-heading,
 .fi-page-header-heading {
   color: var(--vb-navy) !important;
   font-weight: 800 !important;
+  font-size: 1.05rem !important;
+  line-height: 1.25 !important;
+}
+.fi-header-subheading {
+  font-size: 0.75rem !important;
 }
 
 .fi-section,
@@ -140,25 +275,75 @@ html.dark .fi-sidebar-item-label {
   border-radius: 0 !important;
   box-shadow: none !important;
 }
-
 .fi-section-header,
 .fi-ta-header {
+  min-height: 2rem !important;
+  padding-block: 0.35rem !important;
   background: linear-gradient(180deg, #f8fbff, #e4ecf5) !important;
   border-bottom: 1px solid var(--vb-border) !important;
 }
-
+.fi-section-header-heading {
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+}
 .fi-ta-header-cell {
   background: #d7e3f0 !important;
   color: var(--vb-navy) !important;
   font-weight: 800 !important;
+  font-size: 0.7rem !important;
+  padding-block: 0.35rem !important;
+}
+.fi-ta-cell {
+  font-size: 0.74rem !important;
+  padding-block: 0.32rem !important;
 }
 
+.fi-wi-stats-overview {
+  gap: 0.55rem !important;
+}
+.fi-wi-stats-overview-stat {
+  padding: 0.55rem 0.7rem !important;
+}
+.fi-wi-stats-overview-stat-value {
+  font-size: 1.15rem !important;
+}
+.fi-wi-stats-overview-stat-label,
+.fi-wi-stats-overview-stat-description {
+  font-size: 0.7rem !important;
+}
+
+.fi-btn {
+  min-height: 1.85rem !important;
+  padding: 0.28rem 0.65rem !important;
+  font-size: 0.74rem !important;
+  border-radius: 2px !important;
+}
 .fi-btn-color-primary {
   background: linear-gradient(180deg, #3d6ea5, var(--vb-navy)) !important;
   border: 1px solid var(--vb-navy-deep) !important;
   border-radius: 2px !important;
   color: #fff !important;
   font-weight: 700 !important;
+}
+
+.fi-input,
+.fi-select,
+.fi-textarea,
+.fi-fo-field-wrp input,
+.fi-fo-field-wrp select,
+.fi-fo-field-wrp textarea {
+  min-height: 1.9rem !important;
+  font-size: 0.78rem !important;
+  border-radius: 2px !important;
+}
+
+.fi-tabs {
+  gap: 0.15rem !important;
+}
+.fi-tabs-item {
+  font-size: 0.74rem !important;
+  padding: 0.35rem 0.55rem !important;
+  min-height: 1.8rem !important;
 }
 
 .fi-simple-page {
@@ -169,8 +354,17 @@ html.dark .fi-sidebar-item-label {
   border-radius: 0 !important;
 }
 
-/* Hide theme toggle confusion — panel is light-only */
+/* Hide theme toggle — light ACP only */
 .fi-theme-switcher,
 .fi-topbar .fi-color-scheme-switcher {
   display: none !important;
+}
+
+/* Mobile: keep compact when open */
+@media (max-width: 1023px) {
+  .fi-sidebar,
+  .fi-sidebar-nav {
+    width: min(78vw, 15rem) !important;
+    max-width: min(78vw, 15rem) !important;
+  }
 }
