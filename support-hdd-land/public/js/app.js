@@ -1473,6 +1473,14 @@
      * Jalali date text inputs (YYYY/MM/DD)
      * ========================================================= */
 
+    function appCalendarType() {
+        var meta = document.querySelector('meta[name="app-calendar"]');
+        var fromMeta = meta ? (meta.getAttribute('content') || '') : '';
+        var fromHtml = document.documentElement.getAttribute('data-calendar') || '';
+        var type = fromMeta || fromHtml || 'jalali';
+        return type === 'gregorian' ? 'gregorian' : 'jalali';
+    }
+
     function formatJalaliTyped(raw) {
         var digits = convertDigits(raw).replace(/\D+/g, '').slice(0, 8);
         if (digits.length <= 4) return digits;
@@ -1482,11 +1490,14 @@
 
     function initJalaliDateInputs(root) {
         var scope = root && root.querySelectorAll ? root : document;
+        var cal = appCalendarType();
+        var fallbackPh = cal === 'gregorian' ? '2026/08/09' : '1404/05/16';
         scope.querySelectorAll('input.jalali-date').forEach(function (el) {
             if (el.dataset.jalaliReady === '1') return;
             el.dataset.jalaliReady = '1';
-            el.setAttribute('placeholder', el.getAttribute('placeholder') || '1404/05/16');
+            if (!el.getAttribute('placeholder')) el.setAttribute('placeholder', fallbackPh);
             el.setAttribute('dir', 'ltr');
+            el.setAttribute('data-calendar', el.getAttribute('data-calendar') || cal);
             el.style.textAlign = el.style.textAlign || 'left';
             el.addEventListener('input', function () {
                 var next = formatJalaliTyped(el.value);
