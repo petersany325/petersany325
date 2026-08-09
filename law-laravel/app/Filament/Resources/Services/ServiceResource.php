@@ -25,6 +25,8 @@ class ServiceResource extends Resource
 {
     protected static ?string $model = Service::class;
 
+    protected static ?string $recordTitleAttribute = 'title';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBriefcase;
     protected static ?string $navigationLabel = 'خدمات';
 
@@ -93,5 +95,10 @@ class ServiceResource extends Resource
         return [
             'index' => ManageServices::route('/'),
         ];
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['title', 'description'];
     }
 }

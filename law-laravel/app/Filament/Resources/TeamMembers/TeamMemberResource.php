@@ -25,6 +25,8 @@ class TeamMemberResource extends Resource
 {
     protected static ?string $model = TeamMember::class;
 
+    protected static ?string $recordTitleAttribute = 'name';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
     protected static ?string $navigationLabel = 'تیم حقوقی';
 
@@ -109,5 +111,10 @@ class TeamMemberResource extends Resource
         return [
             'index' => ManageTeamMembers::route('/'),
         ];
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'role', 'email', 'phone'];
     }
 }

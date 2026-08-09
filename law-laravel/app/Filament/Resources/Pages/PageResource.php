@@ -25,6 +25,8 @@ class PageResource extends Resource
 {
     protected static ?string $model = Page::class;
 
+    protected static ?string $recordTitleAttribute = 'title';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocument;
     protected static ?string $navigationLabel = 'صفحات';
 
@@ -97,5 +99,10 @@ class PageResource extends Resource
         return [
             'index' => ManagePages::route('/'),
         ];
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['title', 'slug'];
     }
 }

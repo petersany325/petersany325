@@ -25,6 +25,8 @@ class FaqResource extends Resource
 {
     protected static ?string $model = Faq::class;
 
+    protected static ?string $recordTitleAttribute = 'question';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedQuestionMarkCircle;
     protected static ?string $navigationLabel = 'سوالات متداول';
 
@@ -97,5 +99,10 @@ class FaqResource extends Resource
         return [
             'index' => ManageFaqs::route('/'),
         ];
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['question', 'answer', 'category'];
     }
 }

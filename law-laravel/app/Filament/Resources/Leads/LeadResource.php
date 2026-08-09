@@ -25,6 +25,8 @@ class LeadResource extends Resource
 {
     protected static ?string $model = Lead::class;
 
+    protected static ?string $recordTitleAttribute = 'name';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedInbox;
 
     protected static ?string $navigationLabel = 'پیام‌های مشاوره';
@@ -146,5 +148,10 @@ class LeadResource extends Resource
         return [
             'index' => ManageLeads::route('/'),
         ];
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'phone', 'topic', 'message'];
     }
 }

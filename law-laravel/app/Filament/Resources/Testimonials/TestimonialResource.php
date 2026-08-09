@@ -25,6 +25,8 @@ class TestimonialResource extends Resource
 {
     protected static ?string $model = Testimonial::class;
 
+    protected static ?string $recordTitleAttribute = 'client_name';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChatBubbleLeftRight;
     protected static ?string $navigationLabel = 'نظرات موکلین';
 
@@ -104,5 +106,10 @@ class TestimonialResource extends Resource
         return [
             'index' => ManageTestimonials::route('/'),
         ];
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['client_name', 'client_role', 'content'];
     }
 }

@@ -25,6 +25,8 @@ class MenuResource extends Resource
 {
     protected static ?string $model = Menu::class;
 
+    protected static ?string $recordTitleAttribute = 'label';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBars3;
 
     protected static ?string $navigationLabel = 'مدیریت منو';
@@ -135,5 +137,10 @@ class MenuResource extends Resource
         return [
             'index' => ManageMenus::route('/'),
         ];
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['label', 'url'];
     }
 }

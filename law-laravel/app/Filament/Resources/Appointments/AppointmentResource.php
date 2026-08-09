@@ -26,6 +26,8 @@ class AppointmentResource extends Resource
 {
     protected static ?string $model = Appointment::class;
 
+    protected static ?string $recordTitleAttribute = 'name';
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
 
     protected static ?string $navigationLabel = 'نوبت‌های رزرو شده';
@@ -177,5 +179,10 @@ class AppointmentResource extends Resource
         return [
             'index' => ManageAppointments::route('/'),
         ];
+    }
+
+    public static function getGloballySearchableAttributes(): array
+    {
+        return ['name', 'phone', 'topic', 'email'];
     }
 }
