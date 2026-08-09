@@ -35,7 +35,7 @@
     <a href="{{ url('/serial-check') }}">استعلام گارانتی <span>‹</span></a>
     <a href="{{ url('/account') }}">کارتابل کامل مشتری <span>‹</span></a>
     @if(!empty($s['account_show_full_site']))
-      <a href="{{ url('/') }}">نسخه کامل سایت <span>‹</span></a>
+      <a href="{{ url('/') }}" target="_blank" rel="noopener">نسخه کامل سایت <span>‹</span></a>
     @endif
   </div>
 

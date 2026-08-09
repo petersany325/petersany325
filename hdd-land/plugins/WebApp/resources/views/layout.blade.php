@@ -97,7 +97,7 @@
   </nav>
   @if(!empty($s['drawer_show_full_site']))
     <div class="wa-drawer-foot">
-      <a href="{{ url($s['drawer_full_site_url'] ?? '/') }}">{{ $s['drawer_full_site_label'] ?? 'نسخه کامل سایت' }}</a>
+      <a href="{{ url($s['drawer_full_site_url'] ?? '/') }}" target="_blank" rel="noopener">{{ $s['drawer_full_site_label'] ?? 'نسخه کامل سایت' }}</a>
     </div>
   @endif
 </aside>
@@ -171,7 +171,7 @@
           <a href="{{ str_starts_with($link['url'], 'http') ? $link['url'] : url($link['url']) }}">{{ $link['label'] }}</a>
         @endforeach
         @if(!empty($waFooter['show_site_link']))
-          <a href="{{ url('/') }}">نسخه کامل سایت</a>
+          <a href="{{ url('/') }}" target="_blank" rel="noopener">نسخه کامل سایت</a>
         @endif
       </div>
     </nav>
