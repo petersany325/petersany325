@@ -32,6 +32,7 @@
     @if(!empty($s['account_show_track']))
       <a href="{{ url('/orders/track') }}">پیگیری سفارش <span>‹</span></a>
     @endif
+    <a href="{{ url('/account/serials') }}">سریال‌ها و گارانتی من <span>‹</span></a>
     <a href="{{ url('/serial-check') }}">استعلام گارانتی <span>‹</span></a>
     <a href="{{ url('/account') }}">کارتابل کامل مشتری <span>‹</span></a>
     @if(!empty($s['account_show_full_site']))

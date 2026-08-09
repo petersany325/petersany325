@@ -73,10 +73,28 @@ class WebAppController extends Controller
             return redirect('/app/shop')->with('error', 'محصول یافت نشد.');
         }
 
+        $availableSerials = collect();
+        try {
+            if (! empty($product->requires_serial) && Schema::hasTable('product_serials')) {
+                $q = DB::table('product_serials')
+                    ->where('product_id', $product->id)
+                    ->where('status', 'available');
+                if (Schema::hasColumn('product_serials', 'show_in_sales')) {
+                    $q->where('show_in_sales', 1);
+                }
+                $availableSerials = $q->orderBy('serial')->limit(200)->get([
+                    'id', 'serial', 'warranty_company', 'company_warranty_months', 'has_company_warranty',
+                ]);
+            }
+        } catch (\Throwable) {
+            $availableSerials = collect();
+        }
+
         return view('web-app::pages.product', $this->viewData($s, [
             'tab' => 'shop',
             'title' => $product->name ?? 'محصول',
             'product' => $product,
+            'availableSerials' => $availableSerials,
             'related' => $this->products(6, '', null, (int) ($product->category_id ?? 0), (int) $product->id),
         ]));
     }
@@ -144,10 +162,31 @@ class WebAppController extends Controller
         $productId = (int) $request->input('product_id');
         $qty = max(1, (int) $request->input('qty', 1));
         $buyNow = $request->boolean('buy_now');
+        $serialId = (int) $request->input('serial_id', 0);
+        $serial = null;
 
         try {
+            if ($productId > 0 && Schema::hasTable('products')) {
+                $product = DB::table('products')->where('id', $productId)->first();
+                if ($product && ! empty($product->requires_serial)) {
+                    if ($serialId <= 0 || ! Schema::hasTable('product_serials')) {
+                        return back()->with('error', 'برای خرید این محصول باید سریال را انتخاب کنید.');
+                    }
+                    $row = DB::table('product_serials')
+                        ->where('id', $serialId)
+                        ->where('product_id', $productId)
+                        ->where('status', 'available')
+                        ->first();
+                    if (! $row) {
+                        return back()->with('error', 'سریال انتخاب‌شده موجود نیست. دوباره انتخاب کنید.');
+                    }
+                    $serial = (string) $row->serial;
+                    $qty = 1;
+                }
+            }
+
             if (class_exists(\Plugins\CartCheckout\src\Cart::class) && $productId > 0) {
-                \Plugins\CartCheckout\src\Cart::add($productId, $qty);
+                \Plugins\CartCheckout\src\Cart::add($productId, $qty, $serial, $serialId > 0 ? $serialId : null);
             }
         } catch (\Throwable $e) {
             return back()->with('error', 'افزودن به سبد ممکن نشد.');
@@ -242,7 +281,7 @@ class WebAppController extends Controller
         $s = Plugin::settings();
         $offline = ! empty($s['offline_cache']);
         $version = 'webapp-v2-'.substr(md5(json_encode([
-            $s['app_name'] ?? '', $s['theme_color'] ?? '', $s['enabled'] ?? false, 'drawer-design-v13',
+            $s['app_name'] ?? '', $s['theme_color'] ?? '', $s['enabled'] ?? false, 'brand-serial-v14',
         ])), 0, 8);
         $offlineJs = $this->jsBool($offline);
 

@@ -95,6 +95,7 @@ class PortalNav
                 'title' => 'پشتیبانی و ارتباط',
                 'items' => [
                     ['label' => 'تیکت پشتیبانی', 'url' => '/account/tickets', 'match' => 'account/tickets', 'icon' => '✉'],
+                    ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials', 'match' => 'account/serials', 'icon' => '☰'],
                     ['label' => 'استعلام گارانتی', 'url' => '/serial-check', 'icon' => '⛨'],
                     ['label' => 'تاریخچه چت هوشمند', 'url' => '/account/chat-history', 'match' => 'account/chat-history', 'icon' => '✦'],
                 ],

@@ -125,16 +125,9 @@ class CatalogController extends Controller
             ->take(4)
             ->get();
 
-        $availableSerials = collect();
-        if (! empty($product->requires_serial) && $caps['serials']) {
-            $availableSerials = \Illuminate\Support\Facades\DB::table('product_serials')
-                ->where('product_id', $product->id)
-                ->where('status', 'available')
-                ->when($caps['serial_visibility'], fn ($q) => $q->where('show_in_sales', 1))
-                ->orderBy('serial')
-                ->limit(200)
-                ->get(['id', 'serial', 'warranty_company', 'company_warranty_months']);
-        }
+        $availableSerials = ! empty($product->requires_serial) && $caps['serials']
+            ? $product->availableSerialRows(200)
+            : collect();
 
         return view('catalog::storefront.show', compact('product', 'related', 'availableSerials'));
     }
