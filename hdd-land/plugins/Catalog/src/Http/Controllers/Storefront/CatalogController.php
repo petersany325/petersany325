@@ -181,11 +181,13 @@ class CatalogController extends Controller
     {
         $slug = strtolower(trim($slug));
 
+        // Only pure part-type categories get a fallback. Mixed HDD families
+        // (desktop / laptop / external) must stay scoped by category_id so they
+        // do not bleed into each other.
         return match ($slug) {
             'ssd' => 'ssd',
             'nvme' => 'nvme',
             'ram' => 'ram',
-            'hdd', 'hard-disk', 'hard-akstrnal' => 'hdd',
             default => null,
         };
     }
