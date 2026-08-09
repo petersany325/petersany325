@@ -104,7 +104,7 @@ class CatalogController extends Controller
                 });
             }
         }
-        $products = $query->latest()->paginate(12)->withQueryString();
+        $products = $this->sortedCatalogQuery($query)->paginate(48)->withQueryString();
         $categories = Category::query()->where('is_active', true)->whereNull('parent_id')->with('activeChildren')->orderBy('sort_order')->get();
         $brands = collect();
         if ($caps['brand']) {
@@ -146,18 +146,17 @@ class CatalogController extends Controller
         $ids = collect([$category->id])->merge($category->activeChildren->pluck('id'));
         $partFromCat = $this->partTypeForCategorySlug((string) $category->slug);
 
-        $products = Product::query()
-            ->published()
-            ->with('category')
-            ->where(function ($q) use ($ids, $partFromCat, $caps) {
-                $q->whereIn('category_id', $ids);
-                if ($caps['part_type'] && $partFromCat !== null) {
-                    $q->orWhere('part_type', $partFromCat);
-                }
-            })
-            ->latest()
-            ->paginate(12)
-            ->withQueryString();
+        $products = $this->sortedCatalogQuery(
+            Product::query()
+                ->published()
+                ->with('category')
+                ->where(function ($q) use ($ids, $partFromCat, $caps) {
+                    $q->whereIn('category_id', $ids);
+                    if ($caps['part_type'] && $partFromCat !== null) {
+                        $q->orWhere('part_type', $partFromCat);
+                    }
+                })
+        )->paginate(48)->withQueryString();
 
         $categories = Category::query()->where('is_active', true)->whereNull('parent_id')->with('activeChildren')->orderBy('sort_order')->get();
         $brands = collect();
@@ -166,6 +165,15 @@ class CatalogController extends Controller
         }
 
         return view('catalog::storefront.index', compact('products', 'categories', 'category', 'brands'));
+    }
+
+    /** Stable catalog ordering: brand → series order → name (not only newest). */
+    protected function sortedCatalogQuery($query)
+    {
+        return $query
+            ->orderByRaw("CASE LOWER(COALESCE(brand,'')) WHEN 'western digital' THEN 0 WHEN 'seagate' THEN 1 ELSE 2 END")
+            ->orderBy('menu_order')
+            ->orderBy('name');
     }
 
     /** Map storefront category slugs used in menus to product part_type values. */
