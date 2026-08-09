@@ -26,7 +26,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '2.3.0';
+        return '2.3.1';
     }
 
     public function isCore(): bool
@@ -213,6 +213,35 @@ class Plugin extends BasePlugin
         }
 
         return asset($fallback);
+    }
+
+    /**
+     * Resolve product image path the same way as Catalog Product::imageUrl():
+     * prefer public/uploads/… (storefront media), then public/storage/….
+     */
+    public static function productImageUrl(?string $image = null): string
+    {
+        $image = trim((string) ($image ?? ''));
+        if ($image === '') {
+            return asset('product-placeholder.svg');
+        }
+        if (str_starts_with($image, 'http://') || str_starts_with($image, 'https://')) {
+            return $image;
+        }
+
+        $path = ltrim(str_replace('\\', '/', $image), '/');
+        foreach (['uploads/', 'storage/', ''] as $prefix) {
+            $rel = $prefix.$path;
+            if ($prefix === '' && (str_starts_with($path, 'uploads/') || str_starts_with($path, 'storage/'))) {
+                $rel = $path;
+            }
+            if (is_file(public_path($rel))) {
+                return asset($rel);
+            }
+        }
+
+        // Default: uploads (matches live media layout even if file check fails)
+        return asset('uploads/'.$path);
     }
 
     /** @param  array<string,mixed>  $data */
