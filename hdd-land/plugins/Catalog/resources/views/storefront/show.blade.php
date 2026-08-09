@@ -84,28 +84,41 @@
 
       @if($needsSerial && $serials->count() > 0)
         <div class="hl-serial-box">
-          <h2>انتخاب سریال برای خرید</h2>
-          <p>{{ $serials->count() }} سریال موجود است. سریال انتخابی بعد از خرید در کارتابل شما ثبت می‌شود.</p>
-          <form method="post" action="{{ route('cart.add') }}" class="hl-serial-form">@csrf
+          <h2>انتخاب سریال</h2>
+          <p>{{ $serials->count() }} سریال آماده است. بعد از خرید در کارتابل شما می‌ماند.</p>
+          <form method="post" action="{{ route('cart.add') }}" class="hl-serial-form" id="hlSerialForm">@csrf
             <input type="hidden" name="product_id" value="{{ $product->id }}">
             <input type="hidden" name="qty" value="1">
-            <label>
-              سریال قطعه
-              <select name="serial_id" required>
-                <option value="">— انتخاب کنید —</option>
+            <div class="hl-dd" data-hl-dd>
+              <input type="hidden" name="serial_id" value="" required data-hl-dd-input>
+              <button type="button" class="hl-dd-trigger" data-hl-dd-trigger aria-expanded="false">
+                <span>
+                  <small>سریال قطعه</small>
+                  <strong data-hl-dd-label>انتخاب کنید…</strong>
+                </span>
+                <em class="hl-dd-caret" aria-hidden="true"></em>
+              </button>
+              <div class="hl-dd-panel" data-hl-dd-panel hidden>
                 @foreach($serials as $sn)
-                  <option value="{{ $sn->id }}">
-                    {{ $sn->serial }}
-                    @if(!empty($sn->warranty_company)) · {{ $sn->warranty_company }}@endif
-                    @if(!empty($sn->company_warranty_months)) · {{ $sn->company_warranty_months }} ماه@endif
-                  </option>
+                  @php
+                    $label = $sn->serial;
+                    if (!empty($sn->warranty_company)) $label .= ' · '.$sn->warranty_company;
+                    if (!empty($sn->company_warranty_months)) $label .= ' · '.$sn->company_warranty_months.' ماه';
+                  @endphp
+                  <button type="button" class="hl-dd-option" data-hl-dd-option data-value="{{ $sn->id }}" data-label="{{ $sn->serial }}">
+                    <strong dir="ltr">{{ $sn->serial }}</strong>
+                    <small>
+                      @if(!empty($sn->warranty_company)){{ $sn->warranty_company }}@endif
+                      @if(!empty($sn->company_warranty_months)) · {{ $sn->company_warranty_months }} ماه@endif
+                    </small>
+                  </button>
                 @endforeach
-              </select>
-            </label>
+              </div>
+            </div>
             <div class="hl-pdp-actions">
-              <button class="btn btn-dark" type="submit">افزودن به سبد با این سریال</button>
-              <button class="btn btn-primary" type="submit" formaction="{{ route('cart.buy') }}">خرید همین سریال</button>
-              <a class="btn btn-outline" href="{{ url('/serial-check') }}">استعلام گارانتی</a>
+              <button class="hl-btn hl-btn-primary" type="submit">افزودن به سبد</button>
+              <button class="hl-btn hl-btn-dark" type="submit" formaction="{{ route('cart.buy') }}">خرید سریع</button>
+              <a class="hl-btn hl-btn-ghost" href="{{ url('/serial-check') }}">استعلام گارانتی</a>
             </div>
           </form>
         </div>
@@ -118,22 +131,22 @@
             <form method="post" action="{{ route('cart.add') }}" class="hl-qty-form">@csrf
               <input type="hidden" name="product_id" value="{{ $product->id }}">
               <input type="number" name="qty" value="1" min="1" @if($product->manage_stock ?? true) max="{{ max(1,$product->stock) }}" @endif>
-              <button class="btn btn-dark" type="submit">افزودن به سبد</button>
+              <button class="hl-btn hl-btn-dark" type="submit">افزودن به سبد</button>
             </form>
             <form method="post" action="{{ route('cart.buy') }}">@csrf
               <input type="hidden" name="product_id" value="{{ $product->id }}">
               <input type="hidden" name="qty" value="1">
-              <button class="btn btn-primary" type="submit">خرید سریع</button>
+              <button class="hl-btn hl-btn-primary" type="submit">خرید سریع</button>
             </form>
           @else
             @auth
-              <a class="btn btn-primary" href="{{ route('account.preorders', ['product_id' => $product->id]) }}">پیش‌خرید این قطعه</a>
+              <a class="hl-btn hl-btn-primary" href="{{ route('account.preorders', ['product_id' => $product->id]) }}">پیش‌خرید این قطعه</a>
             @else
-              <a class="btn btn-primary" href="{{ route('login') }}">ورود برای پیش‌خرید</a>
+              <a class="hl-btn hl-btn-primary" href="{{ route('login') }}">ورود برای پیش‌خرید</a>
             @endauth
             <div class="alert alert-error" style="margin:0">در حال حاضر ناموجود است</div>
           @endif
-          <a class="btn btn-outline" href="{{ url('/serial-check') }}">استعلام سریال</a>
+          <a class="hl-btn hl-btn-ghost" href="{{ url('/serial-check') }}">استعلام سریال</a>
         </div>
       @endif
     </div>
@@ -167,4 +180,23 @@
     </div>
   @endif
 </section>
+<script src="{{ asset('js/hl-select.js') }}?v=2" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('hlSerialForm');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      var input = form.querySelector('input[name="serial_id"]');
+      if (!input || !input.value) {
+        e.preventDefault();
+        var dd = form.querySelector('[data-hl-dd]');
+        if (dd) {
+          dd.classList.add('is-invalid');
+          var trigger = dd.querySelector('[data-hl-dd-trigger]');
+          if (trigger) trigger.click();
+        }
+      }
+    });
+  });
+</script>
 @endsection

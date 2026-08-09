@@ -13,7 +13,9 @@
   <link rel="apple-touch-icon" href="{{ $iconSrc }}">
   <link rel="icon" type="image/png" sizes="192x192" href="{{ $iconSrc }}">
   <title>{{ $title ?? ($s['app_name'] ?? 'سرزمین هارد') }}</title>
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=14">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=16">
 </head>
 @php
   $anim = !empty($s['animations']);
@@ -263,7 +265,7 @@
     drawerEnabled: @json($drawerOn)
   };
 </script>
-<script src="{{ asset('js/webapp.js') }}?v=14" defer></script>
+<script src="{{ asset('js/webapp.js') }}?v=15" defer></script>
 @php
   \Illuminate\Support\Facades\View::addNamespace('smart-chat', base_path('plugins/SmartChat/resources/views'));
 @endphp

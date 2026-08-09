@@ -52,29 +52,38 @@
   @endif
 
   @if($needsSerial && $serials->count() > 0)
-    <form method="post" action="{{ url('/app/cart/add') }}" class="wa-buy-box wa-serial-box">
+    <form method="post" action="{{ url('/app/cart/add') }}" class="wa-buy-box wa-serial-box" id="waSerialForm">
       @csrf
       <input type="hidden" name="product_id" value="{{ $p->id }}">
       <input type="hidden" name="qty" value="1">
-      <label class="wa-serial-label">
-        انتخاب سریال
-        <select name="serial_id" required>
-          <option value="">— انتخاب کنید —</option>
+      <div class="hl-dd wa-dd" data-hl-dd>
+        <input type="hidden" name="serial_id" value="" required data-hl-dd-input>
+        <button type="button" class="hl-dd-trigger" data-hl-dd-trigger aria-expanded="false">
+          <span>
+            <small>سریال قطعه</small>
+            <strong data-hl-dd-label>انتخاب کنید…</strong>
+          </span>
+          <em class="hl-dd-caret" aria-hidden="true"></em>
+        </button>
+        <div class="hl-dd-panel" data-hl-dd-panel hidden>
           @foreach($serials as $sn)
-            <option value="{{ $sn->id }}">
-              {{ $sn->serial }}
-              @if(!empty($sn->warranty_company)) · {{ $sn->warranty_company }}@endif
-            </option>
+            <button type="button" class="hl-dd-option" data-hl-dd-option data-value="{{ $sn->id }}" data-label="{{ $sn->serial }}">
+              <strong dir="ltr">{{ $sn->serial }}</strong>
+              <small>
+                @if(!empty($sn->warranty_company)){{ $sn->warranty_company }}@endif
+                @if(!empty($sn->company_warranty_months)) · {{ $sn->company_warranty_months }} ماه@endif
+              </small>
+            </button>
           @endforeach
-        </select>
-      </label>
-      <p class="wa-serial-hint">سریال انتخابی پس از خرید در کارتابل «سریال‌ها و گارانتی من» نمایش داده می‌شود.</p>
+        </div>
+      </div>
+      <p class="wa-serial-hint">سریال انتخابی در کارتابل «سریال‌ها و گارانتی من» می‌ماند.</p>
       <div class="wa-buy-actions">
         @if(!empty($s['product_show_add_cart']))
-          <button class="wa-btn wa-btn-primary" type="submit">افزودن با این سریال</button>
+          <button class="wa-btn wa-btn-primary wa-btn-lg" type="submit">افزودن به سبد</button>
         @endif
         @if(!empty($s['product_show_buy_now']))
-          <button class="wa-btn wa-btn-ghost" type="submit" name="buy_now" value="1">خرید سریع</button>
+          <button class="wa-btn wa-btn-ghost wa-btn-lg" type="submit" name="buy_now" value="1">خرید سریع</button>
         @endif
       </div>
     </form>
@@ -90,18 +99,18 @@
       </label>
       <div class="wa-buy-actions">
         @if(!empty($s['product_show_add_cart']))
-          <button class="wa-btn wa-btn-primary" type="submit">افزودن به سبد</button>
+          <button class="wa-btn wa-btn-primary wa-btn-lg" type="submit">افزودن به سبد</button>
         @endif
         @if(!empty($s['product_show_buy_now']))
-          <button class="wa-btn wa-btn-ghost" type="submit" name="buy_now" value="1">خرید سریع</button>
+          <button class="wa-btn wa-btn-ghost wa-btn-lg" type="submit" name="buy_now" value="1">خرید سریع</button>
         @endif
       </div>
     </form>
   @endif
 
-  <a class="wa-btn wa-btn-ghost wa-btn-block" href="{{ url('/serial-check') }}" style="margin-top:.55rem">استعلام گارانتی سریال</a>
+  <a class="wa-btn wa-btn-ghost wa-btn-block wa-btn-lg" href="{{ url('/serial-check') }}" style="margin-top:.55rem">استعلام گارانتی سریال</a>
   @auth
-    <a class="wa-btn wa-btn-ghost wa-btn-block" href="{{ url('/account/serials') }}">سریال‌های من در کارتابل</a>
+    <a class="wa-btn wa-btn-ghost wa-btn-block wa-btn-lg" href="{{ url('/account/serials') }}">سریال‌های من در کارتابل</a>
   @endauth
 </div>
 
@@ -123,4 +132,24 @@
   @endforeach
 </div>
 @endif
+
+<script src="{{ asset('js/hl-select.js') }}?v=2" defer></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('waSerialForm');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      var input = form.querySelector('input[name="serial_id"]');
+      if (!input || !input.value) {
+        e.preventDefault();
+        var dd = form.querySelector('[data-hl-dd]');
+        if (dd) {
+          dd.classList.add('is-invalid');
+          var trigger = dd.querySelector('[data-hl-dd-trigger]');
+          if (trigger) trigger.click();
+        }
+      }
+    });
+  });
+</script>
 @endsection
