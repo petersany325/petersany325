@@ -17,7 +17,7 @@ class NiazpardazSms
 
     public function send(string $to, string $message): array
     {
-        $to = preg_replace('/\D+/', '', $to) ?: '';
+        $to = preg_replace('/\D+/', '', Jalali::toEnglishDigits($to)) ?: '';
         $message = trim($message);
 
         if ($to === '' || $message === '') {
@@ -33,45 +33,34 @@ class NiazpardazSms
         $password = (string) Setting::get('sms_password', '');
         $apiKey = trim((string) Setting::get('sms_api_key', ''));
 
-        try {
-            if ($apiKey !== '') {
-                // Official REST (API Key) — https://api.niazpardaz-sms.com style via panel gateway
-                $response = Http::timeout(20)
-                    ->withHeaders([
-                        'Authorization' => 'Bearer '.$apiKey,
-                        'Accept' => 'application/json',
-                        'Content-Type' => 'application/json',
-                    ])
-                    ->post('https://api.niazpardaz.ir/api/v2/RestWebApi/SendSms', [
-                        'fromNumber' => $from,
-                        'toNumbers' => [$to],
-                        'messageContent' => $message,
-                        'isFlash' => false,
-                    ]);
+        if ($from === '' || ($username === '' && $apiKey === '')) {
+            return ['ok' => false, 'error' => 'اطلاعات پنل پیامک کامل نیست'];
+        }
 
-                // Fallback classic panel endpoint if API host fails
-                if (! $response->successful()) {
-                    $response = Http::timeout(20)->asForm()->post('https://panel.niazpardaz-sms.com/SMSInOutBox/Send', [
-                        'username' => $username,
-                        'password' => $password,
-                        'from' => $from,
-                        'to' => $to,
-                        'text' => $message,
-                        'apiKey' => $apiKey,
-                    ]);
-                }
-            } else {
-                $response = Http::timeout(20)->get('https://panel.niazpardaz-sms.com/SMSInOutBox/SendSms', [
-                    'username' => $username,
-                    'password' => $password,
-                    'from' => $from,
-                    'to' => $to,
-                    'text' => $message,
-                ]);
+        try {
+            // Classic panel API (username/password) — documented by Niazpardaz
+            $payload = [
+                'username' => $username !== '' ? $username : $apiKey,
+                'password' => $password !== '' ? $password : $apiKey,
+                'from' => $from,
+                'to' => $to,
+                'text' => $message,
+            ];
+
+            $response = Http::timeout(25)->asForm()->post(
+                'https://panel.niazpardaz-sms.com/SMSInOutBox/Send',
+                $payload
+            );
+
+            if (! $response->successful()) {
+                $response = Http::timeout(25)->get(
+                    'https://panel.niazpardaz-sms.com/SMSInOutBox/SendSms',
+                    $payload
+                );
             }
 
-            $body = $response->body();
-            $ok = $response->successful();
+            $body = trim((string) $response->body());
+            $ok = $response->successful() && ! preg_match('/^(false|error|0)$/i', $body);
 
             Log::info('niazpardaz.sms', [
                 'to' => $to,
