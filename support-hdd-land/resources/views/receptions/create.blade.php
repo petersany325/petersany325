@@ -25,7 +25,7 @@
     </div>
     <div class="receipt-seq-item receipt-seq-next">
         <span class="receipt-seq-label">قبض جدید</span>
-        <strong class="receipt-seq-value" dir="ltr">{{ $nextReceipt }}</strong>
+        <strong class="receipt-seq-value" id="receipt-seq-next-value" dir="ltr">{{ $nextReceipt }}</strong>
     </div>
 </div>
 
@@ -37,7 +37,9 @@
       data-lookup-url="{{ route('receptions.lookup-phone') }}"
       data-ensure-customer-url="{{ route('receptions.ensure-customer') }}"
       data-skip-phone="{{ $skipPhone ? '1' : '0' }}"
-      data-old-mode="{{ $oldMode }}">
+      data-old-mode="{{ $oldMode }}"
+      data-next-receipt="{{ $nextReceipt }}"
+      data-next-ticket="{{ $nextTicket }}">
     @csrf
     <input type="hidden" name="customer_id" value="{{ old('customer_id') }}">
     <input type="hidden" name="customer_phone" value="{{ old('customer_phone') }}">
@@ -170,7 +172,7 @@
                         </div>
                         <div>
                             <label>برند و مدل</label>
-                            <input type="text" name="brand_model" value="{{ old('brand_model') }}" list="brand-models" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;">
+                            <input type="text" name="brand_model" value="{{ old('brand_model', old('model')) }}" list="brand-models" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;">
                         </div>
                         <div>
                             <label>ظرفیت هارد</label>
@@ -181,8 +183,6 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div><label>برند</label><input type="text" name="brand" value="{{ old('brand') }}" data-ascii-en dir="ltr" style="text-align:left;"></div>
-                        <div><label>مدل</label><input type="text" name="model" value="{{ old('model') }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></div>
                         <div><label>تحویل‌دهنده</label><input type="text" name="delivered_by" value="{{ old('delivered_by') }}"></div>
                         <div><label>معرف</label><input type="text" name="referrer" value="{{ old('referrer') }}"></div>
                         <div>
@@ -199,9 +199,36 @@
                 </div>
                 <div class="ws-pane" data-ws-pane="fault">
                     <div class="accept-texts">
-                        <div><label>عیب به اظهار مشتری</label><textarea name="reported_fault" rows="5">{{ old('reported_fault') }}</textarea></div>
-                        <div><label>لوازم همراه</label><textarea name="accessories" rows="5">{{ old('accessories', 'ندارد') }}</textarea></div>
-                        <div><label>وضعیت ظاهری و توضیحات</label><textarea name="appearance_notes" rows="5">{{ old('appearance_notes') }}</textarea></div>
+                        <div class="note-field">
+                            <label>عیب به اظهار مشتری</label>
+                            <select class="note-menu" data-note-target="reported_fault" aria-label="منوی عیب اظهار مشتری">
+                                <option value="">انتخاب از منو…</option>
+                                @foreach($reportedFaultOptions as $name)
+                                    <option value="{{ $name }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            <textarea name="reported_fault" rows="4">{{ old('reported_fault') }}</textarea>
+                        </div>
+                        <div class="note-field">
+                            <label>لوازم همراه</label>
+                            <select class="note-menu" data-note-target="accessories" aria-label="منوی لوازم همراه">
+                                <option value="">انتخاب از منو…</option>
+                                @foreach($accessoriesOptions as $name)
+                                    <option value="{{ $name }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            <textarea name="accessories" rows="4">{{ old('accessories', 'ندارد') }}</textarea>
+                        </div>
+                        <div class="note-field">
+                            <label>وضعیت ظاهری و توضیحات</label>
+                            <select class="note-menu" data-note-target="appearance_notes" aria-label="منوی وضعیت ظاهری">
+                                <option value="">انتخاب از منو…</option>
+                                @foreach($appearanceOptions as $name)
+                                    <option value="{{ $name }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            <textarea name="appearance_notes" rows="4">{{ old('appearance_notes') }}</textarea>
+                        </div>
                     </div>
                     <div class="accept-row accept-row-3" style="margin-top:8px">
                         <div>
@@ -353,6 +380,7 @@
         <div class="device-card-head">
             <button type="button" class="device-card-toggle" data-device-toggle>
                 <span class="device-index">قبض ۱</span>
+                <span class="device-receipt" data-device-receipt dir="ltr">—</span>
                 <span class="device-preview muted" data-device-preview>در حال تکمیل…</span>
             </button>
             <div class="device-card-tools">
@@ -375,15 +403,13 @@
                         @foreach($repairTypes as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
                     </select>
                 </label>
-                <label>برند/مدل<input type="text" data-name="brand_model" list="brand-models" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
+                <label>برند و مدل<input type="text" data-name="brand_model" list="brand-models" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
                 <label>ظرفیت
                     <select data-name="hdd_capacity">
                         <option value="">—</option>
                         @foreach($hddCapacities as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
                     </select>
                 </label>
-                <label>برند<input type="text" data-name="brand" data-ascii-en dir="ltr" style="text-align:left;"></label>
-                <label>مدل<input type="text" data-name="model" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
                 <label>تعمیرکار
                     <select data-name="technician_id">
                         <option value="">—</option>
@@ -411,9 +437,30 @@
                 <label>کارت گارانتی<input type="text" data-name="card_number"></label>
             </div>
             <div class="dense-notes">
-                <label>عیب اظهار مشتری<textarea data-name="reported_fault" rows="2"></textarea></label>
-                <label>لوازم همراه<textarea data-name="accessories" rows="2">ندارد</textarea></label>
-                <label>وضعیت ظاهری<textarea data-name="appearance_notes" rows="2"></textarea></label>
+                <div class="note-field">
+                    <label>عیب اظهار مشتری</label>
+                    <select class="note-menu" data-note-target="reported_fault" aria-label="منوی عیب اظهار مشتری">
+                        <option value="">انتخاب از منو…</option>
+                        @foreach($reportedFaultOptions as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
+                    </select>
+                    <textarea data-name="reported_fault" rows="2"></textarea>
+                </div>
+                <div class="note-field">
+                    <label>لوازم همراه</label>
+                    <select class="note-menu" data-note-target="accessories" aria-label="منوی لوازم همراه">
+                        <option value="">انتخاب از منو…</option>
+                        @foreach($accessoriesOptions as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
+                    </select>
+                    <textarea data-name="accessories" rows="2">ندارد</textarea>
+                </div>
+                <div class="note-field">
+                    <label>وضعیت ظاهری</label>
+                    <select class="note-menu" data-note-target="appearance_notes" aria-label="منوی وضعیت ظاهری">
+                        <option value="">انتخاب از منو…</option>
+                        @foreach($appearanceOptions as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
+                    </select>
+                    <textarea data-name="appearance_notes" rows="2"></textarea>
+                </div>
             </div>
             <div class="device-card-footer">
                 <button type="button" class="btn btn-secondary" data-device-done>تأیید این قبض و ادامه</button>

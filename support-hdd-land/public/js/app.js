@@ -472,8 +472,61 @@
         var groupCount = document.getElementById('group-count');
         var groupSummaryDeposit = document.getElementById('group-summary-deposit');
         var groupHint = document.getElementById('group-hint');
+        var receiptSeqNextValue = document.getElementById('receipt-seq-next-value');
+        var nextReceiptBase = form.getAttribute('data-next-receipt') || '';
 
         var state = { modeChosen: false };
+
+        function previewReceiptNo(index) {
+            var base = String(nextReceiptBase || '').trim();
+            if (!base) return '—';
+            var match = base.match(/^(.*?)(\d+)$/);
+            if (!match) return base;
+            var prefix = match[1];
+            var digits = match[2];
+            var num = (parseInt(digits, 10) || 0) + index;
+            var padded = String(num);
+            while (padded.length < digits.length) padded = '0' + padded;
+            return prefix + padded;
+        }
+
+        function applyNoteMenu(select) {
+            if (!select) return;
+            var value = (select.value || '').trim();
+            if (!value) return;
+
+            var targetName = select.getAttribute('data-note-target');
+            if (!targetName) return;
+
+            var scope = select.closest('[data-device-card]')
+                || select.closest('#mode-single')
+                || select.closest('form')
+                || document;
+            var field = scope.querySelector('[data-name="' + targetName + '"]')
+                || scope.querySelector('[name="' + targetName + '"]');
+            if (!field) return;
+
+            var current = (field.value || '').trim();
+            if (!current || current === 'ندارد') {
+                field.value = value;
+            } else if (current.indexOf(value) === -1) {
+                field.value = current + '، ' + value;
+            }
+            select.value = '';
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        function wireNoteMenus(root) {
+            if (!root) return;
+            root.querySelectorAll('.note-menu[data-note-target]').forEach(function (select) {
+                if (select.getAttribute('data-note-wired') === '1') return;
+                select.setAttribute('data-note-wired', '1');
+                select.addEventListener('change', function () {
+                    applyNoteMenu(select);
+                });
+            });
+        }
 
         /* ---------- status helpers ---------- */
 
@@ -631,6 +684,7 @@
                 if (modeSingle) modeSingle.classList.remove('hidden');
                 setWorkspaceEnabled(modeGroup, false);
                 setWorkspaceEnabled(modeSingle, true);
+                updateReceiptSeqBar(1);
             }
         }
 
@@ -719,8 +773,7 @@
             if (!previewEl) return;
 
             var serial = fieldValue(card, 'serial_number');
-            var brandModel = fieldValue(card, 'brand_model')
-                || (fieldValue(card, 'brand') + ' ' + fieldValue(card, 'model')).trim();
+            var brandModel = fieldValue(card, 'brand_model');
 
             var parts = [];
             if (serial) parts.push('سریال ' + serial);
@@ -728,6 +781,17 @@
 
             previewEl.textContent = parts.length ? parts.join(' — ') : 'در حال تکمیل…';
             previewEl.classList.toggle('muted', parts.length === 0);
+        }
+
+        function updateReceiptSeqBar(count) {
+            if (!receiptSeqNextValue) return;
+            count = Math.max(1, count || 1);
+            var first = previewReceiptNo(0);
+            if (count <= 1) {
+                receiptSeqNextValue.textContent = first;
+                return;
+            }
+            receiptSeqNextValue.textContent = first + ' … ' + previewReceiptNo(count - 1);
         }
 
         function toggleCollapse(card) {
@@ -756,8 +820,11 @@
                 });
                 var indexEl = card.querySelector('.device-index');
                 if (indexEl) indexEl.textContent = 'قبض ' + toPersianDigits(index + 1);
+                var receiptEl = card.querySelector('[data-device-receipt]');
+                if (receiptEl) receiptEl.textContent = previewReceiptNo(index);
             });
             updateGroupCountText(cards.length);
+            updateReceiptSeqBar(cards.length);
             return cards;
         }
 
@@ -866,6 +933,7 @@
 
             groupDeviceList.appendChild(card);
             wireDeviceCard(card);
+            wireNoteMenus(card);
             collapseAllExcept(card);
             reindexDeviceCards();
             updateGroupSummary();
@@ -1021,6 +1089,8 @@
 
         /* ---------- initial state ---------- */
 
+        wireNoteMenus(form);
+
         if (skipPhone) {
             showBodyStep();
             chooseMode(oldMode);
@@ -1028,6 +1098,26 @@
             showPhoneStep();
             if (lookupPhoneInput) lookupPhoneInput.focus();
         }
+    }
+
+    function initNoteMenusGlobal() {
+        document.querySelectorAll('form .note-menu[data-note-target]').forEach(function (select) {
+            if (select.closest('#reception-wizard')) return;
+            if (select.getAttribute('data-note-wired') === '1') return;
+            select.setAttribute('data-note-wired', '1');
+            select.addEventListener('change', function () {
+                var value = (select.value || '').trim();
+                if (!value) return;
+                var targetName = select.getAttribute('data-note-target');
+                var scope = select.closest('form') || document;
+                var field = scope.querySelector('[name="' + targetName + '"]');
+                if (!field) return;
+                var current = (field.value || '').trim();
+                if (!current || current === 'ندارد') field.value = value;
+                else if (current.indexOf(value) === -1) field.value = current + '، ' + value;
+                select.value = '';
+            });
+        });
     }
 
     /* =========================================================
@@ -1360,6 +1450,7 @@
         initAsciiFields();
         initAppModals();
         initReceptionWizard();
+        initNoteMenusGlobal();
         initStaffShell();
         initStaffLoginDeviceHint();
         initLookupEditors();

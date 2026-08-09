@@ -385,21 +385,20 @@ class ReceptionController extends Controller
             $converted = $this->toAsciiEnglish((string) $data['brand_model']);
             $data['brand_model'] = $converted !== null ? strtoupper($converted) : null;
         }
-        foreach (['brand', 'model', 'serial_number'] as $asciiField) {
-            if (! empty($data[$asciiField])) {
-                $converted = $this->toAsciiEnglish((string) $data[$asciiField]);
-                if ($asciiField === 'brand') {
-                    $data[$asciiField] = $converted;
-                } else {
-                    $data[$asciiField] = $converted !== null ? strtoupper($converted) : null;
-                }
-            }
+        if (! empty($data['serial_number'])) {
+            $converted = $this->toAsciiEnglish((string) $data['serial_number']);
+            $data['serial_number'] = $converted !== null ? strtoupper($converted) : null;
         }
 
         $this->assertSerialAvailable($data['serial_number'] ?? null, (int) $reception->id);
 
         $brandModel = trim((string) ($data['brand_model'] ?? trim(($data['brand'] ?? '').' '.($data['model'] ?? ''))));
         $productName = trim((string) ($data['product_name'] ?? '')) ?: ($brandModel !== '' ? $brandModel : $reception->product_name);
+        // Single brand/model field: keep full value on model for search/display.
+        if ($brandModel !== '') {
+            $data['brand'] = null;
+            $data['model'] = $brandModel;
+        }
 
         $receivedAt = $reception->received_at;
         if (! empty($data['received_at'])) {
@@ -1245,6 +1244,9 @@ class ReceptionController extends Controller
             'warrantyTypes' => LookupOption::options('warranty_type'),
             'hddCapacities' => LookupOption::options('hdd_capacity'),
             'brandModels' => LookupOption::options('brand_model'),
+            'reportedFaultOptions' => LookupOption::options('reported_fault'),
+            'accessoriesOptions' => LookupOption::options('accessories'),
+            'appearanceOptions' => LookupOption::options('appearance'),
         ];
     }
 
@@ -1468,13 +1470,6 @@ class ReceptionController extends Controller
             $converted = $this->toAsciiEnglish((string) $data['brand_model']);
             $data['brand_model'] = $converted !== null ? strtoupper($converted) : null;
         }
-        if (! empty($data['brand'])) {
-            $data['brand'] = $this->toAsciiEnglish((string) $data['brand']);
-        }
-        if (! empty($data['model'])) {
-            $converted = $this->toAsciiEnglish((string) $data['model']);
-            $data['model'] = $converted !== null ? strtoupper($converted) : null;
-        }
         if (! empty($data['serial_number'])) {
             $converted = $this->toAsciiEnglish((string) $data['serial_number']);
             $data['serial_number'] = $converted !== null ? strtoupper($converted) : null;
@@ -1484,6 +1479,9 @@ class ReceptionController extends Controller
 
         $brandModel = trim((string) ($data['brand_model'] ?? trim(($data['brand'] ?? '').' '.($data['model'] ?? ''))));
         $productName = trim((string) ($data['product_name'] ?? '')) ?: ($brandModel !== '' ? $brandModel : 'دستگاه تعمیری');
+        // Single brand/model field: keep full value on model for search/display.
+        $data['brand'] = null;
+        $data['model'] = $brandModel !== '' ? $brandModel : null;
 
         $receivedAt = now();
         if (! empty($data['received_at'])) {
@@ -1507,8 +1505,8 @@ class ReceptionController extends Controller
             'created_by' => Auth::id(),
             'product_name' => $productName,
             'brand' => $data['brand'] ?? null,
-            'model' => (($m = $this->toAsciiEnglish((string) ($data['model'] ?? ($brandModel ?: '')))) !== null ? strtoupper($m) : null),
-            'serial_number' => (($s = $this->toAsciiEnglish((string) ($data['serial_number'] ?? ''))) !== null ? strtoupper($s) : null),
+            'model' => $data['model'] ?? null,
+            'serial_number' => $data['serial_number'] ?? null,
             'delivered_by' => $data['delivered_by'] ?? $customer->name,
             'referrer' => $data['referrer'] ?? null,
             'commission' => (int) ($data['commission'] ?? 0),

@@ -815,7 +815,16 @@ tbody tr:nth-child(even) { background: #f3f5f8; }
 }
 .device-card-toggle { border:0; background:transparent; color:#fff; display:flex; gap:8px; align-items:center; cursor:pointer; padding:2px; font:inherit; }
 .device-index { font-weight:800; font-size:11px; }
+.device-receipt {
+  font-weight:700; font-size:11px; letter-spacing:.02em;
+  background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.28);
+  border-radius:2px; padding:1px 6px; color:#fff;
+}
 .device-preview { color:#c5ccd6 !important; font-size:10.5px; }
+.note-field { display:grid; gap:3px; }
+.note-field > label { margin:0; }
+.note-menu { min-height:28px; font-size:11px; }
+.note-field textarea { min-height:64px; }
 .device-card-tools { display:flex; gap:3px; }
 .device-card-body { padding:7px; background:#f7f8fa; }
 .dense-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:5px; }

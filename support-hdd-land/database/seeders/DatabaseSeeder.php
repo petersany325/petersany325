@@ -40,6 +40,9 @@ class DatabaseSeeder extends Seeder
             'warranty_type' => ['فاقد گارانتی و بیمه', 'گارانتی شرکتی', 'گارانتی تعمیرگاه', 'بیمه'],
             'hdd_capacity' => ['120GB', '250GB', '320GB', '500GB', '1TB', '2TB', '4TB'],
             'brand_model' => ['WD My Passport', 'Seagate Backup Plus', 'Toshiba Canvio', 'Samsung T7', 'Laptop Generic'],
+            'reported_fault' => ['روشن نمی‌شود', 'صدای غیرعادی', 'عدم شناسایی', 'کندی شدید', 'آسیب فیزیکی', 'نیاز به بازیابی اطلاعات'],
+            'accessories' => ['ندارد', 'کابل USB', 'آداپتور', 'جعبه', 'کابل + جعبه'],
+            'appearance' => ['سالم و بدون خط و خش', 'خط و خش سطحی', 'ضرب‌دیدگی', 'برچسب کنده شده', 'وضعیت متوسط'],
         ];
         foreach ($lookupSeed as $group => $names) {
             foreach ($names as $i => $name) {

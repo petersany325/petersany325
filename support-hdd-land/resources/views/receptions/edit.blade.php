@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'ویرایش '.$\2.' | '.shop_name())
+@section('title', 'ویرایش '.$reception->ticket_no.' | '.shop_name())
 @section('page_title', 'ویرایش قبض '.$reception->ticket_no)
 @section('window_title', 'ویرایش قبض — اصلاح مشخصات')
 
@@ -7,6 +7,7 @@
 @php
     $c = $customer;
     $r = $reception;
+    $brandModelValue = old('brand_model', trim(($r->brand ? $r->brand.' ' : '').($r->model ?: $r->product_name ?: '')));
 @endphp
 @if($errors->any())
     <div class="alert alert-error">{{ $errors->first() }}</div>
@@ -60,16 +61,12 @@
                 <input type="text" name="product_name" value="{{ old('product_name', $r->product_name) }}">
             </div>
             <div>
-                <label>برند</label>
-                <input type="text" name="brand" value="{{ old('brand', $r->brand) }}" data-barcode>
-            </div>
-            <div>
-                <label>مدل</label>
-                <input type="text" name="model" value="{{ old('model', $r->model) }}" data-barcode>
+                <label>برند و مدل</label>
+                <input type="text" name="brand_model" value="{{ $brandModelValue }}" list="brand-models" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;">
             </div>
             <div>
                 <label>سریال</label>
-                <input type="text" name="serial_number" value="{{ old('serial_number', $r->serial_number) }}" dir="ltr" style="text-align:left;" data-barcode>
+                <input type="text" name="serial_number" value="{{ old('serial_number', $r->serial_number) }}" dir="ltr" style="text-align:left;" data-barcode data-ascii-en data-fa-en autocomplete="off">
             </div>
             <div>
                 <label>ظرفیت هارد</label>
@@ -116,16 +113,34 @@
                     @endforeach
                 </select>
             </div>
-            <div style="grid-column:1/-1;">
+            <div style="grid-column:1/-1;" class="note-field">
                 <label>ایراد اعلامی مشتری</label>
+                <select class="note-menu" data-note-target="reported_fault" aria-label="منوی عیب اظهار مشتری">
+                    <option value="">انتخاب از منو…</option>
+                    @foreach($reportedFaultOptions as $name)
+                        <option value="{{ $name }}">{{ $name }}</option>
+                    @endforeach
+                </select>
                 <textarea name="reported_fault" rows="3">{{ old('reported_fault', $r->reported_fault) }}</textarea>
             </div>
-            <div style="grid-column:1/-1;">
+            <div style="grid-column:1/-1;" class="note-field">
                 <label>لوازم همراه</label>
-                <input type="text" name="accessories" value="{{ old('accessories', $r->accessories) }}">
+                <select class="note-menu" data-note-target="accessories" aria-label="منوی لوازم همراه">
+                    <option value="">انتخاب از منو…</option>
+                    @foreach($accessoriesOptions as $name)
+                        <option value="{{ $name }}">{{ $name }}</option>
+                    @endforeach
+                </select>
+                <textarea name="accessories" rows="2">{{ old('accessories', $r->accessories) }}</textarea>
             </div>
-            <div style="grid-column:1/-1;">
+            <div style="grid-column:1/-1;" class="note-field">
                 <label>وضعیت ظاهری</label>
+                <select class="note-menu" data-note-target="appearance_notes" aria-label="منوی وضعیت ظاهری">
+                    <option value="">انتخاب از منو…</option>
+                    @foreach($appearanceOptions as $name)
+                        <option value="{{ $name }}">{{ $name }}</option>
+                    @endforeach
+                </select>
                 <textarea name="appearance_notes" rows="2">{{ old('appearance_notes', $r->appearance_notes) }}</textarea>
             </div>
             <div style="grid-column:1/-1;">
@@ -217,4 +232,10 @@
         <a class="btn btn-ghost" href="{{ route('receptions.show', $r) }}">انصراف</a>
     </div>
 </form>
+
+<datalist id="brand-models">
+    @foreach($brandModels as $name)
+        <option value="{{ $name }}"></option>
+    @endforeach
+</datalist>
 @endsection
