@@ -326,9 +326,8 @@ class Reception extends Model
         $prefix = 'SH-'.now()->format('ymd');
         // Include soft-deleted rows: unique index still holds them, so skipping
         // trash caused Duplicate entry SH-yymmdd-0001 and HTTP 500 on create.
-        // Prefix is "SH-yymmdd-" → numeric suffix starts at strlen(prefix)+2? No:
-        // ticket like SH-260809-0001 → after "SH-260809-" the suffix starts at position 12 (1-based for SQL SUBSTRING).
-        $suffixStart = strlen($prefix) + 2; // '-' after prefix + 1-based index
+        // "SH-260809-0001" → numeric suffix starts at strlen(prefix)+2 (1-based SQL).
+        $suffixStart = strlen($prefix) + 2;
         $dbMax = (int) (static::withTrashed()
             ->where('ticket_no', 'like', $prefix.'-%')
             ->selectRaw('MAX(CAST(SUBSTRING(ticket_no, ?) AS UNSIGNED)) as m', [$suffixStart])
