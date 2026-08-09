@@ -7,7 +7,6 @@
 @section('content')
 @php
     $skipPhone = old('customer_id') || old('customer_phone') || old('customer_name') || $errors->any();
-    $oldMode = old('intake_mode', 'single');
     $oldItems = old('items', []);
     if (! is_array($oldItems)) {
         $oldItems = [];
@@ -19,6 +18,12 @@
         }
     }
     $hasSerialErrors = $errors->has('serial_number') || $itemSerialErrors !== [];
+    // After a failed group save, always reopen group mode with the same cards.
+    $oldMode = old('intake_mode', 'single');
+    if ($oldItems !== [] || $itemSerialErrors !== []) {
+        $oldMode = 'group';
+    }
+    $restoreGroupCards = $oldMode === 'group' && $oldItems !== [];
 @endphp
 
 @if($errors->any())
@@ -163,7 +168,7 @@
         <div id="mode-badge" class="mode-badge hidden">حالت: <strong id="mode-badge-text">تکی</strong></div>
 
         {{-- ========== SINGLE ========== --}}
-        <div id="mode-single" data-workspace-tabs>
+        <div id="mode-single" class="{{ $oldMode === 'group' && $skipPhone ? 'hidden' : '' }}" data-workspace-tabs>
             <div class="ws-tabs">
                 <button type="button" class="active" data-ws-tab="device">دستگاه</button>
                 <button type="button" data-ws-tab="fault">عیب و لوازم</button>
@@ -340,7 +345,7 @@
         </div>
 
         {{-- ========== GROUP ========== --}}
-        <div id="mode-group" class="hidden">
+        <div id="mode-group" class="{{ $oldMode === 'group' && $skipPhone ? '' : 'hidden' }}">
             <div class="win-strip">
                 <span class="win-strip-title">اطلاعات مشترک</span>
                 <div class="win-strip-fields">
@@ -360,9 +365,9 @@
                     </label>
                     <label>پرداخت
                         <select name="payment_method" data-group-shared>
-                            <option value="cash">نقد</option>
-                            <option value="card">کارت</option>
-                            <option value="transfer">کارت‌به‌کارت</option>
+                            <option value="cash" @selected(old('payment_method', 'cash') === 'cash')>نقد</option>
+                            <option value="card" @selected(old('payment_method') === 'card')>کارت</option>
+                            <option value="transfer" @selected(old('payment_method') === 'transfer')>کارت‌به‌کارت</option>
                         </select>
                     </label>
                     <label>تحویل‌دهنده
@@ -374,7 +379,17 @@
                 </div>
             </div>
 
-            <div id="group-device-list" class="group-device-list"></div>
+            <div id="group-device-list" class="group-device-list" data-ssr-restored="{{ $restoreGroupCards ? '1' : '0' }}">
+                @if($restoreGroupCards)
+                    @foreach($oldItems as $idx => $oldItem)
+                        @include('partials.group-device-card', [
+                            'item' => is_array($oldItem) ? $oldItem : [],
+                            'index' => (int) $idx,
+                            'serialError' => $itemSerialErrors[(int) $idx] ?? null,
+                        ])
+                    @endforeach
+                @endif
+            </div>
 
             <div class="win-cmdbar" id="group-next-menu">
                 <div class="win-cmdbar-label">منوی قبض بعدی</div>
@@ -396,7 +411,13 @@
                 <button class="btn btn-primary" type="submit" data-set-action="save_close">ثبت همه قبض‌ها</button>
                 <button class="btn btn-secondary" type="button" data-set-action="save_print">ثبت و چاپ اولی</button>
                 <a class="btn btn-ghost" href="{{ route('receptions.index') }}">انصراف</a>
-                <span class="muted" id="group-hint">حداقل ۲ قبض برای پذیرش گروهی لازم است.</span>
+                <span class="muted {{ $itemSerialErrors !== [] ? 'is-error' : '' }}" id="group-hint">
+                    @if($itemSerialErrors !== [])
+                        سریال تکراری را در کادر قرمز اصلاح کنید، سپس دوباره ذخیره کنید.
+                    @else
+                        حداقل ۲ قبض برای پذیرش گروهی لازم است.
+                    @endif
+                </span>
             </div>
         </div>
     </div>

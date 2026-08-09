@@ -678,8 +678,9 @@
                 if (modeGroup) modeGroup.classList.remove('hidden');
                 setWorkspaceEnabled(modeSingle, false);
                 setWorkspaceEnabled(modeGroup, true);
-                ensureMinimumDeviceCards();
-                restoreGroupItemsIfNeeded();
+                if (!restoreGroupItemsIfNeeded()) {
+                    ensureMinimumDeviceCards();
+                }
             } else {
                 if (modeGroup) modeGroup.classList.add('hidden');
                 if (modeSingle) modeSingle.classList.remove('hidden');
@@ -1025,8 +1026,56 @@
             updateDevicePreview(card);
         }
 
+        function focusFirstSerialError() {
+            if (!groupDeviceList) return;
+            var firstBad = groupDeviceList.querySelector('.device-card.has-field-error, .device-card .is-invalid');
+            if (firstBad && !firstBad.hasAttribute('data-device-card')) {
+                firstBad = firstBad.closest('[data-device-card]');
+            }
+            if (!firstBad) return;
+            collapseAllExcept(firstBad);
+            var serialField = firstBad.querySelector('[data-name="serial_number"]');
+            if (serialField) {
+                try { serialField.focus(); serialField.select(); } catch (err) { /* ignore */ }
+            }
+            scrollCardIntoView(firstBad);
+            if (groupHint) {
+                groupHint.textContent = 'سریال تکراری را اصلاح کنید، سپس دوباره ذخیره کنید.';
+                groupHint.classList.add('is-error');
+            }
+        }
+
+        function wireServerRestoredGroupCards() {
+            if (!groupDeviceList) return false;
+            if (groupDeviceList.getAttribute('data-ssr-restored') !== '1') return false;
+            var cards = groupDeviceList.querySelectorAll('[data-device-card]');
+            if (!cards.length) return false;
+
+            cards.forEach(function (card) {
+                wireDeviceCard(card);
+                wireNoteMenus(card);
+                var serialField = card.querySelector('[data-name="serial_number"]');
+                if (serialField && serialField.classList.contains('is-invalid')) {
+                    markSerialFieldError(
+                        serialField,
+                        (card.querySelector('[data-serial-error]') || {}).textContent || 'سریال تکراری است.',
+                        card
+                    );
+                }
+            });
+            reindexDeviceCards();
+            updateGroupSummary();
+            focusFirstSerialError();
+            groupDeviceList.setAttribute('data-ssr-restored', '0');
+            form.setAttribute('data-old-items', '[]');
+            form.setAttribute('data-item-serial-errors', '{}');
+            return true;
+        }
+
         function restoreGroupItemsIfNeeded() {
             if (!groupDeviceList || !groupDeviceTemplate) return false;
+            if (wireServerRestoredGroupCards()) return true;
+
             var rawItems = form.getAttribute('data-old-items') || '[]';
             var rawErrors = form.getAttribute('data-item-serial-errors') || '{}';
             var items = [];
@@ -1051,16 +1100,7 @@
             updateGroupSummary();
             form.setAttribute('data-old-items', '[]');
             form.setAttribute('data-item-serial-errors', '{}');
-
-            if (firstBad) {
-                collapseAllExcept(firstBad);
-                var serialField = firstBad.querySelector('[data-name="serial_number"]');
-                if (serialField) {
-                    try { serialField.focus(); serialField.select(); } catch (err3) { /* ignore */ }
-                }
-                scrollCardIntoView(firstBad);
-            }
-
+            focusFirstSerialError();
             return true;
         }
 
