@@ -170,7 +170,7 @@ class AppointmentResource extends Resource
             ->recordActions([
                 ViewAction::make()
                     ->label('مشاهده')
-                    ->after(function (Appointment $record): void {
+                    ->afterFormFilled(function (Appointment $record): void {
                         $record->markViewed();
                     }),
                 EditAction::make()
