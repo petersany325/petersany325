@@ -44,6 +44,7 @@ class AppServiceProvider extends ServiceProvider
                 'pwa_enabled', 'pwa_auto_mobile', 'pwa_name', 'pwa_short_name',
                 'pwa_description', 'pwa_theme_color', 'pwa_bg_color', 'pwa_start_url',
                 'app_banner_size', 'app_banner_height', 'app_banner_position', 'app_banner_show_lead',
+                'asset_version',
             ];
             $siteSettings = [];
             try {
@@ -56,11 +57,13 @@ class AppServiceProvider extends ServiceProvider
                         'app_banner_size' => 'medium',
                         'app_banner_height' => '42',
                         'app_banner_position' => 'center 35%',
+                        'asset_version' => '12',
                         default => '',
                     });
                 }
             } catch (\Throwable) {
                 $siteSettings = array_fill_keys($keys, '');
+                $siteSettings['asset_version'] = '12';
             }
 
             $headerMenus = collect();
