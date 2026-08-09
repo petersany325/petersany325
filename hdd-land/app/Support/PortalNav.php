@@ -27,6 +27,7 @@ class PortalNav
                     ['label' => 'NVMe', 'url' => '/products?part_type=nvme'],
                     ['label' => 'هارد HDD', 'url' => '/products?part_type=hdd'],
                     ['label' => 'رم', 'url' => '/products?part_type=ram'],
+                    ['label' => 'وسترن', 'url' => '/products?brand='.rawurlencode('Western Digital')],
                 ],
             ],
             [
