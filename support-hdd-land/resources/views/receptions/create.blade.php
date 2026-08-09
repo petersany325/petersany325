@@ -67,12 +67,14 @@
       data-next-receipt="{{ $nextReceipt }}"
       data-next-ticket="{{ $nextTicket }}"
       data-old-items="{{ json_encode($oldItems, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}"
-      data-item-serial-errors="{{ json_encode($itemSerialErrors, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}">
+      data-item-serial-errors="{{ json_encode($itemSerialErrors, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}"
+      data-create-sms-mode="{{ $createSmsMode ?? 'always' }}">
     @csrf
     <input type="hidden" name="customer_id" value="{{ old('customer_id') }}">
     <input type="hidden" name="customer_phone" value="{{ old('customer_phone') }}">
     <input type="hidden" name="intake_mode" id="intake-mode" value="{{ $oldMode }}">
     <input type="hidden" name="action" id="form-action" value="save_close">
+    <input type="hidden" name="send_sms" id="create-send-sms" value="1">
     {{-- Fallback submit target for non-barcode Enter (barcode Enter is handled in app.js and does not submit). --}}
     <button type="submit" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">ثبت</button>
 

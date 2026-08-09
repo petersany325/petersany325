@@ -200,10 +200,12 @@ class ReceptionController extends Controller
             ]);
         });
 
-        $this->queueReceptionCreatedSms($reception);
+        $smsQueued = $this->queueReceptionCreatedSms($reception, $request->boolean('send_sms', true));
 
         $action = $data['action'] ?? 'save_close';
-        $flash = 'قبض پذیرش با موفقیت ثبت شد. پیامک در پس‌زمینه ارسال می‌شود.';
+        $flash = $smsQueued
+            ? 'قبض پذیرش با موفقیت ثبت شد. پیامک در پس‌زمینه ارسال می‌شود.'
+            : 'قبض پذیرش با موفقیت ثبت شد.';
         if ($action === 'save_print') {
             return redirect()->route('receptions.print', $reception)->with('success', $flash);
         }
@@ -302,11 +304,16 @@ class ReceptionController extends Controller
         $first = $receptions->first();
         $action = $data['action'] ?? 'save_close';
 
+        $smsQueued = false;
         foreach ($receptions as $item) {
-            $this->queueReceptionCreatedSms($item);
+            if ($this->queueReceptionCreatedSms($item, $request->boolean('send_sms', true))) {
+                $smsQueued = true;
+            }
         }
 
-        $flash = "{$count} قبض گروهی با کد {$batchCode} ثبت شد. پیامک‌ها در پس‌زمینه ارسال می‌شوند.";
+        $flash = $smsQueued
+            ? "{$count} قبض گروهی با کد {$batchCode} ثبت شد. پیامک‌ها در پس‌زمینه ارسال می‌شوند."
+            : "{$count} قبض گروهی با کد {$batchCode} ثبت شد.";
 
         if ($action === 'save_print' && $first) {
             return redirect()->route('receptions.print', $first)->with('success', $flash);
@@ -336,11 +343,15 @@ class ReceptionController extends Controller
             }
             $previews[$rule->status_key] = [
                 'title' => $rule->title,
-                'auto_send' => $rule->auto_send,
+                'auto_send' => $rule->shouldAutoSend(),
+                'send_mode' => $rule->sendMode(),
                 'color' => $rule->color,
                 'message' => $smsNotifications->preview($rule, $reception),
             ];
         }
+
+        $deliveredRule = SmsStatusRule::findForStatus('delivered');
+        $priceRule = SmsStatusRule::findOnPrice();
 
         return view('receptions.show', array_merge($this->editLookups(), [
             'reception' => $reception,
@@ -348,6 +359,8 @@ class ReceptionController extends Controller
             'smsRules' => $rules,
             'smsPreviews' => $previews,
             'smsMasterEnabled' => $smsNotifications->masterEnabled(),
+            'deliveredSmsMode' => $deliveredRule?->sendMode() ?? SmsStatusRule::SEND_NEVER,
+            'priceSmsMode' => $priceRule?->sendMode() ?? SmsStatusRule::SEND_ALWAYS,
             'costApprovals' => $reception->costApprovals,
             'costStages' => $reception->costStages,
             'statusLogs' => $reception->statusLogs,
@@ -1233,11 +1246,15 @@ class ReceptionController extends Controller
             ->orderByDesc('id')
             ->first(['id', 'ticket_no', 'receipt_no', 'serial_number']);
 
+        $createSmsRule = SmsStatusRule::findOnCreate() ?: SmsStatusRule::findForStatus('received');
+
         return array_merge($this->editLookups(), [
             'customers' => Customer::query()->latest('id')->limit(80)->get(['id', 'name', 'phone']),
             'nextTicket' => Reception::nextTicketNo(),
             'nextReceipt' => Reception::nextReceiptNo(),
             'lastReception' => $lastReception,
+            'createSmsMode' => $createSmsRule?->sendMode() ?? SmsStatusRule::SEND_ALWAYS,
+            'createSmsAsk' => (bool) ($createSmsRule?->shouldAskEmployee()),
         ]);
     }
 
@@ -1573,19 +1590,35 @@ class ReceptionController extends Controller
      * Send create-SMS after the HTTP response so FPM workers are not blocked
      * by the SMS panel (up to ~20s) during peak reception traffic.
      */
-    private function queueReceptionCreatedSms(Reception $reception): void
+    private function queueReceptionCreatedSms(Reception $reception, bool $employeeSaidSend = true): bool
     {
+        $rule = SmsStatusRule::findOnCreate() ?: SmsStatusRule::findForStatus('received');
+        if (! $rule) {
+            return false;
+        }
+
+        $mode = $rule->sendMode();
+        if ($mode === SmsStatusRule::SEND_NEVER) {
+            return false;
+        }
+        if ($mode === SmsStatusRule::SEND_ASK && ! $employeeSaidSend) {
+            return false;
+        }
+
+        $force = $mode === SmsStatusRule::SEND_ASK || $mode === SmsStatusRule::SEND_ALWAYS;
         $id = (int) $reception->id;
-        dispatch(function () use ($id) {
+        dispatch(function () use ($id, $force) {
             try {
                 $row = Reception::query()->with(['customer', 'faultType'])->find($id);
                 if (! $row) {
                     return;
                 }
-                app(SmsNotificationService::class)->sendOnCreate($row);
+                app(SmsNotificationService::class)->sendOnCreate($row, force: $force);
             } catch (\Throwable $e) {
             }
         })->afterResponse();
+
+        return true;
     }
 
     private function normalizePhone(string $value): string

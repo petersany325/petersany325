@@ -270,9 +270,15 @@
                         <button type="button"
                                 class="status-chip color-{{ $rule->color }} {{ $reception->status === $rule->status_key ? 'is-active' : '' }}"
                                 data-status-chip="{{ $rule->status_key }}"
-                                data-auto-send="{{ $rule->auto_send ? '1' : '0' }}">
+                                data-auto-send="{{ $rule->shouldAutoSend() ? '1' : '0' }}"
+                                data-send-mode="{{ $rule->sendMode() }}">
                             <span class="status-chip-title">{{ $rule->title }}</span>
-                            <span class="status-chip-meta">{{ $rule->auto_send ? 'پیامک مجاز' : 'بدون پیامک پیش‌فرض' }}</span>
+                            <span class="status-chip-meta">
+                                @if($rule->sendMode() === 'ask') پرسیده می‌شود
+                                @elseif($rule->shouldAutoSend()) پیامک مجاز
+                                @else بدون پیامک پیش‌فرض
+                                @endif
+                            </span>
                         </button>
                     @endforeach
                     @foreach($statuses as $key => $label)
@@ -930,8 +936,8 @@
                     <div>
                         @include('partials.toggle', [
                             'name' => 'send_sms',
-                            'label' => 'پیامک تحویل به مشتری',
-                            'checked' => true,
+                            'label' => ($deliveredSmsMode ?? 'never') === 'ask' ? 'پیامک تحویل (موقع ثبت پرسیده می‌شود)' : 'پیامک تحویل به مشتری',
+                            'checked' => ($deliveredSmsMode ?? 'never') === 'always',
                             'on' => 'برود',
                             'off' => 'نرود',
                         ])
@@ -1221,22 +1227,30 @@
         if (state) state.textContent = on ? (btn.getAttribute('data-on-text') || 'برود') : (btn.getAttribute('data-off-text') || 'نرود');
     }
 
+    function currentSendMode(key) {
+        var preview = previews[key] || {};
+        if (preview.send_mode) return preview.send_mode;
+        return preview.auto_send ? 'always' : 'never';
+    }
+
     function applyStatus(key, autoDefault) {
         selected.value = key;
         panel.querySelectorAll('[data-status-chip]').forEach(function (chip) {
             chip.classList.toggle('is-active', chip.getAttribute('data-status-chip') === key);
         });
         var preview = previews[key];
+        var mode = currentSendMode(key);
         if (preview) {
             titleEl.textContent = preview.title || key;
             bodyEl.textContent = preview.message || '—';
-            setSendSms(masterOn && !!preview.auto_send);
+            if (mode === 'ask') setSendSms(false);
+            else setSendSms(masterOn && mode === 'always');
         } else {
             titleEl.textContent = key;
             bodyEl.textContent = 'برای این وضعیت قالب پیامک تعریف نشده است. از منوی «تعریف تغییر وضعیت / پیامک» اضافه کنید.';
             setSendSms(false);
         }
-        if (typeof autoDefault === 'boolean') {
+        if (typeof autoDefault === 'boolean' && mode !== 'ask') {
             setSendSms(masterOn && autoDefault);
         }
     }
@@ -1247,7 +1261,54 @@
         });
     });
 
+    var statusForm = document.getElementById('status-sms-form');
+    if (statusForm) {
+        statusForm.addEventListener('submit', function () {
+            var mode = currentSendMode(selected.value);
+            if (!masterOn || mode !== 'ask') return;
+            var go = window.confirm('پیامک به مشتری ارسال شود؟\n\nتأیید = برود\nانصراف = نرود');
+            setSendSms(!!go);
+        });
+    }
+
     applyStatus(panel.getAttribute('data-current') || selected.value);
+
+    var settleForm = document.getElementById('rx-settle-form');
+    var deliveredMode = @json($deliveredSmsMode ?? 'never');
+    if (settleForm && deliveredMode === 'ask') {
+        settleForm.addEventListener('submit', function () {
+            if (!masterOn) {
+                setSettleSendSms(false);
+                return;
+            }
+            var go = window.confirm('پیامک تحویل به مشتری ارسال شود؟\n\nتأیید = برود\nانصراف = نرود');
+            setSettleSendSms(!!go);
+        });
+    } else if (settleForm && deliveredMode === 'never') {
+        setSettleSendSms(false);
+    } else if (settleForm && deliveredMode === 'always') {
+        setSettleSendSms(masterOn);
+    }
+
+    function setSettleSendSms(on) {
+        var field = settleForm && settleForm.querySelector('[name="send_sms"]');
+        if (!field) return;
+        var wrap = field.closest('[data-toggle-field]');
+        if (!wrap) {
+            field.checked = !!on;
+            return;
+        }
+        var input = wrap.querySelector('[data-toggle-input]');
+        var btn = wrap.querySelector('[data-toggle-btn]');
+        if (input) input.checked = !!on;
+        if (btn) {
+            btn.classList.toggle('is-on', !!on);
+            btn.classList.toggle('is-off', !on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            var state = btn.querySelector('.toggle-state');
+            if (state) state.textContent = on ? (btn.getAttribute('data-on-text') || 'برود') : (btn.getAttribute('data-off-text') || 'نرود');
+        }
+    }
 })();
 </script>
 @endpush

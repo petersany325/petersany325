@@ -1273,6 +1273,19 @@
                     clearSerialFieldError(singleSerial);
                 }
             }
+
+            var createSmsMode = form.getAttribute('data-create-sms-mode') || 'always';
+            var sendSmsInput = document.getElementById('create-send-sms');
+            if (sendSmsInput) {
+                if (createSmsMode === 'never') {
+                    sendSmsInput.value = '0';
+                } else if (createSmsMode === 'ask') {
+                    var goSms = window.confirm('پیامک پذیرش به مشتری ارسال شود؟\n\nتأیید = برود\nانصراف = نرود');
+                    sendSmsInput.value = goSms ? '1' : '0';
+                } else {
+                    sendSmsInput.value = '1';
+                }
+            }
         });
 
         var singleSerialInput = form.querySelector('#mode-single [name="serial_number"]');

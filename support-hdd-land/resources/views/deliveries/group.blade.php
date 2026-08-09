@@ -13,7 +13,7 @@
         </div>
     </div>
 
-    <form method="POST" action="{{ route('deliveries.store') }}" id="group-delivery-form">
+    <form method="POST" action="{{ route('deliveries.store') }}" id="group-delivery-form" data-delivered-sms-mode="{{ $deliveredSmsMode ?? 'never' }}">
         @csrf
         <div class="accept-row accept-row-3" style="margin-bottom:6px;">
             <div>
@@ -64,7 +64,13 @@
                 </select>
             </div>
             <div>
-                @include('partials.toggle', ['name' => 'send_sms', 'label' => 'ارسال پیامک تحویل', 'checked' => true, 'on' => 'برود', 'off' => 'نرود'])
+                @include('partials.toggle', [
+                    'name' => 'send_sms',
+                    'label' => ($deliveredSmsMode ?? 'never') === 'ask' ? 'ارسال پیامک تحویل (موقع ثبت پرسیده می‌شود)' : 'ارسال پیامک تحویل',
+                    'checked' => ($deliveredSmsMode ?? 'never') === 'always',
+                    'on' => 'برود',
+                    'off' => 'نرود',
+                ])
             </div>
             <div>
                 <label>یادداشت / دلیل نسیه یا بخشش</label>
@@ -185,7 +191,25 @@
         if (e.key === 'Enter') { e.preventDefault(); lookup(); }
     });
 
-    document.getElementById('group-delivery-form').addEventListener('submit', function (e) {
+    var form = document.getElementById('group-delivery-form');
+    function setGroupSendSms(on) {
+        var field = form.querySelector('[name="send_sms"]');
+        if (!field) return;
+        var wrap = field.closest('[data-toggle-field]');
+        if (!wrap) { field.checked = !!on; return; }
+        var input = wrap.querySelector('[data-toggle-input]');
+        var btn = wrap.querySelector('[data-toggle-btn]');
+        if (input) input.checked = !!on;
+        if (btn) {
+            btn.classList.toggle('is-on', !!on);
+            btn.classList.toggle('is-off', !on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            var state = btn.querySelector('.toggle-state');
+            if (state) state.textContent = on ? (btn.getAttribute('data-on-text') || 'برود') : (btn.getAttribute('data-off-text') || 'نرود');
+        }
+    }
+
+    form.addEventListener('submit', function (e) {
         var checked = body.querySelectorAll('input[name="ticket_ids[]"]:checked');
         if (!checked.length) {
             e.preventDefault();
@@ -202,6 +226,17 @@
         if (unsettled && !mode) {
             e.preventDefault();
             setStatus('قبض مانده‌دار یا بدون هزینه دارید. نسیه/بخشش را انتخاب کنید یا اول تسویه کنید.', 'error');
+            return;
+        }
+
+        var smsMode = form.getAttribute('data-delivered-sms-mode') || 'never';
+        if (smsMode === 'ask') {
+            var go = window.confirm('پیامک تحویل به مشتری ارسال شود؟\n\nتأیید = برود\nانصراف = نرود');
+            setGroupSendSms(!!go);
+        } else if (smsMode === 'never') {
+            setGroupSendSms(false);
+        } else {
+            setGroupSendSms(true);
         }
     });
 })();

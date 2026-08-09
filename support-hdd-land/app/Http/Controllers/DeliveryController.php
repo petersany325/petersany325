@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DeliveryBatch;
 use App\Models\Reception;
+use App\Models\SmsStatusRule;
 use App\Services\AccountingService;
 use App\Services\ReceptionCustodyGate;
 use App\Services\ReceptionSettlementService;
@@ -17,8 +18,11 @@ class DeliveryController extends Controller
 {
     public function create()
     {
+        $deliveredRule = SmsStatusRule::findForStatus('delivered');
+
         return view('deliveries.group', [
             'recent' => DeliveryBatch::query()->withCount('receptions')->latest()->limit(8)->get(),
+            'deliveredSmsMode' => $deliveredRule?->sendMode() ?? SmsStatusRule::SEND_NEVER,
         ]);
     }
 

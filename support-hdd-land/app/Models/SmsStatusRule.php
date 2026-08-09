@@ -9,9 +9,21 @@ use Illuminate\Support\Str;
 
 class SmsStatusRule extends Model
 {
+    public const SEND_ALWAYS = 'always';
+
+    public const SEND_NEVER = 'never';
+
+    public const SEND_ASK = 'ask';
+
+    public const SEND_MODES = [
+        self::SEND_ALWAYS => 'ارسال شود',
+        self::SEND_NEVER => 'ارسال نشود',
+        self::SEND_ASK => 'پرسیده شود',
+    ];
+
     protected $fillable = [
         'code', 'title', 'summary', 'status_key', 'stage_type', 'result_type', 'color',
-        'description', 'message_template', 'auto_send', 'coworker_message_template',
+        'description', 'message_template', 'auto_send', 'send_mode', 'coworker_message_template',
         'send_coworker', 'is_active', 'is_hidden', 'on_create', 'on_price', 'sort_order',
     ];
 
@@ -25,6 +37,50 @@ class SmsStatusRule extends Model
             'on_create' => 'boolean',
             'on_price' => 'boolean',
         ];
+    }
+
+    public function sendMode(): string
+    {
+        $mode = (string) ($this->send_mode ?: '');
+        if (in_array($mode, [self::SEND_ALWAYS, self::SEND_NEVER, self::SEND_ASK], true)) {
+            return $mode;
+        }
+
+        return $this->auto_send ? self::SEND_ALWAYS : self::SEND_NEVER;
+    }
+
+    public function sendModeLabel(): string
+    {
+        return self::SEND_MODES[$this->sendMode()] ?? $this->sendMode();
+    }
+
+    public function shouldAskEmployee(): bool
+    {
+        return $this->sendMode() === self::SEND_ASK;
+    }
+
+    public function shouldAutoSend(): bool
+    {
+        return $this->sendMode() === self::SEND_ALWAYS;
+    }
+
+    public static function normalizeSendMode(mixed $value, ?bool $autoSendFallback = null): string
+    {
+        $mode = is_string($value) ? strtolower(trim($value)) : '';
+        if (in_array($mode, [self::SEND_ALWAYS, self::SEND_NEVER, self::SEND_ASK], true)) {
+            return $mode;
+        }
+        if ($mode === '1' || $mode === 'true' || $mode === 'yes') {
+            return self::SEND_ALWAYS;
+        }
+        if ($mode === '0' || $mode === 'false' || $mode === 'no') {
+            return self::SEND_NEVER;
+        }
+        if ($autoSendFallback === null) {
+            return self::SEND_ALWAYS;
+        }
+
+        return $autoSendFallback ? self::SEND_ALWAYS : self::SEND_NEVER;
     }
 
     public const COLORS = [
