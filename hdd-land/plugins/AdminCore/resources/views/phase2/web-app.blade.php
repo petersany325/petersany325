@@ -71,15 +71,16 @@
         <div class="vb-opt"><div><span class="vb-title">لینک دکمه</span></div><div class="vb-ctrl"><input type="text" name="hero_cta_url" value="{{ $f('hero_cta_url','/app/shop') }}" dir="ltr"></div></div>
         <div class="vb-opt"><div><span class="vb-title">جستجو</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="show_search" value="1" @checked($on('show_search'))><span class="vb-slider"></span></label></div></div>
         <div class="vb-opt"><div><span class="vb-title">دسته‌ها</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="show_categories" value="1" @checked($on('show_categories'))><span class="vb-slider"></span></label></div></div>
-        <div class="vb-opt"><div><span class="vb-title">پرفروش‌ها</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="show_featured" value="1" @checked($on('show_featured'))><span class="vb-slider"></span></label></div></div>
-        <div class="vb-opt"><div><span class="vb-title">عنوان پرفروش‌ها</span></div><div class="vb-ctrl"><input type="text" name="featured_title" value="{{ $f('featured_title') }}"></div></div>
+        <div class="vb-opt"><div><span class="vb-title">محصولات ویژه</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="show_featured" value="1" @checked($on('show_featured'))><span class="vb-slider"></span></label></div></div>
+        <div class="vb-opt"><div><span class="vb-title">عنوان محصولات ویژه</span></div><div class="vb-ctrl"><input type="text" name="featured_title" value="{{ $f('featured_title','محصولات ویژه') }}"></div></div>
+        <div class="vb-opt"><div><span class="vb-title">تعداد محصولات ویژه</span></div><div class="vb-ctrl"><input type="number" name="featured_limit" min="2" max="12" value="{{ $f('featured_limit',4) }}"></div></div>
         <div class="vb-opt"><div><span class="vb-title">لینک‌های سریع</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="show_quick_links" value="1" @checked($on('show_quick_links'))><span class="vb-slider"></span></label></div></div>
         @foreach([1,2,3] as $i)
           <div class="vb-opt"><div><span class="vb-title">لینک سریع {{ $i }} — عنوان</span></div><div class="vb-ctrl"><input type="text" name="quick_link_{{ $i }}_label" value="{{ $f('quick_link_'.$i.'_label') }}"></div></div>
           <div class="vb-opt"><div><span class="vb-title">لینک سریع {{ $i }} — URL</span></div><div class="vb-ctrl"><input type="text" name="quick_link_{{ $i }}_url" value="{{ $f('quick_link_'.$i.'_url') }}" dir="ltr"></div></div>
         @endforeach
         <div class="vb-opt"><div><span class="vb-title">تعداد دسته</span></div><div class="vb-ctrl"><input type="number" name="categories_limit" min="0" max="24" value="{{ $f('categories_limit',10) }}"></div></div>
-        <div class="vb-opt"><div><span class="vb-title">تعداد محصول خانه</span></div><div class="vb-ctrl"><input type="number" name="products_limit" min="4" max="48" value="{{ $f('products_limit',16) }}"></div></div>
+        <div class="vb-opt"><div><span class="vb-title">تعداد محصول خانه (قدیمی)</span></div><div class="vb-ctrl"><input type="number" name="products_limit" min="4" max="48" value="{{ $f('products_limit',16) }}"></div></div>
         <div class="vb-opt"><div><span class="vb-title">تعداد در فروشگاه</span></div><div class="vb-ctrl"><input type="number" name="shop_per_page" min="8" max="60" value="{{ $f('shop_per_page',24) }}"></div></div>
         <div class="vb-opt"><div><span class="vb-title">عنوان فروشگاه</span></div><div class="vb-ctrl"><input type="text" name="shop_title" value="{{ $f('shop_title') }}"></div></div>
         <div class="vb-opt"><div><span class="vb-title">متن خالی بودن</span></div><div class="vb-ctrl"><input type="text" name="empty_products_text" value="{{ $f('empty_products_text') }}"></div></div>
@@ -160,7 +161,7 @@
           'cart' => 'سبد خرید',
           'account' => 'حساب من',
           'track' => 'پیگیری سفارش',
-          'warranty' => 'استعلام گارانتی',
+          'warranty' => 'گارانتی',
           'support' => 'پشتیبانی',
           'contact' => 'تماس با ما',
         ] as $key => $lab)

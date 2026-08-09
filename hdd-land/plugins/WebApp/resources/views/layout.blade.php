@@ -15,7 +15,7 @@
   <title>{{ $title ?? ($s['app_name'] ?? 'سرزمین هارد') }}</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=19">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=20">
 </head>
 @php
   $anim = !empty($s['animations']);
@@ -108,10 +108,20 @@
             <em class="wa-drawer-caret" aria-hidden="true">▾</em>
           </button>
           <div class="wa-drawer-sub" @if(!$openByDefault) hidden @endif>
-            <a href="{{ $href }}" class="wa-drawer-sub-all">همهٔ {{ $item['label'] }}</a>
+            <a href="{{ $href }}" class="wa-drawer-sub-all">{{ $key === 'warranty' ? 'استعلام گارانتی' : 'همهٔ '.$item['label'] }}</a>
+            @php $shownCompanyHead = false; @endphp
             @foreach($kids as $child)
-              @php $ch = str_starts_with($child['url'], 'http') ? $child['url'] : url($child['url']); @endphp
-              <a href="{{ $ch }}">{{ $child['label'] }}</a>
+              @php
+                $ch = str_starts_with($child['url'], 'http') || str_starts_with($child['url'], 'tel:')
+                  ? $child['url']
+                  : url($child['url']);
+                $kind = (string) ($child['kind'] ?? '');
+              @endphp
+              @if($kind === 'company' && !$shownCompanyHead)
+                @php $shownCompanyHead = true; @endphp
+                <span class="wa-drawer-sub-label">شرکت‌های گارانتی</span>
+              @endif
+              <a href="{{ $ch }}" class="{{ $kind === 'company' ? 'wa-drawer-sub-company' : '' }}">{{ $child['label'] }}</a>
             @endforeach
           </div>
         </div>

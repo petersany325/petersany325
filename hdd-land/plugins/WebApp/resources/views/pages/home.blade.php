@@ -48,22 +48,50 @@
 
 @if(!empty($s['show_featured']))
 <div class="wa-section-head">
-  <strong>{{ $s['featured_title'] ?? 'پرفروش‌ها' }}</strong>
-  <a href="{{ url('/app/shop') }}">بیشتر</a>
+  <strong>{{ $s['featured_title'] ?? 'محصولات ویژه' }}</strong>
+  <a href="{{ url('/app/shop') }}">مشاهده همه</a>
 </div>
-<div class="wa-grid">
+<div class="wa-featured" role="list">
   @forelse($products as $p)
-    <a class="wa-card" href="{{ url('/app/product/'.($p->slug ?? $p->id)) }}">
-      <div class="wa-thumb">
+    @php
+      $price = (int) ($p->price ?? 0);
+      $compare = (int) ($p->compare_price ?? 0);
+      $status = (string) ($p->stock_status ?? 'instock');
+      $stock = (int) ($p->stock ?? 0);
+      $manage = !isset($p->manage_stock) || (bool) $p->manage_stock;
+      $inStock = $status !== 'outofstock' && (!$manage || $stock > 0 || $status === 'onbackorder');
+      $brand = trim((string) ($p->brand ?? ''));
+      $capacity = trim((string) ($p->capacity ?? ''));
+    @endphp
+    <a class="wa-feat-card" role="listitem" href="{{ url('/app/product/'.($p->slug ?? $p->id)) }}">
+      <div class="wa-feat-media">
         @if(!empty($p->image))
           <img src="{{ \Plugins\WebApp\Plugin::productImageUrl($p->image ?? null) }}" alt="" loading="lazy">
         @else
           <span>HDD</span>
         @endif
+        <em class="wa-feat-chip">ویژه</em>
+        @if(!$inStock)
+          <i class="wa-feat-stock out">ناموجود</i>
+        @elseif($stock > 0)
+          <i class="wa-feat-stock ok">موجود</i>
+        @endif
       </div>
-      <div class="wa-meta">
+      <div class="wa-feat-body">
+        @if($brand || $capacity)
+          <small class="wa-feat-meta">{{ trim($brand.($brand && $capacity ? ' · ' : '').$capacity) }}</small>
+        @endif
         <strong>{{ $p->name }}</strong>
-        <em>{{ $fmt($p->price ?? 0) }} <small>تومان</small></em>
+        <div class="wa-feat-price">
+          @if($price > 0)
+            <em>{{ $fmt($price) }} <small>تومان</small></em>
+            @if($compare > $price)
+              <s>{{ $fmt($compare) }}</s>
+            @endif
+          @else
+            <em class="wa-feat-ask">تماس بگیرید</em>
+          @endif
+        </div>
       </div>
     </a>
   @empty

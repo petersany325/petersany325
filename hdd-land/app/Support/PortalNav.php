@@ -36,9 +36,13 @@ class PortalNav
                 'children' => [],
             ],
             [
-                'label' => 'استعلام گارانتی',
+                'label' => 'گارانتی',
                 'url' => '/serial-check',
-                'children' => [],
+                'children' => [
+                    ['label' => 'استعلام گارانتی', 'url' => '/serial-check'],
+                    ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials'],
+                    ['label' => 'ثبت گارانتی', 'url' => '/serial-check'],
+                ],
             ],
             [
                 'label' => 'پشتیبانی',
@@ -61,7 +65,14 @@ class PortalNav
             ['label' => 'خانه', 'url' => '/app', 'children' => []],
             ['label' => 'فروشگاه', 'url' => '/app/shop', 'children' => []],
             ['label' => 'پیگیری سفارش', 'url' => '/orders/track', 'children' => []],
-            ['label' => 'استعلام گارانتی', 'url' => '/serial-check', 'children' => []],
+            [
+                'label' => 'گارانتی',
+                'url' => '/serial-check',
+                'children' => [
+                    ['label' => 'استعلام گارانتی', 'url' => '/serial-check'],
+                    ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials'],
+                ],
+            ],
             ['label' => 'حساب', 'url' => '/app/account', 'children' => []],
         ];
     }

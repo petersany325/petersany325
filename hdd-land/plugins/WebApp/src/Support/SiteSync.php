@@ -396,7 +396,14 @@ class SiteSync
             }
         }
         if (str_contains($label, 'گارانتی')) {
-            return ['url' => '/serial-check', 'children' => []];
+            return [
+                'url' => '/serial-check',
+                'children' => [
+                    ['label' => 'استعلام گارانتی', 'url' => '/serial-check'],
+                    ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials'],
+                    ['label' => 'ثبت گارانتی', 'url' => '/serial-check'],
+                ],
+            ];
         }
         if (str_contains($label, 'پیگیری')) {
             return ['url' => '/orders/track', 'children' => []];

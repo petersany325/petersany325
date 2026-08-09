@@ -21,11 +21,13 @@ class WebAppController extends Controller
             return $s;
         }
 
+        $featuredLimit = max(2, min(12, (int) ($s['featured_limit'] ?? 4)));
+
         return view('web-app::pages.home', $this->viewData($s, [
             'tab' => 'home',
             'title' => $s['app_name'],
             'categories' => $this->categories((int) ($s['categories_limit'] ?? 10)),
-            'products' => $this->products((int) ($s['products_limit'] ?? 16)),
+            'products' => $this->featuredProducts($featuredLimit),
             'mobileHero' => SiteSync::heroBanner(),
         ]));
     }
@@ -398,6 +400,61 @@ JS;
             }
 
             return $q->orderBy('id')->limit($limit)->get();
+        } catch (\Throwable) {
+            return collect();
+        }
+    }
+
+    /** Homepage featured strip — mirrors storefront specials. */
+    protected function featuredProducts(int $limit)
+    {
+        try {
+            if (! Schema::hasTable('products')) {
+                return collect();
+            }
+
+            $base = function () {
+                $q = DB::table('products');
+                if (Schema::hasColumn('products', 'status')) {
+                    $q->where('status', 'publish');
+                } elseif (Schema::hasColumn('products', 'is_active')) {
+                    $q->where('is_active', 1);
+                }
+
+                return $q;
+            };
+
+            $rank = static function ($rows) {
+                return collect($rows)->sortByDesc(function ($p) {
+                    $score = 0;
+                    $status = (string) ($p->stock_status ?? 'instock');
+                    $stock = (int) ($p->stock ?? 0);
+                    $manage = ! isset($p->manage_stock) || (bool) $p->manage_stock;
+                    $inStock = $status !== 'outofstock' && (! $manage || $stock > 0 || $status === 'onbackorder');
+                    if ($inStock) {
+                        $score += 2;
+                    }
+                    if ((int) ($p->price ?? 0) > 0) {
+                        $score += 1;
+                    }
+
+                    return $score;
+                })->values();
+            };
+
+            $featured = collect();
+            if (Schema::hasColumn('products', 'is_featured')) {
+                $featured = $rank($base()->where('is_featured', 1)->orderByDesc('id')->limit(24)->get());
+            }
+
+            if ($featured->count() < $limit) {
+                $seen = $featured->pluck('id')->all();
+                $fill = $rank($base()->orderByDesc('id')->limit(24)->get())
+                    ->reject(fn ($p) => in_array($p->id, $seen, true));
+                $featured = $featured->concat($fill)->values();
+            }
+
+            return $featured->take($limit)->values();
         } catch (\Throwable) {
             return collect();
         }

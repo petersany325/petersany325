@@ -67,7 +67,8 @@ class Plugin extends BasePlugin
             'show_categories' => true,
             'show_featured' => true,
             'show_quick_links' => true,
-            'featured_title' => 'پرفروش‌ها',
+            'featured_title' => 'محصولات ویژه',
+            'featured_limit' => 4,
             'shop_title' => 'فروشگاه',
             'empty_products_text' => 'هنوز محصولی ثبت نشده است.',
             'nav_home_label' => 'خانه',
@@ -137,7 +138,7 @@ class Plugin extends BasePlugin
             'drawer_track_url' => '/orders/track',
             'drawer_track_icon' => '⌕',
             'drawer_item_warranty' => true,
-            'drawer_warranty_label' => 'استعلام گارانتی',
+            'drawer_warranty_label' => 'گارانتی',
             'drawer_warranty_url' => '/serial-check',
             'drawer_warranty_icon' => '⛨',
             'drawer_item_support' => true,
@@ -296,7 +297,8 @@ class Plugin extends BasePlugin
             'hero_text' => fn ($v) => $label($v, 200),
             'hero_cta_label' => fn ($v) => $label($v, 40),
             'hero_cta_url' => fn ($v) => $url($v, '/app/shop'),
-            'featured_title' => fn ($v) => $label($v, 40, 'پرفروش‌ها'),
+            'featured_title' => fn ($v) => $label($v, 40, 'محصولات ویژه'),
+            'featured_limit' => fn ($v) => max(2, min(12, (int) $v)),
             'shop_title' => fn ($v) => $label($v, 40, 'فروشگاه'),
             'empty_products_text' => fn ($v) => $label($v, 120),
             'nav_home_label' => fn ($v) => $label($v, 20, 'خانه'),
@@ -337,7 +339,7 @@ class Plugin extends BasePlugin
             'drawer_track_label' => fn ($v) => $label($v, 30, 'پیگیری سفارش'),
             'drawer_track_url' => fn ($v) => $url($v, '/orders/track'),
             'drawer_track_icon' => fn ($v) => $label($v, 8, '⌕'),
-            'drawer_warranty_label' => fn ($v) => $label($v, 30, 'استعلام گارانتی'),
+            'drawer_warranty_label' => fn ($v) => $label($v, 30, 'گارانتی'),
             'drawer_warranty_url' => fn ($v) => $url($v, '/serial-check'),
             'drawer_warranty_icon' => fn ($v) => $label($v, 8, '⛨'),
             'drawer_support_label' => fn ($v) => $label($v, 30, 'پشتیبانی'),
@@ -386,21 +388,20 @@ class Plugin extends BasePlugin
             $children = [];
             if ($key === 'shop') {
                 $children = static::shopDrawerChildren();
-            } elseif (in_array($key, ['track', 'warranty'], true)) {
+            } elseif ($key === 'warranty') {
+                // Structured warranty menu (actions + companies) — avoid mega duplicates of /serial-check
+                $children = static::warrantyDrawerChildren();
+            } elseif ($key === 'track') {
                 $children = $megaByLabel[mb_strtolower($label)] ?? [];
                 if ($children === []) {
-                    // fallback by common mega labels
                     foreach ($megaByLabel as $ml => $kids) {
-                        if ($key === 'track' && (str_contains($ml, 'پیگیری') || str_contains($ml, 'سفارش'))) {
-                            $children = $kids;
-                            break;
-                        }
-                        if ($key === 'warranty' && (str_contains($ml, 'گارانتی') || str_contains($ml, 'warranty'))) {
+                        if (str_contains($ml, 'پیگیری') || str_contains($ml, 'سفارش')) {
                             $children = $kids;
                             break;
                         }
                     }
                 }
+                $children = static::dedupeMenuChildren($children);
             }
 
             $out[] = [
@@ -485,5 +486,101 @@ class Plugin extends BasePlugin
         $children[] = ['label' => 'ای‌دیتا', 'url' => '/app/shop?q='.rawurlencode('ADATA')];
 
         return $children;
+    }
+
+    /**
+     * Warranty drawer: real actions + active warranty companies (no duplicate serial-check junk).
+     *
+     * @return list<array{label:string,url:string,kind?:string}>
+     */
+    protected static function warrantyDrawerChildren(): array
+    {
+        $children = [
+            ['label' => 'استعلام گارانتی', 'url' => '/serial-check', 'kind' => 'action'],
+            ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials', 'kind' => 'action'],
+            ['label' => 'ثبت گارانتی', 'url' => '/serial-check', 'kind' => 'action'],
+        ];
+
+        try {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('warranty_companies')) {
+                return $children;
+            }
+            $rows = \Illuminate\Support\Facades\DB::table('warranty_companies')
+                ->where('is_active', 1)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(['name', 'phone', 'website', 'default_months']);
+
+            $seen = [];
+            foreach ($rows as $row) {
+                $name = trim((string) ($row->name ?? ''));
+                if ($name === '') {
+                    continue;
+                }
+                $months = (int) ($row->default_months ?? 0);
+                $key = mb_strtolower($name).'|'.$months;
+                if (isset($seen[$key])) {
+                    continue;
+                }
+                $seen[$key] = true;
+
+                $phone = preg_replace('/\s+/', '', (string) ($row->phone ?? '')) ?: '';
+                $web = trim((string) ($row->website ?? ''));
+                $url = '/serial-check';
+                if ($web !== '' && ! preg_match('/hdd-land\.ri\b/i', $web)) {
+                    if (! str_starts_with($web, 'http://') && ! str_starts_with($web, 'https://')) {
+                        $web = 'https://'.$web;
+                    }
+                    $url = $web;
+                } elseif ($phone !== '') {
+                    $url = 'tel:'.$phone;
+                }
+
+                $label = $months > 0 ? "شرکت {$name} · {$months} ماه" : "شرکت {$name}";
+                $children[] = [
+                    'label' => $label,
+                    'url' => $url,
+                    'kind' => 'company',
+                ];
+            }
+        } catch (\Throwable) {
+            //
+        }
+
+        return $children;
+    }
+
+    /**
+     * @param  list<array{label?:string,url?:string}>  $children
+     * @return list<array{label:string,url:string}>
+     */
+    protected static function dedupeMenuChildren(array $children): array
+    {
+        $out = [];
+        $seen = [];
+        foreach ($children as $c) {
+            if (! is_array($c)) {
+                continue;
+            }
+            $label = trim((string) ($c['label'] ?? ''));
+            $url = trim((string) ($c['url'] ?? ''));
+            if ($label === '' || $url === '' || $url === '#') {
+                continue;
+            }
+            $key = mb_strtolower($label).'|'.$url;
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $out[] = ['label' => $label, 'url' => $url];
+        }
+
+        // If every child collapses to the same URL, keep a single clear entry
+        $urls = array_unique(array_map(static fn ($c) => $c['url'], $out));
+        if (count($out) > 1 && count($urls) === 1) {
+            return [['label' => $out[0]['label'], 'url' => $out[0]['url']]];
+        }
+
+        return $out;
     }
 }
