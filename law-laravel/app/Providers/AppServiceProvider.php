@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\Appointment;
+use App\Models\Client;
 use App\Observers\AppointmentObserver;
+use App\Observers\ClientObserver;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
@@ -25,6 +27,7 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Pagination\Paginator::useBootstrapFive();
 
         Appointment::observe(AppointmentObserver::class);
+        Client::observe(ClientObserver::class);
 
         Blade::directive('jalali', function ($expression) {
             return "<?php echo \\App\\Support\\Jalali::format($expression); ?>";

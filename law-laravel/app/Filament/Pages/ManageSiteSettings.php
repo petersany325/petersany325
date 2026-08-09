@@ -67,6 +67,7 @@ class ManageSiteSettings extends Page
             'sms_enabled' => '0',
             'sms_on_appointment' => '1',
             'sms_on_confirm' => '1',
+            'sms_on_advocacy' => '1',
             'sms_notify_admin' => '1',
             'sms_username' => '',
             'sms_password' => '',
@@ -76,6 +77,7 @@ class ManageSiteSettings extends Page
             'sms_tpl_appointment' => "{brand}\n{name} عزیز، درخواست نوبت شما ثبت شد.\nموضوع: {topic}\nتاریخ پیشنهادی: {date} ساعت {time}\nبه‌زودی هماهنگ می‌کنیم.",
             'sms_tpl_confirm' => "{brand}\n{name} عزیز، نوبت مشاوره شما تأیید شد.\nتاریخ: {date}\nساعت: {time}\nموضوع: {topic}",
             'sms_tpl_admin' => "نوبت جدید\n{name} | {phone}\n{topic}\n{date} {time}",
+            'sms_tpl_advocacy' => "{brand}\n{name} عزیز، وکالت شما تأیید شد.\nموضوع: {subject}\nنوع پرونده: {case_type}\nمبلغ حق‌الوکاله: {fee}\nتاریخ قرارداد: {date}\nاز اعتماد شما سپاسگزاریم.",
         ];
 
         $keys = array_values(array_unique(array_merge([
@@ -89,9 +91,9 @@ class ManageSiteSettings extends Page
             'app_banner_size', 'app_banner_height', 'app_banner_position', 'app_banner_show_lead',
             'home_services_limit', 'home_team_limit', 'home_faq_limit',
             'home_testimonials_limit', 'home_posts_limit',
-            'sms_enabled', 'sms_on_appointment', 'sms_on_confirm', 'sms_notify_admin',
+            'sms_enabled', 'sms_on_appointment', 'sms_on_confirm', 'sms_on_advocacy', 'sms_notify_admin',
             'sms_username', 'sms_password', 'sms_api_key', 'sms_from', 'sms_admin_phone',
-            'sms_tpl_appointment', 'sms_tpl_confirm', 'sms_tpl_admin',
+            'sms_tpl_appointment', 'sms_tpl_confirm', 'sms_tpl_admin', 'sms_tpl_advocacy',
         ], array_keys($defaults))));
 
         $data = [];
@@ -101,7 +103,7 @@ class ManageSiteSettings extends Page
 
         foreach ([
             'show_phone_in_header', 'pwa_enabled', 'pwa_auto_mobile', 'app_banner_show_lead',
-            'sms_enabled', 'sms_on_appointment', 'sms_on_confirm', 'sms_notify_admin',
+            'sms_enabled', 'sms_on_appointment', 'sms_on_confirm', 'sms_on_advocacy', 'sms_notify_admin',
         ] as $boolKey) {
             $data[$boolKey] = ($data[$boolKey] ?? '0') === '1';
         }
@@ -208,6 +210,7 @@ class ManageSiteSettings extends Page
                             Toggle::make('sms_enabled')->label('فعال‌سازی ارسال پیامک')->inline(false),
                             Toggle::make('sms_on_appointment')->label('پیامک بعد از ثبت نوبت برای متقاضی')->inline(false),
                             Toggle::make('sms_on_confirm')->label('پیامک بعد از تأیید نوبت در ادمین')->inline(false),
+                            Toggle::make('sms_on_advocacy')->label('پیامک بعد از تأیید وکالت موکل')->inline(false),
                             Toggle::make('sms_notify_admin')->label('اطلاع به مدیر هنگام نوبت جدید')->inline(false),
                             TextInput::make('sms_username')->label('نام کاربری پنل'),
                             TextInput::make('sms_password')->label('رمز عبور پنل')->password()->revealable(),
@@ -216,11 +219,12 @@ class ManageSiteSettings extends Page
                             TextInput::make('sms_admin_phone')->label('موبایل مدیر برای اطلاع')->placeholder('09xxxxxxxxx'),
                         ])->columns(2),
                     Section::make('متن پیامک‌ها')
-                        ->description('متغیرها: {name} {phone} {date} {time} {topic} {status} {brand} {notes} — تاریخ‌ها شمسی هستند.')
+                        ->description('نوبت: {name} {phone} {date} {time} {topic} {status} {brand} · وکالت: {name} {subject} {case_type} {fee} {date} {national_code} {brand}')
                         ->schema([
                             Textarea::make('sms_tpl_appointment')->label('متن بعد از ثبت نوبت')->rows(4)->columnSpanFull(),
                             Textarea::make('sms_tpl_confirm')->label('متن تأیید روز مشاوره')->rows(4)->columnSpanFull(),
                             Textarea::make('sms_tpl_admin')->label('متن اطلاع به مدیر')->rows(3)->columnSpanFull(),
+                            Textarea::make('sms_tpl_advocacy')->label('متن تأیید وکالت برای موکل')->rows(4)->columnSpanFull(),
                         ]),
                 ]),
             ])->columnSpanFull(),
@@ -250,7 +254,7 @@ class ManageSiteSettings extends Page
         $data = $this->form->getState();
         foreach ([
             'show_phone_in_header', 'pwa_enabled', 'pwa_auto_mobile', 'app_banner_show_lead',
-            'sms_enabled', 'sms_on_appointment', 'sms_on_confirm', 'sms_notify_admin',
+            'sms_enabled', 'sms_on_appointment', 'sms_on_confirm', 'sms_on_advocacy', 'sms_notify_admin',
         ] as $boolKey) {
             $data[$boolKey] = ! empty($data[$boolKey]) ? '1' : '0';
         }
