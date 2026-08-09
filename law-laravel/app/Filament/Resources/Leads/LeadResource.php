@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Leads;
 
+use App\Support\Jalali;
 use App\Filament\Resources\Leads\Pages\ManageLeads;
 use App\Models\Lead;
 use BackedEnum;
@@ -114,7 +115,7 @@ class LeadResource extends Resource
                     }),
                 TextColumn::make('created_at')
                     ->label('ثبت شده')
-                    ->dateTime('Y/m/d H:i')
+                    ->formatStateUsing(fn ($state): string => $state ? Jalali::formatDateTime($state) : '—')
                     ->sortable(),
                 TextColumn::make('ip')
                     ->label('IP')

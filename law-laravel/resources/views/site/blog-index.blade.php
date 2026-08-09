@@ -11,6 +11,7 @@
       @forelse ($posts as $post)
         <article class="plain-block">
           <h3><a href="{{ route('blog.show', $post) }}">{{ $post->title }}</a></h3>
+          <p class="meta">@jalali($post->published_at)</p>
           <p>{{ $post->excerpt }}</p>
         </article>
       @empty

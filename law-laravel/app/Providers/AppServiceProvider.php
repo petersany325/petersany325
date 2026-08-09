@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Appointment;
+use App\Observers\AppointmentObserver;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -20,6 +23,16 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         \Illuminate\Pagination\Paginator::useBootstrapFive();
+
+        Appointment::observe(AppointmentObserver::class);
+
+        Blade::directive('jalali', function ($expression) {
+            return "<?php echo \\App\\Support\\Jalali::format($expression); ?>";
+        });
+
+        Blade::directive('jalaliDateTime', function ($expression) {
+            return "<?php echo \\App\\Support\\Jalali::formatDateTime($expression); ?>";
+        });
 
         \Illuminate\Support\Facades\View::composer(['layouts.site', 'layouts.app', 'site.home', 'app.index'], function ($view) {
             $keys = [

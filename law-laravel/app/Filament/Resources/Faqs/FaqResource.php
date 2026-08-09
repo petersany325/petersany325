@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Faqs;
 
+use App\Support\Jalali;
 use App\Filament\Resources\Faqs\Pages\ManageFaqs;
 use App\Models\Faq;
 use BackedEnum;
@@ -69,11 +70,11 @@ class FaqResource extends Resource
                 IconColumn::make('is_active')
                     ->boolean(),
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->formatStateUsing(fn ($state): string => $state ? Jalali::formatDateTime($state) : '—')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->formatStateUsing(fn ($state): string => $state ? Jalali::formatDateTime($state) : '—')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

@@ -130,6 +130,7 @@
           @foreach ($posts as $post)
             <article class="plain-block reveal">
               <h3><a href="{{ route('blog.show', $post) }}">{{ $post->title }}</a></h3>
+              <p class="meta">@jalali($post->published_at)</p>
               <p>{{ $post->excerpt }}</p>
             </article>
           @endforeach
@@ -179,7 +180,9 @@
             <label>موضوع<input name="topic" value="{{ old('topic') }}"></label>
           </div>
           <div class="form-row">
-            <label>تاریخ پیشنهادی<input type="date" name="preferred_date" value="{{ old('preferred_date') }}"></label>
+            <label>تاریخ پیشنهادی (شمسی)
+              <input type="text" name="preferred_date" class="jdp-input" data-jdp autocomplete="off" placeholder="۱۴۰۴/۰۵/۱۸" value="{{ old('preferred_date') }}">
+            </label>
             <label>ساعت پیشنهادی<input name="preferred_time" placeholder="مثلاً ۱۰ صبح" value="{{ old('preferred_time') }}"></label>
           </div>
           <label>توضیح<textarea name="notes" rows="3">{{ old('notes') }}</textarea></label>

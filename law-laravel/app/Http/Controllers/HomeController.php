@@ -125,12 +125,18 @@ class HomeController extends Controller
             'phone' => ['required', 'string', 'min:8', 'max:30'],
             'email' => ['nullable', 'email', 'max:160'],
             'topic' => ['nullable', 'string', 'max:120'],
-            'preferred_date' => ['nullable', 'date'],
+            'preferred_date' => ['nullable', 'string', 'max:20'],
             'preferred_time' => ['nullable', 'string', 'max:40'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        Appointment::query()->create($data + ['status' => 'pending']);
+        $gregorian = \App\Support\Jalali::toGregorianDate($data['preferred_date'] ?? null);
+        unset($data['preferred_date']);
+
+        Appointment::query()->create($data + [
+            'preferred_date' => $gregorian,
+            'status' => 'pending',
+        ]);
 
         return redirect()->to($base.'#appointment')->with('success', 'نوبت مشاوره ثبت شد. برای تأیید با شما تماس می‌گیریم.');
     }

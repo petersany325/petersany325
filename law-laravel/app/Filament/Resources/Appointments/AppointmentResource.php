@@ -4,16 +4,17 @@ namespace App\Filament\Resources\Appointments;
 
 use App\Filament\Resources\Appointments\Pages\ManageAppointments;
 use App\Models\Appointment;
+use App\Support\Jalali;
 use BackedEnum;
 use UnitEnum;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
-use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -65,10 +66,15 @@ class AppointmentResource extends Resource
                     ->email(),
                 TextInput::make('topic')
                     ->label('موضوع'),
-                DatePicker::make('preferred_date')
-                    ->label('تاریخ پیشنهادی'),
+                TextInput::make('preferred_date')
+                    ->label('تاریخ پیشنهادی (شمسی)')
+                    ->placeholder('1404/05/18')
+                    ->helperText('فرمت: سال/ماه/روز شمسی')
+                    ->formatStateUsing(fn ($state): string => $state ? Jalali::format($state, 'Y/m/d') : '')
+                    ->dehydrateStateUsing(fn (?string $state): ?string => Jalali::toGregorianDate($state)),
                 TextInput::make('preferred_time')
-                    ->label('ساعت پیشنهادی'),
+                    ->label('ساعت پیشنهادی')
+                    ->placeholder('مثلاً ۱۰ صبح'),
                 Textarea::make('notes')
                     ->label('توضیحات')
                     ->columnSpanFull(),
@@ -76,12 +82,13 @@ class AppointmentResource extends Resource
                     ->label('وضعیت')
                     ->options([
                         'pending' => 'در انتظار',
-                        'confirmed' => 'تأیید شده',
+                        'confirmed' => 'تأیید شده (ارسال پیامک)',
                         'done' => 'انجام شده',
                         'cancelled' => 'لغو شده',
                     ])
                     ->required()
-                    ->default('pending'),
+                    ->default('pending')
+                    ->helperText('با انتخاب «تأیید شده» پیامک تأیید برای متقاضی ارسال می‌شود.'),
             ]);
     }
 
@@ -100,8 +107,8 @@ class AppointmentResource extends Resource
                     ->label('موضوع')
                     ->searchable(),
                 TextColumn::make('preferred_date')
-                    ->label('تاریخ')
-                    ->date('Y/m/d')
+                    ->label('تاریخ نوبت')
+                    ->formatStateUsing(fn ($state): string => $state ? Jalali::format($state, 'Y/m/d') : '—')
                     ->sortable(),
                 TextColumn::make('preferred_time')
                     ->label('ساعت'),
@@ -124,7 +131,7 @@ class AppointmentResource extends Resource
                     }),
                 TextColumn::make('created_at')
                     ->label('ثبت شده')
-                    ->dateTime('Y/m/d H:i')
+                    ->formatStateUsing(fn ($state): string => Jalali::formatDateTime($state))
                     ->sortable(),
                 TextColumn::make('email')
                     ->label('ایمیل')
@@ -146,7 +153,16 @@ class AppointmentResource extends Resource
                     ]),
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->after(function (Appointment $record): void {
+                        if ($record->status === 'confirmed') {
+                            Notification::make()
+                                ->title('وضعیت تأیید شد')
+                                ->body('در صورت فعال بودن پنل پیامک، پیامک تأیید ارسال می‌شود.')
+                                ->success()
+                                ->send();
+                        }
+                    }),
                 DeleteAction::make(),
             ])
             ->toolbarActions([

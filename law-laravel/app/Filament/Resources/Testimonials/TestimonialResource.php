@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Testimonials;
 
+use App\Support\Jalali;
 use App\Filament\Resources\Testimonials\Pages\ManageTestimonials;
 use App\Models\Testimonial;
 use BackedEnum;
@@ -76,11 +77,11 @@ class TestimonialResource extends Resource
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->formatStateUsing(fn ($state): string => $state ? Jalali::formatDateTime($state) : '—')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->formatStateUsing(fn ($state): string => $state ? Jalali::formatDateTime($state) : '—')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

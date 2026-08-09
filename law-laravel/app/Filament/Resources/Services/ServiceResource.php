@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Services;
 
+use App\Support\Jalali;
 use App\Filament\Resources\Services\Pages\ManageServices;
 use App\Models\Service;
 use BackedEnum;
@@ -65,11 +66,11 @@ class ServiceResource extends Resource
                 IconColumn::make('is_active')
                     ->boolean(),
                 TextColumn::make('created_at')
-                    ->dateTime()
+                    ->formatStateUsing(fn ($state): string => $state ? Jalali::formatDateTime($state) : '—')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
-                    ->dateTime()
+                    ->formatStateUsing(fn ($state): string => $state ? Jalali::formatDateTime($state) : '—')
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])

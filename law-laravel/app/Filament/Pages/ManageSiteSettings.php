@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\Setting;
+use App\Services\NiazpardazSms;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
@@ -28,9 +29,9 @@ class ManageSiteSettings extends Page
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 
-    protected static ?string $navigationLabel = 'تنظیمات سایت و وب‌اپ';
+    protected static ?string $navigationLabel = 'تنظیمات سایت و وب‌سرویس';
 
-    protected static ?string $title = 'تنظیمات سایت و وب‌اپ موبایل';
+    protected static ?string $title = 'تنظیمات سایت، وب‌اپ و پیامک';
 
     protected static string|UnitEnum|null $navigationGroup = 'سیستم و حساب';
 
@@ -63,15 +64,20 @@ class ManageSiteSettings extends Page
             'home_faq_limit' => '0',
             'home_testimonials_limit' => '0',
             'home_posts_limit' => '0',
+            'sms_enabled' => '0',
+            'sms_on_appointment' => '1',
+            'sms_on_confirm' => '1',
+            'sms_notify_admin' => '1',
+            'sms_username' => '',
+            'sms_password' => '',
+            'sms_api_key' => '',
+            'sms_from' => '',
+            'sms_admin_phone' => '',
+            'sms_tpl_appointment' => "{brand}\n{name} عزیز، درخواست نوبت شما ثبت شد.\nموضوع: {topic}\nتاریخ پیشنهادی: {date} ساعت {time}\nبه‌زودی هماهنگ می‌کنیم.",
+            'sms_tpl_confirm' => "{brand}\n{name} عزیز، نوبت مشاوره شما تأیید شد.\nتاریخ: {date}\nساعت: {time}\nموضوع: {topic}",
+            'sms_tpl_admin' => "نوبت جدید\n{name} | {phone}\n{topic}\n{date} {time}",
         ];
 
-        $keys = array_keys($defaults + [
-            'site_name' => '', 'site_tagline' => '', 'phone' => '', 'mobile' => '', 'email' => '',
-            'address' => '', 'hours' => '', 'about_title' => '', 'about_text' => '', 'hero_lead' => '',
-            'footer_about' => '', 'social_instagram' => '', 'social_linkedin' => '', 'social_whatsapp' => '',
-        ]);
-
-        // ensure all expected keys
         $keys = array_values(array_unique(array_merge([
             'site_name', 'site_tagline', 'phone', 'mobile', 'email', 'address', 'hours',
             'about_title', 'about_text', 'hero_lead',
@@ -83,15 +89,21 @@ class ManageSiteSettings extends Page
             'app_banner_size', 'app_banner_height', 'app_banner_position', 'app_banner_show_lead',
             'home_services_limit', 'home_team_limit', 'home_faq_limit',
             'home_testimonials_limit', 'home_posts_limit',
-        ], $keys)));
+            'sms_enabled', 'sms_on_appointment', 'sms_on_confirm', 'sms_notify_admin',
+            'sms_username', 'sms_password', 'sms_api_key', 'sms_from', 'sms_admin_phone',
+            'sms_tpl_appointment', 'sms_tpl_confirm', 'sms_tpl_admin',
+        ], array_keys($defaults))));
 
         $data = [];
         foreach ($keys as $key) {
             $data[$key] = Setting::get($key, $defaults[$key] ?? '');
         }
 
-        foreach (['show_phone_in_header', 'pwa_enabled', 'pwa_auto_mobile', 'app_banner_show_lead'] as $boolKey) {
-            $data[$boolKey] = ($data[$boolKey] ?? '1') === '1';
+        foreach ([
+            'show_phone_in_header', 'pwa_enabled', 'pwa_auto_mobile', 'app_banner_show_lead',
+            'sms_enabled', 'sms_on_appointment', 'sms_on_confirm', 'sms_notify_admin',
+        ] as $boolKey) {
+            $data[$boolKey] = ($data[$boolKey] ?? '0') === '1';
         }
 
         $this->form->fill($data);
@@ -140,19 +152,19 @@ class ManageSiteSettings extends Page
                 ]),
                 Tab::make('محدودیت نمایش')->schema([
                     Section::make('تعداد آیتم در صفحه اصلی / وب‌اپ')
-                        ->description('برای هر بخش مشخص کنید چند مورد روی صفحه اصلی دیده شود. مقدار ۰ یعنی نمایش همه موارد فعال.')
+                        ->description('۰ یعنی نمایش همه موارد فعال.')
                         ->schema([
-                            TextInput::make('home_services_limit')->label('خدمات')->numeric()->minValue(0)->default(0)->helperText('۰ = همه'),
-                            TextInput::make('home_team_limit')->label('تیم حقوقی')->numeric()->minValue(0)->default(0)->helperText('۰ = همه'),
-                            TextInput::make('home_faq_limit')->label('سوالات متداول')->numeric()->minValue(0)->default(0)->helperText('۰ = همه'),
-                            TextInput::make('home_testimonials_limit')->label('نظرات')->numeric()->minValue(0)->default(0)->helperText('۰ = همه'),
-                            TextInput::make('home_posts_limit')->label('مقالات')->numeric()->minValue(0)->default(0)->helperText('۰ = همه'),
+                            TextInput::make('home_services_limit')->label('خدمات')->numeric()->minValue(0)->default(0),
+                            TextInput::make('home_team_limit')->label('تیم حقوقی')->numeric()->minValue(0)->default(0),
+                            TextInput::make('home_faq_limit')->label('سوالات متداول')->numeric()->minValue(0)->default(0),
+                            TextInput::make('home_testimonials_limit')->label('نظرات')->numeric()->minValue(0)->default(0),
+                            TextInput::make('home_posts_limit')->label('مقالات')->numeric()->minValue(0)->default(0),
                         ])->columns(2),
                 ]),
                 Tab::make('وب‌اپ / وب‌سرویس')->schema([
                     Section::make('فعال‌سازی وب‌اپ')->description('تنظیمات نصب و هدایت خودکار موبایل به وب‌اپ.')->schema([
                         Toggle::make('pwa_enabled')->label('فعال‌سازی وب‌اپ (PWA)')->inline(false),
-                        Toggle::make('pwa_auto_mobile')->label('هدایت خودکار موبایل به /app')->helperText('کاربر می‌تواند از «نسخه کامل سایت» برگردد.')->inline(false),
+                        Toggle::make('pwa_auto_mobile')->label('هدایت خودکار موبایل به /app')->inline(false),
                         TextInput::make('pwa_name')->label('نام اپ'),
                         TextInput::make('pwa_short_name')->label('نام کوتاه'),
                         Textarea::make('pwa_description')->label('توضیح اپ')->rows(2)->columnSpanFull(),
@@ -160,7 +172,7 @@ class ManageSiteSettings extends Page
                         TextInput::make('pwa_bg_color')->label('رنگ اسپلش')->placeholder('#0a1628'),
                         TextInput::make('pwa_start_url')->label('آدرس شروع')->default('/app'),
                     ])->columns(2),
-                    Section::make('سایز بنر وب‌اپ')->description('ارتفاع بنر صفحه اول وب‌اپ را اینجا تنظیم کنید.')->schema([
+                    Section::make('سایز بنر وب‌اپ')->schema([
                         Select::make('app_banner_size')
                             ->label('سایز پیش‌فرض بنر')
                             ->options([
@@ -173,11 +185,7 @@ class ManageSiteSettings extends Page
                             ->live(),
                         TextInput::make('app_banner_height')
                             ->label('ارتفاع سفارشی (٪ صفحه)')
-                            ->numeric()
-                            ->minValue(25)
-                            ->maxValue(70)
-                            ->suffix('%')
-                            ->helperText('فقط وقتی سایز = سفارشی باشد استفاده می‌شود.')
+                            ->numeric()->minValue(25)->maxValue(70)->suffix('%')
                             ->visible(fn ($get): bool => $get('app_banner_size') === 'custom'),
                         Select::make('app_banner_position')
                             ->label('موقعیت تصویر بنر')
@@ -193,6 +201,28 @@ class ManageSiteSettings extends Page
                             ->inline(false),
                     ])->columns(2),
                 ]),
+                Tab::make('پیامک نیازپرداز')->schema([
+                    Section::make('اتصال پنل پیامک')
+                        ->description('اطلاعات ورود پنل https://niazpardaz-sms.com — ترجیحاً نام کاربری/رمز یا API Key.')
+                        ->schema([
+                            Toggle::make('sms_enabled')->label('فعال‌سازی ارسال پیامک')->inline(false),
+                            Toggle::make('sms_on_appointment')->label('پیامک بعد از ثبت نوبت برای متقاضی')->inline(false),
+                            Toggle::make('sms_on_confirm')->label('پیامک بعد از تأیید نوبت در ادمین')->inline(false),
+                            Toggle::make('sms_notify_admin')->label('اطلاع به مدیر هنگام نوبت جدید')->inline(false),
+                            TextInput::make('sms_username')->label('نام کاربری پنل'),
+                            TextInput::make('sms_password')->label('رمز عبور پنل')->password()->revealable(),
+                            TextInput::make('sms_api_key')->label('API Key (اختیاری)')->password()->revealable(),
+                            TextInput::make('sms_from')->label('شماره فرستنده')->placeholder('مثلاً 3000...'),
+                            TextInput::make('sms_admin_phone')->label('موبایل مدیر برای اطلاع')->placeholder('09xxxxxxxxx'),
+                        ])->columns(2),
+                    Section::make('متن پیامک‌ها')
+                        ->description('متغیرها: {name} {phone} {date} {time} {topic} {status} {brand} {notes} — تاریخ‌ها شمسی هستند.')
+                        ->schema([
+                            Textarea::make('sms_tpl_appointment')->label('متن بعد از ثبت نوبت')->rows(4)->columnSpanFull(),
+                            Textarea::make('sms_tpl_confirm')->label('متن تأیید روز مشاوره')->rows(4)->columnSpanFull(),
+                            Textarea::make('sms_tpl_admin')->label('متن اطلاع به مدیر')->rows(3)->columnSpanFull(),
+                        ]),
+                ]),
             ])->columnSpanFull(),
         ]);
     }
@@ -204,7 +234,13 @@ class ManageSiteSettings extends Page
                 ->id('form')
                 ->livewireSubmitHandler('save')
                 ->footer([
-                    Actions::make([$this->getSaveFormAction()]),
+                    Actions::make([
+                        $this->getSaveFormAction(),
+                        Action::make('testSms')
+                            ->label('ارسال پیامک آزمایشی به مدیر')
+                            ->color('gray')
+                            ->action('sendTestSms'),
+                    ]),
                 ]),
         ]);
     }
@@ -212,11 +248,13 @@ class ManageSiteSettings extends Page
     public function save(): void
     {
         $data = $this->form->getState();
-        foreach (['show_phone_in_header', 'pwa_enabled', 'pwa_auto_mobile', 'app_banner_show_lead'] as $boolKey) {
+        foreach ([
+            'show_phone_in_header', 'pwa_enabled', 'pwa_auto_mobile', 'app_banner_show_lead',
+            'sms_enabled', 'sms_on_appointment', 'sms_on_confirm', 'sms_notify_admin',
+        ] as $boolKey) {
             $data[$boolKey] = ! empty($data[$boolKey]) ? '1' : '0';
         }
 
-        // Resolve preset heights into stored percent for runtime
         $size = $data['app_banner_size'] ?? 'medium';
         $preset = match ($size) {
             'compact' => '34',
@@ -230,9 +268,35 @@ class ManageSiteSettings extends Page
 
         Notification::make()
             ->title('تنظیمات ذخیره شد')
-            ->body('محدودیت‌های نمایش صفحه اصلی و تنظیمات وب‌اپ اعمال شدند.')
+            ->body('وب‌سرویس، محدودیت‌ها و پنل پیامک به‌روز شدند.')
             ->success()
             ->send();
+    }
+
+    public function sendTestSms(): void
+    {
+        $this->save();
+        $phone = trim((string) Setting::get('sms_admin_phone', ''));
+        if ($phone === '') {
+            Notification::make()->title('موبایل مدیر را وارد کنید')->danger()->send();
+
+            return;
+        }
+
+        $result = app(NiazpardazSms::class)->send(
+            $phone,
+            'پیامک آزمایشی از پنل مدیریت '.Setting::get('site_name', '')
+        );
+
+        if (! empty($result['ok'])) {
+            Notification::make()->title('پیامک آزمایشی ارسال شد')->success()->send();
+        } else {
+            Notification::make()
+                ->title('ارسال ناموفق')
+                ->body($result['error'] ?? ($result['body'] ?? 'خطای ناشناخته'))
+                ->danger()
+                ->send();
+        }
     }
 
     protected function getSaveFormAction(): Action

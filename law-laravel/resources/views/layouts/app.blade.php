@@ -37,8 +37,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}?v=11" />
+  <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}?v=12" />
   <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=5" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@majidh1/jalalidatepicker@0.9.12/dist/jalalidatepicker.min.css" />
   <style>
     :root {
       --app-banner-h: {{ $bannerH }}vh;
@@ -77,8 +78,23 @@
 
   <div class="app-toast" id="appToast" hidden>برای دسترسی سریع، وب‌اپ را به صفحه اصلی اضافه کنید.</div>
 
-  <script src="{{ asset('assets/js/main.js') }}?v=11"></script>
+  <script src="{{ asset('assets/js/main.js') }}?v=12"></script>
   <script src="{{ asset('assets/js/app.js') }}?v=5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@majidh1/jalalidatepicker@0.9.12/dist/jalalidatepicker.min.js"></script>
+  <script>
+    if (window.jalaliDatepicker) {
+      jalaliDatepicker.startWatch({
+        time: false,
+        hasSecond: false,
+        hideAfterSelect: true,
+        autoShow: true,
+        showTodayBtn: true,
+        showEmptyBtn: true,
+        format: 'YYYY/MM/DD',
+        persianDigits: false
+      });
+    }
+  </script>
   @if ($pwaOn)
   <script>
     if ('serviceWorker' in navigator) {

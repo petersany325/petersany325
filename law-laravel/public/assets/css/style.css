@@ -700,6 +700,14 @@ a.nav-cta {
   resize: vertical;
 }
 
+.contact-form input.jdp-input {
+  direction: ltr;
+  text-align: right;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  background: linear-gradient(180deg, #fff, #f7fafc);
+}
+
 .contact-form input:focus,
 .contact-form textarea:focus,
 .contact-form select:focus {

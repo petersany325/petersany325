@@ -88,7 +88,7 @@
         </div>
         <div class="form-row">
           <label>موضوع<input name="topic" value="{{ old('topic') }}"></label>
-          <label>تاریخ<input type="date" name="preferred_date" value="{{ old('preferred_date') }}"></label>
+          <label>تاریخ (شمسی)<input type="text" name="preferred_date" class="jdp-input" data-jdp autocomplete="off" placeholder="۱۴۰۴/۰۵/۱۸" value="{{ old('preferred_date') }}"></label>
         </div>
         <label>توضیح<textarea name="notes" rows="3">{{ old('notes') }}</textarea></label>
         <button class="btn btn-primary" type="submit">ثبت نوبت</button>
