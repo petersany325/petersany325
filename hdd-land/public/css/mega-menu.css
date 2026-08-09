@@ -1,8 +1,13 @@
-/* Mega Menu Pro v3.3 — compact dropdown + RTL + global align */
+/* Mega Menu Pro v3.4 — sharper Estedad type + RTL + global align */
 .mega-nav-pro{
-  position:relative;z-index:80;gap:.2rem;flex-wrap:wrap;
+  position:relative;z-index:80;gap:.28rem;flex-wrap:wrap;
   display:flex;align-items:center;justify-content:flex-start;
-  direction:rtl;text-align:right;font-family:var(--mega-font,inherit);
+  direction:rtl;text-align:right;
+  font-family:var(--mega-font, "Estedad", "Estedad Variable", Tahoma, sans-serif);
+  font-optical-sizing:auto;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
   flex:1 1 auto;min-width:0;
 }
 .mega-nav-pro.nav-align-right{justify-content:flex-start}
@@ -10,10 +15,10 @@
 .mega-nav-pro.nav-align-left{justify-content:flex-end}
 
 .mega-nav-pro.style-pills{
-  background:linear-gradient(180deg,rgba(248,250,252,.95),rgba(241,245,249,.88));
+  background:linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,252,.94));
   border:1px solid rgba(226,232,240,.95);
-  border-radius:999px;padding:.22rem .3rem;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.8),0 4px 14px rgba(15,23,42,.04);
+  border-radius:999px;padding:.28rem .36rem;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 4px 14px rgba(15,23,42,.04);
 }
 .mega-nav-pro.style-pills .mega-trigger{border-radius:999px}
 .mega-nav-pro.style-underline .mega-trigger{
@@ -33,8 +38,9 @@
 
 .mega-nav-pro .mega-item{position:relative}
 .mega-nav-pro .mega-trigger{
-  display:inline-flex;align-items:center;gap:.4rem;padding:.42rem .7rem;border-radius:10px;
-  font-weight:700;font-size:.9rem;color:var(--mega-title,#334155);text-decoration:none;
+  display:inline-flex;align-items:center;gap:.42rem;padding:.5rem .82rem;border-radius:11px;
+  font-weight:680;font-variation-settings:"wght" 680;font-size:.96rem;line-height:1.25;
+  letter-spacing:-.015em;color:var(--mega-title,#1e293b);text-decoration:none;
   transition:background .2s,color .2s,box-shadow .2s,transform .15s;font-family:inherit;white-space:nowrap;
 }
 .mega-nav-pro .mega-item.has-mega:hover > .mega-trigger,
@@ -55,11 +61,12 @@
   object-fit:contain;border-radius:5px;display:block;
   box-shadow:0 1px 3px rgba(15,23,42,.08);
 }
-.mega-caret{font-size:.68rem;opacity:.65;transition:transform .25s;margin-right:.1rem}
+.mega-caret{font-size:.74rem;opacity:.78;transition:transform .25s;margin-right:.12rem;color:#64748b}
 .mega-item.is-open > .mega-trigger .mega-caret{transform:rotate(180deg)}
 .mega-badge{
-  display:inline-flex;align-items:center;padding:.1rem .4rem;border-radius:999px;
-  background:#fff1ec;color:var(--mega-accent,var(--brand,#e23d12));font-size:.66rem;font-weight:800;
+  display:inline-flex;align-items:center;padding:.12rem .42rem;border-radius:999px;
+  background:#fff1ec;color:var(--mega-accent,var(--brand,#e23d12));font-size:.7rem;font-weight:800;
+  font-variation-settings:"wght" 780;
 }
 
 /* ---- Compact standard dropdown (NOT mega) ---- */
@@ -87,8 +94,9 @@
 .mega-panel.is-dropdown .mega-col{padding:0}
 .mega-panel.is-dropdown .mega-link,
 .mega-panel.is-dropdown .mega-sub{
-  padding:.55rem .7rem;border-radius:9px;margin:0;gap:.45rem;
-  font-size:.9rem;font-weight:650;
+  padding:.58rem .75rem;border-radius:9px;margin:0;gap:.45rem;
+  font-size:.93rem;font-weight:650;font-variation-settings:"wght" 650;
+  letter-spacing:-.01em;color:#1e293b;line-height:1.35;
 }
 .mega-panel.is-dropdown .mega-link:hover,
 .mega-panel.is-dropdown .mega-sub:hover{
@@ -234,8 +242,9 @@
 .mega-heading{font-weight:800;margin-bottom:.35rem;display:flex;align-items:center;gap:.3rem;color:var(--mega-title,inherit)}
 .mega-desc{display:block;margin:.15rem 0 0;color:var(--mega-text,var(--muted,#6b7280));font-size:.78rem;font-weight:500;line-height:1.45}
 .mega-link,.mega-sub{
-  display:flex;align-items:flex-start;gap:.55rem;padding:.45rem .35rem;color:var(--mega-link,var(--muted,#6b7280));
-  font-weight:600;text-decoration:none;border-radius:8px;transition:color .2s,background .2s;
+  display:flex;align-items:flex-start;gap:.55rem;padding:.45rem .35rem;color:var(--mega-link,#334155);
+  font-weight:650;font-variation-settings:"wght" 650;font-size:.92rem;letter-spacing:-.01em;
+  text-decoration:none;border-radius:8px;transition:color .2s,background .2s;
 }
 .mega-link:hover,.mega-sub:hover{color:var(--mega-hover,var(--mega-accent,var(--brand,#e23d12)));background:rgba(226,61,18,.04)}
 .mega-link.has-thumb{padding:.35rem;background:#f8fafc}
