@@ -96,8 +96,8 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
                 fn (): string => Blade::render(<<<'HTML'
-                    <link rel="stylesheet" href="{{ asset('css/vbulletin-admin.css') }}?v=8" />
-                    <link rel="stylesheet" href="{{ asset('css/admin-login.css') }}?v=1" />
+                    <link rel="stylesheet" href="{{ asset('css/vbulletin-admin.css') }}?v=9" />
+                    <link rel="stylesheet" href="{{ asset('css/admin-login.css') }}?v=2" />
                 HTML)
             )
             ->renderHook(
@@ -109,33 +109,24 @@ class AdminPanelProvider extends PanelProvider
 
                     try {
                         $brand = (string) (Setting::get('site_name', '') ?: 'مؤسسه حقوقی آریان');
-                        $tagline = (string) (Setting::get('site_tagline', '') ?: 'وکالت و مشاوره حقوقی تخصصی');
                     } catch (\Throwable) {
                         $brand = 'مؤسسه حقوقی آریان';
-                        $tagline = 'وکالت و مشاوره حقوقی تخصصی';
                     }
 
                     $initial = mb_substr(preg_replace('/\s+/u', '', $brand) ?: 'آ', 0, 1);
 
                     return Blade::render(<<<'HTML'
-                        <aside class="login-gate-brand" aria-label="معرفی برند">
+                        <aside class="login-gate-brand" aria-label="لوگوی ورود">
                             <div class="login-gate-brand__top">
-                                <div class="login-gate-brand__mark">{{ $initial }}</div>
-                                <span>پنل مدیریت امن</span>
+                                <div class="login-gate-brand__mark" aria-hidden="true">{{ $initial }}</div>
+                                <span>پنل مدیریت</span>
                             </div>
                             <div class="login-gate-brand__hero">
                                 <h1 class="brand-name">{{ $brand }}</h1>
-                                <div class="brand-rule" aria-hidden="true"></div>
-                                <p>{{ $tagline }} — ورود اختصاصی مدیران برای پیگیری نوبت‌ها، موکلین و محتوای وب‌سایت.</p>
-                            </div>
-                            <div class="login-gate-brand__foot">
-                                <span><b>امن</b> · نشست رمزگذاری‌شده</span>
-                                <span><b>سریع</b> · دسترسی یکپارچه به داشبورد</span>
                             </div>
                         </aside>
                     HTML, [
                         'brand' => $brand,
-                        'tagline' => $tagline,
                         'initial' => $initial,
                     ]);
                 }
@@ -149,8 +140,7 @@ class AdminPanelProvider extends PanelProvider
 
                     return Blade::render(<<<'HTML'
                         <p class="login-gate-note">
-                            بازگشت به
-                            <a href="{{ url('/') }}">سایت اصلی</a>
+                            ← <a href="{{ url('/') }}">بازگشت به سایت</a>
                         </p>
                     HTML);
                 }

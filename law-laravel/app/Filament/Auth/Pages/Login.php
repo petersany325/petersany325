@@ -20,7 +20,8 @@ class Login extends BaseLogin
             return parent::getHeading();
         }
 
-        return 'خوش آمدید';
+        // Heading hidden by CSS; keep accessible text for screen readers.
+        return 'ورود به پنل مدیریت';
     }
 
     public function getSubheading(): string | Htmlable | null
@@ -29,7 +30,7 @@ class Login extends BaseLogin
             return parent::getSubheading();
         }
 
-        return 'برای مدیریت نوبت‌ها، موکلین و محتوای سایت وارد شوید.';
+        return null;
     }
 
     protected function getEmailFormComponent(): Component

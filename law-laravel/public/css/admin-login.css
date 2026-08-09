@@ -1,350 +1,313 @@
-/* Modern Admin Login — split gate, brand-first, light form */
-@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&family=Literata:opsz,wght@7..72,500;7..72,700&display=swap");
+/* WordPress-style Admin Login — centered white card + logo */
+@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap");
 
 :root {
-  --login-ink: #062033;
-  --login-ink-2: #0a3a4a;
-  --login-teal: #0d9488;
-  --login-teal-deep: #0f766e;
-  --login-gold: #c9a227;
-  --login-mist: #eef3f7;
-  --login-paper: #f7fafc;
-  --login-line: rgba(6, 32, 51, 0.1);
+  --wp-bg: #f0f0f1;
+  --wp-card: #ffffff;
+  --wp-ink: #1d2327;
+  --wp-muted: #646970;
+  --wp-line: #c3c4c7;
+  --wp-focus: #0f766e;
+  --wp-btn: #0f766e;
+  --wp-btn-hover: #0d9488;
+  --wp-gold: #b8952c;
 }
 
-/* Only restyle guest simple layout (login / simple pages) */
+/* Scope: guest login / simple layout only */
 body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) {
-  background: var(--login-mist) !important;
+  background: var(--wp-bg) !important;
+  font-family: "Vazirmatn", Tahoma, sans-serif !important;
+  color: var(--wp-ink) !important;
 }
 
 body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-layout {
-  position: relative;
-  display: grid !important;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
   min-height: 100dvh !important;
   width: 100% !important;
   margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden;
-  background: var(--login-mist) !important;
-  font-family: "Vazirmatn", Tahoma, sans-serif !important;
-}
-
-/* Brand plane — full-bleed atmosphere */
-.login-gate-brand {
-  position: relative;
-  isolation: isolate;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 100dvh;
-  padding: clamp(1.75rem, 4vw, 3.5rem);
-  color: #f4f8fb;
+  padding: 3.5rem 1rem 2.5rem !important;
   background:
-    radial-gradient(1200px 700px at 15% 10%, rgba(20, 184, 166, 0.28), transparent 55%),
-    radial-gradient(900px 600px at 90% 85%, rgba(201, 162, 39, 0.18), transparent 50%),
-    linear-gradient(155deg, var(--login-ink) 0%, #083044 42%, var(--login-ink-2) 100%);
-  overflow: hidden;
-  animation: loginBrandIn 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+    radial-gradient(900px 420px at 50% -10%, rgba(15, 118, 110, 0.08), transparent 60%),
+    var(--wp-bg) !important;
+  overflow-x: hidden;
 }
 
-.login-gate-brand::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse at 30% 40%, #000 20%, transparent 75%);
-  animation: loginGridDrift 18s linear infinite;
+/* WordPress-like logo block ABOVE the card */
+.login-gate-brand {
+  order: 1;
+  width: min(100%, 22rem);
+  margin: 0 auto 1.35rem;
+  padding: 0;
+  text-align: center;
+  background: none !important;
+  color: var(--wp-ink);
+  min-height: 0 !important;
+  animation: wpLogoIn 0.45s ease both;
 }
 
+.login-gate-brand::before,
 .login-gate-brand::after {
-  content: "";
-  position: absolute;
-  width: 42rem;
-  height: 42rem;
-  right: -18rem;
-  top: -12rem;
-  border-radius: 50%;
-  border: 1px solid rgba(201, 162, 39, 0.28);
-  box-shadow:
-    inset 0 0 0 1px rgba(20, 184, 166, 0.12),
-    0 0 0 48px rgba(255, 255, 255, 0.02);
-  pointer-events: none;
-  animation: loginOrb 12s ease-in-out infinite alternate;
+  display: none !important;
 }
 
 .login-gate-brand__top {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.65rem;
 }
 
 .login-gate-brand__mark {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.7rem;
+  width: 5.25rem;
+  height: 5.25rem;
+  border-radius: 1rem;
   display: grid;
   place-items: center;
-  background: linear-gradient(145deg, rgba(20, 184, 166, 0.35), rgba(201, 162, 39, 0.25));
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  font-family: "Literata", "Vazirmatn", serif;
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: 0.02em;
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(145deg, #0b3a44 0%, #0f766e 55%, #12857c 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 10px 28px rgba(15, 118, 110, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.login-gate-brand__top span {
-  font-size: 0.82rem;
-  font-weight: 600;
-  opacity: 0.85;
-  letter-spacing: 0.04em;
+.login-gate-brand__top > span {
+  display: none;
 }
 
 .login-gate-brand__hero {
-  max-width: 34rem;
-  margin-block: auto;
-  padding-block: 2rem;
-  animation: loginCopyIn 1s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+  margin: 0.85rem 0 0;
+  padding: 0;
+  animation: none;
 }
 
 .login-gate-brand__hero .brand-name {
-  margin: 0 0 1rem;
-  font-family: "Literata", "Vazirmatn", serif;
-  font-size: clamp(2rem, 4.2vw, 3.15rem);
-  font-weight: 700;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-  color: #fff;
-  text-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
-}
-
-.login-gate-brand__hero .brand-rule {
-  width: 4.5rem;
-  height: 3px;
-  margin-bottom: 1.15rem;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--login-gold), var(--login-teal));
-}
-
-.login-gate-brand__hero p {
   margin: 0;
-  max-width: 28rem;
-  font-size: clamp(0.95rem, 1.4vw, 1.08rem);
-  line-height: 1.9;
-  color: rgba(226, 236, 244, 0.88);
-  font-weight: 500;
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.45;
+  color: var(--wp-ink);
+  text-shadow: none;
 }
 
+.login-gate-brand__hero .brand-rule,
+.login-gate-brand__hero p,
 .login-gate-brand__foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.25rem;
-  font-size: 0.78rem;
-  color: rgba(226, 236, 244, 0.7);
-}
-
-.login-gate-brand__foot b {
-  color: #fff;
-  font-weight: 700;
-}
-
-/* Form column */
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main-ctn {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  min-height: 100dvh !important;
-  margin: 0 !important;
-  padding: clamp(1.25rem, 4vw, 2.75rem) !important;
-  background:
-    radial-gradient(600px 400px at 80% 20%, rgba(13, 148, 136, 0.08), transparent 60%),
-    linear-gradient(180deg, #f8fbfd 0%, var(--login-mist) 100%) !important;
-  animation: loginFormIn 0.9s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main {
-  width: min(100%, 26.5rem) !important;
-  max-width: 26.5rem !important;
-  margin: 0 !important;
-  padding: clamp(1.5rem, 3vw, 2.15rem) !important;
-  border-radius: 1.35rem !important;
-  border: 1px solid rgba(6, 32, 51, 0.08) !important;
-  background: rgba(255, 255, 255, 0.88) !important;
-  backdrop-filter: blur(14px);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 24px 60px rgba(6, 32, 51, 0.1) !important;
-}
-
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-page {
-  background: transparent !important;
-  padding: 0 !important;
-}
-
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-header {
-  align-items: flex-start !important;
-  text-align: right !important;
-  margin-bottom: 1.35rem !important;
-  gap: 0.35rem !important;
-}
-
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-logo,
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-logo span {
   display: none !important;
 }
 
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-header-heading {
+/* Form container — the white WordPress card */
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main-ctn {
+  order: 2;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  width: 100% !important;
+  min-height: 0 !important;
   margin: 0 !important;
-  font-family: "Literata", "Vazirmatn", serif !important;
-  font-size: 1.85rem !important;
-  font-weight: 700 !important;
-  color: var(--login-ink) !important;
-  letter-spacing: -0.02em !important;
-  line-height: 1.3 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  animation: wpCardIn 0.5s 0.05s ease both;
 }
 
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-header-subheading {
-  margin-top: 0.35rem !important;
-  font-size: 0.92rem !important;
-  line-height: 1.75 !important;
-  color: #5b6b7a !important;
-  font-weight: 500 !important;
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main.fi-width-lg {
+  width: min(100%, 22rem) !important;
+  max-width: 22rem !important;
+  margin: 0 auto !important;
+  padding: 1.5rem 1.5rem 1.35rem !important;
+  border-radius: 0.35rem !important;
+  border: 1px solid #c3c4c7 !important;
+  background: var(--wp-card) !important;
+  color: var(--wp-ink) !important;
+  backdrop-filter: none !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* Inputs */
+/* Kill Filament dark card / navy panel leftovers */
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-page,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-page-content,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-section,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-section-content,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-sc,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) [class*="fi-bg"],
+html.dark body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main,
+.dark body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--wp-ink) !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main {
+  background: var(--wp-card) !important;
+  border: 1px solid #c3c4c7 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-header {
+  display: none !important; /* WP: logo is outside; keep card clean */
+}
+
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-logo {
+  display: none !important;
+}
+
+/* Compact title inside card (WP has no heading but we keep a light one) */
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-page::before {
+  content: "ورود به پنل مدیریت";
+  display: block;
+  margin: 0 0 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--wp-ink);
+  text-align: right;
+}
+
+/* Labels */
 body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-fo-field-label-content,
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-fo-field-label {
-  font-size: 0.86rem !important;
-  font-weight: 700 !important;
-  color: #1f3344 !important;
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-fo-field-label,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) label {
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  color: var(--wp-ink) !important;
 }
 
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-fo-field {
+  margin-bottom: 0.85rem !important;
+}
+
+/* Inputs — WordPress rectangular feel */
 body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-input-wrp,
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-fo-text-input {
-  border-radius: 0.85rem !important;
-  border-color: rgba(6, 32, 51, 0.12) !important;
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-fo-text-input,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-input-wrp.fi-disabled,
+html.dark body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-input-wrp {
+  border-radius: 0.25rem !important;
+  border: 1px solid var(--wp-line) !important;
   background: #fff !important;
-  min-height: 2.85rem !important;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+  background-color: #fff !important;
+  min-height: 2.5rem !important;
+  box-shadow: 0 0 0 transparent !important;
+  color: var(--wp-ink) !important;
 }
 
 body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-input-wrp:focus-within,
 body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-fo-text-input:focus-within {
-  border-color: var(--login-teal) !important;
-  box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.15) !important;
+  border-color: var(--wp-focus) !important;
+  box-shadow: 0 0 0 1px var(--wp-focus) !important;
 }
 
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-input {
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-input,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) input.fi-input {
   font-size: 0.95rem !important;
-  color: var(--login-ink) !important;
+  color: var(--wp-ink) !important;
+  background: transparent !important;
 }
 
-/* Submit CTA */
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-checkbox-input,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-fo-checkbox {
+  color: var(--wp-ink) !important;
+}
+
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-fo-checkbox .fi-fo-field-label-content {
+  font-weight: 500 !important;
+  color: var(--wp-muted) !important;
+}
+
+/* Primary button — solid WP-like */
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-btn,
 body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-btn-primary,
-body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) button[type="submit"].fi-btn {
-  min-height: 2.95rem !important;
-  border-radius: 0.9rem !important;
-  background: linear-gradient(120deg, var(--login-teal-deep), var(--login-teal)) !important;
-  border: 0 !important;
-  font-weight: 800 !important;
-  font-size: 0.95rem !important;
-  letter-spacing: 0.01em !important;
-  box-shadow: 0 14px 28px rgba(13, 148, 136, 0.28) !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease !important;
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) button[type="submit"].fi-btn,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-ac-btn-action {
+  width: 100% !important;
+  min-height: 2.4rem !important;
+  margin-top: 0.35rem !important;
+  border-radius: 0.25rem !important;
+  border: 1px solid transparent !important;
+  background: var(--wp-btn) !important;
+  background-image: none !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transition: background 0.15s ease !important;
+  filter: none !important;
+  transform: none !important;
 }
 
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-btn:hover,
 body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-btn-primary:hover,
 body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) button[type="submit"].fi-btn:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
-  box-shadow: 0 18px 34px rgba(13, 148, 136, 0.34) !important;
+  background: var(--wp-btn-hover) !important;
+  filter: none !important;
+  transform: none !important;
+  box-shadow: none !important;
+  color: #fff !important;
 }
 
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-btn span,
+body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-btn * {
+  color: #fff !important;
+}
+
+/* Links under card — like WP "← Back to site" */
 .login-gate-note {
-  margin-top: 1.15rem;
+  order: 3;
+  width: min(100%, 22rem);
+  margin: 1.1rem auto 0 !important;
+  padding: 0 !important;
   text-align: center;
-  font-size: 0.78rem;
-  color: #6b7c8c;
+  font-size: 0.8125rem;
+  color: var(--wp-muted);
 }
 
 .login-gate-note a {
-  color: var(--login-teal-deep);
-  font-weight: 700;
+  color: var(--wp-focus);
+  font-weight: 600;
   text-decoration: none;
 }
 
 .login-gate-note a:hover {
+  color: var(--wp-btn-hover);
   text-decoration: underline;
 }
 
-@keyframes loginBrandIn {
-  from { opacity: 0; transform: translateX(18px); }
+@keyframes wpLogoIn {
+  from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: none; }
 }
 
-@keyframes loginCopyIn {
-  from { opacity: 0; transform: translateY(16px); }
+@keyframes wpCardIn {
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
 
-@keyframes loginFormIn {
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes loginGridDrift {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(28px, 18px, 0); }
-}
-
-@keyframes loginOrb {
-  from { transform: translate3d(0, 0, 0) scale(1); }
-  to { transform: translate3d(-24px, 30px, 0) scale(1.04); }
-}
-
-@media (max-width: 960px) {
+@media (max-width: 480px) {
   body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-layout {
-    grid-template-columns: 1fr !important;
-  }
-
-  .login-gate-brand {
-    min-height: auto;
-    padding: 1.35rem 1.25rem 1.5rem;
-  }
-
-  .login-gate-brand__hero {
-    padding-block: 1rem 0.35rem;
-  }
-
-  .login-gate-brand__hero .brand-name {
-    font-size: clamp(1.55rem, 7vw, 2rem);
-  }
-
-  .login-gate-brand__foot {
-    display: none;
-  }
-
-  body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main-ctn {
-    min-height: auto !important;
-    padding: 1.1rem 1rem 2rem !important;
+    padding: 2.25rem 0.85rem 1.75rem !important;
   }
 
   body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main {
     width: 100% !important;
     max-width: 100% !important;
   }
+
+  .login-gate-brand,
+  .login-gate-note {
+    width: 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .login-gate-brand,
-  .login-gate-brand__hero,
-  body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main-ctn,
-  .login-gate-brand::before,
-  .login-gate-brand::after {
+  body.fi-body:has(.fi-simple-layout):not(:has(.fi-simple-layout-header)) .fi-simple-main-ctn {
     animation: none !important;
   }
 }
