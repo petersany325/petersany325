@@ -97,7 +97,7 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::STYLES_AFTER,
                 fn (): string => Blade::render(<<<'HTML'
                     <link rel="stylesheet" href="{{ asset('css/vbulletin-admin.css') }}?v=9" />
-                    <link rel="stylesheet" href="{{ asset('css/admin-login.css') }}?v=2" />
+                    <link rel="stylesheet" href="{{ asset('css/admin-login.css') }}?v=3" />
                 HTML)
             )
             ->renderHook(
@@ -132,7 +132,7 @@ class AdminPanelProvider extends PanelProvider
                 }
             )
             ->renderHook(
-                PanelsRenderHook::SIMPLE_PAGE_END,
+                PanelsRenderHook::SIMPLE_LAYOUT_END,
                 function (): string {
                     if (auth()->check()) {
                         return '';
