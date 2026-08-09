@@ -8,11 +8,18 @@
   @if($type === 'online')
     <div class="online-bar">
       <div class="online-bar-inner">
-        <span class="online-dot"></span>
-        <strong>{{ $s['badge'] ?? 'آنلاین' }}</strong>
-        <span>{{ $s['text'] ?? '' }}</span>
-        <span class="muted">{{ $s['support_text'] ?? '' }}</span>
-        @if(!empty($s['phone']))<a href="tel:{{ preg_replace('/\s+/','',$s['phone']) }}">{{ $s['phone'] }}</a>@endif
+        <span class="online-status">
+          <span class="online-dot" aria-hidden="true"></span>
+          <strong>{{ $s['badge'] ?? 'آنلاین' }}</strong>
+        </span>
+        <span class="online-copy">{{ $s['text'] ?? '' }}</span>
+        @if(!empty($s['support_text']))
+          <span class="online-support muted">{{ $s['support_text'] }}</span>
+        @endif
+        @if(!empty($s['phone']))
+          <a class="online-phone" href="tel:{{ preg_replace('/\s+/','',$s['phone']) }}">{{ $s['phone'] }}</a>
+        @endif
+        <a class="online-track" href="{{ url($s['track_url'] ?? '/orders/track') }}">{{ $s['track_text'] ?? 'پیگیری سفارش' }}</a>
       </div>
     </div>
 
@@ -84,6 +91,21 @@
           ? (($featured->count() ? $featured : $latest)->take($limit))
           : $latest->take($limit);
       }
+      // صفحه اول: فقط کالای موجود با قیمت واقعی؛ در صورت کمبود از آخرین‌ها پر می‌شود
+      $pick = function ($items) {
+        return collect($items)->filter(function ($p) {
+          return $p && method_exists($p, 'inStock') && $p->inStock() && (int) ($p->price ?? 0) > 0;
+        });
+      };
+      $list = $pick($list)->values();
+      if ($list->count() < $limit) {
+        $seen = $list->pluck('id')->filter()->all();
+        $fill = $pick($latest ?? collect())
+          ->reject(fn ($p) => in_array($p->id, $seen, true))
+          ->take($limit - $list->count());
+        $list = $list->concat($fill)->values();
+      }
+      $list = $list->take($limit)->values();
     @endphp
     <section class="section home-products-section">
       <div class="section-head section-head--sm">
@@ -118,12 +140,26 @@
             $kids = (isset($cat->activeChildren) && $cat->activeChildren) ? $cat->activeChildren->take(3) : collect();
             $img = method_exists($cat, 'imageUrl') ? trim((string) $cat->imageUrl()) : '';
             if ($img === '' || str_ends_with($img, '/')) { $img = ''; }
+            $key = mb_strtolower(($cat->slug ?? '').' '.($cat->name ?? ''));
+            $iconKind = 'chip';
+            if (str_contains($key, 'nvme') || str_contains($key, 'm.2') || str_contains($key, 'ام ۲')) { $iconKind = 'nvme'; }
+            elseif (str_contains($key, 'ssd') || str_contains($key, 'اس اس دی')) { $iconKind = 'ssd'; }
+            elseif (str_contains($key, 'ram') || str_contains($key, 'رم') || str_contains($key, 'حافظه')) { $iconKind = 'ram'; }
+            elseif (str_contains($key, 'hdd') || str_contains($key, 'هارد') || str_contains($key, 'hard')) { $iconKind = 'hdd'; }
           @endphp
           <div class="home-cat" role="listitem">
             <a class="home-cat__main" href="{{ route('categories.show', $cat->slug) }}">
-              <span class="home-cat__icon" aria-hidden="true">
+              <span class="home-cat__icon home-cat__icon--{{ $iconKind }}" aria-hidden="true">
                 @if($img)
                   <img src="{{ $img }}" alt="" width="28" height="28" loading="lazy">
+                @elseif($iconKind === 'ssd')
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h2M11 10h2M15 10h2M7 14h10"/></svg>
+                @elseif($iconKind === 'nvme')
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="8" width="20" height="8" rx="1.5"/><circle cx="6" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.2" fill="currentColor" stroke="none"/><path d="M9 12h6"/></svg>
+                @elseif($iconKind === 'ram')
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="10" rx="1.5"/><path d="M6 7V5M10 7V5M14 7V5M18 7V5M7 17v2M11 17v2M15 17v2"/></svg>
+                @elseif($iconKind === 'hdd')
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 14h18"/><circle cx="7.5" cy="17" r="1" fill="currentColor" stroke="none"/><circle cx="11" cy="17" r="1" fill="currentColor" stroke="none"/></svg>
                 @else
                   <em>{{ mb_substr($cat->name, 0, 1) }}</em>
                 @endif
