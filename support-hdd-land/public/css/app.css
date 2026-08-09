@@ -831,7 +831,9 @@ tbody tr:nth-child(even) { background: #f3f5f8; }
 .dense-grid label { font-size:10.5px; display:grid; gap:2px; }
 .dense-notes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; margin-top:6px; }
 @media (max-width:800px){ .dense-notes { grid-template-columns:1fr; } }
-.dense-notes label { font-size:10.5px; display:grid; gap:2px; }
+.dense-notes label,
+.dense-notes .note-field { font-size:10.5px; display:grid; gap:2px; }
+.dense-notes .note-field textarea { min-height:52px; }
 .device-card-footer { display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap:wrap; }
 .chk { display:flex !important; align-items:center; gap:6px; flex-direction:row !important; }
 .win-cmdbar {
