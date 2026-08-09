@@ -324,15 +324,17 @@ class Reception extends Model
     public static function nextTicketNo(): string
     {
         $prefix = 'SH-'.now()->format('ymd');
-        // Padded 4-digit suffix → lexical MAX matches numeric MAX.
-        $last = static::query()
+        // Include soft-deleted rows: unique index still holds them, so skipping
+        // trash caused Duplicate entry SH-yymmdd-0001 and HTTP 500 on create.
+        // Prefix is "SH-yymmdd-" → numeric suffix starts at strlen(prefix)+2? No:
+        // ticket like SH-260809-0001 → after "SH-260809-" the suffix starts at position 12 (1-based for SQL SUBSTRING).
+        $suffixStart = strlen($prefix) + 2; // '-' after prefix + 1-based index
+        $dbMax = (int) (static::withTrashed()
             ->where('ticket_no', 'like', $prefix.'-%')
-            ->orderByDesc('ticket_no')
-            ->value('ticket_no');
+            ->selectRaw('MAX(CAST(SUBSTRING(ticket_no, ?) AS UNSIGNED)) as m', [$suffixStart])
+            ->value('m') ?? 0);
 
-        $seq = $last ? ((int) substr((string) $last, -4)) + 1 : 1;
-
-        return $prefix.'-'.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+        return $prefix.'-'.str_pad((string) ($dbMax + 1), 4, '0', STR_PAD_LEFT);
     }
 
     public static function nextReceiptNo(): string
@@ -340,8 +342,8 @@ class Reception extends Model
         $prefix = 'T-20N';
         $max = 999; // next => T-20N1000
 
-        // Numeric MAX via SQL — never load every receipt_no into PHP.
-        $dbMax = (int) (static::query()
+        // Include soft-deleted rows (same unique-index trap as ticket_no).
+        $dbMax = (int) (static::withTrashed()
             ->where('receipt_no', 'like', $prefix.'%')
             ->selectRaw('MAX(CAST(SUBSTRING(receipt_no, ?) AS UNSIGNED)) as m', [strlen($prefix) + 1])
             ->value('m') ?? 0);
