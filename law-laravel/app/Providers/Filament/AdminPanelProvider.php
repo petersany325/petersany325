@@ -3,7 +3,9 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Auth\Pages\EditAdminProfile;
+use App\Filament\Auth\Pages\Login;
 use App\Http\Middleware\EnsureInstalled;
+use App\Models\Setting;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -33,9 +35,9 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(Login::class)
             ->profile(EditAdminProfile::class, isSimple: false)
-            ->brandName('Admin CP')
+            ->brandName(fn (): string => (string) (Setting::get('site_name', '') ?: 'مؤسسه حقوقی آریان'))
             ->brandLogo(null)
             ->favicon(asset('favicon.ico'))
             ->colors([
@@ -93,7 +95,65 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
-                fn (): string => Blade::render('<link rel="stylesheet" href="{{ asset(\'css/vbulletin-admin.css\') }}?v=7" />')
+                fn (): string => Blade::render(<<<'HTML'
+                    <link rel="stylesheet" href="{{ asset('css/vbulletin-admin.css') }}?v=8" />
+                    <link rel="stylesheet" href="{{ asset('css/admin-login.css') }}?v=1" />
+                HTML)
+            )
+            ->renderHook(
+                PanelsRenderHook::SIMPLE_LAYOUT_START,
+                function (): string {
+                    if (auth()->check()) {
+                        return '';
+                    }
+
+                    try {
+                        $brand = (string) (Setting::get('site_name', '') ?: 'مؤسسه حقوقی آریان');
+                        $tagline = (string) (Setting::get('site_tagline', '') ?: 'وکالت و مشاوره حقوقی تخصصی');
+                    } catch (\Throwable) {
+                        $brand = 'مؤسسه حقوقی آریان';
+                        $tagline = 'وکالت و مشاوره حقوقی تخصصی';
+                    }
+
+                    $initial = mb_substr(preg_replace('/\s+/u', '', $brand) ?: 'آ', 0, 1);
+
+                    return Blade::render(<<<'HTML'
+                        <aside class="login-gate-brand" aria-label="معرفی برند">
+                            <div class="login-gate-brand__top">
+                                <div class="login-gate-brand__mark">{{ $initial }}</div>
+                                <span>پنل مدیریت امن</span>
+                            </div>
+                            <div class="login-gate-brand__hero">
+                                <h1 class="brand-name">{{ $brand }}</h1>
+                                <div class="brand-rule" aria-hidden="true"></div>
+                                <p>{{ $tagline }} — ورود اختصاصی مدیران برای پیگیری نوبت‌ها، موکلین و محتوای وب‌سایت.</p>
+                            </div>
+                            <div class="login-gate-brand__foot">
+                                <span><b>امن</b> · نشست رمزگذاری‌شده</span>
+                                <span><b>سریع</b> · دسترسی یکپارچه به داشبورد</span>
+                            </div>
+                        </aside>
+                    HTML, [
+                        'brand' => $brand,
+                        'tagline' => $tagline,
+                        'initial' => $initial,
+                    ]);
+                }
+            )
+            ->renderHook(
+                PanelsRenderHook::SIMPLE_PAGE_END,
+                function (): string {
+                    if (auth()->check()) {
+                        return '';
+                    }
+
+                    return Blade::render(<<<'HTML'
+                        <p class="login-gate-note">
+                            بازگشت به
+                            <a href="{{ url('/') }}">سایت اصلی</a>
+                        </p>
+                    HTML);
+                }
             )
             ->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,
