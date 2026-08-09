@@ -8,10 +8,31 @@
 @php
     $skipPhone = old('customer_id') || old('customer_phone') || old('customer_name') || $errors->any();
     $oldMode = old('intake_mode', 'single');
+    $oldItems = old('items', []);
+    if (! is_array($oldItems)) {
+        $oldItems = [];
+    }
+    $itemSerialErrors = [];
+    foreach ($errors->keys() as $errorKey) {
+        if (preg_match('/^items\.(\d+)\.serial_number$/', (string) $errorKey, $m)) {
+            $itemSerialErrors[(int) $m[1]] = $errors->first($errorKey);
+        }
+    }
+    $hasSerialErrors = $errors->has('serial_number') || $itemSerialErrors !== [];
 @endphp
 
 @if($errors->any())
-    <div class="alert alert-error" style="margin-bottom:10px;">{{ $errors->first() }}</div>
+    <div class="alert alert-error" style="margin-bottom:10px;">
+        <strong>ذخیره انجام نشد.</strong>
+        @if($hasSerialErrors)
+            <div style="margin-top:4px;">سریال تکراری را در کادر قرمز اصلاح کنید و دوباره ذخیره کنید.</div>
+        @endif
+        <ul style="margin:6px 0 0;padding-right:18px;">
+            @foreach($errors->all() as $err)
+                <li>{{ $err }}</li>
+            @endforeach
+        </ul>
+    </div>
 @endif
 
 <div class="receipt-seq-bar" aria-label="شماره قبض">
@@ -39,7 +60,9 @@
       data-skip-phone="{{ $skipPhone ? '1' : '0' }}"
       data-old-mode="{{ $oldMode }}"
       data-next-receipt="{{ $nextReceipt }}"
-      data-next-ticket="{{ $nextTicket }}">
+      data-next-ticket="{{ $nextTicket }}"
+      data-old-items="{{ json_encode($oldItems, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}"
+      data-item-serial-errors="{{ json_encode($itemSerialErrors, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) }}">
     @csrf
     <input type="hidden" name="customer_id" value="{{ old('customer_id') }}">
     <input type="hidden" name="customer_phone" value="{{ old('customer_phone') }}">
@@ -151,7 +174,17 @@
             <div class="ws-panes">
                 <div class="ws-pane active" data-ws-pane="device">
                     <div class="accept-row accept-row-5">
-                        <div><label>سریال دستگاه</label><input type="text" name="serial_number" value="{{ old('serial_number') }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></div>
+                        <div>
+                            <label>سریال دستگاه</label>
+                            <input type="text"
+                                   name="serial_number"
+                                   value="{{ old('serial_number') }}"
+                                   class="{{ $errors->has('serial_number') ? 'is-invalid' : '' }}"
+                                   data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;">
+                            @error('serial_number')
+                                <div class="field-error">{{ $message }}</div>
+                            @enderror
+                        </div>
                         <div>
                             <label>نوع خدمات</label>
                             <select name="service_type">

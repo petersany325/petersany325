@@ -679,6 +679,7 @@
                 setWorkspaceEnabled(modeSingle, false);
                 setWorkspaceEnabled(modeGroup, true);
                 ensureMinimumDeviceCards();
+                restoreGroupItemsIfNeeded();
             } else {
                 if (modeGroup) modeGroup.classList.add('hidden');
                 if (modeSingle) modeSingle.classList.remove('hidden');
@@ -961,6 +962,151 @@
             }
         }
 
+        function normalizeSerialKey(value) {
+            return convertDigits(String(value || '')).trim().toUpperCase();
+        }
+
+        function clearSerialFieldError(field) {
+            if (!field) return;
+            field.classList.remove('is-invalid');
+            var card = field.closest('[data-device-card]');
+            if (card) {
+                card.classList.remove('has-field-error');
+                var tip = card.querySelector('[data-serial-error]');
+                if (tip) tip.remove();
+            }
+            var wrap = field.closest('div, label');
+            if (wrap) {
+                var localTip = wrap.querySelector('[data-serial-error]');
+                if (localTip) localTip.remove();
+            }
+        }
+
+        function markSerialFieldError(field, message, card) {
+            if (!field) return;
+            field.classList.add('is-invalid');
+            if (card) {
+                card.classList.add('has-field-error');
+                card.classList.remove('is-collapsed');
+                card.classList.add('is-active');
+            }
+            var host = field.parentNode;
+            if (!host) return;
+            var tip = host.querySelector('[data-serial-error]');
+            if (!tip) {
+                tip = document.createElement('div');
+                tip.className = 'field-error';
+                tip.setAttribute('data-serial-error', '1');
+                host.appendChild(tip);
+            }
+            tip.textContent = message || 'سریال تکراری است.';
+            if (field.getAttribute('data-serial-error-wired') === '1') return;
+            field.setAttribute('data-serial-error-wired', '1');
+            field.addEventListener('input', function () {
+                clearSerialFieldError(field);
+            });
+        }
+
+        function setDeviceFieldValue(card, name, value) {
+            var el = card.querySelector('[data-name="' + name + '"]');
+            if (!el) return;
+            if (el.type === 'checkbox') {
+                el.checked = value === true || value === 1 || value === '1' || value === 'on';
+                return;
+            }
+            el.value = value == null ? '' : String(value);
+        }
+
+        function fillDeviceCardFromItem(card, item) {
+            if (!card || !item) return;
+            Object.keys(item).forEach(function (name) {
+                setDeviceFieldValue(card, name, item[name]);
+            });
+            updateDevicePreview(card);
+        }
+
+        function restoreGroupItemsIfNeeded() {
+            if (!groupDeviceList || !groupDeviceTemplate) return false;
+            var rawItems = form.getAttribute('data-old-items') || '[]';
+            var rawErrors = form.getAttribute('data-item-serial-errors') || '{}';
+            var items = [];
+            var errors = {};
+            try { items = JSON.parse(rawItems); } catch (err) { items = []; }
+            try { errors = JSON.parse(rawErrors); } catch (err2) { errors = {}; }
+            if (!Array.isArray(items) || items.length === 0) return false;
+
+            groupDeviceList.innerHTML = '';
+            var firstBad = null;
+            items.forEach(function (item, index) {
+                var card = addDeviceCard({ focus: false });
+                fillDeviceCardFromItem(card, item || {});
+                var msg = errors[String(index)] || errors[index];
+                if (msg) {
+                    var field = card.querySelector('[data-name="serial_number"]');
+                    markSerialFieldError(field, msg, card);
+                    if (!firstBad) firstBad = card;
+                }
+            });
+            reindexDeviceCards();
+            updateGroupSummary();
+            form.setAttribute('data-old-items', '[]');
+            form.setAttribute('data-item-serial-errors', '{}');
+
+            if (firstBad) {
+                collapseAllExcept(firstBad);
+                var serialField = firstBad.querySelector('[data-name="serial_number"]');
+                if (serialField) {
+                    try { serialField.focus(); serialField.select(); } catch (err3) { /* ignore */ }
+                }
+                scrollCardIntoView(firstBad);
+            }
+
+            return true;
+        }
+
+        function validateGroupSerialsClient() {
+            if (!groupDeviceList) return true;
+            var cards = Array.prototype.slice.call(groupDeviceList.querySelectorAll('[data-device-card]'));
+            cards.forEach(function (card) {
+                clearSerialFieldError(card.querySelector('[data-name="serial_number"]'));
+            });
+
+            var seen = {};
+            var firstBad = null;
+            var hasError = false;
+            var dupMsg = 'سریال تکراری در همین پذیرش گروهی است. هر سریال فقط یک قبض می‌تواند داشته باشد.';
+
+            cards.forEach(function (card, index) {
+                var field = card.querySelector('[data-name="serial_number"]');
+                var key = normalizeSerialKey(field ? field.value : '');
+                if (!key) return;
+                if (typeof seen[key] === 'number') {
+                    hasError = true;
+                    var other = cards[seen[key]];
+                    markSerialFieldError(field, dupMsg, card);
+                    markSerialFieldError(other.querySelector('[data-name="serial_number"]'), dupMsg, other);
+                    if (!firstBad) firstBad = other || card;
+                } else {
+                    seen[key] = index;
+                }
+            });
+
+            if (hasError && firstBad) {
+                collapseAllExcept(firstBad);
+                var focusField = firstBad.querySelector('[data-name="serial_number"]');
+                if (focusField) {
+                    try { focusField.focus(); focusField.select(); } catch (err) { /* ignore */ }
+                }
+                scrollCardIntoView(firstBad);
+                if (groupHint) {
+                    groupHint.textContent = 'سریال تکراری را اصلاح کنید، سپس دوباره ذخیره کنید.';
+                    groupHint.classList.add('is-error');
+                }
+            }
+
+            return !hasError;
+        }
+
         /* ---------- wire static controls ---------- */
 
         if (lookupPhoneInput) {
@@ -1076,9 +1222,25 @@
                     if (groupHint) groupHint.classList.add('is-error');
                     return;
                 }
+                if (!validateGroupSerialsClient()) {
+                    e.preventDefault();
+                    return;
+                }
                 updateGroupSummary();
+            } else if (mode === 'single') {
+                var singleSerial = form.querySelector('#mode-single [name="serial_number"]');
+                if (singleSerial && singleSerial.classList.contains('is-invalid') && !normalizeSerialKey(singleSerial.value)) {
+                    clearSerialFieldError(singleSerial);
+                }
             }
         });
+
+        var singleSerialInput = form.querySelector('#mode-single [name="serial_number"]');
+        if (singleSerialInput && singleSerialInput.classList.contains('is-invalid')) {
+            singleSerialInput.addEventListener('input', function () {
+                clearSerialFieldError(singleSerialInput);
+            });
+        }
 
         document.addEventListener('keydown', function (e) {
             if (e.key !== 'Escape') return;

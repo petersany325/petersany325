@@ -279,10 +279,20 @@ class ReceptionController extends Controller
                     'warranty_return' => ! empty($item['warranty_return']) ? 1 : 0,
                 ]);
 
-                $created[] = $this->createReceptionRecord($customer, $row, $fakeRequest, [
-                    'photo_path' => null,
-                    'batch_code' => $batchCode,
-                ]);
+                try {
+                    $created[] = $this->createReceptionRecord($customer, $row, $fakeRequest, [
+                        'photo_path' => null,
+                        'batch_code' => $batchCode,
+                    ]);
+                } catch (ValidationException $e) {
+                    $msgs = $e->errors();
+                    if (! empty($msgs['serial_number'])) {
+                        throw ValidationException::withMessages([
+                            'items.'.$index.'.serial_number' => $msgs['serial_number'],
+                        ]);
+                    }
+                    throw $e;
+                }
             }
 
             return collect($created);
@@ -1613,9 +1623,21 @@ class ReceptionController extends Controller
      */
     private function assertSerialAvailable(?string $serial, ?int $ignoreReceptionId = null, string $field = 'serial_number'): void
     {
+        $message = $this->serialConflictMessage($serial, $ignoreReceptionId);
+        if ($message === null) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            $field => $message,
+        ]);
+    }
+
+    private function serialConflictMessage(?string $serial, ?int $ignoreReceptionId = null): ?string
+    {
         $serial = $this->normalizeSerialNumber($serial);
         if ($serial === null) {
-            return;
+            return null;
         }
 
         $query = Reception::query()
@@ -1628,31 +1650,41 @@ class ReceptionController extends Controller
 
         $existing = $query->orderByDesc('id')->first(['id', 'ticket_no', 'serial_number', 'status']);
         if (! $existing) {
-            return;
+            return null;
         }
 
-        throw ValidationException::withMessages([
-            $field => 'این سریال قبلاً ثبت شده است (قبض '.$existing->ticket_no.'). هر سریال فقط یک قبض می‌تواند داشته باشد.',
-        ]);
+        return 'این سریال قبلاً ثبت شده است (قبض '.$existing->ticket_no.'). هر سریال فقط یک قبض می‌تواند داشته باشد.';
     }
 
     /** @param  array<int, array<string, mixed>>  $items */
     private function assertBatchSerialsUnique(array $items): void
     {
+        $messages = [];
         $seen = [];
+
         foreach ($items as $index => $item) {
             $serial = $this->normalizeSerialNumber(isset($item['serial_number']) ? (string) $item['serial_number'] : null);
             if ($serial === null) {
                 continue;
             }
+
             $field = 'items.'.$index.'.serial_number';
             if (isset($seen[$serial])) {
-                throw ValidationException::withMessages([
-                    $field => 'سریال تکراری در همین پذیرش گروهی است. هر سریال فقط یک قبض می‌تواند داشته باشد.',
-                ]);
+                $dupMsg = 'سریال تکراری در همین پذیرش گروهی است. هر سریال فقط یک قبض می‌تواند داشته باشد.';
+                $messages[$field] = $dupMsg;
+                $messages['items.'.$seen[$serial].'.serial_number'] = $dupMsg;
+                continue;
             }
+
             $seen[$serial] = $index;
-            $this->assertSerialAvailable($serial, null, $field);
+            $conflict = $this->serialConflictMessage($serial);
+            if ($conflict !== null) {
+                $messages[$field] = $conflict;
+            }
+        }
+
+        if ($messages !== []) {
+            throw ValidationException::withMessages($messages);
         }
     }
 
