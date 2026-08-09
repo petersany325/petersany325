@@ -14,9 +14,55 @@
 
 <div class="portal-shell" style="padding-top:10px;">
 <form class="p-search-bar" method="GET" action="{{ route('portal.search') }}">
-    <input type="search" name="q" value="{{ $q }}" placeholder="مثال: SH-100 یا سریال..." autofocus>
+    @include('partials.receipt-search-input', [
+        'name' => 'q',
+        'value' => $q,
+        'autofocus' => true,
+        'placeholder' => '1000',
+        'hint' => 'پیش‌فرض T-20N — ادامه کد را بزنید؛ برای سریال همان کادر را کامل بنویسید.',
+        'allowFree' => true,
+        'barcode' => false,
+    ])
     <button type="submit" class="p-btn primary">جستجو</button>
 </form>
+@push('scripts')
+<script>
+(function () {
+    function convertDigits(v) {
+        return String(v || '').replace(/[۰-۹٠-٩]/g, function (c) {
+            var map = {'۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9','٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9'};
+            return map[c] || c;
+        });
+    }
+    function sync(wrap) {
+        var prefix = wrap.getAttribute('data-prefix') || 'T-20N';
+        var allowFree = wrap.getAttribute('data-allow-free') !== '0';
+        var suffix = wrap.querySelector('[data-receipt-suffix]');
+        var hidden = wrap.querySelector('[data-receipt-full]');
+        if (!suffix || !hidden) return;
+        var raw = convertDigits(suffix.value || '').trim();
+        if (!raw) { hidden.value = ''; return; }
+        if (/^t-20n/i.test(raw)) {
+            hidden.value = 'T-20N' + raw.slice(5).replace(/\s+/g, '');
+            suffix.value = raw.slice(5).replace(/\s+/g, '');
+            return;
+        }
+        if (/^\d+$/.test(raw)) { hidden.value = prefix + raw; return; }
+        hidden.value = allowFree ? raw : (prefix + raw);
+    }
+    document.querySelectorAll('[data-receipt-prefix-wrap]').forEach(function (wrap) {
+        var suffix = wrap.querySelector('[data-receipt-suffix]');
+        if (!suffix) return;
+        ['input', 'change', 'blur'].forEach(function (ev) {
+            suffix.addEventListener(ev, function () { sync(wrap); });
+        });
+        var form = wrap.closest('form');
+        if (form) form.addEventListener('submit', function () { sync(wrap); });
+        sync(wrap);
+    });
+})();
+</script>
+@endpush
 
 <div class="p-ticket-list">
     @if($q === '')

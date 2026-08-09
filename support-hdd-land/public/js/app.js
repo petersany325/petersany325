@@ -1121,6 +1121,65 @@
     }
 
     /* =========================================================
+     * Receipt search prefix (T-20N + staff types the rest)
+     * ========================================================= */
+
+    function syncReceiptPrefixWrap(wrap) {
+        if (!wrap) return;
+        var prefix = wrap.getAttribute('data-prefix') || 'T-20N';
+        var allowFree = wrap.getAttribute('data-allow-free') !== '0';
+        var suffix = wrap.querySelector('[data-receipt-suffix]');
+        var hidden = wrap.querySelector('[data-receipt-full]');
+        if (!suffix || !hidden) return;
+
+        var raw = convertDigits(suffix.value || '').trim();
+        if (!raw) {
+            hidden.value = '';
+            return;
+        }
+
+        // Pasted full receipt like T-20N1000 → keep prefix locked, show rest.
+        if (/^t-20n/i.test(raw)) {
+            var rest = raw.slice(5).replace(/\s+/g, '');
+            hidden.value = rest ? prefix + rest : '';
+            if (suffix.value !== rest) suffix.value = rest;
+            return;
+        }
+
+        if (/^\d+$/.test(raw)) {
+            hidden.value = prefix + raw;
+            return;
+        }
+
+        // Name / phone / serial / SH-… free search
+        hidden.value = allowFree ? raw : (prefix + raw);
+    }
+
+    function initReceiptSearchInputs(root) {
+        root = root || document;
+        root.querySelectorAll('[data-receipt-prefix-wrap]').forEach(function (wrap) {
+            if (wrap.getAttribute('data-receipt-wired') === '1') return;
+            wrap.setAttribute('data-receipt-wired', '1');
+            var suffix = wrap.querySelector('[data-receipt-suffix]');
+            if (!suffix) return;
+
+            ['input', 'change', 'blur'].forEach(function (ev) {
+                suffix.addEventListener(ev, function () { syncReceiptPrefixWrap(wrap); });
+            });
+
+            var form = wrap.closest('form');
+            if (form && !form.__receiptPrefixBound) {
+                form.__receiptPrefixBound = true;
+                form.addEventListener('submit', function () {
+                    form.querySelectorAll('[data-receipt-prefix-wrap]').forEach(syncReceiptPrefixWrap);
+                });
+            }
+
+            syncReceiptPrefixWrap(wrap);
+        });
+    }
+
+    /* =========================================================
      * Staff UI mode (mobile / desktop) + drawer menus
      * ========================================================= */
 
@@ -1451,6 +1510,7 @@
         initAppModals();
         initReceptionWizard();
         initNoteMenusGlobal();
+        initReceiptSearchInputs();
         initStaffShell();
         initStaffLoginDeviceHint();
         initLookupEditors();

@@ -24,8 +24,14 @@
 
     <form class="ticket-search-bar" method="GET" style="margin:14px 0 8px;">
         <div class="field">
-            <label>جستجو</label>
-            <input type="text" name="q" value="{{ $q }}" placeholder="قبض، مشتری، توضیح">
+            <label>شماره قبض / جستجو</label>
+            @include('partials.receipt-search-input', [
+                'name' => 'q',
+                'value' => $q,
+                'placeholder' => '1000',
+                'hint' => 'T-20N ثابت؛ ادامه کد یا نام مشتری',
+                'allowFree' => true,
+            ])
         </div>
         <div class="field">
             <label>وضعیت</label>

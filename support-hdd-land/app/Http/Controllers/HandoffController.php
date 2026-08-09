@@ -18,9 +18,9 @@ class HandoffController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $ticket = trim((string) $request->input('ticket_no', ''));
+        $ticket = normalize_receipt_search_query((string) $request->input('ticket_no', ''));
         $serial = trim((string) $request->input('serial', ''));
-        $q = trim((string) $request->input('q', ''));
+        $q = normalize_receipt_search_query((string) $request->input('q', ''));
         $status = (string) $request->input('status', 'pending');
         if (! in_array($status, ['pending', 'all', 'accepted', 'rejected', 'in_hand'], true)) {
             $status = 'pending';
@@ -61,7 +61,10 @@ class HandoffController extends Controller
             }
 
             if ($ticket !== '') {
-                $inHandQuery->where('ticket_no', 'like', '%'.$ticket.'%');
+                $inHandQuery->where(function ($w) use ($ticket) {
+                    $w->where('ticket_no', 'like', '%'.$ticket.'%')
+                        ->orWhere('receipt_no', 'like', '%'.$ticket.'%');
+                });
             }
             if ($serial !== '') {
                 $inHandQuery->where('serial_number', 'like', '%'.$serial.'%');
@@ -69,6 +72,7 @@ class HandoffController extends Controller
             if ($q !== '') {
                 $inHandQuery->where(function ($inner) use ($q) {
                     $inner->where('ticket_no', 'like', '%'.$q.'%')
+                        ->orWhere('receipt_no', 'like', '%'.$q.'%')
                         ->orWhere('serial_number', 'like', '%'.$q.'%')
                         ->orWhere('product_name', 'like', '%'.$q.'%')
                         ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('phone', 'like', '%'.$q.'%'));
@@ -128,7 +132,10 @@ class HandoffController extends Controller
     private function applyHandoffSearch($query, string $ticket, string $serial, string $q): void
     {
         if ($ticket !== '') {
-            $query->whereHas('reception', fn ($r) => $r->where('ticket_no', 'like', '%'.$ticket.'%'));
+            $query->whereHas('reception', function ($r) use ($ticket) {
+                $r->where('ticket_no', 'like', '%'.$ticket.'%')
+                    ->orWhere('receipt_no', 'like', '%'.$ticket.'%');
+            });
         }
         if ($serial !== '') {
             $query->where(function ($inner) use ($serial) {
@@ -142,6 +149,7 @@ class HandoffController extends Controller
                     ->orWhere('note', 'like', '%'.$q.'%')
                     ->orWhereHas('reception', function ($r) use ($q) {
                         $r->where('ticket_no', 'like', '%'.$q.'%')
+                            ->orWhere('receipt_no', 'like', '%'.$q.'%')
                             ->orWhere('serial_number', 'like', '%'.$q.'%')
                             ->orWhere('product_name', 'like', '%'.$q.'%')
                             ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('phone', 'like', '%'.$q.'%'));

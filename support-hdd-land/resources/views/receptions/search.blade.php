@@ -7,16 +7,16 @@
 @section('content')
 <form method="GET" action="{{ route('receptions.search') }}" class="ticket-search-bar" id="ticket-search-form">
     <div class="field">
-        <label>عبارت جستجو</label>
-        <input type="text"
-               name="q"
-               value="{{ $q }}"
-               placeholder="نام، موبایل، شماره قبض، سریال…"
-               autofocus
-               required
-               data-barcode
-               data-ascii-en
-               autocomplete="off">
+        <label>شماره قبض</label>
+        @include('partials.receipt-search-input', [
+            'name' => 'q',
+            'value' => $q,
+            'autofocus' => true,
+            'required' => true,
+            'placeholder' => '1000',
+            'hint' => 'پیش‌فرض T-20N است — فقط ادامه کد را بزنید. برای نام/موبایل/سریال همان کادر را پاک و عبارت را بنویسید.',
+            'allowFree' => true,
+        ])
     </div>
     <div class="field-sm">
         <label>وضعیت</label>

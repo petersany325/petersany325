@@ -17,8 +17,17 @@
         </div>
     </div>
 
-    <form class="search-row" method="GET">
-        <input type="text" name="q" value="{{ $q }}" placeholder="نام مشتری، موبایل، شماره قبض، سریال..." data-barcode data-search-barcode autocomplete="off">
+    <form class="search-row" method="GET" style="align-items:end;">
+        <div style="flex:1 1 260px;min-width:200px;">
+            <label>شماره قبض</label>
+            @include('partials.receipt-search-input', [
+                'name' => 'q',
+                'value' => $q,
+                'placeholder' => '1000',
+                'hint' => 'T-20N ثابت است؛ ادامه کد را بزنید (یا نام/موبایل/سریال).',
+                'allowFree' => true,
+            ])
+        </div>
         <select name="status">
             <option value="">همه وضعیت‌ها</option>
             @foreach($statuses as $key => $label)

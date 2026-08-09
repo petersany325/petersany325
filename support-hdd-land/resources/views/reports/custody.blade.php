@@ -10,7 +10,13 @@
     <form method="GET" action="{{ route('reports.custody') }}" class="accept-row accept-row-4" style="align-items:end;">
         <div>
             <label>شماره قبض</label>
-            <input type="text" name="ticket_no" value="{{ $ticket ?? '' }}" placeholder="R-..." dir="ltr" style="text-align:left;">
+            @include('partials.receipt-search-input', [
+                'name' => 'ticket_no',
+                'value' => $ticket ?? '',
+                'placeholder' => '1000',
+                'hint' => 'T-20N ثابت — فقط ادامه کد',
+                'allowFree' => true,
+            ])
         </div>
         <div>
             <label>سریال</label>

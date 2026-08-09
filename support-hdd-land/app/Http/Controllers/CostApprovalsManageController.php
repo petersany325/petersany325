@@ -13,7 +13,7 @@ class CostApprovalsManageController extends Controller
     public function index(Request $request)
     {
         $status = trim((string) $request->get('status', ''));
-        $q = trim((string) $request->get('q', ''));
+        $q = normalize_receipt_search_query((string) $request->get('q', ''));
 
         $approvals = CostApproval::query()
             ->with(['reception.customer', 'customer', 'creator'])
@@ -24,6 +24,7 @@ class CostApprovalsManageController extends Controller
                         ->orWhere('description', 'like', "%{$q}%")
                         ->orWhereHas('reception', function ($r) use ($q) {
                             $r->where('ticket_no', 'like', "%{$q}%")
+                                ->orWhere('receipt_no', 'like', "%{$q}%")
                                 ->orWhere('serial_number', 'like', "%{$q}%")
                                 ->orWhere('service_type', 'like', "%{$q}%")
                                 ->orWhere('repair_type', 'like', "%{$q}%");

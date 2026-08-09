@@ -373,3 +373,46 @@ if (! function_exists('shop_logo_url')) {
         return asset($rel).'?v='.rawurlencode($ver);
     }
 }
+
+if (! function_exists('ascii_digits')) {
+    /** Convert Persian/Arabic digits to ASCII 0-9. */
+    function ascii_digits(?string $value): string
+    {
+        $value = (string) $value;
+        $map = [
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+        ];
+
+        return strtr($value, $map);
+    }
+}
+
+if (! function_exists('normalize_receipt_search_query')) {
+    /**
+     * Normalize staff receipt search: digits-only → T-20N{digits}.
+     * Leaves name/phone/serial/SH-… queries unchanged.
+     */
+    function normalize_receipt_search_query(?string $q): string
+    {
+        $q = trim(ascii_digits((string) $q));
+        if ($q === '' || strcasecmp($q, 'T-20N') === 0) {
+            return '';
+        }
+
+        if (preg_match('/^t-20n(.*)$/i', $q, $m)) {
+            $rest = preg_replace('/\s+/', '', (string) ($m[1] ?? ''));
+
+            return $rest === '' ? '' : 'T-20N'.$rest;
+        }
+
+        // Pure numeric suffix typed by staff (e.g. 1000 / 10025).
+        if (preg_match('/^\d{3,}$/', $q)) {
+            return 'T-20N'.$q;
+        }
+
+        return $q;
+    }
+}

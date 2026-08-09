@@ -34,7 +34,7 @@ class ReceptionController extends Controller
     public function index(Request $request)
     {
         $status = $request->get('status');
-        $q = trim((string) $request->get('q'));
+        $q = normalize_receipt_search_query((string) $request->get('q'));
 
         $receptions = $this->searchQuery($q, $status)
             ->with(['customer', 'technician', 'faultType'])
@@ -52,7 +52,7 @@ class ReceptionController extends Controller
 
     public function search(Request $request)
     {
-        $q = trim((string) $request->get('q'));
+        $q = normalize_receipt_search_query((string) $request->get('q'));
         $status = $request->get('status');
         $searched = $request->has('q');
 

@@ -847,6 +847,25 @@ tbody tr:nth-child(even) { background: #f3f5f8; }
 .win-cmdbar-meta { font-size:11px; color:#334155; display:flex; gap:6px; align-items:center; }
 
 /* ===== Compact ticket search ===== */
+.receipt-search-input {
+  display:flex; align-items:stretch; width:100%;
+  border:1px solid #9aa5b5; border-radius:2px; background:#fff; overflow:hidden;
+  direction:ltr;
+}
+.receipt-search-prefix {
+  display:flex; align-items:center; padding:0 8px;
+  background:linear-gradient(180deg,#eef2f7,#dfe5ee);
+  border-right:1px solid #9aa5b5;
+  font-weight:800; font-size:12px; color:#1f2937; letter-spacing:.02em;
+  user-select:none; white-space:nowrap;
+}
+.receipt-search-input input[data-receipt-suffix] {
+  border:0 !important; border-radius:0 !important; min-height:28px;
+  flex:1 1 auto; text-align:left; direction:ltr;
+  box-shadow:none !important;
+}
+.receipt-search-input:focus-within { border-color:#2f6fed; box-shadow:0 0 0 2px rgba(47,111,237,.15); }
+.receipt-search-hint { font-size:10.5px; margin-top:3px; }
 .ticket-search-bar {
   display:flex; flex-wrap:wrap; gap:6px; align-items:end;
   background:linear-gradient(180deg,#fff,#eef1f5); border:1px solid #9aa5b5;

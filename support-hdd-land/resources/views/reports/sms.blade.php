@@ -39,7 +39,16 @@
         @if($receptionId)
             <input type="hidden" name="reception_id" value="{{ $receptionId }}">
         @endif
-        <input type="text" name="q" value="{{ $q }}" placeholder="قبض، موبایل، نام، متن…">
+        <div style="flex:1 1 240px;min-width:200px;">
+            <label>شماره قبض / جستجو</label>
+            @include('partials.receipt-search-input', [
+                'name' => 'q',
+                'value' => $q,
+                'placeholder' => '1000',
+                'hint' => 'T-20N ثابت؛ ادامه کد یا موبایل/نام',
+                'allowFree' => true,
+            ])
+        </div>
         <select name="ok">
             <option value="">نتیجه: همه</option>
             <option value="1" @selected($okFilter === '1')>فقط موفق</option>

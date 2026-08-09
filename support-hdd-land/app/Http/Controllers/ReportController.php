@@ -113,9 +113,9 @@ class ReportController extends Controller
     public function custody(Request $request): View
     {
         [$from, $to] = $this->range($request);
-        $ticket = trim((string) $request->input('ticket_no', ''));
+        $ticket = normalize_receipt_search_query((string) $request->input('ticket_no', ''));
         $serial = trim((string) $request->input('serial', ''));
-        $q = trim((string) $request->input('q', ''));
+        $q = normalize_receipt_search_query((string) $request->input('q', ''));
 
         $handoffs = DeviceHandoff::query()
             ->whereDate('created_at', '>=', $from)
@@ -148,7 +148,10 @@ class ReportController extends Controller
             ->where('custody', 'with_technician')
             ->whereNotIn('status', ['delivered', 'cancelled']);
         if ($ticket !== '') {
-            $inHandQuery->where('ticket_no', 'like', '%'.$ticket.'%');
+            $inHandQuery->where(function ($w) use ($ticket) {
+                $w->where('ticket_no', 'like', '%'.$ticket.'%')
+                    ->orWhere('receipt_no', 'like', '%'.$ticket.'%');
+            });
         }
         if ($serial !== '') {
             $inHandQuery->where('serial_number', 'like', '%'.$serial.'%');
@@ -156,6 +159,7 @@ class ReportController extends Controller
         if ($q !== '') {
             $inHandQuery->where(function ($inner) use ($q) {
                 $inner->where('ticket_no', 'like', '%'.$q.'%')
+                    ->orWhere('receipt_no', 'like', '%'.$q.'%')
                     ->orWhere('serial_number', 'like', '%'.$q.'%')
                     ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%'));
             });
@@ -199,7 +203,10 @@ class ReportController extends Controller
     private function applyCustodySearch($query, string $ticket, string $serial, string $q): void
     {
         if ($ticket !== '') {
-            $query->whereHas('reception', fn ($r) => $r->where('ticket_no', 'like', '%'.$ticket.'%'));
+            $query->whereHas('reception', function ($r) use ($ticket) {
+                $r->where('ticket_no', 'like', '%'.$ticket.'%')
+                    ->orWhere('receipt_no', 'like', '%'.$ticket.'%');
+            });
         }
         if ($serial !== '') {
             $query->where(function ($inner) use ($serial) {
@@ -212,6 +219,7 @@ class ReportController extends Controller
                 $inner->where('serial_snapshot', 'like', '%'.$q.'%')
                     ->orWhereHas('reception', function ($r) use ($q) {
                         $r->where('ticket_no', 'like', '%'.$q.'%')
+                            ->orWhere('receipt_no', 'like', '%'.$q.'%')
                             ->orWhere('serial_number', 'like', '%'.$q.'%')
                             ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('phone', 'like', '%'.$q.'%'));
                     });
@@ -288,7 +296,7 @@ class ReportController extends Controller
         [$from, $to] = $this->range($request);
 
         $receptionId = $request->integer('reception_id') ?: null;
-        $q = trim((string) $request->get('q'));
+        $q = normalize_receipt_search_query((string) $request->get('q'));
         $okFilter = $request->get('ok'); // '', '1', '0'
         $audience = (string) $request->get('audience', '');
         $statusKey = trim((string) $request->get('status_key', ''));

@@ -18,7 +18,7 @@ class PaymentReceiptController extends Controller
     public function index(Request $request)
     {
         $status = trim((string) $request->get('status', 'pending'));
-        $q = trim((string) $request->get('q', ''));
+        $q = normalize_receipt_search_query((string) $request->get('q', ''));
 
         if ($status !== '' && ! array_key_exists($status, PaymentReceipt::STATUSES)) {
             $status = 'pending';
@@ -32,7 +32,8 @@ class PaymentReceiptController extends Controller
                     $inner->where('note', 'like', "%{$q}%")
                         ->orWhere('review_note', 'like', "%{$q}%")
                         ->orWhereHas('reception', function ($r) use ($q) {
-                            $r->where('ticket_no', 'like', "%{$q}%");
+                            $r->where('ticket_no', 'like', "%{$q}%")
+                                ->orWhere('receipt_no', 'like', "%{$q}%");
                         })
                         ->orWhereHas('customer', function ($c) use ($q) {
                             $c->where('name', 'like', "%{$q}%")

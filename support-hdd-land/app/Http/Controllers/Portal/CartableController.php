@@ -75,7 +75,7 @@ class CartableController extends Controller
     public function search(Request $request)
     {
         $customer = $this->customer($request);
-        $q = trim((string) $request->query('q', ''));
+        $q = normalize_receipt_search_query((string) $request->query('q', ''));
         $tickets = collect();
 
         if ($q !== '') {
