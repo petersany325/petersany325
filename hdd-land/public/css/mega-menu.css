@@ -291,12 +291,15 @@
   .mega-panel.is-mega-panel.w-wide,
   .mega-panel.is-mega-panel.w-normal,
   .mega-panel.is-mega-panel.align-center{
-    position:static;min-width:0;max-width:none;width:100%;transform:none!important;margin-top:.35rem;
-    display:none;opacity:1;pointer-events:auto;animation:none!important;padding:.65rem;
+    position:static;min-width:0;max-width:none;width:100%;transform:none!important;margin-top:.15rem;
+    display:none;opacity:1;pointer-events:auto;animation:none!important;
+    padding:.25rem .15rem .45rem .35rem;
+    border:0 !important;border-radius:0 !important;box-shadow:none !important;
+    background:transparent !important;border-right:2px solid color-mix(in srgb, var(--mega-accent,#e23d12) 30%, #fff);
   }
   .mega-panel::before{display:none}
   .mega-item.is-open > .mega-panel{display:block}
-  .mega-grid{grid-template-columns:1fr}
+  .mega-grid{grid-template-columns:1fr;gap:.05rem}
 
   /* Solid header on mobile so glass/backdrop-filter does not trap the drawer */
   .site-header,
@@ -311,9 +314,9 @@
   .header-nav-slot{flex:1 1 auto;min-width:0}
   .mobile-nav-head{
     display:flex;align-items:center;justify-content:space-between;gap:.75rem;
-    margin-bottom:.75rem;padding-bottom:.65rem;border-bottom:1px solid #e5e7eb;
+    margin-bottom:.35rem;padding:.15rem .1rem .85rem;border-bottom:1px solid #e5e7eb;
   }
-  .mobile-nav-head strong{font-size:.95rem;font-weight:800}
+  .mobile-nav-head strong{font-size:1rem;font-weight:800;color:#0f172a}
   .mobile-nav-close{
     width:36px;height:36px;border:0;border-radius:10px;background:#f1f5f9;
     color:#334155;font-size:1.35rem;line-height:1;cursor:pointer;
@@ -324,10 +327,10 @@
     position:fixed !important;top:0;right:0;bottom:0;left:auto;
     width:min(320px,88vw);z-index:1200 !important;
     background:#fff !important;border-left:1px solid #e5e7eb;
-    padding:1rem .85rem 1.25rem;
+    padding:1rem .95rem 1.25rem;
     transform:translateX(105%);transition:transform .25s ease;
     overflow:auto;-webkit-overflow-scrolling:touch;
-    box-shadow:none;margin:0;
+    box-shadow:none;margin:0;border-radius:0;
   }
   body.nav-open > .header-nav-wrap#headerNavWrap,
   body.nav-open .header-nav-wrap#headerNavWrap{
@@ -344,6 +347,51 @@
     display:block !important;
   }
   body.nav-open{overflow:hidden}
+
+  /* Kill desktop "pills/boxed" chrome — it becomes a giant capsule when stacked */
+  .header-nav-wrap .mega-nav-pro,
+  .header-nav-wrap .mega-nav-pro.style-pills,
+  .header-nav-wrap .mega-nav-pro.style-boxed,
+  .header-nav-wrap .mega-nav-pro.style-underline,
+  .header-nav-wrap .mega-nav-pro.style-minimal{
+    display:flex !important;flex-direction:column !important;align-items:stretch !important;
+    width:100% !important;gap:0 !important;
+    background:transparent !important;border:0 !important;box-shadow:none !important;
+    padding:0 !important;border-radius:0 !important;
+  }
+  .header-nav-wrap .mega-nav-pro .mega-item{
+    width:100%;
+    border-bottom:1px solid #eef2f7;
+  }
+  .header-nav-wrap .mega-nav-pro .mega-item:last-child{border-bottom:0}
+  .header-nav-wrap .mega-nav-pro .mega-trigger,
+  .header-nav-wrap .mega-nav-pro.style-pills .mega-trigger{
+    width:100%;justify-content:flex-start;gap:.55rem;
+    min-height:48px;padding:.85rem .15rem;border-radius:0 !important;
+    background:transparent !important;box-shadow:none !important;
+    color:#0f172a;font-size:.95rem;font-weight:750;white-space:normal;
+    transform:none !important;
+  }
+  .header-nav-wrap .mega-nav-pro .mega-item.has-mega:hover > .mega-trigger,
+  .header-nav-wrap .mega-nav-pro .mega-item.is-open > .mega-trigger,
+  .header-nav-wrap .mega-nav-pro.style-pills .mega-item.is-open > .mega-trigger,
+  .header-nav-wrap .mega-nav-pro.style-pills .mega-item.has-mega:hover > .mega-trigger{
+    background:transparent !important;box-shadow:none !important;
+    color:var(--mega-accent,#e23d12);
+  }
+  .header-nav-wrap .mega-nav-pro .mega-caret{
+    margin-right:auto;margin-left:0;order:9;opacity:.55;font-size:.75rem;
+  }
+  .header-nav-wrap .mega-nav-pro .mega-ico,
+  .header-nav-wrap .mega-nav-pro .mega-ico-img{
+    background:transparent !important;box-shadow:none !important;border-radius:0;
+    width:1.15rem;height:1.15rem;font-size:.95rem;
+  }
+  .header-nav-wrap .mega-nav-pro .mega-utils{display:none !important}
+  .header-nav-wrap .mega-panel .mega-link,
+  .header-nav-wrap .mega-panel .mega-sub{
+    padding:.55rem .55rem;border-radius:10px;font-size:.88rem;
+  }
 }
 
 @media (min-width: 961px){

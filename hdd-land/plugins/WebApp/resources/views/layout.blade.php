@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="{{ $iconSrc }}">
   <link rel="icon" type="image/png" sizes="192x192" href="{{ $iconSrc }}">
   <title>{{ $title ?? ($s['app_name'] ?? 'سرزمین هارد') }}</title>
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=12">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=13">
 </head>
 @php
   $anim = !empty($s['animations']);
@@ -25,6 +25,16 @@
   $drawerOn = !empty($s['drawer_menu_enabled']) && !empty($drawerMenu);
   $drawerSide = (($s['drawer_side'] ?? 'right') === 'left') ? 'left' : 'right';
   $tab = $tab ?? 'home';
+  $drawerIcons = [
+    'home' => '⌂',
+    'shop' => '▣',
+    'cart' => '▢',
+    'account' => '☺',
+    'track' => '☰',
+    'warranty' => '⛨',
+    'support' => '✉',
+    'contact' => '☎',
+  ];
 @endphp
 <body class="wa-body {{ $anim ? 'wa-anim' : '' }} {{ $compact ? 'wa-compact' : '' }} {{ $drawerOn ? 'has-wa-drawer' : '' }}"
   style="--wa-brand:{{ $s['theme_color'] ?? '#e23d12' }};--wa-bg:{{ $s['background_color'] ?? '#f4f6f9' }};--wa-surface:{{ $s['surface_color'] ?? '#ffffff' }};--wa-ink:{{ $s['text_color'] ?? '#1a1d23' }}">
@@ -61,16 +71,13 @@
         <img src="{{ $iconSrc }}?v=10" width="36" height="36" alt="" onerror="this.style.display='none'">
         <div>
           <strong>{{ $s['app_name'] ?? 'سرزمین هارد' }}</strong>
-          <small>{{ $s['drawer_subtitle'] ?? ($s['drawer_title'] ?? 'منوی وب‌اپ') }}</small>
+          <small>{{ $s['drawer_title'] ?? 'منوی وب‌اپ' }}</small>
         </div>
       </div>
     @else
       <div class="wa-drawer-brand">
         <div>
           <strong>{{ $s['drawer_title'] ?? 'منوی وب‌اپ' }}</strong>
-          @if(!empty($s['drawer_subtitle']))
-            <small>{{ $s['drawer_subtitle'] }}</small>
-          @endif
         </div>
       </div>
     @endif
@@ -82,17 +89,19 @@
         $href = str_starts_with($item['url'], 'http') ? $item['url'] : url($item['url']);
         $kids = collect($item['children'] ?? [])->filter(fn ($c) => !empty($c['label']) && !empty($c['url']))->values();
         $hasKids = $kids->isNotEmpty();
+        $key = (string) ($item['key'] ?? '');
+        $ico = trim((string) ($item['icon'] ?? '')) ?: ($drawerIcons[$key] ?? '•');
         $active = false;
-        if (($item['key'] ?? '') === 'home' && ($tab ?? '') === 'home') $active = true;
-        if (($item['key'] ?? '') === 'shop' && ($tab ?? '') === 'shop') $active = true;
-        if (($item['key'] ?? '') === 'cart' && ($tab ?? '') === 'cart') $active = true;
-        if (($item['key'] ?? '') === 'account' && ($tab ?? '') === 'account') $active = true;
+        if ($key === 'home' && ($tab ?? '') === 'home') $active = true;
+        if ($key === 'shop' && ($tab ?? '') === 'shop') $active = true;
+        if ($key === 'cart' && ($tab ?? '') === 'cart') $active = true;
+        if ($key === 'account' && ($tab ?? '') === 'account') $active = true;
         $openByDefault = $active && $hasKids;
       @endphp
       @if($hasKids)
         <div class="wa-drawer-group {{ $openByDefault ? 'is-open' : '' }}" data-wa-sub>
           <button type="button" class="wa-drawer-parent {{ $active ? 'active' : '' }}" data-wa-sub-toggle aria-expanded="{{ $openByDefault ? 'true' : 'false' }}">
-            <i class="wa-drawer-ico" aria-hidden="true">{{ $item['icon'] ?? '•' }}</i>
+            <i class="wa-drawer-ico" aria-hidden="true">{{ $ico }}</i>
             <span>{{ $item['label'] }}</span>
             <em class="wa-drawer-caret" aria-hidden="true">▾</em>
           </button>
@@ -106,9 +115,9 @@
         </div>
       @else
         <a href="{{ $href }}" class="{{ $active ? 'active' : '' }}">
-          <i class="wa-drawer-ico" aria-hidden="true">{{ $item['icon'] ?? '•' }}</i>
+          <i class="wa-drawer-ico" aria-hidden="true">{{ $ico }}</i>
           <span>{{ $item['label'] }}</span>
-          @if(($item['key'] ?? '') === 'cart' && ($cartCount ?? 0) > 0)
+          @if($key === 'cart' && ($cartCount ?? 0) > 0)
             <b class="wa-drawer-badge">{{ $cartCount }}</b>
           @endif
         </a>
@@ -117,7 +126,10 @@
   </nav>
   @if(!empty($s['drawer_show_full_site']))
     <div class="wa-drawer-foot">
-      <a href="{{ url($s['drawer_full_site_url'] ?? '/') }}" target="_blank" rel="noopener">{{ $s['drawer_full_site_label'] ?? 'نسخه کامل سایت' }}</a>
+      <a href="{{ url($s['drawer_full_site_url'] ?? '/') }}" target="_blank" rel="noopener">
+        <span>{{ $s['drawer_full_site_label'] ?? 'نسخه کامل سایت' }}</span>
+        <em aria-hidden="true">↗</em>
+      </a>
     </div>
   @endif
 </aside>
@@ -251,7 +263,7 @@
     drawerEnabled: @json($drawerOn)
   };
 </script>
-<script src="{{ asset('js/webapp.js') }}?v=12" defer></script>
+<script src="{{ asset('js/webapp.js') }}?v=13" defer></script>
 @php
   \Illuminate\Support\Facades\View::addNamespace('smart-chat', base_path('plugins/SmartChat/resources/views'));
 @endphp

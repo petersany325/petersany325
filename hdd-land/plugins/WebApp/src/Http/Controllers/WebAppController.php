@@ -242,7 +242,7 @@ class WebAppController extends Controller
         $s = Plugin::settings();
         $offline = ! empty($s['offline_cache']);
         $version = 'webapp-v2-'.substr(md5(json_encode([
-            $s['app_name'] ?? '', $s['theme_color'] ?? '', $s['enabled'] ?? false, 'drawer-sub-v12',
+            $s['app_name'] ?? '', $s['theme_color'] ?? '', $s['enabled'] ?? false, 'drawer-design-v13',
         ])), 0, 8);
         $offlineJs = $this->jsBool($offline);
 

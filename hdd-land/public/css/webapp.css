@@ -357,32 +357,33 @@ img, video, svg, canvas { max-width: 100%; height: auto; display: block; }
 
 .wa-drawer-backdrop {
   position: fixed; inset: 0; z-index: 180;
-  background: rgba(15, 23, 42, .42);
+  background: rgba(15, 23, 42, .45);
   opacity: 0; pointer-events: none; transition: opacity .25s ease;
 }
 .wa-drawer-backdrop.is-open { opacity: 1; pointer-events: auto; }
 
 .wa-drawer {
   position: fixed; top: 0; bottom: 0; z-index: 200;
-  width: min(82vw, 320px); max-width: 100%;
-  background: var(--wa-surface);
-  color: var(--wa-ink);
-  box-shadow: -12px 0 40px rgba(15, 23, 42, .18);
+  width: min(86vw, 320px); max-width: 100%;
+  background: #fff;
+  color: #0f172a;
+  box-shadow: -16px 0 40px rgba(15, 23, 42, .18);
   display: flex; flex-direction: column;
   transition: transform .28s cubic-bezier(.22, 1, .36, 1);
   padding-top: env(safe-area-inset-top, 0);
   padding-bottom: env(safe-area-inset-bottom, 0);
+  border-radius: 0;
 }
 .wa-drawer-right {
   right: 0; left: auto;
-  border-radius: 18px 0 0 18px;
+  border-left: 1px solid #e5e7eb;
   transform: translateX(104%);
 }
 .wa-drawer-left {
   left: 0; right: auto;
-  border-radius: 0 18px 18px 0;
+  border-right: 1px solid #e5e7eb;
   transform: translateX(-104%);
-  box-shadow: 12px 0 40px rgba(15, 23, 42, .18);
+  box-shadow: 16px 0 40px rgba(15, 23, 42, .18);
 }
 .wa-drawer.wa-drawer-right.is-open,
 .wa-drawer.wa-drawer-left.is-open,
@@ -391,85 +392,102 @@ body.wa-drawer-open { overflow: hidden; }
 
 .wa-drawer-head {
   display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem;
-  padding: 1rem 1rem .85rem; border-bottom: 1px solid var(--wa-line);
+  padding: 1.05rem 1rem .9rem; border-bottom: 1px solid #e5e7eb;
 }
-.wa-drawer-brand { display: flex; align-items: center; gap: .65rem; min-width: 0; }
+.wa-drawer-brand { display: flex; align-items: center; gap: .7rem; min-width: 0; }
 .wa-drawer-brand img {
-  width: 36px; height: 36px; border-radius: 10px; object-fit: cover;
-  border: 1px solid var(--wa-line); background: #fff;
+  width: 40px; height: 40px; border-radius: 12px; object-fit: cover;
+  border: 1px solid #e5e7eb; background: #fff;
 }
-.wa-drawer-brand strong { display: block; font-size: .95rem; font-weight: 800; }
-.wa-drawer-brand small { display: block; margin-top: .15rem; color: var(--wa-muted); font-size: .72rem; font-weight: 650; }
+.wa-drawer-brand strong {
+  display: block; font-size: 1.05rem; font-weight: 850; color: var(--wa-brand);
+  letter-spacing: -.01em;
+}
+.wa-drawer-brand small {
+  display: block; margin-top: .18rem; color: #64748b; font-size: .74rem; font-weight: 650;
+}
 .wa-drawer-close {
-  width: 36px; height: 36px; border: 0; border-radius: 10px; background: #f1f5f9;
-  color: #334155; font-size: 1.35rem; line-height: 1; cursor: pointer;
+  width: 36px; height: 36px; border: 0; border-radius: 10px; background: transparent;
+  color: #334155; font-size: 1.45rem; line-height: 1; cursor: pointer;
 }
 .wa-drawer-nav {
-  flex: 1; overflow: auto; padding: .65rem .7rem; display: grid; gap: .25rem;
-  align-content: start;
+  flex: 1; overflow: auto; padding: .15rem 1rem 0;
+  display: flex; flex-direction: column; align-content: start;
 }
 .wa-drawer-nav > a,
+.wa-drawer-group {
+  border-bottom: 1px solid #eef2f7;
+}
+.wa-drawer-nav > a:last-child,
+.wa-drawer-group:last-child { border-bottom: 0; }
+.wa-drawer-nav > a,
 .wa-drawer-parent {
-  display: flex; align-items: center; gap: .7rem; min-height: 46px; width: 100%;
-  padding: .55rem .7rem; border-radius: 12px; text-decoration: none;
-  color: var(--wa-ink); font: inherit; font-size: .9rem; font-weight: 750;
+  display: flex; align-items: center; gap: .75rem; min-height: 52px; width: 100%;
+  padding: .85rem .1rem; border-radius: 0; text-decoration: none;
+  color: #0f172a; font: inherit; font-size: .95rem; font-weight: 750;
   background: transparent; border: 0; text-align: right; cursor: pointer;
 }
 .wa-drawer-nav > a:hover,
-.wa-drawer-parent:hover { background: #fff4f0; color: var(--wa-brand); }
+.wa-drawer-parent:hover { color: var(--wa-brand); background: transparent; }
 .wa-drawer-nav > a.active,
 .wa-drawer-parent.active {
-  background: color-mix(in srgb, var(--wa-brand) 12%, #fff);
+  background: transparent;
   color: var(--wa-brand);
 }
-.wa-drawer-group { display: grid; gap: .2rem; }
+.wa-drawer-group { display: grid; gap: 0; }
 .wa-drawer-caret {
-  margin-right: auto; font-style: normal; font-size: .72rem; opacity: .6;
-  transition: transform .18s ease;
+  margin-right: auto; font-style: normal; font-size: .72rem; opacity: .55;
+  transition: transform .18s ease; color: #64748b;
 }
-.wa-drawer-group.is-open .wa-drawer-caret { transform: rotate(180deg); }
+.wa-drawer-group.is-open .wa-drawer-caret { transform: rotate(180deg); color: var(--wa-brand); }
 .wa-drawer-sub {
-  display: grid; gap: .1rem; margin: 0 .2rem .2rem .15rem;
-  padding: .15rem .15rem .3rem .45rem;
-  border-right: 2px solid color-mix(in srgb, var(--wa-brand) 28%, #fff);
+  display: grid; gap: .05rem; margin: 0 0 .35rem;
+  padding: .05rem .1rem .35rem .45rem;
+  border-right: 2px solid color-mix(in srgb, var(--wa-brand) 30%, #fff);
 }
 .wa-drawer-sub[hidden] { display: none !important; }
 .wa-drawer-sub a {
-  display: block; padding: .5rem .65rem; border-radius: 10px;
-  color: #334155; text-decoration: none; font-size: .82rem; font-weight: 700;
+  display: block; padding: .55rem .45rem; border-radius: 10px;
+  color: #334155; text-decoration: none; font-size: .86rem; font-weight: 700;
 }
 .wa-drawer-sub a:hover { background: #fff4f0; color: var(--wa-brand); }
 .wa-drawer-sub-all { color: var(--wa-brand) !important; }
 .wa-drawer-ico {
-  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px;
-  background: #f8fafc; border: 1px solid var(--wa-line); font-style: normal; font-size: .95rem;
+  display: grid; place-items: center; width: 1.35rem; height: 1.35rem;
+  background: transparent; border: 0; font-style: normal; font-size: 1.05rem;
+  color: #475569; flex: 0 0 auto;
 }
 .wa-drawer-nav > a.active .wa-drawer-ico,
-.wa-drawer-parent.active .wa-drawer-ico {
-  background: color-mix(in srgb, var(--wa-brand) 16%, #fff);
-  border-color: color-mix(in srgb, var(--wa-brand) 35%, #fff);
-}
+.wa-drawer-parent.active .wa-drawer-ico,
+.wa-drawer-group.is-open .wa-drawer-ico { color: var(--wa-brand); }
 .wa-drawer-badge {
   margin-right: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
   display: inline-grid; place-items: center; background: var(--wa-brand); color: #fff;
   font-size: .68rem; font-weight: 800;
 }
 .wa-drawer-foot {
-  padding: .75rem 1rem 1rem; border-top: 1px solid var(--wa-line);
+  padding: .85rem 1rem 1.1rem; border-top: 1px solid #e5e7eb;
 }
 .wa-drawer-foot a {
-  display: block; text-align: center; text-decoration: none; color: var(--wa-muted);
-  font-size: .78rem; font-weight: 700; padding: .55rem; border-radius: 10px; background: #f8fafc;
+  display: flex; align-items: center; justify-content: center; gap: .45rem;
+  text-decoration: none; color: #64748b;
+  font-size: .84rem; font-weight: 750; padding: .45rem; background: transparent;
 }
+.wa-drawer-foot a em { font-style: normal; font-size: .95rem; }
 .wa-drawer-foot a:hover { color: var(--wa-brand); }
 
-.wa-anim .wa-drawer.is-open .wa-drawer-nav a {
-  animation: waRise .35s ease both;
+.wa-anim .wa-drawer.is-open .wa-drawer-nav > a,
+.wa-anim .wa-drawer.is-open .wa-drawer-group {
+  animation: waRise .32s ease both;
 }
-.wa-anim .wa-drawer.is-open .wa-drawer-nav a:nth-child(2) { animation-delay: .03s; }
-.wa-anim .wa-drawer.is-open .wa-drawer-nav a:nth-child(3) { animation-delay: .06s; }
-.wa-anim .wa-drawer.is-open .wa-drawer-nav a:nth-child(4) { animation-delay: .09s; }
-.wa-anim .wa-drawer.is-open .wa-drawer-nav a:nth-child(5) { animation-delay: .12s; }
+.wa-anim .wa-drawer.is-open .wa-drawer-nav > a:nth-child(2),
+.wa-anim .wa-drawer.is-open .wa-drawer-group:nth-child(2) { animation-delay: .03s; }
+.wa-anim .wa-drawer.is-open .wa-drawer-nav > a:nth-child(3),
+.wa-anim .wa-drawer.is-open .wa-drawer-group:nth-child(3) { animation-delay: .06s; }
+.wa-anim .wa-drawer.is-open .wa-drawer-nav > a:nth-child(4),
+.wa-anim .wa-drawer.is-open .wa-drawer-group:nth-child(4) { animation-delay: .09s; }
+.wa-anim .wa-drawer.is-open .wa-drawer-nav > a:nth-child(5),
+.wa-anim .wa-drawer.is-open .wa-drawer-group:nth-child(5) { animation-delay: .12s; }
 
 .wa-tabbar {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;

@@ -17,8 +17,8 @@
       <meta property="og:url" content="{{ url()->current() }}"><meta property="og:type" content="website">
     @endif
     <title>@yield('title', \App\Models\Setting::getValue('shop_name', config('app.name', 'فروشگاه'))) </title>
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=50">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=40">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=51">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=41">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=4">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
