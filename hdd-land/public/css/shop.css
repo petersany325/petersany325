@@ -897,7 +897,7 @@ input:focus, select:focus, textarea:focus {
   -webkit-font-smoothing:antialiased;
 }
 .hl-pdp-hero{
-  display:grid;grid-template-columns:280px minmax(0,1fr);gap:0;align-items:stretch;
+  display:grid;grid-template-columns:var(--hl-pdp-media-w,280px) minmax(0,1fr);gap:0;align-items:stretch;
   background:linear-gradient(180deg,#fff 0%, #f7f8fa 100%);
   border:1px solid rgba(15,23,42,.07);border-radius:16px;overflow:hidden;
   box-shadow:0 8px 22px rgba(15,23,42,.05);
@@ -911,7 +911,16 @@ input:focus, select:focus, textarea:focus {
 }
 .hl-pdp-main{
   width:100%;max-width:240px;height:auto!important;max-height:220px;
-  object-fit:contain;background:transparent;display:block;margin:0 auto;
+  object-fit:var(--hl-pdp-fit,contain);background:transparent;display:block;margin:0 auto;
+}
+.hl-pdp--roomy .hl-pdp-info{gap:.55rem;padding:1.25rem 1.35rem}
+.hl-pdp--roomy .hl-pdp-info h1{font-size:clamp(1.15rem,1.8vw,1.4rem)}
+.hl-pdp--roomy .hl-pdp-price strong{font-size:1.2rem}
+.hl-pdp--roomy .hl-btn{min-height:40px;font-size:.9rem}
+.hl-native-serial{display:grid;gap:.3rem;font-size:.78rem;font-weight:750;color:#475569}
+.hl-native-serial select{
+  min-height:40px;border:1px solid rgba(15,23,42,.12);border-radius:10px;
+  padding:.45rem .65rem;font:inherit;background:#fff
 }
 .hl-pdp-thumbs{display:flex;gap:.35rem;flex-wrap:wrap;padding:.45rem .7rem .7rem;justify-content:center}
 .hl-pdp-thumbs button{

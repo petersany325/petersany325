@@ -1,12 +1,18 @@
 @extends('web-app::layout')
 @section('content')
 @php
+  use Plugins\Catalog\src\Support\StorefrontDisplaySettings;
+  $ds = StorefrontDisplaySettings::get();
+  $brandLabel = StorefrontDisplaySettings::brandLabel($ds);
   $fmt = fn ($n) => number_format((int) $n);
   $p = $product;
   $serials = $availableSerials ?? collect();
   $needsSerial = !empty($p->requires_serial);
   $hasW = !empty($p->has_warranty) || (!empty($p->warranty_type) && $p->warranty_type !== 'none') || !empty($p->warranty_months);
   $chips = array_filter([$p->capacity ?? null, $p->interface ?? null, $p->form_factor ?? null, $p->brand ?? null]);
+  $useCustomDd = !empty($ds['wa_custom_serial_dropdown']);
+  $rawDesc = trim((string) ($p->description ?? ''));
+  $descHasHtml = $rawDesc !== '' && $rawDesc !== strip_tags($rawDesc);
 @endphp
 
 <a class="wa-back" href="{{ url('/app/shop') }}">‹ بازگشت به فروشگاه</a>
@@ -20,14 +26,16 @@
 </div>
 
 <div class="wa-product-body">
-  <div class="wa-pdp-brand">سرزمین هارد</div>
+  @if(!empty($ds['wa_show_brand']))
+    <div class="wa-pdp-brand">{{ $brandLabel }}</div>
+  @endif
   <h1>{{ $p->name }}</h1>
 
-  @if($chips)
+  @if(!empty($ds['wa_show_specs_chips']) && $chips)
     <div class="wa-tags">
       @foreach($chips as $chip)<span>{{ $chip }}</span>@endforeach
     </div>
-  @elseif(!empty($p->brand) || !empty($p->sku))
+  @elseif(!empty($ds['wa_show_specs_chips']) && (!empty($p->brand) || !empty($p->sku)))
     <div class="wa-tags">
       @if(!empty($p->brand))<span>{{ $p->brand }}</span>@endif
       @if(!empty($p->sku))<span>SKU: {{ $p->sku }}</span>@endif
@@ -47,8 +55,12 @@
 
   @if(!empty($p->short_description))
     <p class="wa-desc">{{ $p->short_description }}</p>
-  @elseif(!empty($p->description))
-    <p class="wa-desc">{{ \Illuminate\Support\Str::limit(strip_tags($p->description), 280) }}</p>
+  @elseif($rawDesc !== '')
+    @if(!empty($ds['wa_render_html_description']) && $descHasHtml)
+      <div class="wa-desc wa-desc-html">{!! \App\Support\SafeHtml::clean($rawDesc) !!}</div>
+    @else
+      <p class="wa-desc">{{ \Illuminate\Support\Str::limit(strip_tags($rawDesc), 280) }}</p>
+    @endif
   @endif
 
   @if($needsSerial && $serials->count() > 0)
@@ -56,27 +68,39 @@
       @csrf
       <input type="hidden" name="product_id" value="{{ $p->id }}">
       <input type="hidden" name="qty" value="1">
-      <div class="hl-dd wa-dd" data-hl-dd>
-        <input type="hidden" name="serial_id" value="" required data-hl-dd-input>
-        <button type="button" class="hl-dd-trigger" data-hl-dd-trigger aria-expanded="false">
-          <span>
-            <small>سریال قطعه</small>
-            <strong data-hl-dd-label>انتخاب کنید…</strong>
-          </span>
-          <em class="hl-dd-caret" aria-hidden="true"></em>
-        </button>
-        <div class="hl-dd-panel" data-hl-dd-panel hidden>
-          @foreach($serials as $sn)
-            <button type="button" class="hl-dd-option" data-hl-dd-option data-value="{{ $sn->id }}" data-label="{{ $sn->serial }}">
-              <strong dir="ltr">{{ $sn->serial }}</strong>
-              <small>
-                @if(!empty($sn->warranty_company)){{ $sn->warranty_company }}@endif
-                @if(!empty($sn->company_warranty_months)) · {{ $sn->company_warranty_months }} ماه@endif
-              </small>
-            </button>
-          @endforeach
+      @if($useCustomDd)
+        <div class="hl-dd wa-dd" data-hl-dd>
+          <input type="hidden" name="serial_id" value="" required data-hl-dd-input>
+          <button type="button" class="hl-dd-trigger" data-hl-dd-trigger aria-expanded="false">
+            <span>
+              <small>سریال قطعه</small>
+              <strong data-hl-dd-label>انتخاب کنید…</strong>
+            </span>
+            <em class="hl-dd-caret" aria-hidden="true"></em>
+          </button>
+          <div class="hl-dd-panel" data-hl-dd-panel hidden>
+            @foreach($serials as $sn)
+              <button type="button" class="hl-dd-option" data-hl-dd-option data-value="{{ $sn->id }}" data-label="{{ $sn->serial }}">
+                <strong dir="ltr">{{ $sn->serial }}</strong>
+                <small>
+                  @if(!empty($sn->warranty_company)){{ $sn->warranty_company }}@endif
+                  @if(!empty($sn->company_warranty_months)) · {{ $sn->company_warranty_months }} ماه@endif
+                </small>
+              </button>
+            @endforeach
+          </div>
         </div>
-      </div>
+      @else
+        <label class="wa-native-serial">
+          سریال قطعه
+          <select name="serial_id" required>
+            <option value="">انتخاب کنید…</option>
+            @foreach($serials as $sn)
+              <option value="{{ $sn->id }}">{{ $sn->serial }}</option>
+            @endforeach
+          </select>
+        </label>
+      @endif
       <p class="wa-serial-hint">سریال انتخابی در کارتابل «سریال‌ها و گارانتی من» می‌ماند.</p>
       <div class="wa-buy-actions">
         @if(!empty($s['product_show_add_cart']))
@@ -133,6 +157,7 @@
 </div>
 @endif
 
+@if($useCustomDd)
 <script src="{{ asset('js/hl-select.js') }}?v=2" defer></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
@@ -152,4 +177,5 @@
     });
   });
 </script>
+@endif
 @endsection

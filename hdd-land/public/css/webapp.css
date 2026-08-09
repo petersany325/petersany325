@@ -314,6 +314,14 @@ img:not([class]), video:not([class]) { height: auto; }
 .wa-dd .hl-dd-option:hover,
 .wa-dd .hl-dd-option.is-selected { background: rgba(226,61,18,.08); }
 .wa-dd { position: relative; z-index: 6; }
+.wa-native-serial { display: grid; gap: .3rem; font-size: .8rem; font-weight: 750; color: #475569; }
+.wa-native-serial select {
+  min-height: 42px; border: 1px solid var(--wa-line); border-radius: 12px;
+  padding: .55rem .7rem; font: inherit; background: #fff;
+}
+.wa-desc-html { font-size: .88rem; line-height: 1.65; }
+.wa-desc-html p { margin: 0 0 .55rem; }
+.wa-desc-html ul { margin: .2rem 0 .55rem; padding-right: 1.05rem; }
 
 .wa-cart-list { display: grid; gap: .55rem; padding: 0 1rem; }
 .wa-cart-row {

@@ -4,6 +4,10 @@ use Illuminate\Support\Facades\Route;
 use Plugins\Catalog\src\Http\Controllers\Admin\CategoryController;
 use Plugins\Catalog\src\Http\Controllers\Admin\MediaManagerController;
 use Plugins\Catalog\src\Http\Controllers\Admin\ProductController;
+use Plugins\Catalog\src\Http\Controllers\Admin\StorefrontDisplayController;
+
+Route::get('products/display-settings', [StorefrontDisplayController::class, 'edit'])->name('products.display-settings');
+Route::post('products/display-settings', [StorefrontDisplayController::class, 'update'])->name('products.display-settings.save');
 
 Route::resource('products', ProductController::class)->except(['show']);
 Route::get('products/{product}/serials', [\Plugins\Catalog\src\Http\Controllers\Admin\ProductSerialController::class, 'index'])->name('products.serials');
