@@ -437,9 +437,8 @@ class Plugin extends BasePlugin
     /** @return list<array{label:string,url:string}> */
     protected static function shopDrawerChildren(): array
     {
-        $children = [
-            ['label' => 'همه محصولات', 'url' => '/app/shop'],
-        ];
+        // Parent row already exposes "همهٔ فروشگاه" in the drawer UI.
+        $children = [];
         try {
             if (! \Illuminate\Support\Facades\Schema::hasTable('categories')) {
                 return $children;

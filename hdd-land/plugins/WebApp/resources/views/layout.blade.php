@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="{{ $iconSrc }}">
   <link rel="icon" type="image/png" sizes="192x192" href="{{ $iconSrc }}">
   <title>{{ $title ?? ($s['app_name'] ?? 'سرزمین هارد') }}</title>
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=11">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=12">
 </head>
 @php
   $anim = !empty($s['animations']);
@@ -251,7 +251,7 @@
     drawerEnabled: @json($drawerOn)
   };
 </script>
-<script src="{{ asset('js/webapp.js') }}?v=11" defer></script>
+<script src="{{ asset('js/webapp.js') }}?v=12" defer></script>
 @php
   \Illuminate\Support\Facades\View::addNamespace('smart-chat', base_path('plugins/SmartChat/resources/views'));
 @endphp

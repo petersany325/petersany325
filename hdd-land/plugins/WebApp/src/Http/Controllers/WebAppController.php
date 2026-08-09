@@ -39,7 +39,17 @@ class WebAppController extends Controller
 
         $q = trim((string) $request->input('q', ''));
         $cat = trim((string) $request->input('cat', ''));
-        $products = $this->products((int) ($s['shop_per_page'] ?? 24), $q, $cat !== '' ? $cat : null);
+        $partType = trim((string) $request->input('part_type', ''));
+        $brand = trim((string) $request->input('brand', ''));
+        $products = $this->products(
+            (int) ($s['shop_per_page'] ?? 24),
+            $q,
+            $cat !== '' ? $cat : null,
+            0,
+            0,
+            $partType !== '' ? $partType : null,
+            $brand !== '' ? $brand : null,
+        );
 
         return view('web-app::pages.shop', $this->viewData($s, [
             'tab' => 'shop',
@@ -232,7 +242,7 @@ class WebAppController extends Controller
         $s = Plugin::settings();
         $offline = ! empty($s['offline_cache']);
         $version = 'webapp-v2-'.substr(md5(json_encode([
-            $s['app_name'] ?? '', $s['theme_color'] ?? '', $s['enabled'] ?? false, '2',
+            $s['app_name'] ?? '', $s['theme_color'] ?? '', $s['enabled'] ?? false, 'drawer-sub-v12',
         ])), 0, 8);
         $offlineJs = $this->jsBool($offline);
 
@@ -354,8 +364,15 @@ JS;
         }
     }
 
-    protected function products(int $limit, string $search = '', ?string $catSlug = null, int $categoryId = 0, int $excludeId = 0)
-    {
+    protected function products(
+        int $limit,
+        string $search = '',
+        ?string $catSlug = null,
+        int $categoryId = 0,
+        int $excludeId = 0,
+        ?string $partType = null,
+        ?string $brand = null,
+    ) {
         try {
             if (! Schema::hasTable('products')) {
                 return collect();
@@ -387,6 +404,12 @@ JS;
             }
             if ($categoryId > 0) {
                 $q->where('category_id', $categoryId);
+            }
+            if ($partType && Schema::hasColumn('products', 'part_type')) {
+                $q->where('part_type', $partType);
+            }
+            if ($brand && Schema::hasColumn('products', 'brand')) {
+                $q->where('brand', 'like', '%'.$brand.'%');
             }
             if ($excludeId > 0) {
                 $q->where('id', '!=', $excludeId);

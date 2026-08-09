@@ -239,10 +239,22 @@
         e.stopPropagation();
         var group = btn.closest('[data-wa-sub]');
         if (!group) return;
+        var willOpen = !group.classList.contains('is-open');
+
+        // Accordion: close other groups so one submenu stays readable on mobile.
+        drawer.querySelectorAll('[data-wa-sub].is-open').forEach(function (other) {
+          if (other === group) return;
+          other.classList.remove('is-open');
+          var otherBtn = other.querySelector('[data-wa-sub-toggle]');
+          var otherPanel = other.querySelector('.wa-drawer-sub');
+          if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
+          if (otherPanel) otherPanel.hidden = true;
+        });
+
+        group.classList.toggle('is-open', willOpen);
+        btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
         var panel = group.querySelector('.wa-drawer-sub');
-        var open = group.classList.toggle('is-open');
-        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-        if (panel) panel.hidden = !open;
+        if (panel) panel.hidden = !willOpen;
       });
     });
   })();
