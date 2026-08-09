@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="{{ $iconSrc }}">
   <link rel="icon" type="image/png" sizes="192x192" href="{{ $iconSrc }}">
   <title>{{ $title ?? ($s['app_name'] ?? 'سرزمین هارد') }}</title>
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=10">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=11">
 </head>
 @php
   $anim = !empty($s['animations']);
@@ -80,19 +80,39 @@
     @foreach($drawerMenu as $item)
       @php
         $href = str_starts_with($item['url'], 'http') ? $item['url'] : url($item['url']);
+        $kids = collect($item['children'] ?? [])->filter(fn ($c) => !empty($c['label']) && !empty($c['url']))->values();
+        $hasKids = $kids->isNotEmpty();
         $active = false;
         if (($item['key'] ?? '') === 'home' && ($tab ?? '') === 'home') $active = true;
         if (($item['key'] ?? '') === 'shop' && ($tab ?? '') === 'shop') $active = true;
         if (($item['key'] ?? '') === 'cart' && ($tab ?? '') === 'cart') $active = true;
         if (($item['key'] ?? '') === 'account' && ($tab ?? '') === 'account') $active = true;
+        $openByDefault = $active && $hasKids;
       @endphp
-      <a href="{{ $href }}" class="{{ $active ? 'active' : '' }}">
-        <i class="wa-drawer-ico" aria-hidden="true">{{ $item['icon'] ?? '•' }}</i>
-        <span>{{ $item['label'] }}</span>
-        @if(($item['key'] ?? '') === 'cart' && ($cartCount ?? 0) > 0)
-          <b class="wa-drawer-badge">{{ $cartCount }}</b>
-        @endif
-      </a>
+      @if($hasKids)
+        <div class="wa-drawer-group {{ $openByDefault ? 'is-open' : '' }}" data-wa-sub>
+          <button type="button" class="wa-drawer-parent {{ $active ? 'active' : '' }}" data-wa-sub-toggle aria-expanded="{{ $openByDefault ? 'true' : 'false' }}">
+            <i class="wa-drawer-ico" aria-hidden="true">{{ $item['icon'] ?? '•' }}</i>
+            <span>{{ $item['label'] }}</span>
+            <em class="wa-drawer-caret" aria-hidden="true">▾</em>
+          </button>
+          <div class="wa-drawer-sub" @if(!$openByDefault) hidden @endif>
+            <a href="{{ $href }}" class="wa-drawer-sub-all">همهٔ {{ $item['label'] }}</a>
+            @foreach($kids as $child)
+              @php $ch = str_starts_with($child['url'], 'http') ? $child['url'] : url($child['url']); @endphp
+              <a href="{{ $ch }}">{{ $child['label'] }}</a>
+            @endforeach
+          </div>
+        </div>
+      @else
+        <a href="{{ $href }}" class="{{ $active ? 'active' : '' }}">
+          <i class="wa-drawer-ico" aria-hidden="true">{{ $item['icon'] ?? '•' }}</i>
+          <span>{{ $item['label'] }}</span>
+          @if(($item['key'] ?? '') === 'cart' && ($cartCount ?? 0) > 0)
+            <b class="wa-drawer-badge">{{ $cartCount }}</b>
+          @endif
+        </a>
+      @endif
     @endforeach
   </nav>
   @if(!empty($s['drawer_show_full_site']))
@@ -125,7 +145,23 @@
 @if(!empty($s['show_site_menu']) && !empty($siteMenu))
 <nav class="wa-site-menu" aria-label="منوی سایت">
   @foreach($siteMenu as $m)
-    <a href="{{ str_starts_with($m['url'], 'http') ? $m['url'] : url($m['url']) }}">{{ $m['label'] }}</a>
+    @php
+      $mHref = str_starts_with($m['url'], 'http') ? $m['url'] : url($m['url']);
+      $mKids = collect($m['children'] ?? [])->filter(fn ($c) => !empty($c['label']) && !empty($c['url']))->values();
+    @endphp
+    @if($mKids->isNotEmpty())
+      <details class="wa-site-dd">
+        <summary>{{ $m['label'] }}</summary>
+        <div class="wa-site-dd-panel">
+          <a href="{{ $mHref }}">همه</a>
+          @foreach($mKids as $child)
+            <a href="{{ str_starts_with($child['url'], 'http') ? $child['url'] : url($child['url']) }}">{{ $child['label'] }}</a>
+          @endforeach
+        </div>
+      </details>
+    @else
+      <a href="{{ $mHref }}">{{ $m['label'] }}</a>
+    @endif
   @endforeach
 </nav>
 @endif
@@ -215,7 +251,7 @@
     drawerEnabled: @json($drawerOn)
   };
 </script>
-<script src="{{ asset('js/webapp.js') }}?v=10" defer></script>
+<script src="{{ asset('js/webapp.js') }}?v=11" defer></script>
 @php
   \Illuminate\Support\Facades\View::addNamespace('smart-chat', base_path('plugins/SmartChat/resources/views'));
 @endphp

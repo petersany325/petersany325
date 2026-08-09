@@ -380,7 +380,9 @@ JS;
             if ($catSlug && Schema::hasTable('categories')) {
                 $cat = DB::table('categories')->where('slug', $catSlug)->first();
                 if ($cat) {
-                    $q->where('category_id', $cat->id);
+                    $ids = [$cat->id];
+                    $childIds = DB::table('categories')->where('parent_id', $cat->id)->pluck('id')->all();
+                    $q->whereIn('category_id', array_values(array_unique(array_merge($ids, $childIds))));
                 }
             }
             if ($categoryId > 0) {

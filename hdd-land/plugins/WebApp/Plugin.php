@@ -26,7 +26,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '2.3.1';
+        return '2.3.2';
     }
 
     public function isCore(): bool
@@ -354,13 +354,22 @@ class Plugin extends BasePlugin
      * Dedicated WebApp drawer items from admin settings (not MegaMenu clone).
      *
      * @param  array<string,mixed>|null  $s
-     * @return list<array{key:string,label:string,url:string,icon:string}>
+     * @return list<array{key:string,label:string,url:string,icon:string,children?:list<array{label:string,url:string}>}>
      */
     public static function resolveDrawerMenu(?array $s = null): array
     {
         $s = $s ?? static::settings();
         if (empty($s['drawer_menu_enabled'])) {
             return [];
+        }
+
+        $megaByLabel = [];
+        try {
+            foreach (\Plugins\WebApp\src\Support\SiteSync::menuItems(20) as $m) {
+                $megaByLabel[mb_strtolower(trim((string) ($m['label'] ?? '')))] = $m['children'] ?? [];
+            }
+        } catch (\Throwable) {
+            //
         }
 
         $keys = ['home', 'shop', 'cart', 'account', 'track', 'warranty', 'support', 'contact'];
@@ -374,11 +383,34 @@ class Plugin extends BasePlugin
             if ($label === '' || $url === '') {
                 continue;
             }
+            $children = [];
+            if ($key === 'shop') {
+                $children = static::shopDrawerChildren();
+            } elseif (in_array($key, ['track', 'warranty'], true)) {
+                $children = $megaByLabel[mb_strtolower($label)] ?? [];
+                if ($children === []) {
+                    // fallback by common mega labels
+                    foreach ($megaByLabel as $ml => $kids) {
+                        if ($key === 'track' && (str_contains($ml, 'پیگیری') || str_contains($ml, 'سفارش'))) {
+                            $children = $kids;
+                            break;
+                        }
+                        if ($key === 'warranty' && (str_contains($ml, 'گارانتی') || str_contains($ml, 'warranty'))) {
+                            $children = $kids;
+                            break;
+                        }
+                    }
+                }
+            }
+
             $out[] = [
                 'key' => $key,
                 'label' => $label,
                 'url' => $url,
                 'icon' => trim((string) ($s['drawer_'.$key.'_icon'] ?? '•')) ?: '•',
+                'children' => array_values(array_filter($children, static function ($c) {
+                    return is_array($c) && trim((string) ($c['label'] ?? '')) !== '' && trim((string) ($c['url'] ?? '')) !== '';
+                })),
             ];
         }
 
@@ -395,9 +427,64 @@ class Plugin extends BasePlugin
                 'label' => mb_substr($lab, 0, 40),
                 'url' => mb_substr($href, 0, 200),
                 'icon' => trim($ico) !== '' ? mb_substr(trim($ico), 0, 8) : '•',
+                'children' => [],
             ];
         }
 
         return $out;
+    }
+
+    /** @return list<array{label:string,url:string}> */
+    protected static function shopDrawerChildren(): array
+    {
+        $children = [
+            ['label' => 'همه محصولات', 'url' => '/app/shop'],
+        ];
+        try {
+            if (! \Illuminate\Support\Facades\Schema::hasTable('categories')) {
+                return $children;
+            }
+            $cats = \Illuminate\Support\Facades\DB::table('categories')
+                ->where('is_active', 1)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get(['id', 'name', 'slug', 'parent_id']);
+
+            // Top-level first, then their children indented by label prefix
+            $tops = $cats->whereNull('parent_id')->values();
+            foreach ($tops as $cat) {
+                $slug = trim((string) ($cat->slug ?? ''));
+                $name = trim((string) ($cat->name ?? ''));
+                if ($slug === '' || $name === '') {
+                    continue;
+                }
+                $children[] = [
+                    'label' => $name,
+                    'url' => '/app/shop?cat='.rawurlencode($slug),
+                ];
+                foreach ($cats->where('parent_id', $cat->id) as $child) {
+                    $cSlug = trim((string) ($child->slug ?? ''));
+                    $cName = trim((string) ($child->name ?? ''));
+                    if ($cSlug === '' || $cName === '') {
+                        continue;
+                    }
+                    $children[] = [
+                        'label' => '— '.$cName,
+                        'url' => '/app/shop?cat='.rawurlencode($cSlug),
+                    ];
+                }
+            }
+        } catch (\Throwable) {
+            //
+        }
+
+        // Useful brand shortcuts for the mobile shop
+        $children[] = ['label' => 'وسترن دیجیتال', 'url' => '/app/shop?q='.rawurlencode('Western Digital')];
+        $children[] = ['label' => 'سیگیت', 'url' => '/app/shop?q='.rawurlencode('Seagate')];
+        $children[] = ['label' => 'توشیبا', 'url' => '/app/shop?q='.rawurlencode('Toshiba')];
+        $children[] = ['label' => 'سامسونگ', 'url' => '/app/shop?q='.rawurlencode('Samsung')];
+        $children[] = ['label' => 'ای‌دیتا', 'url' => '/app/shop?q='.rawurlencode('ADATA')];
+
+        return $children;
     }
 }

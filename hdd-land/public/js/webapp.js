@@ -232,5 +232,18 @@
     drawer.querySelectorAll('a').forEach(function (a) {
       a.addEventListener('click', function () { closeDrawer(); });
     });
+
+    drawer.querySelectorAll('[data-wa-sub-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var group = btn.closest('[data-wa-sub]');
+        if (!group) return;
+        var panel = group.querySelector('.wa-drawer-sub');
+        var open = group.classList.toggle('is-open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (panel) panel.hidden = !open;
+      });
+    });
   })();
 })();

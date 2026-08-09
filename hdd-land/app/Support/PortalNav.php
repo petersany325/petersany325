@@ -219,6 +219,11 @@ class PortalNav
             return $mapped;
         }
 
+        // Category pages → in-app shop filter
+        if (preg_match('#^/categor(?:y|ies)/([^/?#]+)$#', $path, $m)) {
+            return '/app/shop?cat='.rawurlencode(urldecode($m[1]));
+        }
+
         return $url;
     }
 
