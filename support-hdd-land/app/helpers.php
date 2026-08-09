@@ -39,8 +39,35 @@ if (! function_exists('jalali_convert')) {
     }
 }
 
-if (! function_exists('jalali_like')) {
-    function jalali_like($date, bool $withTime = true): string
+if (! function_exists('app_calendar_type')) {
+    function app_calendar_type(): string
+    {
+        return \App\Support\CalendarSettings::type();
+    }
+}
+
+if (! function_exists('app_calendar_is_jalali')) {
+    function app_calendar_is_jalali(): bool
+    {
+        return \App\Support\CalendarSettings::isJalali();
+    }
+}
+
+if (! function_exists('to_persian_digits')) {
+    function to_persian_digits(?string $value): string
+    {
+        return strtr((string) $value, [
+            '0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴',
+            '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹',
+        ]);
+    }
+}
+
+if (! function_exists('format_app_date')) {
+    /**
+     * Display date according to admin calendar setting (Jalali default).
+     */
+    function format_app_date($date, bool $withTime = true): string
     {
         if ($date instanceof \Illuminate\Support\Optional || blank($date)) {
             return '—';
@@ -48,20 +75,35 @@ if (! function_exists('jalali_like')) {
 
         try {
             $dt = \Illuminate\Support\Carbon::parse($date)->timezone(config('app.timezone', 'Asia/Tehran'));
-            [$jy, $jm, $jd] = jalali_convert((int) $dt->format('Y'), (int) $dt->format('n'), (int) $dt->format('j'));
-            $base = sprintf('%04d/%02d/%02d', $jy, $jm, $jd);
+            if (app_calendar_is_jalali()) {
+                [$y, $m, $d] = jalali_convert((int) $dt->format('Y'), (int) $dt->format('n'), (int) $dt->format('j'));
+                $base = sprintf('%04d/%02d/%02d', $y, $m, $d);
+            } else {
+                $base = $dt->format('Y/m/d');
+            }
+            $out = $withTime ? $base.' '.$dt->format('H:i') : $base;
+            if (\App\Support\CalendarSettings::usePersianDigits()) {
+                $out = to_persian_digits($out);
+            }
 
-            return $withTime ? $base.' '.$dt->format('H:i') : $base;
+            return $out;
         } catch (\Throwable) {
             return '—';
         }
     }
 }
 
+if (! function_exists('jalali_like')) {
+    function jalali_like($date, bool $withTime = true): string
+    {
+        return format_app_date($date, $withTime);
+    }
+}
+
 if (! function_exists('jalali_date')) {
     function jalali_date($date): string
     {
-        return jalali_like($date, false);
+        return format_app_date($date, false);
     }
 }
 
@@ -143,12 +185,28 @@ if (! function_exists('parse_jalali_or_gregorian_date')) {
 }
 
 if (! function_exists('jalali_input')) {
-    /** Format date for Shamsi text inputs: 1404/05/16 */
+    /**
+     * Format date for calendar text inputs.
+     * Always ASCII digits (input-friendly): Jalali 1404/05/16 or Gregorian 2026/08/09.
+     */
     function jalali_input($date): string
     {
-        $v = jalali_date($date);
+        if ($date instanceof \Illuminate\Support\Optional || blank($date)) {
+            return '';
+        }
 
-        return $v === '—' ? '' : $v;
+        try {
+            $dt = \Illuminate\Support\Carbon::parse($date)->timezone(config('app.timezone', 'Asia/Tehran'));
+            if (app_calendar_is_jalali()) {
+                [$y, $m, $d] = jalali_convert((int) $dt->format('Y'), (int) $dt->format('n'), (int) $dt->format('j'));
+
+                return sprintf('%04d/%02d/%02d', $y, $m, $d);
+            }
+
+            return $dt->format('Y/m/d');
+        } catch (\Throwable) {
+            return '';
+        }
     }
 }
 

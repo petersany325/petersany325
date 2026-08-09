@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-calendar="{{ app_calendar_type() }}">
 <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -8,6 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="app-calendar" content="{{ app_calendar_type() }}">
     <link rel="icon" href="{{ asset('favicon.ico') }}?v=hd1" type="image/x-icon">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/favicon-32.png') }}?v=hd1">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('images/favicon-16.png') }}?v=hd1">
@@ -16,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp17">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp18">
     <script>
     (function () {
         try {
@@ -240,7 +241,7 @@
 @else
     @yield('content')
 @endauth
-<script src="{{ asset('js/app.js') }}?v=erp17"></script>
+<script src="{{ asset('js/app.js') }}?v=erp18"></script>
 <script>
 (function () {
     var bar = document.getElementById('win-menubar');

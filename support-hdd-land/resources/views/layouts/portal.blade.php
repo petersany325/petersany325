@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-calendar="{{ app_calendar_type() }}">
 <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#2b3340">
@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="app-calendar" content="{{ app_calendar_type() }}">
     <title>@yield('title', 'کارتابل مشتری | '.shop_name())</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}?v=hd1" type="image/x-icon">
     <link rel="manifest" href="{{ asset('pwa/manifest.json') }}?v=hd1">
@@ -14,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/portal.css') }}?v=p7">
+    <link rel="stylesheet" href="{{ asset('css/portal.css') }}?v=p8">
 </head>
 <body class="@yield('body_class', 'portal-body')">
 @if(session('success') || session('error') || $errors->any())

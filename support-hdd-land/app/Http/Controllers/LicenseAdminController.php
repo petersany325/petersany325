@@ -113,7 +113,7 @@ class LicenseAdminController extends Controller
             'customer_email' => ['nullable', 'email', 'max:160'],
             'domain_hint' => ['nullable', 'string', 'max:190'],
             'plan_code' => ['required', 'string', 'max:30'],
-            'expires_at' => ['nullable', 'date'],
+            'expires_at' => ['nullable', 'string', 'max:20'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'send_sms' => ['nullable', 'boolean'],
             'start_from' => ['nullable', 'in:issue,activate'],
@@ -134,7 +134,7 @@ class LicenseAdminController extends Controller
             : null;
 
         $startFrom = $data['start_from'] ?? 'activate';
-        $expiresAt = $data['expires_at'] ?? null;
+        $expiresAt = resolve_request_date($data['expires_at'] ?? null);
         if (! $expiresAt && $startFrom === 'issue' && ! empty($plan['months'])) {
             $expiresAt = now()->addMonths((int) $plan['months'])->toDateString();
         }

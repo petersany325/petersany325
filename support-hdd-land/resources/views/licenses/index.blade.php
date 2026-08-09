@@ -103,7 +103,7 @@
                 </div>
                 <div>
                     <label>انقضای دستی (اختیاری — جایگزین پلن)</label>
-                    <input type="date" name="expires_at" value="{{ old('expires_at') }}">
+                    @include('partials.jalali-date', ['name' => 'expires_at', 'value' => old('expires_at')])
                 </div>
                 <div>
                     <label>یادداشت</label>

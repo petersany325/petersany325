@@ -5,10 +5,11 @@
 
 @section('content')
 @php
-    $dateStr = $date->toDateString();
-    $prev = $date->copy()->subDay()->toDateString();
-    $next = $date->copy()->addDay()->toDateString();
-    $today = now('Asia/Tehran')->toDateString();
+    $dateStr = jalali_input($date) ?: $date->toDateString();
+    $prev = jalali_input($date->copy()->subDay()) ?: $date->copy()->subDay()->toDateString();
+    $next = jalali_input($date->copy()->addDay()) ?: $date->copy()->addDay()->toDateString();
+    $today = jalali_input(now('Asia/Tehran')) ?: now('Asia/Tehran')->toDateString();
+    $workDateGregorian = $date->toDateString();
 @endphp
 <div class="daybook">
     <section class="daybook-hero panel">
@@ -65,7 +66,7 @@
             <h3>ثبت رویداد جدید</h3>
             <form method="POST" action="{{ route('daily-logs.store') }}" class="daybook-form">
                 @csrf
-                <input type="hidden" name="work_date" value="{{ $dateStr }}">
+                <input type="hidden" name="work_date" value="{{ $workDateGregorian }}">
                 <input type="hidden" name="user_id" value="{{ $employee->id }}">
 
                 <div class="daybook-cats" id="daybook-cats">

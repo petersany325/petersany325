@@ -3,8 +3,9 @@
 @section('page_title', 'تنظیمات')
 @section('window_title', 'پنجره تنظیمات سیستم')
 @section('content')
-<div data-workspace-tabs data-active-tab="{{ $activeTab ?? 'lookups' }}">
+<div data-workspace-tabs data-active-tab="{{ $activeTab ?? 'general' }}">
     <div class="ws-tabs">
+        <button type="button" class="{{ $activeTab === 'general' ? 'active' : '' }}" data-ws-tab="general">عمومی / تقویم</button>
         <button type="button" class="{{ $activeTab === 'lookups' ? 'active' : '' }}" data-ws-tab="lookups">منوهای پذیرش</button>
         <button type="button" class="{{ $activeTab === 'faults' ? 'active' : '' }}" data-ws-tab="faults">انواع ایراد</button>
         <button type="button" class="{{ $activeTab === 'referrals' ? 'active' : '' }}" data-ws-tab="referrals">نحوه آشنایی</button>
@@ -15,6 +16,40 @@
         <button type="button" class="{{ $activeTab === 'users' ? 'active' : '' }}" data-ws-tab="users">کارتابل کارمند</button>
     </div>
     <div class="ws-panes">
+        <div class="ws-pane {{ $activeTab === 'general' ? 'active' : '' }}" data-ws-pane="general">
+            <h2>تنظیمات عمومی و تقویم</h2>
+            <p class="lead">نوع نمایش تاریخ در کل سیستم (قبض، جستجو، گزارش، چاپ، پورتال و …) از اینجا کنترل می‌شود. ذخیره در دیتابیس همیشه میلادی می‌ماند.</p>
+            <form method="POST" action="{{ route('settings.general') }}" class="panel">
+                @csrf
+                <input type="hidden" name="settings_tab" value="general">
+                <div class="accept-row accept-row-2">
+                    <div>
+                        <label>نوع تقویم نمایش</label>
+                        <select name="calendar_type">
+                            <option value="jalali" @selected(($calendar['type'] ?? 'jalali') === 'jalali')>شمسی (جلالی) — پیشنهادی</option>
+                            <option value="gregorian" @selected(($calendar['type'] ?? '') === 'gregorian')>میلادی</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>ارقام تاریخ</label>
+                        <select name="calendar_digits">
+                            <option value="fa" @selected(($calendar['digits'] ?? 'fa') === 'fa')>فارسی (۱۴۰۴/۰۵/۱۸)</option>
+                            <option value="en" @selected(($calendar['digits'] ?? '') === 'en')>انگلیسی (1404/05/18)</option>
+                        </select>
+                        <p class="muted" style="margin:4px 0 0;font-size:11px;">رقم فارسی فقط وقتی تقویم شمسی است اعمال می‌شود. فیلدهای ورود تاریخ همیشه ارقام انگلیسی می‌گیرند.</p>
+                    </div>
+                </div>
+                <div class="panel" style="margin-top:10px;background:#f3f7ff;border-color:#b7c8e8;">
+                    <strong>نمونه نمایش فعلی:</strong>
+                    <div style="margin-top:6px;font-size:14px;" dir="ltr">{{ jalali_like(now()) }}</div>
+                    <div class="muted" style="margin-top:4px;font-size:11px;">ساعت سیستم: Asia/Tehran</div>
+                </div>
+                <div class="actions" style="margin-top:10px;">
+                    <button class="btn btn-primary" type="submit">ذخیره تنظیمات تقویم</button>
+                </div>
+            </form>
+        </div>
+
         <div class="ws-pane {{ $activeTab === 'lookups' ? 'active' : '' }}" data-ws-pane="lookups">
             <h2>منوهای پذیرش</h2>
             <p class="lead">از لیست کشویی مورد را انتخاب کنید، سپس ویرایش، فعال/غیرفعال یا حذف کنید. برای مورد جدید، «— جدید —» را بگذارید.</p>
