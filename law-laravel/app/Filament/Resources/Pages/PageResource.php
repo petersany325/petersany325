@@ -45,6 +45,8 @@ class PageResource extends Resource
                 Textarea::make('body')
                     ->columnSpanFull(),
                 Toggle::make('is_published')
+                    ->label('منتشر شود')
+                    ->default(true)
                     ->required(),
                 TextInput::make('sort_order')
                     ->required()

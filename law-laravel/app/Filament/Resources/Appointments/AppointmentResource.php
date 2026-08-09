@@ -11,12 +11,14 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class AppointmentResource extends Resource
@@ -24,33 +26,60 @@ class AppointmentResource extends Resource
     protected static ?string $model = Appointment::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
-    protected static ?string $navigationLabel = 'نوبت‌ها';
 
-    protected static ?string $modelLabel = 'نوبت‌ها';
+    protected static ?string $navigationLabel = 'نوبت‌های رزرو شده';
 
-    protected static ?string $pluralModelLabel = 'نوبت‌ها';
+    protected static ?string $modelLabel = 'نوبت';
+
+    protected static ?string $pluralModelLabel = 'نوبت‌های رزرو شده';
 
     protected static string|UnitEnum|null $navigationGroup = 'ورودی‌ها و پیگیری';
 
+    protected static ?int $navigationSort = 1;
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = static::getModel()::query()->where('status', 'pending')->count();
+
+        return $count > 0 ? (string) $count : null;
+    }
+
+    public static function getNavigationBadgeColor(): string|array|null
+    {
+        return 'danger';
+    }
 
     public static function form(Schema $schema): Schema
     {
         return $schema
             ->components([
                 TextInput::make('name')
+                    ->label('نام')
                     ->required(),
                 TextInput::make('phone')
+                    ->label('تلفن')
                     ->tel()
                     ->required(),
                 TextInput::make('email')
-                    ->label('Email address')
+                    ->label('ایمیل')
                     ->email(),
-                TextInput::make('topic'),
-                DatePicker::make('preferred_date'),
-                TextInput::make('preferred_time'),
+                TextInput::make('topic')
+                    ->label('موضوع'),
+                DatePicker::make('preferred_date')
+                    ->label('تاریخ پیشنهادی'),
+                TextInput::make('preferred_time')
+                    ->label('ساعت پیشنهادی'),
                 Textarea::make('notes')
+                    ->label('توضیحات')
                     ->columnSpanFull(),
-                TextInput::make('status')
+                Select::make('status')
+                    ->label('وضعیت')
+                    ->options([
+                        'pending' => 'در انتظار',
+                        'confirmed' => 'تأیید شده',
+                        'done' => 'انجام شده',
+                        'cancelled' => 'لغو شده',
+                    ])
                     ->required()
                     ->default('pending'),
             ]);
@@ -59,34 +88,62 @@ class AppointmentResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('name')
+                    ->label('نام')
                     ->searchable(),
                 TextColumn::make('phone')
-                    ->searchable(),
-                TextColumn::make('email')
-                    ->label('Email address')
+                    ->label('تلفن')
                     ->searchable(),
                 TextColumn::make('topic')
+                    ->label('موضوع')
                     ->searchable(),
                 TextColumn::make('preferred_date')
-                    ->date()
+                    ->label('تاریخ')
+                    ->date('Y/m/d')
                     ->sortable(),
                 TextColumn::make('preferred_time')
-                    ->searchable(),
+                    ->label('ساعت'),
                 TextColumn::make('status')
-                    ->searchable(),
+                    ->label('وضعیت')
+                    ->badge()
+                    ->formatStateUsing(fn (?string $state): string => match ($state) {
+                        'pending' => 'در انتظار',
+                        'confirmed' => 'تأیید شده',
+                        'done' => 'انجام شده',
+                        'cancelled' => 'لغو شده',
+                        default => $state ?? '—',
+                    })
+                    ->color(fn (?string $state): string => match ($state) {
+                        'pending' => 'warning',
+                        'confirmed' => 'success',
+                        'done' => 'gray',
+                        'cancelled' => 'danger',
+                        default => 'gray',
+                    }),
                 TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
+                    ->label('ثبت شده')
+                    ->dateTime('Y/m/d H:i')
+                    ->sortable(),
+                TextColumn::make('email')
+                    ->label('ایمیل')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->searchable(),
+                TextColumn::make('notes')
+                    ->label('توضیح')
+                    ->limit(40)
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                SelectFilter::make('status')
+                    ->label('وضعیت')
+                    ->options([
+                        'pending' => 'در انتظار',
+                        'confirmed' => 'تأیید شده',
+                        'done' => 'انجام شده',
+                        'cancelled' => 'لغو شده',
+                    ]),
             ])
             ->recordActions([
                 EditAction::make(),

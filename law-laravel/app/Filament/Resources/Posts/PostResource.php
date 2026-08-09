@@ -48,8 +48,12 @@ class PostResource extends Resource
                     ->columnSpanFull(),
                 TextInput::make('cover_path'),
                 Toggle::make('is_published')
+                    ->label('منتشر شود')
+                    ->default(true)
                     ->required(),
-                DateTimePicker::make('published_at'),
+                DateTimePicker::make('published_at')
+                    ->label('تاریخ انتشار')
+                    ->default(now()),
                 TextInput::make('user_id')
                     ->numeric(),
             ]);

@@ -47,6 +47,8 @@ class ServiceResource extends Resource
                 Textarea::make('description')
                     ->columnSpanFull(),
                 Toggle::make('is_active')
+                    ->label('فعال')
+                    ->default(true)
                     ->required(),
             ]);
     }

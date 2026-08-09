@@ -2,6 +2,8 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\Appointments\AppointmentResource;
+use App\Filament\Resources\Leads\LeadResource;
 use App\Models\Appointment;
 use App\Models\Lead;
 use App\Models\Post;
@@ -14,12 +16,14 @@ class StatsOverview extends StatsOverviewWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('درخواست‌های جدید', Lead::query()->where('status', 'new')->count())
-                ->description('فرم مشاوره سایت')
-                ->color('warning'),
             Stat::make('نوبت‌های در انتظار', Appointment::query()->where('status', 'pending')->count())
-                ->description('نیاز به پیگیری')
-                ->color('danger'),
+                ->description('از فرم «درخواست نوبت» — برای مشاهده کلیک کنید')
+                ->color('danger')
+                ->url(AppointmentResource::getUrl()),
+            Stat::make('پیام‌های مشاوره جدید', Lead::query()->where('status', 'new')->count())
+                ->description('از فرم تماس پایین صفحه')
+                ->color('warning')
+                ->url(LeadResource::getUrl()),
             Stat::make('مقالات منتشرشده', Post::query()->where('is_published', true)->count())
                 ->description('وبلاگ حقوقی')
                 ->color('success'),

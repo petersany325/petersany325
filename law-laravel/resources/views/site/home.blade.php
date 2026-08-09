@@ -166,7 +166,10 @@
           @if (session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
           @endif
-          <div class="hp-field" aria-hidden="true"><label>وب‌سایت<input name="website" tabindex="-1" autocomplete="off"></label></div>
+          @if ($errors->any())
+            <div class="alert alert-error" role="alert">{{ $errors->first() }}</div>
+          @endif
+          <div class="hp-field" aria-hidden="true"><label>وب‌سایت<input name="company_website_url" tabindex="-1" autocomplete="new-password"></label></div>
           <div class="form-row">
             <label>نام<input name="name" required value="{{ old('name') }}"></label>
             <label>تلفن<input name="phone" required value="{{ old('phone') }}"></label>
@@ -216,7 +219,7 @@
           @endif
 
           <div class="hp-field" aria-hidden="true">
-            <label>وب‌سایت<input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+            <label>وب‌سایت<input type="text" name="company_website_url" tabindex="-1" autocomplete="new-password"></label>
           </div>
 
           <div class="form-row">

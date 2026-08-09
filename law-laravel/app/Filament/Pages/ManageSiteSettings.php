@@ -58,6 +58,11 @@ class ManageSiteSettings extends Page
             'app_banner_height' => '42',
             'app_banner_position' => 'center 35%',
             'app_banner_show_lead' => '1',
+            'home_services_limit' => '0',
+            'home_team_limit' => '0',
+            'home_faq_limit' => '0',
+            'home_testimonials_limit' => '0',
+            'home_posts_limit' => '0',
         ];
 
         $keys = array_keys($defaults + [
@@ -76,6 +81,8 @@ class ManageSiteSettings extends Page
             'pwa_enabled', 'pwa_auto_mobile', 'pwa_name', 'pwa_short_name',
             'pwa_description', 'pwa_theme_color', 'pwa_bg_color', 'pwa_start_url',
             'app_banner_size', 'app_banner_height', 'app_banner_position', 'app_banner_show_lead',
+            'home_services_limit', 'home_team_limit', 'home_faq_limit',
+            'home_testimonials_limit', 'home_posts_limit',
         ], $keys)));
 
         $data = [];
@@ -130,6 +137,17 @@ class ManageSiteSettings extends Page
                         TextInput::make('social_linkedin')->label('لینکدین'),
                         TextInput::make('social_whatsapp')->label('واتساپ'),
                     ])->columns(3),
+                ]),
+                Tab::make('محدودیت نمایش')->schema([
+                    Section::make('تعداد آیتم در صفحه اصلی / وب‌اپ')
+                        ->description('برای هر بخش مشخص کنید چند مورد روی صفحه اصلی دیده شود. مقدار ۰ یعنی نمایش همه موارد فعال.')
+                        ->schema([
+                            TextInput::make('home_services_limit')->label('خدمات')->numeric()->minValue(0)->default(0)->helperText('۰ = همه'),
+                            TextInput::make('home_team_limit')->label('تیم حقوقی')->numeric()->minValue(0)->default(0)->helperText('۰ = همه'),
+                            TextInput::make('home_faq_limit')->label('سوالات متداول')->numeric()->minValue(0)->default(0)->helperText('۰ = همه'),
+                            TextInput::make('home_testimonials_limit')->label('نظرات')->numeric()->minValue(0)->default(0)->helperText('۰ = همه'),
+                            TextInput::make('home_posts_limit')->label('مقالات')->numeric()->minValue(0)->default(0)->helperText('۰ = همه'),
+                        ])->columns(2),
                 ]),
                 Tab::make('وب‌اپ / وب‌سرویس')->schema([
                     Section::make('فعال‌سازی وب‌اپ')->description('تنظیمات نصب و هدایت خودکار موبایل به وب‌اپ.')->schema([
@@ -211,7 +229,8 @@ class ManageSiteSettings extends Page
         Setting::many($data);
 
         Notification::make()
-            ->title('تنظیمات وب‌اپ و بنر ذخیره شد')
+            ->title('تنظیمات ذخیره شد')
+            ->body('محدودیت‌های نمایش صفحه اصلی و تنظیمات وب‌اپ اعمال شدند.')
             ->success()
             ->send();
     }

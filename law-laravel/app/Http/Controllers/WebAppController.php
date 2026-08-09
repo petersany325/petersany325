@@ -14,39 +14,50 @@ class WebAppController extends Controller
 {
     public function index(): View
     {
-        $services = Service::query()
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get();
+        $services = Setting::applyLimit(
+            Service::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id'),
+            'home_services_limit',
+            0
+        )->get();
 
-        $members = TeamMember::query()
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->limit(6)
-            ->get();
+        $members = Setting::applyLimit(
+            TeamMember::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id'),
+            'home_team_limit',
+            0
+        )->get();
 
-        $faqs = Faq::query()
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->limit(6)
-            ->get();
+        $faqs = Setting::applyLimit(
+            Faq::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id'),
+            'home_faq_limit',
+            0
+        )->get();
 
-        $posts = Post::query()
-            ->published()
-            ->latest('published_at')
-            ->latest('id')
-            ->limit(3)
-            ->get();
+        $posts = Setting::applyLimit(
+            Post::query()
+                ->published()
+                ->latest('published_at')
+                ->latest('id'),
+            'home_posts_limit',
+            0
+        )->get();
 
-        $testimonials = Testimonial::query()
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->limit(4)
-            ->get();
+        $testimonials = Setting::applyLimit(
+            Testimonial::query()
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id'),
+            'home_testimonials_limit',
+            0
+        )->get();
 
         $settings = [
             'site_name' => Setting::get('site_name', 'مؤسسه حقوقی آریان'),

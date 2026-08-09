@@ -54,6 +54,8 @@ class TeamMemberResource extends Resource
                     ->numeric()
                     ->default(0),
                 Toggle::make('is_active')
+                    ->label('فعال')
+                    ->default(true)
                     ->required(),
             ]);
     }

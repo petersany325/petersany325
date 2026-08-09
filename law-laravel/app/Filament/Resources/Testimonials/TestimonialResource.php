@@ -49,6 +49,8 @@ class TestimonialResource extends Resource
                     ->numeric()
                     ->default(5),
                 Toggle::make('is_active')
+                    ->label('فعال')
+                    ->default(true)
                     ->required(),
                 TextInput::make('sort_order')
                     ->required()
