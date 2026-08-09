@@ -17,7 +17,7 @@
 <section class="section hl-pdp">
   <div class="hl-pdp-hero">
     <div class="hl-pdp-media">
-      <img id="main-image" class="hl-pdp-main" src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" width="900" height="700">
+      <img id="main-image" class="hl-pdp-main" src="{{ $product->imageUrl() }}" alt="{{ $product->name }}" width="640" height="260">
       @if(count($gallery) > 1)
         <div class="hl-pdp-thumbs">
           @foreach($gallery as $url)
