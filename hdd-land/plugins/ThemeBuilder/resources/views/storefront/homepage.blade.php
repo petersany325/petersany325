@@ -37,7 +37,7 @@
     @include('theme-builder::storefront.widgets', ['widgets'=>[['type'=>'categories','settings'=>$theme['categories']]], 'featured'=>$featured,'latest'=>$latest,'categories'=>$categories])
 
   @elseif($section === 'featured' && !empty($theme['featured']['enabled']))
-    @include('theme-builder::storefront.widgets', ['widgets'=>[['type'=>'products','settings'=>array_merge($theme['featured'],['limit'=>(int)($theme['featured']['limit'] ?? 8),'featured_only'=>'1'])]], 'featured'=>$featured,'latest'=>$latest,'categories'=>$categories])
+    @include('theme-builder::storefront.widgets', ['widgets'=>[['type'=>'products','settings'=>array_merge($theme['featured'],['limit'=>max(1, min(24, (int)($theme['featured']['limit'] ?? 4))),'featured_only'=>'1'])]], 'featured'=>$featured,'latest'=>$latest,'categories'=>$categories])
 
   @elseif($section === 'features' && !empty($theme['features']['enabled']))
     @php

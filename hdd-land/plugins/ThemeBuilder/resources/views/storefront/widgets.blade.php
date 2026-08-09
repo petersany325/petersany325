@@ -88,19 +88,22 @@
       }
       if ($list->isEmpty()) {
         $list = (($s['featured_only'] ?? '0') === '1' || ($s['featured_only'] ?? false) === true)
-          ? (($featured->count() ? $featured : $latest)->take($limit))
-          : $latest->take($limit);
+          ? (($featured->count() ? $featured : $latest)->take(max($limit, 4)))
+          : $latest->take(max($limit, 4));
       }
-      // صفحه اول: فقط کالای موجود با قیمت واقعی؛ در صورت کمبود از آخرین‌ها پر می‌شود
-      $pick = function ($items) {
-        return collect($items)->filter(function ($p) {
-          return $p && method_exists($p, 'inStock') && $p->inStock() && (int) ($p->price ?? 0) > 0;
-        });
+      // اولویت با موجود+قیمت؛ برای رسیدن به تعداد تنظیم‌شده (مثلاً ۴) بقیه هم پر می‌شود
+      $rank = function ($items) {
+        return collect($items)->filter()->sortByDesc(function ($p) {
+          $score = 0;
+          if (method_exists($p, 'inStock') && $p->inStock()) { $score += 2; }
+          if ((int) ($p->price ?? 0) > 0) { $score += 1; }
+          return $score;
+        })->values();
       };
-      $list = $pick($list)->values();
+      $list = $rank($list);
       if ($list->count() < $limit) {
         $seen = $list->pluck('id')->filter()->all();
-        $fill = $pick($latest ?? collect())
+        $fill = $rank($latest ?? collect())
           ->reject(fn ($p) => in_array($p->id, $seen, true))
           ->take($limit - $list->count());
         $list = $list->concat($fill)->values();
