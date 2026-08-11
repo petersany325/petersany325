@@ -324,6 +324,7 @@
                             </select>
                         </div>
                         <div><label>شماره کارت</label><input type="text" name="card_number" value="{{ old('card_number') }}"></div>
+                        <div><label>تاریخ فروش</label>@include('partials.jalali-date', ['name' => 'sale_date', 'value' => old('sale_date')])</div>
                         <div><label>پایان گارانتی</label>@include('partials.jalali-date', ['name' => 'warranty_end_date', 'value' => old('warranty_end_date')])</div>
                     </div>
                 </div>
@@ -517,6 +518,8 @@
                 <label>کارت‌خوان<input type="number" data-name="pos_amount" min="0" value="0"></label>
                 <label>پذیرش<input type="number" data-name="admission_fee" min="0" value="0"></label>
                 <label>تحویل<input type="text" class="jalali-date" data-name="estimated_delivery_at" placeholder="1404/05/16" dir="ltr" style="text-align:left;" inputmode="numeric" autocomplete="off"></label>
+                <label>تاریخ فروش<input type="text" class="jalali-date" data-name="sale_date" placeholder="1404/05/16" dir="ltr" style="text-align:left;" inputmode="numeric" autocomplete="off"></label>
+                <label>پایان گارانتی<input type="text" class="jalali-date" data-name="warranty_end_date" placeholder="1404/05/16" dir="ltr" style="text-align:left;" inputmode="numeric" autocomplete="off"></label>
                 <label>کارت گارانتی<input type="text" data-name="card_number"></label>
             </div>
             <div class="dense-notes">

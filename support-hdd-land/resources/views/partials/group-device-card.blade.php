@@ -125,6 +125,26 @@
                        dir="ltr" style="text-align:left;"
                        inputmode="numeric" autocomplete="off">
             </label>
+            <label>تاریخ فروش
+                <input type="text"
+                       class="jalali-date"
+                       data-name="sale_date"
+                       name="items[{{ $index }}][sale_date]"
+                       value="{{ $item['sale_date'] ?? '' }}"
+                       placeholder="1404/05/16"
+                       dir="ltr" style="text-align:left;"
+                       inputmode="numeric" autocomplete="off">
+            </label>
+            <label>پایان گارانتی
+                <input type="text"
+                       class="jalali-date"
+                       data-name="warranty_end_date"
+                       name="items[{{ $index }}][warranty_end_date]"
+                       value="{{ $item['warranty_end_date'] ?? '' }}"
+                       placeholder="1404/05/16"
+                       dir="ltr" style="text-align:left;"
+                       inputmode="numeric" autocomplete="off">
+            </label>
             <label>کارت گارانتی
                 <input type="text" data-name="card_number" name="items[{{ $index }}][card_number]" value="{{ $item['card_number'] ?? '' }}">
             </label>

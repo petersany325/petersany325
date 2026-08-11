@@ -128,6 +128,8 @@
         @endif
         @if($invoice['show_warranty'])
             <div class="field"><label>گارانتی</label><div>{{ $reception->warranty_type ?: '—' }}</div></div>
+            <div class="field"><label>تاریخ فروش</label><div dir="ltr">{{ $reception->sale_date ? jalali_date($reception->sale_date) : '—' }}</div></div>
+            <div class="field"><label>پایان گارانتی</label><div dir="ltr">{{ $reception->warranty_end_date ? jalali_date($reception->warranty_end_date) : '—' }}</div></div>
         @endif
         @if($invoice['show_technician'])
             <div class="field"><label>تعمیرکار</label><div>{{ $reception->technician?->name ?: '—' }}</div></div>

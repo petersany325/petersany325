@@ -49,6 +49,8 @@
                 <div><span class="muted">خدمات / تعمیر</span><div>{{ $reception->service_type ?: '—' }} / {{ $reception->repair_type ?: '—' }}</div></div>
                 <div><span class="muted">ظرفیت</span><div>{{ $reception->capacityLabel() }}</div></div>
                 <div><span class="muted">گارانتی</span><div>{{ $reception->warranty_type ?: '—' }}</div></div>
+                <div><span class="muted">تاریخ فروش</span><div dir="ltr">{{ $reception->sale_date ? jalali_date($reception->sale_date) : '—' }}</div></div>
+                <div><span class="muted">پایان گارانتی</span><div dir="ltr">{{ $reception->warranty_end_date ? jalali_date($reception->warranty_end_date) : '—' }}</div></div>
                 <div><span class="muted">تعمیرکار</span><div>{{ $reception->technician?->name ?: '—' }}</div></div>
                 <div><span class="muted">محل دستگاه</span><div>{{ $reception->custodyLabel() }}</div></div>
                 <div><span class="muted">پذیرش</span><div>{{ jalali_like($reception->received_at) }}</div></div>

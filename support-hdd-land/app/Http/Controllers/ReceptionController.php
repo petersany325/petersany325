@@ -262,7 +262,7 @@ class ReceptionController extends Controller
         }
 
         merge_jalali_dates($request, [
-            'warranty_end_date', 'estimated_delivery_at', 'next_visit_at', 'received_at',
+            'sale_date', 'warranty_end_date', 'estimated_delivery_at', 'next_visit_at', 'received_at',
         ]);
 
         $data = $request->validate(array_merge($this->customerRules(), $this->deviceRules(), [
@@ -306,6 +306,7 @@ class ReceptionController extends Controller
     {
         merge_jalali_dates($request, [
             'received_at',
+            'items.*.sale_date',
             'items.*.warranty_end_date',
             'items.*.estimated_delivery_at',
         ]);
@@ -334,6 +335,7 @@ class ReceptionController extends Controller
             'items.*.warranty_return' => ['nullable', 'boolean'],
             'items.*.warranty_type' => ['nullable', 'string', 'max:120'],
             'items.*.card_number' => ['nullable', 'string', 'max:80'],
+            'items.*.sale_date' => ['nullable', 'date'],
             'items.*.warranty_end_date' => ['nullable', 'date'],
             'items.*.deposit' => ['nullable', 'integer', 'min:0'],
             'items.*.pos_amount' => ['nullable', 'integer', 'min:0'],
@@ -475,7 +477,7 @@ class ReceptionController extends Controller
     public function update(Request $request, Reception $reception, SmsNotificationService $smsNotifications, ReceptionLifecycleService $lifecycle)
     {
         merge_jalali_dates($request, [
-            'warranty_end_date', 'estimated_delivery_at', 'next_visit_at', 'received_at',
+            'sale_date', 'warranty_end_date', 'estimated_delivery_at', 'next_visit_at', 'received_at',
         ]);
 
         $data = $request->validate(array_merge($this->customerRules(), $this->deviceRules(), [
@@ -546,6 +548,7 @@ class ReceptionController extends Controller
             'warranty_return' => $request->boolean('warranty_return'),
             'warranty_type' => $data['warranty_type'] ?? null,
             'card_number' => $data['card_number'] ?? null,
+            'sale_date' => $data['sale_date'] ?? null,
             'warranty_end_date' => $data['warranty_end_date'] ?? null,
             'deposit' => (int) ($data['deposit'] ?? $reception->deposit),
             'pos_amount' => (int) ($data['pos_amount'] ?? $reception->pos_amount),
@@ -1485,6 +1488,7 @@ class ReceptionController extends Controller
             'warranty_return' => ['nullable', 'boolean'],
             'warranty_type' => ['nullable', 'string', 'max:120'],
             'card_number' => ['nullable', 'string', 'max:80'],
+            'sale_date' => ['nullable', 'date'],
             'warranty_end_date' => ['nullable', 'date'],
             'deposit' => ['nullable', 'integer', 'min:0'],
             'pos_amount' => ['nullable', 'integer', 'min:0'],
@@ -1631,6 +1635,7 @@ class ReceptionController extends Controller
             'warranty_return' => $request->boolean('warranty_return'),
             'warranty_type' => $data['warranty_type'] ?? null,
             'card_number' => $data['card_number'] ?? null,
+            'sale_date' => $data['sale_date'] ?? null,
             'warranty_end_date' => $data['warranty_end_date'] ?? null,
             'status' => 'received',
             'deposit' => $deposit,

@@ -188,6 +188,7 @@
                 </select>
             </div>
             <div><label>شماره کارت</label><input type="text" name="card_number" value="{{ old('card_number', $r->card_number) }}"></div>
+            <div><label>تاریخ فروش</label>@include('partials.jalali-date', ['name' => 'sale_date', 'value' => old('sale_date', jalali_input($r->sale_date))])</div>
             <div><label>پایان گارانتی</label>@include('partials.jalali-date', ['name' => 'warranty_end_date', 'value' => old('warranty_end_date', jalali_input($r->warranty_end_date))])</div>
             <div><label>بیعانه</label><input type="number" name="deposit" min="0" value="{{ old('deposit', (int) $r->deposit) }}"></div>
             <div><label>کارت‌خوان</label><input type="number" name="pos_amount" min="0" value="{{ old('pos_amount', (int) $r->pos_amount) }}"></div>

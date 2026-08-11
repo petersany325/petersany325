@@ -44,6 +44,8 @@
             <div><span class="muted">تعمیر</span><div>{{ $reception->repair_type ?: '—' }}</div></div>
             <div><span class="muted">تعمیرکار</span><div>{{ $reception->technician?->name ?: '—' }}</div></div>
             <div><span class="muted">گارانتی</span><div>{{ $reception->warranty_type ?: '—' }}{{ $reception->warranty_return ? ' (برگشت گارانتی)' : '' }}</div></div>
+            <div><span class="muted">تاریخ فروش</span><div dir="ltr">{{ $reception->sale_date ? jalali_date($reception->sale_date) : '—' }}</div></div>
+            <div><span class="muted">پایان گارانتی</span><div dir="ltr">{{ $reception->warranty_end_date ? jalali_date($reception->warranty_end_date) : '—' }}</div></div>
             <div><span class="muted">تحویل‌دهنده</span><div>{{ $reception->delivered_by ?: '—' }}</div></div>
             <div><span class="muted">معرف</span><div>{{ $reception->referrer ?: '—' }}</div></div>
             <div><span class="muted">ثبت‌کننده</span><div>{{ $reception->creator?->name ?: '—' }}</div></div>
