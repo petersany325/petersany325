@@ -243,10 +243,18 @@ class SmartI18nPlugin {
 
         $hub = function_exists('graphical_main_hub') ? graphical_main_hub($lang) : self::build_smart_hub($lang);
         $intro = $lang === 'fa'
-            ? "✅ زبان تنظیم شد.\n\nاز منوی گرافیکی زیر همه بخش‌ها را ببینید."
-            : "✅ Language ready.\n\nUse the graphic menu below — all sections are visible.";
+            ? "✅ زبان تنظیم شد.\n\nاز دکمه‌های پایین صفحه یا منوی شیشه‌ای استفاده کنید."
+            : "✅ Language ready.\n\nUse the bottom buttons or the menu below.";
 
         edit_or_send($chatId, $messageId, $intro . "\n\n" . welcome_text($lang), $hub);
+        // Install / refresh persistent reply keyboard (Technical Support, My Tickets, …)
+        if (function_exists('main_reply_keyboard')) {
+            send_message(
+                $chatId,
+                $lang === 'fa' ? '⌨️ میانبرهای پایین صفحه آماده است.' : '⌨️ Bottom shortcuts are ready.',
+                main_reply_keyboard($lang)
+            );
+        }
     }
 
     /** Smart categorized keyboard: all root items + quick links to deep branches */

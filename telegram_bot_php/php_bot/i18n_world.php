@@ -379,21 +379,28 @@ function graphical_main_hub($lang = 'en') {
     }
     $kb = $top;
 
-    // Append custom root menu items (not duplicates)
-    $used = array('shop','reqhub','req:support','req:sales','faqcat:all','forum','cmd:training','lang','help','main','cart','orders','checkout','license','renew','demo','profile','feedback','referral','contact','brands','news','miniapp','mytickets','support_cancel');
+    // Append custom root menu items (not duplicates of hub buttons)
+    $used = array('shop','reqhub','req:support','req:sales','faqcat:all','forum','cmd:training','lang','help','main','cart','orders','checkout','license','renew','demo','profile','feedback','referral','contact','brands','news','miniapp','mytickets','support_cancel','support');
     $row = array();
     foreach ($items as $it) {
+        $titleLow = function_exists('mb_strtolower') ? mb_strtolower((string)$it['title'], 'UTF-8') : strtolower((string)$it['title']);
+        // Hub already has Website + Pro Desk — skip duplicates from DB roots
+        if ($it['menu_type'] === 'url') {
+            continue;
+        }
+        if ($it['menu_type'] === 'submenu' && (strpos($titleLow, 'pro desk') !== false || strpos($titleLow, 'میز') !== false)) {
+            continue;
+        }
+        if ($it['menu_type'] === 'callback' && in_array((string)$it['value_text'], array('support', 'reqhub'), true)) {
+            continue;
+        }
         $cb = '';
         if ($it['menu_type'] === 'callback') $cb = $it['value_text'];
         elseif ($it['menu_type'] === 'faq_list') $cb = 'faqcat:all';
         elseif ($it['menu_type'] === 'command') $cb = 'cmd:' . $it['value_text'];
         elseif ($it['menu_type'] === 'submenu') $cb = 'menu:' . $it['id'];
         if ($cb && in_array($cb, $used, true)) continue;
-        if ($it['menu_type'] === 'url') {
-            $btn = array('text' => $it['title'], 'url' => $it['value_text'] ?: bot_config()['site_url']);
-        } else {
-            $btn = array('text' => $it['title'], 'callback_data' => $cb ?: ('menutxt:' . $it['id']));
-        }
+        $btn = array('text' => $it['title'], 'callback_data' => $cb ?: ('menutxt:' . $it['id']));
         $row[] = $btn;
         $used[] = $cb;
         if (count($row) === 2) {

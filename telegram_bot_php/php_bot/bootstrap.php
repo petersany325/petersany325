@@ -192,7 +192,7 @@ function help_text($lang = 'en') {
 require_once __DIR__ . '/menu_faq.php';
 
 // Optional modules — missing file must never 500 the whole admin
-foreach (array('settings_lib.php', 'i18n_world.php', 'admins_schema.php', 'requests.php') as $opt) {
+foreach (array('settings_lib.php', 'i18n_world.php', 'admins_schema.php', 'requests.php', 'reply_buttons.php') as $opt) {
     $path = __DIR__ . '/' . $opt;
     if (is_file($path)) {
         try {

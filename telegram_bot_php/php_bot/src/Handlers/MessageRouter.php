@@ -45,6 +45,13 @@ final class MessageRouter
 
         if ($text === '' || ($text[0] ?? '') !== '/') {
             if ($text !== '') {
+                // Bottom reply-keyboard buttons arrive as plain text (not callbacks)
+                if (function_exists('resolve_reply_button_action') && function_exists('dispatch_reply_button_action')) {
+                    $action = resolve_reply_button_action($text);
+                    if ($action && dispatch_reply_button_action($action, $chatId, $userId, $lang)) {
+                        return;
+                    }
+                }
                 if (function_exists('feature_on') && feature_on('prodesk') && function_exists('handle_request_text') && handle_request_text($chatId, $userId, $text, $lang)) {
                     return;
                 }
@@ -59,7 +66,11 @@ final class MessageRouter
                         return;
                     }
                 }
-                send_message($chatId, $lang === 'fa' ? 'از /menu یا /faq استفاده کنید.' : 'Send /menu or /faq — or /help for commands.', main_keyboard($lang));
+                send_message(
+                    $chatId,
+                    $lang === 'fa' ? 'از دکمه‌های پایین یا /menu استفاده کنید.' : 'Use the buttons below or /menu.',
+                    function_exists('main_reply_keyboard') ? main_reply_keyboard($lang) : main_keyboard($lang)
+                );
             }
             return;
         }
@@ -80,12 +91,22 @@ final class MessageRouter
                     $detected = function_exists('detect_telegram_lang') ? detect_telegram_lang($from) : 'en';
                     send_message($chatId, language_gate_text(), function_exists('lang_keyboard_world') ? lang_keyboard_world(true, 0, $detected) : lang_keyboard(true));
                 } else {
-                    send_message($chatId, welcome_text($lang), main_keyboard($lang));
+                    if (function_exists('main_reply_keyboard')) {
+                        send_message($chatId, welcome_text($lang), main_reply_keyboard($lang));
+                        send_message($chatId, $lang === 'fa' ? '📑 منوی سریع:' : '📑 Quick menu:', main_keyboard($lang));
+                    } else {
+                        send_message($chatId, welcome_text($lang), main_keyboard($lang));
+                    }
                 }
                 break;
 
             case 'menu':
-                send_message($chatId, $lang === 'fa' ? '📑 <b>منوی پیشرفته</b>' : '📑 <b>Main Menu</b>', main_keyboard($lang));
+                if (function_exists('main_reply_keyboard')) {
+                    send_message($chatId, $lang === 'fa' ? '📑 <b>منوی اصلی</b>' : '📑 <b>Main Menu</b>', main_reply_keyboard($lang));
+                    send_message($chatId, $lang === 'fa' ? 'دکمه‌های شیشه‌ای:' : 'Menu buttons:', main_keyboard($lang));
+                } else {
+                    send_message($chatId, $lang === 'fa' ? '📑 <b>منوی پیشرفته</b>' : '📑 <b>Main Menu</b>', main_keyboard($lang));
+                }
                 break;
 
             case 'lang':
