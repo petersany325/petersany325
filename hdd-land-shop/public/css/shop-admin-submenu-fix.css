@@ -1,0 +1,4 @@
+/* Applied into shop.css on server — admin/staff submenu text visibility */
+.admin-side .adm-sub a { color: #1f2937 !important; }
+.admin-side .adm-sub a:hover { color: #167ca8 !important; background: #e5f4fb !important; }
+.admin-side .adm-sub a.active { color: #fff !important; background: linear-gradient(90deg,#2d95c1,#4bb4df) !important; }

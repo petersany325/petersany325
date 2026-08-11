@@ -4,73 +4,178 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'پنل کارمندان')</title>
+    <!-- STAFF-UI-ADMIN-MATCH-V2 -->
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=45">
-    <link rel="stylesheet" href="{{ asset('css/admin-nav.css') }}?v=9">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=46">
+    <link rel="stylesheet" href="{{ asset('css/admin-nav.css') }}?v=10">
+    <link rel="stylesheet" href="{{ asset('css/admin-settings.css') }}?v=2">
     <style>
-      /* تراکم و کادر مثل پنل ادمین */
-      :root { --admin-ui-scale: .94; }
-      body.adm-compact .admin-main { padding: .85rem 1rem 1.4rem; }
-      .admin-main { font-size: calc(.92rem * var(--admin-ui-scale, 1)); }
-      .admin-main > h1:first-child,
-      .admin-main h1 { margin: 0 0 .35rem; font-size: 1.15rem; font-weight: 800; }
-      .admin-main .muted { font-size: .8rem; }
-      .admin-main .panel {
-        border-radius: 6px !important;
-        padding: .7rem .8rem !important;
-        border: 1px solid #d5dbe3 !important;
-        box-shadow: none !important;
-        background: #fff;
+      /* مثل ادمین: رنگ متن همیشه خوانا + تراکم */
+      :root { --admin-ui-scale: 1; }
+      body {
+        color: #0f172a;
+        font-family: Vazirmatn, Tahoma, sans-serif;
+        background: #f6f5f2;
       }
-      .admin-main .panel h3 { margin: 0 0 .55rem; font-size: .95rem; }
+      .admin-shell { color: #0f172a; }
+      .admin-main {
+        color: #0f172a !important;
+        background: #f6f5f2 !important;
+        padding: 1.1rem 1.25rem 1.75rem;
+        min-width: 0;
+      }
+      body.adm-compact .admin-main { padding: .85rem 1rem 1.4rem; }
+      .admin-main h1,
+      .admin-main h2,
+      .admin-main h3,
+      .admin-main p,
+      .admin-main label,
+      .admin-main td,
+      .admin-main th,
+      .admin-main span,
+      .admin-main strong,
+      .admin-main div {
+        color: inherit;
+      }
+      .admin-main h1 {
+        margin: 0 0 .4rem;
+        font-size: 1.28rem;
+        font-weight: 800;
+        color: #b45309 !important;
+      }
+      .admin-main h2 { font-size: 1.05rem; font-weight: 800; color: #0f172a !important; }
+      .admin-main h3 { font-size: .95rem; font-weight: 800; color: #0f172a !important; }
+      .admin-main .muted,
+      .admin-main .muted * { color: #64748b !important; }
+      .admin-main .panel {
+        border-radius: 8px !important;
+        padding: .75rem .85rem !important;
+        border: 1px solid #d8dee8 !important;
+        box-shadow: 0 1px 2px rgba(15,23,42,.03) !important;
+        background: #fff !important;
+        color: #0f172a !important;
+      }
       .admin-main .staff-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-        gap: .5rem;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: .55rem;
         margin: .65rem 0;
       }
       .admin-main .staff-stat {
-        background: #fff;
-        border: 1px solid #d7dee8;
-        border-radius: 5px;
-        padding: .55rem .65rem;
+        background: #fff !important;
+        border: 1px solid #d7dee8 !important;
+        border-radius: 6px !important;
+        padding: .55rem .65rem !important;
+        color: #0f172a !important;
       }
       .admin-main .staff-stat strong {
         display: block;
-        font-size: 1.05rem;
+        font-size: 1.08rem;
         margin-top: .15rem;
         font-weight: 800;
-        line-height: 1.25;
+        color: #0f172a !important;
       }
-      .admin-main .staff-stat .muted,
-      .admin-main .staff-stat [style*="font-size:.75rem"] { font-size: .72rem !important; }
+      .admin-main .table { color: #0f172a; }
       .admin-main .table th,
-      .admin-main .table td { padding: .4rem .5rem; font-size: .8rem; }
-      .admin-main .btn { border-radius: 6px; font-size: .8rem; }
-      .admin-main .btn-sm { padding: .28rem .55rem; font-size: .72rem; border-radius: 5px; }
-      .admin-main .alert { border-radius: 6px; padding: .55rem .7rem; font-size: .82rem; }
-      .adm-group[data-group="staff-ops"].is-open > .adm-sub,
-      .adm-group[data-group="staff-cartable"].is-open > .adm-sub,
-      .adm-group[data-group="staff-links"].is-open > .adm-sub {
-        display: block;
-        grid-template-columns: none;
-        background: #f4f6f8;
-        border-radius: 0 0 7px 7px;
-        padding: .2rem;
-        margin: 0;
+      .admin-main .table td {
+        padding: .45rem .55rem;
+        font-size: .84rem;
+        color: #0f172a !important;
+        border-color: #e5e7eb;
       }
-      .adm-group[data-group="staff-ops"] .adm-sub a,
-      .adm-group[data-group="staff-cartable"] .adm-sub a,
-      .adm-group[data-group="staff-links"] .adm-sub a {
-        min-height: auto;
-        flex-direction: row;
-        justify-content: flex-start;
-        text-align: right;
-        gap: .45rem;
-        padding: .48rem .65rem;
-        border: 0;
-        border-bottom: 1px solid #e2e6ea;
-        background: transparent !important;
+      .admin-main .btn { border-radius: 7px; font-size: .82rem; }
+
+      /* زیر منو کارمند: متن تیره روی پس‌زمینه روشن (مثل ادمین) */
+      .adm-group[data-group^="staff-"] .adm-sub {
+        display: none;
+        background: #f4f6f8 !important;
+        border: 0 !important;
+        margin: 0 !important;
+        padding: .2rem !important;
+        border-radius: 0 0 7px 7px;
+        grid-template-columns: none !important;
+      }
+      .adm-group[data-group^="staff-"].is-open > .adm-sub { display: block !important; }
+      .adm-group[data-group^="staff-"] .adm-sub a {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: .45rem !important;
+        min-height: auto !important;
+        text-align: right !important;
+        padding: .5rem .65rem !important;
+        margin: 0 !important;
+        border: 0 !important;
+        border-bottom: 1px solid #e2e6ea !important;
+        border-radius: 4px !important;
+        background: #fff !important;
+        color: #1f2937 !important;
+        font-size: .84rem !important;
+        font-weight: 700 !important;
+        line-height: 1.4 !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+      .adm-group[data-group^="staff-"] .adm-sub a span {
+        color: inherit !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+      .adm-group[data-group^="staff-"] .adm-sub a .item-icon {
+        width: 1.35rem !important;
+        height: 1.35rem !important;
+        border-radius: 6px !important;
+        background: #e8f0f5 !important;
+        color: #278db8 !important;
+        font-size: .75rem !important;
+      }
+      .adm-group[data-group^="staff-"] .adm-sub a:hover {
+        color: #167ca8 !important;
+        background: #e5f4fb !important;
+      }
+      .adm-group[data-group^="staff-"] .adm-sub a:hover .item-icon {
+        background: #167ca8 !important;
+        color: #fff !important;
+      }
+      .adm-group[data-group^="staff-"] .adm-sub a.active {
+        color: #fff !important;
+        background: linear-gradient(90deg, #2d95c1, #4bb4df) !important;
+        box-shadow: none !important;
+      }
+      .adm-group[data-group^="staff-"] .adm-sub a.active .item-icon {
+        background: rgba(255,255,255,.22) !important;
+        color: #fff !important;
+      }
+      .adm-group[data-group^="staff-"] .adm-sub a.ext::after {
+        content: "↗";
+        margin-right: auto;
+        opacity: .55;
+        font-size: .72rem;
+        color: inherit;
+      }
+
+      /* خنثی‌سازی قانون قدیمی shop.css که متن سایدبار را سفید می‌کرد */
+      .admin-side .adm-sub a,
+      .admin-side .adm-sub a:hover,
+      .admin-side .adm-sub a.active {
+        /* رنگ‌ها در بلوک staff- بالا با !important تنظیم شده */
+      }
+      .admin-side a.adm-dash {
+        color: #c9ced8 !important;
+      }
+      .admin-side a.adm-dash:hover,
+      .admin-side a.adm-dash.active {
+        color: #fff !important;
+      }
+      .adm-group-head {
+        color: #f0f2f5 !important;
+      }
+      .adm-group-head .g-title,
+      .adm-group-head .g-ico,
+      .adm-group-head .g-chev {
+        color: inherit !important;
+        opacity: 1 !important;
       }
     </style>
 </head>
@@ -99,6 +204,10 @@
     'فروش قطعه' => '◎',
     'پشتیبانی' => '✉',
     'حسابداری' => '₫',
+    'مشاهده سایت' => '↗',
+    'وب‌اپ فروشگاه' => '📱',
+    'کارتابل مشتری' => '👤',
+    'پنل مدیریت' => '⚙',
   ];
 @endphp
 <div class="admin-topbar">
@@ -116,8 +225,8 @@
     <div class="adm-brand">
       <span class="brand-mark">ST</span>
       <div>
-        <strong>پنل کارمندان</strong>
-        <span>{{ auth()->user()->name ?? 'کارمند' }} · HDD Land</span>
+        <strong>کنترل پنل کارمند</strong>
+        <span>HDD Land Staff</span>
       </div>
     </div>
 
@@ -128,7 +237,7 @@
       </div>
 
       <a class="adm-dash {{ $path === 'staff' ? 'active' : '' }}" href="{{ url('/staff') }}">
-        <span>🏠</span> داشبورد کارتابل
+        <span>🏠</span> داشبورد
       </a>
 
       @php
@@ -153,7 +262,7 @@
         @continue(empty($g['items']))
         @php
           $hasActive = collect($g['items'])->contains(fn ($it) => ! empty($it['active']));
-          $open = $hasActive || $gid === 'staff-cartable' || $gid === 'staff-ops';
+          $open = $hasActive || in_array($gid, ['staff-cartable', 'staff-ops'], true);
         @endphp
         <div class="adm-group {{ $open ? 'is-open' : '' }} {{ $hasActive ? 'is-active' : '' }}" data-group="{{ $gid }}">
           <button type="button" class="adm-group-head" aria-expanded="{{ $open ? 'true' : 'false' }}">
@@ -167,7 +276,7 @@
                  class="{{ ! empty($it['active']) ? 'active' : '' }} {{ ! empty($it['ext']) ? 'ext' : '' }}"
                  @if(! empty($it['ext'])) target="_blank" rel="noopener" @endif>
                 <span class="item-icon">{{ $icons[$it['label']] ?? '•' }}</span>
-                <span>{{ $it['label'] }}</span>
+                <span class="item-label">{{ $it['label'] }}</span>
               </a>
             @endforeach
           </div>
@@ -198,7 +307,7 @@
 (function(){
   var nav = document.getElementById('admNav');
   if (nav) {
-    var key = 'hdl_staff_menu_open_v1';
+    var key = 'hdl_staff_menu_open_v2';
     var saved = {};
     try { saved = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) {}
 
@@ -238,20 +347,22 @@
     });
   }
 
-  var uiScale = parseInt(localStorage.getItem('hdl_staff_font') || localStorage.getItem('hdl_admin_font') || '94', 10);
+  var rawFont = localStorage.getItem('hdl_staff_font') || '100';
+  var uiScale = parseInt(rawFont, 10);
+  if (!Number.isFinite(uiScale) || uiScale < 80 || uiScale > 130) uiScale = 100;
   if (localStorage.getItem('hdl_staff_compact') === null) {
     localStorage.setItem('hdl_staff_compact', '1');
   }
   function applyStaffView() {
     uiScale = Math.max(88, Math.min(118, uiScale));
-    document.documentElement.style.setProperty('--admin-ui-scale', uiScale / 100);
+    document.documentElement.style.setProperty('--admin-ui-scale', String(uiScale / 100));
     document.body.classList.toggle('adm-compact', localStorage.getItem('hdl_staff_compact') !== '0');
   }
   document.getElementById('admFontDown')?.addEventListener('click', function () {
-    uiScale -= 6; localStorage.setItem('hdl_staff_font', uiScale); applyStaffView();
+    uiScale -= 6; localStorage.setItem('hdl_staff_font', String(uiScale)); applyStaffView();
   });
   document.getElementById('admFontUp')?.addEventListener('click', function () {
-    uiScale += 6; localStorage.setItem('hdl_staff_font', uiScale); applyStaffView();
+    uiScale += 6; localStorage.setItem('hdl_staff_font', String(uiScale)); applyStaffView();
   });
   document.getElementById('admDensity')?.addEventListener('click', function () {
     localStorage.setItem('hdl_staff_compact', document.body.classList.contains('adm-compact') ? '0' : '1');
