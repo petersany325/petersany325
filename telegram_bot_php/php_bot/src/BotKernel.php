@@ -35,6 +35,13 @@ final class BotKernel
             exit('no update');
         }
 
+        // Telegram retries timed-out webhooks — ignore duplicate update_id
+        $updateId = (int)($update['update_id'] ?? 0);
+        if ($updateId > 0 && self::isDuplicateUpdate($updateId)) {
+            echo 'ok';
+            return;
+        }
+
         try {
             self::dispatch($update);
         } catch (\Throwable $e) {
@@ -67,5 +74,30 @@ final class BotKernel
                 MessageRouter::handle($ctx);
             }
         });
+    }
+
+    private static function isDuplicateUpdate(int $updateId): bool
+    {
+        try {
+            $pdo = db();
+            $pdo->exec(
+                'CREATE TABLE IF NOT EXISTS telegram_updates (
+                    update_id BIGINT PRIMARY KEY,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+            );
+            $st = $pdo->prepare('INSERT IGNORE INTO telegram_updates (update_id) VALUES (?)');
+            $st->execute(array($updateId));
+            if ($st->rowCount() === 0) {
+                return true;
+            }
+            // keep table small
+            if ($updateId % 50 === 0) {
+                $pdo->exec('DELETE FROM telegram_updates WHERE update_id < ' . (int)($updateId - 5000));
+            }
+        } catch (\Throwable $e) {
+            return false;
+        }
+        return false;
     }
 }

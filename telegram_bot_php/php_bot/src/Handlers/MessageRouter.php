@@ -33,6 +33,19 @@ final class MessageRouter
             }
         }
 
+        // Bottom reply-keyboard MUST win over in-progress forms (Buy SEDIV / Support / …)
+        if ($text !== '' && function_exists('resolve_reply_button_action') && function_exists('dispatch_reply_button_action')) {
+            $action = resolve_reply_button_action($text);
+            if ($action) {
+                if (function_exists('clear_user_state')) {
+                    clear_user_state($userId);
+                }
+                if (dispatch_reply_button_action($action, $chatId, $userId, $lang)) {
+                    return;
+                }
+            }
+        }
+
         // Advanced support / ticket form + optional phone gate for My Tickets
         if ($text !== '') {
             if (SupportFormService::handleText($chatId, $userId, $text, $lang)) {
@@ -45,13 +58,6 @@ final class MessageRouter
 
         if ($text === '' || ($text[0] ?? '') !== '/') {
             if ($text !== '') {
-                // Bottom reply-keyboard buttons arrive as plain text (not callbacks)
-                if (function_exists('resolve_reply_button_action') && function_exists('dispatch_reply_button_action')) {
-                    $action = resolve_reply_button_action($text);
-                    if ($action && dispatch_reply_button_action($action, $chatId, $userId, $lang)) {
-                        return;
-                    }
-                }
                 if (function_exists('feature_on') && feature_on('prodesk') && function_exists('handle_request_text') && handle_request_text($chatId, $userId, $text, $lang)) {
                     return;
                 }

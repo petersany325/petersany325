@@ -5,23 +5,50 @@
  */
 declare(strict_types=1);
 
-function main_reply_keyboard($lang = 'en') {
+function reply_button_label($lang, $key, $fallbackEn, $fallbackFa = null) {
     $fa = ($lang === 'fa');
+    $fallback = $fa ? ($fallbackFa !== null ? $fallbackFa : $fallbackEn) : $fallbackEn;
+    // Optional admin overrides in settings: reply_btn_<key>_en / _fa
+    $cfgKey = 'reply_btn_' . $key . '_' . ($fa ? 'fa' : 'en');
+    if (function_exists('cfg')) {
+        $custom = trim((string)cfg($cfgKey, ''));
+        if ($custom !== '') {
+            return $custom;
+        }
+    }
+    if (function_exists('menu_action_label')) {
+        $map = array(
+            'shop' => array('shop'),
+            'renew' => array('renew', 'cmd:renew'),
+            'support' => array('req:support', 'support'),
+            'orders' => array('orders'),
+            'mytickets' => array('mytickets'),
+            'sales' => array('req:sales'),
+            'help' => array('help'),
+        );
+        if (isset($map[$key])) {
+            return menu_action_label($lang, $map[$key], $fallback);
+        }
+    }
+    return $fallback;
+}
+
+function main_reply_keyboard($lang = 'en') {
     $rows = array(
         array(
-            array('text' => $fa ? '🛒 خرید SeDiv' : '🛒 Buy SEDIV'),
-            array('text' => $fa ? '♻️ تمدید لایسنس' : '♻️ Renew Licence'),
+            array('text' => reply_button_label($lang, 'shop', '🛒 Buy SEDIV', '🛒 خرید SeDiv')),
+            array('text' => reply_button_label($lang, 'renew', '♻️ Renew Licence', '♻️ تمدید لایسنس')),
         ),
         array(
-            array('text' => $fa ? '🔧 پشتیبانی فنی' : '🔧 Technical Support'),
+            array('text' => reply_button_label($lang, 'support', '🔧 Technical Support', '🔧 پشتیبانی فنی')),
         ),
         array(
-            array('text' => $fa ? '📦 سفارش‌های من' : '📦 My Orders'),
-            array('text' => $fa ? '🎫 تیکت‌های من' : '🎫 My Tickets'),
+            array('text' => reply_button_label($lang, 'orders', '📦 My Orders', '📦 سفارش‌های من')),
+            array('text' => reply_button_label($lang, 'mytickets', '🎫 My Tickets', '🎫 تیکت‌های من')),
         ),
         array(
-            array('text' => $fa ? '💎 تماس فروش' : '💬 Contact Sales'),
-            array('text' => $fa ? 'ℹ️ راهنما' : 'ℹ️ Help'),
+            array('text' => reply_button_label($lang, 'sales', '💬 Contact Sales', '💬 تماس فروش')),
+            array('text' => reply_button_label($lang, 'help', 'ℹ️ Help', 'ℹ️ راهنما')),
         ),
     );
     return array(
@@ -87,6 +114,24 @@ function resolve_reply_button_action($text) {
         'منو' => 'menu',
         'main menu' => 'menu',
     );
+
+    // Match current localized / admin-overridden button labels too
+    foreach (array(
+        'shop' => 'shop',
+        'renew' => 'renew',
+        'support' => 'support_form',
+        'orders' => 'orders',
+        'mytickets' => 'mytickets',
+        'sales' => 'sales',
+        'help' => 'help',
+    ) as $key => $action) {
+        foreach (array('en', 'fa') as $lang) {
+            $label = reply_button_norm(reply_button_label($lang, $key, $key));
+            if ($label !== '' && $label === $n) {
+                return $action;
+            }
+        }
+    }
 
     if (isset($map[$n])) {
         return $map[$n];

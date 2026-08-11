@@ -76,6 +76,20 @@ final class SupportFormService
     public static function start(int $chatId, int $userId, string $lang, string $mode = 'ticket'): void
     {
         self::ensureSchema();
+
+        // Ignore Telegram webhook retries that re-fire the same Support tap
+        $existing = get_user_state($userId);
+        if (
+            $existing
+            && ($existing['state'] ?? '') === 'support_form'
+            && (string)($existing['payload']['mode'] ?? '') === $mode
+            && !empty($existing['payload']['started_at'])
+            && (time() - (int)$existing['payload']['started_at']) < 3
+            && empty($existing['payload']['values'])
+        ) {
+            return;
+        }
+
         $intro = (string)cfg('support_intro_' . ($lang === 'fa' ? 'fa' : 'en'), '');
         if ($intro === '') {
             $intro = $lang === 'fa'
@@ -89,26 +103,37 @@ final class SupportFormService
         }
         $kb['inline_keyboard'][] = array(array('text' => $lang === 'fa' ? '❌ لغو' : '❌ Cancel', 'callback_data' => 'support_cancel'));
 
+        $token = bin2hex(random_bytes(4));
         set_user_state($userId, 'support_form', array(
             'mode' => $mode,
             'step' => 'boot',
             'values' => array(),
+            'started_at' => time(),
+            'token' => $token,
+            'asked' => array(),
         ));
         send_message($chatId, $intro, $kb);
-        self::askNext($chatId, $userId, $lang);
+        self::askNext($chatId, $userId, $lang, $token);
     }
 
-    public static function askNext(int $chatId, int $userId, string $lang): void
+    public static function askNext(int $chatId, int $userId, string $lang, ?string $expectToken = null): void
     {
         $st = get_user_state($userId);
         if (!$st || $st['state'] !== 'support_form') {
             return;
         }
         $p = $st['payload'] ?: array();
+        if ($expectToken !== null && (string)($p['token'] ?? '') !== '' && (string)$p['token'] !== $expectToken) {
+            return; // stale retry from an older start()
+        }
         $values = isset($p['values']) && is_array($p['values']) ? $p['values'] : array();
+        $asked = isset($p['asked']) && is_array($p['asked']) ? $p['asked'] : array();
         $profile = UserRepository::profile($userId);
+        $fields = TicketFieldsService::all();
+        $total = max(1, count($fields));
+        $done = count($values);
 
-        foreach (TicketFieldsService::all() as $field) {
+        foreach ($fields as $field) {
             $key = $field['key'];
             if (array_key_exists($key, $values)) {
                 continue;
@@ -128,19 +153,28 @@ final class SupportFormService
                     $values[$key] = $existing;
                     $p['values'] = $values;
                     set_user_state($userId, 'support_form', $p);
+                    $done = count($values);
                     continue;
                 }
             }
 
+            // Already prompted for this field — wait for the user's answer
+            if (!empty($asked[$key])) {
+                return;
+            }
+
+            $asked[$key] = 1;
             $p['step'] = 'f:' . $key;
             $p['values'] = $values;
+            $p['asked'] = $asked;
             set_user_state($userId, 'support_form', $p);
             $label = $lang === 'fa' ? $field['fa'] : $field['en'];
             $icon = self::iconFor($field['type']);
             $req = !empty($field['required'])
                 ? ($lang === 'fa' ? ' (الزامی)' : ' (required)')
                 : ($lang === 'fa' ? ' (اختیاری — برای رد شدن - بفرستید)' : ' (optional — send - to skip)');
-            send_message($chatId, $icon . ' ' . $label . $req);
+            $progress = ($lang === 'fa' ? 'مرحله ' : 'Step ') . ($done + 1) . '/' . $total;
+            send_message($chatId, $progress . "\n" . $icon . ' ' . $label . $req);
             return;
         }
 
@@ -160,6 +194,12 @@ final class SupportFormService
         if (!$st || $st['state'] !== 'support_form') {
             return false;
         }
+
+        // Let MessageRouter handle bottom menu buttons (do not treat as form answers)
+        if (function_exists('resolve_reply_button_action') && resolve_reply_button_action($text)) {
+            return false;
+        }
+
         if ($text === '/cancel' || strcasecmp($text, 'cancel') === 0) {
             clear_user_state($userId);
             send_message($chatId, $lang === 'fa' ? '❌ لغو شد.' : '❌ Cancelled.', function_exists('main_reply_keyboard') ? main_reply_keyboard($lang) : main_keyboard($lang));
@@ -169,7 +209,7 @@ final class SupportFormService
         $p = $st['payload'] ?: array();
         $step = (string)($p['step'] ?? '');
         if (strpos($step, 'f:') !== 0) {
-            self::askNext($chatId, $userId, $lang);
+            self::askNext($chatId, $userId, $lang, isset($p['token']) ? (string)$p['token'] : null);
             return true;
         }
 
@@ -182,7 +222,7 @@ final class SupportFormService
             }
         }
         if (!$field) {
-            self::askNext($chatId, $userId, $lang);
+            self::askNext($chatId, $userId, $lang, isset($p['token']) ? (string)$p['token'] : null);
             return true;
         }
 
@@ -200,7 +240,7 @@ final class SupportFormService
                 return true;
             }
             if ($field['type'] === 'phone') {
-                $val = preg_replace('/[^\d\+]/', '', $val) ?: $val;
+                $val = self::normalizePhone($val);
             }
         }
 
@@ -214,8 +254,28 @@ final class SupportFormService
         }
 
         set_user_state($userId, 'support_form', $p);
-        self::askNext($chatId, $userId, $lang);
+        self::askNext($chatId, $userId, $lang, isset($p['token']) ? (string)$p['token'] : null);
         return true;
+    }
+
+    public static function normalizePhone(string $val): string
+    {
+        $map = array(
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+            '＋' => '+',
+        );
+        $val = strtr(trim($val), $map);
+        $val = preg_replace('/[^\d+]/', '', $val) ?? '';
+        // keep a single leading +
+        if ($val !== '' && $val[0] === '+') {
+            $val = '+' . preg_replace('/\D+/', '', substr($val, 1));
+        } else {
+            $val = preg_replace('/\D+/', '', $val) ?? '';
+        }
+        return $val;
     }
 
     /** @param array<string,mixed> $field */
@@ -234,9 +294,13 @@ final class SupportFormService
                 }
                 break;
             case 'phone':
-                $phone = preg_replace('/[^\d\+]/', '', $val);
-                if ($phone === null || strlen($phone) < 7) {
-                    return $lang === 'fa' ? 'شماره موبایل معتبر وارد کنید.' : 'Please enter a valid mobile number.';
+                $phone = self::normalizePhone($val);
+                $digits = preg_replace('/\D+/', '', $phone) ?? '';
+                // E.164-ish: 7–15 digits (accepts +9893…,  rec09…, 0935…)
+                if ($digits === '' || strlen($digits) < 7 || strlen($digits) > 15) {
+                    return $lang === 'fa'
+                        ? 'شماره موبایل معتبر وارد کنید (مثلاً +98912… یا 0912…).'
+                        : 'Please enter a valid mobile number (e.g. +98912… or 0912…).';
                 }
                 break;
             case 'id':

@@ -57,6 +57,9 @@ final class CallbackRouter
 
         if ($data === 'req:support') {
             answer_callback($id);
+            if (function_exists('clear_user_state')) {
+                clear_user_state($userId);
+            }
             SupportFormService::start($chatId, $userId, $lang, 'support');
             return;
         }

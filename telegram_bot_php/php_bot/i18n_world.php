@@ -235,6 +235,62 @@ function lang_keyboard_world($fromStart = true, $page = 0, $detected = 'en') {
     return array('inline_keyboard' => $kb);
 }
 
+/**
+ * Resolve button label from admin Menus (DB + i18n), else fallback.
+ * Prefer admin-edited titles so changed texts actually show in the bot.
+ */
+function menu_action_label($lang, $actions, $fallback) {
+    static $cache = array();
+    $lang = $lang ? (string)$lang : 'en';
+    if (!isset($cache[$lang])) {
+        $cache[$lang] = array();
+        try {
+            if (function_exists('ensure_schema')) {
+                ensure_schema();
+            }
+            $rows = db()->query('SELECT * FROM menus WHERE is_active=1')->fetchAll();
+            foreach ($rows as $row) {
+                if (function_exists('localize_menu_row')) {
+                    $row = localize_menu_row($row, $lang);
+                }
+                $title = trim((string)($row['title'] ?? ''));
+                if ($title === '') {
+                    continue;
+                }
+                $type = (string)($row['menu_type'] ?? '');
+                $val = trim((string)($row['value_text'] ?? ''));
+                if ($type === 'callback' && $val !== '') {
+                    $cache[$lang][$val] = $title;
+                } elseif ($type === 'command' && $val !== '') {
+                    $cmd = ltrim($val, '/');
+                    $cache[$lang]['cmd:' . $cmd] = $title;
+                    $cache[$lang][$cmd] = $title;
+                } elseif ($type === 'faq_list') {
+                    $cache[$lang]['faqcat:all'] = $title;
+                } elseif ($type === 'submenu') {
+                    $cache[$lang]['menu:' . (int)$row['id']] = $title;
+                }
+            }
+        } catch (Throwable $e) {
+            $cache[$lang] = array();
+        }
+    }
+    foreach ((array)$actions as $action) {
+        $action = (string)$action;
+        if ($action !== '' && isset($cache[$lang][$action]) && $cache[$lang][$action] !== '') {
+            return $cache[$lang][$action];
+        }
+    }
+    // Smart translate hardcoded English fallbacks for non-EN languages
+    if ($lang !== 'en' && class_exists('SmartI18nPlugin') && is_string($fallback) && $fallback !== '') {
+        try {
+            return SmartI18nPlugin::translate($fallback, $lang);
+        } catch (Throwable $e) {
+        }
+    }
+    return $fallback;
+}
+
 /** Professional graphical main hub after language */
 function graphical_main_hub($lang = 'en') {
     $items = function_exists('get_menu_items') ? get_menu_items(null, $lang) : array();
@@ -242,145 +298,148 @@ function graphical_main_hub($lang = 'en') {
     $on = function ($f) {
         return !function_exists('feature_on') || feature_on($f);
     };
+    $L = function ($actions, $fallback) use ($lang) {
+        return menu_action_label($lang, $actions, $fallback);
+    };
 
-    // Always show professional top actions (feature-aware)
+    // Always show professional top actions (feature-aware) — labels from admin menus when present
     if ($lang === 'fa') {
         $top = array();
         if ($on('shop') || $on('prodesk')) {
             $top[] = array(
-                array('text' => '🛒 فروشگاه SeDiv', 'callback_data' => 'shop'),
-                array('text' => '💼 میز حرفه‌ای', 'callback_data' => 'reqhub'),
+                array('text' => $L(array('shop'), '🛒 فروشگاه SeDiv'), 'callback_data' => 'shop'),
+                array('text' => $L(array('reqhub', 'support'), '💼 میز حرفه‌ای'), 'callback_data' => 'reqhub'),
             );
         }
         if ($on('prodesk')) {
             $top[] = array(
-                array('text' => '🛠️ پشتیبانی', 'callback_data' => 'req:support'),
-                array('text' => '💎 فروش نرم‌افزار', 'callback_data' => 'req:sales'),
+                array('text' => $L(array('req:support'), '🛠️ پشتیبانی'), 'callback_data' => 'req:support'),
+                array('text' => $L(array('req:sales'), '💎 فروش نرم‌افزار'), 'callback_data' => 'req:sales'),
             );
         }
         if ($on('tickets') || $on('profile')) {
             $tk = array();
             if ($on('tickets')) {
-                $tk[] = array('text' => '🎫 تیکت‌های من', 'callback_data' => 'mytickets');
+                $tk[] = array('text' => $L(array('mytickets'), '🎫 تیکت‌های من'), 'callback_data' => 'mytickets');
             }
             if ($on('profile')) {
-                $tk[] = array('text' => '👤 پروفایل', 'callback_data' => 'profile');
+                $tk[] = array('text' => $L(array('profile'), '👤 پروفایل'), 'callback_data' => 'profile');
             }
             $top[] = $tk;
         }
         $top[] = array(
-            array('text' => '❓ سوالات', 'callback_data' => 'faqcat:all'),
-            array('text' => '📋 انجمن', 'callback_data' => 'forum'),
+            array('text' => $L(array('faqcat:all'), '❓ سوالات'), 'callback_data' => 'faqcat:all'),
+            array('text' => $L(array('forum'), '📋 انجمن'), 'callback_data' => 'forum'),
         );
         $top[] = array(
-            array('text' => '🎓 آموزش', 'callback_data' => 'cmd:training'),
+            array('text' => $L(array('cmd:training', 'training'), '🎓 آموزش'), 'callback_data' => 'cmd:training'),
             array('text' => '🌐 وب‌سایت', 'url' => bot_config()['site_url']),
         );
         $acc = array();
         if ($on('license')) {
-            $acc[] = array('text' => '🔑 لایسنس', 'callback_data' => 'license');
+            $acc[] = array('text' => $L(array('license'), '🔑 لایسنس'), 'callback_data' => 'license');
         }
         if ($on('orders')) {
-            $acc[] = array('text' => '📦 سفارش‌ها', 'callback_data' => 'orders');
+            $acc[] = array('text' => $L(array('orders'), '📦 سفارش‌ها'), 'callback_data' => 'orders');
         }
         if ($acc) {
             $top[] = $acc;
         }
         $more = array();
         if ($on('cart')) {
-            $more[] = array('text' => '🛒 سبد', 'callback_data' => 'cart');
+            $more[] = array('text' => $L(array('cart'), '🛒 سبد'), 'callback_data' => 'cart');
         }
         if ($on('payments')) {
-            $more[] = array('text' => '💳 پرداخت', 'callback_data' => 'checkout');
+            $more[] = array('text' => $L(array('checkout'), '💳 پرداخت'), 'callback_data' => 'checkout');
         }
         if ($more) {
             $top[] = $more;
         }
         $eng = array();
         if ($on('contact')) {
-            $eng[] = array('text' => '☎️ تماس', 'callback_data' => 'contact');
+            $eng[] = array('text' => $L(array('contact'), '☎️ تماس'), 'callback_data' => 'contact');
         }
         if ($on('referral')) {
-            $eng[] = array('text' => '🎁 معرفی', 'callback_data' => 'referral');
+            $eng[] = array('text' => $L(array('referral'), '🎁 معرفی'), 'callback_data' => 'referral');
         }
         if ($eng) {
             $top[] = $eng;
         }
         if ($on('vip_download')) {
-            $top[] = array(array('text' => '💎 دانلود VIP', 'callback_data' => 'vipdl'));
+            $top[] = array(array('text' => $L(array('vipdl'), '💎 دانلود VIP'), 'callback_data' => 'vipdl'));
         }
         $top[] = array(
-            array('text' => '🌍 زبان', 'callback_data' => 'lang'),
-            array('text' => 'ℹ️ راهنما', 'callback_data' => 'help'),
+            array('text' => $L(array('lang'), '🌍 زبان'), 'callback_data' => 'lang'),
+            array('text' => $L(array('help'), 'ℹ️ راهنما'), 'callback_data' => 'help'),
         );
     } else {
         $top = array();
         if ($on('shop') || $on('prodesk')) {
             $top[] = array(
-                array('text' => '🛒 SeDiv Shop', 'callback_data' => 'shop'),
-                array('text' => '💼 Pro Desk', 'callback_data' => 'reqhub'),
+                array('text' => $L(array('shop'), '🛒 SeDiv Shop'), 'callback_data' => 'shop'),
+                array('text' => $L(array('reqhub', 'support'), '💼 Pro Desk'), 'callback_data' => 'reqhub'),
             );
         }
         if ($on('prodesk')) {
             $top[] = array(
-                array('text' => '🛠️ Support', 'callback_data' => 'req:support'),
-                array('text' => '💎 Software Sales', 'callback_data' => 'req:sales'),
+                array('text' => $L(array('req:support'), '🛠️ Support'), 'callback_data' => 'req:support'),
+                array('text' => $L(array('req:sales'), '💎 Software Sales'), 'callback_data' => 'req:sales'),
             );
         }
         if ($on('tickets') || $on('profile')) {
             $tk = array();
             if ($on('tickets')) {
-                $tk[] = array('text' => '🎫 My Tickets', 'callback_data' => 'mytickets');
+                $tk[] = array('text' => $L(array('mytickets'), '🎫 My Tickets'), 'callback_data' => 'mytickets');
             }
             if ($on('profile')) {
-                $tk[] = array('text' => '👤 Profile', 'callback_data' => 'profile');
+                $tk[] = array('text' => $L(array('profile'), '👤 Profile'), 'callback_data' => 'profile');
             }
             $top[] = $tk;
         }
         $top[] = array(
-            array('text' => '❓ FAQ', 'callback_data' => 'faqcat:all'),
-            array('text' => '📋 Forum', 'callback_data' => 'forum'),
+            array('text' => $L(array('faqcat:all'), '❓ FAQ'), 'callback_data' => 'faqcat:all'),
+            array('text' => $L(array('forum'), '📋 Forum'), 'callback_data' => 'forum'),
         );
         $top[] = array(
-            array('text' => '🎓 Training', 'callback_data' => 'cmd:training'),
+            array('text' => $L(array('cmd:training', 'training'), '🎓 Training'), 'callback_data' => 'cmd:training'),
             array('text' => '🌐 Website', 'url' => bot_config()['site_url']),
         );
         $acc = array();
         if ($on('license')) {
-            $acc[] = array('text' => '🔑 License', 'callback_data' => 'license');
+            $acc[] = array('text' => $L(array('license'), '🔑 License'), 'callback_data' => 'license');
         }
         if ($on('orders')) {
-            $acc[] = array('text' => '📦 Orders', 'callback_data' => 'orders');
+            $acc[] = array('text' => $L(array('orders'), '📦 Orders'), 'callback_data' => 'orders');
         }
         if ($acc) {
             $top[] = $acc;
         }
         $more = array();
         if ($on('cart')) {
-            $more[] = array('text' => '🛒 Cart', 'callback_data' => 'cart');
+            $more[] = array('text' => $L(array('cart'), '🛒 Cart'), 'callback_data' => 'cart');
         }
         if ($on('payments')) {
-            $more[] = array('text' => '💳 Checkout', 'callback_data' => 'checkout');
+            $more[] = array('text' => $L(array('checkout'), '💳 Checkout'), 'callback_data' => 'checkout');
         }
         if ($more) {
             $top[] = $more;
         }
         $eng = array();
         if ($on('contact')) {
-            $eng[] = array('text' => '☎️ Contact', 'callback_data' => 'contact');
+            $eng[] = array('text' => $L(array('contact'), '☎️ Contact'), 'callback_data' => 'contact');
         }
         if ($on('referral')) {
-            $eng[] = array('text' => '🎁 Referral', 'callback_data' => 'referral');
+            $eng[] = array('text' => $L(array('referral'), '🎁 Referral'), 'callback_data' => 'referral');
         }
         if ($eng) {
             $top[] = $eng;
         }
         if ($on('vip_download')) {
-            $top[] = array(array('text' => '💎 VIP Download', 'callback_data' => 'vipdl'));
+            $top[] = array(array('text' => $L(array('vipdl'), '💎 VIP Download'), 'callback_data' => 'vipdl'));
         }
         $top[] = array(
-            array('text' => '🌍 Language', 'callback_data' => 'lang'),
-            array('text' => 'ℹ️ Help', 'callback_data' => 'help'),
+            array('text' => $L(array('lang'), '🌍 Language'), 'callback_data' => 'lang'),
+            array('text' => $L(array('help'), 'ℹ️ Help'), 'callback_data' => 'help'),
         );
     }
     $kb = $top;
