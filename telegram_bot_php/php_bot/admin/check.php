@@ -120,6 +120,42 @@ try {
     bad('File: ' . $e->getFile() . ' line ' . $e->getLine());
 }
 
+echo '</ul><h3>Telegram API (outbound)</h3><ul>';
+info('allow_url_fopen: ' . (ini_get('allow_url_fopen') ? 'On' : 'Off'));
+info('curl extension: ' . (function_exists('curl_init') ? 'yes' : 'NO'));
+info('openssl: ' . (extension_loaded('openssl') ? 'yes' : 'NO'));
+if (function_exists('cfg')) {
+    info('feature_language_gate: ' . (function_exists('feature_on') && feature_on('language_gate') ? 'ON' : 'off'));
+    info('start_with_menu: ' . ((int)cfg('start_with_menu', 0) === 1 ? 'ON (skips language!)' : 'off (good)'));
+    $sec = (string)cfg('webhook_secret', '');
+    info('webhook_secret: ' . ($sec !== '' ? ('set, len=' . strlen($sec)) : 'empty'));
+}
+if (function_exists('tg_api')) {
+    $me = tg_api('getMe', array());
+    if (!empty($me['ok'])) {
+        $u = $me['result']['username'] ?? '?';
+        ok('getMe OK — @' . $u);
+    } else {
+        bad('getMe FAILED: ' . json_encode($me, JSON_UNESCAPED_UNICODE));
+        bad('Without outbound Telegram API the bot cannot show language picker or menus.');
+    }
+    $wh = tg_api('getWebhookInfo', array());
+    if (!empty($wh['ok'])) {
+        $r = $wh['result'] ?? array();
+        ok('Webhook URL: ' . (string)($r['url'] ?? ''));
+        info('pending_update_count: ' . (string)($r['pending_update_count'] ?? '?'));
+        if (!empty($r['last_error_message'])) {
+            bad('last_error_message: ' . (string)$r['last_error_message'] . ' @ ' . (string)($r['last_error_date'] ?? ''));
+        } else {
+            ok('No last_error_message on webhook');
+        }
+    } else {
+        bad('getWebhookInfo FAILED: ' . json_encode($wh, JSON_UNESCAPED_UNICODE));
+    }
+} else {
+    bad('tg_api() not available');
+}
+
 $log = $botDir . '/error.log';
 if (is_file($log)) {
     $tail = @file_get_contents($log);
@@ -137,6 +173,7 @@ if (is_file($log)) {
 echo '</ul>';
 echo '<p><a href="login.php">Try Admin Login</a> &nbsp; | &nbsp; ';
 echo '<a href="menus.php">Menus</a> &nbsp; | &nbsp; ';
+echo '<a href="settings.php?tab=webhook">Webhook settings</a> &nbsp; | &nbsp; ';
 echo '<a href="../setup_admin.php">Setup Admin Password</a></p>';
 echo '<p>Correct login URL:<br><code>https://hdd-land.com/telegram_bot/php_bot/admin/login.php</code></p>';
 echo '</body></html>';

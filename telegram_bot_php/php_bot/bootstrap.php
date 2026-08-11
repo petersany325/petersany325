@@ -36,19 +36,93 @@ function db() {
     return $pdo;
 }
 
+/**
+ * Call Telegram Bot API. Prefer cURL (file_get_contents often fails when
+ * allow_url_fopen is off or OpenSSL streams are blocked on shared hosts).
+ * Errors are logged to error.log without the bot token.
+ */
 function tg_api($method, $params = array()) {
-    $token = bot_config()['bot_token'];
+    $token = (string)(bot_config()['bot_token'] ?? '');
+    if ($token === '') {
+        tg_api_log($method, 'empty bot_token');
+        return array('ok' => false, 'description' => 'empty bot_token');
+    }
     $url = 'https://api.telegram.org/bot' . $token . '/' . $method;
-    $ctx = stream_context_create(array(
-        'http' => array(
-            'method' => 'POST',
-            'header' => "Content-Type: application/json\r\n",
-            'content' => json_encode($params, JSON_UNESCAPED_UNICODE),
-            'timeout' => 30,
-        ),
-    ));
-    $raw = @file_get_contents($url, false, $ctx);
-    return $raw ? (json_decode($raw, true) ?: array()) : array();
+    $payload = json_encode($params, JSON_UNESCAPED_UNICODE);
+    if ($payload === false) {
+        tg_api_log($method, 'json_encode failed');
+        return array('ok' => false, 'description' => 'json_encode failed');
+    }
+
+    $raw = null;
+    $httpCode = 0;
+    $err = '';
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, array(
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $payload,
+            CURLOPT_HTTPHEADER => array('Content-Type: application/json'),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_TIMEOUT => 45,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+        ));
+        $raw = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if ($raw === false) {
+            $err = curl_error($ch) ?: 'curl_exec failed';
+        }
+        curl_close($ch);
+    } else {
+        $ctx = stream_context_create(array(
+            'http' => array(
+                'method' => 'POST',
+                'header' => "Content-Type: application/json\r\n",
+                'content' => $payload,
+                'timeout' => 45,
+                'ignore_errors' => true,
+            ),
+        ));
+        $raw = @file_get_contents($url, false, $ctx);
+        if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) {
+            $httpCode = (int)$m[1];
+        }
+        if ($raw === false) {
+            $err = 'file_get_contents failed (allow_url_fopen=' . (ini_get('allow_url_fopen') ? '1' : '0') . ')';
+        }
+    }
+
+    if ($raw === false || $raw === null || $raw === '') {
+        tg_api_log($method, $err !== '' ? $err : ('empty response http=' . $httpCode));
+        return array(
+            'ok' => false,
+            'description' => $err !== '' ? $err : ('empty response http=' . $httpCode),
+            'http_code' => $httpCode,
+        );
+    }
+
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        tg_api_log($method, 'invalid json http=' . $httpCode . ' body=' . substr($raw, 0, 180));
+        return array('ok' => false, 'description' => 'invalid json', 'http_code' => $httpCode);
+    }
+    if (empty($decoded['ok'])) {
+        $desc = (string)($decoded['description'] ?? 'telegram error');
+        tg_api_log($method, 'api=' . $desc . ' http=' . $httpCode);
+    }
+    return $decoded;
+}
+
+function tg_api_log($method, $message) {
+    $safeMethod = preg_replace('/[^a-zA-Z0-9_]/', '', (string)$method);
+    @file_put_contents(
+        __DIR__ . '/error.log',
+        date('c') . ' tg_api ' . $safeMethod . ': ' . $message . "\n",
+        FILE_APPEND
+    );
 }
 
 function send_message($chatId, $text, $replyMarkup = null) {
@@ -61,7 +135,16 @@ function send_message($chatId, $text, $replyMarkup = null) {
     if ($replyMarkup) {
         $params['reply_markup'] = $replyMarkup;
     }
-    tg_api('sendMessage', $params);
+    $res = tg_api('sendMessage', $params);
+    // HTML parse errors: retry as plain text so language picker / menus still arrive
+    if (is_array($res) && empty($res['ok'])) {
+        $desc = (string)($res['description'] ?? '');
+        if (stripos($desc, 'parse') !== false || stripos($desc, "can't parse") !== false) {
+            unset($params['parse_mode']);
+            $res = tg_api('sendMessage', $params);
+        }
+    }
+    return $res;
 }
 
 function edit_message($chatId, $messageId, $text, $replyMarkup = null) {

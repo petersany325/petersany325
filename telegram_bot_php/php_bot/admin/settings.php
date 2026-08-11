@@ -224,17 +224,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $res = tg_api('setWebhook', $params);
             if (empty($res['ok'])) {
-                throw new RuntimeException('Telegram error: ' . json_encode($res));
+                $detail = is_array($res) ? ($res['description'] ?? json_encode($res)) : 'empty response';
+                throw new RuntimeException('Telegram setWebhook failed: ' . $detail . ' — check admin/check.php (host must reach api.telegram.org)');
             }
-            flash('ok', 'Webhook set to ' . $url);
+            flash('ok', 'Webhook set to ' . $url . ' | ' . json_encode($res, JSON_UNESCAPED_UNICODE));
             $tab = 'webhook';
         } elseif ($action === 'webhook_info') {
             $res = tg_api('getWebhookInfo', array());
+            if (empty($res) || (isset($res['ok']) && !$res['ok'] && empty($res['result']))) {
+                $detail = is_array($res) ? ($res['description'] ?? json_encode($res)) : '[]';
+                throw new RuntimeException('getWebhookInfo failed: ' . $detail . ' — open admin/check.php');
+            }
             flash('ok', 'Webhook info: ' . json_encode($res, JSON_UNESCAPED_UNICODE));
             $tab = 'webhook';
         } elseif ($action === 'delete_webhook') {
             $res = tg_api('deleteWebhook', array());
-            flash('ok', 'Webhook deleted: ' . json_encode($res));
+            flash('ok', 'Webhook deleted: ' . json_encode($res, JSON_UNESCAPED_UNICODE));
             $tab = 'webhook';
         }
     } catch (Throwable $e) {
