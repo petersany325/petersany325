@@ -255,6 +255,7 @@ function ensure_professional_menus($pdo = null) {
         array('Resources', '🔧 Brands', 'callback', 'brands', 9, 1, '🔧 برندها', 'resources'),
         array('Community', '📰 News', 'callback', 'news', 9, 2, '📰 اخبار', null),
         array('Commerce', '📱 Mini App', 'callback', 'miniapp', 10, 1, '📱 مینی‌اپ', null),
+        array('Resources', '💎 VIP Download', 'callback', 'vipdl', 11, 1, '💎 دانلود VIP', 'resources'),
         array('System', '🌍 Language', 'callback', 'lang', 3, 1, '🌍 زبان', null),
     );
 
@@ -398,6 +399,7 @@ function menu_feature_for_item(array $item) {
         'brands' => 'brand_search',
         'news' => 'news',
         'miniapp' => 'miniapp',
+        'vipdl' => 'vip_download',
     );
     return isset($map[$val]) ? $map[$val] : null;
 }

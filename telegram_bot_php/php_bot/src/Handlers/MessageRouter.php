@@ -242,7 +242,9 @@ final class MessageRouter
             case 'brands':
             case 'news':
             case 'miniapp':
-                \HddLand\Bot\Services\ExtraMenusService::show($cmd, $chatId, 0, $userId, $lang);
+            case 'vipdl':
+            case 'vip':
+                \HddLand\Bot\Services\ExtraMenusService::show($cmd === 'vip' ? 'vipdl' : $cmd, $chatId, 0, $userId, $lang);
                 break;
 
             default:

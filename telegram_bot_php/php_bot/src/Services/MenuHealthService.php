@@ -179,6 +179,7 @@ final class MenuHealthService
             'brands' => 'Brand Search',
             'news' => 'News / Updates',
             'miniapp' => 'Mini App',
+            'vipdl' => 'VIP Download',
         );
     }
 
@@ -206,6 +207,7 @@ final class MenuHealthService
             'brands' => 'brand_search',
             'news' => 'news',
             'miniapp' => 'miniapp',
+            'vipdl' => 'vip_download',
             'faqcat:all' => 'faq',
         );
         return $map[$cb] ?? null;

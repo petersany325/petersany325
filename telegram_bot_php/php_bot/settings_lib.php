@@ -63,6 +63,7 @@ function bot_defaults() {
         'feature_brand_search' => 1,
         'feature_news' => 1,
         'feature_miniapp' => 0,
+        'feature_vip_download' => 1,
 
         'notify_tickets' => 1,
         'notify_requests' => 1,
@@ -79,6 +80,13 @@ function bot_defaults() {
         'payment_currency' => 'USD',
         'checkout_url' => '',
         'miniapp_url' => '',
+
+        // VIP Download (forum vbdlmanager)
+        'vip_download_url' => 'https://forum.hdd-land.com/vbdlmanager',
+        'vip_download_text_en' => "💎 <b>VIP Download</b>\n\nExclusive downloads for VIP members.",
+        'vip_download_text_fa' => "💎 <b>دانلود VIP</b>\n\nدانلود اختصاصی برای اعضای VIP.",
+        'vip_download_denied_en' => "🔒 This section is for <b>VIP</b> users only.\n\nContact sales to upgrade your access.",
+        'vip_download_denied_fa' => "🔒 این بخش فقط برای کاربران <b>VIP</b> است.\n\nبرای ارتقا با فروش تماس بگیرید.",
 
         // License / renewal
         'license_help_text_en' => '',
@@ -217,6 +225,6 @@ function all_feature_keys() {
     return array(
         'shop', 'forum', 'faq', 'tickets', 'prodesk', 'ai', 'language_gate', 'auto_faq_search',
         'cart', 'orders', 'payments', 'license', 'renewal', 'demo', 'profile', 'feedback',
-        'referral', 'contact', 'brand_search', 'news', 'miniapp',
+        'referral', 'contact', 'brand_search', 'news', 'miniapp', 'vip_download',
     );
 }

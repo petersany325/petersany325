@@ -306,6 +306,9 @@ function graphical_main_hub($lang = 'en') {
         if ($eng) {
             $top[] = $eng;
         }
+        if ($on('vip_download')) {
+            $top[] = array(array('text' => '💎 دانلود VIP', 'callback_data' => 'vipdl'));
+        }
         $top[] = array(
             array('text' => '🌍 زبان', 'callback_data' => 'lang'),
             array('text' => 'ℹ️ راهنما', 'callback_data' => 'help'),
@@ -372,6 +375,9 @@ function graphical_main_hub($lang = 'en') {
         if ($eng) {
             $top[] = $eng;
         }
+        if ($on('vip_download')) {
+            $top[] = array(array('text' => '💎 VIP Download', 'callback_data' => 'vipdl'));
+        }
         $top[] = array(
             array('text' => '🌍 Language', 'callback_data' => 'lang'),
             array('text' => 'ℹ️ Help', 'callback_data' => 'help'),
@@ -380,7 +386,7 @@ function graphical_main_hub($lang = 'en') {
     $kb = $top;
 
     // Append custom root menu items (not duplicates of hub buttons)
-    $used = array('shop','reqhub','req:support','req:sales','faqcat:all','forum','cmd:training','lang','help','main','cart','orders','checkout','license','renew','demo','profile','feedback','referral','contact','brands','news','miniapp','mytickets','support_cancel','support');
+    $used = array('shop','reqhub','req:support','req:sales','faqcat:all','forum','cmd:training','lang','help','main','cart','orders','checkout','license','renew','demo','profile','feedback','referral','contact','brands','news','miniapp','mytickets','support_cancel','support','vipdl');
     $row = array();
     foreach ($items as $it) {
         $titleLow = function_exists('mb_strtolower') ? mb_strtolower((string)$it['title'], 'UTF-8') : strtolower((string)$it['title']);

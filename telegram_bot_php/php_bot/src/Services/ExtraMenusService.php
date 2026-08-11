@@ -188,9 +188,44 @@ final class ExtraMenusService
                         array(array('text' => $lang === 'fa' ? '🏠 منو' : '🏠 Menu', 'callback_data' => 'main')),
                     )));
                 break;
+            case 'vipdl':
+                self::vipDownload($chatId, $msgId, $userId, $lang);
+                break;
             default:
                 Presenter::editOrSend($chatId, $msgId, 'Unknown menu.', main_keyboard($lang));
         }
+    }
+
+    private static function vipDownload(int $chatId, int $msgId, int $userId, string $lang): void
+    {
+        $url = trim((string)cfg('vip_download_url', 'https://forum.hdd-land.com/vbdlmanager'));
+        if ($url === '' || !preg_match('#^https?://#i', $url)) {
+            $url = 'https://forum.hdd-land.com/vbdlmanager';
+        }
+        $isVip = \HddLand\Bot\Repositories\UserRepository::isVip($userId) || (function_exists('is_admin') && is_admin($userId));
+        if (!$isVip) {
+            $denied = (string)cfg('vip_download_denied_' . ($lang === 'fa' ? 'fa' : 'en'), '');
+            if ($denied === '') {
+                $denied = $lang === 'fa'
+                    ? "🔒 این بخش فقط برای کاربران <b>VIP</b> است.\n\nبرای ارتقا با فروش تماس بگیرید."
+                    : "🔒 This section is for <b>VIP</b> users only.\n\nContact sales to upgrade your access.";
+            }
+            Presenter::editOrSend($chatId, $msgId, $denied, self::kb($lang, array(
+                array('req:sales', $lang === 'fa' ? '💎 تماس فروش' : '💎 Contact Sales'),
+                array('main', $lang === 'fa' ? '🏠 منو' : '🏠 Menu'),
+            )));
+            return;
+        }
+        $text = (string)cfg('vip_download_text_' . ($lang === 'fa' ? 'fa' : 'en'), '');
+        if ($text === '') {
+            $text = $lang === 'fa'
+                ? "💎 <b>دانلود VIP</b>\n\nدانلود اختصاصی برای اعضای VIP."
+                : "💎 <b>VIP Download</b>\n\nExclusive downloads for VIP members.";
+        }
+        Presenter::editOrSend($chatId, $msgId, $text, array('inline_keyboard' => array(
+            array(array('text' => $lang === 'fa' ? '⬇️ ورود به VIP Download' : '⬇️ Open VIP Download', 'url' => $url)),
+            array(array('text' => $lang === 'fa' ? '🏠 منو' : '🏠 Menu', 'callback_data' => 'main')),
+        )));
     }
 
     private static function checkout(int $chatId, int $msgId, string $lang): void
@@ -265,6 +300,7 @@ final class ExtraMenusService
             'news' => 'news',
             'miniapp' => 'miniapp',
             'mytickets' => 'tickets',
+            'vipdl' => 'vip_download',
         );
         return $map[$key] ?? null;
     }

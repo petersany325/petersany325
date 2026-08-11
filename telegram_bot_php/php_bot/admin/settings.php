@@ -64,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'bot_username','referral_bonus_text_en','referral_bonus_text_fa','contact_phone','contact_hours',
                 'news_channel_url','demo_request_info_en','demo_request_info_fa','feedback_thankyou_en','feedback_thankyou_fa',
                 'brand_search_prompt_en','brand_search_prompt_fa',
+                'vip_download_url','vip_download_text_en','vip_download_text_fa','vip_download_denied_en','vip_download_denied_fa',
             ) as $k) {
                 $cfg[$k] = trim((string)($_POST[$k] ?? ''));
             }
@@ -353,6 +354,7 @@ require __DIR__ . '/layout_header.php';
         'feature_brand_search' => '🔧 Brand Search',
         'feature_news' => '📰 News / Updates',
         'feature_miniapp' => '📱 Mini App',
+        'feature_vip_download' => '💎 VIP Download',
       );
       foreach ($pro as $k => $label): ?>
         <label><input type="checkbox" name="<?= e($k) ?>" value="1" <?= !empty($cfg[$k])?'checked':'' ?>> <?= e($label) ?></label>
@@ -439,6 +441,18 @@ require __DIR__ . '/layout_header.php';
     <textarea name="brand_search_prompt_en" rows="2"><?= e((string)($cfg['brand_search_prompt_en'] ?? '')) ?></textarea>
     <label>Brand search prompt (FA)</label>
     <textarea name="brand_search_prompt_fa" rows="2"><?= e((string)($cfg['brand_search_prompt_fa'] ?? '')) ?></textarea>
+    <h2 style="margin-top:18px">💎 VIP Download</h2>
+    <label>VIP Download URL</label>
+    <input name="vip_download_url" value="<?= e((string)($cfg['vip_download_url'] ?? 'https://forum.hdd-land.com/vbdlmanager')) ?>" placeholder="https://forum.hdd-land.com/vbdlmanager">
+    <label>VIP intro text (EN)</label>
+    <textarea name="vip_download_text_en" rows="3"><?= e((string)($cfg['vip_download_text_en'] ?? '')) ?></textarea>
+    <label>VIP intro text (FA)</label>
+    <textarea name="vip_download_text_fa" rows="3"><?= e((string)($cfg['vip_download_text_fa'] ?? '')) ?></textarea>
+    <label>Denied message for non-VIP (EN)</label>
+    <textarea name="vip_download_denied_en" rows="2"><?= e((string)($cfg['vip_download_denied_en'] ?? '')) ?></textarea>
+    <label>Denied message for non-VIP (FA)</label>
+    <textarea name="vip_download_denied_fa" rows="2"><?= e((string)($cfg['vip_download_denied_fa'] ?? '')) ?></textarea>
+    <p class="muted" style="font-size:.85rem">Mark users as VIP in <a href="users.php">Users</a>. Admins always have access.</p>
     <button class="btn" type="submit" style="margin-top:12px">Save Growth Settings</button>
   </form>
 </div>
