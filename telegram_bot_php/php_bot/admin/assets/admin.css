@@ -127,6 +127,7 @@ th { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-sp
   display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: .75rem; font-weight: 700;
 }
 .badge.open { background: rgba(39,174,96,.15); color: #9affc3; }
+.badge.warn { background: rgba(245,158,11,.18); color: #fcd34d; }
 .badge.closed { background: rgba(235,87,87,.15); color: #ffb4b4; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; border: 0; cursor: pointer; font-weight: 700;

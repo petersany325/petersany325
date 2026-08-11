@@ -200,6 +200,22 @@ final class MessageRouter
                 AiService::ask($chatId, $arg);
                 break;
 
+            case 'cart':
+            case 'orders':
+            case 'checkout':
+            case 'license':
+            case 'renew':
+            case 'demo':
+            case 'profile':
+            case 'feedback':
+            case 'referral':
+            case 'contact':
+            case 'brands':
+            case 'news':
+            case 'miniapp':
+                \HddLand\Bot\Services\ExtraMenusService::show($cmd, $chatId, 0, $userId, $lang);
+                break;
+
             default:
                 send_message($chatId, 'Unknown command. Try /help', main_keyboard($lang));
         }

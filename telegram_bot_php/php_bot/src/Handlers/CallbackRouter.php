@@ -181,6 +181,13 @@ final class CallbackRouter
             return;
         }
 
+        $extras = array('cart','orders','checkout','license','renew','demo','profile','feedback','referral','contact','brands','news','miniapp');
+        if (in_array($data, $extras, true)) {
+            answer_callback($id);
+            \HddLand\Bot\Services\ExtraMenusService::show($data, $chatId, $msgId, $userId, $lang);
+            return;
+        }
+
         answer_callback($id, 'OK');
     }
 }

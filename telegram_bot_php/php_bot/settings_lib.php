@@ -14,6 +14,7 @@ function bot_defaults() {
         'sales_email' => '',
         'bot_title' => 'HDD-Land Bot',
         'bot_subtitle' => 'SeDiv Professional · Data Recovery',
+        'bot_username' => '',
         'gate_text' => '',
         'welcome_text_en' => '',
         'welcome_text_fa' => '',
@@ -27,10 +28,18 @@ function bot_defaults() {
         'shop_text_fa' => '',
         'help_text_en' => '',
         'help_text_fa' => '',
+        'cart_text_en' => '',
+        'cart_text_fa' => '',
+        'orders_text_en' => '',
+        'orders_text_fa' => '',
+        'license_text_en' => '',
+        'license_text_fa' => '',
         'ai_system_prompt' => 'You are an expert HDD repair and data recovery assistant for HDD-Land.com / SeDiv. Be concise and professional.',
         'ai_model' => 'gpt-4o-mini',
         'openai_api_key' => '',
         'weather_api_key' => '',
+
+        // Core modules
         'feature_shop' => 1,
         'feature_forum' => 1,
         'feature_faq' => 1,
@@ -39,12 +48,62 @@ function bot_defaults() {
         'feature_ai' => 1,
         'feature_language_gate' => 1,
         'feature_auto_faq_search' => 1,
+
+        // Professional modules
+        'feature_cart' => 1,
+        'feature_orders' => 1,
+        'feature_payments' => 1,
+        'feature_license' => 1,
+        'feature_renewal' => 1,
+        'feature_demo' => 1,
+        'feature_profile' => 1,
+        'feature_feedback' => 1,
+        'feature_referral' => 1,
+        'feature_contact' => 1,
+        'feature_brand_search' => 1,
+        'feature_news' => 1,
+        'feature_miniapp' => 0,
+
         'notify_tickets' => 1,
         'notify_requests' => 1,
         'notify_media' => 1,
+        'notify_orders' => 1,
+        'notify_feedback' => 1,
+
         'start_with_menu' => 0,
         'maintenance_mode' => 0,
         'maintenance_text' => 'Bot is under maintenance. Please try again later.',
+
+        // Commerce / payments
+        'payment_provider_token' => '',
+        'payment_currency' => 'USD',
+        'checkout_url' => '',
+        'miniapp_url' => '',
+
+        // License / renewal
+        'license_help_text_en' => '',
+        'license_help_text_fa' => '',
+        'license_check_url' => '',
+        'renewal_days_before' => 14,
+        'renewal_message_en' => 'Your SeDiv license may need renewal soon. Reply with your license code.',
+        'renewal_message_fa' => 'ممکن است لایسنس SeDiv شما نزدیک تمدید باشد. کد لایسنس را بفرستید.',
+
+        // Growth / contact
+        'referral_bonus_text_en' => 'Share your link. When friends buy SeDiv, our team can apply your referral bonus.',
+        'referral_bonus_text_fa' => 'لینک خود را به اشتراک بگذارید. با خرید دوستانتان، پاداش معرفی بررسی می‌شود.',
+        'contact_phone' => '',
+        'contact_hours' => 'Sat–Thu 10:00–19:00',
+        'news_channel_url' => '',
+        'demo_request_info_en' => '',
+        'demo_request_info_fa' => '',
+        'feedback_thankyou_en' => '',
+        'feedback_thankyou_fa' => '',
+        'brand_search_prompt_en' => '',
+        'brand_search_prompt_fa' => '',
+
+        // Integrations
+        'crm_webhook_url' => '',
+        'analytics_webhook_url' => '',
     );
 }
 
@@ -89,7 +148,6 @@ function content_text($baseKey, $lang = 'en') {
     if (is_string($custom) && trim($custom) !== '') {
         return $custom;
     }
-    // fallback other lang
     $other = $lang === 'fa' ? 'en' : 'fa';
     $alt = cfg($baseKey . '_text_' . $other, '');
     if (is_string($alt) && trim($alt) !== '') {
@@ -131,13 +189,17 @@ function notify_staff($text, $kind = 'tickets') {
 function ensure_settings_defaults_saved() {
     try {
         $cfg = bot_config();
-        $merged = merge_bot_defaults_into_config($cfg);
-        if ($merged !== $cfg && function_exists('save_bot_config')) {
-            // Don't auto-write on every request — only fill missing keys in memory via bot_config static is hard.
-            // Admin Settings "Initialize defaults" button writes them.
-        }
-        return $merged;
+        return merge_bot_defaults_into_config($cfg);
     } catch (Throwable $e) {
         return bot_defaults();
     }
+}
+
+/** All feature flag keys (without feature_ prefix) */
+function all_feature_keys() {
+    return array(
+        'shop', 'forum', 'faq', 'tickets', 'prodesk', 'ai', 'language_gate', 'auto_faq_search',
+        'cart', 'orders', 'payments', 'license', 'renewal', 'demo', 'profile', 'feedback',
+        'referral', 'contact', 'brand_search', 'news', 'miniapp',
+    );
 }

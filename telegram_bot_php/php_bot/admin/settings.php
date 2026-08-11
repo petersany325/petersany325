@@ -8,7 +8,7 @@ require_admin();
 
 $cfg = merge_bot_defaults_into_config(bot_config());
 $tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'general';
-$allowedTabs = array('general','features','messages','branding','notify','api','security','webhook');
+$allowedTabs = array('general','features','commerce','license','growth','integrations','messages','branding','notify','api','security','webhook');
 if (!in_array($tab, $allowedTabs, true)) {
     $tab = 'general';
 }
@@ -37,17 +37,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('ok', 'General settings saved.');
             $tab = 'general';
         } elseif ($action === 'save_features') {
-            foreach (array('shop','forum','faq','tickets','prodesk','ai','language_gate','auto_faq_search') as $f) {
+            foreach (all_feature_keys() as $f) {
                 $cfg['feature_' . $f] = settings_bool_post('feature_' . $f);
             }
             save_bot_config($cfg);
             flash('ok', 'Feature switches saved.');
             $tab = 'features';
+        } elseif ($action === 'save_commerce') {
+            $cfg['payment_provider_token'] = trim((string)($_POST['payment_provider_token'] ?? ''));
+            $cfg['payment_currency'] = trim((string)($_POST['payment_currency'] ?? 'USD'));
+            $cfg['checkout_url'] = trim((string)($_POST['checkout_url'] ?? ''));
+            $cfg['miniapp_url'] = trim((string)($_POST['miniapp_url'] ?? ''));
+            save_bot_config($cfg);
+            flash('ok', 'Commerce / payments settings saved.');
+            $tab = 'commerce';
+        } elseif ($action === 'save_license') {
+            foreach (array('license_help_text_en','license_help_text_fa','license_check_url','renewal_message_en','renewal_message_fa') as $k) {
+                $cfg[$k] = trim((string)($_POST[$k] ?? ''));
+            }
+            $cfg['renewal_days_before'] = max(1, (int)($_POST['renewal_days_before'] ?? 14));
+            save_bot_config($cfg);
+            flash('ok', 'License / renewal settings saved.');
+            $tab = 'license';
+        } elseif ($action === 'save_growth') {
+            foreach (array(
+                'bot_username','referral_bonus_text_en','referral_bonus_text_fa','contact_phone','contact_hours',
+                'news_channel_url','demo_request_info_en','demo_request_info_fa','feedback_thankyou_en','feedback_thankyou_fa',
+                'brand_search_prompt_en','brand_search_prompt_fa',
+            ) as $k) {
+                $cfg[$k] = trim((string)($_POST[$k] ?? ''));
+            }
+            save_bot_config($cfg);
+            flash('ok', 'Growth / contact settings saved.');
+            $tab = 'growth';
+        } elseif ($action === 'save_integrations') {
+            $cfg['crm_webhook_url'] = trim((string)($_POST['crm_webhook_url'] ?? ''));
+            $cfg['analytics_webhook_url'] = trim((string)($_POST['analytics_webhook_url'] ?? ''));
+            save_bot_config($cfg);
+            flash('ok', 'Integrations saved.');
+            $tab = 'integrations';
         } elseif ($action === 'save_messages') {
             $keys = array(
                 'website_text_en','website_text_fa','forum_text_en','forum_text_fa',
                 'training_text_en','training_text_fa','shop_text_en','shop_text_fa',
-                'help_text_en','help_text_fa',
+                'help_text_en','help_text_fa','cart_text_en','cart_text_fa',
+                'orders_text_en','orders_text_fa','license_text_en','license_text_fa',
             );
             foreach ($keys as $k) {
                 $cfg[$k] = trim((string)($_POST[$k] ?? ''));
@@ -68,9 +102,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $cfg['notify_tickets'] = settings_bool_post('notify_tickets');
             $cfg['notify_requests'] = settings_bool_post('notify_requests');
             $cfg['notify_media'] = settings_bool_post('notify_media');
+            $cfg['notify_orders'] = settings_bool_post('notify_orders');
+            $cfg['notify_feedback'] = settings_bool_post('notify_feedback');
             save_bot_config($cfg);
             flash('ok', 'Notification settings saved.');
             $tab = 'notify';
+        } elseif ($action === 'sync_menus') {
+            if (function_exists('ensure_professional_menus')) {
+                $n = ensure_professional_menus(db());
+                flash('ok', 'Professional menus synced. Added/updated: ' . (int)$n);
+            } else {
+                throw new RuntimeException('ensure_professional_menus() missing — update menu_faq.php');
+            }
+            $tab = 'features';
         } elseif ($action === 'save_api') {
             $cfg['openai_api_key'] = trim((string)($_POST['openai_api_key'] ?? ''));
             $cfg['ai_model'] = trim((string)($_POST['ai_model'] ?? 'gpt-4o-mini'));
@@ -201,6 +245,10 @@ require __DIR__ . '/layout_header.php';
   $tabs = array(
     'general' => 'General',
     'features' => 'Features',
+    'commerce' => 'Commerce',
+    'license' => 'License',
+    'growth' => 'Growth',
+    'integrations' => 'Integrations',
     'messages' => 'Page Texts',
     'branding' => 'Branding',
     'notify' => 'Notifications',
@@ -255,26 +303,142 @@ require __DIR__ . '/layout_header.php';
 </div>
 
 <?php elseif ($tab === 'features'): ?>
+<div class="row2">
+  <div class="card panel">
+    <h2>Core modules</h2>
+    <form method="post" class="stack">
+      <input type="hidden" name="action" value="save_features">
+      <?php
+      $core = array(
+        'feature_shop' => '🛒 Shop / Products',
+        'feature_forum' => '📋 Forum',
+        'feature_faq' => '❓ FAQ',
+        'feature_tickets' => '🎫 Tickets (/ticket)',
+        'feature_prodesk' => '💼 Pro Desk (Support & Sales)',
+        'feature_ai' => '🤖 AI assistant (/ask)',
+        'feature_language_gate' => '🌍 Language picker on /start',
+        'feature_auto_faq_search' => '🔎 Auto-search FAQ on free text',
+      );
+      foreach ($core as $k => $label): ?>
+        <label><input type="checkbox" name="<?= e($k) ?>" value="1" <?= !empty($cfg[$k])?'checked':'' ?>> <?= e($label) ?></label>
+      <?php endforeach; ?>
+      <h2 style="margin-top:18px">Professional modules</h2>
+      <?php
+      $pro = array(
+        'feature_cart' => '🛒 Cart',
+        'feature_orders' => '📦 My Orders',
+        'feature_payments' => '💳 Checkout / Payments',
+        'feature_license' => '🔑 License Status',
+        'feature_renewal' => '♻️ Renew License',
+        'feature_demo' => '▶️ Request Demo',
+        'feature_profile' => '👤 My Profile',
+        'feature_feedback' => '⭐ Feedback',
+        'feature_referral' => '🎁 Referral',
+        'feature_contact' => '☎️ Contact Human',
+        'feature_brand_search' => '🔧 Brand Search',
+        'feature_news' => '📰 News / Updates',
+        'feature_miniapp' => '📱 Mini App',
+      );
+      foreach ($pro as $k => $label): ?>
+        <label><input type="checkbox" name="<?= e($k) ?>" value="1" <?= !empty($cfg[$k])?'checked':'' ?>> <?= e($label) ?></label>
+      <?php endforeach; ?>
+      <button class="btn" type="submit" style="margin-top:12px">Save All Features</button>
+    </form>
+  </div>
+  <div class="card panel">
+    <h2>Menus sync</h2>
+    <p class="muted">Creates missing professional menu rows (Cart, Orders, License, …) without deleting your custom menus.</p>
+    <form method="post" onsubmit="return confirm('Sync professional menus into database?')">
+      <input type="hidden" name="action" value="sync_menus">
+      <button class="btn secondary" type="submit">Sync Professional Menus</button>
+    </form>
+    <p class="muted" style="margin-top:14px">Also open <a href="health.php">Health & Repair</a> → Menu Health for online checks.</p>
+  </div>
+</div>
+
+<?php elseif ($tab === 'commerce'): ?>
 <div class="card panel">
-  <h2>Feature switches</h2>
-  <p class="muted">Turn modules on/off without code changes. Disabled features reply with a short unavailable message.</p>
+  <h2>Commerce & payments</h2>
+  <p class="muted">Telegram Payments provider token from BotFather / payment provider. Checkout URL is optional external page.</p>
+  <form method="post" class="stack" autocomplete="off">
+    <input type="hidden" name="action" value="save_commerce">
+    <label>Payment provider token</label>
+    <input name="payment_provider_token" value="<?= e((string)($cfg['payment_provider_token'] ?? '')) ?>" placeholder="123456:TEST:XXXX">
+    <label>Currency</label>
+    <input name="payment_currency" value="<?= e((string)($cfg['payment_currency'] ?? 'USD')) ?>">
+    <label>Checkout URL (optional)</label>
+    <input name="checkout_url" value="<?= e((string)($cfg['checkout_url'] ?? '')) ?>" placeholder="https://...">
+    <label>Mini App URL (optional)</label>
+    <input name="miniapp_url" value="<?= e((string)($cfg['miniapp_url'] ?? '')) ?>" placeholder="https://...">
+    <button class="btn" type="submit" style="margin-top:12px">Save Commerce</button>
+  </form>
+</div>
+
+<?php elseif ($tab === 'license'): ?>
+<div class="card panel">
+  <h2>License & renewal</h2>
   <form method="post" class="stack">
-    <input type="hidden" name="action" value="save_features">
-    <?php
-    $feats = array(
-      'feature_shop' => 'Shop / Products',
-      'feature_forum' => 'Forum',
-      'feature_faq' => 'FAQ',
-      'feature_tickets' => 'Tickets (/ticket)',
-      'feature_prodesk' => 'Pro Desk (Support & Sales requests)',
-      'feature_ai' => 'AI assistant (/ask)',
-      'feature_language_gate' => 'Language picker on /start',
-      'feature_auto_faq_search' => 'Auto-search FAQ on free text',
-    );
-    foreach ($feats as $k => $label): ?>
-      <label><input type="checkbox" name="<?= e($k) ?>" value="1" <?= !empty($cfg[$k])?'checked':'' ?>> <?= e($label) ?></label>
-    <?php endforeach; ?>
-    <button class="btn" type="submit" style="margin-top:12px">Save Features</button>
+    <input type="hidden" name="action" value="save_license">
+    <label>License help text (EN)</label>
+    <textarea name="license_help_text_en" rows="4"><?= e((string)($cfg['license_help_text_en'] ?? '')) ?></textarea>
+    <label>License help text (FA)</label>
+    <textarea name="license_help_text_fa" rows="4"><?= e((string)($cfg['license_help_text_fa'] ?? '')) ?></textarea>
+    <label>License check URL (optional API/page)</label>
+    <input name="license_check_url" value="<?= e((string)($cfg['license_check_url'] ?? '')) ?>">
+    <label>Remind before expiry (days)</label>
+    <input name="renewal_days_before" type="number" min="1" value="<?= e((string)($cfg['renewal_days_before'] ?? 14)) ?>">
+    <label>Renewal message (EN)</label>
+    <textarea name="renewal_message_en" rows="3"><?= e((string)($cfg['renewal_message_en'] ?? '')) ?></textarea>
+    <label>Renewal message (FA)</label>
+    <textarea name="renewal_message_fa" rows="3"><?= e((string)($cfg['renewal_message_fa'] ?? '')) ?></textarea>
+    <button class="btn" type="submit" style="margin-top:12px">Save License Settings</button>
+  </form>
+</div>
+
+<?php elseif ($tab === 'growth'): ?>
+<div class="card panel">
+  <h2>Growth, contact & engagement</h2>
+  <form method="post" class="stack">
+    <input type="hidden" name="action" value="save_growth">
+    <label>Bot username (without @) for referral links</label>
+    <input name="bot_username" value="<?= e((string)($cfg['bot_username'] ?? '')) ?>" placeholder="YourBot">
+    <label>Referral bonus text (EN)</label>
+    <textarea name="referral_bonus_text_en" rows="3"><?= e((string)($cfg['referral_bonus_text_en'] ?? '')) ?></textarea>
+    <label>Referral bonus text (FA)</label>
+    <textarea name="referral_bonus_text_fa" rows="3"><?= e((string)($cfg['referral_bonus_text_fa'] ?? '')) ?></textarea>
+    <label>Contact phone</label>
+    <input name="contact_phone" value="<?= e((string)($cfg['contact_phone'] ?? '')) ?>">
+    <label>Contact hours</label>
+    <input name="contact_hours" value="<?= e((string)($cfg['contact_hours'] ?? '')) ?>">
+    <label>News channel URL</label>
+    <input name="news_channel_url" value="<?= e((string)($cfg['news_channel_url'] ?? '')) ?>" placeholder="https://t.me/...">
+    <label>Demo request intro (EN)</label>
+    <textarea name="demo_request_info_en" rows="3"><?= e((string)($cfg['demo_request_info_en'] ?? '')) ?></textarea>
+    <label>Demo request intro (FA)</label>
+    <textarea name="demo_request_info_fa" rows="3"><?= e((string)($cfg['demo_request_info_fa'] ?? '')) ?></textarea>
+    <label>Feedback thank-you (EN)</label>
+    <textarea name="feedback_thankyou_en" rows="2"><?= e((string)($cfg['feedback_thankyou_en'] ?? '')) ?></textarea>
+    <label>Feedback thank-you (FA)</label>
+    <textarea name="feedback_thankyou_fa" rows="2"><?= e((string)($cfg['feedback_thankyou_fa'] ?? '')) ?></textarea>
+    <label>Brand search prompt (EN)</label>
+    <textarea name="brand_search_prompt_en" rows="2"><?= e((string)($cfg['brand_search_prompt_en'] ?? '')) ?></textarea>
+    <label>Brand search prompt (FA)</label>
+    <textarea name="brand_search_prompt_fa" rows="2"><?= e((string)($cfg['brand_search_prompt_fa'] ?? '')) ?></textarea>
+    <button class="btn" type="submit" style="margin-top:12px">Save Growth Settings</button>
+  </form>
+</div>
+
+<?php elseif ($tab === 'integrations'): ?>
+<div class="card panel">
+  <h2>Integrations</h2>
+  <p class="muted">Optional webhooks for CRM / analytics (JSON POST when events happen — ready for next stage).</p>
+  <form method="post" class="stack">
+    <input type="hidden" name="action" value="save_integrations">
+    <label>CRM webhook URL</label>
+    <input name="crm_webhook_url" value="<?= e((string)($cfg['crm_webhook_url'] ?? '')) ?>" placeholder="https://...">
+    <label>Analytics webhook URL</label>
+    <input name="analytics_webhook_url" value="<?= e((string)($cfg['analytics_webhook_url'] ?? '')) ?>" placeholder="https://...">
+    <button class="btn" type="submit" style="margin-top:12px">Save Integrations</button>
   </form>
 </div>
 
@@ -296,6 +460,12 @@ require __DIR__ . '/layout_header.php';
       'shop_text_fa' => 'Shop intro (FA)',
       'help_text_en' => 'Help / commands (EN)',
       'help_text_fa' => 'Help / commands (FA)',
+      'cart_text_en' => 'Cart text (EN)',
+      'cart_text_fa' => 'Cart text (FA)',
+      'orders_text_en' => 'Orders text (EN)',
+      'orders_text_fa' => 'Orders text (FA)',
+      'license_text_en' => 'License page text (EN)',
+      'license_text_fa' => 'License page text (FA)',
     );
     foreach ($fields as $k => $label): ?>
       <label><?= e($label) ?></label>
@@ -333,6 +503,8 @@ require __DIR__ . '/layout_header.php';
     <label><input type="checkbox" name="notify_tickets" value="1" <?= !empty($cfg['notify_tickets'])?'checked':'' ?>> Notify on new tickets</label>
     <label><input type="checkbox" name="notify_requests" value="1" <?= !empty($cfg['notify_requests'])?'checked':'' ?>> Notify on Support/Sales requests</label>
     <label><input type="checkbox" name="notify_media" value="1" <?= !empty($cfg['notify_media'])?'checked':'' ?>> Forward user media to staff</label>
+    <label><input type="checkbox" name="notify_orders" value="1" <?= !empty($cfg['notify_orders'])?'checked':'' ?>> Notify on orders / checkout events</label>
+    <label><input type="checkbox" name="notify_feedback" value="1" <?= !empty($cfg['notify_feedback'])?'checked':'' ?>> Notify on feedback</label>
     <button class="btn" type="submit" style="margin-top:12px">Save Notifications</button>
   </form>
 </div>

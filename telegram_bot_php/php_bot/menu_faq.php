@@ -155,6 +155,11 @@ function ensure_schema($pdo = null) {
             ensure_admins_schema($pdo);
         }
     } catch (Throwable $e) {}
+    try {
+        if (function_exists('ensure_professional_menus')) {
+            ensure_professional_menus($pdo);
+        }
+    } catch (Throwable $e) {}
 }
 
 function seed_default_menus($pdo) {
@@ -214,7 +219,52 @@ function seed_default_menus($pdo) {
 }
 
 function menu_categories() {
-    return array('Main', 'Commerce', 'Community', 'Support', 'Resources', 'System');
+    return array('Main', 'Commerce', 'Community', 'Support', 'Resources', 'System', 'Account');
+}
+
+/**
+ * Idempotent: add missing professional menus without wiping customs.
+ * @return int number of inserted rows
+ */
+function ensure_professional_menus($pdo = null) {
+    $pdo = $pdo ? $pdo : db();
+    $count = 0;
+    $exists = $pdo->prepare('SELECT id FROM menus WHERE menu_type=? AND value_text=? LIMIT 1');
+    $ins = $pdo->prepare('INSERT INTO menus (parent_id, category, title, menu_type, value_text, row_index, sort_order, is_active) VALUES (?,?,?,?,?,?,?,1)');
+    $ti = $pdo->prepare('INSERT IGNORE INTO menu_i18n (menu_id, lang, title, value_text) VALUES (?,?,?,?)');
+
+    $items = array(
+        array('Commerce', '🛒 Cart', 'callback', 'cart', 4, 1, '🛒 سبد خرید'),
+        array('Commerce', '📦 My Orders', 'callback', 'orders', 4, 2, '📦 سفارش‌های من'),
+        array('Commerce', '💳 Checkout', 'callback', 'checkout', 5, 1, '💳 پرداخت'),
+        array('Account', '🔑 License', 'callback', 'license', 5, 2, '🔑 لایسنس'),
+        array('Account', '♻️ Renew', 'callback', 'renew', 6, 1, '♻️ تمدید'),
+        array('Commerce', '▶️ Demo', 'callback', 'demo', 6, 2, '▶️ دمو'),
+        array('Account', '👤 Profile', 'callback', 'profile', 7, 1, '👤 پروفایل'),
+        array('Support', '⭐ Feedback', 'callback', 'feedback', 7, 2, '⭐ نظرات'),
+        array('Community', '🎁 Referral', 'callback', 'referral', 8, 1, '🎁 معرفی'),
+        array('Support', '☎️ Contact', 'callback', 'contact', 8, 2, '☎️ تماس'),
+        array('Resources', '🔧 Brands', 'callback', 'brands', 9, 1, '🔧 برندها'),
+        array('Community', '📰 News', 'callback', 'news', 9, 2, '📰 اخبار'),
+        array('Commerce', '📱 Mini App', 'callback', 'miniapp', 10, 1, '📱 مینی‌اپ'),
+    );
+
+    foreach ($items as $it) {
+        list($cat, $title, $type, $val, $row, $sort, $fa) = $it;
+        $exists->execute(array($type, $val));
+        $id = (int)$exists->fetchColumn();
+        if ($id > 0) {
+            $ti->execute(array($id, 'fa', $fa, $val));
+            continue;
+        }
+        $ins->execute(array(null, $cat, $title, $type, $val, $row, $sort));
+        $id = (int)$pdo->lastInsertId();
+        if ($id > 0) {
+            $ti->execute(array($id, 'fa', $fa, $val));
+            $count++;
+        }
+    }
+    return $count;
 }
 
 function get_languages($activeOnly = true) {

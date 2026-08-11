@@ -239,29 +239,128 @@ function lang_keyboard_world($fromStart = true, $page = 0, $detected = 'en') {
 function graphical_main_hub($lang = 'en') {
     $items = function_exists('get_menu_items') ? get_menu_items(null, $lang) : array();
     $kb = array();
+    $on = function ($f) {
+        return !function_exists('feature_on') || feature_on($f);
+    };
 
-    // Always show professional top actions
+    // Always show professional top actions (feature-aware)
     if ($lang === 'fa') {
-        $top = array(
-            array(array('text' => '🛒 فروشگاه SeDiv', 'callback_data' => 'shop'), array('text' => '💼 میز حرفه‌ای', 'callback_data' => 'reqhub')),
-            array(array('text' => '🛠️ پشتیبانی', 'callback_data' => 'req:support'), array('text' => '💎 فروش نرم‌افزار', 'callback_data' => 'req:sales')),
-            array(array('text' => '❓ سوالات', 'callback_data' => 'faqcat:all'), array('text' => '📋 انجمن', 'callback_data' => 'forum')),
-            array(array('text' => '🎓 آموزش', 'callback_data' => 'cmd:training'), array('text' => '🌐 وب‌سایت', 'url' => bot_config()['site_url'])),
-            array(array('text' => '🌍 زبان', 'callback_data' => 'lang'), array('text' => 'ℹ️ راهنما', 'callback_data' => 'help')),
+        $top = array();
+        if ($on('shop') || $on('prodesk')) {
+            $top[] = array(
+                array('text' => '🛒 فروشگاه SeDiv', 'callback_data' => 'shop'),
+                array('text' => '💼 میز حرفه‌ای', 'callback_data' => 'reqhub'),
+            );
+        }
+        if ($on('prodesk')) {
+            $top[] = array(
+                array('text' => '🛠️ پشتیبانی', 'callback_data' => 'req:support'),
+                array('text' => '💎 فروش نرم‌افزار', 'callback_data' => 'req:sales'),
+            );
+        }
+        $top[] = array(
+            array('text' => '❓ سوالات', 'callback_data' => 'faqcat:all'),
+            array('text' => '📋 انجمن', 'callback_data' => 'forum'),
+        );
+        $top[] = array(
+            array('text' => '🎓 آموزش', 'callback_data' => 'cmd:training'),
+            array('text' => '🌐 وب‌سایت', 'url' => bot_config()['site_url']),
+        );
+        $acc = array();
+        if ($on('license')) {
+            $acc[] = array('text' => '🔑 لایسنس', 'callback_data' => 'license');
+        }
+        if ($on('orders')) {
+            $acc[] = array('text' => '📦 سفارش‌ها', 'callback_data' => 'orders');
+        }
+        if ($acc) {
+            $top[] = $acc;
+        }
+        $more = array();
+        if ($on('cart')) {
+            $more[] = array('text' => '🛒 سبد', 'callback_data' => 'cart');
+        }
+        if ($on('payments')) {
+            $more[] = array('text' => '💳 پرداخت', 'callback_data' => 'checkout');
+        }
+        if ($more) {
+            $top[] = $more;
+        }
+        $eng = array();
+        if ($on('contact')) {
+            $eng[] = array('text' => '☎️ تماس', 'callback_data' => 'contact');
+        }
+        if ($on('referral')) {
+            $eng[] = array('text' => '🎁 معرفی', 'callback_data' => 'referral');
+        }
+        if ($eng) {
+            $top[] = $eng;
+        }
+        $top[] = array(
+            array('text' => '🌍 زبان', 'callback_data' => 'lang'),
+            array('text' => 'ℹ️ راهنما', 'callback_data' => 'help'),
         );
     } else {
-        $top = array(
-            array(array('text' => '🛒 SeDiv Shop', 'callback_data' => 'shop'), array('text' => '💼 Pro Desk', 'callback_data' => 'reqhub')),
-            array(array('text' => '🛠️ Support', 'callback_data' => 'req:support'), array('text' => '💎 Software Sales', 'callback_data' => 'req:sales')),
-            array(array('text' => '❓ FAQ', 'callback_data' => 'faqcat:all'), array('text' => '📋 Forum', 'callback_data' => 'forum')),
-            array(array('text' => '🎓 Training', 'callback_data' => 'cmd:training'), array('text' => '🌐 Website', 'url' => bot_config()['site_url'])),
-            array(array('text' => '🌍 Language', 'callback_data' => 'lang'), array('text' => 'ℹ️ Help', 'callback_data' => 'help')),
+        $top = array();
+        if ($on('shop') || $on('prodesk')) {
+            $top[] = array(
+                array('text' => '🛒 SeDiv Shop', 'callback_data' => 'shop'),
+                array('text' => '💼 Pro Desk', 'callback_data' => 'reqhub'),
+            );
+        }
+        if ($on('prodesk')) {
+            $top[] = array(
+                array('text' => '🛠️ Support', 'callback_data' => 'req:support'),
+                array('text' => '💎 Software Sales', 'callback_data' => 'req:sales'),
+            );
+        }
+        $top[] = array(
+            array('text' => '❓ FAQ', 'callback_data' => 'faqcat:all'),
+            array('text' => '📋 Forum', 'callback_data' => 'forum'),
+        );
+        $top[] = array(
+            array('text' => '🎓 Training', 'callback_data' => 'cmd:training'),
+            array('text' => '🌐 Website', 'url' => bot_config()['site_url']),
+        );
+        $acc = array();
+        if ($on('license')) {
+            $acc[] = array('text' => '🔑 License', 'callback_data' => 'license');
+        }
+        if ($on('orders')) {
+            $acc[] = array('text' => '📦 Orders', 'callback_data' => 'orders');
+        }
+        if ($acc) {
+            $top[] = $acc;
+        }
+        $more = array();
+        if ($on('cart')) {
+            $more[] = array('text' => '🛒 Cart', 'callback_data' => 'cart');
+        }
+        if ($on('payments')) {
+            $more[] = array('text' => '💳 Checkout', 'callback_data' => 'checkout');
+        }
+        if ($more) {
+            $top[] = $more;
+        }
+        $eng = array();
+        if ($on('contact')) {
+            $eng[] = array('text' => '☎️ Contact', 'callback_data' => 'contact');
+        }
+        if ($on('referral')) {
+            $eng[] = array('text' => '🎁 Referral', 'callback_data' => 'referral');
+        }
+        if ($eng) {
+            $top[] = $eng;
+        }
+        $top[] = array(
+            array('text' => '🌍 Language', 'callback_data' => 'lang'),
+            array('text' => 'ℹ️ Help', 'callback_data' => 'help'),
         );
     }
     $kb = $top;
 
     // Append custom root menu items (not duplicates)
-    $used = array('shop','reqhub','req:support','req:sales','faqcat:all','forum','cmd:training','lang','help','main');
+    $used = array('shop','reqhub','req:support','req:sales','faqcat:all','forum','cmd:training','lang','help','main','cart','orders','checkout','license','renew','demo','profile','feedback','referral','contact','brands','news','miniapp');
     $row = array();
     foreach ($items as $it) {
         $cb = '';
