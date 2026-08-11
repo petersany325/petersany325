@@ -264,6 +264,7 @@ final class ExtraMenusService
             'brands' => 'brand_search',
             'news' => 'news',
             'miniapp' => 'miniapp',
+            'mytickets' => 'tickets',
         );
         return $map[$key] ?? null;
     }

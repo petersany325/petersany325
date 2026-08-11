@@ -232,39 +232,66 @@ function ensure_professional_menus($pdo = null) {
     $exists = $pdo->prepare('SELECT id FROM menus WHERE menu_type=? AND value_text=? LIMIT 1');
     $ins = $pdo->prepare('INSERT INTO menus (parent_id, category, title, menu_type, value_text, row_index, sort_order, is_active) VALUES (?,?,?,?,?,?,?,1)');
     $ti = $pdo->prepare('INSERT IGNORE INTO menu_i18n (menu_id, lang, title, value_text) VALUES (?,?,?,?)');
+    $setParent = $pdo->prepare('UPDATE menus SET parent_id=?, category=? WHERE id=?');
+
+    $resourcesId = (int)$pdo->query("SELECT id FROM menus WHERE menu_type='submenu' AND title LIKE '%Resources%' AND parent_id IS NULL LIMIT 1")->fetchColumn();
+    $proDeskId = (int)$pdo->query("SELECT id FROM menus WHERE menu_type='submenu' AND (title LIKE '%Pro Desk%' OR value_text='reqhub') LIMIT 1")->fetchColumn();
+    if ($proDeskId <= 0) {
+        $proDeskId = (int)$pdo->query("SELECT id FROM menus WHERE menu_type='submenu' AND category='Support' AND parent_id IS NULL ORDER BY id ASC LIMIT 1")->fetchColumn();
+    }
 
     $items = array(
-        array('Commerce', '🛒 Cart', 'callback', 'cart', 4, 1, '🛒 سبد خرید'),
-        array('Commerce', '📦 My Orders', 'callback', 'orders', 4, 2, '📦 سفارش‌های من'),
-        array('Commerce', '💳 Checkout', 'callback', 'checkout', 5, 1, '💳 پرداخت'),
-        array('Account', '🔑 License', 'callback', 'license', 5, 2, '🔑 لایسنس'),
-        array('Account', '♻️ Renew', 'callback', 'renew', 6, 1, '♻️ تمدید'),
-        array('Commerce', '▶️ Demo', 'callback', 'demo', 6, 2, '▶️ دمو'),
-        array('Account', '👤 Profile', 'callback', 'profile', 7, 1, '👤 پروفایل'),
-        array('Support', '🎫 My Tickets', 'callback', 'mytickets', 7, 2, '🎫 تیکت‌های من'),
-        array('Support', '⭐ Feedback', 'callback', 'feedback', 8, 1, '⭐ نظرات'),
-        array('Community', '🎁 Referral', 'callback', 'referral', 8, 2, '🎁 معرفی'),
-        array('Support', '☎️ Contact', 'callback', 'contact', 10, 2, '☎️ تماس'),
-        array('Resources', '🔧 Brands', 'callback', 'brands', 9, 1, '🔧 برندها'),
-        array('Community', '📰 News', 'callback', 'news', 9, 2, '📰 اخبار'),
-        array('Commerce', '📱 Mini App', 'callback', 'miniapp', 10, 1, '📱 مینی‌اپ'),
+        array('Commerce', '🛒 Cart', 'callback', 'cart', 4, 1, '🛒 سبد خرید', null),
+        array('Commerce', '📦 My Orders', 'callback', 'orders', 4, 2, '📦 سفارش‌های من', null),
+        array('Commerce', '💳 Checkout', 'callback', 'checkout', 5, 1, '💳 پرداخت', null),
+        array('Account', '🔑 License', 'callback', 'license', 5, 2, '🔑 لایسنس', null),
+        array('Account', '♻️ Renew', 'callback', 'renew', 6, 1, '♻️ تمدید', null),
+        array('Commerce', '▶️ Demo', 'callback', 'demo', 6, 2, '▶️ دمو', null),
+        array('Account', '👤 Profile', 'callback', 'profile', 7, 1, '👤 پروفایل', null),
+        array('Support', '🎫 My Tickets', 'callback', 'mytickets', 7, 2, '🎫 تیکت‌های من', 'prodesk'),
+        array('Support', '⭐ Feedback', 'callback', 'feedback', 8, 1, '⭐ نظرات', 'prodesk'),
+        array('Community', '🎁 Referral', 'callback', 'referral', 8, 2, '🎁 معرفی', null),
+        array('Support', '☎️ Contact', 'callback', 'contact', 10, 2, '☎️ تماس', null),
+        array('Resources', '🔧 Brands', 'callback', 'brands', 9, 1, '🔧 برندها', 'resources'),
+        array('Community', '📰 News', 'callback', 'news', 9, 2, '📰 اخبار', null),
+        array('Commerce', '📱 Mini App', 'callback', 'miniapp', 10, 1, '📱 مینی‌اپ', null),
+        array('System', '🌍 Language', 'callback', 'lang', 3, 1, '🌍 زبان', null),
     );
 
     foreach ($items as $it) {
-        list($cat, $title, $type, $val, $row, $sort, $fa) = $it;
+        list($cat, $title, $type, $val, $row, $sort, $fa, $nest) = $it;
+        $parent = null;
+        if ($nest === 'resources' && $resourcesId > 0) {
+            $parent = $resourcesId;
+        } elseif ($nest === 'prodesk' && $proDeskId > 0) {
+            $parent = $proDeskId;
+        }
         $exists->execute(array($type, $val));
         $id = (int)$exists->fetchColumn();
         if ($id > 0) {
             $ti->execute(array($id, 'fa', $fa, $val));
+            if ($parent !== null) {
+                $setParent->execute(array($parent, $cat, $id));
+            }
             continue;
         }
-        $ins->execute(array(null, $cat, $title, $type, $val, $row, $sort));
+        $ins->execute(array($parent, $cat, $title, $type, $val, $row, $sort));
         $id = (int)$pdo->lastInsertId();
         if ($id > 0) {
             $ti->execute(array($id, 'fa', $fa, $val));
             $count++;
         }
     }
+
+    // Hide Mini App menu when feature is off (avoids dead button)
+    try {
+        if (function_exists('feature_on') && !feature_on('miniapp')) {
+            $pdo->prepare("UPDATE menus SET is_active=0 WHERE menu_type='callback' AND value_text='miniapp'")->execute();
+        } else {
+            $pdo->prepare("UPDATE menus SET is_active=1 WHERE menu_type='callback' AND value_text='miniapp'")->execute();
+        }
+    } catch (Throwable $e) {}
+
     return $count;
 }
 
@@ -340,6 +367,41 @@ function localize_faq_row($row, $lang) {
     return $row;
 }
 
+function menu_feature_for_item(array $item) {
+    $type = (string)($item['menu_type'] ?? '');
+    $val = trim((string)($item['value_text'] ?? ''));
+    if ($type === 'faq_list') {
+        return 'faq';
+    }
+    if ($type !== 'callback') {
+        return null;
+    }
+    $map = array(
+        'shop' => 'shop',
+        'forum' => 'forum',
+        'support' => 'prodesk',
+        'reqhub' => 'prodesk',
+        'req:support' => 'prodesk',
+        'req:sales' => 'prodesk',
+        'req:mediahelp' => 'prodesk',
+        'mytickets' => 'tickets',
+        'cart' => 'cart',
+        'orders' => 'orders',
+        'checkout' => 'payments',
+        'license' => 'license',
+        'renew' => 'renewal',
+        'demo' => 'demo',
+        'profile' => 'profile',
+        'feedback' => 'feedback',
+        'referral' => 'referral',
+        'contact' => 'contact',
+        'brands' => 'brand_search',
+        'news' => 'news',
+        'miniapp' => 'miniapp',
+    );
+    return isset($map[$val]) ? $map[$val] : null;
+}
+
 function get_menu_items($parentId = null, $lang = null) {
     ensure_schema();
     $lang = $lang ? $lang : default_lang();
@@ -353,6 +415,10 @@ function get_menu_items($parentId = null, $lang = null) {
     $items = $stmt->fetchAll();
     $out = array();
     foreach ($items as $item) {
+        $feat = menu_feature_for_item($item);
+        if ($feat && function_exists('feature_on') && !feature_on($feat)) {
+            continue; // hide disabled modules — no dead buttons
+        }
         $out[] = localize_menu_row($item, $lang);
     }
     return $out;

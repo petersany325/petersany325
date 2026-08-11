@@ -61,23 +61,38 @@ final class MenuHealthService
                         $broken++;
                         $out[] = self::row(false, 'err', 'menu:' . $id, $title, 'Invalid URL value');
                     } else {
-                        $out[] = self::row(true, 'ok', 'menu:' . $id, $title, 'URL OK → ' . $val);
+                        $http = self::httpCheck($val);
+                        if ($http['ok']) {
+                            $out[] = self::row(true, 'ok', 'menu:' . $id, $title, 'URL HTTP ' . $http['code'] . ' OK → ' . $val);
+                        } elseif (in_array($http['code'], array(401, 403, 405, 406), true)) {
+                            $out[] = self::row(true, 'warn', 'menu:' . $id, $title, 'URL HTTP ' . $http['code'] . ' (reachable) → ' . $val);
+                        } else {
+                            $broken++;
+                            $out[] = self::row(false, 'err', 'menu:' . $id, $title, 'URL HTTP ' . $http['code'] . ' FAIL → ' . $val);
+                        }
                     }
                     break;
                 case 'callback':
                     if ($val === '') {
                         $broken++;
                         $out[] = self::row(false, 'err', 'menu:' . $id, $title, 'Empty callback');
-                    } elseif (!isset($knownCallbacks[$val]) && strpos($val, 'product:') !== 0 && strpos($val, 'faq:') !== 0) {
-                        $out[] = self::row(true, 'warn', 'menu:' . $id, $title, 'Callback "' . $val . '" not in built-in map (may still work via menu id)');
+                    } elseif (!self::callbackRoutable($val, $knownCallbacks)) {
+                        $broken++;
+                        $out[] = self::row(false, 'err', 'menu:' . $id, $title, 'Callback "' . $val . '" not handled by bot router');
                     } else {
-                        $out[] = self::row(true, 'ok', 'menu:' . $id, $title, 'Callback OK → ' . $val);
+                        $feat = self::featureForCallback($val);
+                        if ($feat && function_exists('feature_on') && !feature_on($feat)) {
+                            $out[] = self::row(true, 'warn', 'menu:' . $id, $title, 'Callback OK but feature "' . $feat . '" is OFF (hidden in bot)');
+                        } else {
+                            $out[] = self::row(true, 'ok', 'menu:' . $id, $title, 'Callback OK → ' . $val);
+                        }
                     }
                     break;
                 case 'command':
                     $allowed = array('training', 'website', 'help', 'support', 'shop', 'forum', 'faq', 'lang');
                     if ($val === '' || !in_array($val, $allowed, true)) {
-                        $out[] = self::row(true, 'warn', 'menu:' . $id, $title, 'Command "' . $val . '" — verify handler exists');
+                        $broken++;
+                        $out[] = self::row(false, 'err', 'menu:' . $id, $title, 'Command "' . $val . '" has no handler');
                     } else {
                         $out[] = self::row(true, 'ok', 'menu:' . $id, $title, 'Command OK → /' . $val);
                     }
@@ -176,6 +191,7 @@ final class MenuHealthService
             'reqhub' => 'prodesk',
             'req:support' => 'prodesk',
             'req:sales' => 'prodesk',
+            'req:mediahelp' => 'prodesk',
             'mytickets' => 'tickets',
             'cart' => 'cart',
             'orders' => 'orders',
@@ -190,8 +206,60 @@ final class MenuHealthService
             'brands' => 'brand_search',
             'news' => 'news',
             'miniapp' => 'miniapp',
+            'faqcat:all' => 'faq',
         );
         return $map[$cb] ?? null;
+    }
+
+    /** @param array<string,string> $known */
+    private static function callbackRoutable(string $val, array $known): bool
+    {
+        if (isset($known[$val])) {
+            return true;
+        }
+        foreach (array('product:', 'faq:', 'faqcat:', 'menu:', 'menutxt:', 'cmd:', 'ticket:', 'langpage:', 'startlang:', 'setlang:') as $p) {
+            if (strpos($val, $p) === 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** @return array{ok:bool,code:int} */
+    private static function httpCheck(string $url): array
+    {
+        if (!function_exists('curl_init')) {
+            return array('ok' => true, 'code' => 0);
+        }
+        $ch = curl_init($url);
+        curl_setopt_array($ch, array(
+            CURLOPT_NOBODY => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 6,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_USERAGENT => 'HDDLandMenuHealth/1.0',
+            CURLOPT_SSL_VERIFYPEER => false,
+        ));
+        curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($code === 0) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, array(
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_CONNECTTIMEOUT => 6,
+                CURLOPT_USERAGENT => 'HDDLandMenuHealth/1.0',
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_RANGE => '0-0',
+            ));
+            curl_exec($ch);
+            $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+        }
+        return array('ok' => ($code >= 200 && $code < 400), 'code' => $code);
     }
 
     /** @return array{ok:bool,level:string,code:string,title:string,detail:string} */

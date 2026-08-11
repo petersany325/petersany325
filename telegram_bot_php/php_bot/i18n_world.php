@@ -258,6 +258,16 @@ function graphical_main_hub($lang = 'en') {
                 array('text' => '💎 فروش نرم‌افزار', 'callback_data' => 'req:sales'),
             );
         }
+        if ($on('tickets') || $on('profile')) {
+            $tk = array();
+            if ($on('tickets')) {
+                $tk[] = array('text' => '🎫 تیکت‌های من', 'callback_data' => 'mytickets');
+            }
+            if ($on('profile')) {
+                $tk[] = array('text' => '👤 پروفایل', 'callback_data' => 'profile');
+            }
+            $top[] = $tk;
+        }
         $top[] = array(
             array('text' => '❓ سوالات', 'callback_data' => 'faqcat:all'),
             array('text' => '📋 انجمن', 'callback_data' => 'forum'),
@@ -313,6 +323,16 @@ function graphical_main_hub($lang = 'en') {
                 array('text' => '🛠️ Support', 'callback_data' => 'req:support'),
                 array('text' => '💎 Software Sales', 'callback_data' => 'req:sales'),
             );
+        }
+        if ($on('tickets') || $on('profile')) {
+            $tk = array();
+            if ($on('tickets')) {
+                $tk[] = array('text' => '🎫 My Tickets', 'callback_data' => 'mytickets');
+            }
+            if ($on('profile')) {
+                $tk[] = array('text' => '👤 Profile', 'callback_data' => 'profile');
+            }
+            $top[] = $tk;
         }
         $top[] = array(
             array('text' => '❓ FAQ', 'callback_data' => 'faqcat:all'),

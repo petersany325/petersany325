@@ -180,8 +180,38 @@ final class CallbackRouter
                 Presenter::editOrSend($chatId, $msgId, ContentService::trainingText($lang), main_keyboard($lang));
             } elseif ($cmd === 'website') {
                 Presenter::editOrSend($chatId, $msgId, ContentService::websiteText($lang), main_keyboard($lang));
-            } else {
+            } elseif ($cmd === 'help') {
                 Presenter::editOrSend($chatId, $msgId, help_text($lang), main_keyboard($lang));
+            } elseif ($cmd === 'shop') {
+                if (function_exists('feature_on') && !feature_on('shop')) {
+                    Presenter::editOrSend($chatId, $msgId, Presenter::featureDisabled($lang, 'فروشگاه غیرفعال است.', 'Shop is disabled.'), main_keyboard($lang));
+                } else {
+                    ShopService::showList($chatId, $msgId, $lang);
+                }
+            } elseif ($cmd === 'forum') {
+                if (function_exists('feature_on') && !feature_on('forum')) {
+                    Presenter::editOrSend($chatId, $msgId, Presenter::featureDisabled($lang, 'فروم غیرفعال است.', 'Forum is disabled.'), main_keyboard($lang));
+                } else {
+                    ForumService::show($chatId, $msgId, $lang);
+                }
+            } elseif ($cmd === 'faq') {
+                FaqService::showHub($chatId, $lang);
+            } elseif ($cmd === 'lang') {
+                $detected = function_exists('detect_telegram_lang') ? detect_telegram_lang($from) : 'en';
+                Presenter::editOrSend($chatId, $msgId, language_gate_text(), lang_keyboard_world(false, 0, $detected));
+            } elseif ($cmd === 'support') {
+                if (function_exists('feature_on') && !feature_on('prodesk')) {
+                    Presenter::editOrSend($chatId, $msgId, Presenter::featureDisabled($lang, 'میز حرفه‌ای غیرفعال است.', 'Pro Desk is disabled.'), main_keyboard($lang));
+                } else {
+                    show_request_hub($chatId, $msgId, $lang);
+                }
+            } else {
+                Presenter::editOrSend(
+                    $chatId,
+                    $msgId,
+                    $lang === 'fa' ? 'دستور ناشناخته.' : 'Unknown command.',
+                    main_keyboard($lang)
+                );
             }
             return;
         }
@@ -214,6 +244,14 @@ final class CallbackRouter
             return;
         }
 
-        answer_callback($id, 'OK');
+        answer_callback($id);
+        Presenter::editOrSend(
+            $chatId,
+            $msgId,
+            $lang === 'fa'
+                ? '⚠️ این دکمه فعلاً متصل نیست. از /menu استفاده کنید.'
+                : '⚠️ This button is not wired yet. Use /menu.',
+            main_keyboard($lang)
+        );
     }
 }
