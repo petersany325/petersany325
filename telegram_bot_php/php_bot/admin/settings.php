@@ -8,7 +8,7 @@ require_admin();
 
 $cfg = merge_bot_defaults_into_config(bot_config());
 $tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'general';
-$allowedTabs = array('general','features','commerce','license','growth','integrations','messages','branding','notify','api','security','webhook');
+$allowedTabs = array('general','features','commerce','license','growth','support','integrations','messages','branding','notify','api','security','webhook');
 if (!in_array($tab, $allowedTabs, true)) {
     $tab = 'general';
 }
@@ -70,6 +70,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             save_bot_config($cfg);
             flash('ok', 'Growth / contact settings saved.');
             $tab = 'growth';
+        } elseif ($action === 'save_support') {
+            foreach (array('support_intro_en', 'support_intro_fa', 'support_links', 'support_questions') as $k) {
+                $cfg[$k] = trim((string)($_POST[$k] ?? ''));
+            }
+            $cfg['ticket_ask_name'] = settings_bool_post('ticket_ask_name');
+            $cfg['ticket_ask_phone'] = settings_bool_post('ticket_ask_phone');
+            $cfg['ticket_always_ask_name'] = settings_bool_post('ticket_always_ask_name');
+            $cfg['ticket_always_ask_phone'] = settings_bool_post('ticket_always_ask_phone');
+            $cfg['ticket_phone_for_view'] = settings_bool_post('ticket_phone_for_view');
+            save_bot_config($cfg);
+            flash('ok', 'Technical Support & Tickets settings saved.');
+            $tab = 'support';
         } elseif ($action === 'save_integrations') {
             $cfg['crm_webhook_url'] = trim((string)($_POST['crm_webhook_url'] ?? ''));
             $cfg['analytics_webhook_url'] = trim((string)($_POST['analytics_webhook_url'] ?? ''));
@@ -248,6 +260,7 @@ require __DIR__ . '/layout_header.php';
     'commerce' => 'Commerce',
     'license' => 'License',
     'growth' => 'Growth',
+    'support' => 'Support / Tickets',
     'integrations' => 'Integrations',
     'messages' => 'Page Texts',
     'branding' => 'Branding',
@@ -427,6 +440,41 @@ require __DIR__ . '/layout_header.php';
     <button class="btn" type="submit" style="margin-top:12px">Save Growth Settings</button>
   </form>
 </div>
+
+<?php elseif ($tab === 'support'): ?>
+<form method="post">
+  <input type="hidden" name="action" value="save_support">
+  <div class="row2">
+    <div class="card panel">
+      <h2>🛠️ Technical Support form</h2>
+      <p class="muted">Used when users open Technical Support or <code>/ticket</code>. Add questions and helpful links from here.</p>
+      <div class="stack">
+        <label>Intro text (EN)</label>
+        <textarea name="support_intro_en" rows="4"><?= e((string)($cfg['support_intro_en'] ?? '')) ?></textarea>
+        <label>Intro text (FA)</label>
+        <textarea name="support_intro_fa" rows="4"><?= e((string)($cfg['support_intro_fa'] ?? '')) ?></textarea>
+        <label>Helpful links (one per line: <code>Label|https://url</code>)</label>
+        <textarea name="support_links" rows="4" placeholder="Forum|https://hdd-land.com/forum"><?= e((string)($cfg['support_links'] ?? '')) ?></textarea>
+        <label>Questions (one per line: <code>key|English|فارسی|1or0</code> — last = required)</label>
+        <textarea name="support_questions" rows="6" placeholder="drive_model|Hard drive model|مدل هارد|1"><?= e((string)($cfg['support_questions'] ?? '')) ?></textarea>
+      </div>
+    </div>
+    <div class="card panel">
+      <h2>🎫 My Tickets / contact capture</h2>
+      <p class="muted">Name &amp; phone are saved on the user profile and on each ticket for admin. Phone gate for viewing is optional (Telegram ID is usually enough).</p>
+      <div class="stack">
+        <label><input type="checkbox" name="ticket_ask_name" value="1" <?= !empty($cfg['ticket_ask_name'])?'checked':'' ?>> Ask for full name when creating a ticket</label>
+        <label><input type="checkbox" name="ticket_ask_phone" value="1" <?= !empty($cfg['ticket_ask_phone'])?'checked':'' ?>> Ask for phone when creating a ticket</label>
+        <label><input type="checkbox" name="ticket_always_ask_name" value="1" <?= !empty($cfg['ticket_always_ask_name'])?'checked':'' ?>> Always re-ask name (even if saved)</label>
+        <label><input type="checkbox" name="ticket_always_ask_phone" value="1" <?= !empty($cfg['ticket_always_ask_phone'])?'checked':'' ?>> Always re-ask phone (even if saved)</label>
+        <hr style="border:none;border-top:1px solid var(--line);margin:8px 0">
+        <label><input type="checkbox" name="ticket_phone_for_view" value="1" <?= !empty($cfg['ticket_phone_for_view'])?'checked':'' ?>> Require phone again to view My Tickets (extra gate — default off)</label>
+        <p class="muted" style="font-size:.85rem">Tip: keep phone-for-view off unless you need extra privacy. Users already authenticate via Telegram.</p>
+      </div>
+    </div>
+  </div>
+  <button class="btn" type="submit" style="margin-top:14px">Save Support &amp; Ticket Settings</button>
+</form>
 
 <?php elseif ($tab === 'integrations'): ?>
 <div class="card panel">

@@ -9,6 +9,7 @@ use HddLand\Bot\Services\ContentService;
 use HddLand\Bot\Services\FaqService;
 use HddLand\Bot\Services\ForumService;
 use HddLand\Bot\Services\ShopService;
+use HddLand\Bot\Services\SupportFormService;
 use HddLand\Bot\Services\TicketService;
 use HddLand\Bot\Support\Presenter;
 
@@ -29,6 +30,16 @@ final class MessageRouter
                 if (function_exists('handle_request_media_message') && handle_request_media_message($message, $lang)) {
                     return;
                 }
+            }
+        }
+
+        // Advanced support / ticket form + optional phone gate for My Tickets
+        if ($text !== '') {
+            if (SupportFormService::handleText($chatId, $userId, $text, $lang)) {
+                return;
+            }
+            if (SupportFormService::handleMyTicketsPhone($chatId, $userId, $text, $lang)) {
+                return;
             }
         }
 
@@ -144,19 +155,16 @@ final class MessageRouter
                 break;
 
             case 'ticket':
-                if (function_exists('feature_on') && !feature_on('tickets')) {
+            case 'supportform':
+                if (function_exists('feature_on') && !feature_on('tickets') && !feature_on('prodesk')) {
                     send_message($chatId, Presenter::featureDisabled($lang, 'تیکت غیرفعال است.', 'Tickets are disabled.'), main_keyboard($lang));
                     break;
                 }
-                if ($arg === '') {
-                    send_message($chatId, 'Usage: /ticket your issue description');
-                    break;
-                }
-                TicketService::create($chatId, $userId, $arg);
+                SupportFormService::start($chatId, $userId, $lang, 'ticket');
                 break;
 
             case 'mytickets':
-                TicketService::showMine($chatId, $userId);
+                SupportFormService::showMyTickets($chatId, $userId, $lang);
                 break;
 
             case 'tickets':

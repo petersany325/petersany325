@@ -73,11 +73,15 @@ final class ExtraMenusService
                 break;
             case 'profile':
                 $uname = '';
+                $contact = '';
+                $phone = '';
                 try {
-                    $st = db()->prepare('SELECT username, full_name, lang FROM users WHERE telegram_id=? LIMIT 1');
+                    $st = db()->prepare('SELECT username, full_name, lang, contact_name, phone FROM users WHERE telegram_id=? LIMIT 1');
                     $st->execute([$userId]);
                     $u = $st->fetch() ?: [];
                     $uname = trim((string)($u['full_name'] ?? $u['username'] ?? ''));
+                    $contact = trim((string)($u['contact_name'] ?? ''));
+                    $phone = trim((string)($u['phone'] ?? ''));
                     $ulang = (string)($u['lang'] ?? $lang);
                 } catch (\Throwable $e) {
                     $ulang = $lang;
@@ -85,8 +89,11 @@ final class ExtraMenusService
                 $text = ($lang === 'fa' ? '👤 <b>پروفایل من</b>' : '👤 <b>My Profile</b>') . "\n\n"
                     . 'ID: <code>' . $userId . "</code>\n"
                     . 'Name: ' . htmlspecialchars($uname !== '' ? $uname : '-') . "\n"
+                    . ($lang === 'fa' ? 'نام تماس: ' : 'Contact: ') . htmlspecialchars($contact !== '' ? $contact : '-') . "\n"
+                    . ($lang === 'fa' ? 'تلفن: ' : 'Phone: ') . htmlspecialchars($phone !== '' ? $phone : '-') . "\n"
                     . 'Lang: ' . htmlspecialchars($ulang);
                 Presenter::editOrSend($chatId, $msgId, $text, self::kb($lang, array(
+                    array('mytickets', $lang === 'fa' ? '🎫 تیکت‌ها' : '🎫 Tickets'),
                     array('orders', $lang === 'fa' ? '📦 سفارش‌ها' : '📦 Orders'),
                     array('license', $lang === 'fa' ? '🔑 لایسنس' : '🔑 License'),
                     array('main', $lang === 'fa' ? '🏠 منو' : '🏠 Menu'),

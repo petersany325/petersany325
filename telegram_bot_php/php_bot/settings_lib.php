@@ -104,6 +104,18 @@ function bot_defaults() {
         // Integrations
         'crm_webhook_url' => '',
         'analytics_webhook_url' => '',
+
+        // Advanced Technical Support + Tickets
+        'support_intro_en' => "🛠️ <b>Advanced Technical Support</b>\n\nA few short questions help our team respond faster.\nCancel: /cancel",
+        'support_intro_fa' => "🛠️ <b>پشتیبانی فنی پیشرفته</b>\n\nچند سؤال کوتاه می‌پرسیم تا تیم دقیق‌تر کمک کند.\nلغو: /cancel",
+        'support_links' => "Forum|https://hdd-land.com/forum\nWebsite|https://hdd-land.com",
+        'support_questions' => "drive_model|Hard drive model (e.g. WD20EFRX)|مدل هارد (مثلاً WD20EFRX)|1\nerror|Error / symptom|خطا / علائم مشکل|1\nsediv_version|SeDiv version (if any)|نسخه SeDiv (اگر دارید)|0",
+        'ticket_ask_name' => 1,
+        'ticket_ask_phone' => 1,
+        'ticket_always_ask_name' => 0,
+        'ticket_always_ask_phone' => 0,
+        // Optional: require phone again to view tickets (default OFF — Telegram ID is enough)
+        'ticket_phone_for_view' => 0,
     );
 }
 

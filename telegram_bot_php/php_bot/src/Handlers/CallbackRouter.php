@@ -10,6 +10,7 @@ use HddLand\Bot\Services\ContentService;
 use HddLand\Bot\Services\FaqService;
 use HddLand\Bot\Services\ForumService;
 use HddLand\Bot\Services\ShopService;
+use HddLand\Bot\Services\SupportFormService;
 use HddLand\Bot\Support\Presenter;
 
 final class CallbackRouter
@@ -56,7 +57,32 @@ final class CallbackRouter
 
         if ($data === 'req:support') {
             answer_callback($id);
-            start_request_flow($chatId, $userId, 'support', $lang);
+            SupportFormService::start($chatId, $userId, $lang, 'support');
+            return;
+        }
+
+        if ($data === 'support_cancel') {
+            answer_callback($id);
+            clear_user_state($userId);
+            Presenter::editOrSend(
+                $chatId,
+                $msgId,
+                $lang === 'fa' ? '❌ لغو شد.' : '❌ Cancelled.',
+                main_keyboard($lang)
+            );
+            return;
+        }
+
+        if ($data === 'mytickets') {
+            answer_callback($id);
+            SupportFormService::showMyTickets($chatId, $userId, $lang, $msgId);
+            return;
+        }
+
+        if (strpos($data, 'ticket:') === 0) {
+            $tid = (int)substr($data, 7);
+            answer_callback($id);
+            SupportFormService::showTicketThread($chatId, $userId, $tid, $lang, $msgId);
             return;
         }
         if ($data === 'req:sales') {

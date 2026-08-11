@@ -71,6 +71,16 @@ require __DIR__ . '/layout_header.php';
     &nbsp; User: <code><?= e((string)$ticket['user_id']) ?></code>
     &nbsp; Created: <span class="muted"><?= e((string)$ticket['created_at']) ?></span>
   </p>
+  <?php
+    $cn = trim((string)($ticket['contact_name'] ?? ''));
+    $ph = trim((string)($ticket['phone'] ?? ''));
+    if ($cn !== '' || $ph !== ''):
+  ?>
+  <p>
+    <?php if ($cn !== ''): ?>👤 <b><?= e($cn) ?></b><?php endif; ?>
+    <?php if ($ph !== ''): ?> &nbsp; 📞 <a href="tel:<?= e(preg_replace('/\s+/', '', $ph)) ?>"><?= e($ph) ?></a><?php endif; ?>
+  </p>
+  <?php endif; ?>
   <h2><?= e((string)$ticket['subject']) ?></h2>
 
   <div style="margin:18px 0;display:flex;flex-direction:column;gap:10px">

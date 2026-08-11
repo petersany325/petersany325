@@ -360,7 +360,7 @@ function graphical_main_hub($lang = 'en') {
     $kb = $top;
 
     // Append custom root menu items (not duplicates)
-    $used = array('shop','reqhub','req:support','req:sales','faqcat:all','forum','cmd:training','lang','help','main','cart','orders','checkout','license','renew','demo','profile','feedback','referral','contact','brands','news','miniapp');
+    $used = array('shop','reqhub','req:support','req:sales','faqcat:all','forum','cmd:training','lang','help','main','cart','orders','checkout','license','renew','demo','profile','feedback','referral','contact','brands','news','miniapp','mytickets','support_cancel');
     $row = array();
     foreach ($items as $it) {
         $cb = '';
