@@ -9,6 +9,9 @@
 require_once dirname(__DIR__) . '/loader.php';
 
 class SmartI18nPlugin {
+    /** AI translate is slow — keep OFF in webhook/menu path so language → menu never freezes */
+    public static $allowAi = false;
+
     public static function boot() {
         self::ensure_cache_table();
         add_filter('localize_menu_row', array(__CLASS__, 'filter_menu_row'), 10);
@@ -140,6 +143,10 @@ class SmartI18nPlugin {
         if ($cached !== null) {
             return $cached;
         }
+        // Never call OpenAI during Telegram webhook — it blocks the next menu
+        if (!self::$allowAi) {
+            return $text; // English source until dictionary/cache exists
+        }
         $ai = self::ai_translate($text, $lang);
         if ($ai !== null) {
             self::cache_set($text, $lang, $ai);
@@ -190,17 +197,9 @@ class SmartI18nPlugin {
             return $row; // core already localized
         }
         $row['question'] = self::translate($row['question'], $lang);
-        // Don't AI-translate long answers without key — dictionary may partially help
-        if (strlen($row['answer']) < 80) {
+        // Hot path: dictionary/cache only (AI disabled in webhook)
+        if (strlen((string)$row['answer']) < 120) {
             $row['answer'] = self::translate($row['answer'], $lang);
-        } else {
-            $ai = self::ai_translate($row['answer'], $lang);
-            if ($ai) {
-                $row['answer'] = $ai;
-                try {
-                    save_faq_translation((int)$row['id'], $lang, $row['question'], $ai, isset($row['category']) ? $row['category'] : null);
-                } catch (Exception $e) {}
-            }
         }
         return $row;
     }
@@ -230,30 +229,70 @@ class SmartI18nPlugin {
     }
 
     /**
-     * After language: smart hub showing ALL root categories + entries clearly.
+     * After language: open main menu immediately (never block on AI translate).
      */
     public static function on_language_selected($chatId, $messageId, $userId, $lang) {
-        // Warm-translate all active menus in background of this request
+        $chatId = (int)$chatId;
+        $messageId = (int)$messageId;
+        $lang = $lang ? (string)$lang : 'en';
+
+        // Fast dictionary warm-up only (no OpenAI in the webhook path — that was freezing the menu)
         try {
-            $all = db()->query('SELECT * FROM menus WHERE is_active=1 ORDER BY id ASC')->fetchAll();
-            foreach ($all as $m) {
-                self::filter_menu_row($m, $lang);
+            if ($lang !== 'en') {
+                $all = db()->query('SELECT id, title, value_text, menu_type FROM menus WHERE is_active=1 ORDER BY id ASC LIMIT 80')->fetchAll();
+                foreach ($all as $m) {
+                    $hit = self::dictionary_lookup((string)$m['title'], $lang);
+                    if ($hit !== null) {
+                        try {
+                            save_menu_translation((int)$m['id'], $lang, $hit, null);
+                        } catch (Exception $e) {
+                        }
+                    }
+                }
             }
-        } catch (Exception $e) {}
+        } catch (Exception $e) {
+        }
 
-        $hub = function_exists('graphical_main_hub') ? graphical_main_hub($lang) : self::build_smart_hub($lang);
-        $intro = $lang === 'fa'
-            ? "✅ زبان تنظیم شد.\n\nاز دکمه‌های پایین صفحه یا منوی شیشه‌ای استفاده کنید."
-            : "✅ Language ready.\n\nUse the bottom buttons or the menu below.";
-
-        edit_or_send($chatId, $messageId, $intro . "\n\n" . welcome_text($lang), $hub);
-        // Install / refresh persistent reply keyboard (Technical Support, My Tickets, …)
-        if (function_exists('main_reply_keyboard')) {
-            send_message(
-                $chatId,
-                $lang === 'fa' ? '⌨️ میانبرهای پایین صفحه آماده است.' : '⌨️ Bottom shortcuts are ready.',
-                main_reply_keyboard($lang)
+        try {
+            $hub = function_exists('graphical_main_hub') ? graphical_main_hub($lang) : self::build_smart_hub($lang);
+            if (!is_array($hub) || empty($hub['inline_keyboard'])) {
+                $hub = function_exists('main_keyboard') ? main_keyboard($lang) : self::build_smart_hub($lang);
+            }
+            $intro = $lang === 'fa'
+                ? "✅ زبان تنظیم شد.\n\nمنوی اصلی آماده است:"
+                : "✅ Language set.\n\nMain menu is ready:";
+            $body = $intro . "\n\n" . (function_exists('welcome_text') ? welcome_text($lang) : '');
+            if (function_exists('edit_or_send')) {
+                edit_or_send($chatId, $messageId, $body, $hub);
+            } else {
+                if ($messageId > 0) {
+                    edit_message($chatId, $messageId, $body, $hub);
+                } else {
+                    send_message($chatId, $body, $hub);
+                }
+            }
+            if (function_exists('main_reply_keyboard')) {
+                send_message(
+                    $chatId,
+                    $lang === 'fa' ? '⌨️ میانبرهای پایین صفحه:' : '⌨️ Bottom shortcuts:',
+                    main_reply_keyboard($lang)
+                );
+            }
+        } catch (Throwable $e) {
+            @file_put_contents(
+                dirname(__DIR__, 2) . '/error.log',
+                date('c') . ' SmartI18n menu: ' . $e->getMessage() . "\n",
+                FILE_APPEND
             );
+            // Last-resort: always open something for the user
+            try {
+                send_message(
+                    $chatId,
+                    $lang === 'fa' ? '🏠 منوی اصلی' : '🏠 Main Menu',
+                    function_exists('main_keyboard') ? main_keyboard($lang) : null
+                );
+            } catch (Throwable $e2) {
+            }
         }
     }
 

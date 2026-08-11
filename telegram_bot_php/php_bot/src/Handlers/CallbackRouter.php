@@ -130,13 +130,53 @@ final class CallbackRouter
         if (strpos($data, 'startlang:') === 0 || strpos($data, 'setlang:') === 0) {
             $fromStart = (strpos($data, 'startlang:') === 0);
             $code = $fromStart ? substr($data, 10) : substr($data, 8);
-            answer_callback($id, $code === 'fa' ? 'فارسی' : 'English');
+            $code = strtolower(preg_replace('/[^a-z0-9\-]/i', '', (string)$code) ?: 'en');
+            if ($code === '') {
+                $code = 'en';
+            }
+            // Validate against active languages; unknown → English
+            try {
+                $st = db()->prepare('SELECT code FROM languages WHERE code=? AND is_active=1 LIMIT 1');
+                $st->execute(array($code));
+                if (!$st->fetchColumn()) {
+                    $code = 'en';
+                }
+            } catch (\Throwable $e) {
+            }
+            answer_callback($id, '✅');
             UserRepository::setLang($userId, $code);
             $lang = $code;
-            if (function_exists('do_action')) {
-                do_action('after_language_selected', $chatId, $msgId, $userId, $lang);
-            } else {
-                Presenter::editOrSend($chatId, $msgId, welcome_text($lang), function_exists('graphical_main_hub') ? graphical_main_hub($lang) : main_keyboard($lang));
+
+            $opened = false;
+            $hasHook = function_exists('do_action')
+                && !empty($GLOBALS['hdd_actions']['after_language_selected']);
+            if ($hasHook) {
+                try {
+                    do_action('after_language_selected', $chatId, $msgId, $userId, $lang);
+                    $opened = true;
+                } catch (\Throwable $e) {
+                    @file_put_contents(
+                        dirname(__DIR__, 2) . '/error.log',
+                        date('c') . ' after_language_selected: ' . $e->getMessage() . "\n",
+                        FILE_APPEND
+                    );
+                }
+            }
+            if (!$opened) {
+                $hub = function_exists('graphical_main_hub') ? graphical_main_hub($lang) : main_keyboard($lang);
+                Presenter::editOrSend(
+                    $chatId,
+                    $msgId,
+                    ($lang === 'fa' ? "✅ زبان تنظیم شد.\n\n" : "✅ Language set.\n\n") . welcome_text($lang),
+                    $hub
+                );
+                if (function_exists('main_reply_keyboard')) {
+                    send_message(
+                        $chatId,
+                        $lang === 'fa' ? '⌨️ میانبرهای پایین صفحه:' : '⌨️ Bottom shortcuts:',
+                        main_reply_keyboard($lang)
+                    );
+                }
             }
             return;
         }

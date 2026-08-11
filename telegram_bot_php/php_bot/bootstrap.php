@@ -75,7 +75,24 @@ function edit_message($chatId, $messageId, $text, $replyMarkup = null) {
     if ($replyMarkup) {
         $params['reply_markup'] = $replyMarkup;
     }
-    tg_api('editMessageText', $params);
+    return tg_api('editMessageText', $params);
+}
+
+/**
+ * Edit an existing Telegram message, or send a new one (plugins/legacy helper).
+ */
+function edit_or_send($chatId, $msgId, $text, $replyMarkup = null) {
+    $chatId = (int)$chatId;
+    $msgId = (int)$msgId;
+    if ($msgId > 0) {
+        $res = edit_message($chatId, $msgId, $text, $replyMarkup);
+        // If edit fails (message too old / not modified), fall back to send
+        if (is_array($res) && empty($res['ok'])) {
+            send_message($chatId, $text, $replyMarkup);
+        }
+        return;
+    }
+    send_message($chatId, $text, $replyMarkup);
 }
 
 function answer_callback($id, $text = '', $alert = false) {
