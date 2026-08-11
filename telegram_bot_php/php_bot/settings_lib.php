@@ -110,10 +110,15 @@ function bot_defaults() {
         'support_intro_fa' => "🛠️ <b>پشتیبانی فنی پیشرفته</b>\n\nچند سؤال کوتاه می‌پرسیم تا تیم دقیق‌تر کمک کند.\nلغو: /cancel",
         'support_links' => "Forum|https://hdd-land.com/forum\nWebsite|https://hdd-land.com",
         'support_questions' => "drive_model|Hard drive model (e.g. WD20EFRX)|مدل هارد (مثلاً WD20EFRX)|1\nerror|Error / symptom|خطا / علائم مشکل|1\nsediv_version|SeDiv version (if any)|نسخه SeDiv (اگر دارید)|0",
+        // Smart ticket fields: key|type|EN|FA|required|ask_always
+        'ticket_fields' => "contact_name|name|Full name|نام و نام خانوادگی|1|1\nphone|phone|Mobile number (with country code)|شماره موبایل (با کد کشور)|1|1\ncustomer_id|id|Customer / License / National ID|کد مشتری / لایسنس / کد ملی|1|1\ndrive_model|text|Hard drive model (e.g. WD20EFRX)|مدل هارد (مثلاً WD20EFRX)|1|0\nerror|text|Error / symptom|خطا / علائم مشکل|1|0\nsediv_version|text|SeDiv version (if any)|نسخه SeDiv (اگر دارید)|0|0\nproblem|message|Describe your problem in detail|شرح کامل مشکل را بنویسید|1|0",
         'ticket_ask_name' => 1,
         'ticket_ask_phone' => 1,
-        'ticket_always_ask_name' => 0,
-        'ticket_always_ask_phone' => 0,
+        'ticket_ask_id' => 1,
+        'ticket_id_required' => 1,
+        'ticket_always_ask_name' => 1,
+        'ticket_always_ask_phone' => 1,
+        'ticket_always_ask_id' => 1,
         // Optional: require phone again to view tickets (default OFF — Telegram ID is enough)
         'ticket_phone_for_view' => 0,
     );

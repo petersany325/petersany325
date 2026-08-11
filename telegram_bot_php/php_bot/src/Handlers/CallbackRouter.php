@@ -79,6 +79,13 @@ final class CallbackRouter
             return;
         }
 
+        if (strpos($data, 'ticket_reply:') === 0) {
+            $tid = (int)substr($data, 13);
+            answer_callback($id);
+            SupportFormService::beginUserReply($chatId, $userId, $tid, $lang, $msgId);
+            return;
+        }
+
         if (strpos($data, 'ticket:') === 0) {
             $tid = (int)substr($data, 7);
             answer_callback($id);

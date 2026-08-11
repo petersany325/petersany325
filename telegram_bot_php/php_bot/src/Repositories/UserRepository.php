@@ -36,7 +36,7 @@ final class UserRepository
         }
     }
 
-    public static function saveContact(int $userId, string $name, string $phone): void
+    public static function saveContact(int $userId, string $name, string $phone, string $customerId = ''): void
     {
         try {
             $sets = [];
@@ -48,6 +48,10 @@ final class UserRepository
             if ($phone !== '') {
                 $sets[] = 'phone = ?';
                 $vals[] = mb_substr($phone, 0, 40);
+            }
+            if ($customerId !== '') {
+                $sets[] = 'customer_id = ?';
+                $vals[] = mb_substr($customerId, 0, 80);
             }
             if (!$sets) {
                 return;

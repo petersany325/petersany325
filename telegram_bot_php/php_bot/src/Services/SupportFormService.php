@@ -8,7 +8,7 @@ use HddLand\Bot\Repositories\UserRepository;
 use HddLand\Bot\Support\Presenter;
 
 /**
- * Advanced Technical Support + Ticket intake (admin-configurable questions/links).
+ * Smart ticket intake: identity → questions → problem → admin notify.
  */
 final class SupportFormService
 {
@@ -16,34 +16,40 @@ final class SupportFormService
     {
         $pdo = db();
         foreach (array(
-            'contact_name' => "VARCHAR(120) NULL",
-            'phone' => "VARCHAR(40) NULL",
+            'contact_name' => 'VARCHAR(120) NULL',
+            'phone' => 'VARCHAR(40) NULL',
+            'customer_id' => 'VARCHAR(80) NULL',
         ) as $col => $def) {
             try {
-                $c = $pdo->query("SHOW COLUMNS FROM users LIKE " . $pdo->quote($col))->fetch();
+                $c = $pdo->query('SHOW COLUMNS FROM users LIKE ' . $pdo->quote($col))->fetch();
                 if (!$c) {
                     $pdo->exec("ALTER TABLE users ADD COLUMN `{$col}` {$def}");
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
         foreach (array(
-            'contact_name' => "VARCHAR(120) NULL",
-            'phone' => "VARCHAR(40) NULL",
-            'meta_json' => "TEXT NULL",
+            'contact_name' => 'VARCHAR(120) NULL',
+            'phone' => 'VARCHAR(40) NULL',
+            'customer_id' => 'VARCHAR(80) NULL',
+            'meta_json' => 'TEXT NULL',
+            'updated_at' => 'TIMESTAMP NULL DEFAULT NULL',
         ) as $col => $def) {
             try {
-                $c = $pdo->query("SHOW COLUMNS FROM tickets LIKE " . $pdo->quote($col))->fetch();
+                $c = $pdo->query('SHOW COLUMNS FROM tickets LIKE ' . $pdo->quote($col))->fetch();
                 if (!$c) {
                     $pdo->exec("ALTER TABLE tickets ADD COLUMN `{$col}` {$def}");
                 }
-            } catch (\Throwable $e) {}
+            } catch (\Throwable $e) {
+            }
         }
         try {
             $c = $pdo->query("SHOW COLUMNS FROM service_requests LIKE 'meta_json'")->fetch();
             if (!$c) {
-                $pdo->exec("ALTER TABLE service_requests ADD COLUMN meta_json TEXT NULL");
+                $pdo->exec('ALTER TABLE service_requests ADD COLUMN meta_json TEXT NULL');
             }
-        } catch (\Throwable $e) {}
+        } catch (\Throwable $e) {
+        }
     }
 
     /** @return list<array{label:string,url:string}> */
@@ -67,46 +73,14 @@ final class SupportFormService
         return $out;
     }
 
-    /** @return list<array{key:string,en:string,fa:string,required:bool}> */
-    public static function questions(): array
-    {
-        $raw = trim((string)cfg('support_questions', ''));
-        $out = array();
-        if ($raw === '') {
-            // Sensible SeDiv defaults
-            return array(
-                array('key' => 'drive_model', 'en' => 'Hard drive model (e.g. WD20EFRX)', 'fa' => 'مدل هارد (مثلاً WD20EFRX)', 'required' => true),
-                array('key' => 'error', 'en' => 'Error / symptom', 'fa' => 'خطا / علائم مشکل', 'required' => true),
-                array('key' => 'sediv_version', 'en' => 'SeDiv version (if any)', 'fa' => 'نسخه SeDiv (اگر دارید)', 'required' => false),
-            );
-        }
-        foreach (preg_split('/\r\n|\n|\r/', $raw) as $line) {
-            $line = trim($line);
-            if ($line === '') {
-                continue;
-            }
-            $parts = array_map('trim', explode('|', $line));
-            if (count($parts) < 3) {
-                continue;
-            }
-            $out[] = array(
-                'key' => preg_replace('/[^a-z0-9_]/i', '_', $parts[0]) ?: ('q' . (count($out) + 1)),
-                'en' => $parts[1],
-                'fa' => $parts[2] !== '' ? $parts[2] : $parts[1],
-                'required' => !isset($parts[3]) || strtolower($parts[3]) !== '0',
-            );
-        }
-        return $out;
-    }
-
     public static function start(int $chatId, int $userId, string $lang, string $mode = 'ticket'): void
     {
         self::ensureSchema();
         $intro = (string)cfg('support_intro_' . ($lang === 'fa' ? 'fa' : 'en'), '');
         if ($intro === '') {
             $intro = $lang === 'fa'
-                ? "🛠️ <b>پشتیبانی فنی پیشرفته</b>\n\nچند سؤال کوتاه می‌پرسیم تا تیم دقیق‌تر کمک کند.\nلغو: /cancel"
-                : "🛠️ <b>Advanced Technical Support</b>\n\nA few short questions help our team respond faster.\nCancel: /cancel";
+                ? "🛠️ <b>ثبت تیکت هوشمند</b>\n\nابتدا مشخصات شما، بعد سؤالات فنی، سپس شرح مشکل.\nلغو: /cancel"
+                : "🛠️ <b>Smart ticket</b>\n\nFirst your identity, then technical questions, then the problem.\nCancel: /cancel";
         }
 
         $kb = array('inline_keyboard' => array());
@@ -116,11 +90,9 @@ final class SupportFormService
         $kb['inline_keyboard'][] = array(array('text' => $lang === 'fa' ? '❌ لغو' : '❌ Cancel', 'callback_data' => 'support_cancel'));
 
         set_user_state($userId, 'support_form', array(
-            'mode' => $mode, // ticket | support
+            'mode' => $mode,
             'step' => 'boot',
-            'answers' => array(),
-            'contact_name' => '',
-            'phone' => '',
+            'values' => array(),
         ));
         send_message($chatId, $intro, $kb);
         self::askNext($chatId, $userId, $lang);
@@ -133,161 +105,192 @@ final class SupportFormService
             return;
         }
         $p = $st['payload'] ?: array();
+        $values = isset($p['values']) && is_array($p['values']) ? $p['values'] : array();
         $profile = UserRepository::profile($userId);
 
-        if (!empty(cfg('ticket_ask_name', 1)) && trim((string)($p['contact_name'] ?? '')) === '') {
-            $existing = trim((string)($profile['contact_name'] ?? ''));
-            if ($existing !== '' && empty(cfg('ticket_always_ask_name', 0))) {
-                $p['contact_name'] = $existing;
-                set_user_state($userId, 'support_form', $p);
-            } else {
-                $p['step'] = 'name';
-                set_user_state($userId, 'support_form', $p);
-                send_message($chatId, $lang === 'fa' ? '👤 نام و نام خانوادگی خود را بنویسید:' : '👤 Please type your full name:');
-                return;
+        foreach (TicketFieldsService::all() as $field) {
+            $key = $field['key'];
+            if (array_key_exists($key, $values)) {
+                continue;
             }
+
+            // Reuse saved profile for identity fields unless ask_always
+            if (empty($field['ask_always'])) {
+                $existing = '';
+                if ($field['type'] === 'name') {
+                    $existing = trim((string)($profile['contact_name'] ?? ''));
+                } elseif ($field['type'] === 'phone') {
+                    $existing = trim((string)($profile['phone'] ?? ''));
+                } elseif ($field['type'] === 'id') {
+                    $existing = trim((string)($profile['customer_id'] ?? ''));
+                }
+                if ($existing !== '') {
+                    $values[$key] = $existing;
+                    $p['values'] = $values;
+                    set_user_state($userId, 'support_form', $p);
+                    continue;
+                }
+            }
+
+            $p['step'] = 'f:' . $key;
+            $p['values'] = $values;
+            set_user_state($userId, 'support_form', $p);
+            $label = $lang === 'fa' ? $field['fa'] : $field['en'];
+            $icon = self::iconFor($field['type']);
+            $req = !empty($field['required'])
+                ? ($lang === 'fa' ? ' (الزامی)' : ' (required)')
+                : ($lang === 'fa' ? ' (اختیاری — برای رد شدن - بفرستید)' : ' (optional — send - to skip)');
+            send_message($chatId, $icon . ' ' . $label . $req);
+            return;
         }
 
-        if (!empty(cfg('ticket_ask_phone', 1)) && trim((string)($p['phone'] ?? '')) === '') {
-            $existing = trim((string)($profile['phone'] ?? ''));
-            if ($existing !== '' && empty(cfg('ticket_always_ask_phone', 0))) {
-                $p['phone'] = $existing;
-                set_user_state($userId, 'support_form', $p);
-            } else {
-                $p['step'] = 'phone';
-                set_user_state($userId, 'support_form', $p);
-                send_message($chatId, $lang === 'fa' ? '📞 شماره تلفن خود را با کد کشور بنویسید:' : '📞 Please type your phone number (with country code):');
-                return;
-            }
-        }
-
-        $questions = self::questions();
-        $answers = isset($p['answers']) && is_array($p['answers']) ? $p['answers'] : array();
-        foreach ($questions as $q) {
-            if (!array_key_exists($q['key'], $answers)) {
-                $p['step'] = 'q:' . $q['key'];
-                set_user_state($userId, 'support_form', $p);
-                $label = $lang === 'fa' ? $q['fa'] : $q['en'];
-                $req = !empty($q['required']) ? ($lang === 'fa' ? ' (الزامی)' : ' (required)') : ($lang === 'fa' ? ' (اختیاری — برای رد شدن - بفرستید)' : ' (optional — send - to skip)');
-                send_message($chatId, '❓ ' . $label . $req);
-                return;
-            }
-        }
-
-        $p['step'] = 'message';
-        set_user_state($userId, 'support_form', $p);
-        send_message($chatId, $lang === 'fa'
-            ? '📝 شرح کامل مشکل / درخواست را بنویسید:'
-            : '📝 Describe the full issue / request:');
+        // Should not reach — message field is always last
+        clear_user_state($userId);
+        send_message($chatId, $lang === 'fa' ? 'فرم ناقص است. دوباره /ticket بزنید.' : 'Form incomplete. Try /ticket again.');
     }
 
     public static function handleText(int $chatId, int $userId, string $text, string $lang): bool
     {
+        // User follow-up reply to an open/answered ticket
+        if (self::handleTicketReplyText($chatId, $userId, $text, $lang)) {
+            return true;
+        }
+
         $st = get_user_state($userId);
         if (!$st || $st['state'] !== 'support_form') {
             return false;
         }
         if ($text === '/cancel' || strcasecmp($text, 'cancel') === 0) {
             clear_user_state($userId);
-            send_message($chatId, $lang === 'fa' ? '❌ لغو شد.' : '❌ Cancelled.', main_keyboard($lang));
+            send_message($chatId, $lang === 'fa' ? '❌ لغو شد.' : '❌ Cancelled.', function_exists('main_reply_keyboard') ? main_reply_keyboard($lang) : main_keyboard($lang));
             return true;
         }
 
         $p = $st['payload'] ?: array();
         $step = (string)($p['step'] ?? '');
-
-        if ($step === 'name') {
-            if (mb_strlen(trim($text)) < 2) {
-                send_message($chatId, $lang === 'fa' ? 'نام معتبر وارد کنید.' : 'Please enter a valid name.');
-                return true;
-            }
-            $p['contact_name'] = trim($text);
-            set_user_state($userId, 'support_form', $p);
+        if (strpos($step, 'f:') !== 0) {
             self::askNext($chatId, $userId, $lang);
             return true;
         }
 
-        if ($step === 'phone') {
-            $phone = preg_replace('/[^\d\+]/', '', $text);
-            if ($phone === null || strlen($phone) < 7) {
-                send_message($chatId, $lang === 'fa' ? 'شماره تلفن معتبر وارد کنید.' : 'Please enter a valid phone number.');
-                return true;
+        $key = substr($step, 2);
+        $field = null;
+        foreach (TicketFieldsService::all() as $f) {
+            if ($f['key'] === $key) {
+                $field = $f;
+                break;
             }
-            $p['phone'] = $phone;
-            set_user_state($userId, 'support_form', $p);
+        }
+        if (!$field) {
             self::askNext($chatId, $userId, $lang);
             return true;
         }
 
-        if (strpos($step, 'q:') === 0) {
-            $key = substr($step, 2);
-            $q = null;
-            foreach (self::questions() as $item) {
-                if ($item['key'] === $key) {
-                    $q = $item;
-                    break;
-                }
-            }
-            $val = trim($text);
-            if ($val === '-' || strcasecmp($val, 'skip') === 0) {
-                if ($q && !empty($q['required'])) {
-                    send_message($chatId, $lang === 'fa' ? 'این سؤال الزامی است.' : 'This question is required.');
-                    return true;
-                }
-                $val = '';
-            } elseif ($q && !empty($q['required']) && $val === '') {
-                send_message($chatId, $lang === 'fa' ? 'این سؤال الزامی است.' : 'This question is required.');
+        $val = trim($text);
+        if ($val === '-' || strcasecmp($val, 'skip') === 0) {
+            if (!empty($field['required'])) {
+                send_message($chatId, $lang === 'fa' ? 'این مورد الزامی است.' : 'This field is required.');
                 return true;
             }
-            $p['answers'][$key] = $val;
-            set_user_state($userId, 'support_form', $p);
-            self::askNext($chatId, $userId, $lang);
+            $val = '';
+        } else {
+            $err = self::validate($field, $val, $lang);
+            if ($err !== null) {
+                send_message($chatId, $err);
+                return true;
+            }
+            if ($field['type'] === 'phone') {
+                $val = preg_replace('/[^\d\+]/', '', $val) ?: $val;
+            }
+        }
+
+        $values = isset($p['values']) && is_array($p['values']) ? $p['values'] : array();
+        $values[$key] = $val;
+        $p['values'] = $values;
+
+        if ($field['type'] === 'message') {
+            self::finish($chatId, $userId, $lang, $p, $val);
             return true;
         }
 
-        if ($step === 'message') {
-            if (trim($text) === '') {
-                send_message($chatId, $lang === 'fa' ? 'متن مشکل را بنویسید.' : 'Please describe the issue.');
-                return true;
-            }
-            self::finish($chatId, $userId, $lang, $p, trim($text));
-            return true;
-        }
-
-        // boot / unknown → restart questions
+        set_user_state($userId, 'support_form', $p);
         self::askNext($chatId, $userId, $lang);
         return true;
+    }
+
+    /** @param array<string,mixed> $field */
+    private static function validate(array $field, string $val, string $lang): ?string
+    {
+        if ($val === '' && !empty($field['required'])) {
+            return $lang === 'fa' ? 'این مورد الزامی است.' : 'This field is required.';
+        }
+        if ($val === '') {
+            return null;
+        }
+        switch ($field['type']) {
+            case 'name':
+                if (mb_strlen($val) < 2) {
+                    return $lang === 'fa' ? 'نام معتبر وارد کنید.' : 'Please enter a valid name.';
+                }
+                break;
+            case 'phone':
+                $phone = preg_replace('/[^\d\+]/', '', $val);
+                if ($phone === null || strlen($phone) < 7) {
+                    return $lang === 'fa' ? 'شماره موبایل معتبر وارد کنید.' : 'Please enter a valid mobile number.';
+                }
+                break;
+            case 'id':
+                if (mb_strlen($val) < 3) {
+                    return $lang === 'fa' ? 'کد/شناسه معتبر وارد کنید.' : 'Please enter a valid ID.';
+                }
+                break;
+            case 'message':
+                if (mb_strlen($val) < 5) {
+                    return $lang === 'fa' ? 'لطفاً مشکل را کامل‌تر توضیح دهید.' : 'Please describe the problem in more detail.';
+                }
+                break;
+        }
+        return null;
+    }
+
+    private static function iconFor(string $type): string
+    {
+        $map = array('name' => '👤', 'phone' => '📞', 'id' => '🆔', 'text' => '❓', 'message' => '📝');
+        return $map[$type] ?? '❓';
     }
 
     /** @param array<string,mixed> $p */
     private static function finish(int $chatId, int $userId, string $lang, array $p, string $message): void
     {
         self::ensureSchema();
-        $name = trim((string)($p['contact_name'] ?? ''));
-        $phone = trim((string)($p['phone'] ?? ''));
-        $answers = isset($p['answers']) && is_array($p['answers']) ? $p['answers'] : array();
+        $values = isset($p['values']) && is_array($p['values']) ? $p['values'] : array();
         $mode = (string)($p['mode'] ?? 'ticket');
 
-        UserRepository::saveContact($userId, $name, $phone);
-
+        $name = '';
+        $phone = '';
+        $customerId = '';
+        $answers = array();
         $metaLines = array();
-        if ($name !== '') {
-            $metaLines[] = 'Name: ' . $name;
-        }
-        if ($phone !== '') {
-            $metaLines[] = 'Phone: ' . $phone;
-        }
-        $qmap = array();
-        foreach (self::questions() as $q) {
-            $qmap[$q['key']] = $lang === 'fa' ? $q['fa'] : $q['en'];
-        }
-        foreach ($answers as $k => $v) {
-            if ((string)$v === '') {
+        foreach (TicketFieldsService::all() as $f) {
+            $v = trim((string)($values[$f['key']] ?? ''));
+            if ($f['type'] === 'name') {
+                $name = $v;
+            } elseif ($f['type'] === 'phone') {
+                $phone = $v;
+            } elseif ($f['type'] === 'id') {
+                $customerId = $v;
+            } elseif ($f['type'] === 'text' && $v !== '') {
+                $answers[$f['key']] = $v;
+            }
+            if ($v === '' || $f['type'] === 'message') {
                 continue;
             }
-            $label = $qmap[$k] ?? $k;
+            $label = $lang === 'fa' ? $f['fa'] : $f['en'];
             $metaLines[] = $label . ': ' . $v;
         }
+
+        UserRepository::saveContact($userId, $name, $phone, $customerId);
+
         $full = $message;
         if ($metaLines) {
             $full = $message . "\n\n——\n" . implode("\n", $metaLines);
@@ -296,20 +299,20 @@ final class SupportFormService
         $metaJson = json_encode(array(
             'contact_name' => $name,
             'phone' => $phone,
+            'customer_id' => $customerId,
             'answers' => $answers,
+            'values' => $values,
             'mode' => $mode,
+            'lang' => $lang,
         ), JSON_UNESCAPED_UNICODE);
 
-        $tid = TicketRepository::createAdvanced($userId, $subject, $full, $name, $phone, (string)$metaJson);
+        $tid = TicketRepository::createAdvanced($userId, $subject, $full, $name, $phone, (string)$metaJson, $customerId);
 
-        // Also mirror into Pro Desk requests for Support & Sales inbox
         try {
             if (function_exists('create_service_request')) {
                 $rid = create_service_request($userId, 'support', $full, 'Support: ' . $subject);
-                if ($phone !== '' || $name !== '') {
-                    db()->prepare('UPDATE service_requests SET contact_info=?, meta_json=? WHERE id=?')
-                        ->execute(array(trim($name . ' / ' . $phone, ' /'), $metaJson, $rid));
-                }
+                db()->prepare('UPDATE service_requests SET contact_info=?, meta_json=? WHERE id=?')
+                    ->execute(array(trim($name . ' / ' . $phone . ' / ' . $customerId, ' /'), $metaJson, $rid));
                 set_user_state($userId, 'await_media', array('type' => 'support', 'request_id' => $rid, 'ticket_id' => $tid));
             } else {
                 clear_user_state($userId);
@@ -320,18 +323,20 @@ final class SupportFormService
 
         if (function_exists('notify_staff')) {
             notify_staff(
-                "🆕 Support/Ticket <b>#{$tid}</b>\n"
+                "🆕 <b>تیکت جدید #{$tid}</b>\n"
                 . ($name !== '' ? "👤 {$name}\n" : '')
                 . ($phone !== '' ? "📞 {$phone}\n" : '')
-                . "From: <code>{$userId}</code>\n\n"
-                . htmlspecialchars($message),
+                . ($customerId !== '' ? "🆔 {$customerId}\n" : '')
+                . "TG: <code>{$userId}</code>\n\n"
+                . htmlspecialchars($message) . "\n\n"
+                . 'Admin: reply in panel or /replyticket ' . $tid . ' …',
                 'tickets'
             );
         }
 
         $msg = $lang === 'fa'
-            ? "✅ تیکت <b>#{$tid}</b> ثبت شد.\n\nاگر عکس/فیلم دارید همین الان بفرستید.\nپایان: /done\nمشاهده: /mytickets"
-            : "✅ Ticket <b>#{$tid}</b> created.\n\nSend photo/video now if needed.\nFinish: /done\nView: /mytickets";
+            ? "✅ تیکت <b>#{$tid}</b> ثبت شد و برای پشتیبانی ارسال شد.\n\nاگر عکس/فیلم دارید همین الان بفرستید.\nپایان: /done"
+            : "✅ Ticket <b>#{$tid}</b> created and sent to support.\n\nSend photo/video now if needed.\nFinish: /done";
         send_message($chatId, $msg, array('inline_keyboard' => array(
             array(array('text' => $lang === 'fa' ? '🎫 تیکت‌های من' : '🎫 My Tickets', 'callback_data' => 'mytickets')),
             array(array('text' => $lang === 'fa' ? '🏠 منو' : '🏠 Menu', 'callback_data' => 'main')),
@@ -345,23 +350,22 @@ final class SupportFormService
             $profile = UserRepository::profile($userId);
             $saved = trim((string)($profile['phone'] ?? ''));
             if ($phoneGate === null) {
-                // ask
                 set_user_state($userId, 'mytickets_phone', array());
                 $text = $lang === 'fa'
-                    ? '🔐 برای مشاهده تیکت‌ها، شماره تلفنی که هنگام ثبت وارد کردید را بفرستید:'
-                    : '🔐 To view tickets, send the phone number used when creating the ticket:';
+                    ? '🔐 برای مشاهده تیکت‌ها، شماره موبایلی که هنگام ثبت وارد کردید را بفرستید:'
+                    : '🔐 To view tickets, send the mobile number used when creating the ticket:';
                 Presenter::editOrSend($chatId, $msgId, $text);
                 return;
             }
             $norm = preg_replace('/[^\d\+]/', '', $phoneGate);
-            if ($saved === '' || $norm === '' || ($norm !== $saved && substr($norm, -9) !== substr($saved, -9))) {
+            if ($saved === '' || $norm === '' || ($norm !== $saved && substr((string)$norm, -9) !== substr($saved, -9))) {
                 send_message($chatId, $lang === 'fa' ? '❌ شماره مطابقت ندارد.' : '❌ Phone number does not match.');
                 return;
             }
             clear_user_state($userId);
         }
 
-        $rows = TicketRepository::forUserDetailed($userId, 10);
+        $rows = TicketRepository::forUserDetailed($userId, 12);
         if (!$rows) {
             Presenter::editOrSend($chatId, $msgId, $lang === 'fa' ? '🎫 تیکتی ندارید.' : '🎫 You have no tickets.', main_keyboard($lang));
             return;
@@ -370,10 +374,9 @@ final class SupportFormService
         $kb = array('inline_keyboard' => array());
         $lines = array($lang === 'fa' ? '🎫 <b>تیکت‌های من</b>' : '🎫 <b>My Tickets</b>', '');
         foreach ($rows as $t) {
-            $st = $t['status'] === 'open' ? '🟢' : '🔴';
-            $lines[] = "{$st} #{$t['id']} — " . htmlspecialchars(mb_substr((string)$t['subject'], 0, 40));
+            $lines[] = self::statusEmoji((string)$t['status']) . " #{$t['id']} — " . htmlspecialchars(mb_substr((string)$t['subject'], 0, 40));
             $kb['inline_keyboard'][] = array(array(
-                'text' => "#{$t['id']} " . ($lang === 'fa' ? 'مشاهده پاسخ' : 'View replies'),
+                'text' => "#{$t['id']} " . ($lang === 'fa' ? 'مشاهده / پاسخ' : 'View / reply'),
                 'callback_data' => 'ticket:' . $t['id'],
             ));
         }
@@ -390,26 +393,103 @@ final class SupportFormService
         }
         $msgs = TicketRepository::messages($ticketId);
         $lines = array(
-            ($lang === 'fa' ? '🎫 <b>تیکت' : '🎫 <b>Ticket') . " #{$ticketId}</b> — " . htmlspecialchars((string)$t['status']),
+            ($lang === 'fa' ? '🎫 <b>تیکت' : '🎫 <b>Ticket') . " #{$ticketId}</b> — " . self::statusLabel((string)$t['status'], $lang),
             '',
             '<b>' . htmlspecialchars((string)$t['subject']) . '</b>',
             '',
         );
-        if (!empty($t['contact_name']) || !empty($t['phone'])) {
-            $lines[] = '👤 ' . htmlspecialchars((string)($t['contact_name'] ?? '-')) . ' · 📞 ' . htmlspecialchars((string)($t['phone'] ?? '-'));
+        $idBits = array();
+        if (!empty($t['contact_name'])) {
+            $idBits[] = '👤 ' . htmlspecialchars((string)$t['contact_name']);
+        }
+        if (!empty($t['phone'])) {
+            $idBits[] = '📞 ' . htmlspecialchars((string)$t['phone']);
+        }
+        if (!empty($t['customer_id'])) {
+            $idBits[] = '🆔 ' . htmlspecialchars((string)$t['customer_id']);
+        }
+        if ($idBits) {
+            $lines[] = implode(' · ', $idBits);
             $lines[] = '';
         }
         foreach ($msgs as $m) {
-            $who = !empty($m['is_admin']) ? ($lang === 'fa' ? '🛡️ ادمین' : '🛡️ Admin') : ($lang === 'fa' ? '👤 شما' : '👤 You');
+            $who = !empty($m['is_admin']) ? ($lang === 'fa' ? '🛡️ پشتیبانی' : '🛡️ Support') : ($lang === 'fa' ? '👤 شما' : '👤 You');
             $lines[] = '<b>' . $who . '</b>';
             $lines[] = htmlspecialchars((string)$m['text']);
             $lines[] = '';
         }
-        $kb = array('inline_keyboard' => array(
-            array(array('text' => $lang === 'fa' ? '⬅️ تیکت‌ها' : '⬅️ My Tickets', 'callback_data' => 'mytickets')),
-            array(array('text' => $lang === 'fa' ? '🏠 منو' : '🏠 Menu', 'callback_data' => 'main')),
-        ));
-        Presenter::editOrSend($chatId, $msgId, implode("\n", $lines), $kb);
+
+        $kbRows = array();
+        if ((string)$t['status'] !== 'closed') {
+            $kbRows[] = array(array(
+                'text' => $lang === 'fa' ? '💬 پاسخ به پشتیبانی' : '💬 Reply to support',
+                'callback_data' => 'ticket_reply:' . $ticketId,
+            ));
+        }
+        $kbRows[] = array(array('text' => $lang === 'fa' ? '⬅️ تیکت‌ها' : '⬅️ My Tickets', 'callback_data' => 'mytickets'));
+        $kbRows[] = array(array('text' => $lang === 'fa' ? '🏠 منو' : '🏠 Menu', 'callback_data' => 'main'));
+        Presenter::editOrSend($chatId, $msgId, implode("\n", $lines), array('inline_keyboard' => $kbRows));
+    }
+
+    public static function beginUserReply(int $chatId, int $userId, int $ticketId, string $lang, int $msgId = 0): void
+    {
+        $t = TicketRepository::find($ticketId);
+        if (!$t || (int)$t['user_id'] !== $userId || (string)$t['status'] === 'closed') {
+            Presenter::editOrSend($chatId, $msgId, $lang === 'fa' ? 'امکان پاسخ نیست.' : 'Cannot reply.');
+            return;
+        }
+        set_user_state($userId, 'ticket_reply', array('ticket_id' => $ticketId));
+        Presenter::editOrSend(
+            $chatId,
+            $msgId,
+            $lang === 'fa'
+                ? "💬 پاسخ خود برای تیکت #{$ticketId} را بنویسید:\nلغو: /cancel"
+                : "💬 Type your reply for ticket #{$ticketId}:\nCancel: /cancel"
+        );
+    }
+
+    public static function handleTicketReplyText(int $chatId, int $userId, string $text, string $lang): bool
+    {
+        $st = get_user_state($userId);
+        if (!$st || $st['state'] !== 'ticket_reply') {
+            return false;
+        }
+        if ($text === '/cancel' || strcasecmp($text, 'cancel') === 0) {
+            clear_user_state($userId);
+            send_message($chatId, $lang === 'fa' ? 'لغو شد.' : 'Cancelled.');
+            return true;
+        }
+        $tid = (int)($st['payload']['ticket_id'] ?? 0);
+        $t = TicketRepository::find($tid);
+        if (!$t || (int)$t['user_id'] !== $userId || (string)$t['status'] === 'closed') {
+            clear_user_state($userId);
+            send_message($chatId, $lang === 'fa' ? 'تیکت معتبر نیست.' : 'Invalid ticket.');
+            return true;
+        }
+        $body = trim($text);
+        if ($body === '') {
+            send_message($chatId, $lang === 'fa' ? 'متن پاسخ خالی است.' : 'Reply cannot be empty.');
+            return true;
+        }
+        TicketRepository::addUserReply($tid, $userId, $body);
+        TicketRepository::setStatus($tid, 'open');
+        clear_user_state($userId);
+        if (function_exists('notify_staff')) {
+            notify_staff(
+                "💬 پاسخ مشتری روی تیکت <b>#{$tid}</b>\n"
+                . 'TG: <code>' . $userId . "</code>\n\n"
+                . htmlspecialchars($body),
+                'tickets'
+            );
+        }
+        send_message(
+            $chatId,
+            $lang === 'fa' ? "✅ پاسخ شما برای تیکت #{$tid} ارسال شد." : "✅ Your reply for ticket #{$tid} was sent.",
+            array('inline_keyboard' => array(
+                array(array('text' => $lang === 'fa' ? '🎫 مشاهده تیکت' : '🎫 View ticket', 'callback_data' => 'ticket:' . $tid)),
+            ))
+        );
+        return true;
     }
 
     public static function handleMyTicketsPhone(int $chatId, int $userId, string $text, string $lang): bool
@@ -425,5 +505,20 @@ final class SupportFormService
         }
         self::showMyTickets($chatId, $userId, $lang, 0, $text);
         return true;
+    }
+
+    public static function statusEmoji(string $status): string
+    {
+        $map = array('open' => '🟢', 'answered' => '🔵', 'waiting' => '🟡', 'closed' => '🔴');
+        return $map[$status] ?? '⚪';
+    }
+
+    public static function statusLabel(string $status, string $lang = 'en'): string
+    {
+        if ($lang === 'fa') {
+            $map = array('open' => 'باز', 'answered' => 'پاسخ‌داده‌شده', 'waiting' => 'منتظر مشتری', 'closed' => 'بسته‌شده');
+            return $map[$status] ?? $status;
+        }
+        return $status;
     }
 }

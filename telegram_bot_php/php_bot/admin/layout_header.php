@@ -37,6 +37,7 @@ $user = $_SESSION['hddland_admin_user'] ?? 'admin';
   <nav>
     <a class="<?= $active === 'dashboard' ? 'on' : '' ?>" href="index.php">Dashboard</a>
     <a class="<?= $active === 'tickets' ? 'on' : '' ?>" href="tickets.php">Tickets</a>
+    <a class="<?= $active === 'ticket_fields' ? 'on' : '' ?>" href="ticket_fields.php">Ticket Fields</a>
     <a class="<?= $active === 'requests' ? 'on' : '' ?>" href="requests.php">Support & Sales</a>
     <a class="<?= $active === 'faqs' ? 'on' : '' ?>" href="faqs.php">FAQ / Questions</a>
     <a class="<?= $active === 'menus' ? 'on' : '' ?>" href="menus.php">Menus & Categories</a>

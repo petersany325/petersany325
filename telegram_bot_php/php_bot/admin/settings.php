@@ -76,8 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $cfg['ticket_ask_name'] = settings_bool_post('ticket_ask_name');
             $cfg['ticket_ask_phone'] = settings_bool_post('ticket_ask_phone');
+            $cfg['ticket_ask_id'] = settings_bool_post('ticket_ask_id');
             $cfg['ticket_always_ask_name'] = settings_bool_post('ticket_always_ask_name');
             $cfg['ticket_always_ask_phone'] = settings_bool_post('ticket_always_ask_phone');
+            $cfg['ticket_always_ask_id'] = settings_bool_post('ticket_always_ask_id');
             $cfg['ticket_phone_for_view'] = settings_bool_post('ticket_phone_for_view');
             save_bot_config($cfg);
             flash('ok', 'Technical Support & Tickets settings saved.');
@@ -460,16 +462,18 @@ require __DIR__ . '/layout_header.php';
       </div>
     </div>
     <div class="card panel">
-      <h2>🎫 My Tickets / contact capture</h2>
-      <p class="muted">Name &amp; phone are saved on the user profile and on each ticket for admin. Phone gate for viewing is optional (Telegram ID is usually enough).</p>
-      <div class="stack">
-        <label><input type="checkbox" name="ticket_ask_name" value="1" <?= !empty($cfg['ticket_ask_name'])?'checked':'' ?>> Ask for full name when creating a ticket</label>
-        <label><input type="checkbox" name="ticket_ask_phone" value="1" <?= !empty($cfg['ticket_ask_phone'])?'checked':'' ?>> Ask for phone when creating a ticket</label>
-        <label><input type="checkbox" name="ticket_always_ask_name" value="1" <?= !empty($cfg['ticket_always_ask_name'])?'checked':'' ?>> Always re-ask name (even if saved)</label>
-        <label><input type="checkbox" name="ticket_always_ask_phone" value="1" <?= !empty($cfg['ticket_always_ask_phone'])?'checked':'' ?>> Always re-ask phone (even if saved)</label>
+      <h2>🎫 Smart ticket identity</h2>
+      <p class="muted">برای مدیریت کامل فیلدها (نام، موبایل، کد مشتری، سؤالات) از صفحه اختصاصی استفاده کنید.</p>
+      <p><a class="btn sm" href="ticket_fields.php">🧠 Open Ticket Fields Manager</a></p>
+      <div class="stack" style="margin-top:14px">
+        <label><input type="checkbox" name="ticket_ask_name" value="1" <?= !empty($cfg['ticket_ask_name'])?'checked':'' ?>> Ask name</label>
+        <label><input type="checkbox" name="ticket_ask_phone" value="1" <?= !empty($cfg['ticket_ask_phone'])?'checked':'' ?>> Ask mobile</label>
+        <label><input type="checkbox" name="ticket_ask_id" value="1" <?= !empty($cfg['ticket_ask_id'] ?? 1)?'checked':'' ?>> Ask customer / license ID</label>
+        <label><input type="checkbox" name="ticket_always_ask_name" value="1" <?= !empty($cfg['ticket_always_ask_name'])?'checked':'' ?>> Always re-ask name</label>
+        <label><input type="checkbox" name="ticket_always_ask_phone" value="1" <?= !empty($cfg['ticket_always_ask_phone'])?'checked':'' ?>> Always re-ask mobile</label>
+        <label><input type="checkbox" name="ticket_always_ask_id" value="1" <?= !empty($cfg['ticket_always_ask_id'] ?? 1)?'checked':'' ?>> Always re-ask ID</label>
         <hr style="border:none;border-top:1px solid var(--line);margin:8px 0">
-        <label><input type="checkbox" name="ticket_phone_for_view" value="1" <?= !empty($cfg['ticket_phone_for_view'])?'checked':'' ?>> Require phone again to view My Tickets (extra gate — default off)</label>
-        <p class="muted" style="font-size:.85rem">Tip: keep phone-for-view off unless you need extra privacy. Users already authenticate via Telegram.</p>
+        <label><input type="checkbox" name="ticket_phone_for_view" value="1" <?= !empty($cfg['ticket_phone_for_view'])?'checked':'' ?>> Require phone again to view My Tickets</label>
       </div>
     </div>
   </div>

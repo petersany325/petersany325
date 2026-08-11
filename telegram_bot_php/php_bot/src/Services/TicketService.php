@@ -68,7 +68,14 @@ final class TicketService
             return;
         }
         TicketRepository::addAdminReply($tid, $adminId, $text);
-        send_message((int)$ticket['user_id'], "💬 <b>Reply to Ticket #{$tid}:</b>\n\n" . htmlspecialchars($text));
+        send_message(
+            (int)$ticket['user_id'],
+            "💬 <b>Reply to Ticket #{$tid}:</b>\n\n" . htmlspecialchars($text),
+            array('inline_keyboard' => array(
+                array(array('text' => '💬 Reply', 'callback_data' => 'ticket_reply:' . $tid)),
+                array(array('text' => '🎫 View', 'callback_data' => 'ticket:' . $tid)),
+            ))
+        );
         send_message($adminChatId, "✅ Reply sent to ticket #{$tid}.");
     }
 
