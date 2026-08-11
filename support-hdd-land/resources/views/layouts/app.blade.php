@@ -241,7 +241,7 @@
 @else
     @yield('content')
 @endauth
-<script src="{{ asset('js/app.js') }}?v=erp21"></script>
+<script src="{{ asset('js/app.js') }}?v=erp23"></script>
 <script>
 (function () {
     var bar = document.getElementById('win-menubar');
