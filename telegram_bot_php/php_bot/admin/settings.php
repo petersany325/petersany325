@@ -295,7 +295,8 @@ require __DIR__ . '/layout_header.php';
       <input name="sales_email" value="<?= e((string)$cfg['sales_email']) ?>">
       <label>Telegram Admin IDs (comma-separated)</label>
       <input name="admin_ids" value="<?= e(implode(',', $cfg['admin_ids'] ?? array())) ?>">
-      <label><input type="checkbox" name="start_with_menu" value="1" <?= !empty($cfg['start_with_menu'])?'checked':'' ?>> Skip language gate on /start (go straight to menu)</label>
+      <label><input type="checkbox" name="start_with_menu" value="1" <?= !empty($cfg['start_with_menu'])?'checked':'' ?>> Skip language picker on /start (NOT recommended — users should pick language first)</label>
+      <p class="muted">Normal flow: <b>/start → select language → bot switches to that language → menus</b>. Keep this unchecked.</p>
       <label><input type="checkbox" name="maintenance_mode" value="1" <?= !empty($cfg['maintenance_mode'])?'checked':'' ?>> Maintenance mode</label>
       <label>Maintenance message</label>
       <textarea name="maintenance_text"><?= e((string)$cfg['maintenance_text']) ?></textarea>

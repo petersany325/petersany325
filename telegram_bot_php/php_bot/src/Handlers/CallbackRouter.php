@@ -173,13 +173,14 @@ final class CallbackRouter
                     ($lang === 'fa' ? "✅ زبان تنظیم شد.\n\n" : "✅ Language set.\n\n") . welcome_text($lang),
                     $hub
                 );
-                if (function_exists('main_reply_keyboard')) {
-                    send_message(
-                        $chatId,
-                        $lang === 'fa' ? '⌨️ میانبرهای پایین صفحه:' : '⌨️ Bottom shortcuts:',
-                        main_reply_keyboard($lang)
-                    );
-                }
+            }
+            // Always refresh bottom keyboard in the selected language
+            if (function_exists('main_reply_keyboard')) {
+                send_message(
+                    $chatId,
+                    $lang === 'fa' ? '⌨️ میانبرهای پایین صفحه:' : '⌨️ Bottom shortcuts:',
+                    main_reply_keyboard($lang)
+                );
             }
             return;
         }

@@ -93,9 +93,51 @@ final class MessageRouter
 
         switch ($cmd) {
             case 'start':
-                if (function_exists('feature_on') && feature_on('language_gate') && empty(cfg('start_with_menu', 0))) {
-                    $detected = function_exists('detect_telegram_lang') ? detect_telegram_lang($from) : 'en';
-                    send_message($chatId, language_gate_text(), function_exists('lang_keyboard_world') ? lang_keyboard_world(true, 0, $detected) : lang_keyboard(true));
+                // Product flow: /start → language picker → translate bot → menus
+                // Only skip when admin explicitly enables "start_with_menu"
+                $skipGate = function_exists('cfg') && (int)cfg('start_with_menu', 0) === 1;
+                $gateEnabled = !function_exists('feature_on') || feature_on('language_gate');
+                if (!$skipGate && $gateEnabled) {
+                    try {
+                        if (function_exists('clear_user_state')) {
+                            clear_user_state($userId);
+                        }
+                        $detected = function_exists('detect_telegram_lang') ? detect_telegram_lang($from) : 'en';
+                        $gateText = function_exists('language_gate_text')
+                            ? language_gate_text()
+                            : "🌍 <b>Please select your language</b>\nلطفاً زبان خود را انتخاب کنید";
+                        $kb = null;
+                        if (function_exists('lang_keyboard_world')) {
+                            $kb = lang_keyboard_world(true, 0, $detected);
+                        } elseif (function_exists('lang_keyboard')) {
+                            $kb = lang_keyboard(true);
+                        }
+                        if (!is_array($kb) || empty($kb['inline_keyboard'])) {
+                            $kb = array('inline_keyboard' => array(
+                                array(
+                                    array('text' => '🇬🇧 English', 'callback_data' => 'startlang:en'),
+                                    array('text' => '🇮🇷 فارسی', 'callback_data' => 'startlang:fa'),
+                                ),
+                            ));
+                        }
+                        send_message($chatId, $gateText, $kb);
+                    } catch (\Throwable $e) {
+                        @file_put_contents(
+                            dirname(__DIR__, 2) . '/error.log',
+                            date('c') . ' start language gate: ' . $e->getMessage() . "\n",
+                            FILE_APPEND
+                        );
+                        send_message(
+                            $chatId,
+                            "🌍 <b>Please select your language</b>\nلطفاً زبان خود را انتخاب کنید",
+                            array('inline_keyboard' => array(
+                                array(
+                                    array('text' => '🇬🇧 English', 'callback_data' => 'startlang:en'),
+                                    array('text' => '🇮🇷 فارسی', 'callback_data' => 'startlang:fa'),
+                                ),
+                            ))
+                        );
+                    }
                 } else {
                     if (function_exists('main_reply_keyboard')) {
                         send_message($chatId, welcome_text($lang), main_reply_keyboard($lang));

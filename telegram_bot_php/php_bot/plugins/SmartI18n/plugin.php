@@ -13,6 +13,10 @@ class SmartI18nPlugin {
     public static $allowAi = false;
 
     public static function boot() {
+        // Must run only after bootstrap.php defined db()
+        if (!function_exists('db') || !function_exists('add_action')) {
+            return;
+        }
         self::ensure_cache_table();
         add_filter('localize_menu_row', array(__CLASS__, 'filter_menu_row'), 10);
         add_filter('localize_faq_row', array(__CLASS__, 'filter_faq_row'), 10);

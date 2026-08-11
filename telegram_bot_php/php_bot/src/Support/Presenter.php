@@ -10,8 +10,15 @@ final class Presenter
 {
     public static function editOrSend(int $chatId, int $msgId, string $text, ?array $kb = null): void
     {
+        if (function_exists('edit_or_send')) {
+            edit_or_send($chatId, $msgId, $text, $kb);
+            return;
+        }
         if ($msgId > 0) {
-            edit_message($chatId, $msgId, $text, $kb);
+            $res = edit_message($chatId, $msgId, $text, $kb);
+            if (is_array($res) && empty($res['ok'])) {
+                send_message($chatId, $text, $kb);
+            }
         } else {
             send_message($chatId, $text, $kb);
         }
