@@ -22,12 +22,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
 		'vip_contact_whatsapp',
 		'vip_telegram_button_label',
 		'vip_whatsapp_button_label',
+		'force_dm_for_attachments',
 	);
 	foreach ($fields as $field)
 	{
 		if (isset($_POST[$field]))
 		{
 			$repo->setSetting($field, $_POST[$field]);
+		}
+	}
+	// Sync attachment-routing flag into vB options for vbdlportal frontend hook.
+	if (isset($_POST['force_dm_for_attachments']))
+	{
+		$forceVal = (string)$_POST['force_dm_for_attachments'];
+		$repo->setSetting('force_dm_for_attachments', $forceVal);
+		if (function_exists('vbdl_sync_force_dm_option'))
+		{
+			vbdl_sync_force_dm_option($forceVal);
+		}
+		else
+		{
+			global $db, $table_prefix;
+			$pfx = isset($table_prefix) ? $table_prefix : '';
+			$v = ($forceVal === '1') ? '1' : '0';
+			if ($db)
+			{
+				$chk = $db->query_first("SELECT varname FROM {$pfx}setting WHERE varname='force_dm_for_attachments'");
+				if ($chk)
+				{
+					$db->query_write("UPDATE {$pfx}setting SET value='" . $db->escape_string($v) . "' WHERE varname='force_dm_for_attachments'");
+				}
+				else
+				{
+					$db->query_write("INSERT INTO {$pfx}setting (varname, grouptitle, value, defaultvalue, datatype, optioncode, displayorder, volatile) VALUES ('force_dm_for_attachments', 'vbdlportal', '" . $db->escape_string($v) . "', '0', 'boolean', 'yesno', 20, 1)");
+				}
+				$opt = $db->query_first("SELECT data FROM {$pfx}datastore WHERE title='options'");
+				if ($opt && !empty($opt['data']))
+				{
+					$options = @unserialize($opt['data']);
+					if (!is_array($options))
+					{
+						$options = array();
+					}
+					$options['force_dm_for_attachments'] = $v;
+					$db->query_write("UPDATE {$pfx}datastore SET data='" . $db->escape_string(serialize($options)) . "' WHERE title='options'");
+				}
+			}
 		}
 	}
 	print_cp_redirect(vbdl_admin_url('settings'), 1);
@@ -49,6 +89,12 @@ $guest = isset($s['guest_downloads']) ? $s['guest_downloads'] : '0';
 echo '<div class="vbdl-form-row"><label>Guest downloads</label><select class="vbdl-select" name="guest_downloads"><option value="0"' . ($guest === '0' ? ' selected' : '') . '>No</option><option value="1"' . ($guest === '1' ? ' selected' : '') . '>Yes</option></select></div>';
 echo '<div class="vbdl-form-row"><label>Rate limit / hour</label><input class="vbdl-input" name="rate_limit_per_hour" value="' . vbdl_h(isset($s['rate_limit_per_hour']) ? $s['rate_limit_per_hour'] : '60') . '" /></div>';
 echo '<div class="vbdl-form-row"><label>Per page</label><input class="vbdl-input" name="downloads_per_page" value="' . vbdl_h(isset($s['downloads_per_page']) ? $s['downloads_per_page'] : '20') . '" /></div>';
+
+$forceDm = isset($s['force_dm_for_attachments']) ? $s['force_dm_for_attachments'] : '0';
+echo '<hr style="border:0;border-top:1px solid #d9e2ec;margin:20px 0" />';
+echo '<h3 style="margin:0 0 10px">Centralize downloads (phase 1)</h3>';
+echo '<p class="vbdl-muted">Safe first step toward routing all downloads through Download Manager. When enabled, visible attachment links in posts are rewritten to <strong>Open VIP DOWNLOAD</strong> pointing at <code>/vbdlmanager/</code>. Native attachment serving is not blocked yet (phase 2).</p>';
+echo '<div class="vbdl-form-row"><label>Route attachment downloads through Download Manager notice</label><select class="vbdl-select" name="force_dm_for_attachments"><option value="0"' . ($forceDm !== '1' ? ' selected' : '') . '>No (default)</option><option value="1"' . ($forceDm === '1' ? ' selected' : '') . '>Yes</option></select></div>';
 
 echo '<hr style="border:0;border-top:1px solid #d9e2ec;margin:20px 0" />';
 echo '<h3 style="margin:0 0 10px">Paid / VIP downloads</h3>';
