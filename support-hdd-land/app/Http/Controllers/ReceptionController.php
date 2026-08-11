@@ -129,42 +129,78 @@ class ReceptionController extends Controller
             '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
         ]);
 
-        if (mb_strlen($q) < 2) {
+        // Lightweight payload for typeahead (no N+1 visit counts).
+        $mapRow = static function (Customer $customer): array {
+            return [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'phone' => $customer->phone,
+                'job' => $customer->job,
+                'national_code' => $customer->national_code,
+                'address' => $customer->address,
+                'referral_source_id' => $customer->referral_source_id,
+            ];
+        };
+
+        // Empty query: recent registered customers for quick pick.
+        if ($q === '') {
+            $recent = Customer::query()
+                ->select(['id', 'name', 'phone', 'job', 'national_code', 'address', 'referral_source_id'])
+                ->whereNotNull('name')
+                ->where('name', '!=', '')
+                ->orderByDesc('id')
+                ->limit(25)
+                ->get();
+
+            return response()->json([
+                'ok' => true,
+                'q' => '',
+                'mode' => 'recent',
+                'count' => $recent->count(),
+                'customers' => $recent->map($mapRow)->values(),
+                'message' => 'مشتریان اخیر ثبت‌شده',
+            ]);
+        }
+
+        if (mb_strlen($q) < 1) {
             return response()->json([
                 'ok' => true,
                 'q' => $q,
+                'mode' => 'search',
                 'count' => 0,
                 'customers' => [],
-                'message' => 'حداقل ۲ حرف از نام را بنویسید.',
+                'message' => 'نام مشتری را بنویسید.',
             ]);
         }
 
         $digits = preg_replace('/\D+/', '', $q) ?? '';
+        $likeContains = '%'.$q.'%';
+        $likePrefix = $q.'%';
+
         $rows = Customer::query()
-            ->withCount('receptions')
-            ->where(function ($query) use ($q, $digits) {
-                $query->where('name', 'like', '%'.$q.'%');
+            ->select(['id', 'name', 'phone', 'job', 'national_code', 'address', 'referral_source_id'])
+            ->where(function ($query) use ($q, $digits, $likeContains) {
+                $query->where('name', 'like', $likeContains);
                 if (strlen($digits) >= 3) {
                     $query->orWhere('phone', 'like', '%'.$digits.'%');
                 }
-                if (strlen($q) >= 3) {
-                    $query->orWhere('national_code', 'like', '%'.$q.'%');
-                }
             })
+            // Names that start with the typed text first, then alphabetical.
+            ->orderByRaw('CASE WHEN name LIKE ? THEN 0 ELSE 1 END', [$likePrefix])
+            ->orderBy('name')
             ->orderByDesc('id')
-            ->limit(20)
+            ->limit(40)
             ->get();
 
         return response()->json([
             'ok' => true,
             'q' => $q,
+            'mode' => 'search',
             'count' => $rows->count(),
-            'customers' => $rows->map(function (Customer $customer) {
-                $payload = $this->customerPayload($customer);
-                $payload['visits'] = (int) ($customer->receptions_count ?? 0);
-
-                return $payload;
-            })->values(),
+            'customers' => $rows->map($mapRow)->values(),
+            'message' => $rows->isEmpty()
+                ? 'در لیست مشتریان ثبت‌شده پیدا نشد.'
+                : null,
         ]);
     }
 

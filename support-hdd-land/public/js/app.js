@@ -435,12 +435,15 @@
         var lookupPhoneInput = document.getElementById('lookup-phone');
         var lookupPhoneBtn = document.getElementById('lookup-phone-btn');
         var lookupNameInput = document.getElementById('lookup-name');
-        var lookupNameBtn = document.getElementById('lookup-name-btn');
         var customerPickList = document.getElementById('customer-pick-list');
         var lookupStatus = document.getElementById('lookup-status');
         var startTabs = form.querySelectorAll('[data-start-tab]');
         var nameSearchTimer = null;
         var nameSearchSeq = 0;
+        var nameSearchAbort = null;
+        var nameSuggestCache = {};
+        var nameSuggestItems = [];
+        var nameSuggestIndex = -1;
 
         var modeModal = document.getElementById('mode-modal');
         var chooseModeBtns = form.querySelectorAll('[data-choose-mode]');
@@ -580,6 +583,41 @@
             if (!customerPickList) return;
             customerPickList.innerHTML = '';
             customerPickList.hidden = true;
+            nameSuggestItems = [];
+            nameSuggestIndex = -1;
+            if (lookupNameInput) lookupNameInput.setAttribute('aria-expanded', 'false');
+        }
+
+        function highlightNameMatch(text, query) {
+            var raw = String(text || '');
+            var q = String(query || '').trim();
+            if (!q) return raw;
+            var lower = raw.toLocaleLowerCase('fa');
+            var qLower = q.toLocaleLowerCase('fa');
+            var idx = lower.indexOf(qLower);
+            if (idx < 0) return raw;
+            return raw.slice(0, idx)
+                + '<mark>' + raw.slice(idx, idx + q.length) + '</mark>'
+                + raw.slice(idx + q.length);
+        }
+
+        function setActiveSuggest(index) {
+            if (!customerPickList) return;
+            var buttons = customerPickList.querySelectorAll('.customer-pick-item');
+            if (!buttons.length) {
+                nameSuggestIndex = -1;
+                return;
+            }
+            if (index < 0) index = buttons.length - 1;
+            if (index >= buttons.length) index = 0;
+            nameSuggestIndex = index;
+            buttons.forEach(function (btn, i) {
+                btn.classList.toggle('is-active', i === nameSuggestIndex);
+            });
+            var active = buttons[nameSuggestIndex];
+            if (active && typeof active.scrollIntoView === 'function') {
+                try { active.scrollIntoView({ block: 'nearest' }); } catch (err) { /* ignore */ }
+            }
         }
 
         function goBackToPhone(resetCustomer) {
@@ -662,44 +700,58 @@
             }
         }
 
-        function renderCustomerPickList(customers, query) {
+        function renderCustomerPickList(customers, query, mode) {
             if (!customerPickList) return;
             customerPickList.innerHTML = '';
-            if (!customers || !customers.length) {
+            nameSuggestItems = Array.isArray(customers) ? customers : [];
+            nameSuggestIndex = -1;
+
+            var head = document.createElement('div');
+            head.className = 'customer-pick-head';
+            head.textContent = mode === 'recent'
+                ? 'مشتریان اخیر ثبت‌شده — انتخاب کنید'
+                : (query
+                    ? ('نتایج از لیست مشتریان برای «' + query + '»')
+                    : 'مشتریان ثبت‌شده');
+            customerPickList.appendChild(head);
+
+            if (!nameSuggestItems.length) {
                 customerPickList.hidden = false;
                 var empty = document.createElement('div');
                 empty.className = 'customer-pick-empty';
                 empty.textContent = query
-                    ? 'مشتری با این نام پیدا نشد. با موبایل ادامه دهید یا مشتری جدید ثبت کنید.'
-                    : 'حداقل ۲ حرف از نام را بنویسید.';
+                    ? 'در مشتریان ثبت‌شده پیدا نشد. تب موبایل را برای مشتری جدید بزنید.'
+                    : 'هنوز مشتری ثبت‌شده‌ای نیست.';
                 customerPickList.appendChild(empty);
+                if (lookupNameInput) lookupNameInput.setAttribute('aria-expanded', 'true');
                 return;
             }
 
-            customers.forEach(function (customer) {
+            nameSuggestItems.forEach(function (customer, index) {
                 var btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'customer-pick-item';
+                btn.setAttribute('role', 'option');
+                btn.setAttribute('data-suggest-index', String(index));
                 var name = document.createElement('span');
                 name.className = 'customer-pick-name';
-                name.textContent = customer.name || 'بدون نام';
+                name.innerHTML = highlightNameMatch(customer.name || 'بدون نام', query);
                 var meta = document.createElement('span');
                 meta.className = 'customer-pick-meta';
                 var bits = [];
                 if (customer.phone) bits.push(customer.phone);
                 if (customer.job) bits.push(customer.job);
-                if (typeof customer.visits !== 'undefined' && customer.visits !== null) {
-                    bits.push(toPersianDigits(customer.visits) + ' مراجعه');
-                }
                 meta.textContent = bits.join(' · ') || '—';
                 btn.appendChild(name);
                 btn.appendChild(meta);
-                btn.addEventListener('click', function () {
+                btn.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
                     selectExistingCustomer(customer, 'مشتری انتخاب شد: ' + (customer.name || '—'));
                 });
                 customerPickList.appendChild(btn);
             });
             customerPickList.hidden = false;
+            if (lookupNameInput) lookupNameInput.setAttribute('aria-expanded', 'true');
         }
 
         function doNameLookup(immediate) {
@@ -711,46 +763,62 @@
             }
 
             var run = function () {
-                if (q.length < 2) {
-                    clearCustomerPickList();
-                    setLookupStatus('حداقل ۲ حرف از نام را بنویسید.', 'info');
-                    return;
-                }
                 if (!lookupCustomersUrl) {
                     setLookupStatus('آدرس جستجوی مشتری تنظیم نشده است.', 'error');
                     return;
                 }
 
-                var seq = ++nameSearchSeq;
-                setLookupStatus('در حال جستجوی نام...', 'info');
-                if (lookupNameBtn) lookupNameBtn.disabled = true;
+                var cacheKey = q.toLocaleLowerCase('fa');
+                if (Object.prototype.hasOwnProperty.call(nameSuggestCache, cacheKey)) {
+                    var cached = nameSuggestCache[cacheKey];
+                    renderCustomerPickList(cached.customers, q, cached.mode);
+                    setLookupStatus(
+                        cached.customers.length
+                            ? (toPersianDigits(cached.customers.length) + ' مشتری از لیست ثبت‌شده')
+                            : 'در لیست مشتریان پیدا نشد.',
+                        cached.customers.length ? 'ok' : 'info'
+                    );
+                    return;
+                }
 
-                fetch(lookupCustomersUrl + '?q=' + encodeURIComponent(q), {
+                if (nameSearchAbort) {
+                    try { nameSearchAbort.abort(); } catch (err) { /* ignore */ }
+                }
+                nameSearchAbort = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+                var seq = ++nameSearchSeq;
+                setLookupStatus('در حال خواندن مشتریان ثبت‌شده...', 'info');
+
+                var url = lookupCustomersUrl + '?q=' + encodeURIComponent(q);
+                var opts = {
                     method: 'GET',
                     headers: { 'Accept': 'application/json' },
                     credentials: 'same-origin'
-                })
+                };
+                if (nameSearchAbort) opts.signal = nameSearchAbort.signal;
+
+                fetch(url, opts)
                     .then(function (r) { return r.json(); })
                     .then(function (data) {
                         if (seq !== nameSearchSeq) return;
-                        if (lookupNameBtn) lookupNameBtn.disabled = false;
                         var list = (data && data.customers) || [];
-                        renderCustomerPickList(list, q);
+                        var mode = (data && data.mode) || 'search';
+                        nameSuggestCache[cacheKey] = { customers: list, mode: mode };
+                        renderCustomerPickList(list, q, mode);
                         if (list.length) {
-                            setLookupStatus(toPersianDigits(list.length) + ' مشتری پیدا شد — یکی را انتخاب کنید.', 'ok');
+                            setLookupStatus(toPersianDigits(list.length) + ' مشتری از لیست ثبت‌شده — انتخاب کنید.', 'ok');
                         } else {
-                            setLookupStatus('مشتری پیدا نشد. با موبایل ادامه دهید یا مشتری جدید ثبت کنید.', 'info');
+                            setLookupStatus((data && data.message) || 'در لیست مشتریان پیدا نشد.', 'info');
                         }
                     })
-                    .catch(function () {
+                    .catch(function (err) {
+                        if (err && err.name === 'AbortError') return;
                         if (seq !== nameSearchSeq) return;
-                        if (lookupNameBtn) lookupNameBtn.disabled = false;
                         setLookupStatus('خطا در ارتباط با سرور. دوباره تلاش کنید.', 'error');
                     });
             };
 
             if (immediate) run();
-            else nameSearchTimer = setTimeout(run, 280);
+            else nameSearchTimer = setTimeout(run, 160);
         }
 
         function handleLookupResult(data, fallbackPhone) {
@@ -1302,27 +1370,49 @@
 
         startTabs.forEach(function (btn) {
             btn.addEventListener('click', function () {
-                setStartTab(btn.getAttribute('data-start-tab'));
+                var tab = btn.getAttribute('data-start-tab');
+                setStartTab(tab);
                 setLookupStatus('', '');
+                if (tab === 'name') {
+                    doNameLookup(true);
+                }
             });
         });
 
         if (lookupNameInput) {
+            lookupNameInput.addEventListener('focus', function () {
+                doNameLookup(true);
+            });
             lookupNameInput.addEventListener('input', function () {
                 doNameLookup(false);
             });
             lookupNameInput.addEventListener('keydown', function (e) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (customerPickList && customerPickList.hidden) doNameLookup(true);
+                    setActiveSuggest(nameSuggestIndex + 1);
+                    return;
+                }
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setActiveSuggest(nameSuggestIndex - 1);
+                    return;
+                }
                 if (e.key === 'Enter') {
                     e.preventDefault();
+                    if (nameSuggestIndex >= 0 && nameSuggestItems[nameSuggestIndex]) {
+                        selectExistingCustomer(
+                            nameSuggestItems[nameSuggestIndex],
+                            'مشتری انتخاب شد: ' + (nameSuggestItems[nameSuggestIndex].name || '—')
+                        );
+                        return;
+                    }
                     doNameLookup(true);
+                    return;
                 }
-            });
-        }
-
-        if (lookupNameBtn) {
-            lookupNameBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                doNameLookup(true);
+                if (e.key === 'Escape') {
+                    clearCustomerPickList();
+                }
             });
         }
 

@@ -106,19 +106,22 @@
             </div>
 
             <div class="start-pane" data-start-pane="name" id="start-pane-name">
-                <div class="phone-row">
-                    <div>
-                        <label>نام مشتری</label>
-                        <input type="text"
-                               id="lookup-name"
-                               value=""
-                               autocomplete="off"
-                               placeholder="مثلاً رضا محمدی"
-                               maxlength="120">
-                    </div>
-                    <button type="button" class="btn btn-primary" id="lookup-name-btn">جستجو</button>
+                <label for="lookup-name">نام مشتری ثبت‌شده</label>
+                <div class="customer-suggest" id="customer-suggest">
+                    <input type="text"
+                           id="lookup-name"
+                           value=""
+                           autocomplete="off"
+                           spellcheck="false"
+                           role="combobox"
+                           aria-autocomplete="list"
+                           aria-expanded="false"
+                           aria-controls="customer-pick-list"
+                           placeholder="نام را بنویسید تا از لیست مشتریان پیشنهاد شود…"
+                           maxlength="120">
+                    <div class="customer-pick-list" id="customer-pick-list" role="listbox" hidden></div>
                 </div>
-                <div class="customer-pick-list" id="customer-pick-list" hidden></div>
+                <p class="hint" style="margin:6px 0 0;">با تایپ نام، مشتریان ثبت‌شده زیر همین کادر می‌آیند — یکی را انتخاب کنید.</p>
             </div>
 
             <div class="lookup-status" id="lookup-status"></div>
