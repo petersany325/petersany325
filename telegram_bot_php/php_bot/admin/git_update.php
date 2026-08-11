@@ -1,7 +1,6 @@
 <?php
 /**
  * One-click pull of selected bot PHP files from GitHub (admin only).
- * Use when cPanel API/FTP from CI is unavailable.
  */
 declare(strict_types=1);
 require __DIR__ . '/auth.php';
@@ -25,9 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'pull'
     $botRoot = dirname(__DIR__);
     foreach ($files as $rel) {
         $url = $base . implode('/', array_map('rawurlencode', explode('/', $rel)));
-        $ctx = stream_context_create(array('http' => array('timeout' => 45, 'header' => "User-Agent: HDDLand-Admin-Updater\r\n")));
+        $ctx = stream_context_create(array(
+            'http' => array(
+                'timeout' => 60,
+                'header' => "User-Agent: HDDLand-Admin-Updater\r\n",
+            ),
+        ));
         $body = @file_get_contents($url, false, $ctx);
-        if ($body === false || strlen($body) < 20 || strpos($body, '404') === 0) {
+        if ($body === false || strlen($body) < 20) {
             $report[] = array('err', $rel . ' — download failed');
             continue;
         }
@@ -50,10 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'pull'
     flash('ok', 'Git update finished. See report below.');
 }
 
+$pageTitle = 'Git Update';
+$active = 'health';
 require __DIR__ . '/layout_header.php';
-admin_header('Git Update');
 ?>
-<div class="card">
+<div class="card panel">
   <h2>Update bot files from GitHub</h2>
   <p class="muted">Branch: <code><?= e($branch) ?></code></p>
   <form method="post">
@@ -63,7 +68,7 @@ admin_header('Git Update');
   <?php if ($report): ?>
     <ul style="margin-top:16px;line-height:1.8">
       <?php foreach ($report as $row): ?>
-        <li style="color:<?= $row[0] === 'ok' ? '#166534' : '#991b1b' ?>"><?= e($row[1]) ?></li>
+        <li style="color:<?= $row[0] === 'ok' ? '#86efac' : '#fca5a5' ?>"><?= e($row[1]) ?></li>
       <?php endforeach; ?>
     </ul>
   <?php endif; ?>
