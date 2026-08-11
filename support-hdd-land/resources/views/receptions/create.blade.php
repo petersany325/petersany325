@@ -260,6 +260,15 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div>
+                            <label>نوع ایراد</label>
+                            <select name="fault_type_id">
+                                <option value="">—</option>
+                                @foreach($faultTypes as $fault)
+                                    <option value="{{ $fault->id }}" @selected(old('fault_type_id') == $fault->id)>{{ $fault->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="photo-box"><label>عکس دستگاه</label><input type="file" name="photo" accept="image/*"></div>
                     </div>
                 </div>
@@ -294,17 +303,6 @@
                                 @endforeach
                             </select>
                             <textarea name="appearance_notes" rows="4">{{ old('appearance_notes') }}</textarea>
-                        </div>
-                    </div>
-                    <div class="accept-row accept-row-3" style="margin-top:8px">
-                        <div>
-                            <label>نوع ایراد</label>
-                            <select name="fault_type_id">
-                                <option value="">—</option>
-                                @foreach($faultTypes as $fault)
-                                    <option value="{{ $fault->id }}" @selected(old('fault_type_id') == $fault->id)>{{ $fault->name }}</option>
-                                @endforeach
-                            </select>
                         </div>
                     </div>
                 </div>
