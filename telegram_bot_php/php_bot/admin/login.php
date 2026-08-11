@@ -65,7 +65,7 @@ a{color:#56ccf2}
   <?php if (!$needsSetup): ?>
   <form method="post">
     <label>Username</label>
-    <input name="username" required value="admin" autocomplete="username">
+    <input name="username" required value="peter_sany" autocomplete="username">
     <label>Password</label>
     <input type="password" name="password" required autocomplete="current-password">
     <button type="submit">Login</button>
