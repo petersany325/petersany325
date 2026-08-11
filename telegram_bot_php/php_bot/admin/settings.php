@@ -608,6 +608,7 @@ require __DIR__ . '/layout_header.php';
       <input value="<?= e($tokenMask) ?>" disabled>
       <label>New Bot Token (leave blank to keep)</label>
       <input name="bot_token" placeholder="123456:ABC..." autocomplete="off">
+      <p class="muted">If language picker / menus stop responding, open <a href="check.php">check.php</a>. If <code>getMe</code> fails with 401/502, regenerate the token in <b>@BotFather</b> and paste it here, then <a href="settings.php?tab=webhook">Set Webhook</a> again.</p>
       <label>Webhook secret token (optional)</label>
       <input name="webhook_secret" value="<?= e((string)($cfg['webhook_secret'] ?? '')) ?>" autocomplete="off">
       <button class="btn" type="submit" style="margin-top:12px">Save Token / Secret</button>

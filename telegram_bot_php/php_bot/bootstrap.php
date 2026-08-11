@@ -57,57 +57,89 @@ function tg_api($method, $params = array()) {
     $raw = null;
     $httpCode = 0;
     $err = '';
+    $decoded = null;
 
-    if (function_exists('curl_init')) {
-        $ch = curl_init($url);
-        curl_setopt_array($ch, array(
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => array('Content-Type: application/json'),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => 15,
-            CURLOPT_TIMEOUT => 45,
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2,
-        ));
-        $raw = curl_exec($ch);
-        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        if ($raw === false) {
-            $err = curl_error($ch) ?: 'curl_exec failed';
+    // Retry transient Telegram edge failures (502/503/504)
+    for ($attempt = 1; $attempt <= 3; $attempt++) {
+        $raw = null;
+        $httpCode = 0;
+        $err = '';
+
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, array(
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $payload,
+                CURLOPT_HTTPHEADER => array(
+                    'Content-Type: application/json',
+                    'User-Agent: HDD-Land-Bot/1.0',
+                ),
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CONNECTTIMEOUT => 15,
+                CURLOPT_TIMEOUT => 45,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2,
+                CURLOPT_IPRESOLVE => defined('CURL_IPRESOLVE_V4') ? CURL_IPRESOLVE_V4 : 1,
+            ));
+            $raw = curl_exec($ch);
+            $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            if ($raw === false) {
+                $err = curl_error($ch) ?: 'curl_exec failed';
+            }
+            curl_close($ch);
+        } else {
+            $ctx = stream_context_create(array(
+                'http' => array(
+                    'method' => 'POST',
+                    'header' => "Content-Type: application/json\r\nUser-Agent: HDD-Land-Bot/1.0\r\n",
+                    'content' => $payload,
+                    'timeout' => 45,
+                    'ignore_errors' => true,
+                ),
+            ));
+            $raw = @file_get_contents($url, false, $ctx);
+            if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) {
+                $httpCode = (int)$m[1];
+            }
+            if ($raw === false) {
+                $err = 'file_get_contents failed (allow_url_fopen=' . (ini_get('allow_url_fopen') ? '1' : '0') . ')';
+            }
         }
-        curl_close($ch);
-    } else {
-        $ctx = stream_context_create(array(
-            'http' => array(
-                'method' => 'POST',
-                'header' => "Content-Type: application/json\r\n",
-                'content' => $payload,
-                'timeout' => 45,
-                'ignore_errors' => true,
-            ),
-        ));
-        $raw = @file_get_contents($url, false, $ctx);
-        if (isset($http_response_header[0]) && preg_match('/\s(\d{3})\s/', $http_response_header[0], $m)) {
-            $httpCode = (int)$m[1];
+
+        if ($raw === false || $raw === null || $raw === '') {
+            if ($attempt < 3) {
+                usleep(250000 * $attempt);
+                continue;
+            }
+            tg_api_log($method, $err !== '' ? $err : ('empty response http=' . $httpCode));
+            return array(
+                'ok' => false,
+                'description' => $err !== '' ? $err : ('empty response http=' . $httpCode),
+                'http_code' => $httpCode,
+            );
         }
-        if ($raw === false) {
-            $err = 'file_get_contents failed (allow_url_fopen=' . (ini_get('allow_url_fopen') ? '1' : '0') . ')';
+
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            if ($attempt < 3 && in_array($httpCode, array(502, 503, 504), true)) {
+                usleep(250000 * $attempt);
+                continue;
+            }
+            tg_api_log($method, 'invalid json http=' . $httpCode . ' body=' . substr($raw, 0, 180));
+            return array('ok' => false, 'description' => 'invalid json', 'http_code' => $httpCode);
         }
+
+        $transient = empty($decoded['ok'])
+            && in_array((int)($decoded['error_code'] ?? $httpCode), array(502, 503, 504), true);
+        if ($transient && $attempt < 3) {
+            usleep(350000 * $attempt);
+            continue;
+        }
+        break;
     }
 
-    if ($raw === false || $raw === null || $raw === '') {
-        tg_api_log($method, $err !== '' ? $err : ('empty response http=' . $httpCode));
-        return array(
-            'ok' => false,
-            'description' => $err !== '' ? $err : ('empty response http=' . $httpCode),
-            'http_code' => $httpCode,
-        );
-    }
-
-    $decoded = json_decode($raw, true);
     if (!is_array($decoded)) {
-        tg_api_log($method, 'invalid json http=' . $httpCode . ' body=' . substr($raw, 0, 180));
-        return array('ok' => false, 'description' => 'invalid json', 'http_code' => $httpCode);
+        return array('ok' => false, 'description' => 'empty response', 'http_code' => $httpCode);
     }
     if (empty($decoded['ok'])) {
         $desc = (string)($decoded['description'] ?? 'telegram error');

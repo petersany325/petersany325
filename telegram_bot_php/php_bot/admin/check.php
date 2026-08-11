@@ -137,7 +137,16 @@ if (function_exists('tg_api')) {
         ok('getMe OK — @' . $u);
     } else {
         bad('getMe FAILED: ' . json_encode($me, JSON_UNESCAPED_UNICODE));
-        bad('Without outbound Telegram API the bot cannot show language picker or menus.');
+        bad('Without a working Telegram token the bot cannot show language picker or menus.');
+        $code = (int)($me['error_code'] ?? 0);
+        $desc = (string)($me['description'] ?? '');
+        if ($code === 401 || stripos($desc, 'Unauthorized') !== false) {
+            bad('Token is invalid/revoked. Open @BotFather → API Token → Revoke → paste new token in Settings → API, then Set Webhook.');
+            bad('توکن باطل است. از BotFather توکن جدید بگیرید و در تنظیمات API ذخیره کنید، بعد Webhook را دوباره Set کنید.');
+        } elseif ($code === 502 || stripos($desc, 'Bad Gateway') !== false) {
+            bad('Telegram returns 502 for this bot token (often means token/bot is broken). Regenerate token in @BotFather and update Settings → API.');
+            bad('تلگرام برای این توکن 502 می‌دهد — معمولاً توکن خراب/باطل است. از BotFather توکن تازه بگیرید و جایگزین کنید.');
+        }
     }
     $wh = tg_api('getWebhookInfo', array());
     if (!empty($wh['ok'])) {
