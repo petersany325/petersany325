@@ -744,7 +744,7 @@ tbody tr:nth-child(even) { background: #f3f5f8; }
 .receipt-seq-label { display:block; font-size:10px; color:var(--muted); }
 .receipt-seq-value { font-size:12.5px; }
 .receipt-seq-next { border-color:#2f6fed; background:linear-gradient(180deg,#f3f7ff,#e7f0ff); }
-.phone-step { max-width:520px; margin:18px auto; }
+.phone-step { max-width:560px; margin:18px auto; }
 .phone-box {
   background:#fff; border:1px solid #9aa5b5; border-radius:2px; padding:12px;
   box-shadow: var(--shadow);
@@ -753,6 +753,37 @@ tbody tr:nth-child(even) { background: #f3f5f8; }
 .phone-row { display:grid; grid-template-columns:1fr auto; gap:6px; align-items:end; }
 .phone-row input { min-height:30px; }
 .lookup-status { margin-top:6px; font-size:11px; color:var(--muted); min-height:16px; }
+.start-tabs {
+  display:grid; grid-template-columns:1fr 1fr; gap:4px; margin:10px 0 8px;
+  padding:3px; background:#eef1f5; border:1px solid #c5ccd6; border-radius:2px;
+}
+.start-tab {
+  border:0; background:transparent; min-height:30px; font-weight:700; font-size:12px;
+  color:#445066; cursor:pointer; border-radius:2px;
+}
+.start-tab.is-active {
+  background:linear-gradient(180deg,#fff,#f3f7ff); color:#1d4ed8;
+  border:1px solid #9db7ef; box-shadow:0 1px 0 rgba(255,255,255,.8);
+}
+.start-pane { display:none; }
+.start-pane.is-active { display:block; }
+.customer-pick-list {
+  margin-top:8px; border:1px solid #c5ccd6; border-radius:2px; background:#fafbfc;
+  max-height:260px; overflow:auto;
+}
+.customer-pick-item {
+  width:100%; text-align:right; border:0; border-bottom:1px solid #e4e8ee;
+  background:transparent; padding:8px 10px; cursor:pointer; display:grid; gap:2px;
+}
+.customer-pick-item:last-child { border-bottom:0; }
+.customer-pick-item:hover, .customer-pick-item:focus {
+  background:linear-gradient(180deg,#f3f7ff,#e8f0ff); outline:none;
+}
+.customer-pick-name { font-weight:700; font-size:12.5px; color:#1f2937; }
+.customer-pick-meta { font-size:11px; color:#64748b; }
+.customer-pick-empty {
+  padding:10px; font-size:11.5px; color:#64748b; text-align:center;
+}
 .accept-form { display:grid; gap:8px; }
 .accept-row { display:grid; gap:6px; }
 .accept-row-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }

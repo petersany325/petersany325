@@ -134,6 +134,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware(EnsurePermission::class.':receptions')->group(function () {
         Route::get('receptions/lookup-phone', [ReceptionController::class, 'lookupPhone'])->name('receptions.lookup-phone');
+        Route::get('receptions/lookup-customers', [ReceptionController::class, 'lookupCustomers'])->name('receptions.lookup-customers');
         Route::post('receptions/ensure-customer', [ReceptionController::class, 'ensureCustomer'])->name('receptions.ensure-customer');
         Route::get('receptions/search', [ReceptionController::class, 'search'])->name('receptions.search');
         Route::get('deliveries/group', [DeliveryController::class, 'create'])->name('deliveries.group');

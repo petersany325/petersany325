@@ -425,6 +425,7 @@
         if (!form) return;
 
         var lookupUrl = form.getAttribute('data-lookup-url') || '';
+        var lookupCustomersUrl = form.getAttribute('data-lookup-customers-url') || '';
         var ensureCustomerUrl = form.getAttribute('data-ensure-customer-url') || '';
         var skipPhone = form.getAttribute('data-skip-phone') === '1';
         var oldMode = form.getAttribute('data-old-mode') || 'single';
@@ -433,7 +434,13 @@
         var stepPhone = document.getElementById('step-phone');
         var lookupPhoneInput = document.getElementById('lookup-phone');
         var lookupPhoneBtn = document.getElementById('lookup-phone-btn');
+        var lookupNameInput = document.getElementById('lookup-name');
+        var lookupNameBtn = document.getElementById('lookup-name-btn');
+        var customerPickList = document.getElementById('customer-pick-list');
         var lookupStatus = document.getElementById('lookup-status');
+        var startTabs = form.querySelectorAll('[data-start-tab]');
+        var nameSearchTimer = null;
+        var nameSearchSeq = 0;
 
         var modeModal = document.getElementById('mode-modal');
         var chooseModeBtns = form.querySelectorAll('[data-choose-mode]');
@@ -554,6 +561,27 @@
             if (stepBody) stepBody.classList.remove('hidden');
         }
 
+        function setStartTab(tab) {
+            tab = tab === 'name' ? 'name' : 'phone';
+            startTabs.forEach(function (btn) {
+                btn.classList.toggle('is-active', btn.getAttribute('data-start-tab') === tab);
+            });
+            form.querySelectorAll('[data-start-pane]').forEach(function (pane) {
+                pane.classList.toggle('is-active', pane.getAttribute('data-start-pane') === tab);
+            });
+            if (tab === 'name') {
+                if (lookupNameInput) lookupNameInput.focus();
+            } else if (lookupPhoneInput) {
+                lookupPhoneInput.focus();
+            }
+        }
+
+        function clearCustomerPickList() {
+            if (!customerPickList) return;
+            customerPickList.innerHTML = '';
+            customerPickList.hidden = true;
+        }
+
         function goBackToPhone(resetCustomer) {
             closeModeModal();
             showPhoneStep();
@@ -562,8 +590,11 @@
                 if (customerPhoneInput) customerPhoneInput.value = '';
                 if (existingCard) existingCard.classList.add('hidden');
                 if (lookupPhoneInput) lookupPhoneInput.value = '';
+                if (lookupNameInput) lookupNameInput.value = '';
+                clearCustomerPickList();
             }
-            if (lookupPhoneInput) lookupPhoneInput.focus();
+            var activeTab = form.querySelector('.start-tab.is-active');
+            setStartTab(activeTab ? activeTab.getAttribute('data-start-tab') : 'phone');
         }
 
         function showExistingCustomer(customer) {
@@ -616,21 +647,125 @@
                 });
         }
 
+        function selectExistingCustomer(customer, statusText) {
+            if (!customer) return;
+            if (customerIdInput) customerIdInput.value = customer.id || '';
+            if (customerPhoneInput) customerPhoneInput.value = customer.phone || '';
+            if (lookupPhoneInput && customer.phone) lookupPhoneInput.value = customer.phone;
+            showExistingCustomer(customer);
+            if (newCustomerFields) newCustomerFields.classList.add('hidden');
+            setLookupStatus(statusText || ('مشتری انتخاب شد: ' + (customer.name || '—')), 'ok');
+            clearCustomerPickList();
+            showBodyStep();
+            if (!state.modeChosen) {
+                openModeModal();
+            }
+        }
+
+        function renderCustomerPickList(customers, query) {
+            if (!customerPickList) return;
+            customerPickList.innerHTML = '';
+            if (!customers || !customers.length) {
+                customerPickList.hidden = false;
+                var empty = document.createElement('div');
+                empty.className = 'customer-pick-empty';
+                empty.textContent = query
+                    ? 'مشتری با این نام پیدا نشد. با موبایل ادامه دهید یا مشتری جدید ثبت کنید.'
+                    : 'حداقل ۲ حرف از نام را بنویسید.';
+                customerPickList.appendChild(empty);
+                return;
+            }
+
+            customers.forEach(function (customer) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'customer-pick-item';
+                var name = document.createElement('span');
+                name.className = 'customer-pick-name';
+                name.textContent = customer.name || 'بدون نام';
+                var meta = document.createElement('span');
+                meta.className = 'customer-pick-meta';
+                var bits = [];
+                if (customer.phone) bits.push(customer.phone);
+                if (customer.job) bits.push(customer.job);
+                if (typeof customer.visits !== 'undefined' && customer.visits !== null) {
+                    bits.push(toPersianDigits(customer.visits) + ' مراجعه');
+                }
+                meta.textContent = bits.join(' · ') || '—';
+                btn.appendChild(name);
+                btn.appendChild(meta);
+                btn.addEventListener('click', function () {
+                    selectExistingCustomer(customer, 'مشتری انتخاب شد: ' + (customer.name || '—'));
+                });
+                customerPickList.appendChild(btn);
+            });
+            customerPickList.hidden = false;
+        }
+
+        function doNameLookup(immediate) {
+            if (!lookupNameInput) return;
+            var q = (lookupNameInput.value || '').trim();
+            if (nameSearchTimer) {
+                clearTimeout(nameSearchTimer);
+                nameSearchTimer = null;
+            }
+
+            var run = function () {
+                if (q.length < 2) {
+                    clearCustomerPickList();
+                    setLookupStatus('حداقل ۲ حرف از نام را بنویسید.', 'info');
+                    return;
+                }
+                if (!lookupCustomersUrl) {
+                    setLookupStatus('آدرس جستجوی مشتری تنظیم نشده است.', 'error');
+                    return;
+                }
+
+                var seq = ++nameSearchSeq;
+                setLookupStatus('در حال جستجوی نام...', 'info');
+                if (lookupNameBtn) lookupNameBtn.disabled = true;
+
+                fetch(lookupCustomersUrl + '?q=' + encodeURIComponent(q), {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (seq !== nameSearchSeq) return;
+                        if (lookupNameBtn) lookupNameBtn.disabled = false;
+                        var list = (data && data.customers) || [];
+                        renderCustomerPickList(list, q);
+                        if (list.length) {
+                            setLookupStatus(toPersianDigits(list.length) + ' مشتری پیدا شد — یکی را انتخاب کنید.', 'ok');
+                        } else {
+                            setLookupStatus('مشتری پیدا نشد. با موبایل ادامه دهید یا مشتری جدید ثبت کنید.', 'info');
+                        }
+                    })
+                    .catch(function () {
+                        if (seq !== nameSearchSeq) return;
+                        if (lookupNameBtn) lookupNameBtn.disabled = false;
+                        setLookupStatus('خطا در ارتباط با سرور. دوباره تلاش کنید.', 'error');
+                    });
+            };
+
+            if (immediate) run();
+            else nameSearchTimer = setTimeout(run, 280);
+        }
+
         function handleLookupResult(data, fallbackPhone) {
             var phone = (data && data.phone) || fallbackPhone;
             if (customerPhoneInput) customerPhoneInput.value = phone;
 
             if (data && data.found && data.customer) {
-                if (customerIdInput) customerIdInput.value = data.customer.id;
-                showExistingCustomer(data.customer);
-                if (newCustomerFields) newCustomerFields.classList.add('hidden');
-                setLookupStatus('مشتری پیدا شد: ' + (data.customer.name || '—'), 'ok');
-            } else {
-                if (customerIdInput) customerIdInput.value = '';
-                if (existingCard) existingCard.classList.add('hidden');
-                if (newCustomerFields) newCustomerFields.classList.remove('hidden');
-                setLookupStatus('مشتری جدید است؛ اطلاعات را کامل و ثبت کنید.', 'info');
+                selectExistingCustomer(data.customer, 'مشتری پیدا شد: ' + (data.customer.name || '—'));
+                return;
             }
+
+            if (customerIdInput) customerIdInput.value = '';
+            if (existingCard) existingCard.classList.add('hidden');
+            if (newCustomerFields) newCustomerFields.classList.remove('hidden');
+            setLookupStatus('مشتری جدید است؛ اطلاعات را کامل و ثبت کنید.', 'info');
 
             showBodyStep();
 
@@ -1162,6 +1297,32 @@
             lookupPhoneBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 doLookup();
+            });
+        }
+
+        startTabs.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                setStartTab(btn.getAttribute('data-start-tab'));
+                setLookupStatus('', '');
+            });
+        });
+
+        if (lookupNameInput) {
+            lookupNameInput.addEventListener('input', function () {
+                doNameLookup(false);
+            });
+            lookupNameInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    doNameLookup(true);
+                }
+            });
+        }
+
+        if (lookupNameBtn) {
+            lookupNameBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                doNameLookup(true);
             });
         }
 

@@ -118,6 +118,56 @@ class ReceptionController extends Controller
         ]);
     }
 
+    public function lookupCustomers(Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
+        $q = strtr($q, [
+            'ي' => 'ی', 'ك' => 'ک',
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+        ]);
+
+        if (mb_strlen($q) < 2) {
+            return response()->json([
+                'ok' => true,
+                'q' => $q,
+                'count' => 0,
+                'customers' => [],
+                'message' => 'حداقل ۲ حرف از نام را بنویسید.',
+            ]);
+        }
+
+        $digits = preg_replace('/\D+/', '', $q) ?? '';
+        $rows = Customer::query()
+            ->withCount('receptions')
+            ->where(function ($query) use ($q, $digits) {
+                $query->where('name', 'like', '%'.$q.'%');
+                if (strlen($digits) >= 3) {
+                    $query->orWhere('phone', 'like', '%'.$digits.'%');
+                }
+                if (strlen($q) >= 3) {
+                    $query->orWhere('national_code', 'like', '%'.$q.'%');
+                }
+            })
+            ->orderByDesc('id')
+            ->limit(20)
+            ->get();
+
+        return response()->json([
+            'ok' => true,
+            'q' => $q,
+            'count' => $rows->count(),
+            'customers' => $rows->map(function (Customer $customer) {
+                $payload = $this->customerPayload($customer);
+                $payload['visits'] = (int) ($customer->receptions_count ?? 0);
+
+                return $payload;
+            })->values(),
+        ]);
+    }
+
     public function ensureCustomer(Request $request)
     {
         $data = $request->validate([
