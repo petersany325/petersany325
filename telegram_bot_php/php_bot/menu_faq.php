@@ -244,7 +244,7 @@ function ensure_professional_menus($pdo = null) {
         array('Support', '🎫 My Tickets', 'callback', 'mytickets', 7, 2, '🎫 تیکت‌های من'),
         array('Support', '⭐ Feedback', 'callback', 'feedback', 8, 1, '⭐ نظرات'),
         array('Community', '🎁 Referral', 'callback', 'referral', 8, 2, '🎁 معرفی'),
-        array('Support', '☎️ Contact', 'callback', 'contact', 9, 1, '☎️ تماس'),
+        array('Support', '☎️ Contact', 'callback', 'contact', 10, 2, '☎️ تماس'),
         array('Resources', '🔧 Brands', 'callback', 'brands', 9, 1, '🔧 برندها'),
         array('Community', '📰 News', 'callback', 'news', 9, 2, '📰 اخبار'),
         array('Commerce', '📱 Mini App', 'callback', 'miniapp', 10, 1, '📱 مینی‌اپ'),
