@@ -140,13 +140,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tab = 'api';
         } elseif ($action === 'save_token') {
             $token = trim((string)($_POST['bot_token'] ?? ''));
-            if ($token !== '' && strpos($token, '…') === false && strlen($token) > 20) {
-                $cfg['bot_token'] = $token;
-            }
             $secret = trim((string)($_POST['webhook_secret'] ?? ''));
-            $cfg['webhook_secret'] = $secret;
+            $confirm = trim((string)($_POST['confirm_token_change'] ?? ''));
+            $tokenChanged = false;
+            if ($token !== '' && strpos($token, '…') === false && strpos($token, '...') === false && strlen($token) > 20 && strpos($token, ':') !== false) {
+                $current = trim((string)($cfg['bot_token'] ?? ''));
+                if ($token !== $current) {
+                    // Require explicit confirmation so token is never changed by accident
+                    if ($confirm !== 'CHANGE') {
+                        throw new RuntimeException('To change bot token, type CHANGE in the confirm box. Leave new token blank to keep the current one.');
+                    }
+                    $cfg['bot_token'] = $token;
+                    $tokenChanged = true;
+                }
+            }
+            // Blank secret keeps the previous value (never wipe)
+            if ($secret !== '') {
+                $cfg['webhook_secret'] = $secret;
+            }
             save_bot_config($cfg);
-            flash('ok', 'Bot token / webhook secret saved.');
+            $msg = $tokenChanged
+                ? 'Bot token updated. Now open Webhook tab → Set Webhook.'
+                : 'Settings saved (bot token unchanged).';
+            flash('ok', $msg);
             $tab = 'security';
         } elseif ($action === 'password') {
             $user = trim((string)($_POST['admin_username'] ?? 'admin'));
@@ -606,12 +622,14 @@ require __DIR__ . '/layout_header.php';
       <input type="hidden" name="action" value="save_token">
       <label>Current token (masked)</label>
       <input value="<?= e($tokenMask) ?>" disabled>
-      <label>New Bot Token (leave blank to keep)</label>
-      <input name="bot_token" placeholder="123456:ABC..." autocomplete="off">
-      <p class="muted">If language picker / menus stop responding, open <a href="check.php">check.php</a>. If <code>getMe</code> fails with 401/502, regenerate the token in <b>@BotFather</b> and paste it here, then <a href="settings.php?tab=webhook">Set Webhook</a> again.</p>
-      <label>Webhook secret token (optional)</label>
+      <label>New Bot Token (leave blank to keep current — recommended)</label>
+      <input name="bot_token" placeholder="leave blank to keep" autocomplete="off">
+      <label>Type CHANGE only if you intentionally replace the token</label>
+      <input name="confirm_token_change" placeholder="CHANGE" autocomplete="off">
+      <p class="muted">Current bot stays locked unless you paste a new token <b>and</b> type <code>CHANGE</code>. After a real token change, open <a href="settings.php?tab=webhook">Webhook → Set Webhook</a>.</p>
+      <label>Webhook secret (leave as-is unless you need to rotate)</label>
       <input name="webhook_secret" value="<?= e((string)($cfg['webhook_secret'] ?? '')) ?>" autocomplete="off">
-      <button class="btn" type="submit" style="margin-top:12px">Save Token / Secret</button>
+      <button class="btn" type="submit" style="margin-top:12px">Save</button>
     </form>
   </div>
   <div class="card panel">

@@ -108,6 +108,31 @@ function take_flash() {
 
 function save_bot_config($cfg) {
     $file = dirname(__DIR__) . '/config.local.php';
+    if (!is_array($cfg)) {
+        throw new RuntimeException('Invalid config payload');
+    }
+    // Hard lock: never wipe/replace bot_token with empty/masked/short values
+    if (is_file($file)) {
+        $prev = (static function ($path) {
+            /** @var mixed $v */
+            $v = include $path;
+            return is_array($v) ? $v : array();
+        })($file);
+        $prevToken = trim((string)($prev['bot_token'] ?? ''));
+        $newToken = trim((string)($cfg['bot_token'] ?? ''));
+        $tokenLooksValid = $newToken !== ''
+            && strpos($newToken, '…') === false
+            && strpos($newToken, '...') === false
+            && strlen($newToken) > 20
+            && strpos($newToken, ':') !== false;
+        if ($prevToken !== '' && !$tokenLooksValid) {
+            $cfg['bot_token'] = $prevToken;
+        }
+        // Do not clear webhook_secret unless explicitly provided as non-empty string key intent
+        if (!array_key_exists('webhook_secret', $cfg) && array_key_exists('webhook_secret', $prev)) {
+            $cfg['webhook_secret'] = $prev['webhook_secret'];
+        }
+    }
     $code = "<?php\nreturn " . var_export($cfg, true) . ";\n";
     if (file_put_contents($file, $code) === false) {
         throw new RuntimeException('Cannot write config.local.php');
