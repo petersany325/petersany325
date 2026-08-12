@@ -5,34 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>فهرست طرح‌ها</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/css/wireframe.css" />
   <style>
-    .hub{max-width:880px;margin:2rem auto;padding:0 1rem 2.5rem}
-    .hub h1{font-size:clamp(1.7rem,3vw,2.3rem);letter-spacing:-.03em;margin-bottom:.5rem}
-    .hub p{color:var(--muted);margin-bottom:1.3rem}
-    .hub a{display:flex;justify-content:space-between;align-items:center;gap:1rem;background:#fff;border:1px solid var(--line);border-radius:18px;padding:1.05rem 1.15rem;margin-bottom:.75rem;box-shadow:0 12px 30px rgba(7,21,37,.05)}
-    .hub a strong{display:block;margin-bottom:.2rem}
-    .hub a span{color:var(--muted);font-size:.9rem}
-    .hub a em{font-style:normal;background:var(--red);color:#fff;padding:.5rem .9rem;border-radius:999px;font-weight:800;font-size:.85rem}
+    body{font-family:Vazirmatn,Tahoma,sans-serif;background:#DDE5F0;margin:0;color:#08111D}
+    .bar{background:#06101C;color:#fff;padding:.8rem 1rem;display:flex;justify-content:space-between;gap:.5rem;flex-wrap:wrap}
+    .bar a{color:#c9d7e8;text-decoration:none;padding:.3rem .7rem;border:1px solid rgba(255,255,255,.15);border-radius:999px}
+    .bar a.active{background:#E11D2E;border-color:#E11D2E;color:#fff}
+    .note{background:#fff8e6;color:#7a5a00;text-align:center;padding:.55rem 1rem;font-size:.88rem}
+    .hub{max-width:860px;margin:2rem auto;padding:0 1rem 2rem}
+    .hub h1{font-size:1.9rem;letter-spacing:-.03em}
+    .hub p{color:#5A6A7C}
+    .hub a.card{display:flex;justify-content:space-between;align-items:center;gap:1rem;background:#fff;border:1px solid #D0DAE6;border-radius:18px;padding:1rem 1.1rem;margin:.7rem 0;text-decoration:none;color:inherit;box-shadow:0 12px 30px rgba(6,16,28,.06)}
+    .hub a.card strong{display:block;margin-bottom:.2rem}
+    .hub a.card span{color:#5A6A7C;font-size:.9rem}
+    .hub a.card em{font-style:normal;background:#E11D2E;color:#fff;padding:.45rem .85rem;border-radius:999px;font-weight:800;font-size:.85rem}
   </style>
 </head>
 <body>
-  <div class="wf-toolbar">
-    <strong>بررسی طرح مدرن صفحه اول</strong>
-    <nav class="wf-tabs">
+  <div class="bar">
+    <strong>بررسی طرح مگامنو</strong>
+    <nav>
       <a class="active" href="index.html">فهرست</a>
       <a href="home.html">صفحه اول</a>
       <a href="corporate.html">شرکتی</a>
       <a href="shop.html">فروشگاه</a>
     </nav>
   </div>
-  <div class="wf-note">تمرکز این نسخه روی صفحه اول جذاب و حرفه‌ای است</div>
+  <div class="note">صفحه اول جدید: مگامنوی پلاتر استک + منو آبشاری + بنر مدار بازیابی</div>
   <div class="hub">
-    <h1>صفحه اول بازطراحی شد</h1>
-    <p>هیرو مدرن متالیک، انیمیشن ملایم، CTA قرمز قوی، مسیرهای واضح به خدمات و فروشگاه.</p>
-    <a href="home.html"><div><strong>صفحه اول (اصلی)</strong><span>نسخه مدرن و جذاب برای بررسی</span></div><em>مشاهده</em></a>
-    <a href="corporate.html"><div><strong>صفحه شرکتی</strong><span>خدمات و گارانتی</span></div><em>مشاهده</em></a>
-    <a href="shop.html"><div><strong>فروشگاه</strong><span>نرم‌افزارها</span></div><em>مشاهده</em></a>
+    <h1>صفحه اول اختصاصی آماده بررسی است</h1>
+    <p>روی «خدمات» بروید تا مگامنو باز شود. گارانتی/آموزش/فروشگاه منوی آبشاری چندسطحی دارند.</p>
+    <a class="card" href="home.html"><div><strong>صفحه اول (مگامنو + بنر)</strong><span>دیزاین کنسول بازیابی</span></div><em>مشاهده</em></a>
+    <a class="card" href="corporate.html"><div><strong>صفحه شرکتی</strong><span>خدمات و فرم</span></div><em>مشاهده</em></a>
+    <a class="card" href="shop.html"><div><strong>فروشگاه</strong><span>نرم‌افزارها</span></div><em>مشاهده</em></a>
   </div>
 </body>
 </html>
