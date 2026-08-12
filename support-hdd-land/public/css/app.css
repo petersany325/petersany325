@@ -1171,34 +1171,97 @@ html[data-ui-mode="mobile"] .staff-drawer:not([hidden]) .staff-tab-more{color:#f
 
 /* ===== Daybook / دفتر روز ===== */
 .daybook{display:grid;gap:10px}
-.daybook-hero{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;background:
-  linear-gradient(135deg,rgba(200,146,42,.12),transparent 45%),
-  linear-gradient(180deg,#fff,#f7f4ee)}
-.daybook-eyebrow{margin:0 0 4px;font-size:10.5px;font-weight:800;color:#b45309}
-.daybook-hero h2{margin:0;font-size:18px}
+.daybook-v2{gap:12px}
+.daybook-hero{
+  display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;
+  padding:12px 14px;border:1px solid #c5ccd6;border-radius:3px;
+  background:
+    linear-gradient(135deg,rgba(15,118,110,.10),transparent 42%),
+    linear-gradient(180deg,#fff,#f3f8f7);
+}
+.daybook-eyebrow{margin:0 0 4px;font-size:10.5px;font-weight:800;color:#0f766e}
+.daybook-hero h2,.daybook-hero-copy h2{margin:0;font-size:18px;color:#1f2933}
+.daybook-sub{margin:4px 0 0;color:var(--muted);font-size:12px;line-height:1.65;max-width:56ch}
 .daybook-hero-actions{display:flex;gap:6px;flex-wrap:wrap}
+.daybook-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.daybook-kpi{border:1px solid #c5ccd6;border-radius:3px;padding:10px 12px;background:linear-gradient(180deg,#fff,#f7f8fa)}
+.daybook-kpi span{display:block;font-size:10.5px;color:var(--muted);font-weight:700}
+.daybook-kpi strong{display:block;font-size:16px;margin-top:2px;line-height:1.25}
+.daybook-kpi small{display:block;font-size:10px;color:var(--muted);margin-top:2px}
+.daybook-kpi.tone-slate{border-color:#c5ccd6}
+.daybook-kpi.tone-teal{border-color:#99d5cf;background:linear-gradient(180deg,#f2fffc,#e6f7f4)}
+.daybook-kpi.tone-blue{border-color:#bfdbfe;background:linear-gradient(180deg,#f5f9ff,#eaf2ff)}
+.daybook-kpi.tone-amber{border-color:#f5d59a;background:linear-gradient(180deg,#fffaf0,#fff4df)}
+.daybook-kpi.tone-green{border-color:#bbf7d0;background:linear-gradient(180deg,#f3fdf6,#e8f8ee)}
 .daybook-toolbar{display:grid;gap:10px}
 .daybook-filters{display:flex;flex-wrap:wrap;gap:10px;align-items:end;justify-content:space-between}
-.daybook-nav{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-.daybook-nav input[type=date]{min-height:30px}
+.daybook-nav{display:flex;flex-wrap:wrap;gap:6px;align-items:end}
+.daybook-date-field,.daybook-emp-field{display:grid;gap:2px;min-width:140px}
+.daybook-date-field label,.daybook-emp-field label{margin:0;font-size:10.5px}
+.daybook-nav input[type=date],.daybook-nav .jalali-date{min-height:30px;min-width:120px}
 .daybook-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px}
 .daybook-stats > div{border:1px solid #d9dee6;border-radius:3px;background:#fff;padding:6px 8px}
 .daybook-stats span{display:block;font-size:10px;color:var(--muted)}
 .daybook-stats strong{font-size:12.5px}
-.daybook-compose h3{margin:0 0 8px}
-.daybook-cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-bottom:10px}
-.daybook-cat{display:flex;gap:8px;align-items:flex-start;border:1px solid #9aa5b5;border-radius:3px;padding:8px;background:linear-gradient(180deg,#fff,#f3f5f8);cursor:pointer}
+.daybook-desk{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(240px,.85fr);gap:10px;align-items:start}
+.daybook-desk-main{display:grid;gap:10px;min-width:0}
+.daybook-side{display:grid;gap:10px;position:sticky;top:8px}
+.daybook-section-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
+.daybook-section-head h3{margin:0;font-size:14px}
+.daybook-section-head .muted{margin:3px 0 0;font-size:11px}
+.daybook-badge{display:inline-flex;align-items:center;padding:3px 8px;border:1px solid #99d5cf;border-radius:2px;background:#e6f7f4;color:#115e59;font-size:10.5px;font-weight:800;white-space:nowrap}
+.daybook-compose h3{margin:0}
+.daybook-cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:6px;margin-bottom:10px}
+.daybook-cat{position:relative;display:flex;gap:8px;align-items:flex-start;border:1px solid #9aa5b5;border-radius:3px;padding:8px;background:linear-gradient(180deg,#fff,#f3f5f8);cursor:pointer;min-height:58px}
 .daybook-cat input{position:absolute;opacity:0;pointer-events:none}
-.daybook-cat.is-on,.daybook-cat:has(input:checked){border-color:#c8922a;background:#fff8eb}
+.daybook-cat.is-on,.daybook-cat:has(input:checked){border-color:#0f766e;background:#e6f7f4;box-shadow:inset 0 0 0 1px rgba(15,118,110,.2)}
 .daybook-cat-mark{width:26px;height:26px;border-radius:3px;display:grid;place-items:center;background:#3a4454;color:#fff;font-size:11px;font-weight:800;flex:0 0 auto}
-.daybook-cat strong{display:block;font-size:12px}
-.daybook-cat small{display:block;font-size:10px;color:var(--muted);margin-top:1px}
-.daybook-entry{display:flex;gap:10px;align-items:flex-start;padding:8px;border:1px solid #d9dee6;border-radius:3px;background:#fff;margin-bottom:6px}
-.daybook-entry-mark{width:28px;height:28px;border-radius:3px;display:grid;place-items:center;background:#c8922a;color:#fff;font-weight:800;flex:0 0 auto}
-.daybook-entry-main{flex:1;min-width:0}
+.daybook-cat.is-on .daybook-cat-mark,.daybook-cat:has(input:checked) .daybook-cat-mark{background:#0f766e}
+.daybook-cat-text{min-width:0}
+.daybook-cat strong{display:block;font-size:12px;line-height:1.3}
+.daybook-cat small{display:block;font-size:10px;color:var(--muted);margin-top:2px;line-height:1.35}
+.daybook-fields{display:grid;grid-template-columns:minmax(0,1.4fr) repeat(2,minmax(90px,.55fr));gap:8px;margin-bottom:8px}
+.daybook-field{display:grid;gap:2px}
+.daybook-field.grow{min-width:0}
+.daybook-field label{margin:0}
+.daybook-compose-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+.daybook-timeline-panel{padding-bottom:8px}
+.daybook-entry{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:stretch;padding:10px 8px;border:1px solid #d9dee6;border-radius:3px;background:#fff;margin-bottom:8px}
+.daybook-entry-rail{display:flex;flex-direction:column;align-items:center}
+.daybook-entry-mark{width:28px;height:28px;border-radius:3px;display:grid;place-items:center;background:#0f766e;color:#fff;font-weight:800;flex:0 0 auto}
+.daybook-entry-line{width:2px;flex:1;min-height:12px;margin-top:4px;background:#d7dee8}
+.daybook-entry:last-of-type .daybook-entry-line{display:none}
+.daybook-entry-body{min-width:0}
+.daybook-entry-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.daybook-entry-top strong{font-size:12.5px;line-height:1.35}
+.daybook-entry-top time{font-size:11px;color:var(--muted);font-weight:700;white-space:nowrap}
+.daybook-entry-meta{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.daybook-chip{display:inline-flex;align-items:center;padding:2px 7px;border:1px solid #d5dbe3;border-radius:2px;background:#f8fafc;font-size:10.5px;font-weight:700;color:#475569}
+.daybook-chip.soft{background:#eef2f7}
+.daybook-entry-note{margin:8px 0 0;font-size:12px;line-height:1.6;color:#334155;white-space:pre-wrap}
+.daybook-entry-actions{align-self:start}
+.daybook-empty{padding:18px 12px;border:1px dashed #c5ccd6;border-radius:3px;background:#f8fafc;text-align:center}
+.daybook-empty strong{display:block;font-size:13px}
+.daybook-empty p{margin:4px 0 0;color:var(--muted);font-size:12px}
+.daybook-guide h3,.daybook-side-stats h3{margin:0 0 8px;font-size:13px}
+.daybook-guide ol{margin:0;padding:0 16px 0 0;display:grid;gap:6px;font-size:12px;line-height:1.55;color:#334155}
+.daybook-side-row{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed #e5e9ef;font-size:12px}
+.daybook-side-row:last-child{border-bottom:0}
+.daybook-side-row span{color:var(--muted);font-weight:700}
 .daybook-cat-edit{border:1px solid #d9dee6;border-radius:3px;padding:8px;background:#fff;margin-bottom:6px}
+@media (max-width:960px){
+  .daybook-desk{grid-template-columns:1fr}
+  .daybook-side{position:static}
+  .daybook-fields{grid-template-columns:1fr 1fr}
+}
 @media (max-width:800px){
   .daybook-cats{grid-template-columns:1fr 1fr}
+  .daybook-entry{grid-template-columns:28px minmax(0,1fr)}
+  .daybook-entry-actions{grid-column:2;justify-self:start}
+}
+@media (max-width:560px){
+  .daybook-fields{grid-template-columns:1fr}
+  .daybook-cats{grid-template-columns:1fr}
 }
 
 /* ===== Warehouse / accounting-style inventory ===== */
