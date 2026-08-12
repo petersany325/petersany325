@@ -3,131 +3,81 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>طرح چشم‌گیر | فروشگاه</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <title>طرح آزمایشگاهی | فروشگاه</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/wireframe.css" />
 </head>
 <body>
   <div class="wf-toolbar">
-    <strong>سبک اپل/مایکروسافت — فروشگاه</strong>
+    <strong>طرح جدید — فروشگاه</strong>
     <nav class="wf-tabs">
       <a href="index.html">فهرست</a>
       <a href="home.html">صفحه اول</a>
-      <a href="corporate.html">صفحه شرکتی</a>
+      <a href="corporate.html">شرکتی</a>
       <a class="active" href="shop.html">فروشگاه</a>
     </nav>
   </div>
-  <div class="wf-note">فروشگاه تمیز مثل استور بزرگ‌تک‌ها: کارت بزرگ، فضای زیاد، قیمت قرمز، دکمه آبی متالیک</div>
-  <div class="palette-bar">
-    <span class="swatch"><i style="background:#fff;border:1px solid #ccc"></i>سفید</span>
-    <span class="swatch"><i style="background:#2563A8"></i>دکمه متالیک</span>
-    <span class="swatch"><i style="background:#E10600"></i>قیمت قرمز</span>
-  </div>
+  <div class="wf-note">فروشگاه صنعتی/فنی: پنل متالیک، قیمت قرمز، دکمه آبی</div>
 
   <div class="frame">
     <header class="site-nav">
       <div class="brand"><span class="brand-mark">DR</span> برند شما</div>
       <nav class="nav-links">
-        <a href="corporate.html">خدمات</a>
-        <a href="#">گارانتی</a>
-        <a href="#">آموزش</a>
-        <a href="shop.html">فروشگاه</a>
-        <a href="#">تماس</a>
+        <a href="corporate.html">خدمات</a><a href="#">گارانتی</a><a href="#">آموزش</a><a href="shop.html">فروشگاه</a><a href="#">تماس</a>
       </nav>
       <a class="nav-cta" href="corporate.html">درخواست بازیابی</a>
     </header>
 
-    <section class="page-hero shop">
-      <div class="breadcrumb">خانه / فروشگاه</div>
-      <h1>فروشگاه نرم‌افزارهای تخصصی</h1>
-      <p class="lead">ابزار بازیابی و تعمیر — خرید جدا از خدمات حضوری.</p>
-      <div class="hero-actions">
-        <a class="btn btn-metal" href="#products">مشاهده محصولات</a>
-        <a class="btn btn-ghost" style="color:#0B0D10;border-color:#D1D5DB" href="#">سبد خرید (۰)</a>
+    <section class="shop-hero">
+      <div class="shop-hero-copy">
+        <div class="eyebrow"><i></i> SOFTWARE STORE</div>
+        <h1>فروشگاه نرم‌افزارهای بازیابی و تعمیر</h1>
+        <p style="color:var(--muted);margin-bottom:1rem">خرید ابزار جدا از خدمات حضوری — لایسنس و دانلود بعد از پرداخت.</p>
+        <div class="hero-actions">
+          <a class="btn btn-blue" href="#products">مشاهده محصولات</a>
+          <a class="btn btn-line" href="#">سبد خرید (۰)</a>
+        </div>
       </div>
+      <aside class="shop-hero-panel">
+        <div class="eyebrow" style="color:#ffb4b7"><i style="background:#D61F26"></i> CHECKOUT FLOW</div>
+        <h2 style="font-size:1.3rem">سبد → پرداخت → لایسنس</h2>
+        <p style="color:#B7C9DC">این مسیر به فرم بازیابی وصل نمی‌شود.</p>
+      </aside>
     </section>
 
-    <section class="band soft" id="products">
+    <section class="section" id="products">
       <div class="shop-layout">
         <aside class="filters">
-          <h3>فیلترها</h3>
-          <div class="filter-item">همه محصولات</div>
+          <h3>فیلتر محصولات</h3>
+          <div class="filter-item">همه</div>
           <div class="filter-item">بازیابی اطلاعات</div>
           <div class="filter-item">تعمیرات هارد</div>
           <div class="filter-item">ابزار تشخیص</div>
           <div class="filter-item">لایسنس حرفه‌ای</div>
         </aside>
-        <div class="product-grid">
-          <article class="product">
-            <div class="product-img">Software A</div>
-            <div class="product-body">
-              <h3>نرم‌افزار بازیابی A</h3>
-              <p>مناسب HDD و پارتیشن</p>
-              <div class="price">۳٬۹۰۰٬۰۰۰ تومان</div>
-              <a class="btn btn-metal" href="#">افزودن به سبد</a>
-            </div>
-          </article>
-          <article class="product">
-            <div class="product-img">Tool B</div>
-            <div class="product-body">
-              <h3>ابزار تعمیرات B</h3>
-              <p>تشخیص و تعمیر منطقی</p>
-              <div class="price">۵٬۵۰۰٬۰۰۰ تومان</div>
-              <a class="btn btn-metal" href="#">افزودن به سبد</a>
-            </div>
-          </article>
-          <article class="product">
-            <div class="product-img">Pro C</div>
-            <div class="product-body">
-              <h3>پکیج حرفه‌ای C</h3>
-              <p>لایسنس کامل تعمیرکار</p>
-              <div class="price">۸٬۲۰۰٬۰۰۰ تومان</div>
-              <a class="btn btn-metal" href="#">افزودن به سبد</a>
-            </div>
-          </article>
-          <article class="product">
-            <div class="product-img">SSD D</div>
-            <div class="product-body">
-              <h3>ابزار SSD D</h3>
-              <p>NVMe / SATA</p>
-              <div class="price">۴٬۱۰۰٬۰۰۰ تومان</div>
-              <a class="btn btn-metal" href="#">افزودن به سبد</a>
-            </div>
-          </article>
-          <article class="product">
-            <div class="product-img">Bundle</div>
-            <div class="product-body">
-              <h3>پکیج آموزش + نرم‌افزار</h3>
-              <p>ترکیب یادگیری و ابزار</p>
-              <div class="price">۶٬۷۰۰٬۰۰۰ تومان</div>
-              <a class="btn btn-metal" href="#">افزودن به سبد</a>
-            </div>
-          </article>
-          <article class="product">
-            <div class="product-img">Renew</div>
-            <div class="product-body">
-              <h3>تمدید لایسنس</h3>
-              <p>تمدید سالانه</p>
-              <div class="price">۱٬۸۰۰٬۰۰۰ تومان</div>
-              <a class="btn btn-metal" href="#">افزودن به سبد</a>
-            </div>
-          </article>
+        <div class="products">
+          <article class="product"><div class="product-img">A</div><div class="product-body"><h3>نرم‌افزار بازیابی A</h3><p style="color:var(--muted);font-size:.86rem">HDD / پارتیشن</p><div class="price">۳٬۹۰۰٬۰۰۰ ت</div><a class="btn btn-blue" href="#">افزودن به سبد</a></div></article>
+          <article class="product"><div class="product-img">B</div><div class="product-body"><h3>ابزار تعمیرات B</h3><p style="color:var(--muted);font-size:.86rem">تشخیص منطقی</p><div class="price">۵٬۵۰۰٬۰۰۰ ت</div><a class="btn btn-blue" href="#">افزودن به سبد</a></div></article>
+          <article class="product"><div class="product-img">C</div><div class="product-body"><h3>پکیج حرفه‌ای C</h3><p style="color:var(--muted);font-size:.86rem">لایسنس کامل</p><div class="price">۸٬۲۰۰٬۰۰۰ ت</div><a class="btn btn-blue" href="#">افزودن به سبد</a></div></article>
+          <article class="product"><div class="product-img">D</div><div class="product-body"><h3>ابزار SSD D</h3><p style="color:var(--muted);font-size:.86rem">NVMe / SATA</p><div class="price">۴٬۱۰۰٬۰۰۰ ت</div><a class="btn btn-blue" href="#">افزودن به سبد</a></div></article>
+          <article class="product"><div class="product-img">E</div><div class="product-body"><h3>آموزش + نرم‌افزار</h3><p style="color:var(--muted);font-size:.86rem">پکیج ترکیبی</p><div class="price">۶٬۷۰۰٬۰۰۰ ت</div><a class="btn btn-blue" href="#">افزودن به سبد</a></div></article>
+          <article class="product"><div class="product-img">F</div><div class="product-body"><h3>تمدید لایسنس</h3><p style="color:var(--muted);font-size:.86rem">سالانه</p><div class="price">۱٬۸۰۰٬۰۰۰ ت</div><a class="btn btn-blue" href="#">افزودن به سبد</a></div></article>
         </div>
       </div>
     </section>
 
-    <section class="band dark">
-      <h2>داده از دست داده‌اید؟</h2>
-      <p class="sub">اینجا فروش نرم‌افزار است. برای بازیابی تخصصی به خدمات بروید.</p>
-      <a class="btn btn-accent" href="corporate.html">رفتن به خدمات بازیابی</a>
+    <section class="stripe">
+      <div>
+        <h2>داده از دست رفته؟</h2>
+        <p>برای بازیابی تخصصی به بخش خدمات بروید.</p>
+      </div>
+      <a class="btn btn-red" href="corporate.html">خدمات بازیابی</a>
     </section>
 
     <footer class="footer">
-      <div><strong>فروشگاه</strong>نرم‌افزار بازیابی و تعمیرات</div>
-      <div><strong>پس از خرید</strong>دانلود · لایسنس · پشتیبانی</div>
-      <div><strong>قوانین</strong>شرایط خرید · بازگشت وجه</div>
+      <div><strong>فروشگاه</strong>نرم‌افزار بازیابی و تعمیر</div>
+      <div><strong>پس از خرید</strong>دانلود · لایسنس</div>
+      <div><strong>قوانین</strong>خرید · بازگشت وجه</div>
     </footer>
   </div>
 </body>
