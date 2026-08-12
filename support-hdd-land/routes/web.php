@@ -22,6 +22,8 @@ use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
 use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\Portal\PaymentReceiptController as PortalPaymentReceiptController;
+use App\Http\Controllers\Portal\RemotePartPreorderController as PortalRemotePartPreorderController;
+use App\Http\Controllers\RemotePartPreorderController;
 use App\Http\Controllers\HandoffController;
 use App\Http\Controllers\InternController;
 use App\Http\Controllers\InternPortalController;
@@ -105,6 +107,11 @@ Route::prefix('cartable')->name('portal.')->group(function () {
         Route::get('/receipts/{receipt}/image', [PortalPaymentReceiptController::class, 'image'])->name('receipts.image');
         Route::get('/messages', [PortalMessageController::class, 'index'])->name('messages');
         Route::post('/messages', [PortalMessageController::class, 'store'])->name('messages.store');
+        Route::get('/preorders', [PortalRemotePartPreorderController::class, 'index'])->name('preorders.index');
+        Route::get('/preorders/create', [PortalRemotePartPreorderController::class, 'create'])->name('preorders.create');
+        Route::post('/preorders', [PortalRemotePartPreorderController::class, 'store'])->name('preorders.store');
+        Route::get('/preorders/{preorder}', [PortalRemotePartPreorderController::class, 'show'])->name('preorders.show');
+        Route::get('/preorders/{preorder}/photo', [PortalRemotePartPreorderController::class, 'photo'])->name('preorders.photo');
     });
 });
 
@@ -351,6 +358,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/{license}/revoke', [\App\Http\Controllers\LicenseAdminController::class, 'revoke'])->name('revoke');
         Route::post('/{license}/unbind', [\App\Http\Controllers\LicenseAdminController::class, 'unbind'])->name('unbind');
         Route::post('/{license}/extend', [\App\Http\Controllers\LicenseAdminController::class, 'extend'])->name('extend');
+    });
+
+    Route::middleware(EnsurePermission::class.':receptions')->prefix('remote-preorders')->name('remote-preorders.')->group(function () {
+        Route::get('/', [RemotePartPreorderController::class, 'index'])->name('index');
+        Route::get('/settings', [RemotePartPreorderController::class, 'settings'])->name('settings');
+        Route::post('/settings', [RemotePartPreorderController::class, 'saveSettings'])->name('settings.save');
+        Route::get('{preorder}', [RemotePartPreorderController::class, 'show'])->name('show');
+        Route::get('{preorder}/photo', [RemotePartPreorderController::class, 'photo'])->name('photo');
+        Route::post('{preorder}/arrived', [RemotePartPreorderController::class, 'markArrived'])->name('arrived');
+        Route::post('{preorder}/convert', [RemotePartPreorderController::class, 'convert'])->name('convert');
     });
 
     Route::middleware(EnsurePermission::class.':receptions')->prefix('trash')->name('trash.')->group(function () {

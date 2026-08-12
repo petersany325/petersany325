@@ -33,11 +33,12 @@ class NavMenu
                 'label' => 'پذیرش',
                 'permission' => 'receptions',
                 'route' => null,
-                'match' => 'receptions.*|deliveries.*|trash.*',
+                'match' => 'receptions.*|deliveries.*|trash.*|remote-preorders.*',
                 'mark' => 'پ',
                 'hint' => 'قبض، جستجو، تحویل',
                 'children' => [
                     ['label' => 'پذیرش جدید', 'route' => 'receptions.create', 'match' => 'receptions.create', 'hint' => 'ثبت قبض تکی/گروهی', 'mark' => 'جد'],
+                    ['label' => 'ورود قطعه از راه دور', 'route' => 'remote-preorders.index', 'match' => 'remote-preorders.*', 'hint' => 'پیش‌سفارش عکس و باربری', 'mark' => 'ور'],
                     ['label' => 'جستجوی قبض', 'route' => 'receptions.search', 'match' => 'receptions.search', 'hint' => 'سریال، موبایل، شماره', 'mark' => 'ج'],
                     ['label' => 'لیست قبض‌ها', 'route' => 'receptions.index', 'match' => 'receptions.index|receptions.show|receptions.edit', 'hint' => 'همه پذیرش‌ها', 'mark' => 'لی'],
                     ['label' => 'تحویل گروهی', 'route' => 'deliveries.group', 'match' => 'deliveries.*', 'hint' => 'خروج چند قبض', 'mark' => 'تح'],

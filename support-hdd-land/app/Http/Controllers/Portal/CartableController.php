@@ -22,6 +22,7 @@ class CartableController extends Controller
 
         $menus = [
             ['route' => 'portal.tickets', 'params' => [], 'label' => 'همه قبض‌ها', 'hint' => 'لیست کامل دستگاه‌ها', 'icon' => '▤', 'tone' => 'teal'],
+            ['route' => 'portal.preorders.index', 'params' => [], 'label' => 'ارسال قطعه', 'hint' => 'از شهر دیگر · پیش‌سفارش', 'icon' => '⇪', 'tone' => 'blue'],
             ['route' => 'portal.search', 'params' => [], 'label' => 'جستجوی قبض', 'hint' => 'شماره / سریال', 'icon' => '⌕', 'tone' => 'blue'],
             ['route' => 'portal.tickets', 'params' => ['status' => 'repairing'], 'label' => 'در حال تعمیر', 'hint' => $stats['repairing'].' دستگاه', 'icon' => '⚙', 'tone' => 'amber'],
             ['route' => 'portal.tickets', 'params' => ['status' => 'ready'], 'label' => 'آماده تحویل', 'hint' => 'هزینه و لینک پرداخت', 'icon' => '✓', 'tone' => 'green'],
