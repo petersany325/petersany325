@@ -61,12 +61,22 @@
                 <input type="text" name="product_name" value="{{ old('product_name', $r->product_name) }}">
             </div>
             <div>
-                <label>برند و مدل</label>
-                <input type="text" name="brand_model" value="{{ $brandModelValue }}" list="brand-models" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;">
+                <label>برند و مدل <span class="latin-hint">EN</span></label>
+                <input type="text" name="brand_model" value="{{ $brandModelValue }}" list="brand-models"
+                       class="field-latin"
+                       data-barcode data-ascii-en data-fa-en
+                       lang="en" spellcheck="false" autocapitalize="characters"
+                       autocomplete="off" dir="ltr" inputmode="latin"
+                       placeholder="BRAND MODEL" style="text-align:left;">
             </div>
             <div>
-                <label>سریال</label>
-                <input type="text" name="serial_number" value="{{ old('serial_number', $r->serial_number) }}" dir="ltr" style="text-align:left;" data-barcode data-ascii-en data-fa-en autocomplete="off">
+                <label>سریال <span class="latin-hint">EN</span></label>
+                <input type="text" name="serial_number" value="{{ old('serial_number', $r->serial_number) }}"
+                       class="field-latin"
+                       dir="ltr" style="text-align:left;"
+                       data-barcode data-ascii-en data-fa-en
+                       lang="en" spellcheck="false" autocapitalize="characters"
+                       autocomplete="off" inputmode="latin" placeholder="SERIAL">
             </div>
             <div>
                 <label>ظرفیت هارد</label>

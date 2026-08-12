@@ -1425,14 +1425,31 @@ html[data-ui-mode="mobile"] .staff-drawer:not([hidden]) .staff-tab-more{color:#f
 .rx-timeline-item strong{font-size:12.5px;display:block}
 .compact-table td,.compact-table th{font-size:11.5px;padding:5px 6px}
 
-/* Serial/model barcode fields: Latin look while typing; JS finalizes on blur/Enter/submit */
+/* Serial/model: English-only look + live FA→EN typing (font is Latin monospace) */
+input.field-latin,
 input[data-fa-en],
 input[data-barcode][name*="serial"],
 input[data-barcode][data-name*="serial"],
 input[data-barcode][name="model"],
 input[data-barcode][data-name="model"],
 input[data-barcode][name="brand_model"],
-input[data-barcode][data-name="brand_model"]{
+input[data-barcode][data-name="brand_model"],
+input[name="serial_number"],
+input[name*="[serial_number]"],
+input[name="model"],
+input[name="brand_model"],
+input[name*="[brand_model]"],
+input[name*="[model]"]{
+  direction:ltr !important;
+  text-align:left !important;
   text-transform:uppercase;
+  letter-spacing:.04em;
+  font-family:"Cascadia Mono","Segoe UI Mono","SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace !important;
+  font-size:13px;
+  unicode-bidi:isolate;
+}
+label:has(> input.field-latin) .latin-hint,
+.latin-hint{
+  display:inline-block;margin-right:6px;font-size:10px;font-weight:700;color:#0f766e;
   letter-spacing:.02em;
 }

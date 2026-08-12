@@ -20,7 +20,7 @@
         </div>
         <div>
             <label>سریال</label>
-            <input type="text" name="serial" value="{{ $serial ?? '' }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;">
+            <input type="text" name="serial" value="{{ $serial ?? '' }}" class="field-latin" data-barcode data-ascii-en data-fa-en lang="en" spellcheck="false" autocapitalize="characters" autocomplete="off" dir="ltr" inputmode="latin" placeholder="SERIAL" style="text-align:left;">
         </div>
         <div>
             <label>جستجوی کلی</label>

@@ -26,14 +26,16 @@
     </div>
     <div class="device-card-body">
         <div class="dense-grid">
-            <label>سریال
+            <label>سریال <span class="latin-hint">EN</span>
                 <input type="text"
                        data-name="serial_number"
                        name="items[{{ $index }}][serial_number]"
                        value="{{ $serialValue }}"
-                       class="{{ $hasError ? 'is-invalid' : '' }}"
+                       class="field-latin {{ $hasError ? 'is-invalid' : '' }}"
                        data-barcode data-ascii-en data-fa-en
-                       autocomplete="off" dir="ltr" style="text-align:left;">
+                       lang="en" spellcheck="false" autocapitalize="characters"
+                       autocomplete="off" dir="ltr" inputmode="latin"
+                       placeholder="SERIAL" style="text-align:left;">
                 @if($hasError)
                     <div class="field-error" data-serial-error="1">{{ $serialError }}</div>
                 @endif
@@ -54,14 +56,17 @@
                     @endforeach
                 </select>
             </label>
-            <label>برند و مدل
+            <label>برند و مدل <span class="latin-hint">EN</span>
                 <input type="text"
                        data-name="brand_model"
                        name="items[{{ $index }}][brand_model]"
                        value="{{ $item['brand_model'] ?? ($item['model'] ?? '') }}"
                        list="brand-models"
+                       class="field-latin"
                        data-barcode data-ascii-en data-fa-en
-                       autocomplete="off" dir="ltr" style="text-align:left;">
+                       lang="en" spellcheck="false" autocapitalize="characters"
+                       autocomplete="off" dir="ltr" inputmode="latin"
+                       placeholder="BRAND MODEL" style="text-align:left;">
             </label>
             <label>ظرفیت
                 <select data-name="hdd_capacity" name="items[{{ $index }}][hdd_capacity]">

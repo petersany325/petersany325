@@ -211,12 +211,15 @@
                 <div class="ws-pane active" data-ws-pane="device">
                     <div class="accept-row accept-row-5">
                         <div>
-                            <label>سریال دستگاه</label>
+                            <label>سریال دستگاه <span class="latin-hint">EN</span></label>
                             <input type="text"
                                    name="serial_number"
                                    value="{{ old('serial_number') }}"
-                                   class="{{ $errors->has('serial_number') ? 'is-invalid' : '' }}"
-                                   data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;">
+                                   class="field-latin {{ $errors->has('serial_number') ? 'is-invalid' : '' }}"
+                                   data-barcode data-ascii-en data-fa-en
+                                   lang="en" spellcheck="false" autocapitalize="characters"
+                                   autocomplete="off" dir="ltr" inputmode="latin"
+                                   placeholder="SERIAL" style="text-align:left;">
                             @error('serial_number')
                                 <div class="field-error">{{ $message }}</div>
                             @enderror
@@ -240,8 +243,13 @@
                             </select>
                         </div>
                         <div>
-                            <label>برند و مدل</label>
-                            <input type="text" name="brand_model" value="{{ old('brand_model', old('model')) }}" list="brand-models" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;">
+                            <label>برند و مدل <span class="latin-hint">EN</span></label>
+                            <input type="text" name="brand_model" value="{{ old('brand_model', old('model')) }}" list="brand-models"
+                                   class="field-latin"
+                                   data-barcode data-ascii-en data-fa-en
+                                   lang="en" spellcheck="false" autocapitalize="characters"
+                                   autocomplete="off" dir="ltr" inputmode="latin"
+                                   placeholder="BRAND MODEL" style="text-align:left;">
                         </div>
                         <div>
                             <label>ظرفیت هارد</label>
@@ -473,7 +481,7 @@
         </div>
         <div class="device-card-body">
             <div class="dense-grid">
-                <label>سریال<input type="text" data-name="serial_number" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
+                <label>سریال <span class="latin-hint">EN</span><input type="text" class="field-latin" data-name="serial_number" data-barcode data-ascii-en data-fa-en lang="en" spellcheck="false" autocapitalize="characters" autocomplete="off" dir="ltr" inputmode="latin" placeholder="SERIAL" style="text-align:left;"></label>
                 <label>خدمات
                     <select data-name="service_type">
                         <option value="">—</option>
@@ -486,7 +494,7 @@
                         @foreach($repairTypes as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
                     </select>
                 </label>
-                <label>برند و مدل<input type="text" data-name="brand_model" list="brand-models" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
+                <label>برند و مدل <span class="latin-hint">EN</span><input type="text" class="field-latin" data-name="brand_model" list="brand-models" data-barcode data-ascii-en data-fa-en lang="en" spellcheck="false" autocapitalize="characters" autocomplete="off" dir="ltr" inputmode="latin" placeholder="BRAND MODEL" style="text-align:left;"></label>
                 <label>ظرفیت
                     <select data-name="hdd_capacity">
                         <option value="">—</option>

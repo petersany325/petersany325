@@ -272,23 +272,49 @@
         }
         if (converted === el.value) return;
 
-        el.value = converted;
-        // Barcode wedges append at end — keep caret at end to avoid dropped chars.
+        var caret = null;
         if (opts.caret === 'end') {
-            try { el.setSelectionRange(converted.length, converted.length); } catch (err) {}
-            return;
+            caret = converted.length;
+        } else if (typeof el.selectionStart === 'number') {
+            // Map caret through FA→EN so live typing keeps cursor in the right place.
+            var sel = el.selectionStart;
+            caret = isSerialOrModelField(el)
+                ? persianKeyboardToEnglish(el.value.slice(0, sel)).toUpperCase().length
+                : Math.min(converted.length, sel);
         }
-        if (typeof el.selectionStart === 'number') {
-            try {
-                var pos = Math.min(converted.length, el.selectionStart);
-                el.setSelectionRange(pos, pos);
-            } catch (err2) {}
+
+        el.value = converted;
+        if (caret !== null) {
+            try { el.setSelectionRange(caret, caret); } catch (err) {}
         }
     }
 
     function convertAsciiFieldsIn(scope) {
         (scope || document).querySelectorAll('[data-ascii-en], [data-barcode]').forEach(function (el) {
             convertAsciiField(el, { caret: 'end' });
+        });
+    }
+
+    function decorateLatinFields(scope) {
+        (scope || document).querySelectorAll('input, textarea').forEach(function (el) {
+            if (!isSerialOrModelField(el)) return;
+            el.classList.add('field-latin');
+            el.setAttribute('lang', 'en');
+            el.setAttribute('spellcheck', 'false');
+            el.setAttribute('autocapitalize', 'characters');
+            el.setAttribute('autocomplete', 'off');
+            el.setAttribute('dir', 'ltr');
+            if (!el.getAttribute('inputmode')) {
+                el.setAttribute('inputmode', 'latin');
+            }
+            if (!el.getAttribute('placeholder')) {
+                var name = (el.getAttribute('name') || el.getAttribute('data-name') || '').toLowerCase();
+                if (name.indexOf('serial') !== -1) {
+                    el.setAttribute('placeholder', 'SERIAL (EN)');
+                } else if (name === 'model' || name === 'brand_model') {
+                    el.setAttribute('placeholder', 'BRAND MODEL (EN)');
+                }
+            }
         });
     }
 
@@ -312,18 +338,16 @@
     }
 
     function initAsciiFields() {
-        // Live typing: digits only. Full FA→EN remap on blur/Enter/submit so
-        // fast barcode wedges are not corrupted by mid-keystroke value rewrites.
+        decorateLatinFields(document);
+
+        // Live typing on serial/model: always show English (FA keyboard → EN + uppercase).
+        // Other ascii fields: digits only while typing.
         document.addEventListener('input', function (e) {
             var el = e.target;
             if (!el || !el.matches) return;
-            if (!(el.matches('[data-ascii-en]') || el.matches('[data-barcode]'))) return;
+            if (!(el.matches('[data-ascii-en]') || el.matches('[data-barcode]') || isSerialOrModelField(el))) return;
             if (isSerialOrModelField(el)) {
-                var digitsOnly = convertDigits(el.value);
-                if (digitsOnly !== el.value) {
-                    el.value = digitsOnly;
-                    try { el.setSelectionRange(digitsOnly.length, digitsOnly.length); } catch (err) {}
-                }
+                convertAsciiField(el);
                 return;
             }
             convertAsciiField(el, { caret: 'end' });
@@ -333,7 +357,7 @@
         document.addEventListener('blur', function (e) {
             var el = e.target;
             if (!el || !el.matches) return;
-            if (el.matches('[data-ascii-en]') || el.matches('[data-barcode]')) {
+            if (el.matches('[data-ascii-en]') || el.matches('[data-barcode]') || isSerialOrModelField(el)) {
                 convertAsciiField(el, { caret: 'end' });
             }
         }, true);
@@ -351,6 +375,14 @@
             e.preventDefault();
             convertAsciiField(el, { caret: 'end' });
             focusNextAfterBarcode(el);
+        }, true);
+
+        // Newly added group-device cards
+        document.addEventListener('focusin', function (e) {
+            var el = e.target;
+            if (el && isSerialOrModelField(el)) {
+                decorateLatinFields(el.parentNode || document);
+            }
         }, true);
     }
 
@@ -1139,6 +1171,8 @@
             groupDeviceList.appendChild(card);
             wireDeviceCard(card);
             wireNoteMenus(card);
+            decorateLatinFields(card);
+            convertAsciiFieldsIn(card);
             collapseAllExcept(card);
             reindexDeviceCards();
             updateGroupSummary();
