@@ -1725,21 +1725,20 @@
         return resolved;
     }
 
-    function setStaffUiMode(value) {
-        try {
-            if (value === 'auto' || !value) localStorage.removeItem(UI_MODE_KEY);
-            else localStorage.setItem(UI_MODE_KEY, value);
-        } catch (e) {}
-        applyStaffUiMode();
-    }
-
     function openStaffDrawer() {
         var drawer = document.getElementById('staff-drawer');
         if (!drawer) return;
         drawer.hidden = false;
         document.body.style.overflow = 'hidden';
-        var search = document.getElementById('staff-drawer-search');
-        if (search) setTimeout(function () { search.focus(); }, 50);
+        document.documentElement.style.overflow = 'hidden';
+        // Do NOT autofocus search on phones: iOS keyboard + overflow:hidden freezes the UI.
+        var mode = document.documentElement.getAttribute('data-ui-mode') || 'desktop';
+        if (mode === 'desktop') {
+            var search = document.getElementById('staff-drawer-search');
+            if (search) setTimeout(function () { try { search.focus(); } catch (err) {} }, 50);
+        }
+        var more = document.querySelector('.staff-tab-more');
+        if (more) more.classList.add('is-on');
     }
 
     function closeStaffDrawer() {
@@ -1747,6 +1746,25 @@
         if (!drawer) return;
         drawer.hidden = true;
         document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+        var more = document.querySelector('.staff-tab-more');
+        if (more) more.classList.remove('is-on');
+        var search = document.getElementById('staff-drawer-search');
+        if (search) {
+            try { search.blur(); } catch (err) {}
+        }
+    }
+
+    function setStaffUiMode(value) {
+        try {
+            if (value === 'auto' || !value) localStorage.removeItem(UI_MODE_KEY);
+            else localStorage.setItem(UI_MODE_KEY, value);
+        } catch (e) {}
+        var resolved = applyStaffUiMode();
+        if (resolved !== 'mobile') {
+            closeStaffDrawer();
+        }
+        return resolved;
     }
 
     function initStaffShell() {
@@ -1755,18 +1773,43 @@
         document.querySelectorAll('[data-staff-drawer-open]').forEach(function (btn) {
             btn.addEventListener('click', function (e) {
                 e.preventDefault();
-                openStaffDrawer();
+                e.stopPropagation();
+                var drawer = document.getElementById('staff-drawer');
+                if (drawer && !drawer.hidden) {
+                    closeStaffDrawer();
+                } else {
+                    openStaffDrawer();
+                }
             });
         });
         document.querySelectorAll('[data-staff-drawer-close]').forEach(function (btn) {
             btn.addEventListener('click', function (e) {
                 e.preventDefault();
+                e.stopPropagation();
                 closeStaffDrawer();
             });
         });
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') closeStaffDrawer();
         });
+
+        // Unlock scroll as soon as a menu link is chosen (avoids stuck body on slow navigations).
+        var drawer = document.getElementById('staff-drawer');
+        if (drawer) {
+            drawer.addEventListener('click', function (e) {
+                var link = e.target && e.target.closest ? e.target.closest('a.staff-drawer-item') : null;
+                if (!link) return;
+                document.body.style.overflow = '';
+                document.documentElement.style.overflow = '';
+            }, true);
+            // Stop touch scrolling on backdrop from locking the page awkwardly.
+            var backdrop = drawer.querySelector('.staff-drawer-backdrop');
+            if (backdrop) {
+                backdrop.addEventListener('touchmove', function (e) {
+                    e.preventDefault();
+                }, { passive: false });
+            }
+        }
 
         document.querySelectorAll('[data-ui-mode-set]').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -1786,7 +1829,7 @@
                 var q = (search.value || '').trim().toLowerCase();
                 document.querySelectorAll('[data-drawer-group]').forEach(function (g) {
                     var groupLabel = (g.getAttribute('data-menu-label') || '').toLowerCase();
-                    var items = g.querySelectorAll('[data-menu-label]');
+                    var items = g.querySelectorAll('a.staff-drawer-item');
                     var any = false;
                     items.forEach(function (item) {
                         var label = (item.getAttribute('data-menu-label') || '').toLowerCase();
@@ -1794,7 +1837,11 @@
                         item.style.display = show ? '' : 'none';
                         if (show) any = true;
                     });
-                    g.style.display = (!q || any || groupLabel.indexOf(q) !== -1) ? '' : 'none';
+                    var showGroup = !q || any || groupLabel.indexOf(q) !== -1;
+                    g.style.display = showGroup ? '' : 'none';
+                    if (showGroup && q && g.tagName === 'DETAILS') {
+                        g.open = true;
+                    }
                 });
             });
         }

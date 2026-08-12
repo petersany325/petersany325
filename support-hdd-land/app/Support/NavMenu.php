@@ -379,14 +379,34 @@ class NavMenu
         ];
 
         $tabs = [];
+        $preferredRoutes = [
+            'reception' => ['receptions.search', 'receptions.index', 'receptions.create'],
+            'customers' => ['customers.index', 'portal-invites.index', 'customers.create'],
+            'parts' => ['parts.index'],
+            'handoffs' => ['handoffs.index'],
+            'reports' => ['reports.operations', 'reports.payments'],
+            'accounting' => ['accounting.index'],
+            'employees' => ['employees.index'],
+        ];
+
         foreach ($order as $key) {
             if (! $groups->has($key)) {
                 continue;
             }
             $g = $groups->get($key);
             $route = $g['route'] ?? null;
-            if (! $route && ! empty($g['children'][0]['route'])) {
-                $route = $g['children'][0]['route'];
+            $children = $g['children'] ?? [];
+            if ($children !== []) {
+                $childRoutes = collect($children)->pluck('route')->filter()->all();
+                foreach ($preferredRoutes[$key] ?? [] as $pref) {
+                    if (in_array($pref, $childRoutes, true) && Route::has($pref)) {
+                        $route = $pref;
+                        break;
+                    }
+                }
+                if (! $route && ! empty($children[0]['route'])) {
+                    $route = $children[0]['route'];
+                }
             }
             if (! $route || ! Route::has($route)) {
                 continue;
@@ -399,7 +419,8 @@ class NavMenu
                 'match' => $g['match'],
                 'tone' => self::tone($key),
             ];
-            if (count($tabs) >= 3) {
+            // Bottom bar: 4 shortcuts + «بیشتر» so more menus stay one tap away.
+            if (count($tabs) >= 4) {
                 break;
             }
         }

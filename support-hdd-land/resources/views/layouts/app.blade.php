@@ -17,7 +17,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp27">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp28">
     <script>
     (function () {
         try {
@@ -203,9 +203,13 @@
             </div>
             <div class="staff-drawer-list">
                 @foreach($menuGroups as $group)
-                    <div class="staff-drawer-group" data-drawer-group data-menu-label="{{ $group['label'] }} {{ collect($group['children'])->pluck('label')->implode(' ') }}">
-                        @if(count($group['children']) > 0)
-                            <div class="staff-drawer-group-title">{{ $group['label'] }}</div>
+                    @php
+                        $groupHasActive = \App\Support\NavMenu::isActive($group['match']);
+                        $childLabels = collect($group['children'])->pluck('label')->implode(' ');
+                    @endphp
+                    @if(count($group['children']) > 0)
+                        <details class="staff-drawer-group" data-drawer-group data-menu-label="{{ $group['label'] }} {{ $childLabels }}" open>
+                            <summary class="staff-drawer-group-title">{{ $group['label'] }}</summary>
                             @foreach($group['children'] as $child)
                                 <a href="{{ route($child['route']) }}"
                                    class="staff-drawer-item {{ \App\Support\NavMenu::isActive($child['match']) ? 'is-on' : '' }}"
@@ -219,7 +223,9 @@
                                     </span>
                                 </a>
                             @endforeach
-                        @elseif(!empty($group['route']))
+                        </details>
+                    @elseif(!empty($group['route']))
+                        <div class="staff-drawer-group" data-drawer-group data-menu-label="{{ $group['label'] }}">
                             <a href="{{ route($group['route']) }}"
                                class="staff-drawer-item {{ \App\Support\NavMenu::isActive($group['match']) ? 'is-on' : '' }}"
                                data-menu-label="{{ $group['label'] }}">
@@ -231,8 +237,8 @@
                                     @endif
                                 </span>
                             </a>
-                        @endif
-                    </div>
+                        </div>
+                    @endif
                 @endforeach
             </div>
         </aside>
@@ -241,13 +247,17 @@
 @else
     @yield('content')
 @endauth
-<script src="{{ asset('js/app.js') }}?v=erp27"></script>
+<script src="{{ asset('js/app.js') }}?v=erp28"></script>
 <script>
 (function () {
     var bar = document.getElementById('win-menubar');
     var root = document.getElementById('module-tabs');
     if (!bar || !root) return;
     var sticky = false;
+
+    function isDesktopUi() {
+        return document.documentElement.getAttribute('data-ui-mode') !== 'mobile';
+    }
 
     function closeAll(except) {
         root.querySelectorAll('[data-menu-group].is-open').forEach(function (g) {
@@ -270,6 +280,7 @@
         var group = btn.closest('[data-menu-group]');
 
         btn.addEventListener('click', function (e) {
+            if (!isDesktopUi()) return;
             e.preventDefault();
             e.stopPropagation();
             var open = group.classList.contains('is-open');
@@ -283,11 +294,13 @@
         });
 
         btn.addEventListener('mouseenter', function () {
+            if (!isDesktopUi()) return;
             if (sticky) openGroup(group);
         });
     });
 
     document.addEventListener('click', function (e) {
+        if (!isDesktopUi()) return;
         if (!bar.contains(e.target)) {
             sticky = false;
             closeAll();
@@ -303,6 +316,7 @@
     var input = document.getElementById('module-menu-search');
     if (input) {
         input.addEventListener('input', function () {
+            if (!isDesktopUi()) return;
             var q = (input.value || '').trim().toLowerCase();
             sticky = !!q;
             root.querySelectorAll('[data-menu-group]').forEach(function (g) {
