@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<script>
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    const items = document.querySelectorAll('.nav-item.mega-host');
+    if (items[0]) {
+      items[0].classList.add('open');
+      const backdrop = document.getElementById('megaBackdrop');
+      if (backdrop) {
+        backdrop.hidden = false;
+        backdrop.classList.add('show');
+      }
+    }
+  }, 500);
+});
+</script>
+</head>
+<body>
+<iframe src="home.html" style="width:100%;height:100vh;border:none;"></iframe>
+</body>
+</html>
