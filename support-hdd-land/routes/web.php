@@ -20,7 +20,7 @@ use App\Http\Controllers\SystemToolsController;
 use App\Http\Controllers\TrashController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
-use App\Http\Controllers\PaymentReceiptController;
+use App\Http\Controllers\PortalInviteController;
 use App\Http\Controllers\Portal\PaymentReceiptController as PortalPaymentReceiptController;
 use App\Http\Controllers\Portal\RemotePartPreorderController as PortalRemotePartPreorderController;
 use App\Http\Controllers\RemotePartPreorderController;
@@ -137,6 +137,15 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware(EnsurePermission::class.':customers')->group(function () {
         Route::resource('customers', CustomerController::class);
+        Route::prefix('portal-invites')->name('portal-invites.')->group(function () {
+            Route::get('/', [PortalInviteController::class, 'index'])->name('index');
+            Route::post('/template', [PortalInviteController::class, 'saveTemplate'])->name('template');
+            Route::post('/start', [PortalInviteController::class, 'start'])->name('start');
+            Route::match(['get', 'post'], '/run/{batch}', [PortalInviteController::class, 'run'])->name('run');
+            Route::get('/report', [PortalInviteController::class, 'report'])->name('report');
+            Route::post('/resend-failed', [PortalInviteController::class, 'resendFailed'])->name('resend-failed');
+            Route::post('/resend/{customer}', [PortalInviteController::class, 'resend'])->name('resend');
+        });
     });
 
     Route::middleware(EnsurePermission::class.':receptions')->group(function () {
