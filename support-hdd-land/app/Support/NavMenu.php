@@ -78,7 +78,7 @@ class NavMenu
                 'any_of' => ['daily_logs', 'daily_logs.manage'],
                 'children' => [
                     ['label' => 'ثبت امروز', 'route' => 'daily-logs.index', 'match' => 'daily-logs.index', 'hint' => 'رویدادهای روز جاری', 'mark' => 'ام', 'permission' => 'daily_logs'],
-                    ['label' => 'گزارش همه', 'route' => 'daily-logs.report', 'match' => 'daily-logs.report', 'hint' => 'مرور کارمندان', 'mark' => 'گ', 'permission' => 'daily_logs.manage'],
+                    ['label' => 'گزارش و چک', 'route' => 'daily-logs.report', 'match' => 'daily-logs.report', 'hint' => 'تکمیل و بررسی کارمندان', 'mark' => 'گ', 'permission' => 'daily_logs.manage'],
                 ],
             ],
             [

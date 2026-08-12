@@ -190,6 +190,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [DailyLogController::class, 'index'])->name('index');
         Route::post('/', [DailyLogController::class, 'store'])->name('store');
         Route::get('/report', [DailyLogController::class, 'report'])->name('report');
+        Route::post('/check', [DailyLogController::class, 'check'])->name('check');
+        Route::post('/uncheck', [DailyLogController::class, 'uncheck'])->name('uncheck');
         Route::get('/settings', [DailyLogController::class, 'settings'])->name('settings');
         Route::post('/settings', [DailyLogController::class, 'saveSettings'])->name('settings.save');
         Route::post('/categories', [DailyLogController::class, 'storeCategory'])->name('categories.store');
