@@ -98,7 +98,16 @@ class DailyLogController extends Controller
             ->get()
             ->keyBy(fn ($row) => $row->user_id.'|'.$row->work_date->toDateString());
 
-        $checklist = [];
+        $allEntries = DailyLogEntry::query()
+            ->with(['category'])
+            ->whereDate('work_date', '>=', $from->toDateString())
+            ->whereDate('work_date', '<=', $to->toDateString())
+            ->when($employeeId, fn ($q) => $q->where('user_id', $employeeId))
+            ->orderByDesc('work_date')
+            ->orderByDesc('id')
+            ->get()
+            ->groupBy(fn ($e) => $e->user_id.'|'.Carbon::parse($e->work_date)->toDateString());
+
         $stats = [
             'slots' => 0,
             'complete' => 0,
@@ -108,29 +117,46 @@ class DailyLogController extends Controller
             'issues' => 0,
         ];
 
+        $employeePanels = [];
         foreach ($staff as $person) {
+            $days = [];
+            $personStats = [
+                'complete' => 0,
+                'partial' => 0,
+                'missing' => 0,
+                'checked' => 0,
+                'issues' => 0,
+                'entries' => 0,
+            ];
+
             foreach ($workDays as $day) {
                 $key = $person->id.'|'.$day;
                 $row = $counts->get($key);
                 $cnt = (int) ($row->cnt ?? 0);
                 $fill = $cnt >= $minEntries ? 'complete' : ($cnt > 0 ? 'partial' : 'missing');
                 $check = $checks->get($key);
+                $dayEntries = $allEntries->get($key, collect());
+
                 $item = [
-                    'user' => $person,
                     'date' => $day,
                     'count' => $cnt,
                     'quantity' => (int) ($row->qty ?? 0),
                     'minutes' => (int) ($row->mins ?? 0),
                     'fill' => $fill,
                     'check' => $check,
-                    'checked' => (bool) $check,
+                    'entries' => $dayEntries,
                 ];
+
                 $stats['slots']++;
                 $stats[$fill]++;
+                $personStats[$fill]++;
+                $personStats['entries'] += $cnt;
                 if ($check) {
                     $stats['checked']++;
+                    $personStats['checked']++;
                     if ($check->status === 'issue') {
                         $stats['issues']++;
+                        $personStats['issues']++;
                     }
                 }
 
@@ -147,59 +173,35 @@ class DailyLogController extends Controller
                     continue;
                 }
 
-                $checklist[] = $item;
-            }
-        }
-
-        // newest dates first for manager review
-        usort($checklist, function ($a, $b) {
-            $d = strcmp($b['date'], $a['date']);
-            if ($d !== 0) {
-                return $d;
+                $days[] = $item;
             }
 
-            return strcmp($a['user']->name, $b['user']->name);
-        });
+            if ($statusFilter !== 'all' && $days === []) {
+                continue;
+            }
 
-        $query = DailyLogEntry::query()
-            ->with(['user', 'category'])
-            ->whereDate('work_date', '>=', $from->toDateString())
-            ->whereDate('work_date', '<=', $to->toDateString())
-            ->orderByDesc('work_date')
-            ->orderByDesc('id');
+            // newest days first for manager review
+            $days = array_reverse($days);
 
-        if ($employeeId) {
-            $query->where('user_id', $employeeId);
+            $employeePanels[] = [
+                'user' => $person,
+                'days' => $days,
+                'stats' => $personStats,
+            ];
         }
 
-        $entries = $query->paginate(40)->withQueryString();
-
-        $byEmployee = DailyLogEntry::query()
-            ->selectRaw('user_id, COUNT(*) as cnt, COALESCE(SUM(quantity),0) as qty')
-            ->whereDate('work_date', '>=', $from->toDateString())
-            ->whereDate('work_date', '<=', $to->toDateString())
-            ->when($employeeId, fn ($q) => $q->where('user_id', $employeeId))
-            ->groupBy('user_id')
-            ->get();
-
-        $usersById = User::query()
-            ->whereIn('id', $byEmployee->pluck('user_id')->filter()->all())
-            ->get(['id', 'name'])
-            ->keyBy('id');
-
-        foreach ($byEmployee as $row) {
-            $row->setRelation('user', $usersById->get($row->user_id));
-        }
+        $openUserId = $request->filled('open')
+            ? (int) $request->input('open')
+            : (int) ($employeePanels[0]['user']->id ?? 0);
 
         return view('daily-logs.report', [
             'from' => $from,
             'to' => $to,
-            'entries' => $entries,
-            'byEmployee' => $byEmployee,
             'employees' => $this->getDailyLogStaff(),
             'employeeId' => $employeeId,
             'statusFilter' => $statusFilter,
-            'checklist' => $checklist,
+            'employeePanels' => $employeePanels,
+            'openUserId' => $openUserId,
             'stats' => $stats,
             'minEntries' => $minEntries,
             'workDaysCount' => count($workDays),
