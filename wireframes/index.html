@@ -3,48 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>وایرفریم‌ها | بازیابی اطلاعات + فروشگاه</title>
+  <title>طرح چشم‌گیر | فهرست</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/wireframe.css" />
   <style>
     .hub { max-width: 900px; margin: 2rem auto; padding: 0 1rem 3rem; }
-    .hub h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
-    .hub-lead { color: var(--muted); margin-bottom: 1.5rem; }
+    .hub h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); letter-spacing: -0.04em; margin-bottom: 0.6rem; }
+    .hub-lead { color: var(--muted); margin-bottom: 1.5rem; font-size: 1.05rem; }
     .hub-grid { display: grid; gap: 0.9rem; }
     .hub-card {
-      display: grid;
-      grid-template-columns: 120px 1fr auto;
-      gap: 1rem;
-      align-items: center;
-      background: #fff;
-      border: 2px solid var(--line);
-      border-radius: 8px;
-      padding: 1rem 1.1rem;
+      display: grid; grid-template-columns: 110px 1fr auto; gap: 1rem; align-items: center;
+      background: #fff; border: 1px solid var(--line); border-radius: 22px; padding: 1.1rem 1.2rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.04);
     }
     .hub-card .tag {
-      font-size: 0.75rem; font-weight: 800;
-      padding: 0.5rem; text-align: center;
-      border: 1.5px dashed var(--line);
-      border-radius: 6px;
-      background: #f0f4f8;
+      font-size: 0.75rem; font-weight: 800; text-align: center; padding: 0.7rem;
+      border-radius: 16px; color: #fff;
+      background: linear-gradient(145deg, #0F2744, #2563A8);
     }
-    .hub-card h2 { font-size: 1.05rem; margin-bottom: 0.25rem; }
-    .hub-card p { font-size: 0.88rem; color: var(--muted); }
+    .hub-card h2 { font-size: 1.1rem; margin-bottom: 0.25rem; letter-spacing: -0.02em; }
+    .hub-card p { font-size: 0.9rem; color: var(--muted); }
     .hub-card .go {
-      background: #121a24; color: #fff;
-      padding: 0.45rem 0.85rem; border-radius: 4px; font-size: 0.85rem; font-weight: 700;
-      white-space: nowrap;
+      background: #111; color: #fff; padding: 0.5rem 0.9rem; border-radius: 999px;
+      font-size: 0.85rem; font-weight: 700; white-space: nowrap;
     }
-    @media (max-width: 700px) {
-      .hub-card { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 700px) { .hub-card { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
   <div class="wf-toolbar">
-    <strong>طرح گرافیکی اولیه (وایرفریم)</strong>
+    <strong>سبک چشم‌گیر اپل/مایکروسافت</strong>
     <nav class="wf-tabs">
       <a class="active" href="index.html">فهرست</a>
       <a href="home.html">صفحه اول</a>
@@ -52,46 +42,39 @@
       <a href="shop.html">فروشگاه</a>
     </nav>
   </div>
-  <div class="wf-note">
-    پالت جدید برای بررسی: سفید + آبی متالیک + قرمز.
-  </div>
-
+  <div class="wf-note">پالت شما حفظ شده: سفید + آبی متالیک + قرمز — با چیدمان بزرگ‌تک‌ها</div>
   <div class="palette-bar" style="max-width:900px;margin:1.2rem auto 0;padding:0 1rem;">
-    <span class="swatch"><i style="background:#FFFFFF;border:1px solid #ccc"></i>#FFFFFF سفید</span>
-    <span class="swatch"><i style="background:#2F5F8F"></i>#2F5F8F آبی متالیک</span>
-    <span class="swatch"><i style="background:#3E7BB5"></i>#3E7BB5 آبی روشن</span>
-    <span class="swatch"><i style="background:#C62828"></i>#C62828 قرمز</span>
-    <span class="swatch"><i style="background:#0F1B2D"></i>#0F1B2D بنر</span>
+    <span class="swatch"><i style="background:#fff;border:1px solid #ccc"></i>سفید</span>
+    <span class="swatch"><i style="background:#2563A8"></i>آبی متالیک</span>
+    <span class="swatch"><i style="background:#E10600"></i>قرمز</span>
+    <span class="swatch"><i style="background:#000"></i>بنر مشکی</span>
   </div>
 
   <div class="hub">
-    <h1>طرح رنگی سفید / آبی متالیک / قرمز</h1>
-    <p class="hub-lead">
-      سفید برای سطح و پس‌زمینه، آبی متالیک برای برند و فروشگاه، قرمز برای CTAهای مهم مثل درخواست بازیابی و قیمت.
-    </p>
-
+    <h1>طرح چشم‌گیر برای بررسی</h1>
+    <p class="hub-lead">عنوان‌های خیلی بزرگ، فضای زیاد، بنر سینمایی مشکی، دکمه‌های کپسولی، قرمز فقط برای اقدام اصلی.</p>
     <div class="hub-grid">
       <a class="hub-card" href="home.html">
-        <div class="tag">۰۱<br>HOME</div>
+        <div class="tag">HOME</div>
         <div>
-          <h2>صفحه اول سایت</h2>
-          <p>برند، مسیرهای اصلی (بازیابی / گارانتی / آموزش و فروشگاه)، دستگاه‌های تحت پوشش، اعتماد.</p>
+          <h2>صفحه اول</h2>
+          <p>هیرو سینمایی مثل اپل + سه مسیر بزرگ مثل مایکروسافت</p>
         </div>
         <span class="go">مشاهده ←</span>
       </a>
       <a class="hub-card" href="corporate.html">
-        <div class="tag">۰۲<br>CORP</div>
+        <div class="tag">CORP</div>
         <div>
-          <h2>صفحه شرکتی / خدمات</h2>
-          <p>لیست خدمات بازیابی و تعمیر، روند کار، فرم درخواست بررسی، بخش گارانتی.</p>
+          <h2>صفحه شرکتی</h2>
+          <p>خدمات، فرآیند، گارانتی و فرم درخواست</p>
         </div>
         <span class="go">مشاهده ←</span>
       </a>
       <a class="hub-card" href="shop.html">
-        <div class="tag">۰۳<br>SHOP</div>
+        <div class="tag">SHOP</div>
         <div>
-          <h2>صفحه فروشگاهی</h2>
-          <p>دسته نرم‌افزارها، فیلتر، کارت محصول، قیمت، سبد خرید — جدا از فرم خدمات.</p>
+          <h2>فروشگاه</h2>
+          <p>کارت‌های محصول تمیز با قیمت قرمز و دکمه آبی متالیک</p>
         </div>
         <span class="go">مشاهده ←</span>
       </a>
