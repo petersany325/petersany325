@@ -1,18 +1,11 @@
 @extends('layouts.portal')
-@section('title', 'پیام به تعمیرگاه | '.shop_name())
+@section('title', 'پیام‌ها | '.shop_name())
 
 @section('content')
 <div class="portal-shell">
     <div class="p-card">
-        <h2>پیام به تعمیرگاه</h2>
-        <p class="p-lead">سؤال، پیگیری یا درخواست خود را درباره قبض بنویسید. اعلان برای منشی، تعمیرکار و مدیر ارسال می‌شود.</p>
-
-        @if(session('success'))
-            <div class="p-alert ok">{{ session('success') }}</div>
-        @endif
-        @if($errors->any())
-            <div class="p-alert err">{{ $errors->first() }}</div>
-        @endif
+        <h2>پیام‌ها</h2>
+        <p class="p-lead">پیام‌های تعمیرگاه و پیام‌های شما. برای هماهنگی با دفتر: <a href="tel:{{ shop_office_phone() }}" dir="ltr">{{ shop_office_phone() }}</a></p>
 
         <form method="POST" action="{{ route('portal.messages.store') }}" class="p-form">
             @csrf
@@ -33,26 +26,28 @@
                 </select>
             </label>
             <label>متن پیام
-                <textarea name="body" rows="4" required placeholder="مثلاً: لطفاً وضعیت تعمیر هارد من را بگویید یا کار را زودتر انجام دهید.">{{ old('body') }}</textarea>
+                <textarea name="body" rows="4" required placeholder="مثلاً: لطفاً وضعیت تعمیر را بگویید.">{{ old('body') }}</textarea>
             </label>
-            <button class="p-btn primary" type="submit">ارسال پیام</button>
+            <button class="p-btn primary" type="submit">ارسال پیام به تعمیرگاه</button>
         </form>
     </div>
 
     <div class="p-card">
-        <h3>پیام‌های قبلی من</h3>
+        <h3>صندوق پیام</h3>
         @forelse($messages as $m)
+            @php $fromShop = $m->isFromShop(); @endphp
             <div style="border-top:1px solid var(--line);padding:10px 0;">
-                <div style="font-size:12px;color:var(--muted);">
-                    {{ jalali_like($m->created_at) }}
-                    @if($m->reception) — {{ $m->reception->ticket_no }} @endif
-                    — {{ $m->priorityLabel() }}
-                    @if($m->isUnread()) · در صف بررسی @else · دیده شده @endif
+                <div style="font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                    <span class="p-chip {{ $fromShop ? 'tone-teal' : 'tone-slate' }}">{{ $fromShop ? 'پیام تعمیرگاه' : 'پیام شما' }}</span>
+                    <span>{{ jalali_like($m->created_at) }}</span>
+                    @if($m->reception) <span>— {{ $m->reception->ticket_no }}</span> @endif
+                    @if($m->preorder) <span>— {{ $m->preorder->code }}</span> @endif
+                    @if($fromShop && $m->isUnread()) <span style="color:#b45309;font-weight:800;">جدید</span> @endif
                 </div>
-                <div style="margin-top:4px;">{{ $m->body }}</div>
+                <div style="margin-top:6px;white-space:pre-wrap;line-height:1.7;">{{ $m->body }}</div>
             </div>
         @empty
-            <p class="muted">هنوز پیامی نفرستاده‌اید.</p>
+            <p class="muted">هنوز پیامی نیست.</p>
         @endforelse
         {{ $messages->links() }}
     </div>

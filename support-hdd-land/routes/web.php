@@ -367,6 +367,7 @@ Route::middleware('auth')->group(function () {
         Route::get('{preorder}', [RemotePartPreorderController::class, 'show'])->name('show');
         Route::get('{preorder}/photo', [RemotePartPreorderController::class, 'photo'])->name('photo');
         Route::post('{preorder}/arrived', [RemotePartPreorderController::class, 'markArrived'])->name('arrived');
+        Route::post('{preorder}/specs', [RemotePartPreorderController::class, 'updateSpecs'])->name('specs');
         Route::post('{preorder}/convert', [RemotePartPreorderController::class, 'convert'])->name('convert');
     });
 

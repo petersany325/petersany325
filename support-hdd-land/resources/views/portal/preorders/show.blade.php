@@ -16,7 +16,22 @@
             {{ $preorder->code }}
         </div>
         <p class="muted" style="margin:8px 0 0;font-size:12px;">این کد را روی بسته یا فاکتور باربری بنویسید تا موقع تحویل سریع پیدا شود.</p>
+        <p class="p-office-phone" style="margin:10px 0 0;">تلفن دفتر: <a href="tel:{{ shop_office_phone() }}" dir="ltr">{{ shop_office_phone() }}</a></p>
     </div>
+
+    @if($preorder->status === 'matched' && $preorder->reception)
+        <div class="p-card" style="border-color:#86efac;background:#f0fdf4;">
+            <strong>قبض تأیید شد</strong>
+            <p class="muted" style="margin:4px 0 0;">شماره قبض: <a href="{{ route('portal.show', $preorder->reception) }}">{{ $preorder->reception->ticket_no }}</a></p>
+        </div>
+    @elseif($preorder->status === 'rejected')
+        <div class="p-card" style="border-color:#f5d59a;background:#fff8eb;">
+            <strong>قبض تأیید نشد · نیاز به تماس</strong>
+            <p class="muted" style="margin:4px 0 0;">{{ $preorder->admin_note ?: 'لطفاً با دفتر تماس بگیرید.' }}</p>
+            <p class="p-office-phone" style="margin:8px 0 0;">تلفن دفتر: <a href="tel:{{ shop_office_phone() }}" dir="ltr">{{ shop_office_phone() }}</a></p>
+            <a class="p-btn ghost" style="margin-top:8px;" href="{{ route('portal.messages') }}">مشاهده پیام‌ها</a>
+        </div>
+    @endif
 
     <div class="p-card">
         <h3>جزئیات</h3>

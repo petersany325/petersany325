@@ -14,22 +14,22 @@ class RemotePartPreorder extends Model
     public const STATUS_REJECTED = 'rejected';
     public const STATUS_CANCELLED = 'cancelled';
 
-    public const STATUSES = [
-        self::STATUS_PENDING_ARRIVAL => 'در انتظار رسیدن',
-        self::STATUS_ARRIVED => 'بار رسیده · منتظر تطبیق',
-        self::STATUS_MATCHED => 'تبدیل به قبض',
-        self::STATUS_REJECTED => 'مغایر / رد شده',
-        self::STATUS_CANCELLED => 'لغو شده',
-    ];
-
     public const MATCH_OK = 'ok';
     public const MATCH_MISMATCH = 'mismatch';
     public const MATCH_INCOMPLETE = 'incomplete';
 
     public const MATCH_RESULTS = [
-        self::MATCH_OK => 'مطابق است · ساخت قبض',
-        self::MATCH_MISMATCH => 'مغایرت دارد',
-        self::MATCH_INCOMPLETE => 'ناقص · نیاز به اطلاعات بیشتر',
+        self::MATCH_OK => 'تأیید شد · صدور قبض',
+        self::MATCH_MISMATCH => 'تأیید نشد · نیاز به تماس',
+        self::MATCH_INCOMPLETE => 'ناقص · نیاز به تماس',
+    ];
+
+    public const STATUSES = [
+        self::STATUS_PENDING_ARRIVAL => 'در انتظار رسیدن',
+        self::STATUS_ARRIVED => 'بار رسیده · منتظر بررسی',
+        self::STATUS_MATCHED => 'تأیید و صدور قبض',
+        self::STATUS_REJECTED => 'تأیید نشد',
+        self::STATUS_CANCELLED => 'لغو شده',
     ];
 
     protected $fillable = [

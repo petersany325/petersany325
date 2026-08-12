@@ -28,6 +28,8 @@ a{color:var(--accent);text-decoration:none}
 }
 .p-hero h1{margin:0;font-size:15px}
 .p-hero p{margin:4px 0 0;color:var(--muted);font-size:11px}
+.p-office-phone{font-size:12px !important;font-weight:800;color:#0f766e !important}
+.p-office-phone a{color:#0f766e;font-weight:800;letter-spacing:.02em}
 .p-hero-stat{text-align:center;min-width:64px}
 .p-hero-stat strong{display:block;font-size:18px}
 .p-hero-stat span{font-size:10px;color:var(--muted)}
@@ -41,6 +43,7 @@ a{color:var(--accent);text-decoration:none}
 .p-chip.tone-green{background:#e9f8ef;border-color:#86efac;color:#166534}
 .p-chip.tone-slate{background:#eef1f5;border-color:#c5ccd6;color:#334155}
 .p-chip.tone-blue{background:#e7f0ff;border-color:#93c5fd;color:#1e3a8a}
+.p-chip.tone-teal{background:#e7faf6;border-color:#99f6e4;color:#0f766e}
 .p-section{padding:0 12px 12px}
 .p-section h2{margin:0 0 6px;font-size:12.5px}
 .p-section-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}

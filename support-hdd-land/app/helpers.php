@@ -404,6 +404,21 @@ if (! function_exists('shop_tagline')) {
     }
 }
 
+if (! function_exists('shop_office_phone')) {
+    /** Main office contact phone shown to customers. */
+    function shop_office_phone(): string
+    {
+        try {
+            if (class_exists(\App\Support\RemotePartPreorderSettings::class)) {
+                return \App\Support\RemotePartPreorderSettings::officePhone();
+            }
+        } catch (\Throwable) {
+        }
+
+        return '01144447220';
+    }
+}
+
 if (! function_exists('shop_logo_url')) {
     /**
      * @param  'main'|'header'|'invoice'  $variant

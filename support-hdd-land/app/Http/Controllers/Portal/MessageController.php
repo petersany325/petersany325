@@ -17,10 +17,17 @@ class MessageController extends Controller
     {
         $customer = $this->customer($request);
         $messages = CustomerMessage::query()
-            ->with('reception')
+            ->with(['reception', 'preorder'])
             ->where('customer_id', $customer->id)
             ->latest('id')
             ->paginate(20);
+
+        CustomerMessage::query()
+            ->where('customer_id', $customer->id)
+            ->where('direction', CustomerMessage::DIRECTION_OUTBOUND)
+            ->whereNull('customer_read_at')
+            ->update(['customer_read_at' => now('Asia/Tehran')]);
+
         $tickets = $customer->receptions()
             ->where('status', '!=', 'cancelled')
             ->latest('id')
@@ -62,6 +69,7 @@ class MessageController extends Controller
             'reception_id' => $receptionId,
             'body' => trim($data['body']),
             'priority' => $data['priority'] ?? 'normal',
+            'direction' => CustomerMessage::DIRECTION_INBOUND,
         ]);
 
         $ticket = $receptionId
