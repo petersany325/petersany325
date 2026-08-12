@@ -23,11 +23,27 @@ public class GameLevel {
         this.emotionSkill = emotionSkill;
         this.interactionSkill = interactionSkill;
         completedLevel = false;
-        if (emotionSkill) {
-            this.emotionImage = ImageAssets.emotionFile(answer);
-        } else {
-            this.emotionImage = null;
+        emotionImage = pickEmotionImage(answer, emotionSkill);
+    }
+
+    private String pickEmotionImage(String emotion, boolean isEmotion) {
+        if (!isEmotion || emotion == null) {
+            return null;
         }
+        if (emotion.equalsIgnoreCase("Happy") || emotion.equalsIgnoreCase("Excited")) {
+            return "dino-happy.png";
+        }
+        if (emotion.equalsIgnoreCase("Sad") || emotion.equalsIgnoreCase("Worried")
+                || emotion.equalsIgnoreCase("Scared")) {
+            return "dino-sad.png";
+        }
+        if (emotion.equalsIgnoreCase("Angry")) {
+            return "dino-angry.png";
+        }
+        if (emotion.equalsIgnoreCase("Proud")) {
+            return "dino-proud.png";
+        }
+        return null;
     }
 
     public String getInstruction() {
@@ -68,10 +84,6 @@ public class GameLevel {
 
     public String getEmotionImage() {
         return emotionImage;
-    }
-
-    public void setEmotionImage(String emotionImage) {
-        this.emotionImage = emotionImage;
     }
 
     public boolean checkAnswer(String chosen) {

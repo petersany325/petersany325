@@ -10,10 +10,13 @@ import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
+import java.awt.Image;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -152,12 +155,9 @@ public class MainFrame extends JFrame {
 
         JLabel mouseLabel = new JLabel();
         mouseLabel.setAlignmentX(CENTER_ALIGNMENT);
-        ImageIcon mouse = ImageAssets.loadScaled("welcome-mouse.png", 150, 150);
+        ImageIcon mouse = getPicture("welcome-mouse.png", 150, 150);
         if (mouse != null) {
             mouseLabel.setIcon(mouse);
-        } else {
-            mouseLabel.setText(":)");
-            mouseLabel.setFont(new Font("Arial", Font.BOLD, 42));
         }
 
         JLabel line1 = new JLabel("Welcome fellow guardians!", SwingConstants.CENTER);
@@ -174,7 +174,7 @@ public class MainFrame extends JFrame {
 
         JLabel animalsLabel = new JLabel();
         animalsLabel.setAlignmentX(CENTER_ALIGNMENT);
-        ImageIcon animals = ImageAssets.loadScaled("welcome-animals.png", 720, 250);
+        ImageIcon animals = getPicture("welcome-animals.png", 720, 250);
         if (animals != null) {
             animalsLabel.setIcon(animals);
         }
@@ -579,23 +579,36 @@ public class MainFrame extends JFrame {
         gameCharacterLabel.setText(" ");
 
         String imageName = level.getEmotionImage();
-        if (imageName == null && level.isEmotionSkill()) {
-            imageName = ImageAssets.emotionFile(level.getAnswer());
-        }
-        if (imageName == null && !level.isEmotionSkill()) {
-            // Friendly companion for social levels
+        if (imageName == null) {
             imageName = "ferret.png";
         }
 
-        ImageIcon icon = ImageAssets.loadScaled(imageName, 160, 160);
+        ImageIcon icon = getPicture(imageName, 160, 160);
         if (icon != null) {
             gameCharacterLabel.setIcon(icon);
-            if (level.isEmotionSkill()) {
-                gameCharacterLabel.setToolTipText("Look at the character's face for clues");
-            } else {
-                gameCharacterLabel.setToolTipText("Your learning friend");
+        }
+    }
+
+    // Load and resize a picture from the images folder
+    private ImageIcon getPicture(String fileName, int width, int height) {
+        ImageIcon icon = null;
+
+        URL resource = getClass().getResource("/autismapp/images/" + fileName);
+        if (resource != null) {
+            icon = new ImageIcon(resource);
+        } else {
+            File file = new File("src/autismapp/images/" + fileName);
+            if (file.exists()) {
+                icon = new ImageIcon(file.getAbsolutePath());
             }
         }
+
+        if (icon == null || icon.getIconWidth() <= 0) {
+            return null;
+        }
+
+        Image scaled = icon.getImage().getScaledInstance(width, height, Image.SCALE_SMOOTH);
+        return new ImageIcon(scaled);
     }
 
     private void checkAnswer() {
@@ -627,8 +640,6 @@ public class MainFrame extends JFrame {
             progress.markLevelComplete(currentLevel, level.isEmotionSkill(), level.isInteractionSkill());
             awards.addCard(level.getCardReward());
 
-            // Math interest gets an extra arithmetic collector card challenge
-            // Only offer once when the level is first completed.
             if (!alreadyDone && guardian.getHyperF().equalsIgnoreCase("Math")) {
                 offerMathCard();
             }
