@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>وایرفریم‌ها | بازیابی اطلاعات + فروشگاه</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/wireframe.css" />
+  <style>
+    .hub { max-width: 900px; margin: 2rem auto; padding: 0 1rem 3rem; }
+    .hub h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+    .hub-lead { color: var(--muted); margin-bottom: 1.5rem; }
+    .hub-grid { display: grid; gap: 0.9rem; }
+    .hub-card {
+      display: grid;
+      grid-template-columns: 120px 1fr auto;
+      gap: 1rem;
+      align-items: center;
+      background: #fff;
+      border: 2px solid var(--line);
+      border-radius: 8px;
+      padding: 1rem 1.1rem;
+    }
+    .hub-card .tag {
+      font-size: 0.75rem; font-weight: 800;
+      padding: 0.5rem; text-align: center;
+      border: 1.5px dashed var(--line);
+      border-radius: 6px;
+      background: #f0f4f8;
+    }
+    .hub-card h2 { font-size: 1.05rem; margin-bottom: 0.25rem; }
+    .hub-card p { font-size: 0.88rem; color: var(--muted); }
+    .hub-card .go {
+      background: #121a24; color: #fff;
+      padding: 0.45rem 0.85rem; border-radius: 4px; font-size: 0.85rem; font-weight: 700;
+      white-space: nowrap;
+    }
+    @media (max-width: 700px) {
+      .hub-card { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wf-toolbar">
+    <strong>طرح گرافیکی اولیه (وایرفریم)</strong>
+    <nav class="wf-tabs">
+      <a class="active" href="index.html">فهرست</a>
+      <a href="home.html">صفحه اول</a>
+      <a href="corporate.html">صفحه شرکتی</a>
+      <a href="shop.html">فروشگاه</a>
+    </nav>
+  </div>
+  <div class="wf-note">
+    این‌ها طرح ساخت‌نیافته‌اند برای بررسی چیدمان — هنوز سایت نهایی یا محتوای واقعی نیستند.
+  </div>
+
+  <div class="hub">
+    <h1>بررسی طرح سه صفحه اصلی</h1>
+    <p class="hub-lead">
+      کسب‌وکار: بازیابی اطلاعات و تعمیر استوریج + گارانتی هارد + آموزش + فروش نرم‌افزار.
+      سایت یکپارچه است؛ صفحه اول اعتماد می‌سازد، بخش شرکتی خدمات را توضیح می‌دهد، فروشگاه نرم‌افزار می‌فروشد.
+    </p>
+
+    <div class="hub-grid">
+      <a class="hub-card" href="home.html">
+        <div class="tag">۰۱<br>HOME</div>
+        <div>
+          <h2>صفحه اول سایت</h2>
+          <p>برند، مسیرهای اصلی (بازیابی / گارانتی / آموزش و فروشگاه)، دستگاه‌های تحت پوشش، اعتماد.</p>
+        </div>
+        <span class="go">مشاهده ←</span>
+      </a>
+      <a class="hub-card" href="corporate.html">
+        <div class="tag">۰۲<br>CORP</div>
+        <div>
+          <h2>صفحه شرکتی / خدمات</h2>
+          <p>لیست خدمات بازیابی و تعمیر، روند کار، فرم درخواست بررسی، بخش گارانتی.</p>
+        </div>
+        <span class="go">مشاهده ←</span>
+      </a>
+      <a class="hub-card" href="shop.html">
+        <div class="tag">۰۳<br>SHOP</div>
+        <div>
+          <h2>صفحه فروشگاهی</h2>
+          <p>دسته نرم‌افزارها، فیلتر، کارت محصول، قیمت، سبد خرید — جدا از فرم خدمات.</p>
+        </div>
+        <span class="go">مشاهده ←</span>
+      </a>
+    </div>
+  </div>
+</body>
+</html>
