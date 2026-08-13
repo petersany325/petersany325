@@ -15,6 +15,16 @@
 @php
   $shopName = \App\Models\Setting::getValue('shop_name', config('app.name', 'HDD Land'));
   $cartCount = class_exists(\Plugins\CartCheckout\src\Cart::class) ? \Plugins\CartCheckout\src\Cart::count() : 0;
+  if (! class_exists(\App\Support\CorporateHomeConfig::class) && is_file(app_path('Support/CorporateHomeConfig.php'))) {
+      require_once app_path('Support/CorporateHomeConfig.php');
+  }
+  $ch = class_exists(\App\Support\CorporateHomeConfig::class) ? \App\Support\CorporateHomeConfig::get() : [];
+  $chHref = fn ($u) => class_exists(\App\Support\CorporateHomeConfig::class)
+      ? \App\Support\CorporateHomeConfig::href((string) $u)
+      : url($u);
+  $chLinks = fn ($raw) => class_exists(\App\Support\CorporateHomeConfig::class)
+      ? \App\Support\CorporateHomeConfig::links((string) $raw)
+      : [];
 @endphp
 
 <div class="mega-backdrop" id="megaBackdrop" hidden></div>
@@ -195,7 +205,7 @@
 
       <div class="header-actions">
         <a class="cart-pill" href="{{ url('/cart') }}" aria-label="سبد خرید">{{ $cartCount > 0 ? $cartCount : 'Bag' }}</a>
-        <a class="cta-red" href="{{ url('/contact') }}">درخواست بازیابی</a>
+        <a class="cta-red" href="{{ $chHref($ch['header_cta_url'] ?? '/contact') }}">{{ $ch['header_cta_label'] ?? 'درخواست بازیابی' }}</a>
       </div>
     </div>
   </header>
@@ -209,58 +219,53 @@
           <span class="brand-mark">HL</span>
           <div>
             <strong>{{ $shopName }}</strong>
-            <span>مرکز بازیابی اطلاعات · تعمیر استوریج · فروش نرم‌افزار</span>
+            <span>{{ $ch['footer_tagline'] ?? 'مرکز بازیابی اطلاعات · تعمیر استوریج · فروش نرم‌افزار' }}</span>
           </div>
         </div>
-        <p>یک سایت واحد با دو مسیر مشخص: خدمات شرکتی برای دستگاه آسیب‌دیده، فروشگاه برای نرم‌افزار و آموزش.</p>
+        <p>{{ $ch['footer_about'] ?? '' }}</p>
         <div class="footer-ctas">
-          <a class="btn btn-red" href="{{ url('/contact') }}">درخواست بازیابی</a>
-          <a class="btn btn-blue" href="{{ url('/products') }}">ورود به فروشگاه</a>
+          <a class="btn btn-red" href="{{ $chHref($ch['footer_cta_red_url'] ?? '/contact') }}">{{ $ch['footer_cta_red_label'] ?? 'درخواست بازیابی' }}</a>
+          <a class="btn btn-blue" href="{{ $chHref($ch['footer_cta_blue_url'] ?? '/products') }}">{{ $ch['footer_cta_blue_label'] ?? 'ورود به فروشگاه' }}</a>
         </div>
       </div>
 
       <div class="footer-cols">
         <div class="footer-col">
-          <h4>خدمات شرکتی</h4>
-          <a href="{{ url('/services') }}">بازیابی هارد / SSD</a>
-          <a href="{{ url('/services') }}">تعمیر استوریج</a>
-          <a href="{{ url('/services/about-recovery') }}">تعریف تعمیرات و بازیابی</a>
-          <a href="{{ url('/warranty') }}">گارانتی هارد</a>
-          <a href="{{ url('/about') }}">معرفی شرکت</a>
+          <h4>{{ $ch['footer_col1_title'] ?? 'خدمات شرکتی' }}</h4>
+          @foreach($chLinks($ch['footer_col1_links'] ?? '') as $lnk)
+            <a href="{{ $chHref($lnk['url']) }}">{{ $lnk['label'] }}</a>
+          @endforeach
         </div>
         <div class="footer-col">
-          <h4>فروشگاه</h4>
-          <a href="{{ url('/products') }}">نرم‌افزار بازیابی</a>
-          <a href="{{ url('/products') }}">ابزار تعمیرات</a>
-          <a href="{{ url('/cart') }}">سبد خرید</a>
-          <a href="{{ url('/orders/track') }}">پیگیری سفارش</a>
-          <a href="{{ url('/checkout') }}">تسویه‌حساب</a>
+          <h4>{{ $ch['footer_col2_title'] ?? 'فروشگاه' }}</h4>
+          @foreach($chLinks($ch['footer_col2_links'] ?? '') as $lnk)
+            <a href="{{ $chHref($lnk['url']) }}">{{ $lnk['label'] }}</a>
+          @endforeach
         </div>
         <div class="footer-col">
-          <h4>آموزش و بلاگ</h4>
-          <a href="{{ url('/training') }}">آموزش تعمیرات هارد</a>
-          <a href="{{ url('/training') }}">آموزش بازیابی اطلاعات</a>
-          <a href="{{ url('/blog') }}">بلاگ آموزشی</a>
-          <a href="{{ url('/contact') }}">تماس و پشتیبانی</a>
+          <h4>{{ $ch['footer_col3_title'] ?? 'آموزش و بلاگ' }}</h4>
+          @foreach($chLinks($ch['footer_col3_links'] ?? '') as $lnk)
+            <a href="{{ $chHref($lnk['url']) }}">{{ $lnk['label'] }}</a>
+          @endforeach
         </div>
         <div class="footer-col footer-contact">
-          <h4>تماس با ما</h4>
+          <h4>{{ $ch['footer_contact_title'] ?? 'تماس با ما' }}</h4>
           <a href="tel:{{ \App\Models\Setting::getValue('shop_phone', '02100000000') }}">{{ \App\Models\Setting::getValue('shop_phone', '۰۲۱-۰۰۰۰۰۰۰۰') }}</a>
           <a href="{{ url('/contact') }}">فرم تماس</a>
           <a href="{{ url('/contact') }}">پذیرش حضوری</a>
           <div class="footer-hours">
-            <b>ساعات پاسخگویی</b>
-            <span>شنبه تا پنجشنبه · ۹ تا ۱۸</span>
+            <b>{{ $ch['footer_hours_title'] ?? 'ساعات پاسخگویی' }}</b>
+            <span>{{ $ch['footer_hours_text'] ?? 'شنبه تا پنجشنبه · ۹ تا ۱۸' }}</span>
           </div>
         </div>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© {{ $shopName }} — همه حقوق محفوظ است</span>
+      <span>© {{ $shopName }} {{ $ch['footer_copyright'] ?? '— همه حقوق محفوظ است' }}</span>
       <div class="footer-bottom-links">
-        <a href="{{ url('/about') }}">درباره ما</a>
-        <a href="{{ url('/contact') }}">تماس</a>
-        <a href="{{ url('/blog') }}">بلاگ</a>
+        @foreach($chLinks($ch['footer_bottom_links'] ?? '') as $lnk)
+          <a href="{{ $chHref($lnk['url']) }}">{{ $lnk['label'] }}</a>
+        @endforeach
       </div>
     </div>
   </footer>
