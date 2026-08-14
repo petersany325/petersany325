@@ -9,6 +9,7 @@ use HddLand\Bot\Services\ContentService;
 use HddLand\Bot\Services\FaqService;
 use HddLand\Bot\Services\ForumService;
 use HddLand\Bot\Services\ShopService;
+use HddLand\Bot\Services\LicenseFlowService;
 use HddLand\Bot\Services\SupportFormService;
 use HddLand\Bot\Services\TicketService;
 use HddLand\Bot\Support\Presenter;
@@ -24,8 +25,11 @@ final class MessageRouter
         $text = $ctx->text;
         $from = $ctx->from;
 
-        // Media for Pro Desk
+        // License / receipt / activation media first
         if (isset($message['photo']) || isset($message['video']) || isset($message['document'])) {
+            if (LicenseFlowService::handleMedia($message, $lang)) {
+                return;
+            }
             if (!function_exists('feature_on') || feature_on('prodesk')) {
                 if (function_exists('handle_request_media_message') && handle_request_media_message($message, $lang)) {
                     return;
@@ -44,6 +48,11 @@ final class MessageRouter
                     return;
                 }
             }
+        }
+
+        // Account registration + license flow text steps
+        if ($text !== '' && LicenseFlowService::handleText($chatId, $userId, $text, $lang)) {
+            return;
         }
 
         // Advanced support / ticket form + optional phone gate for My Tickets
@@ -275,6 +284,37 @@ final class MessageRouter
                     break;
                 }
                 AiService::ask($chatId, $arg);
+                break;
+
+            case 'account':
+            case 'myaccount':
+                LicenseFlowService::showAccount($chatId, 0, $userId, $lang);
+                break;
+
+            case 'approvereceipt':
+                if (!is_admin($userId)) {
+                    send_message($chatId, '🔒 Admins only.');
+                    break;
+                }
+                if (!ctype_digit(trim($arg))) {
+                    send_message($chatId, 'Usage: /approvereceipt ID');
+                    break;
+                }
+                $res = LicenseFlowService::approveReceipt((int)$arg, $userId);
+                send_message($chatId, $res['msg']);
+                break;
+
+            case 'rejectreceipt':
+                if (!is_admin($userId)) {
+                    send_message($chatId, '🔒 Admins only.');
+                    break;
+                }
+                if (!ctype_digit(trim($arg))) {
+                    send_message($chatId, 'Usage: /rejectreceipt ID');
+                    break;
+                }
+                $res = LicenseFlowService::rejectReceipt((int)$arg, $userId);
+                send_message($chatId, $res['msg']);
                 break;
 
             case 'cart':

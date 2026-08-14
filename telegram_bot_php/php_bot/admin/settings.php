@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('ok', 'Commerce / payments settings saved.');
             $tab = 'commerce';
         } elseif ($action === 'save_license') {
-            foreach (array('license_help_text_en','license_help_text_fa','license_check_url','renewal_message_en','renewal_message_fa') as $k) {
+            foreach (array('license_help_text_en','license_help_text_fa','license_check_url','renewal_message_en','renewal_message_fa','license_mailbox') as $k) {
                 $cfg[$k] = trim((string)($_POST[$k] ?? ''));
             }
             $cfg['renewal_days_before'] = max(1, (int)($_POST['renewal_days_before'] ?? 14));
@@ -418,6 +418,9 @@ require __DIR__ . '/layout_header.php';
   <h2>License & renewal</h2>
   <form method="post" class="stack">
     <input type="hidden" name="action" value="save_license">
+    <label>License mailbox (send/receive)</label>
+    <input name="license_mailbox" value="<?= e((string)($cfg['license_mailbox'] ?? 'sedivlic@list.ru')) ?>" placeholder="sedivlic@list.ru">
+    <p class="muted">All license/activation emails use this address (sample flow).</p>
     <label>License help text (EN)</label>
     <textarea name="license_help_text_en" rows="4"><?= e((string)($cfg['license_help_text_en'] ?? '')) ?></textarea>
     <label>License help text (FA)</label>

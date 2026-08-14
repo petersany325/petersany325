@@ -45,6 +45,8 @@ $user = $_SESSION['hddland_admin_user'] ?? 'admin';
     <a class="<?= $active === 'broadcast' ? 'on' : '' ?>" href="broadcast.php">Broadcast</a>
     <a class="<?= $active === 'languages' ? 'on' : '' ?>" href="languages.php">Languages</a>
     <a class="<?= $active === 'users' ? 'on' : '' ?>" href="users.php">Users</a>
+    <a class="<?= $active === 'user_options' ? 'on' : '' ?>" href="user_options.php">User Options</a>
+    <a class="<?= $active === 'receipts' ? 'on' : '' ?>" href="receipts.php">Receipts & Licenses</a>
     <a class="<?= $active === 'admins' ? 'on' : '' ?>" href="admins.php">Admins & Access</a>
     <a class="<?= $active === 'settings' ? 'on' : '' ?>" href="settings.php">Settings ★</a>
     <a class="<?= $active === 'password' ? 'on' : '' ?>" href="password.php">Change Password</a>

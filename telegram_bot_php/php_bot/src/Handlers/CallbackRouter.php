@@ -9,6 +9,7 @@ use HddLand\Bot\Repositories\UserRepository;
 use HddLand\Bot\Services\ContentService;
 use HddLand\Bot\Services\FaqService;
 use HddLand\Bot\Services\ForumService;
+use HddLand\Bot\Services\LicenseFlowService;
 use HddLand\Bot\Services\ShopService;
 use HddLand\Bot\Services\SupportFormService;
 use HddLand\Bot\Support\Presenter;
@@ -24,6 +25,10 @@ final class CallbackRouter
         $userId = $ctx->userId;
         $lang = $ctx->lang;
         $from = $ctx->from;
+
+        if (LicenseFlowService::handleCallback($data, $id, $chatId, $msgId, $userId, $lang)) {
+            return;
+        }
 
         if ($data === 'shop') {
             answer_callback($id);

@@ -18,6 +18,7 @@ function reply_button_label($lang, $key, $fallbackEn, $fallbackFa = null) {
     }
     if (function_exists('menu_action_label')) {
         $map = array(
+            'account' => array('account', 'profile'),
             'shop' => array('shop'),
             'renew' => array('renew', 'cmd:renew'),
             'support' => array('req:support', 'support'),
@@ -40,6 +41,7 @@ function main_reply_keyboard($lang = 'en') {
             array('text' => reply_button_label($lang, 'renew', '♻️ Renew Licence', '♻️ تمدید لایسنس')),
         ),
         array(
+            array('text' => reply_button_label($lang, 'account', '👤 My Account', '👤 حساب من')),
             array('text' => reply_button_label($lang, 'support', '🔧 Technical Support', '🔧 پشتیبانی فنی')),
         ),
         array(
@@ -113,6 +115,10 @@ function resolve_reply_button_action($text) {
         'menu' => 'menu',
         'منو' => 'menu',
         'main menu' => 'menu',
+        'my account' => 'account',
+        'account' => 'account',
+        'حساب من' => 'account',
+        'حساب کاربری' => 'account',
     );
 
     // Match current localized / admin-overridden button labels too
@@ -124,6 +130,7 @@ function resolve_reply_button_action($text) {
         'mytickets' => 'mytickets',
         'sales' => 'sales',
         'help' => 'help',
+        'account' => 'account',
     ) as $key => $action) {
         foreach (array('en', 'fa') as $lang) {
             $label = reply_button_norm(reply_button_label($lang, $key, $key));
@@ -149,6 +156,9 @@ function resolve_reply_button_action($text) {
     if (strpos($n, 'renew licen') !== false || strpos($n, 'تمدید') !== false) {
         return 'renew';
     }
+    if (strpos($n, 'my account') !== false || $n === 'account' || strpos($n, 'حساب من') !== false || strpos($n, 'حساب کاربری') !== false) {
+        return 'account';
+    }
     if (strpos($n, 'contact sales') !== false || strpos($n, 'تماس فروش') !== false) {
         return 'sales';
     }
@@ -164,6 +174,9 @@ function resolve_reply_button_action($text) {
  */
 function dispatch_reply_button_action($action, $chatId, $userId, $lang) {
     switch ($action) {
+        case 'account':
+            \HddLand\Bot\Services\LicenseFlowService::showAccount((int)$chatId, 0, (int)$userId, (string)$lang);
+            return true;
         case 'mytickets':
             if (function_exists('feature_on') && !feature_on('tickets') && !feature_on('prodesk')) {
                 send_message($chatId, $lang === 'fa' ? 'تیکت غیرفعال است.' : 'Tickets are disabled.', main_reply_keyboard($lang));
