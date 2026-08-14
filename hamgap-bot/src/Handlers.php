@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v10.7.1';
+    public const CODE_VERSION = '2026-08-14-v10.7.2';
 
     private string $assets;
     private Settings $settings;
@@ -454,6 +454,8 @@ final class Handlers
         $from = $cq['from'] ?? [];
         $tid = (int)($from['id'] ?? 0);
         $user = $this->db->upsertUser($tid, $from['username'] ?? null, $from['first_name'] ?? null);
+        $this->db->touchSeen($tid);
+        $user = $this->db->findUser($tid) ?? $user;
 
         // Admin console — always hand off; AdminHandlers enforces login
         if (str_starts_with($data, 'adm:')) {
@@ -2025,6 +2027,47 @@ final class Handlers
         ]);
     }
 
+    /**
+     * Presence line for browse results.
+     * Respects privacy show_online. Compact = short for lists/menus.
+     */
+    private function formatPresence(array $target, bool $compact = false): string
+    {
+        if ((int)($target['show_online'] ?? 1) !== 1) {
+            return '';
+        }
+        $raw = (string)($target['last_seen_at'] ?? '');
+        if ($raw === '') {
+            return $compact ? '⚪' : '⚪ وضعیت نامشخص';
+        }
+        $ts = strtotime($raw);
+        if (!$ts) {
+            return $compact ? '⚪' : '⚪ وضعیت نامشخص';
+        }
+        $sec = max(0, time() - $ts);
+        // Online window: active in last 3 minutes
+        if ($sec < 180) {
+            return $compact ? '🟢' : '🟢 آنلاین الان';
+        }
+        if ($sec < 3600) {
+            $m = max(1, (int)floor($sec / 60));
+            return $compact ? "🟡 {$m}د" : "🟡 آخرین بازدید {$m} دقیقه پیش";
+        }
+        if ($sec < 86400) {
+            $h = max(1, (int)floor($sec / 3600));
+            return $compact ? "🟠 {$h}س" : "🟠 آخرین بازدید {$h} ساعت پیش";
+        }
+        if ($sec < 86400 * 7) {
+            $d = max(1, (int)floor($sec / 86400));
+            return $compact ? "⚪ {$d}ر" : "⚪ آخرین بازدید {$d} روز پیش";
+        }
+        if ($sec < 86400 * 30) {
+            $w = max(1, (int)floor($sec / (86400 * 7)));
+            return $compact ? "⚪ {$w}هفته" : "⚪ آخرین بازدید حدود {$w} هفته پیش";
+        }
+        return $compact ? '⚪ قدیمی' : '⚪ آخرین بازدید بیش از یک ماه پیش';
+    }
+
     private function shortProfileLabel(array $target, bool $compact): string
     {
         $dn = (string)($target['display_name'] ?? 'کاربر');
@@ -2037,14 +2080,16 @@ final class Handlers
         }
         $age = ((int)($target['show_age'] ?? 1) === 1) ? (string)(int)($target['age'] ?? 0) : '';
         $city = ((int)($target['show_city'] ?? 1) === 1) ? (string)($target['city'] ?? '') : '';
+        $presence = $this->formatPresence($target, true);
         if ($compact) {
-            return trim($g . ' ' . $dn . ($age !== '' ? ' ' . $age : ''));
+            return trim($presence . ' ' . $g . ' ' . $dn . ($age !== '' ? ' ' . $age : ''));
         }
         $parts = array_filter([
             $dn,
             ((int)($target['show_gender'] ?? 1) === 1) ? Gender::short((string)($target['gender'] ?? '')) : null,
             $age !== '' ? $age . 'ساله' : null,
             $city !== '' ? $city : null,
+            $presence !== '' ? $presence : null,
         ]);
         return htmlspecialchars(implode(' · ', $parts), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
@@ -2075,17 +2120,9 @@ final class Handlers
         if ($loc) {
             $lines[] = implode(' · ', $loc);
         }
-        if ((int)($target['show_online'] ?? 1) === 1) {
-            $online = 'آفلاین';
-            if (!empty($target['last_seen_at'])) {
-                $ts = strtotime((string)$target['last_seen_at']);
-                if ($ts && (time() - $ts) < 300) {
-                    $online = 'آنلاین الان';
-                } elseif ($ts && (time() - $ts) < 3600) {
-                    $online = 'فعال اخیراً';
-                }
-            }
-            $lines[] = $online;
+        $presence = $this->formatPresence($target, false);
+        if ($presence !== '') {
+            $lines[] = $presence;
         }
         $bio = trim((string)($target['bio'] ?? ''));
         if ($bio !== '' && !$short) {
