@@ -12,6 +12,7 @@ $files = array(
     'src/Handlers/MessageRouter.php',
     'src/Handlers/CallbackRouter.php',
     'src/Services/SupportFormService.php',
+    'src/Services/ExtraMenusService.php',
     'src/Services/UserOptionsService.php',
     'src/Services/LicenseFlowService.php',
     'src/BotKernel.php',
