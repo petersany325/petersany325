@@ -7,6 +7,9 @@ return [
     'bot_token' => 'REPLACE_BOT_TOKEN',
     'bot_username' => 'HamGapXBot',
     'bot_name' => 'هم‌گپ',
+    // Separate Telegram bots (no website admin panel required)
+    'admin_bot_token' => '',
+    'support_bot_token' => '',
     'admin_ids' => [],
 
     'db' => [

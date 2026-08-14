@@ -11,31 +11,19 @@ if (!is_file($configFile)) {
 }
 
 $config = require $configFile;
+$token = (string)($config['admin_bot_token'] ?? '');
+if ($token === '') {
+    http_response_code(503);
+    echo 'admin bot not configured';
+    exit;
+}
+
 require __DIR__ . '/src/Database.php';
 require __DIR__ . '/src/Settings.php';
 require __DIR__ . '/src/Migrator.php';
 require __DIR__ . '/src/Telegram.php';
-require __DIR__ . '/src/IranLocations.php';
 require __DIR__ . '/src/Keyboards.php';
-require __DIR__ . '/src/Matcher.php';
-require __DIR__ . '/src/Handlers.php';
-
-if (function_exists('opcache_invalidate')) {
-    foreach ([
-        __DIR__ . '/config.php',
-        __DIR__ . '/src/Database.php',
-        __DIR__ . '/src/Settings.php',
-        __DIR__ . '/src/Migrator.php',
-        __DIR__ . '/src/Telegram.php',
-        __DIR__ . '/src/IranLocations.php',
-        __DIR__ . '/src/Keyboards.php',
-        __DIR__ . '/src/Matcher.php',
-        __DIR__ . '/src/Handlers.php',
-        __FILE__,
-    ] as $f) {
-        @opcache_invalidate($f, true);
-    }
-}
+require __DIR__ . '/src/AdminHandlers.php';
 
 $secret = $_GET['secret'] ?? '';
 if (!hash_equals((string)$config['webhook_secret'], (string)$secret)) {
@@ -56,13 +44,12 @@ try {
     $db = new Database($config['db']);
     Migrator::ensure($db);
     $settings = new Settings($db);
-    $tg = new Telegram($config['bot_token']);
-    $matcher = new Matcher($db, $settings);
-    $handler = new Handlers($config, $db, $tg, $matcher, $settings);
+    $tg = new Telegram($token);
+    $handler = new AdminHandlers($config, $db, $tg, $settings);
     $handler->handle($update);
     echo 'ok';
 } catch (Throwable $e) {
-    @file_put_contents(__DIR__ . '/storage/error.log', date('c') . ' ' . $e->getMessage() . "\n", FILE_APPEND);
+    @file_put_contents(__DIR__ . '/storage/error.log', date('c') . ' admin ' . $e->getMessage() . "\n", FILE_APPEND);
     http_response_code(200);
     echo 'err';
 }

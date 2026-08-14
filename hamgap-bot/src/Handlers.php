@@ -2,22 +2,25 @@
 declare(strict_types=1);
 
 /**
- * HamGap handlers v9 — connect / find / profile / wallet / invite.
+ * HamGap handlers v10 — free search, profile browse cards, support, coin requests.
  * CODE_VERSION verifies deploys. Migrator keeps DB forward-compatible.
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v9.1';
+    public const CODE_VERSION = '2026-08-14-v10';
 
     private string $assets;
+    private Settings $settings;
 
     public function __construct(
         private array $config,
         private Database $db,
         private Telegram $tg,
-        private Matcher $matcher
+        private Matcher $matcher,
+        ?Settings $settings = null
     ) {
         $this->assets = rtrim((string)$config['assets_path'], '/');
+        $this->settings = $settings ?? new Settings($db);
     }
 
     public function handle(array $update): void
@@ -139,6 +142,9 @@ final class Handlers
             $from['username'] ?? null,
             $from['first_name'] ?? null
         );
+        $this->db->ensureIdentity($user);
+        $this->db->touchSeen($tid);
+        $user = $this->db->findUser($tid) ?? $user;
 
         if (($user['status'] ?? '') === 'banned') {
             $this->tg->sendMessage($chatId, 'حساب شما مسدود شده است.');
@@ -146,6 +152,27 @@ final class Handlers
         }
 
         $text = trim((string)($message['text'] ?? ''));
+
+        // Admin flows (settings typing) on main bot
+        if (str_starts_with((string)($user['flow'] ?? ''), 'adm:')) {
+            $admins = array_map('intval', $this->config['admin_ids'] ?? []);
+            if (in_array($tid, $admins, true) || !empty($user['is_admin'])) {
+                require_once __DIR__ . '/AdminHandlers.php';
+                $admin = new AdminHandlers($this->config, $this->db, $this->tg, $this->settings);
+                $admin->handle(['message' => $message]);
+                return;
+            }
+        }
+
+        // Compose short message to a browsed profile
+        if (str_starts_with((string)($user['flow'] ?? ''), 'br:compose:') && $text !== '') {
+            $this->sendBrowseMessage($chatId, $user, $text);
+            return;
+        }
+        if (($user['flow'] ?? '') === 'support:compose' && $text !== '' && !str_starts_with($text, '/')) {
+            $this->forwardSupportFromMain($chatId, $user, $text);
+            return;
+        }
 
         // Avatar upload
         if (!empty($message['photo']) && ($user['flow'] ?? '') === 'set:avatar') {
@@ -210,6 +237,17 @@ final class Handlers
         }
 
         // Slash commands (profile complete)
+        if ($text === '/admin') {
+            $admins = array_map('intval', $this->config['admin_ids'] ?? []);
+            if (!in_array($tid, $admins, true) && empty($user['is_admin'])) {
+                $this->tg->sendMessage($chatId, 'دسترسی ادمین نداری.');
+                return;
+            }
+            require_once __DIR__ . '/AdminHandlers.php';
+            $admin = new AdminHandlers($this->config, $this->db, $this->tg, $this->settings);
+            $admin->handle(['message' => $message]);
+            return;
+        }
         if ($text === '/profile') {
             $this->clearUi($chatId, $user);
             $this->showProfile($chatId, $user);
@@ -289,14 +327,16 @@ final class Handlers
         }
 
         match ($text) {
-            '🔗 وصلم کن به ناشناس' => $this->showConnect($chatId, $user),
-            '🔍 پیدا کردن مخاطب' => $this->showFind($chatId, $user),
-            '💎 سکه‌ها' => $this->showWallet($chatId, $user),
-            '👤 پروفایل من' => $this->showProfile($chatId, $user),
+            '🔗 وصلم کن به ناشناس', '🔗 وصل ناشناس' => $this->showConnect($chatId, $user),
+            '🔍 پیدا کردن مخاطب', '🔍 جستجوی کاربران' => $this->showFind($chatId, $user),
+            '👥 وصل به دوستان' => $this->showFriends($chatId, $user),
+            '💎 سکه‌ها', '💎 کیف‌پول' => $this->showWallet($chatId, $user),
+            '👤 پروفایل من', '👤 پروفایل' => $this->showProfile($chatId, $user),
+            '🆘 پشتیبانی' => $this->showSupport($chatId, $user),
             'ℹ️ راهنما' => $this->showHelp($chatId, $user),
             default => (function () use ($chatId, &$user): void {
                 $this->clearUi($chatId, $user);
-                $this->showMain($chatId, $user, 'از منوی زیر یک گزینه را لمس کن 🙂');
+                $this->showMain($chatId, $user, 'از منوی زیر یک گزینه را لمس کن.');
             })(),
         };
     }
@@ -310,6 +350,19 @@ final class Handlers
         $from = $cq['from'] ?? [];
         $tid = (int)($from['id'] ?? 0);
         $user = $this->db->upsertUser($tid, $from['username'] ?? null, $from['first_name'] ?? null);
+
+        // Admin console callbacks (same bot fallback until dedicated admin bot is wired)
+        if (str_starts_with($data, 'adm:')) {
+            $admins = array_map('intval', $this->config['admin_ids'] ?? []);
+            if (!in_array($tid, $admins, true) && empty($user['is_admin'])) {
+                $this->tg->answerCallback($id, 'دسترسی ندارید', true);
+                return;
+            }
+            require_once __DIR__ . '/AdminHandlers.php';
+            $admin = new AdminHandlers($this->config, $this->db, $this->tg, $this->settings);
+            $admin->handle(['callback_query' => $cq]);
+            return;
+        }
 
         if (($user['status'] ?? '') === 'banned') {
             $this->tg->answerCallback($id, 'مسدود شده‌اید', true);
@@ -518,7 +571,6 @@ final class Handlers
             }
             $flow = (string)($user['flow'] ?? '');
             $filters = [];
-            $note = '';
             if (preg_match('/^find:(\d+):(\d+)$/', $flow, $fm)) {
                 $provinces = IranLocations::provinces();
                 $provIdx = (int)$fm[1];
@@ -528,19 +580,96 @@ final class Handlers
                     $cities = IranLocations::cities($province);
                     $city = $cities[$cityIdx] ?? '';
                     $filters['province'] = $province;
-                    $pSafe = htmlspecialchars($province, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                    $cSafe = htmlspecialchars($city, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                    $note = $city !== ''
-                        ? "محدوده: {$pSafe} / {$cSafe}"
-                        : "محدوده: {$pSafe}";
+                    if ($city !== '') {
+                        $filters['city'] = $city;
+                    }
                 }
             }
-            $this->db->updateUser($tid, ['flow' => null]);
+            if (in_array($g, ['male', 'female'], true)) {
+                $filters['gender'] = $g;
+            }
+            $encoded = rawurlencode(json_encode($filters, JSON_UNESCAPED_UNICODE));
+            $this->db->updateUser($tid, [
+                'flow' => 'browse:' . $encoded,
+                'browse_cursor' => 0,
+            ]);
+            $this->tg->answerCallback($id, 'جستجو رایگان ✅');
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->showNextBrowseCard($chatId, $user);
+            return;
+        }
+
+        // Browse profile actions
+        if ($data === 'br:next') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->showNextBrowseCard($chatId, $user);
+            return;
+        }
+        if (str_starts_with($data, 'br:req:')) {
+            $code = substr($data, strlen('br:req:'));
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->sendBrowseRequest($chatId, $user, $code);
+            return;
+        }
+        if (str_starts_with($data, 'br:msg:')) {
+            $code = substr($data, strlen('br:msg:'));
+            $target = $this->db->findByPublicCode($code);
+            if (!$target) {
+                $this->tg->answerCallback($id, 'کاربر پیدا نشد', true);
+                return;
+            }
+            $this->db->updateUser($tid, ['flow' => 'br:compose:' . $code]);
+            $this->tg->answerCallback($id, 'متن پیام را بفرست');
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $cost = $this->settings->getInt('message_cost', 1);
+            $this->clearUi($chatId, $user);
+            $dn = htmlspecialchars((string)($target['display_name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $this->uiText(
+                $chatId,
+                $user,
+                "پیام کوتاه برای <b>{$dn}</b>\nهزینه ارسال: <b>{$cost}</b> سکه\nمتن را همین‌جا بنویس."
+            );
+            return;
+        }
+        if (str_starts_with($data, 'br:rep:')) {
+            $code = substr($data, strlen('br:rep:'));
+            $target = $this->db->findByPublicCode($code);
+            if ($target) {
+                $this->db->pdo()->prepare(
+                    'INSERT INTO reports (reporter_id, reported_id, reason) VALUES (?, ?, ?)'
+                )->execute([$tid, (int)$target['telegram_id'], 'browse_report']);
+            }
+            $this->tg->answerCallback($id, 'گزارش ثبت شد');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->showNextBrowseCard($chatId, $user);
+            return;
+        }
+        if (str_starts_with($data, 'br:blk:')) {
+            $code = substr($data, strlen('br:blk:'));
+            $target = $this->db->findByPublicCode($code);
+            if ($target) {
+                $this->db->blockUser($tid, (int)$target['telegram_id']);
+            }
+            $this->tg->answerCallback($id, 'بلاک شد');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->showNextBrowseCard($chatId, $user);
+            return;
+        }
+        if ($data === 'support:compose') {
+            $this->db->updateUser($tid, ['flow' => 'support:compose']);
             $this->tg->answerCallback($id);
             $this->stripCallbackMenu($cq);
             $user = $this->db->findUser($tid) ?? $user;
             $this->clearUi($chatId, $user);
-            $this->startChat($chatId, $user, $g, $filters, $note);
+            $this->uiText($chatId, $user, "پیام پشتیبانی را بنویس.\nهمکاران ما پاسخ می‌دهند.");
             return;
         }
 
@@ -584,6 +713,14 @@ final class Handlers
             case 'menu:help':
                 $this->clearUi($chatId, $user);
                 $this->showHelp($chatId, $user);
+                break;
+            case 'menu:friends':
+                $this->clearUi($chatId, $user);
+                $this->showFriends($chatId, $user);
+                break;
+            case 'menu:support':
+                $this->clearUi($chatId, $user);
+                $this->showSupport($chatId, $user);
                 break;
             case 'menu:invite':
                 $this->clearUi($chatId, $user);
@@ -695,12 +832,13 @@ final class Handlers
             return;
         }
         $this->db->updateUser($myTid, ['referred_by' => $refTid]);
-        $this->db->addCoins($refTid, 20, 'referral', (string)$myTid);
+        $reward = $this->settings->getInt('invite_reward', 30);
+        $this->db->addCoins($refTid, $reward, 'referral', (string)$myTid);
         $user = $this->db->findUser($myTid) ?? $user;
         try {
             $this->tg->sendMessage(
                 $refTid,
-                "🎉 یک دوست با لینک دعوتت وارد شد!\n<b>+۲۰ سکه</b> به حسابت اضافه شد."
+                "یک دوست با لینک دعوتت وارد شد.\n<b>+{$reward} سکه</b> به حسابت اضافه شد."
             );
         } catch (Throwable $e) {
             // ignore notify failures
@@ -839,22 +977,20 @@ final class Handlers
     {
         $this->clearUi($chatId, $user);
         $name = $this->botName();
+        $invite = $this->settings->getInt('invite_reward', 30);
+        $msgCost = $this->settings->getInt('message_cost', 1);
+        $reqCost = $this->settings->getInt('request_cost', 1);
         $this->uiText(
             $chatId,
             $user,
-            "📘 <b>راهنمای {$name}</b>\n\n" .
-            "🔻 <b>{$name} چیه؟</b>\n" .
-            "ربات چت ناشناس برای حرف‌زدن با افراد جدید — بدون نمایش هویت تلگرام.\n\n" .
-            "🔻 <b>وصلم کن به ناشناس</b>\n" .
-            "چت شانسی رایگان، یا فیلتر دختر/پسر/هم‌استان/هم‌سن.\n\n" .
-            "🔻 <b>پیدا کردن مخاطب</b>\n" .
-            "استان و شهر را انتخاب کن، بعد جنسیت — جستجو شروع می‌شود.\n\n" .
-            "🔻 <b>سکه‌ها</b>\n" .
-            "برای فیلترهای غیررایگان. با دعوت دوست +۲۰ سکه بگیر.\n\n" .
-            "🔻 <b>پروفایل</b>\n" .
-            "نام کاربری، عکس، جنسیت، سن و موقعیت را مدیریت کن.\n\n" .
+            "راهنمای <b>{$name}</b>\n\n" .
+            "وصل ناشناس — اتصال رندوم رایگان\n" .
+            "جستجوی کاربران — مرور پروفایل‌ها کاملاً رایگان (حتی فیلتر دختر)\n" .
+            "درخواست گفتگو / پیام کوتاه — هر کدام {$reqCost} و {$msgCost} سکه\n" .
+            "دعوت دوستان — هر دعوت موفق +{$invite} سکه\n" .
+            "پشتیبانی — ارتباط با تیم خدمات\n\n" .
             "دستورها: /profile /coins /search /link\n\n" .
-            "⚠️ رمز، کارت بانکی و لینک مشکوک را نفرست."
+            "رمز، کارت بانکی و لینک مشکوک نفرست."
         );
     }
 
@@ -896,13 +1032,46 @@ final class Handlers
     private function showFind(int $chatId, array &$user): void
     {
         $this->clearUi($chatId, $user);
-        $this->db->updateUser((int)$user['telegram_id'], ['flow' => null]);
+        $this->db->updateUser((int)$user['telegram_id'], ['flow' => null, 'browse_cursor' => 0]);
         $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         $this->uiText(
             $chatId,
             $user,
-            "🔍 <b>پیدا کردن مخاطب</b>\nاول استان مورد نظرت را انتخاب کن 👇",
+            "جستجوی کاربران · <b>کاملاً رایگان</b>\n" .
+            "استان را انتخاب کن؛ بعد کارت پروفایل‌ها را یکی‌یکی می‌بینی.\n" .
+            "فقط وقتی درخواست گفتگو یا پیام بفرستی سکه کم می‌شود.",
             ['reply_markup' => Keyboards::findProvinces()]
+        );
+    }
+
+    private function showFriends(int $chatId, array &$user): void
+    {
+        $this->clearUi($chatId, $user);
+        $invite = $this->settings->getInt('invite_reward', 30);
+        $this->uiText(
+            $chatId,
+            $user,
+            "وصل به دوستان\n\n" .
+            "لینک دعوتت را برای دوستانت بفرست.\n" .
+            "هر نفری که با لینک تو وارد شود، <b>+{$invite} سکه</b> می‌گیری.\n" .
+            "بعداً می‌توانی از طریق جستجو یا چت ناشناس به جمع وصل شوی.",
+            ['reply_markup' => Keyboards::friendsInline()]
+        );
+    }
+
+    private function showSupport(int $chatId, array &$user): void
+    {
+        $this->clearUi($chatId, $user);
+        $u = trim($this->settings->get('support_bot_username'));
+        $hours = htmlspecialchars($this->settings->get('support_hours'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $line = $u !== ''
+            ? 'بات پشتیبانی: <b>@' . htmlspecialchars($u, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>'
+            : 'بات پشتیبانی هنوز از پنل ادمین تنظیم نشده؛ می‌توانی همین‌جا پیام بفرستی.';
+        $this->uiText(
+            $chatId,
+            $user,
+            "پشتیبانی و خدمات هم‌گپ\n{$line}\nساعات پاسخگویی: <b>{$hours}</b>",
+            ['reply_markup' => Keyboards::supportInline($u !== '' ? $u : null)]
         );
     }
 
@@ -913,12 +1082,13 @@ final class Handlers
         $dn = htmlspecialchars((string)($user['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $prov = htmlspecialchars((string)($user['province'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $city = htmlspecialchars((string)($user['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $text = "👤 <b>پروفایل من</b>\n" .
-            "نام کاربری: <b>{$dn}</b>\n" .
-            "جنسیت: <b>{$g}</b>\n" .
-            "سن: <b>" . ($user['age'] ?? '-') . "</b>\n" .
-            "استان: <b>{$prov}</b>\n" .
-            "شهر: <b>{$city}</b>\n" .
+        $pc = htmlspecialchars((string)($user['public_code'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $text = "پروفایل من\n" .
+            "────────────\n" .
+            "<b>{$dn}</b>\n" .
+            "کد عمومی: <code>{$pc}</code>\n" .
+            "{$g} · سن " . ($user['age'] ?? '-') . "\n" .
+            "{$prov} / {$city}\n" .
             "سکه: <b>" . (int)$user['coins'] . "</b>";
 
         $avatar = (string)($user['avatar_file_id'] ?? '');
@@ -934,15 +1104,20 @@ final class Handlers
     private function showWallet(int $chatId, array &$user): void
     {
         $this->clearUi($chatId, $user);
+        $invite = $this->settings->getInt('invite_reward', 30);
+        $msgCost = $this->settings->getInt('message_cost', 1);
+        $reqCost = $this->settings->getInt('request_cost', 1);
         $path = $this->assets . '/menu-wallet.jpg';
-        $caption = "💎 <b>سکه‌های تو</b>\n" .
+        $caption = "کیف‌پول تو\n" .
             "موجودی: <b>" . (int)$user['coins'] . "</b> سکه\n\n" .
-            "با دعوت دوست +۲۰ سکه بگیر، یا از پکیج‌های زیر شارژ کن.";
+            "جستجو رایگان است.\n" .
+            "هر پیام کوتاه: {$msgCost} سکه · هر درخواست گفتگو: {$reqCost} سکه\n" .
+            "دعوت دوست: +{$invite} سکه";
         if (is_file($path)) {
-            $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::walletInline());
+            $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::walletInline($invite));
         } else {
             $this->uiText($chatId, $user, $caption, [
-                'reply_markup' => Keyboards::walletInline(),
+                'reply_markup' => Keyboards::walletInline($invite),
             ]);
         }
     }
@@ -955,12 +1130,13 @@ final class Handlers
         $uname = $this->botUsername();
         $link = 'https://t.me/' . $uname . '?start=ref_' . $code;
         $safeLink = htmlspecialchars($link, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $invite = $this->settings->getInt('invite_reward', 30);
         $this->uiText(
             $chatId,
             $user,
-            "✨ <b>دعوت دوستان</b>\n\n" .
+            "دعوت دوستان\n\n" .
             "لینک اختصاصی تو:\n<code>{$safeLink}</code>\n\n" .
-            "هر دوست جدیدی که با این لینک وارد شود و ثبت‌نام را شروع کند، <b>+۲۰ سکه</b> به تو می‌رسد."
+            "هر دوست جدیدی که با این لینک وارد شود، <b>+{$invite} سکه</b> می‌گیری."
         );
     }
 
@@ -1087,5 +1263,187 @@ final class Handlers
             )->execute([(int)$user['telegram_id'], $partnerId, 'user_report']);
         }
         $this->endAndMenu($chatId, $user);
+    }
+
+    /** @return array{province?:string,city?:string,gender?:string} */
+    private function browseFiltersFromUser(array $user): array
+    {
+        $flow = (string)($user['flow'] ?? '');
+        if (!str_starts_with($flow, 'browse:')) {
+            return [];
+        }
+        $raw = rawurldecode(substr($flow, strlen('browse:')));
+        $decoded = json_decode($raw, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    private function showNextBrowseCard(int $chatId, array &$user): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $filters = $this->browseFiltersFromUser($user);
+        // Keep browse flow sticky
+        if (!str_starts_with((string)($user['flow'] ?? ''), 'browse:')) {
+            $encoded = rawurlencode(json_encode($filters, JSON_UNESCAPED_UNICODE));
+            $this->db->updateUser($tid, ['flow' => 'browse:' . $encoded]);
+            $user = $this->db->findUser($tid) ?? $user;
+        }
+        $cursor = (int)($user['browse_cursor'] ?? 0);
+        $target = $this->db->nextBrowseProfile($tid, $cursor, $filters);
+        if (!$target) {
+            $this->uiText($chatId, $user, "کسی با این فیلتر پیدا نشد.\nاستان دیگری را امتحان کن یا بعداً برگرد.", [
+                'reply_markup' => Keyboards::findProvinces(),
+            ]);
+            return;
+        }
+        $this->db->ensureIdentity($target);
+        $target = $this->db->findUser((int)$target['telegram_id']) ?? $target;
+        $this->db->updateUser($tid, ['browse_cursor' => (int)$target['id']]);
+        $user = $this->db->findUser($tid) ?? $user;
+        $this->renderBrowseCard($chatId, $user, $target);
+    }
+
+    private function renderBrowseCard(int $chatId, array &$viewer, array $target): void
+    {
+        $this->db->ensureIdentity($target);
+        $target = $this->db->findUser((int)$target['telegram_id']) ?? $target;
+        $dn = htmlspecialchars((string)($target['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $g = ($target['gender'] ?? '') === 'female' ? 'دختر' : (($target['gender'] ?? '') === 'male' ? 'پسر' : '—');
+        $prov = htmlspecialchars((string)($target['province'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $city = htmlspecialchars((string)($target['city'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $pc = htmlspecialchars((string)($target['public_code'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $age = (int)($target['age'] ?? 0);
+        $online = 'آفلاین';
+        if (!empty($target['last_seen_at'])) {
+            $ts = strtotime((string)$target['last_seen_at']);
+            if ($ts && (time() - $ts) < 300) {
+                $online = 'آنلاین الان';
+            } elseif ($ts && (time() - $ts) < 3600) {
+                $online = 'فعال اخیراً';
+            }
+        }
+        // Modern, calm card — not competitor green spam layout.
+        $caption =
+            "<b>{$dn}</b>\n" .
+            "{$g} · {$age} ساله\n" .
+            "{$prov} · {$city}\n" .
+            "{$online}\n" .
+            "────────\n" .
+            "شناسه: <code>{$pc}</code>";
+
+        $req = $this->settings->getInt('request_cost', 1);
+        $msg = $this->settings->getInt('message_cost', 1);
+        $markup = Keyboards::browseProfileInline((string)$target['public_code'], $req, $msg);
+        $avatar = (string)($target['avatar_file_id'] ?? '');
+        if ($avatar !== '') {
+            $this->uiPhotoFileId($chatId, $viewer, $avatar, $caption, $markup);
+        } else {
+            $this->uiText($chatId, $viewer, $caption, ['reply_markup' => $markup]);
+        }
+    }
+
+    private function sendBrowseRequest(int $chatId, array &$user, string $code): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $target = $this->db->findByPublicCode($code);
+        if (!$target) {
+            $this->uiText($chatId, $user, 'کاربر پیدا نشد.');
+            return;
+        }
+        $to = (int)$target['telegram_id'];
+        if ($to === $tid) {
+            $this->uiText($chatId, $user, 'نمی‌توانی به خودت درخواست بفرستی.');
+            return;
+        }
+        $cost = $this->settings->getInt('request_cost', 1);
+        if (!$this->db->spendCoins($tid, $cost, 'chat_request', (string)$to)) {
+            $this->uiText($chatId, $user, 'سکه کافی نداری.');
+            $this->showWallet($chatId, $user);
+            return;
+        }
+        $this->db->createContactRequest($tid, $to, 'request');
+        $fromName = htmlspecialchars((string)($user['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $fromCode = htmlspecialchars((string)($user['public_code'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        try {
+            $this->tg->sendMessage(
+                $to,
+                "درخواست گفتگو جدید\nاز: <b>{$fromName}</b>\nکد: <code>{$fromCode}</code>\n\nاگر مایلید در بات اصلی به جستجو بروید یا چت ناشناس را باز کنید."
+            );
+        } catch (Throwable $e) {
+            // keep going
+        }
+        $user = $this->db->findUser($tid) ?? $user;
+        $this->uiText($chatId, $user, "درخواست ارسال شد (−{$cost} سکه).");
+        $this->showNextBrowseCard($chatId, $user);
+    }
+
+    private function sendBrowseMessage(int $chatId, array &$user, string $text): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $flow = (string)($user['flow'] ?? '');
+        $code = str_starts_with($flow, 'br:compose:') ? substr($flow, strlen('br:compose:')) : '';
+        $target = $code !== '' ? $this->db->findByPublicCode($code) : null;
+        if (!$target) {
+            $this->db->updateUser($tid, ['flow' => null]);
+            $this->uiText($chatId, $user, 'مخاطب نامعتبر بود. دوباره از جستجو انتخاب کن.');
+            return;
+        }
+        $to = (int)$target['telegram_id'];
+        $cost = $this->settings->getInt('message_cost', 1);
+        $body = mb_substr(trim($text), 0, 500);
+        if (mb_strlen($body) < 1) {
+            $this->tg->sendMessage($chatId, 'متن خالی قبول نیست.');
+            return;
+        }
+        if (!$this->db->spendCoins($tid, $cost, 'direct_message', (string)$to)) {
+            $this->db->updateUser($tid, ['flow' => null]);
+            $this->uiText($chatId, $user, 'سکه کافی نداری.');
+            $this->showWallet($chatId, $user);
+            return;
+        }
+        $this->db->createContactRequest($tid, $to, 'message', $body);
+        $fromName = htmlspecialchars((string)($user['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $safe = htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        try {
+            $this->tg->sendMessage(
+                $to,
+                "پیام کوتاه از <b>{$fromName}</b>\n────────\n{$safe}"
+            );
+        } catch (Throwable $e) {
+        }
+        // Restore browse filters if we still have them in a previous flow — restart browse empty filters ok
+        $this->db->updateUser($tid, ['flow' => null]);
+        $user = $this->db->findUser($tid) ?? $user;
+        $this->clearUi($chatId, $user);
+        $this->uiText($chatId, $user, "پیام ارسال شد (−{$cost} سکه).");
+    }
+
+    private function forwardSupportFromMain(int $chatId, array &$user, string $text): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $this->db->updateUser($tid, ['flow' => null]);
+        $staff = $this->db->listSupportStaff(true);
+        $payload = "پیام پشتیبانی از کاربر <code>{$tid}</code>\n" .
+            htmlspecialchars(mb_substr($text, 0, 1000), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $sent = 0;
+        foreach ($staff as $row) {
+            try {
+                $this->tg->sendMessage((int)$row['telegram_id'], $payload);
+                $sent++;
+            } catch (Throwable $e) {
+            }
+        }
+        if ($sent === 0) {
+            foreach (($this->config['admin_ids'] ?? []) as $aid) {
+                try {
+                    $this->tg->sendMessage((int)$aid, $payload);
+                    $sent++;
+                } catch (Throwable $e) {
+                }
+            }
+        }
+        $user = $this->db->findUser($tid) ?? $user;
+        $this->clearUi($chatId, $user);
+        $this->uiText($chatId, $user, $sent > 0 ? 'پیامت به پشتیبانی رسید ✅' : 'پیامت ثبت شد. به‌زودی بررسی می‌شود.');
+        $this->showSupport($chatId, $user);
     }
 }

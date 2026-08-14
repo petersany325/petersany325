@@ -1,0 +1,87 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Runtime bot settings stored in DB so the admin Telegram bot can edit them
+ * without touching config.php / a website panel.
+ */
+final class Settings
+{
+    private static array $cache = [];
+
+    public const DEFAULTS = [
+        'invite_reward' => '30',
+        'message_cost' => '1',
+        'request_cost' => '1',
+        'search_free' => '1',
+        'connect_any_cost' => '0',
+        'connect_gender_cost' => '0',
+        'connect_province_cost' => '0',
+        'connect_age_cost' => '0',
+        'welcome_coins' => '35',
+        'support_bot_username' => '',
+        'support_welcome' => "سلام 👋\nپیامت را بنویس؛ همکاران پشتیبانی به‌زودی جواب می‌دهند.",
+        'support_hours' => '۹ تا ۲۴',
+        'main_bot_username' => 'HamGapXBot',
+        'brand_name' => 'هم‌گپ',
+    ];
+
+    public function __construct(private Database $db)
+    {
+    }
+
+    public function get(string $key, ?string $default = null): string
+    {
+        if (array_key_exists($key, self::$cache)) {
+            return self::$cache[$key];
+        }
+        $st = $this->db->pdo()->prepare('SELECT setting_value FROM bot_settings WHERE setting_key = ? LIMIT 1');
+        $st->execute([$key]);
+        $row = $st->fetchColumn();
+        if ($row === false) {
+            $val = $default ?? (self::DEFAULTS[$key] ?? '');
+            self::$cache[$key] = $val;
+            return $val;
+        }
+        self::$cache[$key] = (string)$row;
+        return self::$cache[$key];
+    }
+
+    public function getInt(string $key, ?int $default = null): int
+    {
+        $raw = $this->get($key, $default !== null ? (string)$default : null);
+        return (int)$raw;
+    }
+
+    public function set(string $key, string $value): void
+    {
+        $pdo = $this->db->pdo();
+        $st = $pdo->prepare(
+            'INSERT INTO bot_settings (setting_key, setting_value) VALUES (?, ?)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)'
+        );
+        $st->execute([$key, $value]);
+        self::$cache[$key] = $value;
+    }
+
+    public function all(): array
+    {
+        $out = self::DEFAULTS;
+        $rows = $this->db->pdo()->query('SELECT setting_key, setting_value FROM bot_settings')->fetchAll();
+        foreach ($rows as $row) {
+            $out[(string)$row['setting_key']] = (string)$row['setting_value'];
+        }
+        return $out;
+    }
+
+    public function seedDefaults(): void
+    {
+        foreach (self::DEFAULTS as $k => $v) {
+            $st = $this->db->pdo()->prepare('SELECT 1 FROM bot_settings WHERE setting_key = ? LIMIT 1');
+            $st->execute([$k]);
+            if (!$st->fetchColumn()) {
+                $this->set($k, $v);
+            }
+        }
+    }
+}

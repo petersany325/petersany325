@@ -3,18 +3,25 @@ declare(strict_types=1);
 
 final class Matcher
 {
-    public function __construct(private Database $db)
-    {
+    public function __construct(
+        private Database $db,
+        private ?Settings $settings = null
+    ) {
     }
 
-    public static function costFor(string $pref): int
+    public static function costFor(string $pref, ?Settings $settings = null): int
     {
-        return match ($pref) {
-            'any' => 0,
-            'male', 'female' => 1,
-            'province', 'age' => 2,
-            default => 1,
-        };
+        if ($settings) {
+            return match ($pref) {
+                'any' => $settings->getInt('connect_any_cost', 0),
+                'male', 'female' => $settings->getInt('connect_gender_cost', 0),
+                'province' => $settings->getInt('connect_province_cost', 0),
+                'age' => $settings->getInt('connect_age_cost', 0),
+                default => 0,
+            };
+        }
+        // Default: all connect/search free; monetize message/request instead.
+        return 0;
     }
 
     /**
@@ -23,7 +30,7 @@ final class Matcher
     public function startSearch(array $user, string $pref, array $filters = []): array
     {
         $tid = (int)$user['telegram_id'];
-        $cost = self::costFor($pref);
+        $cost = self::costFor($pref, $this->settings);
 
         if (in_array($pref, ['province', 'age'], true)) {
             if ($pref === 'province' && empty($user['province'])) {
@@ -79,10 +86,12 @@ final class Matcher
                 if ((int)$row['telegram_id'] === $myId) {
                     continue;
                 }
+                if ($this->db->isBlocked($myId, (int)$row['telegram_id']) || $this->db->isBlocked((int)$row['telegram_id'], $myId)) {
+                    continue;
+                }
                 $theirPref = (string)($row['search_pref'] ?? 'any');
                 $theirGender = (string)$row['gender'];
 
-                // Gender compatibility for classic prefs
                 if (in_array($pref, ['any', 'male', 'female'], true)) {
                     $acceptsMe = ($theirPref === 'any' || $theirPref === $myGender || in_array($theirPref, ['province', 'age'], true));
                     $iAcceptThem = ($pref === 'any' || $pref === $theirGender);
@@ -104,7 +113,6 @@ final class Matcher
                     }
                 }
 
-                // If they want province/age, enforce their constraint too
                 if ($theirPref === 'province') {
                     if ($myProvince === '' || (string)($row['province'] ?? '') !== $myProvince) {
                         continue;
@@ -120,7 +128,6 @@ final class Matcher
                     continue;
                 }
 
-                // Optional find-flow location filters
                 if ($filterProvince !== '' && (string)($row['province'] ?? '') !== $filterProvince) {
                     continue;
                 }

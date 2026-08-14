@@ -7,9 +7,10 @@ final class Keyboards
     {
         return [
             'keyboard' => [
-                [['text' => '🔗 وصلم کن به ناشناس']],
-                [['text' => '🔍 پیدا کردن مخاطب'], ['text' => '💎 سکه‌ها']],
-                [['text' => '👤 پروفایل من'], ['text' => 'ℹ️ راهنما']],
+                [['text' => '🔗 وصل ناشناس'], ['text' => '👥 وصل به دوستان']],
+                [['text' => '🔍 جستجوی کاربران'], ['text' => '💎 کیف‌پول']],
+                [['text' => '👤 پروفایل'], ['text' => '🆘 پشتیبانی']],
+                [['text' => 'ℹ️ راهنما']],
             ],
             'resize_keyboard' => true,
             'is_persistent' => true,
@@ -19,13 +20,17 @@ final class Keyboards
     public static function mainInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => '🔗 وصلم کن به ناشناس', 'callback_data' => 'menu:connect']],
+            [['text' => '🔗 وصل ناشناس · رایگان', 'callback_data' => 'menu:connect']],
             [
-                ['text' => '🔍 پیدا کردن مخاطب', 'callback_data' => 'menu:find'],
-                ['text' => '💎 سکه‌ها', 'callback_data' => 'menu:wallet'],
+                ['text' => '🔍 جستجوی کاربران · رایگان', 'callback_data' => 'menu:find'],
+                ['text' => '👥 دوستان', 'callback_data' => 'menu:friends'],
             ],
             [
-                ['text' => '👤 پروفایل من', 'callback_data' => 'menu:profile'],
+                ['text' => '👤 پروفایل', 'callback_data' => 'menu:profile'],
+                ['text' => '💎 کیف‌پول', 'callback_data' => 'menu:wallet'],
+            ],
+            [
+                ['text' => '🆘 پشتیبانی', 'callback_data' => 'menu:support'],
                 ['text' => 'ℹ️ راهنما', 'callback_data' => 'menu:help'],
             ],
         ]];
@@ -38,15 +43,16 @@ final class Keyboards
 
     public static function connectInline(): array
     {
+        // Search/connect filters are free; monetization is on message/request.
         return ['inline_keyboard' => [
             [['text' => '🎲 شانسی · رایگان', 'callback_data' => 'chat:any']],
             [
-                ['text' => '👩 فقط دختر · ۱ سکه', 'callback_data' => 'chat:female'],
-                ['text' => '👨 فقط پسر · ۱ سکه', 'callback_data' => 'chat:male'],
+                ['text' => '👩 فقط دختر · رایگان', 'callback_data' => 'chat:female'],
+                ['text' => '👨 فقط پسر · رایگان', 'callback_data' => 'chat:male'],
             ],
-            [['text' => '🏙 هم‌استان · ۲ سکه', 'callback_data' => 'chat:province']],
-            [['text' => '🎂 هم‌سن · ۲ سکه', 'callback_data' => 'chat:age']],
-            [['text' => '🔙 منوی اصلی', 'callback_data' => 'menu:main']],
+            [['text' => '🏙 هم‌استان · رایگان', 'callback_data' => 'chat:province']],
+            [['text' => '🎂 هم‌سن · رایگان', 'callback_data' => 'chat:age']],
+            [['text' => 'بازگشت', 'callback_data' => 'menu:main']],
         ]];
     }
 
@@ -54,11 +60,11 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [
-                ['text' => '👩 فقط دختر', 'callback_data' => 'find:gender:female'],
-                ['text' => '👨 فقط پسر', 'callback_data' => 'find:gender:male'],
+                ['text' => '👩 دختر · رایگان', 'callback_data' => 'find:gender:female'],
+                ['text' => '👨 پسر · رایگان', 'callback_data' => 'find:gender:male'],
             ],
-            [['text' => '👫 همه', 'callback_data' => 'find:gender:any']],
-            [['text' => '🔙 بازگشت', 'callback_data' => 'menu:find']],
+            [['text' => 'همه · رایگان', 'callback_data' => 'find:gender:any']],
+            [['text' => 'بازگشت', 'callback_data' => 'menu:find']],
         ]];
     }
 
@@ -120,11 +126,10 @@ final class Keyboards
             $rows[] = $row;
         }
         $rows[] = [['text' => '🏙 شهر دیگر', 'callback_data' => 'reg:city:other']];
-        $rows[] = [['text' => '🔙 تغییر استان', 'callback_data' => 'reg:prov:back']];
+        $rows[] = [['text' => 'تغییر استان', 'callback_data' => 'reg:prov:back']];
         return ['inline_keyboard' => $rows];
     }
 
-    /** Province picker for find-flow (separate callback prefix) */
     public static function findProvinces(): array
     {
         $rows = [];
@@ -139,7 +144,7 @@ final class Keyboards
         if ($row) {
             $rows[] = $row;
         }
-        $rows[] = [['text' => '🔙 منوی اصلی', 'callback_data' => 'menu:main']];
+        $rows[] = [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']];
         return ['inline_keyboard' => $rows];
     }
 
@@ -157,14 +162,14 @@ final class Keyboards
         if ($row) {
             $rows[] = $row;
         }
-        $rows[] = [['text' => '🔙 تغییر استان', 'callback_data' => 'menu:find']];
+        $rows[] = [['text' => 'تغییر استان', 'callback_data' => 'menu:find']];
         return ['inline_keyboard' => $rows];
     }
 
     public static function searching(): array
     {
         return ['inline_keyboard' => [[
-            ['text' => '❌ لغو جستجو', 'callback_data' => 'chat:cancel'],
+            ['text' => 'لغو جستجو', 'callback_data' => 'chat:cancel'],
         ]]];
     }
 
@@ -172,10 +177,10 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [
-                ['text' => '⏭ بعدی', 'callback_data' => 'chat:next'],
-                ['text' => '🛑 پایان', 'callback_data' => 'chat:end'],
+                ['text' => 'نفر بعدی', 'callback_data' => 'chat:next'],
+                ['text' => 'پایان گفتگو', 'callback_data' => 'chat:end'],
             ],
-            [['text' => '🚩 گزارش', 'callback_data' => 'chat:report']],
+            [['text' => 'گزارش', 'callback_data' => 'chat:report']],
         ]];
     }
 
@@ -190,46 +195,147 @@ final class Keyboards
         ];
     }
 
+    /** Modern profile card actions — minimal, not competitor-style green spam. */
+    public static function browseProfileInline(string $publicCode, int $requestCost, int $messageCost): array
+    {
+        $code = preg_replace('/[^A-Za-z0-9_]/', '', $publicCode) ?? '';
+        return ['inline_keyboard' => [
+            [['text' => "درخواست گفتگو · {$requestCost} سکه", 'callback_data' => 'br:req:' . $code]],
+            [['text' => "پیام کوتاه · {$messageCost} سکه", 'callback_data' => 'br:msg:' . $code]],
+            [
+                ['text' => 'بعدی', 'callback_data' => 'br:next'],
+                ['text' => 'گزارش', 'callback_data' => 'br:rep:' . $code],
+            ],
+            [
+                ['text' => 'بلاک', 'callback_data' => 'br:blk:' . $code],
+                ['text' => 'پایان جستجو', 'callback_data' => 'menu:main'],
+            ],
+        ]];
+    }
+
     public static function profileInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => '🛠 تنظیمات پروفایل', 'callback_data' => 'menu:profile_settings']],
-            [['text' => '✨ دعوت دوستان', 'callback_data' => 'menu:invite']],
-            [['text' => '🔙 منوی اصلی', 'callback_data' => 'menu:main']],
+            [['text' => 'تنظیمات پروفایل', 'callback_data' => 'menu:profile_settings']],
+            [['text' => 'دعوت دوستان · +۳۰ سکه', 'callback_data' => 'menu:invite']],
+            [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
         ]];
     }
 
     public static function profileSettingsInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => '🖼 تغییر عکس پروفایل', 'callback_data' => 'edit:avatar']],
-            [['text' => '🔤 تغییر نام کاربری', 'callback_data' => 'edit:displayname']],
+            [['text' => 'عکس پروفایل', 'callback_data' => 'edit:avatar']],
+            [['text' => 'نام کاربری', 'callback_data' => 'edit:displayname']],
             [
-                ['text' => '✏️ جنسیت', 'callback_data' => 'edit:gender'],
-                ['text' => '✏️ سن', 'callback_data' => 'edit:age'],
+                ['text' => 'جنسیت', 'callback_data' => 'edit:gender'],
+                ['text' => 'سن', 'callback_data' => 'edit:age'],
             ],
-            [['text' => '📍 استان / شهر', 'callback_data' => 'edit:location']],
-            [['text' => '🔙 پروفایل', 'callback_data' => 'menu:profile']],
+            [['text' => 'استان / شهر', 'callback_data' => 'edit:location']],
+            [['text' => 'بازگشت به پروفایل', 'callback_data' => 'menu:profile']],
         ]];
     }
 
-    public static function walletInline(): array
+    public static function walletInline(int $inviteReward = 30): array
     {
         return ['inline_keyboard' => [
-            [['text' => '✨ دعوت دوست · +۲۰ سکه', 'callback_data' => 'menu:invite']],
+            [['text' => "دعوت دوست · +{$inviteReward} سکه", 'callback_data' => 'menu:invite']],
             [['text' => '۱۰۰ سکه — ۵۰٬۰۰۰ تومان', 'callback_data' => 'pay:100']],
-            [['text' => '۳۰۰ سکه — ۱۲۰٬۰۰۰ تومان ★', 'callback_data' => 'pay:300']],
-            [['text' => '۱۰۰۰ سکه — ۳۵۰٬۰۰۰ تومان VIP', 'callback_data' => 'pay:1000']],
-            [['text' => '🔙 منوی اصلی', 'callback_data' => 'menu:main']],
+            [['text' => '۳۰۰ سکه — ۱۲۰٬۰۰۰ تومان', 'callback_data' => 'pay:300']],
+            [['text' => '۱۰۰۰ سکه — ۳۵۰٬۰۰۰ تومان', 'callback_data' => 'pay:1000']],
+            [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
         ]];
     }
 
     public static function payMethodInline(string $pack): array
     {
         return ['inline_keyboard' => [
-            [['text' => '💳 درگاه بانکی (به‌زودی)', 'callback_data' => 'pay:soon']],
-            [['text' => '🏦 کارت‌به‌کارت (به‌زودی)', 'callback_data' => 'pay:soon']],
-            [['text' => '🔙 بازگشت', 'callback_data' => 'menu:wallet']],
+            [['text' => 'درگاه بانکی (به‌زودی)', 'callback_data' => 'pay:soon']],
+            [['text' => 'کارت‌به‌کارت (به‌زودی)', 'callback_data' => 'pay:soon']],
+            [['text' => 'بازگشت', 'callback_data' => 'menu:wallet']],
+        ]];
+    }
+
+    public static function supportInline(?string $supportUsername): array
+    {
+        $rows = [];
+        if ($supportUsername) {
+            $u = ltrim($supportUsername, '@');
+            $rows[] = [['text' => 'گفتگو با پشتیبانی', 'url' => 'https://t.me/' . $u]];
+        }
+        $rows[] = [['text' => 'ارسال پیام اینجا', 'callback_data' => 'support:compose']];
+        $rows[] = [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']];
+        return ['inline_keyboard' => $rows];
+    }
+
+    public static function friendsInline(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => 'لینک دعوت من', 'callback_data' => 'menu:invite']],
+            [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
+        ]];
+    }
+
+    public static function adminMain(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => 'آمار لحظه‌ای', 'callback_data' => 'adm:stats']],
+            [['text' => 'تنظیمات سکه و هزینه', 'callback_data' => 'adm:coins']],
+            [['text' => 'مدیریت کاربران', 'callback_data' => 'adm:users']],
+            [['text' => 'پشتیبانی و کارمندان', 'callback_data' => 'adm:support']],
+            [['text' => 'تنظیمات عمومی', 'callback_data' => 'adm:general']],
+        ]];
+    }
+
+    public static function adminCoins(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => 'پاداش دعوت', 'callback_data' => 'adm:set:invite_reward']],
+            [['text' => 'هزینه پیام', 'callback_data' => 'adm:set:message_cost']],
+            [['text' => 'هزینه درخواست گفتگو', 'callback_data' => 'adm:set:request_cost']],
+            [['text' => 'سکه خوش‌آمد', 'callback_data' => 'adm:set:welcome_coins']],
+            [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
+        ]];
+    }
+
+    public static function adminUsers(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => 'جستجوی کاربر با کد/آیدی', 'callback_data' => 'adm:user:find']],
+            [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
+        ]];
+    }
+
+    public static function adminUserActions(int $telegramId): array
+    {
+        return ['inline_keyboard' => [
+            [
+                ['text' => 'مسدود', 'callback_data' => 'adm:ban:' . $telegramId],
+                ['text' => 'رفع مسدود', 'callback_data' => 'adm:unban:' . $telegramId],
+            ],
+            [['text' => 'حذف پروفایل عمومی', 'callback_data' => 'adm:wipe:' . $telegramId]],
+            [['text' => '+۵۰ سکه', 'callback_data' => 'adm:give:' . $telegramId . ':50']],
+            [['text' => 'بازگشت', 'callback_data' => 'adm:users']],
+        ]];
+    }
+
+    public static function adminSupport(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => 'ثبت یوزرنیم بات پشتیبانی', 'callback_data' => 'adm:set:support_bot_username']],
+            [['text' => 'افزودن کارمند (آیدی عددی)', 'callback_data' => 'adm:staff:add']],
+            [['text' => 'لیست کارمندان', 'callback_data' => 'adm:staff:list']],
+            [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
+        ]];
+    }
+
+    public static function adminGeneral(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => 'نام برند', 'callback_data' => 'adm:set:brand_name']],
+            [['text' => 'ساعات پشتیبانی', 'callback_data' => 'adm:set:support_hours']],
+            [['text' => 'متن خوش‌آمد پشتیبانی', 'callback_data' => 'adm:set:support_welcome']],
+            [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
         ]];
     }
 }
