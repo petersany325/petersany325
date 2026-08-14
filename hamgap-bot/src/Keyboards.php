@@ -7,9 +7,10 @@ final class Keyboards
     {
         return [
             'keyboard' => [
-                [['text' => '🔗 وصل ناشناس'], ['text' => '👥 وصل به دوستان']],
-                [['text' => '🔍 جستجوی کاربران'], ['text' => '💎 کیف‌پول']],
-                [['text' => '👤 پروفایل'], ['text' => '🆘 پشتیبانی']],
+                [['text' => '💬 چت ناشناس']],
+                [['text' => '🔍 جستجوی کاربران'], ['text' => '👥 چت با دوستان']],
+                [['text' => '👤 پروفایل'], ['text' => '💎 کیف‌پول']],
+                [['text' => '✨ دعوت دوستان · +۳۰'], ['text' => '🆘 پشتیبانی']],
                 [['text' => 'ℹ️ راهنما']],
             ],
             'resize_keyboard' => true,
@@ -20,10 +21,10 @@ final class Keyboards
     public static function mainInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => '🔗 وصل ناشناس · رایگان', 'callback_data' => 'menu:connect']],
+            [['text' => '💬 چت ناشناس · رایگان', 'callback_data' => 'menu:connect']],
             [
-                ['text' => '🔍 جستجوی کاربران · رایگان', 'callback_data' => 'menu:find'],
-                ['text' => '👥 دوستان', 'callback_data' => 'menu:friends'],
+                ['text' => '🔍 جستجوی کاربران', 'callback_data' => 'menu:find'],
+                ['text' => '👥 چت با دوستان', 'callback_data' => 'menu:friends'],
             ],
             [
                 ['text' => '👤 پروفایل', 'callback_data' => 'menu:profile'],
@@ -43,17 +44,102 @@ final class Keyboards
 
     public static function connectInline(): array
     {
-        // Search/connect filters are free; monetization is on message/request.
+        // Anonymous chat filters — free; monetize message/request elsewhere.
         return ['inline_keyboard' => [
-            [['text' => '🎲 شانسی · رایگان', 'callback_data' => 'chat:any']],
+            [['text' => '🎲 چت شانسی · رایگان', 'callback_data' => 'chat:any']],
             [
-                ['text' => '👩 فقط دختر · رایگان', 'callback_data' => 'chat:female'],
-                ['text' => '👨 فقط پسر · رایگان', 'callback_data' => 'chat:male'],
+                ['text' => '👩 فقط دختر', 'callback_data' => 'chat:female'],
+                ['text' => '👨 فقط پسر', 'callback_data' => 'chat:male'],
             ],
-            [['text' => '🏙 هم‌استان · رایگان', 'callback_data' => 'chat:province']],
-            [['text' => '🎂 هم‌سن · رایگان', 'callback_data' => 'chat:age']],
+            [['text' => '🏙 هم‌استان', 'callback_data' => 'chat:province']],
+            [['text' => '🎂 هم‌سن', 'callback_data' => 'chat:age']],
             [['text' => 'بازگشت', 'callback_data' => 'menu:main']],
         ]];
+    }
+
+    /** Modern search hub — calm & structured (not competitor green spam). */
+    public static function searchHubInline(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '🟢 آنلاین الان', 'callback_data' => 'sr:online']],
+            [
+                ['text' => '✨ تازه‌واردها', 'callback_data' => 'sr:new'],
+                ['text' => '📍 نزدیک من', 'callback_data' => 'sr:nearby'],
+            ],
+            [
+                ['text' => '🏙 هم‌استان', 'callback_data' => 'sr:sameprov'],
+                ['text' => '🎂 هم‌سن', 'callback_data' => 'sr:sameage'],
+            ],
+            [['text' => '🎛 جستجوی پیشرفته', 'callback_data' => 'sr:advanced']],
+            [
+                ['text' => '👩 آنلاین دختر', 'callback_data' => 'sr:online:female'],
+                ['text' => '👨 آنلاین پسر', 'callback_data' => 'sr:online:male'],
+            ],
+            [['text' => '💬 چت ناشناس سریع', 'callback_data' => 'menu:connect']],
+            [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
+        ]];
+    }
+
+    public static function advancedGenderInline(): array
+    {
+        return ['inline_keyboard' => [
+            [
+                ['text' => '👩 دختر', 'callback_data' => 'adv:gender:female'],
+                ['text' => '👨 پسر', 'callback_data' => 'adv:gender:male'],
+            ],
+            [['text' => 'همه', 'callback_data' => 'adv:gender:any']],
+            [['text' => 'بازگشت به جستجو', 'callback_data' => 'menu:find']],
+        ]];
+    }
+
+    public static function advancedAgeInline(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '۱۶–۲۰', 'callback_data' => 'adv:age:16:20']],
+            [['text' => '۲۱–۲۵', 'callback_data' => 'adv:age:21:25']],
+            [['text' => '۲۶–۳۰', 'callback_data' => 'adv:age:26:30']],
+            [['text' => '۳۱–۴۰', 'callback_data' => 'adv:age:31:40']],
+            [['text' => 'همه سن‌ها', 'callback_data' => 'adv:age:any']],
+            [['text' => 'بازگشت', 'callback_data' => 'sr:advanced']],
+        ]];
+    }
+
+    public static function advancedProvinces(): array
+    {
+        $rows = [];
+        $row = [];
+        foreach (IranLocations::provinces() as $i => $name) {
+            $row[] = ['text' => $name, 'callback_data' => 'adv:prov:' . $i];
+            if (count($row) === 2) {
+                $rows[] = $row;
+                $row = [];
+            }
+        }
+        if ($row) {
+            $rows[] = $row;
+        }
+        $rows[] = [['text' => 'همه استان‌ها', 'callback_data' => 'adv:prov:all']];
+        $rows[] = [['text' => 'بازگشت', 'callback_data' => 'menu:find']];
+        return ['inline_keyboard' => $rows];
+    }
+
+    public static function advancedCities(string $province): array
+    {
+        $rows = [];
+        $row = [];
+        foreach (IranLocations::cities($province) as $i => $city) {
+            $row[] = ['text' => $city, 'callback_data' => 'adv:ci:' . $i];
+            if (count($row) === 2) {
+                $rows[] = $row;
+                $row = [];
+            }
+        }
+        if ($row) {
+            $rows[] = $row;
+        }
+        $rows[] = [['text' => 'همه شهرهای استان', 'callback_data' => 'adv:ci:all']];
+        $rows[] = [['text' => 'تغییر استان', 'callback_data' => 'sr:advanced']];
+        return ['inline_keyboard' => $rows];
     }
 
     public static function findGenderInline(): array

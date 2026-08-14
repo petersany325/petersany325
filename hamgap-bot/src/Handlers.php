@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v10';
+    public const CODE_VERSION = '2026-08-14-v10.2';
 
     private string $assets;
     private Settings $settings;
@@ -327,11 +327,12 @@ final class Handlers
         }
 
         match ($text) {
-            '🔗 وصلم کن به ناشناس', '🔗 وصل ناشناس' => $this->showConnect($chatId, $user),
+            '🔗 وصلم کن به ناشناس', '🔗 وصل ناشناس', '💬 چت ناشناس' => $this->showConnect($chatId, $user),
             '🔍 پیدا کردن مخاطب', '🔍 جستجوی کاربران' => $this->showFind($chatId, $user),
-            '👥 وصل به دوستان' => $this->showFriends($chatId, $user),
+            '👥 وصل به دوستان', '👥 چت با دوستان' => $this->showFriends($chatId, $user),
             '💎 سکه‌ها', '💎 کیف‌پول' => $this->showWallet($chatId, $user),
             '👤 پروفایل من', '👤 پروفایل' => $this->showProfile($chatId, $user),
+            '✨ دعوت دوستان · +۳۰', '✨ دعوت دوستان' => $this->showInvite($chatId, $user),
             '🆘 پشتیبانی' => $this->showSupport($chatId, $user),
             'ℹ️ راهنما' => $this->showHelp($chatId, $user),
             default => (function () use ($chatId, &$user): void {
@@ -500,6 +501,12 @@ final class Handlers
             $this->tg->answerCallback($id, 'اول پروفایل را کامل کن', true);
             $this->stripCallbackMenu($cq);
             $this->ensureProfileOrMain($chatId, $user, false);
+            return;
+        }
+
+        // ——— Search hub (modern presets) ———
+        if (str_starts_with($data, 'sr:') || str_starts_with($data, 'adv:')) {
+            $this->handleSearchHubCallback($cq, $user, $id, $data, $chatId, $tid);
             return;
         }
 
@@ -984,8 +991,9 @@ final class Handlers
             $chatId,
             $user,
             "راهنمای <b>{$name}</b>\n\n" .
-            "وصل ناشناس — اتصال رندوم رایگان\n" .
-            "جستجوی کاربران — مرور پروفایل‌ها کاملاً رایگان (حتی فیلتر دختر)\n" .
+            "چت ناشناس — اتصال رندوم رایگان\n" .
+            "جستجوی کاربران — آنلاین، نزدیک، پیشرفته، تازه‌وارد… همه رایگان\n" .
+            "چت با دوستان — لینک دعوت و جمع دوستانه\n" .
             "درخواست گفتگو / پیام کوتاه — هر کدام {$reqCost} و {$msgCost} سکه\n" .
             "دعوت دوستان — هر دعوت موفق +{$invite} سکه\n" .
             "پشتیبانی — ارتباط با تیم خدمات\n\n" .
@@ -1017,9 +1025,9 @@ final class Handlers
     {
         $this->clearUi($chatId, $user);
         $path = $this->assets . '/menu-smart.jpg';
-        $caption = "🔗 <b>وصلم کن به ناشناس</b>\n" .
-            "نوع اتصال را انتخاب کن.\n" .
-            "هزینه فقط بعد از اتصال موفق کم می‌شود.";
+        $caption = "💬 <b>چت ناشناس</b>\n" .
+            "بدون نمایش هویت تلگرام وصل شو.\n" .
+            "همه حالت‌ها رایگان است.";
         if (is_file($path)) {
             $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::connectInline());
         } else {
@@ -1037,10 +1045,10 @@ final class Handlers
         $this->uiText(
             $chatId,
             $user,
-            "جستجوی کاربران · <b>کاملاً رایگان</b>\n" .
-            "استان را انتخاب کن؛ بعد کارت پروفایل‌ها را یکی‌یکی می‌بینی.\n" .
-            "فقط وقتی درخواست گفتگو یا پیام بفرستی سکه کم می‌شود.",
-            ['reply_markup' => Keyboards::findProvinces()]
+            "🔍 <b>جستجوی کاربران</b> · کاملاً رایگان\n" .
+            "کارت پروفایل را ببین، بعد تصمیم بگیر.\n" .
+            "سکه فقط برای درخواست گفتگو یا پیام کوتاه کم می‌شود.",
+            ['reply_markup' => Keyboards::searchHubInline()]
         );
     }
 
@@ -1051,10 +1059,10 @@ final class Handlers
         $this->uiText(
             $chatId,
             $user,
-            "وصل به دوستان\n\n" .
+            "👥 <b>چت با دوستان</b>\n\n" .
             "لینک دعوتت را برای دوستانت بفرست.\n" .
             "هر نفری که با لینک تو وارد شود، <b>+{$invite} سکه</b> می‌گیری.\n" .
-            "بعداً می‌توانی از طریق جستجو یا چت ناشناس به جمع وصل شوی.",
+            "بعد از ورود می‌توانی از جستجو یا چت ناشناس به هم وصل شوید.",
             ['reply_markup' => Keyboards::friendsInline()]
         );
     }
@@ -1263,6 +1271,250 @@ final class Handlers
             )->execute([(int)$user['telegram_id'], $partnerId, 'user_report']);
         }
         $this->endAndMenu($chatId, $user);
+    }
+
+    private function handleSearchHubCallback(
+        array $cq,
+        array &$user,
+        string $id,
+        string $data,
+        int $chatId,
+        int $tid
+    ): void {
+        if ($data === 'sr:advanced') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->db->updateUser($tid, ['flow' => 'adv:', 'browse_cursor' => 0]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "🎛 <b>جستجوی پیشرفته</b>\nاول استان را انتخاب کن (یا همه استان‌ها).",
+                ['reply_markup' => Keyboards::advancedProvinces()]
+            );
+            return;
+        }
+
+        if (str_starts_with($data, 'sr:online')) {
+            $filters = ['online_only' => 1];
+            if ($data === 'sr:online:female') {
+                $filters['gender'] = 'female';
+            } elseif ($data === 'sr:online:male') {
+                $filters['gender'] = 'male';
+            }
+            $this->tg->answerCallback($id, 'آنلاین‌ها');
+            $this->stripCallbackMenu($cq);
+            $this->beginBrowse($chatId, $user, $filters);
+            return;
+        }
+        if ($data === 'sr:new') {
+            $this->tg->answerCallback($id, 'تازه‌واردها');
+            $this->stripCallbackMenu($cq);
+            $this->beginBrowse($chatId, $user, ['new_only' => 1]);
+            return;
+        }
+        if ($data === 'sr:nearby') {
+            $city = (string)($user['city'] ?? '');
+            if ($city === '') {
+                $this->tg->answerCallback($id, 'اول شهر پروفایلت را کامل کن', true);
+                return;
+            }
+            $this->tg->answerCallback($id, 'نزدیک تو');
+            $this->stripCallbackMenu($cq);
+            $this->beginBrowse($chatId, $user, ['nearby_city' => $city]);
+            return;
+        }
+        if ($data === 'sr:sameprov') {
+            $prov = (string)($user['province'] ?? '');
+            if ($prov === '') {
+                $this->tg->answerCallback($id, 'اول استان پروفایلت را کامل کن', true);
+                return;
+            }
+            $this->tg->answerCallback($id, 'هم‌استان');
+            $this->stripCallbackMenu($cq);
+            $this->beginBrowse($chatId, $user, ['same_province' => $prov]);
+            return;
+        }
+        if ($data === 'sr:sameage') {
+            $age = (int)($user['age'] ?? 0);
+            if ($age <= 0) {
+                $this->tg->answerCallback($id, 'اول سن پروفایلت را کامل کن', true);
+                return;
+            }
+            $this->tg->answerCallback($id, 'هم‌سن');
+            $this->stripCallbackMenu($cq);
+            $this->beginBrowse($chatId, $user, ['age_near' => 1, 'viewer_age' => $age]);
+            return;
+        }
+
+        // Advanced wizard
+        if (str_starts_with($data, 'adv:prov:')) {
+            $part = substr($data, strlen('adv:prov:'));
+            $flow = 'adv:';
+            if ($part === 'all') {
+                $flow = 'adv:all';
+                $this->tg->answerCallback($id, 'همه استان‌ها');
+                $this->stripCallbackMenu($cq);
+                $this->db->updateUser($tid, ['flow' => $flow]);
+                $user = $this->db->findUser($tid) ?? $user;
+                $this->clearUi($chatId, $user);
+                $this->uiText($chatId, $user, 'جنسیت مخاطب را انتخاب کن 👇', [
+                    'reply_markup' => Keyboards::advancedGenderInline(),
+                ]);
+                return;
+            }
+            $idx = (int)$part;
+            $provinces = IranLocations::provinces();
+            if (!isset($provinces[$idx])) {
+                $this->tg->answerCallback($id, 'استان نامعتبر', true);
+                return;
+            }
+            $province = $provinces[$idx];
+            $this->db->updateUser($tid, ['flow' => 'adv:' . $idx]);
+            $this->tg->answerCallback($id, "{$province} ✅");
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $safe = htmlspecialchars($province, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $this->uiText($chatId, $user, "شهر در استان <b>{$safe}</b> را انتخاب کن 👇", [
+                'reply_markup' => Keyboards::advancedCities($province),
+            ]);
+            return;
+        }
+
+        if (str_starts_with($data, 'adv:ci:')) {
+            $part = substr($data, strlen('adv:ci:'));
+            $flow = (string)($user['flow'] ?? '');
+            if (!preg_match('/^adv:(\d+)$/', $flow, $fm)) {
+                $this->tg->answerCallback($id, 'اول استان را انتخاب کن', true);
+                return;
+            }
+            $provIdx = (int)$fm[1];
+            $provinces = IranLocations::provinces();
+            if (!isset($provinces[$provIdx])) {
+                $this->tg->answerCallback($id, 'استان نامعتبر', true);
+                return;
+            }
+            $province = $provinces[$provIdx];
+            if ($part === 'all') {
+                $this->db->updateUser($tid, ['flow' => 'adv:' . $provIdx . ':all']);
+            } else {
+                $cityIdx = (int)$part;
+                $cities = IranLocations::cities($province);
+                if (!isset($cities[$cityIdx])) {
+                    $this->tg->answerCallback($id, 'شهر نامعتبر', true);
+                    return;
+                }
+                $this->db->updateUser($tid, ['flow' => 'adv:' . $provIdx . ':' . $cityIdx]);
+                $this->tg->answerCallback($id, $cities[$cityIdx] . ' ✅');
+                $this->stripCallbackMenu($cq);
+                $user = $this->db->findUser($tid) ?? $user;
+                $this->clearUi($chatId, $user);
+                $this->uiText($chatId, $user, 'جنسیت مخاطب را انتخاب کن 👇', [
+                    'reply_markup' => Keyboards::advancedGenderInline(),
+                ]);
+                return;
+            }
+            $this->tg->answerCallback($id, 'همه شهرها');
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->uiText($chatId, $user, 'جنسیت مخاطب را انتخاب کن 👇', [
+                'reply_markup' => Keyboards::advancedGenderInline(),
+            ]);
+            return;
+        }
+
+        if (str_starts_with($data, 'adv:gender:')) {
+            $g = substr($data, strlen('adv:gender:'));
+            if (!in_array($g, ['any', 'male', 'female'], true)) {
+                $this->tg->answerCallback($id, 'نامعتبر', true);
+                return;
+            }
+            $flow = (string)($user['flow'] ?? '');
+            $this->db->updateUser($tid, ['flow' => $flow . '|g:' . $g]);
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->uiText($chatId, $user, 'بازه سنی را انتخاب کن 👇', [
+                'reply_markup' => Keyboards::advancedAgeInline(),
+            ]);
+            return;
+        }
+
+        if (str_starts_with($data, 'adv:age:')) {
+            $rest = substr($data, strlen('adv:age:'));
+            $filters = $this->parseAdvancedFlow((string)($user['flow'] ?? ''));
+            if ($rest === 'any') {
+                // no age bounds
+            } else {
+                $parts = explode(':', $rest);
+                if (count($parts) === 2) {
+                    $filters['age_min'] = (int)$parts[0];
+                    $filters['age_max'] = (int)$parts[1];
+                }
+            }
+            $this->tg->answerCallback($id, 'شروع جستجو');
+            $this->stripCallbackMenu($cq);
+            $this->beginBrowse($chatId, $user, $filters);
+            return;
+        }
+
+        $this->tg->answerCallback($id);
+    }
+
+    /** @return array<string,mixed> */
+    private function parseAdvancedFlow(string $flow): array
+    {
+        $filters = [];
+        // adv:all|g:female  OR adv:3:5|g:male OR adv:3:all|g:any
+        if (!str_starts_with($flow, 'adv:')) {
+            return $filters;
+        }
+        $body = substr($flow, 4);
+        $gender = null;
+        if (str_contains($body, '|g:')) {
+            [$loc, $gPart] = explode('|g:', $body, 2);
+            $gender = $gPart;
+            $body = $loc;
+        }
+        if ($gender && in_array($gender, ['male', 'female'], true)) {
+            $filters['gender'] = $gender;
+        }
+        if ($body === 'all' || $body === '') {
+            return $filters;
+        }
+        $bits = explode(':', $body);
+        $provinces = IranLocations::provinces();
+        $provIdx = (int)($bits[0] ?? -1);
+        if (!isset($provinces[$provIdx])) {
+            return $filters;
+        }
+        $filters['province'] = $provinces[$provIdx];
+        if (isset($bits[1]) && $bits[1] !== 'all') {
+            $cities = IranLocations::cities($filters['province']);
+            $ci = (int)$bits[1];
+            if (isset($cities[$ci])) {
+                $filters['city'] = $cities[$ci];
+            }
+        }
+        return $filters;
+    }
+
+    /** @param array<string,mixed> $filters */
+    private function beginBrowse(int $chatId, array &$user, array $filters): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $encoded = rawurlencode(json_encode($filters, JSON_UNESCAPED_UNICODE));
+        $this->db->updateUser($tid, [
+            'flow' => 'browse:' . $encoded,
+            'browse_cursor' => 0,
+        ]);
+        $user = $this->db->findUser($tid) ?? $user;
+        $this->clearUi($chatId, $user);
+        $this->showNextBrowseCard($chatId, $user);
     }
 
     /** @return array{province?:string,city?:string,gender?:string} */

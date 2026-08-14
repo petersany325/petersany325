@@ -192,7 +192,39 @@ final class Database
             $sql .= ' AND u.city = ?';
             $params[] = $filters['city'];
         }
-        $sql .= ' ORDER BY u.id ASC LIMIT 1';
+        if (!empty($filters['online_only'])) {
+            $sql .= ' AND u.last_seen_at IS NOT NULL AND u.last_seen_at >= (NOW() - INTERVAL 15 MINUTE)';
+        }
+        if (!empty($filters['new_only'])) {
+            $sql .= ' AND u.created_at >= (NOW() - INTERVAL 7 DAY)';
+        }
+        if (!empty($filters['nearby_city'])) {
+            $sql .= ' AND u.city = ?';
+            $params[] = $filters['nearby_city'];
+        }
+        if (!empty($filters['same_province'])) {
+            $sql .= ' AND u.province = ?';
+            $params[] = $filters['same_province'];
+        }
+        if (isset($filters['age_min']) && $filters['age_min'] !== '' && $filters['age_min'] !== null) {
+            $sql .= ' AND u.age >= ?';
+            $params[] = (int)$filters['age_min'];
+        }
+        if (isset($filters['age_max']) && $filters['age_max'] !== '' && $filters['age_max'] !== null) {
+            $sql .= ' AND u.age <= ?';
+            $params[] = (int)$filters['age_max'];
+        }
+        if (!empty($filters['age_near']) && !empty($filters['viewer_age'])) {
+            $sql .= ' AND ABS(u.age - ?) <= 3';
+            $params[] = (int)$filters['viewer_age'];
+        }
+        $order = ' ORDER BY u.id ASC';
+        if (!empty($filters['online_only'])) {
+            $order = ' ORDER BY u.last_seen_at DESC, u.id ASC';
+        } elseif (!empty($filters['new_only'])) {
+            $order = ' ORDER BY u.created_at DESC, u.id ASC';
+        }
+        $sql .= $order . ' LIMIT 1';
         $st = $this->pdo->prepare($sql);
         $st->execute($params);
         $row = $st->fetch();
