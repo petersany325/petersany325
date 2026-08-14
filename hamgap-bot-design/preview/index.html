@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>هم‌گپ — نمونه طراحی منو</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b1c22;
+      --panel: #10262e;
+      --line: rgba(255, 255, 255, 0.08);
+      --text: #e8f4f2;
+      --muted: #9bb6b3;
+      --mint: #5eead4;
+      --mint-dim: rgba(94, 234, 212, 0.14);
+      --danger: #fb7185;
+      --warn: #fbbf24;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Vazirmatn", sans-serif;
+      background:
+        radial-gradient(ellipse at top, #163842 0%, var(--bg) 55%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 28px 16px 64px;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 700;
+    }
+    header p {
+      margin: 0 0 28px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 22px;
+    }
+    .tabs button {
+      border: 1px solid var(--line);
+      background: var(--mint-dim);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font: inherit;
+      cursor: pointer;
+    }
+    .tabs button.active {
+      background: var(--mint);
+      color: #083344;
+      font-weight: 600;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+    @media (min-width: 900px) {
+      .stage { grid-template-columns: 380px 1fr; align-items: start; }
+    }
+
+    .phone {
+      background: #071316;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    }
+    .phone-top {
+      padding: 14px 16px;
+      background: #0e2229;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2dd4bf, #0f766e);
+    }
+    .phone-top strong { display: block; font-size: 0.95rem; }
+    .phone-top span { color: var(--muted); font-size: 0.78rem; }
+
+    .chat {
+      padding: 14px;
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background:
+        linear-gradient(180deg, rgba(13, 40, 48, 0.9), rgba(7, 19, 22, 0.95));
+    }
+
+    .bubble {
+      align-self: stretch;
+      background: #143039;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      max-width: 100%;
+    }
+    .bubble img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      object-fit: cover;
+    }
+    .bubble .caption {
+      padding: 12px 14px 4px;
+      font-size: 0.92rem;
+      line-height: 1.7;
+      white-space: pre-line;
+    }
+
+    .inline-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 10px;
+    }
+    .inline-grid.one { grid-template-columns: 1fr; }
+    .btn {
+      border: 1px solid rgba(94, 234, 212, 0.28);
+      background: rgba(94, 234, 212, 0.08);
+      color: var(--mint);
+      border-radius: 10px;
+      padding: 11px 8px;
+      text-align: center;
+      font-size: 0.86rem;
+      font-weight: 500;
+    }
+    .btn.danger { color: var(--danger); border-color: rgba(251, 113, 133, 0.35); }
+    .btn.warn { color: var(--warn); border-color: rgba(251, 191, 36, 0.35); }
+    .btn.full { grid-column: 1 / -1; }
+
+    .reply-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      padding: 10px;
+      border-top: 1px solid var(--line);
+      background: #0c1d23;
+    }
+    .reply-bar .key {
+      background: #18343d;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 8px;
+      text-align: center;
+      font-size: 0.84rem;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 18px;
+    }
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 1.15rem;
+    }
+    .panel ul {
+      margin: 0;
+      padding-right: 18px;
+      color: var(--muted);
+      line-height: 1.9;
+    }
+    .screen { display: none; }
+    .screen.active { display: contents; }
+
+    .note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>نمونه طراحی منوی گرافیکی — هم‌گپ</h1>
+      <p>
+        فقط طراحی اولیه بنرها و چیدمان دکمه‌هاست.
+        بعد از تأیید، همین الگو داخل بات تلگرام پیاده می‌شود.
+      </p>
+    </header>
+
+    <div class="tabs" id="tabs">
+      <button class="active" data-tab="main">منوی اصلی</button>
+      <button data-tab="smart">چت هوشمند</button>
+      <button data-tab="wallet">کیف سکه</button>
+      <button data-tab="chat">چت خصوصی</button>
+    </div>
+
+    <div class="stage">
+      <div class="phone">
+        <div class="phone-top">
+          <div class="avatar"></div>
+          <div>
+            <strong>هم‌گپ</strong>
+            <span>ربات · آنلاین</span>
+          </div>
+        </div>
+
+        <!-- MAIN -->
+        <div class="screen active" data-screen="main">
+          <div class="chat">
+            <div class="bubble">
+              <img src="../banners/menu-main.png" alt="منوی اصلی" />
+              <div class="caption">به هم‌گپ خوش اومدی
+اینجا می‌تونی ناشناس، امن و سریع گپ بزنی.</div>
+              <div class="inline-grid">
+                <div class="btn">🎲 چت تصادفی</div>
+                <div class="btn">💬 چت هوشمند</div>
+                <div class="btn">👤 پروفایل</div>
+                <div class="btn">💎 کیف سکه</div>
+                <div class="btn">⭐ VIP</div>
+                <div class="btn">🆘 پشتیبانی</div>
+              </div>
+            </div>
+          </div>
+          <div class="reply-bar">
+            <div class="key">🎲 چت تصادفی</div>
+            <div class="key">💬 چت هوشمند</div>
+            <div class="key">👤 پروفایل</div>
+            <div class="key">💎 کیف سکه</div>
+          </div>
+        </div>
+
+        <!-- SMART -->
+        <div class="screen" data-screen="smart">
+          <div class="chat">
+            <div class="bubble">
+              <img src="../banners/menu-smart.png" alt="چت هوشمند" />
+              <div class="caption">مخاطبت رو انتخاب کن
+هزینه فقط بعد از اتصال موفق کم می‌شود.</div>
+              <div class="inline-grid">
+                <div class="btn">👨 پسر · ۱ سکه</div>
+                <div class="btn">👩 دختر · ۱ سکه</div>
+                <div class="btn">🏙 همشهری · ۲</div>
+                <div class="btn">🎂 هم‌سن · ۲</div>
+                <div class="btn">📍 نزدیک · ۲</div>
+                <div class="btn">🆕 کاربر جدید</div>
+                <div class="btn full">🔙 بازگشت</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WALLET -->
+        <div class="screen" data-screen="wallet">
+          <div class="chat">
+            <div class="bubble">
+              <img src="../banners/menu-wallet.png" alt="کیف سکه" />
+              <div class="caption">موجودی شما: ۱۲ سکه
+پرداخت امن با درگاه بانکی ایران</div>
+              <div class="inline-grid one">
+                <div class="btn">۱۰ سکه — ۲۰٬۰۰۰ تومان</div>
+                <div class="btn">۳۰ سکه — ۵۰٬۰۰۰ تومان ★</div>
+                <div class="btn">۱۰۰ سکه — ۱۴۰٬۰۰۰ تومان</div>
+                <div class="btn">💳 پرداخت زرین‌پال</div>
+                <div class="btn">🏦 کارت‌به‌کارت</div>
+                <div class="btn full">🔙 بازگشت</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHAT -->
+        <div class="screen" data-screen="chat">
+          <div class="chat">
+            <div class="bubble">
+              <img src="../banners/menu-chat.png" alt="چت خصوصی" />
+              <div class="caption">✅ وصل شدید!
+هویت طرف مقابل مخفی است. محترمانه گفتگو کنید.</div>
+              <div class="inline-grid">
+                <div class="btn">⏭ بعدی</div>
+                <div class="btn danger">🛑 پایان</div>
+                <div class="btn warn">🚩 گزارش</div>
+                <div class="btn">⭐ علاقه‌مندی</div>
+              </div>
+            </div>
+          </div>
+          <div class="reply-bar">
+            <div class="key">⏭ بعدی</div>
+            <div class="key">🛑 پایان</div>
+            <div class="key">🚩 گزارش</div>
+            <div class="key">🎁 هدیه</div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="panel" id="info">
+        <h2>منوی اصلی</h2>
+        <ul>
+          <li>بنر گرافیکی تمام‌عرض + دکمه‌های اینلاین</li>
+          <li>کیبورد پایین برای دسترسی سریع همیشگی</li>
+          <li>تم رنگی: teal / mint (مدرن، غیرتکراری)</li>
+          <li>نام برند «هم‌گپ» موقتی است و قابل تغییر</li>
+        </ul>
+      </aside>
+    </div>
+
+    <p class="note">
+      این صفحه فقط نمونه طراحی است. بعد از تأیید شما، بنرها فشرده‌سازی می‌شوند و داخل بات واقعی قرار می‌گیرند.
+    </p>
+  </div>
+
+  <script>
+    const texts = {
+      main: {
+        title: "منوی اصلی",
+        items: [
+          "بنر گرافیکی تمام‌عرض + دکمه‌های اینلاین",
+          "کیبورد پایین برای دسترسی سریع همیشگی",
+          "تم رنگی: teal / mint (مدرن، غیرتکراری)",
+          "نام برند «هم‌گپ» موقتی است و قابل تغییر",
+        ],
+      },
+      smart: {
+        title: "چت هوشمند",
+        items: [
+          "فیلتر پسر/دختر و پیشرفته‌ها در یک کارت",
+          "قیمت سکه روی خود دکمه دیده می‌شود",
+          "کسر سکه فقط بعد از اتصال موفق",
+        ],
+      },
+      wallet: {
+        title: "کیف سکه و پرداخت",
+        items: [
+          "۳ پکیج قیمت‌گذاری‌شده",
+          "درگاه اصلی: زرین‌پال",
+          "پشتیبان: کارت‌به‌کارت با تأیید ادمین",
+        ],
+      },
+      chat: {
+        title: "منوی چت خصوصی",
+        items: [
+          "بعد از وصل شدن، بنر وضعیت + اکشن‌ها",
+          "دکمه‌های بعدی / پایان / گزارش در دسترس فوری",
+          "کیبورد پایین مخصوص حالت چت",
+        ],
+      },
+    };
+
+    const tabs = document.getElementById("tabs");
+    const info = document.getElementById("info");
+
+    tabs.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-tab]");
+      if (!btn) return;
+      const tab = btn.dataset.tab;
+
+      tabs.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b === btn));
+      document.querySelectorAll(".screen").forEach((s) => {
+        s.classList.toggle("active", s.dataset.screen === tab);
+      });
+
+      const data = texts[tab];
+      info.innerHTML = `<h2>${data.title}</h2><ul>${data.items
+        .map((i) => `<li>${i}</li>`)
+        .join("")}</ul>`;
+    });
+  </script>
+</body>
+</html>
