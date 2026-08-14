@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v7';
+    public const CODE_VERSION = '2026-08-14-v8';
 
     private string $assets;
 
@@ -144,6 +144,7 @@ final class Handlers
                     'gender' => null,
                     'age' => null,
                     'city' => null,
+                    'province' => null,
                     'flow' => null,
                     'status' => 'idle',
                     'partner_id' => null,
@@ -264,11 +265,68 @@ final class Handlers
                 $this->finishRegistration($chatId, $fresh);
                 return;
             }
+            $this->askProvinceMenu($chatId, $fresh);
+            return;
+        }
+
+        if ($data === 'reg:prov:back') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->db->updateUser($tid, ['province' => null, 'city' => null, 'flow' => null]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->askProvinceMenu($chatId, $user);
+            return;
+        }
+
+        if (str_starts_with($data, 'reg:prov:')) {
+            $idx = (int)substr($data, strlen('reg:prov:'));
+            $provinces = IranLocations::provinces();
+            if (!isset($provinces[$idx])) {
+                $this->tg->answerCallback($id, 'استان نامعتبر', true);
+                return;
+            }
+            $province = $provinces[$idx];
+            $this->db->updateUser($tid, [
+                'province' => $province,
+                'city' => null,
+                'flow' => null,
+            ]);
+            $this->tg->answerCallback($id, "{$province} ✅");
+            $this->stripCallbackMenu($cq);
+            $fresh = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $fresh);
             $this->askCityMenu($chatId, $fresh);
             return;
         }
 
+        if (str_starts_with($data, 'reg:ci:')) {
+            $idx = (int)substr($data, strlen('reg:ci:'));
+            $province = (string)($user['province'] ?? '');
+            $cities = $province !== '' ? IranLocations::cities($province) : [];
+            if ($province === '' || !isset($cities[$idx])) {
+                $this->tg->answerCallback($id, 'اول استان را انتخاب کن', true);
+                $this->stripCallbackMenu($cq);
+                $this->clearUi($chatId, $user);
+                $this->askProvinceMenu($chatId, $user);
+                return;
+            }
+            $city = $cities[$idx];
+            $this->tg->answerCallback($id, "{$city} ✅");
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->saveCity($chatId, $user, $city);
+            return;
+        }
+
         if ($data === 'reg:city:other') {
+            if (empty($user['province'])) {
+                $this->tg->answerCallback($id, 'اول استان را انتخاب کن', true);
+                $this->stripCallbackMenu($cq);
+                $this->clearUi($chatId, $user);
+                $this->askProvinceMenu($chatId, $user);
+                return;
+            }
             $flow = $this->isProfileComplete($user) ? 'edit:city_other' : 'reg:city_other';
             $this->db->updateUser($tid, ['flow' => $flow]);
             $this->tg->answerCallback($id, 'نام شهر را بفرست');
@@ -278,22 +336,17 @@ final class Handlers
             $this->uiText(
                 $chatId,
                 $user,
-                "🏙 <b>شهر دیگر</b>\nنام شهرت را همین‌جا بنویس و ارسال کن:"
+                "🏙 <b>شهر دیگر</b> ({$user['province']})\nنام شهرت را همین‌جا بنویس و ارسال کن:"
             );
             return;
         }
 
+        // legacy city callbacks ignored safely
         if (str_starts_with($data, 'reg:city:')) {
-            $city = substr($data, strlen('reg:city:'));
-            $city = mb_substr(trim($city), 0, 64);
-            if ($city === '' || $city === 'other' || mb_strlen($city) < 2) {
-                $this->tg->answerCallback($id, 'نامعتبر', true);
-                return;
-            }
-            $this->tg->answerCallback($id, "{$city} ✅");
+            $this->tg->answerCallback($id, 'لطفاً دوباره از منوی استان انتخاب کن', true);
             $this->stripCallbackMenu($cq);
             $this->clearUi($chatId, $user);
-            $this->saveCity($chatId, $user, $city);
+            $this->askProvinceMenu($chatId, $user);
             return;
         }
 
@@ -373,11 +426,12 @@ final class Handlers
                     'reply_markup' => Keyboards::age(),
                 ]);
                 break;
+            case 'edit:location':
             case 'edit:city':
                 $this->clearUi($chatId, $user);
-                $this->uiText($chatId, $user, "شهر جدید را انتخاب کن 👇", [
-                    'reply_markup' => Keyboards::city(),
-                ]);
+                $this->db->updateUser($tid, ['province' => null, 'city' => null, 'flow' => null]);
+                $user = $this->db->findUser($tid) ?? $user;
+                $this->askProvinceMenu($chatId, $user);
                 break;
             case 'pay:soon':
                 $this->tg->answerCallback($id, 'پرداخت به‌زودی فعال می‌شود', true);
@@ -392,7 +446,7 @@ final class Handlers
         if (!$user) {
             return false;
         }
-        return !empty($user['gender']) && !empty($user['age']) && !empty($user['city']);
+        return !empty($user['gender']) && !empty($user['age']) && !empty($user['province']) && !empty($user['city']);
     }
 
     private function ensureProfileOrMain(int $chatId, array &$user, bool $freshStart): void
@@ -422,6 +476,14 @@ final class Handlers
             return;
         }
 
+        if (empty($user['province'])) {
+            if ($freshStart) {
+                $this->uiText($chatId, $user, $this->welcomeTextFirst());
+            }
+            $this->askProvinceMenu($chatId, $user);
+            return;
+        }
+
         if ($freshStart) {
             $this->uiText($chatId, $user, $this->welcomeTextFirst());
         }
@@ -438,10 +500,23 @@ final class Handlers
         );
     }
 
+    private function askProvinceMenu(int $chatId, array &$user): void
+    {
+        $this->uiText($chatId, $user, "استان خودت رو از منوی زیر انتخاب کن 👇", [
+            'reply_markup' => Keyboards::provinces(),
+        ]);
+    }
+
     private function askCityMenu(int $chatId, array &$user): void
     {
-        $this->uiText($chatId, $user, "شهر خودت رو از منوی زیر انتخاب کن 👇", [
-            'reply_markup' => Keyboards::city(),
+        $province = (string)($user['province'] ?? '');
+        if ($province === '' || IranLocations::cities($province) === []) {
+            $this->askProvinceMenu($chatId, $user);
+            return;
+        }
+        $safe = htmlspecialchars($province, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $this->uiText($chatId, $user, "شهر خودت در استان <b>{$safe}</b> رو انتخاب کن 👇", [
+            'reply_markup' => Keyboards::cities($province),
         ]);
     }
 
@@ -451,8 +526,15 @@ final class Handlers
         $city = mb_substr(trim($city), 0, 64);
         if (mb_strlen($city) < 2) {
             $this->uiText($chatId, $user, 'نام شهر معتبر بفرست یا از منو انتخاب کن.', [
-                'reply_markup' => Keyboards::city(),
+                'reply_markup' => !empty($user['province'])
+                    ? Keyboards::cities((string)$user['province'])
+                    : Keyboards::provinces(),
             ]);
+            return;
+        }
+        if (empty($user['province'])) {
+            $this->clearUi($chatId, $user);
+            $this->askProvinceMenu($chatId, $user);
             return;
         }
         $wasComplete = $this->isProfileComplete($user);
@@ -551,6 +633,7 @@ final class Handlers
         $text = "👤 <b>پروفایل من</b>\n" .
             "جنسیت: <b>{$g}</b>\n" .
             "سن: <b>" . ($user['age'] ?? '-') . "</b>\n" .
+            "استان: <b>" . htmlspecialchars((string)($user['province'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
             "شهر: <b>" . htmlspecialchars((string)($user['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
             "سکه: <b>" . (int)$user['coins'] . "</b>";
         $this->uiText($chatId, $user, $text, [

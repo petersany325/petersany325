@@ -11,6 +11,7 @@ final class Migrator
         $pdo = $db->pdo();
         self::addColumn($pdo, 'users', 'flow', 'VARCHAR(64) NULL');
         self::addColumn($pdo, 'users', 'ui_messages', 'TEXT NULL');
+        self::addColumn($pdo, 'users', 'province', 'VARCHAR(64) NULL');
     }
 
     private static function addColumn(PDO $pdo, string $table, string $column, string $definition): void

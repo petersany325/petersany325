@@ -42,33 +42,21 @@ final class Keyboards
     public static function smartInline(): array
     {
         return ['inline_keyboard' => [
-            [
-                ['text' => '👨 چت با پسر · ۱ سکه', 'callback_data' => 'chat:male'],
-            ],
-            [
-                ['text' => '👩 چت با دختر · ۱ سکه', 'callback_data' => 'chat:female'],
-            ],
-            [
-                ['text' => '🎲 چت تصادفی · رایگان', 'callback_data' => 'chat:any'],
-            ],
-            [
-                ['text' => '🔙 بازگشت', 'callback_data' => 'menu:main'],
-            ],
+            [['text' => '👨 چت با پسر · ۱ سکه', 'callback_data' => 'chat:male']],
+            [['text' => '👩 چت با دختر · ۱ سکه', 'callback_data' => 'chat:female']],
+            [['text' => '🎲 چت تصادفی · رایگان', 'callback_data' => 'chat:any']],
+            [['text' => '🔙 بازگشت', 'callback_data' => 'menu:main']],
         ]];
     }
 
-    /** Gender choice — one dedicated menu box */
     public static function gender(): array
     {
-        return ['inline_keyboard' => [
-            [
-                ['text' => '👩 دختر', 'callback_data' => 'reg:gender:female'],
-                ['text' => '👨 پسر', 'callback_data' => 'reg:gender:male'],
-            ],
-        ]];
+        return ['inline_keyboard' => [[
+            ['text' => '👩 دختر', 'callback_data' => 'reg:gender:female'],
+            ['text' => '👨 پسر', 'callback_data' => 'reg:gender:male'],
+        ]]];
     }
 
-    /** Age choice — click only */
     public static function age(): array
     {
         $rows = [];
@@ -83,24 +71,35 @@ final class Keyboards
         if ($row) {
             $rows[] = $row;
         }
-        $rows[] = [
-            ['text' => '۴۵+', 'callback_data' => 'reg:age:45'],
-        ];
+        $rows[] = [['text' => '۴۵+', 'callback_data' => 'reg:age:45']];
         return ['inline_keyboard' => $rows];
     }
 
-    /** City choice — click only */
-    public static function city(): array
+    /** All Iran provinces — index callbacks stay under Telegram 64-byte limit */
+    public static function provinces(): array
     {
-        $cities = [
-            'تهران', 'کرج', 'مشهد', 'اصفهان', 'شیراز', 'تبریز',
-            'اهواز', 'قم', 'کرمان', 'رشت', 'ارومیه', 'زاهدان',
-            'همدان', 'کرمانشاه', 'یزد', 'اردبیل',
-        ];
         $rows = [];
         $row = [];
-        foreach ($cities as $i => $city) {
-            $row[] = ['text' => $city, 'callback_data' => 'reg:city:' . $city];
+        foreach (IranLocations::provinces() as $i => $name) {
+            $row[] = ['text' => $name, 'callback_data' => 'reg:prov:' . $i];
+            if (count($row) === 2) {
+                $rows[] = $row;
+                $row = [];
+            }
+        }
+        if ($row) {
+            $rows[] = $row;
+        }
+        return ['inline_keyboard' => $rows];
+    }
+
+    /** Cities of selected province + other + back to provinces */
+    public static function cities(string $province): array
+    {
+        $rows = [];
+        $row = [];
+        foreach (IranLocations::cities($province) as $i => $city) {
+            $row[] = ['text' => $city, 'callback_data' => 'reg:ci:' . $i];
             if (count($row) === 2) {
                 $rows[] = $row;
                 $row = [];
@@ -110,6 +109,7 @@ final class Keyboards
             $rows[] = $row;
         }
         $rows[] = [['text' => '🏙 شهر دیگر', 'callback_data' => 'reg:city:other']];
+        $rows[] = [['text' => '🔙 تغییر استان', 'callback_data' => 'reg:prov:back']];
         return ['inline_keyboard' => $rows];
     }
 
@@ -127,9 +127,7 @@ final class Keyboards
                 ['text' => '⏭ بعدی', 'callback_data' => 'chat:next'],
                 ['text' => '🛑 پایان', 'callback_data' => 'chat:end'],
             ],
-            [
-                ['text' => '🚩 گزارش', 'callback_data' => 'chat:report'],
-            ],
+            [['text' => '🚩 گزارش', 'callback_data' => 'chat:report']],
         ]];
     }
 
@@ -160,7 +158,7 @@ final class Keyboards
                 ['text' => '✏️ سن', 'callback_data' => 'edit:age'],
             ],
             [
-                ['text' => '✏️ شهر', 'callback_data' => 'edit:city'],
+                ['text' => '✏️ استان/شهر', 'callback_data' => 'edit:location'],
                 ['text' => '🔙 پروفایل', 'callback_data' => 'menu:profile'],
             ],
         ]];
