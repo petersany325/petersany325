@@ -59,6 +59,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             save_bot_config($cfg);
             flash('ok', 'License / renewal settings saved.');
             $tab = 'license';
+        } elseif ($action === 'install_license_sample') {
+            $botRoot = dirname(__DIR__);
+            $branch = 'cursor/telegram-bot-architecture-5168';
+            $base = 'https://raw.githubusercontent.com/petersany325/petersany325/' . rawurlencode($branch) . '/telegram_bot_php/php_bot/';
+            $files = array(
+                'src/Services/LicenseFlowService.php',
+                'src/Services/UserOptionsService.php',
+                'src/Services/ExtraMenusService.php',
+                'src/Handlers/CallbackRouter.php',
+                'src/Handlers/MessageRouter.php',
+                'src/BotKernel.php',
+                'bootstrap.php',
+                'admin/git_update.php',
+                'admin/user_options.php',
+                'admin/receipts.php',
+                'storage/licenses/.htaccess',
+            );
+            $ok = 0;
+            $fail = array();
+            foreach ($files as $rel) {
+                $url = $base . implode('/', array_map('rawurlencode', explode('/', $rel)));
+                $body = false;
+                if (function_exists('curl_init')) {
+                    $ch = curl_init($url);
+                    curl_setopt_array($ch, array(
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_FOLLOWLOCATION => true,
+                        CURLOPT_CONNECTTIMEOUT => 15,
+                        CURLOPT_TIMEOUT => 60,
+                        CURLOPT_USERAGENT => 'HDDLand-License-Installer',
+                    ));
+                    $body = curl_exec($ch);
+                    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    curl_close($ch);
+                    if ($body === false || $code >= 400) {
+                        $body = false;
+                    }
+                }
+                if ($body === false) {
+                    $fail[] = $rel . ' download';
+                    continue;
+                }
+                if (substr($rel, -4) === '.php' && strpos((string)$body, '<?php') === false) {
+                    $fail[] = $rel . ' invalid';
+                    continue;
+                }
+                $dest = $botRoot . '/' . $rel;
+                $dir = dirname($dest);
+                if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+                    $fail[] = $rel . ' mkdir';
+                    continue;
+                }
+                if (@file_put_contents($dest, $body) === false) {
+                    $fail[] = $rel . ' write';
+                    continue;
+                }
+                $ok++;
+            }
+            $licDir = $botRoot . '/storage/licenses';
+            if (!is_dir($licDir)) {
+                @mkdir($licDir, 0755, true);
+            }
+            if ($fail) {
+                flash('err', "Installed {$ok} files; failed: " . implode(', ', $fail));
+            } else {
+                flash('ok', "License sample installed ({$ok} files). Test 🔑 License in Telegram.");
+            }
+            $tab = 'license';
         } elseif ($action === 'save_growth') {
             foreach (array(
                 'bot_username','referral_bonus_text_en','referral_bonus_text_fa','contact_phone','contact_hours',
@@ -416,6 +484,11 @@ require __DIR__ . '/layout_header.php';
 <?php elseif ($tab === 'license'): ?>
 <div class="card panel">
   <h2>License & renewal</h2>
+  <form method="post" class="stack" style="margin-bottom:18px">
+    <input type="hidden" name="action" value="install_license_sample">
+    <p class="muted">If Telegram still shows the old License Status page, install the guided license sample files from GitHub (register → receipt → license TXT → activation).</p>
+    <button class="btn" type="submit">Install / repair License sample files</button>
+  </form>
   <form method="post" class="stack">
     <input type="hidden" name="action" value="save_license">
     <label>License mailbox (send/receive)</label>
