@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v6';
+    public const CODE_VERSION = '2026-08-14-v7';
 
     private string $assets;
 
@@ -136,7 +136,22 @@ final class Handlers
         $text = trim((string)($message['text'] ?? ''));
 
         if ($text === '/start' || str_starts_with($text, '/start ') || $text === '🏠 منوی اصلی') {
+            // 1) clear old UI menus
             $this->clearUi($chatId, $user);
+            // 2) incomplete profiles restart from zero (brand-clean onboarding)
+            if (!$this->isProfileComplete($user)) {
+                $this->db->updateUser($tid, [
+                    'gender' => null,
+                    'age' => null,
+                    'city' => null,
+                    'flow' => null,
+                    'status' => 'idle',
+                    'partner_id' => null,
+                    'search_pref' => null,
+                ]);
+                $user = $this->db->findUser($tid) ?? $user;
+            }
+            // 3) output fresh screens
             $this->ensureProfileOrMain($chatId, $user, true);
             return;
         }
@@ -147,6 +162,8 @@ final class Handlers
         }
 
         if (!$this->isProfileComplete($user)) {
+            // Do NOT stack menus. Clear once, show only the current step.
+            $this->clearUi($chatId, $user);
             $this->ensureProfileOrMain($chatId, $user, false);
             return;
         }
