@@ -37,6 +37,22 @@ final class Keyboards
         ]];
     }
 
+    public static function helpInline(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '💬 چت ناشناس', 'callback_data' => 'menu:connect']],
+            [
+                ['text' => '🔍 جستجو', 'callback_data' => 'menu:find'],
+                ['text' => '👤 پروفایل', 'callback_data' => 'menu:profile'],
+            ],
+            [
+                ['text' => '💎 کیف‌پول', 'callback_data' => 'menu:wallet'],
+                ['text' => '🆘 پشتیبانی', 'callback_data' => 'menu:support'],
+            ],
+            [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
+        ]];
+    }
+
     public static function removeReply(): array
     {
         return ['remove_keyboard' => true];

@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v10.7';
+    public const CODE_VERSION = '2026-08-14-v10.7.1';
 
     private string $assets;
     private Settings $settings;
@@ -1263,22 +1263,28 @@ final class Handlers
         $this->clearUi($chatId, $user);
         $name = $this->botName();
         $invite = $this->settings->getInt('invite_reward', 30);
-        $msgCost = $this->settings->getInt('message_cost', 1);
+        $msgCost = $this->settings->getInt('message_cost', 2);
         $reqCost = $this->settings->getInt('request_cost', 1);
-        $this->uiText(
-            $chatId,
-            $user,
-            "راهنمای <b>{$name}</b>\n\n" .
-            "چت ناشناس — اتصال رندوم رایگان\n" .
-            "جستجوی کاربران — نزدیک‌ترین ۱۰۰ نفر خودکار + نمایش کارت/فهرست/عکس/منو\n" .
-            "پروفایل حرفه‌ای — عکس، نام دستی/خودکار، بیو، حریم خصوصی فیلدها\n" .
-            "چت با دوستان — گپ گروهی دختر و پسر با کد دعوت\n" .
-            "درخواست گفتگو / پیام کوتاه — هر کدام {$reqCost} و {$msgCost} سکه\n" .
-            "دعوت دوستان — هر دعوت موفق +{$invite} سکه\n" .
-            "پشتیبانی — ارتباط با تیم خدمات\n\n" .
-            "دستورها: /profile /coins /search /link\n\n" .
-            "رمز، کارت بانکی و لینک مشکوک نفرست."
-        );
+        $caption =
+            "ℹ️ <b>راهنمای {$name}</b>\n\n" .
+            "💬 چت ناشناس — اتصال رندوم رایگان\n" .
+            "🔍 جستجو — نزدیک‌ترین‌ها + کارت/فهرست/عکس/منو\n" .
+            "👤 پروفایل — عکس، نام، بیو، لایک، حریم خصوصی\n" .
+            "📩 چت خصوصی — درخواست با تأیید / رزرو · پایان = پاک شدن تاریخچه\n" .
+            "✉️ پیام بدون درخواست — هر پیام {$msgCost} سکه · درخواست {$reqCost} سکه\n" .
+            "👥 گپ دوستان — ساخت/ورود با سکه · بستن = پاک‌سازی کامل\n" .
+            "🚩 گزارش خلاف — با ۵ گزارش مسدود تا تماس با پشتیبانی\n" .
+            "✨ دعوت — هر دعوت +{$invite} سکه\n\n" .
+            "دستورها: /profile /coins /search /link\n" .
+            "رمز و کارت بانکی را در چت نفرست.";
+        $path = $this->assets . '/menu-help.jpg';
+        if (is_file($path)) {
+            $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::helpInline());
+        } else {
+            $this->uiText($chatId, $user, $caption, [
+                'reply_markup' => Keyboards::helpInline(),
+            ]);
+        }
     }
 
     private function showMain(int $chatId, array &$user, string $extra = ''): void
