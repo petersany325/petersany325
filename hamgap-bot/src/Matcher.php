@@ -214,24 +214,23 @@ final class Matcher
         $tid = (int)$user['telegram_id'];
         $partnerId = !empty($user['partner_id']) ? (int)$user['partner_id'] : null;
 
-        $this->db->updateUser($tid, [
-            'status' => 'idle',
-            'partner_id' => null,
-            'search_pref' => null,
-        ]);
-
+        // Hard-delete chat rows — no message history / logs retained
         if ($partnerId) {
-            $this->db->pdo()->prepare(
-                "UPDATE chats SET status = 'ended', ended_at = NOW()
-                 WHERE status = 'active' AND ((user_a = ? AND user_b = ?) OR (user_a = ? AND user_b = ?))"
-            )->execute([$tid, $partnerId, $partnerId, $tid]);
-
+            $this->db->wipeChatPair($tid, $partnerId);
             $this->db->updateUser($partnerId, [
                 'status' => 'idle',
                 'partner_id' => null,
                 'search_pref' => null,
             ]);
+        } else {
+            $this->db->wipeUserChats($tid);
         }
+
+        $this->db->updateUser($tid, [
+            'status' => 'idle',
+            'partner_id' => null,
+            'search_pref' => null,
+        ]);
 
         return $partnerId;
     }

@@ -45,7 +45,44 @@ final class Migrator
         self::ensureFriendRoomsTables($pdo);
         self::ensureStatusIncludesRoom($pdo);
         self::ensurePaymentInvoicesTable($pdo);
+        self::ensureUserLikesTable($pdo);
+        self::ensureContactRequestsKinds($pdo);
+        self::addColumn($pdo, 'users', 'ban_reason', 'VARCHAR(64) NULL');
+        self::addColumn($pdo, 'users', 'likes_count', 'INT NOT NULL DEFAULT 0');
         (new Settings($db))->seedDefaults();
+    }
+
+    private static function ensureUserLikesTable(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS user_likes (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                from_id BIGINT NOT NULL,
+                to_id BIGINT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_like (from_id, to_id),
+                KEY idx_like_to (to_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    private static function ensureContactRequestsKinds(PDO $pdo): void
+    {
+        try {
+            $pdo->exec(
+                "ALTER TABLE contact_requests
+                 MODIFY kind VARCHAR(16) NOT NULL DEFAULT 'request'"
+            );
+        } catch (Throwable $e) {
+        }
+        try {
+            $pdo->exec(
+                "ALTER TABLE contact_requests
+                 MODIFY status VARCHAR(16) NOT NULL DEFAULT 'pending'"
+            );
+        } catch (Throwable $e) {
+        }
     }
 
     private static function ensurePaymentInvoicesTable(PDO $pdo): void

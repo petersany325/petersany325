@@ -11,8 +11,12 @@ final class Settings
 
     public const DEFAULTS = [
         'invite_reward' => '30',
-        'message_cost' => '1',
+        'message_cost' => '2',
         'request_cost' => '1',
+        'like_cost' => '0',
+        'room_create_cost' => '5',
+        'room_join_cost' => '1',
+        'report_ban_threshold' => '5',
         'search_free' => '1',
         'connect_any_cost' => '0',
         'connect_gender_cost' => '0',

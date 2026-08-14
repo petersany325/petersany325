@@ -136,6 +136,7 @@ final class AdminHandlers
                 'connect_any_cost', 'connect_gender_cost', 'connect_province_cost', 'connect_age_cost',
                 'admin_session_hours', 'pay_invoice_minutes',
                 'pack_100_price', 'pack_300_price', 'pack_1000_price',
+                'like_cost', 'room_create_cost', 'room_join_cost', 'report_ban_threshold',
             ], true)) {
                 if (!ctype_digit($value)) {
                     $this->tg->sendMessage($chatId, 'فقط عدد بفرست.');

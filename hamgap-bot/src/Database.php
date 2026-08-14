@@ -162,6 +162,176 @@ final class Database
         )->execute([$blockerId, $blockedId]);
     }
 
+    public function unblockUser(int $blockerId, int $blockedId): void
+    {
+        $this->pdo->prepare(
+            'DELETE FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?'
+        )->execute([$blockerId, $blockedId]);
+    }
+
+    /** @return list<array> */
+    public function listBlockedUsers(int $blockerId, int $limit = 30): array
+    {
+        $limit = max(1, min(50, $limit));
+        $st = $this->pdo->prepare(
+            "SELECT u.telegram_id, u.display_name, u.public_code, b.created_at
+             FROM user_blocks b
+             JOIN users u ON u.telegram_id = b.blocked_id
+             WHERE b.blocker_id = ?
+             ORDER BY b.id DESC LIMIT {$limit}"
+        );
+        $st->execute([$blockerId]);
+        return $st->fetchAll() ?: [];
+    }
+
+    public function addLike(int $fromId, int $toId): string
+    {
+        if ($fromId === $toId) {
+            return 'self';
+        }
+        try {
+            $this->pdo->prepare(
+                'INSERT INTO user_likes (from_id, to_id) VALUES (?, ?)'
+            )->execute([$fromId, $toId]);
+            $this->pdo->prepare(
+                'UPDATE users SET likes_count = likes_count + 1 WHERE telegram_id = ?'
+            )->execute([$toId]);
+            return 'ok';
+        } catch (Throwable $e) {
+            return 'already';
+        }
+    }
+
+    public function countLikes(int $telegramId): int
+    {
+        $st = $this->pdo->prepare('SELECT likes_count FROM users WHERE telegram_id = ? LIMIT 1');
+        $st->execute([$telegramId]);
+        $n = $st->fetchColumn();
+        if ($n !== false) {
+            return (int)$n;
+        }
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM user_likes WHERE to_id = ?');
+        $st->execute([$telegramId]);
+        return (int)$st->fetchColumn();
+    }
+
+    public function createContactRequest(int $fromId, int $toId, string $kind, ?string $payload = null): int
+    {
+        $this->pdo->prepare(
+            'INSERT INTO contact_requests (from_id, to_id, kind, payload, status) VALUES (?, ?, ?, ?, ?)'
+        )->execute([$fromId, $toId, $kind, $payload, 'pending']);
+        return (int)$this->pdo->lastInsertId();
+    }
+
+    public function findContactRequest(int $id): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM contact_requests WHERE id = ? LIMIT 1');
+        $st->execute([$id]);
+        $row = $st->fetch();
+        return $row ?: null;
+    }
+
+    public function updateContactRequest(int $id, array $fields): void
+    {
+        if (!$fields) {
+            return;
+        }
+        $sets = [];
+        $vals = [];
+        foreach ($fields as $k => $v) {
+            $sets[] = "`{$k}` = ?";
+            $vals[] = $v;
+        }
+        $vals[] = $id;
+        $this->pdo->prepare('UPDATE contact_requests SET ' . implode(', ', $sets) . ' WHERE id = ?')->execute($vals);
+    }
+
+    /** @return list<array> */
+    public function listIncomingRequests(int $toId, array $statuses = ['pending', 'held']): array
+    {
+        if (!$statuses) {
+            return [];
+        }
+        $in = implode(',', array_fill(0, count($statuses), '?'));
+        $st = $this->pdo->prepare(
+            "SELECT r.*, u.display_name, u.public_code, u.gender, u.age, u.city
+             FROM contact_requests r
+             JOIN users u ON u.telegram_id = r.from_id
+             WHERE r.to_id = ? AND r.kind = 'request' AND r.status IN ({$in})
+             ORDER BY FIELD(r.status,'pending','held'), r.id DESC
+             LIMIT 30"
+        );
+        $st->execute(array_merge([$toId], $statuses));
+        return $st->fetchAll() ?: [];
+    }
+
+    public function addReport(int $reporterId, int $reportedId, string $reason): int
+    {
+        $this->pdo->prepare(
+            'INSERT INTO reports (reporter_id, reported_id, reason) VALUES (?, ?, ?)'
+        )->execute([$reporterId, $reportedId, $reason]);
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM reports WHERE reported_id = ?');
+        $st->execute([$reportedId]);
+        return (int)$st->fetchColumn();
+    }
+
+    public function banForReports(int $telegramId, string $reason = 'report_threshold'): void
+    {
+        $this->updateUser($telegramId, [
+            'status' => 'banned',
+            'ban_reason' => $reason,
+            'partner_id' => null,
+            'search_pref' => null,
+            'flow' => null,
+            'active_room_id' => null,
+        ]);
+    }
+
+    public function openPrivateChat(int $a, int $b, string $matchType = 'request'): void
+    {
+        // Wipe any previous active chats for both — no history kept
+        $this->wipeUserChats($a);
+        $this->wipeUserChats($b);
+        $this->pdo->prepare(
+            "INSERT INTO chats (user_a, user_b, match_type, status) VALUES (?, ?, ?, 'active')"
+        )->execute([$a, $b, $matchType]);
+        $this->updateUser($a, ['status' => 'chatting', 'partner_id' => $b, 'search_pref' => null, 'flow' => null]);
+        $this->updateUser($b, ['status' => 'chatting', 'partner_id' => $a, 'search_pref' => null, 'flow' => null]);
+    }
+
+    public function wipeUserChats(int $telegramId): void
+    {
+        $this->pdo->prepare(
+            'DELETE FROM chats WHERE user_a = ? OR user_b = ?'
+        )->execute([$telegramId, $telegramId]);
+        $u = $this->findUser($telegramId);
+        if ($u && ($u['status'] ?? '') === 'chatting') {
+            $this->updateUser($telegramId, ['status' => 'idle', 'partner_id' => null]);
+        }
+    }
+
+    public function wipeChatPair(int $a, int $b): void
+    {
+        $this->pdo->prepare(
+            'DELETE FROM chats WHERE (user_a = ? AND user_b = ?) OR (user_a = ? AND user_b = ?)'
+        )->execute([$a, $b, $b, $a]);
+    }
+
+    public function wipeFriendRoomCompletely(int $roomId): array
+    {
+        $members = $this->listRoomMembers($roomId);
+        $this->pdo->prepare('DELETE FROM friend_room_members WHERE room_id = ?')->execute([$roomId]);
+        $this->pdo->prepare('DELETE FROM friend_rooms WHERE id = ?')->execute([$roomId]);
+        foreach ($members as $m) {
+            $tid = (int)$m['telegram_id'];
+            $u = $this->findUser($tid);
+            if ($u && (int)($u['active_room_id'] ?? 0) === $roomId) {
+                $this->updateUser($tid, ['active_room_id' => null, 'status' => 'idle', 'flow' => null]);
+            }
+        }
+        return $members;
+    }
+
     /** @param array<string,mixed> $filters */
     private function browseWhereSql(int $viewerTid, array $filters, array &$params): string
     {
@@ -483,16 +653,25 @@ final class Database
         return ['ok' => true, 'room' => $room];
     }
 
-    public function leaveFriendRoom(int $telegramId): void
+    public function leaveFriendRoom(int $telegramId): ?array
     {
         $user = $this->findUser($telegramId);
         $roomId = (int)($user['active_room_id'] ?? 0);
-        if ($roomId > 0) {
-            $this->pdo->prepare(
-                "DELETE FROM friend_room_members WHERE room_id = ? AND telegram_id = ? AND role <> 'owner'"
-            )->execute([$roomId, $telegramId]);
+        if ($roomId <= 0) {
+            $this->updateUser($telegramId, ['active_room_id' => null, 'status' => 'idle', 'flow' => null]);
+            return null;
         }
+        $room = $this->findFriendRoom($roomId);
+        $isOwner = $room && (int)$room['owner_id'] === $telegramId;
+        if ($isOwner) {
+            $members = $this->wipeFriendRoomCompletely($roomId);
+            return ['closed' => true, 'room' => $room, 'members' => $members];
+        }
+        $this->pdo->prepare(
+            'DELETE FROM friend_room_members WHERE room_id = ? AND telegram_id = ?'
+        )->execute([$roomId, $telegramId]);
         $this->updateUser($telegramId, ['active_room_id' => null, 'status' => 'idle', 'flow' => null]);
+        return ['closed' => false, 'room' => $room, 'members' => []];
     }
 
     public function enterFriendRoom(int $telegramId, int $roomId): bool
@@ -701,14 +880,6 @@ final class Database
         $chatting = (int)$this->pdo->query("SELECT COUNT(*) FROM users WHERE status = 'chatting'")->fetchColumn();
         $banned = (int)$this->pdo->query("SELECT COUNT(*) FROM users WHERE status = 'banned'")->fetchColumn();
         return compact('total', 'complete', 'chatting', 'banned');
-    }
-
-    public function createContactRequest(int $fromId, int $toId, string $kind, ?string $payload = null): int
-    {
-        $this->pdo->prepare(
-            'INSERT INTO contact_requests (from_id, to_id, kind, payload, status) VALUES (?, ?, ?, ?, ?)'
-        )->execute([$fromId, $toId, $kind, $payload, 'pending']);
-        return (int)$this->pdo->lastInsertId();
     }
 
     /** @return list<array> */

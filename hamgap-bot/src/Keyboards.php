@@ -273,7 +273,10 @@ final class Keyboards
                 ['text' => 'نفر بعدی', 'callback_data' => 'chat:next'],
                 ['text' => 'پایان گفتگو', 'callback_data' => 'chat:end'],
             ],
-            [['text' => 'گزارش', 'callback_data' => 'chat:report']],
+            [
+                ['text' => '📥 درخواست‌ها / رزرو', 'callback_data' => 'req:inbox'],
+                ['text' => 'گزارش خلاف', 'callback_data' => 'chat:report'],
+            ],
         ]];
     }
 
@@ -282,23 +285,31 @@ final class Keyboards
         return [
             'keyboard' => [
                 [['text' => '⏭ بعدی'], ['text' => '🛑 پایان چت']],
-                [['text' => '🚩 گزارش']],
+                [['text' => '📥 درخواست‌ها'], ['text' => '🚩 گزارش']],
             ],
             'resize_keyboard' => true,
         ];
     }
 
     /** Modern profile card actions — minimal, not competitor-style green spam. */
-    public static function browseProfileInline(string $publicCode, int $requestCost, int $messageCost): array
-    {
+    public static function browseProfileInline(
+        string $publicCode,
+        int $requestCost,
+        int $messageCost,
+        int $likeCost = 0
+    ): array {
         $code = preg_replace('/[^A-Za-z0-9_]/', '', $publicCode) ?? '';
+        $likeLabel = $likeCost > 0 ? "❤️ لایک · {$likeCost} سکه" : '❤️ لایک';
         return ['inline_keyboard' => [
-            [['text' => "درخواست گفتگو · {$requestCost} سکه", 'callback_data' => 'br:req:' . $code]],
-            [['text' => "پیام کوتاه · {$messageCost} سکه", 'callback_data' => 'br:msg:' . $code]],
-            [['text' => '➕ افزودن دوست', 'callback_data' => 'br:friend:' . $code]],
+            [['text' => "درخواست چت خصوصی · {$requestCost} سکه", 'callback_data' => 'br:req:' . $code]],
+            [['text' => "پیام بدون درخواست · {$messageCost} سکه", 'callback_data' => 'br:msg:' . $code]],
+            [
+                ['text' => $likeLabel, 'callback_data' => 'br:like:' . $code],
+                ['text' => '➕ دوست', 'callback_data' => 'br:friend:' . $code],
+            ],
             [
                 ['text' => 'بعدی', 'callback_data' => 'br:next'],
-                ['text' => 'گزارش', 'callback_data' => 'br:rep:' . $code],
+                ['text' => 'گزارش خلاف', 'callback_data' => 'br:rep:' . $code],
             ],
             [
                 ['text' => 'بلاک', 'callback_data' => 'br:blk:' . $code],
@@ -308,6 +319,26 @@ final class Keyboards
                 ['text' => 'حالت نمایش', 'callback_data' => 'vw:pick'],
                 ['text' => 'پایان جستجو', 'callback_data' => 'menu:find'],
             ],
+        ]];
+    }
+
+    public static function chatRequestInline(int $requestId): array
+    {
+        $id = (string)$requestId;
+        return ['inline_keyboard' => [
+            [
+                ['text' => '✅ قبول چت', 'callback_data' => 'req:ok:' . $id],
+                ['text' => '⏳ رزرو', 'callback_data' => 'req:hold:' . $id],
+            ],
+            [['text' => '❌ رد', 'callback_data' => 'req:no:' . $id]],
+        ]];
+    }
+
+    public static function roomCreateConfirmInline(int $cost): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => "✅ بله، بساز (−{$cost} سکه)", 'callback_data' => 'fr:create:go']],
+            [['text' => 'انصراف', 'callback_data' => 'menu:friends']],
         ]];
     }
 
@@ -388,6 +419,10 @@ final class Keyboards
             [
                 ['text' => '🔤 نام کاربری', 'callback_data' => 'edit:namehub'],
                 ['text' => '📝 بیو / معرفی', 'callback_data' => 'edit:bio'],
+            ],
+            [
+                ['text' => '🚫 بلاک‌شده‌ها', 'callback_data' => 'menu:blocks'],
+                ['text' => '📥 درخواست‌های چت', 'callback_data' => 'req:inbox'],
             ],
             [['text' => 'دعوت دوستان · +۳۰ سکه', 'callback_data' => 'menu:invite']],
             [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
@@ -514,10 +549,10 @@ final class Keyboards
         return ['inline_keyboard' => $rows];
     }
 
-    public static function friendsInline(): array
+    public static function friendsInline(int $createCost = 5): array
     {
         return ['inline_keyboard' => [
-            [['text' => '🏠 ساخت گپ گروهی دوستان', 'callback_data' => 'fr:create']],
+            [['text' => "🏠 ساخت گپ گروهی (−{$createCost} سکه)", 'callback_data' => 'fr:create']],
             [['text' => '🔑 ورود با کد گپ', 'callback_data' => 'fr:join']],
             [['text' => '📂 گپ‌های من', 'callback_data' => 'fr:list']],
             [['text' => '👥 لیست دوستان', 'callback_data' => 'fr:friends']],
@@ -531,6 +566,7 @@ final class Keyboards
         $code = preg_replace('/[^A-Za-z0-9]/', '', $code) ?? '';
         return ['inline_keyboard' => [
             [['text' => '👥 اعضای گپ', 'callback_data' => 'fr:members']],
+            [['text' => '🗑 بستن و پاک‌سازی کامل', 'callback_data' => 'fr:close']],
             [['text' => '🚪 ترک گپ', 'callback_data' => 'fr:leave']],
             [['text' => 'منوی دوستان', 'callback_data' => 'menu:friends']],
         ]];
@@ -575,8 +611,12 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [['text' => 'پاداش دعوت', 'callback_data' => 'adm:set:invite_reward']],
-            [['text' => 'هزینه پیام کوتاه', 'callback_data' => 'adm:set:message_cost']],
-            [['text' => 'هزینه درخواست گفتگو', 'callback_data' => 'adm:set:request_cost']],
+            [['text' => 'هزینه پیام بدون درخواست', 'callback_data' => 'adm:set:message_cost']],
+            [['text' => 'هزینه درخواست چت', 'callback_data' => 'adm:set:request_cost']],
+            [['text' => 'هزینه لایک', 'callback_data' => 'adm:set:like_cost']],
+            [['text' => 'ساخت گپ گروهی', 'callback_data' => 'adm:set:room_create_cost']],
+            [['text' => 'ورود به گپ (هر نفر)', 'callback_data' => 'adm:set:room_join_cost']],
+            [['text' => 'آستانه بلاک با گزارش', 'callback_data' => 'adm:set:report_ban_threshold']],
             [['text' => 'سکه خوش‌آمد', 'callback_data' => 'adm:set:welcome_coins']],
             [['text' => 'هزینه چت شانسی', 'callback_data' => 'adm:set:connect_any_cost']],
             [['text' => 'هزینه فیلتر جنسیت', 'callback_data' => 'adm:set:connect_gender_cost']],
