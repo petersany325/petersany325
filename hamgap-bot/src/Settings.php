@@ -24,6 +24,10 @@ final class Settings
         'support_hours' => '۹ تا ۲۴',
         'main_bot_username' => 'HamGapXBot',
         'brand_name' => 'هم‌گپ',
+        'admin_username' => 'hamgap_admin',
+        // password hash is set on first deploy; never store plaintext here
+        'admin_password_hash' => '',
+        'admin_session_hours' => '12',
     ];
 
     public function __construct(private Database $db)

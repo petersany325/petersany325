@@ -365,11 +365,24 @@ final class Keyboards
     public static function adminMain(): array
     {
         return ['inline_keyboard' => [
-            [['text' => 'آمار لحظه‌ای', 'callback_data' => 'adm:stats']],
-            [['text' => 'تنظیمات سکه و هزینه', 'callback_data' => 'adm:coins']],
-            [['text' => 'مدیریت کاربران', 'callback_data' => 'adm:users']],
-            [['text' => 'پشتیبانی و کارمندان', 'callback_data' => 'adm:support']],
-            [['text' => 'تنظیمات عمومی', 'callback_data' => 'adm:general']],
+            [['text' => '📊 آمار لحظه‌ای', 'callback_data' => 'adm:stats']],
+            [['text' => '🪙 سکه و هزینه‌ها', 'callback_data' => 'adm:coins']],
+            [['text' => '👥 مدیریت کاربران', 'callback_data' => 'adm:users']],
+            [['text' => '🚩 گزارش‌ها', 'callback_data' => 'adm:reports']],
+            [['text' => '🆘 پشتیبانی و کارمندان', 'callback_data' => 'adm:support']],
+            [['text' => '⚙️ تنظیمات عمومی', 'callback_data' => 'adm:general']],
+            [['text' => '🛡 امنیت و رمز', 'callback_data' => 'adm:security']],
+            [['text' => '🚪 خروج از پنل', 'callback_data' => 'adm:logout']],
+        ]];
+    }
+
+    public static function adminSecurity(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => 'تغییر رمز عبور', 'callback_data' => 'adm:pwd:change']],
+            [['text' => 'تغییر نام کاربری', 'callback_data' => 'adm:set:admin_username']],
+            [['text' => 'مدت نشست (ساعت)', 'callback_data' => 'adm:set:admin_session_hours']],
+            [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
         ]];
     }
 
@@ -377,9 +390,13 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [['text' => 'پاداش دعوت', 'callback_data' => 'adm:set:invite_reward']],
-            [['text' => 'هزینه پیام', 'callback_data' => 'adm:set:message_cost']],
+            [['text' => 'هزینه پیام کوتاه', 'callback_data' => 'adm:set:message_cost']],
             [['text' => 'هزینه درخواست گفتگو', 'callback_data' => 'adm:set:request_cost']],
             [['text' => 'سکه خوش‌آمد', 'callback_data' => 'adm:set:welcome_coins']],
+            [['text' => 'هزینه چت شانسی', 'callback_data' => 'adm:set:connect_any_cost']],
+            [['text' => 'هزینه فیلتر جنسیت', 'callback_data' => 'adm:set:connect_gender_cost']],
+            [['text' => 'هزینه هم‌استان', 'callback_data' => 'adm:set:connect_province_cost']],
+            [['text' => 'هزینه هم‌سن', 'callback_data' => 'adm:set:connect_age_cost']],
             [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
         ]];
     }
@@ -387,29 +404,57 @@ final class Keyboards
     public static function adminUsers(): array
     {
         return ['inline_keyboard' => [
-            [['text' => 'جستجوی کاربر با کد/آیدی', 'callback_data' => 'adm:user:find']],
+            [['text' => '🔎 جستجوی کاربر', 'callback_data' => 'adm:user:find']],
+            [['text' => '🆕 کاربران اخیر', 'callback_data' => 'adm:users:recent']],
+            [['text' => '🚫 لیست مسدودها', 'callback_data' => 'adm:users:banned']],
             [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
         ]];
     }
 
     public static function adminUserActions(int $telegramId): array
     {
+        $id = (string)$telegramId;
         return ['inline_keyboard' => [
             [
-                ['text' => 'مسدود', 'callback_data' => 'adm:ban:' . $telegramId],
-                ['text' => 'رفع مسدود', 'callback_data' => 'adm:unban:' . $telegramId],
+                ['text' => 'مسدود', 'callback_data' => 'adm:ban:' . $id],
+                ['text' => 'رفع مسدود', 'callback_data' => 'adm:unban:' . $id],
             ],
-            [['text' => 'حذف پروفایل عمومی', 'callback_data' => 'adm:wipe:' . $telegramId]],
-            [['text' => '+۵۰ سکه', 'callback_data' => 'adm:give:' . $telegramId . ':50']],
+            [
+                ['text' => '+۵۰ سکه', 'callback_data' => 'adm:give:' . $id . ':50'],
+                ['text' => '−۵۰ سکه', 'callback_data' => 'adm:take:' . $id . ':50'],
+            ],
+            [['text' => 'تنظیم موجودی سکه', 'callback_data' => 'adm:setcoins:' . $id]],
+            [
+                ['text' => 'ویرایش نام', 'callback_data' => 'adm:editask:display_name:' . $id],
+                ['text' => 'ویرایش سن', 'callback_data' => 'adm:editask:age:' . $id],
+            ],
+            [
+                ['text' => 'ویرایش جنسیت', 'callback_data' => 'adm:editask:gender:' . $id],
+                ['text' => 'ویرایش شهر', 'callback_data' => 'adm:editask:city:' . $id],
+            ],
+            [['text' => 'ویرایش استان', 'callback_data' => 'adm:editask:province:' . $id]],
+            [['text' => 'پیام به کاربر', 'callback_data' => 'adm:msg:' . $id]],
+            [['text' => 'ریست پروفایل عمومی', 'callback_data' => 'adm:wipe:' . $id]],
+            [['text' => '🗑 حذف کامل کاربر', 'callback_data' => 'adm:delask:' . $id]],
             [['text' => 'بازگشت', 'callback_data' => 'adm:users']],
+        ]];
+    }
+
+    public static function adminConfirmDelete(int $telegramId): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => 'بله، حذف کامل', 'callback_data' => 'adm:delgo:' . $telegramId]],
+            [['text' => 'انصراف', 'callback_data' => 'adm:users']],
         ]];
     }
 
     public static function adminSupport(): array
     {
         return ['inline_keyboard' => [
-            [['text' => 'ثبت یوزرنیم بات پشتیبانی', 'callback_data' => 'adm:set:support_bot_username']],
-            [['text' => 'افزودن کارمند (آیدی عددی)', 'callback_data' => 'adm:staff:add']],
+            [['text' => 'یوزرنیم بات پشتیبانی', 'callback_data' => 'adm:set:support_bot_username']],
+            [['text' => 'ساعات پشتیبانی', 'callback_data' => 'adm:set:support_hours']],
+            [['text' => 'متن خوش‌آمد پشتیبانی', 'callback_data' => 'adm:set:support_welcome']],
+            [['text' => 'افزودن کارمند', 'callback_data' => 'adm:staff:add']],
             [['text' => 'لیست کارمندان', 'callback_data' => 'adm:staff:list']],
             [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
         ]];
@@ -419,8 +464,7 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [['text' => 'نام برند', 'callback_data' => 'adm:set:brand_name']],
-            [['text' => 'ساعات پشتیبانی', 'callback_data' => 'adm:set:support_hours']],
-            [['text' => 'متن خوش‌آمد پشتیبانی', 'callback_data' => 'adm:set:support_welcome']],
+            [['text' => 'یوزرنیم بات اصلی', 'callback_data' => 'adm:set:main_bot_username']],
             [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
         ]];
     }

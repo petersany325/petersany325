@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v10.2';
+    public const CODE_VERSION = '2026-08-14-v10.3';
 
     private string $assets;
     private Settings $settings;
@@ -153,15 +153,12 @@ final class Handlers
 
         $text = trim((string)($message['text'] ?? ''));
 
-        // Admin flows (settings typing) on main bot
-        if (str_starts_with((string)($user['flow'] ?? ''), 'adm:')) {
-            $admins = array_map('intval', $this->config['admin_ids'] ?? []);
-            if (in_array($tid, $admins, true) || !empty($user['is_admin'])) {
-                require_once __DIR__ . '/AdminHandlers.php';
-                $admin = new AdminHandlers($this->config, $this->db, $this->tg, $this->settings);
-                $admin->handle(['message' => $message]);
-                return;
-            }
+        // Admin flows / login on main bot
+        if (str_starts_with((string)($user['flow'] ?? ''), 'adm:') || $text === '/admin' || $text === '/login' || $text === '/logout') {
+            require_once __DIR__ . '/AdminHandlers.php';
+            $admin = new AdminHandlers($this->config, $this->db, $this->tg, $this->settings);
+            $admin->handle(['message' => $message]);
+            return;
         }
 
         // Compose short message to a browsed profile
@@ -237,12 +234,7 @@ final class Handlers
         }
 
         // Slash commands (profile complete)
-        if ($text === '/admin') {
-            $admins = array_map('intval', $this->config['admin_ids'] ?? []);
-            if (!in_array($tid, $admins, true) && empty($user['is_admin'])) {
-                $this->tg->sendMessage($chatId, 'دسترسی ادمین نداری.');
-                return;
-            }
+        if ($text === '/admin' || $text === '/login' || $text === '/logout') {
             require_once __DIR__ . '/AdminHandlers.php';
             $admin = new AdminHandlers($this->config, $this->db, $this->tg, $this->settings);
             $admin->handle(['message' => $message]);
@@ -352,13 +344,8 @@ final class Handlers
         $tid = (int)($from['id'] ?? 0);
         $user = $this->db->upsertUser($tid, $from['username'] ?? null, $from['first_name'] ?? null);
 
-        // Admin console callbacks (same bot fallback until dedicated admin bot is wired)
+        // Admin console — always hand off; AdminHandlers enforces login
         if (str_starts_with($data, 'adm:')) {
-            $admins = array_map('intval', $this->config['admin_ids'] ?? []);
-            if (!in_array($tid, $admins, true) && empty($user['is_admin'])) {
-                $this->tg->answerCallback($id, 'دسترسی ندارید', true);
-                return;
-            }
             require_once __DIR__ . '/AdminHandlers.php';
             $admin = new AdminHandlers($this->config, $this->db, $this->tg, $this->settings);
             $admin->handle(['callback_query' => $cq]);

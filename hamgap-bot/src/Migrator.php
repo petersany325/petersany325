@@ -19,6 +19,7 @@ final class Migrator
         self::addColumn($pdo, 'users', 'public_code', 'VARCHAR(16) NULL');
         self::addColumn($pdo, 'users', 'last_seen_at', 'TIMESTAMP NULL');
         self::addColumn($pdo, 'users', 'browse_cursor', 'BIGINT NULL');
+        self::widenFlowColumn($pdo);
         self::ensureSearchPrefFlexible($pdo);
         self::ensureReferralUnique($pdo);
         self::ensurePublicCodeUnique($pdo);
@@ -27,7 +28,20 @@ final class Migrator
         self::ensureSupportStaffTable($pdo);
         self::ensureContactRequestsTable($pdo);
         self::ensureSupportTicketsTable($pdo);
+        self::ensureAdminSessionsTable($pdo);
         (new Settings($db))->seedDefaults();
+    }
+
+    private static function ensureAdminSessionsTable(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS admin_sessions (
+                telegram_id BIGINT NOT NULL,
+                logged_in_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                PRIMARY KEY (telegram_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
     }
 
     private static function addColumn(PDO $pdo, string $table, string $column, string $definition): void
@@ -41,6 +55,19 @@ final class Migrator
             return;
         }
         $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `{$column}` {$definition}");
+    }
+
+    private static function widenFlowColumn(PDO $pdo): void
+    {
+        $st = $pdo->query("SHOW COLUMNS FROM users LIKE 'flow'");
+        $col = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$col) {
+            return;
+        }
+        $type = strtolower((string)($col['Type'] ?? ''));
+        if (str_contains($type, 'varchar(64)') || preg_match('/varchar\(([0-9]+)\)/', $type, $m) && (int)$m[1] < 255) {
+            $pdo->exec('ALTER TABLE users MODIFY flow VARCHAR(255) NULL');
+        }
     }
 
     private static function ensureSearchPrefFlexible(PDO $pdo): void

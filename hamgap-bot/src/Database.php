@@ -290,6 +290,111 @@ final class Database
         ]);
     }
 
+    public function setCoinsAbsolute(int $telegramId, int $coins, string $reason = 'admin_set'): bool
+    {
+        $user = $this->findUser($telegramId);
+        if (!$user) {
+            return false;
+        }
+        $coins = max(0, $coins);
+        $delta = $coins - (int)$user['coins'];
+        $this->pdo->prepare('UPDATE users SET coins = ? WHERE telegram_id = ?')->execute([$coins, $telegramId]);
+        if ($delta !== 0) {
+            $this->pdo->prepare(
+                'INSERT INTO coin_transactions (user_id, amount, reason, meta) VALUES (?, ?, ?, ?)'
+            )->execute([(int)$user['id'], $delta, $reason, null]);
+        }
+        return true;
+    }
+
+    public function deleteUserHard(int $telegramId): bool
+    {
+        $user = $this->findUser($telegramId);
+        if (!$user) {
+            return false;
+        }
+        $uid = (int)$user['id'];
+        $pdo = $this->pdo;
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare('DELETE FROM coin_transactions WHERE user_id = ?')->execute([$uid]);
+            $pdo->prepare('DELETE FROM user_blocks WHERE blocker_id = ? OR blocked_id = ?')->execute([$telegramId, $telegramId]);
+            $pdo->prepare('DELETE FROM contact_requests WHERE from_id = ? OR to_id = ?')->execute([$telegramId, $telegramId]);
+            $pdo->prepare('DELETE FROM reports WHERE reporter_id = ? OR reported_id = ?')->execute([$telegramId, $telegramId]);
+            $pdo->prepare("UPDATE chats SET status = 'ended', ended_at = NOW() WHERE status = 'active' AND (user_a = ? OR user_b = ?)")
+                ->execute([$telegramId, $telegramId]);
+            $pdo->prepare('DELETE FROM users WHERE telegram_id = ?')->execute([$telegramId]);
+            $pdo->commit();
+            return true;
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+    }
+
+    public function createAdminSession(int $telegramId, int $hours = 12): void
+    {
+        $hours = max(1, min(72, $hours));
+        $this->pdo->prepare(
+            'INSERT INTO admin_sessions (telegram_id, logged_in_at, expires_at)
+             VALUES (?, NOW(), DATE_ADD(NOW(), INTERVAL ? HOUR))
+             ON DUPLICATE KEY UPDATE logged_in_at = NOW(), expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR)'
+        )->execute([$telegramId, $hours, $hours]);
+    }
+
+    public function destroyAdminSession(int $telegramId): void
+    {
+        $this->pdo->prepare('DELETE FROM admin_sessions WHERE telegram_id = ?')->execute([$telegramId]);
+    }
+
+    public function hasValidAdminSession(int $telegramId): bool
+    {
+        $st = $this->pdo->prepare(
+            'SELECT 1 FROM admin_sessions WHERE telegram_id = ? AND expires_at > NOW() LIMIT 1'
+        );
+        $st->execute([$telegramId]);
+        return (bool)$st->fetchColumn();
+    }
+
+    /** @return list<array> */
+    public function recentUsers(int $limit = 10): array
+    {
+        $limit = max(1, min(30, $limit));
+        $st = $this->pdo->query(
+            "SELECT telegram_id, display_name, public_code, status, coins, created_at
+             FROM users ORDER BY id DESC LIMIT {$limit}"
+        );
+        return $st->fetchAll() ?: [];
+    }
+
+    /** @return list<array> */
+    public function bannedUsers(int $limit = 20): array
+    {
+        $limit = max(1, min(50, $limit));
+        $st = $this->pdo->query(
+            "SELECT telegram_id, display_name, public_code, coins, updated_at
+             FROM users WHERE status = 'banned' ORDER BY updated_at DESC LIMIT {$limit}"
+        );
+        return $st->fetchAll() ?: [];
+    }
+
+    public function countReports(): int
+    {
+        return (int)$this->pdo->query('SELECT COUNT(*) FROM reports')->fetchColumn();
+    }
+
+    /** @return list<array> */
+    public function recentReports(int $limit = 15): array
+    {
+        $limit = max(1, min(50, $limit));
+        $st = $this->pdo->query(
+            "SELECT reporter_id, reported_id, reason, created_at FROM reports ORDER BY id DESC LIMIT {$limit}"
+        );
+        return $st->fetchAll() ?: [];
+    }
+
     public function generateDisplayName(): string
     {
         for ($i = 0; $i < 8; $i++) {
