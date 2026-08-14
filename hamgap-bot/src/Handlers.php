@@ -145,23 +145,25 @@ final class Handlers
                 $this->tg->answerCallback($id);
                 $this->showProfile($chatId, $user);
                 break;
+            case 'menu:edit_profile':
+                $this->tg->answerCallback($id);
+                $this->tg->sendMessage(
+                    $chatId,
+                    "📝 <b>ویرایش پروفایل</b>\nکدام مورد را می‌خواهی تغییر بدهی؟",
+                    ['reply_markup' => json_encode(Keyboards::editProfileInline(), JSON_UNESCAPED_UNICODE)]
+                );
+                break;
             case 'menu:wallet':
                 $this->tg->answerCallback($id);
                 $this->showWallet($chatId, $user);
                 break;
             case 'menu:help':
                 $this->tg->answerCallback($id);
-                $this->tg->sendMessage($chatId,
-                    "📘 <b>راهنما</b>\n\n" .
-                    "• چت تصادفی رایگان است.\n" .
-                    "• فیلتر پسر/دختر ۱ سکه برای هر اتصال.\n" .
-                    "• هویت طرف مقابل مخفی می‌ماند.\n" .
-                    "• رمز، کارت بانکی و لینک مشکوک نفرست.\n"
-                );
+                $this->showHelp($chatId);
                 break;
             case 'menu:support':
                 $this->tg->answerCallback($id);
-                $this->tg->sendMessage($chatId, "برای پشتیبانی به ادمین پیام بده یا همین‌جا مشکلت را بنویس.");
+                $this->showSupport($chatId);
                 break;
             case 'chat:any':
                 $this->tg->answerCallback($id);
@@ -228,9 +230,15 @@ final class Handlers
     {
         if (!$this->isProfileComplete($user)) {
             if (empty($user['gender'])) {
+                $name = htmlspecialchars((string)$this->config['bot_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $this->tg->sendMessage(
                     $chatId,
-                    "به <b>{$this->config['bot_name']}</b> خوش اومدی 👋\nاول بگو پسر هستی یا دختر؟",
+                    "به <b>{$name}</b> خوش اومدی 👋\n\n" .
+                    "یه ربات چت ناشناس برای گپ‌زدن امن و سریع با آدم‌های جدید.\n\n" .
+                    "🎁 ۳ سکه هدیه برای شروع داری.\n" .
+                    "🎲 چت تصادفی هم کاملاً رایگان و نامحدوده.\n\n" .
+                    "اول پروفایلت رو بساز تا وصل شی.\n" .
+                    "پسر هستی یا دختر؟",
                     ['reply_markup' => json_encode(Keyboards::gender(), JSON_UNESCAPED_UNICODE)]
                 );
                 return;
@@ -243,6 +251,36 @@ final class Handlers
             return;
         }
         $this->showMain($chatId, "دوباره خوش اومدی 🌿");
+    }
+
+    private function showHelp(int $chatId): void
+    {
+        $name = htmlspecialchars((string)$this->config['bot_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $this->tg->sendMessage(
+            $chatId,
+            "📘 <b>راهنمای {$name}</b>\n\n" .
+            "🔻 <b>{$name} چیه؟</b>\n" .
+            "ربات چت ناشناس برای حرف‌زدن و وقت‌گذرونی با افراد جدید — بدون نمایش هویت.\n\n" .
+            "🔻 <b>چجوری رایگان استفاده کنم؟</b>\n" .
+            "از «🎲 چت تصادفی» هرچقدر خواستی رایگان و نامحدود چت کن.\n\n" .
+            "🔻 <b>چت پسر / دختر چی؟</b>\n" .
+            "از «💬 چت هوشمند» انتخاب کن؛ هر اتصال موفق ۱ سکه کم می‌شود.\n\n" .
+            "🔻 <b>پروفایلمو چجوری عوض کنم؟</b>\n" .
+            "منو → 👤 پروفایل → 📝 ویرایش پروفایل\n\n" .
+            "🔻 <b>سوال یا مشکل؟</b>\n" .
+            "از منو → 🆘 پشتیبانی\n\n" .
+            "⚠️ رمز، کارت بانکی و لینک مشکوک را برای کسی نفرست."
+        );
+    }
+
+    private function showSupport(int $chatId): void
+    {
+        $this->tg->sendMessage(
+            $chatId,
+            "🆘 <b>پشتیبانی هم‌گپ</b>\n\n" .
+            "اگر به مشکلی خوردی یا انتقاد و پیشنهادی داری، از همین بخش پیام بده.\n" .
+            "پشتیبانی فقط از داخل ربات انجام می‌شود؛ به پیام‌های ناشناس با نام هم‌گپ اعتماد نکن."
+        );
     }
 
     private function continueRegistration(int $chatId, array $user, string $text): void
@@ -273,7 +311,10 @@ final class Handlers
             }
             $this->db->updateUser($tid, ['city' => $city]);
             $fresh = $this->db->findUser($tid) ?? $user;
-            $this->showMain($chatId, "پروفایل آماده شد ✅\n۳ سکه هدیه گرفتی. بزن بریم!");
+            $this->showMain(
+                $chatId,
+                "پروفایل آماده شد ✅\n۳ سکه هدیه گرفتی.\nبرای راهنما از دکمه ℹ️ راهنما استفاده کن."
+            );
             return;
         }
     }
@@ -326,7 +367,8 @@ final class Handlers
             "جنسیت: <b>{$g}</b>\n" .
             "سن: <b>" . ($user['age'] ?? '-') . "</b>\n" .
             "شهر: <b>" . htmlspecialchars((string)($user['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
-            "سکه: <b>" . (int)$user['coins'] . "</b>";
+            "سکه: <b>" . (int)$user['coins'] . "</b>\n\n" .
+            "برای تغییر اطلاعات، از «📝 ویرایش پروفایل» استفاده کن.";
         $this->tg->sendMessage($chatId, $text, [
             'reply_markup' => json_encode(Keyboards::profileInline(), JSON_UNESCAPED_UNICODE),
         ]);

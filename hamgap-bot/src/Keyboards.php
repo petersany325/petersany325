@@ -88,12 +88,24 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [
+                ['text' => '📝 ویرایش پروفایل', 'callback_data' => 'menu:edit_profile'],
+            ],
+            [
+                ['text' => '🔙 بازگشت', 'callback_data' => 'menu:main'],
+            ],
+        ]];
+    }
+
+    public static function editProfileInline(): array
+    {
+        return ['inline_keyboard' => [
+            [
                 ['text' => '✏️ جنسیت', 'callback_data' => 'edit:gender'],
                 ['text' => '✏️ سن', 'callback_data' => 'edit:age'],
             ],
             [
                 ['text' => '✏️ شهر', 'callback_data' => 'edit:city'],
-                ['text' => '🔙 بازگشت', 'callback_data' => 'menu:main'],
+                ['text' => '🔙 پروفایل', 'callback_data' => 'menu:profile'],
             ],
         ]];
     }
