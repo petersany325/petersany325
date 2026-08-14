@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v9';
+    public const CODE_VERSION = '2026-08-14-v9.1';
 
     private string $assets;
 
@@ -820,11 +820,19 @@ final class Handlers
 
     private function finishRegistration(int $chatId, array $user): void
     {
+        $this->db->ensureIdentity($user);
+        $fresh = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+        $dn = htmlspecialchars((string)($fresh['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $this->showMain(
             $chatId,
-            $user,
-            "پروفایل آماده شد ✅\n۳۵ سکه هدیه گرفتی.\nحالا می‌تونی وصل شی یا مخاطب پیدا کنی."
+            $fresh,
+            "پروفایل آماده شد ✅\n" .
+            "نام کاربری تو: <b>{$dn}</b>\n" .
+            "۳۵ سکه هدیه گرفتی.\n" .
+            "از «پروفایل من» می‌تونی عکس و نام را عوض کنی."
         );
+        // Show full profile card right after welcome so the auto username is visible.
+        $this->showProfile($chatId, $fresh);
     }
 
     private function showHelp(int $chatId, array &$user): void
