@@ -42,12 +42,8 @@ final class ExtraMenusService
                 self::checkout($chatId, $msgId, $lang);
                 break;
             case 'license':
-                self::page($chatId, $msgId, $lang, 'license',
-                    $lang === 'fa' ? '🔑 <b>وضعیت لایسنس</b>' : '🔑 <b>License Status</b>',
-                    (string)(cfg('license_help_text_' . ($lang === 'fa' ? 'fa' : 'en'), '')
-                        ?: ($lang === 'fa'
-                            ? "کد لایسنس SeDiv خود را برای پشتیبانی بفرستید یا از فروش درخواست تمدید کنید.\n\nUsage: پیام متنی به پشتیبانی یا /ticket"
-                            : "Send your SeDiv license code to support, or request renewal via Sales.\n\nTip: /ticket your license question")));
+                // Main Menu → 🔑 License opens the guided SeDiv license pipeline
+                LicenseFlowService::showLicenseEntry($chatId, $msgId, $userId, $lang);
                 break;
             case 'renew':
                 if (function_exists('start_request_flow')) {

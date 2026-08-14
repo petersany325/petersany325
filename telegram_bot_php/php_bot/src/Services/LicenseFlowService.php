@@ -152,32 +152,112 @@ final class LicenseFlowService
         return $kb;
     }
 
-    public static function showAccount(int $chatId, int $msgId, int $userId, string $lang): void
+    /**
+     * Entry from Main Menu → 🔑 License
+     * Continues the sample pipeline: register → receipt → license → activation.
+     */
+    public static function showLicenseEntry(int $chatId, int $msgId, int $userId, string $lang): void
     {
         self::ensureSchema();
-        $reg = self::isRegistered($userId);
-        $profile = '';
-        try {
-            $st = db()->prepare('SELECT first_name, last_name, email, username FROM users WHERE telegram_id=? LIMIT 1');
-            $st->execute(array($userId));
-            $u = $st->fetch() ?: array();
-            if ($reg) {
-                $profile = $lang === 'fa'
-                    ? "\n\n👤 <b>" . htmlspecialchars(trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? ''))) . "</b>\n📧 " . htmlspecialchars((string)($u['email'] ?? ''))
-                    : "\n\n👤 <b>" . htmlspecialchars(trim(($u['first_name'] ?? '') . ' ' . ($u['last_name'] ?? ''))) . "</b>\n📧 " . htmlspecialchars((string)($u['email'] ?? ''));
+        UserOptionsService::ensureSchema();
+
+        // Always keep the entry option path open for the License menu itself
+        if (!UserOptionsService::isOpen($userId, 'register')) {
+            UserOptionsService::setUserAccess($userId, 'register', true);
+        }
+        if (!UserOptionsService::isOpen($userId, 'pay_receipt')) {
+            UserOptionsService::setUserAccess($userId, 'pay_receipt', true);
+        }
+        if (!UserOptionsService::isOpen($userId, 'history')) {
+            UserOptionsService::setUserAccess($userId, 'history', true);
+        }
+
+        if (!self::isRegistered($userId)) {
+            $text = $lang === 'fa'
+                ? "🔑 <b>مرکز لایسنس SeDiv</b>\n\nبرای ادامه باید ثبت‌نام کنید (نام، نام‌خانوادگی، ایمیل).\nبعد می‌توانید فیش PayPal / Western Union بفرستید."
+                : "🔑 <b>SeDiv License Center</b>\n\nPlease register first (name, family name, email).\nThen you can submit a PayPal / Western Union receipt.";
+            $kb = array('inline_keyboard' => array(
+                array(array('text' => $lang === 'fa' ? '📝 شروع ثبت‌نام' : '📝 Start registration', 'callback_data' => 'acct:register')),
+                array(array('text' => $lang === 'fa' ? '🏠 منوی اصلی' : '🏠 Main Menu', 'callback_data' => 'main')),
+            ));
+            if ($msgId > 0) {
+                Presenter::editOrSend($chatId, $msgId, $text, $kb);
+            } else {
+                send_message($chatId, $text, $kb);
             }
+            return;
+        }
+
+        // Registered: check latest order status
+        $st = db()->prepare('SELECT * FROM license_orders WHERE telegram_id=? ORDER BY id DESC LIMIT 1');
+        $st->execute(array($userId));
+        $order = $st->fetch() ?: null;
+        $status = $order ? (string)$order['status'] : '';
+
+        $pending = false;
+        try {
+            $p = db()->prepare("SELECT id FROM payment_receipts WHERE telegram_id=? AND status='pending' ORDER BY id DESC LIMIT 1");
+            $p->execute(array($userId));
+            $pending = (bool)$p->fetchColumn();
         } catch (\Throwable $e) {
         }
 
-        $body = $lang === 'fa'
-            ? "👤 <b>پنل کاربر SeDiv</b>\nاپشن‌های باز برای حساب شما:" . $profile
-            : "👤 <b>SeDiv user panel</b>\nOptions open for your account:" . $profile;
-
-        if ($msgId > 0) {
-            Presenter::editOrSend($chatId, $msgId, $body, self::accountKeyboard($lang, $userId));
-        } else {
-            send_message($chatId, $body, self::accountKeyboard($lang, $userId));
+        if ($pending || $status === 'receipt_submitted') {
+            $text = $lang === 'fa'
+                ? "🔑 <b>مرکز لایسنس</b>\n\n⏳ فیش شما در صف تایید ادمین است.\nبعد از تایید، فایل لایسنس برایتان ارسال می‌شود."
+                : "🔑 <b>License Center</b>\n\n⏳ Your receipt is waiting for admin approval.\nAfter approval, the license file will be sent.";
+            $kb = array('inline_keyboard' => array(
+                array(array('text' => $lang === 'fa' ? '📋 گزارش مراحل' : '📋 My reports', 'callback_data' => 'acct:history')),
+                array(array('text' => $lang === 'fa' ? '🏠 منوی اصلی' : '🏠 Main Menu', 'callback_data' => 'main')),
+            ));
+            if ($msgId > 0) {
+                Presenter::editOrSend($chatId, $msgId, $text, $kb);
+            } else {
+                send_message($chatId, $text, $kb);
+            }
+            return;
         }
+
+        $hasLicense = $order && in_array($status, array('license_sent', 'activation_uploaded', 'activation_emailed', 'activation_ready', 'downloaded'), true);
+        if (!$hasLicense) {
+            $text = $lang === 'fa'
+                ? "🔑 <b>مرکز لایسنس SeDiv</b>\n\nثبت‌نام شما کامل است.\nمرحله بعد: ارسال فیش واریزی PayPal یا Western Union."
+                : "🔑 <b>SeDiv License Center</b>\n\nRegistration is complete.\nNext: submit a PayPal or Western Union payment receipt.";
+            $kb = array('inline_keyboard' => array(
+                array(array('text' => $lang === 'fa' ? '💵 ارسال فیش واریزی' : '💵 Submit payment receipt', 'callback_data' => 'acct:pay_receipt')),
+                array(array('text' => $lang === 'fa' ? '📋 گزارش مراحل' : '📋 My reports', 'callback_data' => 'acct:history')),
+                array(array('text' => $lang === 'fa' ? '🏠 منوی اصلی' : '🏠 Main Menu', 'callback_data' => 'main')),
+            ));
+            if ($msgId > 0) {
+                Presenter::editOrSend($chatId, $msgId, $text, $kb);
+            } else {
+                send_message($chatId, $text, $kb);
+            }
+            return;
+        }
+
+        // Has license — show license + activation options
+        $text = $lang === 'fa'
+            ? "🔑 <b>مرکز لایسنس</b>\n\nوضعیت سفارش: <code>" . htmlspecialchars($status) . "</code>\nکد: <code>" . htmlspecialchars((string)$order['order_code']) . "</code>\n\nلایسنس را دوباره بگیرید یا فایل اکتیو (۲۰۰/۳۰۰KB) بفرستید."
+            : "🔑 <b>License Center</b>\n\nOrder status: <code>" . htmlspecialchars($status) . "</code>\nCode: <code>" . htmlspecialchars((string)$order['order_code']) . "</code>\n\nRe-download license or upload activation file (200/300KB).";
+        $kb = array('inline_keyboard' => array(
+            array(array('text' => $lang === 'fa' ? '⬇️ دریافت لایسنس TXT' : '⬇️ Get license TXT', 'callback_data' => 'acct:license')),
+            array(array('text' => $lang === 'fa' ? '📦 ارسال فایل اکتیو' : '📦 Send activation file', 'callback_data' => 'acct:activation')),
+            array(array('text' => $lang === 'fa' ? '💵 فیش جدید' : '💵 New receipt', 'callback_data' => 'acct:pay_receipt')),
+            array(array('text' => $lang === 'fa' ? '📋 گزارش مراحل' : '📋 My reports', 'callback_data' => 'acct:history')),
+            array(array('text' => $lang === 'fa' ? '🏠 منوی اصلی' : '🏠 Main Menu', 'callback_data' => 'main')),
+        ));
+        if ($msgId > 0) {
+            Presenter::editOrSend($chatId, $msgId, $text, $kb);
+        } else {
+            send_message($chatId, $text, $kb);
+        }
+    }
+
+    public static function showAccount(int $chatId, int $msgId, int $userId, string $lang): void
+    {
+        // My Account / License menu both open the guided license center
+        self::showLicenseEntry($chatId, $msgId, $userId, $lang);
     }
 
     public static function handleCallback(string $data, string $cbId, int $chatId, int $msgId, int $userId, string $lang): bool
