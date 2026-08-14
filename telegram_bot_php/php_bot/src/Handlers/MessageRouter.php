@@ -18,6 +18,10 @@ final class MessageRouter
 {
     public static function handle(Context $ctx): void
     {
+        if (function_exists('ensure_license_sample_files')) {
+            ensure_license_sample_files();
+        }
+
         $message = $ctx->message ?? [];
         $chatId = $ctx->chatId;
         $userId = $ctx->userId;
@@ -27,7 +31,7 @@ final class MessageRouter
 
         // License / receipt / activation media first
         if (isset($message['photo']) || isset($message['video']) || isset($message['document'])) {
-            if (LicenseFlowService::handleMedia($message, $lang)) {
+            if (class_exists(LicenseFlowService::class, true) && LicenseFlowService::handleMedia($message, $lang)) {
                 return;
             }
             if (!function_exists('feature_on') || feature_on('prodesk')) {

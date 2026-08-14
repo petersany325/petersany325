@@ -18,6 +18,10 @@ final class CallbackRouter
 {
     public static function handle(Context $ctx): void
     {
+        if (function_exists('ensure_license_sample_files')) {
+            ensure_license_sample_files();
+        }
+
         $id = $ctx->callbackId;
         $data = $ctx->callbackData;
         $chatId = $ctx->chatId;
@@ -26,7 +30,7 @@ final class CallbackRouter
         $lang = $ctx->lang;
         $from = $ctx->from;
 
-        if (LicenseFlowService::handleCallback($data, $id, $chatId, $msgId, $userId, $lang)) {
+        if (class_exists(LicenseFlowService::class, true) && LicenseFlowService::handleCallback($data, $id, $chatId, $msgId, $userId, $lang)) {
             return;
         }
 

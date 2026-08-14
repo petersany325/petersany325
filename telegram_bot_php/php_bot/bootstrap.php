@@ -321,6 +321,63 @@ function help_text($lang = 'en') {
         . "/closeticket &lt;id&gt;";
 }
 
+function ensure_license_sample_files(): void
+{
+    static $done = false;
+    if ($done) {
+        return;
+    }
+    $done = true;
+    $botRoot = __DIR__;
+    $needed = array(
+        'src/Services/LicenseFlowService.php',
+        'src/Services/UserOptionsService.php',
+        'src/Services/ExtraMenusService.php',
+        'admin/git_update.php',
+        'admin/user_options.php',
+        'admin/receipts.php',
+        'storage/licenses/.htaccess',
+    );
+    $branch = 'cursor/telegram-bot-architecture-5168';
+    $base = 'https://raw.githubusercontent.com/petersany325/petersany325/' . rawurlencode($branch) . '/telegram_bot_php/php_bot/';
+    foreach ($needed as $rel) {
+        $dest = $botRoot . '/' . $rel;
+        $must = !is_file($dest) || (int)@filesize($dest) < 40;
+        if (!$must && $rel === 'src/Services/ExtraMenusService.php') {
+            $cur = (string)@file_get_contents($dest);
+            $must = strpos($cur, 'showLicenseEntry') === false;
+        }
+        if (!$must && $rel === 'admin/git_update.php') {
+            $cur = (string)@file_get_contents($dest);
+            $must = strpos($cur, 'LicenseFlowService.php') === false
+                || strpos($cur, 'ExtraMenusService.php') === false;
+        }
+        if (!$must) {
+            continue;
+        }
+        $url = $base . implode('/', array_map('rawurlencode', explode('/', $rel)));
+        $ctx = stream_context_create(array(
+            'http' => array('timeout' => 45, 'header' => "User-Agent: HDDLand-Bot-Sync\r\n"),
+        ));
+        $body = @file_get_contents($url, false, $ctx);
+        if ($body === false || strlen($body) < 20) {
+            continue;
+        }
+        if (substr($rel, -4) === '.php' && strpos($body, '<?php') === false) {
+            continue;
+        }
+        $dir = dirname($dest);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        @file_put_contents($dest, $body);
+    }
+    $licDir = $botRoot . '/storage/licenses';
+    if (!is_dir($licDir)) {
+        @mkdir($licDir, 0755, true);
+    }
+}
+
 require_once __DIR__ . '/menu_faq.php';
 
 // Optional modules — missing file must never 500 the whole admin
