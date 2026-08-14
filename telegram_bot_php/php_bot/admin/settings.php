@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('ok', 'Commerce / payments settings saved.');
             $tab = 'commerce';
         } elseif ($action === 'save_license') {
-            foreach (array('license_help_text_en','license_help_text_fa','license_check_url','renewal_message_en','renewal_message_fa','license_mailbox') as $k) {
+            foreach (array('license_help_text_en','license_help_text_fa','license_check_url','renewal_message_en','renewal_message_fa','license_mailbox','paypal_email') as $k) {
                 $cfg[$k] = trim((string)($_POST[$k] ?? ''));
             }
             $cfg['renewal_days_before'] = max(1, (int)($_POST['renewal_days_before'] ?? 14));
@@ -494,6 +494,9 @@ require __DIR__ . '/layout_header.php';
     <label>License mailbox (send/receive)</label>
     <input name="license_mailbox" value="<?= e((string)($cfg['license_mailbox'] ?? 'sedivlic@list.ru')) ?>" placeholder="sedivlic@list.ru">
     <p class="muted">All license/activation emails use this address (sample flow).</p>
+    <label>PayPal email (shown after License / registration)</label>
+    <input name="paypal_email" value="<?= e((string)($cfg['paypal_email'] ?? ($cfg['license_mailbox'] ?? 'sedivlic@list.ru'))) ?>" placeholder="sedivlic@list.ru">
+    <p class="muted">Displayed as <code>PayPal: …</code> in the payment step.</p>
     <label>License help text (EN)</label>
     <textarea name="license_help_text_en" rows="4"><?= e((string)($cfg['license_help_text_en'] ?? '')) ?></textarea>
     <label>License help text (FA)</label>

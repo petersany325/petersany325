@@ -96,6 +96,21 @@ final class LicenseFlowService
         return $m !== '' ? $m : 'sedivlic@list.ru';
     }
 
+    /** PayPal account shown after License / registration (payment step). */
+    public static function paypalEmail(): string
+    {
+        $m = trim((string)cfg('paypal_email', ''));
+        if ($m === '') {
+            $m = self::licenseMailbox();
+        }
+        return $m !== '' ? $m : 'sedivlic@list.ru';
+    }
+
+    public static function paypalPayLine(): string
+    {
+        return 'PayPal: ' . self::paypalEmail();
+    }
+
     public static function logEvent(int $telegramId, string $code, string $detail = '', ?int $orderId = null): void
     {
         self::ensureSchema();
@@ -220,11 +235,13 @@ final class LicenseFlowService
 
         $hasLicense = $order && in_array($status, array('license_sent', 'activation_uploaded', 'activation_emailed', 'activation_ready', 'downloaded'), true);
         if (!$hasLicense) {
+            $pp = htmlspecialchars(self::paypalPayLine());
             $text = $lang === 'fa'
-                ? "🔑 <b>مرکز لایسنس SeDiv</b>\n\nثبت‌نام شما کامل است.\nمرحله بعد: ارسال فیش واریزی PayPal یا Western Union."
-                : "🔑 <b>SeDiv License Center</b>\n\nRegistration is complete.\nNext: submit a PayPal or Western Union payment receipt.";
+                ? "🔑 <b>مرکز لایسنس SeDiv</b>\n\nثبت‌نام شما کامل است.\n\nمرحله بعد — پرداخت:\n<code>{$pp}</code>\n\nبعد از پرداخت، فیش را اینجا بفرستید."
+                : "🔑 <b>SeDiv License Center</b>\n\nRegistration is complete.\n\nNext — payment:\n<code>{$pp}</code>\n\nAfter payment, send your receipt here.";
             $kb = array('inline_keyboard' => array(
-                array(array('text' => $lang === 'fa' ? '💵 ارسال فیش واریزی' : '💵 Submit payment receipt', 'callback_data' => 'acct:pay_receipt')),
+                array(array('text' => $lang === 'fa' ? '💳 پرداخت PayPal / ارسال فیش' : '💳 PayPal / send receipt', 'callback_data' => 'acct:pay_paypal')),
+                array(array('text' => $lang === 'fa' ? '🏦 Western Union' : '🏦 Western Union', 'callback_data' => 'acct:pay_wu')),
                 array(array('text' => $lang === 'fa' ? '📋 گزارش مراحل' : '📋 My reports', 'callback_data' => 'acct:history')),
                 array(array('text' => $lang === 'fa' ? '🏠 منوی اصلی' : '🏠 Main Menu', 'callback_data' => 'main')),
             ));
@@ -348,26 +365,36 @@ final class LicenseFlowService
             );
             return;
         }
+        $pp = htmlspecialchars(self::paypalPayLine());
         $kb = array('inline_keyboard' => array(
             array(array('text' => '💳 PayPal', 'callback_data' => 'acct:pay_paypal')),
             array(array('text' => '🏦 Western Union', 'callback_data' => 'acct:pay_wu')),
             array(array('text' => $lang === 'fa' ? '⬅️ بازگشت' : '⬅️ Back', 'callback_data' => 'acct')),
         ));
         $text = $lang === 'fa'
-            ? "💵 <b>ثبت فیش واریزی</b>\n\nروش پرداخت را انتخاب کنید، بعد عکس/فایل فیش را بفرستید.\nصندوق لایسنس: <code>" . htmlspecialchars(self::licenseMailbox()) . '</code>'
-            : "💵 <b>Payment receipt</b>\n\nChoose method, then send photo/PDF of the receipt.\nLicense mailbox: <code>" . htmlspecialchars(self::licenseMailbox()) . '</code>';
+            ? "💵 <b>پرداخت لایسنس</b>\n\n<code>{$pp}</code>\n\nبه این حساب PayPal واریز کنید، بعد عکس/فایل فیش را بفرستید.\nWestern Union هم در صورت نیاز موجود است."
+            : "💵 <b>License payment</b>\n\n<code>{$pp}</code>\n\nPay to this PayPal account, then send photo/PDF of the receipt.\nWestern Union is also available if needed.";
         Presenter::editOrSend($chatId, $msgId, $text, $kb);
     }
 
     public static function beginReceiptUpload(int $chatId, int $userId, string $lang, string $method): void
     {
         set_user_state($userId, 'license_receipt', array('method' => $method));
-        $label = $method === 'paypal' ? 'PayPal' : 'Western Union';
+        if ($method === 'paypal') {
+            $pp = htmlspecialchars(self::paypalPayLine());
+            send_message(
+                $chatId,
+                $lang === 'fa'
+                    ? "💳 <b>پرداخت PayPal</b>\n\n<code>{$pp}</code>\n\n📎 بعد از واریز، فیش را به‌صورت عکس یا فایل بفرستید.\nمی‌توانید توضیح کوتاه در کپشن بنویسید.\nلغو: /cancel"
+                    : "💳 <b>PayPal payment</b>\n\n<code>{$pp}</code>\n\n📎 After payment, send the receipt as photo or file.\nOptional short note in the caption.\nCancel: /cancel"
+            );
+            return;
+        }
         send_message(
             $chatId,
             $lang === 'fa'
-                ? "📎 فیش <b>{$label}</b> را به‌صورت عکس یا فایل بفرستید.\nمی‌توانید یک توضیح کوتاه هم در کپشن بنویسید.\nلغو: /cancel"
-                : "📎 Send your <b>{$label}</b> receipt as photo or document.\nOptional caption note is OK.\nCancel: /cancel"
+                ? "📎 فیش <b>Western Union</b> را به‌صورت عکس یا فایل بفرستید.\nمی‌توانید یک توضیح کوتاه هم در کپشن بنویسید.\nلغو: /cancel"
+                : "📎 Send your <b>Western Union</b> receipt as photo or document.\nOptional caption note is OK.\nCancel: /cancel"
         );
     }
 
@@ -492,12 +519,18 @@ final class LicenseFlowService
             // Ensure pay_receipt stays open after register
             UserOptionsService::setUserAccess($userId, 'pay_receipt', true);
             UserOptionsService::setUserAccess($userId, 'history', true);
+            $pp = htmlspecialchars(self::paypalPayLine());
+            $kb = array('inline_keyboard' => array(
+                array(array('text' => $lang === 'fa' ? '💳 پرداخت PayPal / ارسال فیش' : '💳 PayPal / send receipt', 'callback_data' => 'acct:pay_paypal')),
+                array(array('text' => '🏦 Western Union', 'callback_data' => 'acct:pay_wu')),
+                array(array('text' => $lang === 'fa' ? '🔑 مرکز لایسنس' : '🔑 License Center', 'callback_data' => 'acct')),
+            ));
             send_message(
                 $chatId,
                 $lang === 'fa'
-                    ? "✅ ثبت‌نام شد.\nحالا می‌توانید فیش واریزی را از پنل حساب ارسال کنید."
-                    : "✅ Registered.\nYou can now submit a payment receipt from My Account.",
-                self::accountKeyboard($lang, $userId)
+                    ? "✅ ثبت‌نام شد.\n\nمرحله بعد — پرداخت:\n<code>{$pp}</code>\n\nواریز کنید، بعد فیش را بفرستید."
+                    : "✅ Registered.\n\nNext — payment:\n<code>{$pp}</code>\n\nPay, then send your receipt.",
+                $kb
             );
             return true;
         }
