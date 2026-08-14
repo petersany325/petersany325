@@ -53,7 +53,7 @@ final class Database
         }
 
         $st = $this->pdo->prepare(
-            'INSERT INTO users (telegram_id, username, first_name, coins) VALUES (?, ?, ?, 3)'
+            'INSERT INTO users (telegram_id, username, first_name, coins) VALUES (?, ?, ?, 35)'
         );
         $st->execute([$telegramId, $username, $firstName]);
         $user = $this->findUser($telegramId);
@@ -61,7 +61,7 @@ final class Database
             throw new RuntimeException('Failed to create user');
         }
         $this->pdo->prepare(
-            'INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, 3, ?)'
+            'INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, 35, ?)'
         )->execute([(int)$user['id'], 'welcome_gift']);
         return $user;
     }

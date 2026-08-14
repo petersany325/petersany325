@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v3';
+    public const CODE_VERSION = '2026-08-14-v4';
 
     private string $assets;
 
@@ -36,13 +36,24 @@ final class Handlers
         return htmlspecialchars((string)$this->config['bot_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
-    private function welcomeText(): string
+    /** پیام اول — معرفی کوتاه + هدیه */
+    private function welcomeTextFirst(): string
     {
-        $name = $this->botName();
+        return "به هم‌گپ خوش اومدی 👋\n\n" .
+            "یه ربات چت ناشناس برای گپ‌زدن امن و سریع با آدم‌های جدید.\n\n" .
+            "🎁 ۳۵ سکه هدیه برای شروع داری.\n" .
+            "🎲 چت تصادفی هم کاملاً رایگان و نامحدوده.\n\n" .
+            "اول پروفایلت رو بساز تا وصل شی.";
+    }
+
+    /** پیام دوم — توضیح کامل + دکمه‌های دختر/پسر زیر همین پیام */
+    private function welcomeTextSecond(): string
+    {
         return "سلام 😊 عزیز ✋\n\n" .
-            "به 《 <b>{$name}</b> 》 خوش اومدی ، توی این ربات می‌تونی افراد نزدیکت رو پیدا کنی و باهاشون آشنا شی " .
-            "یا به یه نفر بصورت <b>ناشناس</b> وصل شی و باهاش <b>چت</b> کنی ❗️\n\n" .
-            "استفاده از این ربات رایگانه و اطلاعات تلگرام شما مثل اسم، عکس پروفایل یا موقعیت GPS کاملاً محرمانه هست 😎";
+            "به 《 هم‌گپ 》 خوش اومدی ، توی این ربات می‌تونی افراد نزدیکت رو پیدا کنی و باهاشون آشنا شی " .
+            "یا به یه نفر بصورت ناشناس وصل شی و باهاش چت کنی ❗️\n\n" .
+            "استفاده از این ربات رایگانه و اطلاعات تلگرام شما مثل اسم، عکس پروفایل یا موقعیت GPS کاملاً محرمانه هست 😎\n\n" .
+            "برای شروع بهم بگو دختری یا پسری؟ 👇";
     }
 
     private function onMessage(array $message): void
@@ -307,35 +318,49 @@ final class Handlers
             return;
         }
 
-        if ($withWelcome || empty($user['gender'])) {
-            $this->tg->sendMessage($chatId, $this->welcomeText(), [
-                'reply_markup' => Keyboards::removeReply(),
+        // مرحله ۱: اگر جنسیت ندارد → پیام اول + پیام دوم با ۲ دکمه دختر/پسر
+        if (empty($user['gender'])) {
+            if ($withWelcome) {
+                $this->tg->sendMessage($chatId, $this->welcomeTextFirst(), [
+                    'reply_markup' => Keyboards::removeReply(),
+                ]);
+            }
+            $this->tg->sendMessage($chatId, $this->welcomeTextSecond(), [
+                'reply_markup' => Keyboards::gender(),
             ]);
+            return;
         }
 
-        if (empty($user['gender'])) {
-            $this->askGenderMenu($chatId);
-            return;
-        }
+        // مرحله ۲: سن — فقط از منوی دکمه
         if (empty($user['age'])) {
+            if ($withWelcome) {
+                $this->tg->sendMessage($chatId, $this->welcomeTextFirst());
+            }
             $this->askAgeMenu($chatId);
             return;
+        }
+
+        // مرحله ۳: شهر — فقط از منوی دکمه
+        if ($withWelcome) {
+            $this->tg->sendMessage($chatId, $this->welcomeTextFirst());
         }
         $this->askCityMenu($chatId);
     }
 
     private function askGenderMenu(int $chatId): void
     {
-        $this->tg->sendMessage($chatId, "برای شروع بهم بگو دختری یا پسری؟ 👇", [
+        $this->tg->sendMessage($chatId, $this->welcomeTextSecond(), [
             'reply_markup' => Keyboards::gender(),
         ]);
     }
 
     private function askAgeMenu(int $chatId): void
     {
-        $this->tg->sendMessage($chatId, "عالی ✅\nحالا سنت رو از منوی زیر انتخاب کن 👇", [
-            'reply_markup' => Keyboards::age(),
-        ]);
+        $this->tg->sendMessage(
+            $chatId,
+            "سن‌ات چند ساله؟\nمثلاً: <b>24</b>\n\nاز منوی زیر انتخاب کن 👇",
+            ['reply_markup' => Keyboards::age()]
+        );
     }
 
     private function askCityMenu(int $chatId): void
@@ -373,7 +398,7 @@ final class Handlers
     {
         $this->showMain(
             $chatId,
-            "پروفایل آماده شد ✅\n۳ سکه هدیه گرفتی.\nحالا می‌تونی چت رو شروع کنی."
+            "پروفایل آماده شد ✅\n۳۵ سکه هدیه گرفتی.\nحالا می‌تونی چت رو شروع کنی."
         );
     }
 

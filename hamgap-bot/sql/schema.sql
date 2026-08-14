@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   gender ENUM('male','female') NULL,
   age TINYINT UNSIGNED NULL,
   city VARCHAR(64) NULL,
-  coins INT NOT NULL DEFAULT 3,
+    coins INT NOT NULL DEFAULT 35,
   status ENUM('idle','searching','chatting','banned') NOT NULL DEFAULT 'idle',
   search_pref ENUM('any','male','female') NULL,
   partner_id BIGINT NULL,
