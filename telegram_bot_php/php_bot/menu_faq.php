@@ -224,6 +224,7 @@ function menu_categories() {
 
 /**
  * Idempotent: add missing professional menus without wiping customs.
+ * Never rewrites parent/category/title of menus that already exist.
  * @return int number of inserted rows
  */
 function ensure_professional_menus($pdo = null) {
@@ -232,7 +233,6 @@ function ensure_professional_menus($pdo = null) {
     $exists = $pdo->prepare('SELECT id FROM menus WHERE menu_type=? AND value_text=? LIMIT 1');
     $ins = $pdo->prepare('INSERT INTO menus (parent_id, category, title, menu_type, value_text, row_index, sort_order, is_active) VALUES (?,?,?,?,?,?,?,1)');
     $ti = $pdo->prepare('INSERT IGNORE INTO menu_i18n (menu_id, lang, title, value_text) VALUES (?,?,?,?)');
-    $setParent = $pdo->prepare('UPDATE menus SET parent_id=?, category=? WHERE id=?');
 
     $resourcesId = (int)$pdo->query("SELECT id FROM menus WHERE menu_type='submenu' AND title LIKE '%Resources%' AND parent_id IS NULL LIMIT 1")->fetchColumn();
     $proDeskId = (int)$pdo->query("SELECT id FROM menus WHERE menu_type='submenu' AND (title LIKE '%Pro Desk%' OR value_text='reqhub') LIMIT 1")->fetchColumn();
@@ -270,10 +270,8 @@ function ensure_professional_menus($pdo = null) {
         $exists->execute(array($type, $val));
         $id = (int)$exists->fetchColumn();
         if ($id > 0) {
+            // Keep existing menu placement/labels; only fill missing FA i18n
             $ti->execute(array($id, 'fa', $fa, $val));
-            if ($parent !== null) {
-                $setParent->execute(array($parent, $cat, $id));
-            }
             continue;
         }
         $ins->execute(array($parent, $cat, $title, $type, $val, $row, $sort));
@@ -284,7 +282,7 @@ function ensure_professional_menus($pdo = null) {
         }
     }
 
-    // Hide Mini App menu when feature is off (avoids dead button)
+    // Hide Mini App menu when feature is off (avoids dead button) — does not delete the row
     try {
         if (function_exists('feature_on') && !feature_on('miniapp')) {
             $pdo->prepare("UPDATE menus SET is_active=0 WHERE menu_type='callback' AND value_text='miniapp'")->execute();
@@ -629,13 +627,20 @@ function search_faqs($q, $lang = null) {
     return $out;
 }
 
-function save_menu_translation($menuId, $lang, $title, $valueText = null) {
+function save_menu_translation($menuId, $lang, $title, $valueText = null, $overwrite = true) {
     $pdo = db();
-    $st = $pdo->prepare('SELECT id FROM menu_i18n WHERE menu_id=? AND lang=?');
+    $st = $pdo->prepare('SELECT id, title, value_text FROM menu_i18n WHERE menu_id=? AND lang=?');
     $st->execute(array($menuId, $lang));
-    if ($st->fetch()) {
+    $row = $st->fetch();
+    if ($row) {
+        // Preserve admin/custom translations unless overwrite explicitly requested
+        if (!$overwrite) {
+            return;
+        }
+        // Keep existing value_text when caller passes null (SmartI18n title-only fills)
+        $vt = $valueText !== null ? $valueText : $row['value_text'];
         $pdo->prepare('UPDATE menu_i18n SET title=?, value_text=? WHERE menu_id=? AND lang=?')
-            ->execute(array($title, $valueText, $menuId, $lang));
+            ->execute(array($title, $vt, $menuId, $lang));
     } else {
         $pdo->prepare('INSERT INTO menu_i18n (menu_id, lang, title, value_text) VALUES (?,?,?,?)')
             ->execute(array($menuId, $lang, $title, $valueText));

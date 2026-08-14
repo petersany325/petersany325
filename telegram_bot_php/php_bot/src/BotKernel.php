@@ -17,9 +17,8 @@ final class BotKernel
 {
     public static function handleHttp(): void
     {
-        if (function_exists('ensure_license_sample_files')) {
-            ensure_license_sample_files();
-        }
+        // NOTE: do NOT auto-download/overwrite PHP from GitHub on webhook.
+        // Updates are admin-only (Git Update / Install sample) so menus & code stay stable.
 
         if (function_exists('do_action')) {
             do_action('bot_boot');

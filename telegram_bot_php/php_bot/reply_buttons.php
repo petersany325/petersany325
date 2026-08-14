@@ -147,22 +147,23 @@ function resolve_reply_button_action($text) {
     if (strpos($n, 'my ticket') !== false || (strpos($n, 'تیکت') !== false && strpos($n, 'من') !== false)) {
         return 'mytickets';
     }
-    if (strpos($n, 'technical support') !== false || strpos($n, 'پشتیبانی فنی') !== false) {
+    if (strpos($n, 'technical support') !== false || $n === 'پشتیبانی فنی') {
         return 'support_form';
     }
     if (strpos($n, 'buy sediv') !== false || (strpos($n, 'خرید') !== false && stripos($n, 'sediv') !== false)) {
         return 'shop';
     }
-    if (strpos($n, 'renew licen') !== false || strpos($n, 'تمدید') !== false) {
+    // Exact renew phrases only — bare "تمدید" inside free text must not steal license forms
+    if (strpos($n, 'renew licen') !== false || $n === 'تمدید لایسنس' || $n === 'تمدید') {
         return 'renew';
     }
-    if (strpos($n, 'my account') !== false || $n === 'account' || strpos($n, 'حساب من') !== false || strpos($n, 'حساب کاربری') !== false) {
+    if (strpos($n, 'my account') !== false || $n === 'account' || $n === 'حساب من' || $n === 'حساب کاربری') {
         return 'account';
     }
-    if (strpos($n, 'contact sales') !== false || strpos($n, 'تماس فروش') !== false) {
+    if (strpos($n, 'contact sales') !== false || $n === 'تماس فروش' || $n === 'software sales') {
         return 'sales';
     }
-    if (strpos($n, 'my order') !== false || (strpos($n, 'سفارش') !== false && strpos($n, 'من') !== false)) {
+    if (strpos($n, 'my order') !== false || (strpos($n, 'سفارش') !== false && strpos($n, 'من') !== false && strlen($n) < 40)) {
         return 'orders';
     }
 
@@ -175,7 +176,11 @@ function resolve_reply_button_action($text) {
 function dispatch_reply_button_action($action, $chatId, $userId, $lang) {
     switch ($action) {
         case 'account':
-            \HddLand\Bot\Services\LicenseFlowService::showAccount((int)$chatId, 0, (int)$userId, (string)$lang);
+            if (class_exists('\\HddLand\\Bot\\Services\\LicenseFlowService', true)) {
+                \HddLand\Bot\Services\LicenseFlowService::showAccount((int)$chatId, 0, (int)$userId, (string)$lang);
+            } else {
+                send_message($chatId, $lang === 'fa' ? 'مرکز لایسنس موقتاً در دسترس نیست.' : 'License center temporarily unavailable.', main_reply_keyboard($lang));
+            }
             return true;
         case 'mytickets':
             if (function_exists('feature_on') && !feature_on('tickets') && !feature_on('prodesk')) {

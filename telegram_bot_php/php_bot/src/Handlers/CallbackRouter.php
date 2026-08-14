@@ -18,10 +18,6 @@ final class CallbackRouter
 {
     public static function handle(Context $ctx): void
     {
-        if (function_exists('ensure_license_sample_files')) {
-            ensure_license_sample_files();
-        }
-
         $id = $ctx->callbackId;
         $data = $ctx->callbackData;
         $chatId = $ctx->chatId;
@@ -266,12 +262,28 @@ final class CallbackRouter
                     show_request_hub($chatId, $msgId, $lang);
                 }
             } else {
-                Presenter::editOrSend(
-                    $chatId,
-                    $msgId,
-                    $lang === 'fa' ? 'دستور ناشناخته.' : 'Unknown command.',
-                    main_keyboard($lang)
-                );
+                // Forward professional extras (license, renew, cart, …) without losing menus
+                $extras = array('cart','orders','checkout','license','renew','demo','profile','feedback','referral','contact','brands','news','miniapp','vipdl','mytickets');
+                if (in_array($cmd, $extras, true)) {
+                    if ($cmd === 'license') {
+                        if (function_exists('feature_on') && !feature_on('license')) {
+                            Presenter::editOrSend($chatId, $msgId, Presenter::featureDisabled($lang, 'این بخش فعلاً غیرفعال است.', 'This section is currently disabled.'), main_keyboard($lang));
+                        } elseif (class_exists(LicenseFlowService::class, true)) {
+                            LicenseFlowService::showLicenseEntry($chatId, $msgId, $userId, $lang);
+                        } else {
+                            \HddLand\Bot\Services\ExtraMenusService::show($cmd, $chatId, $msgId, $userId, $lang);
+                        }
+                    } else {
+                        \HddLand\Bot\Services\ExtraMenusService::show($cmd, $chatId, $msgId, $userId, $lang);
+                    }
+                } else {
+                    Presenter::editOrSend(
+                        $chatId,
+                        $msgId,
+                        $lang === 'fa' ? 'دستور ناشناخته.' : 'Unknown command.',
+                        main_keyboard($lang)
+                    );
+                }
             }
             return;
         }

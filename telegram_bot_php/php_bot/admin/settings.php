@@ -60,71 +60,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('ok', 'License / renewal settings saved.');
             $tab = 'license';
         } elseif ($action === 'install_license_sample') {
-            $botRoot = dirname(__DIR__);
-            $branch = 'cursor/telegram-bot-architecture-5168';
-            $base = 'https://raw.githubusercontent.com/petersany325/petersany325/' . rawurlencode($branch) . '/telegram_bot_php/php_bot/';
-            $files = array(
-                'src/Services/LicenseFlowService.php',
-                'src/Services/UserOptionsService.php',
-                'src/Services/ExtraMenusService.php',
-                'src/Handlers/CallbackRouter.php',
-                'src/Handlers/MessageRouter.php',
-                'src/BotKernel.php',
-                'bootstrap.php',
-                'admin/git_update.php',
-                'admin/user_options.php',
-                'admin/receipts.php',
-                'storage/licenses/.htaccess',
-            );
+            // Admin-only installer — never runs from webhook
+            $rows = function_exists('ensure_license_sample_files')
+                ? ensure_license_sample_files(true)
+                : array(array('err', 'ensure_license_sample_files() missing — pull bootstrap.php first'));
             $ok = 0;
             $fail = array();
-            foreach ($files as $rel) {
-                $url = $base . implode('/', array_map('rawurlencode', explode('/', $rel)));
-                $body = false;
-                if (function_exists('curl_init')) {
-                    $ch = curl_init($url);
-                    curl_setopt_array($ch, array(
-                        CURLOPT_RETURNTRANSFER => true,
-                        CURLOPT_FOLLOWLOCATION => true,
-                        CURLOPT_CONNECTTIMEOUT => 15,
-                        CURLOPT_TIMEOUT => 60,
-                        CURLOPT_USERAGENT => 'HDDLand-License-Installer',
-                    ));
-                    $body = curl_exec($ch);
-                    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    curl_close($ch);
-                    if ($body === false || $code >= 400) {
-                        $body = false;
-                    }
+            foreach ($rows as $row) {
+                if ($row[0] === 'ok') {
+                    $ok++;
+                } elseif ($row[0] === 'err') {
+                    $fail[] = $row[1];
                 }
-                if ($body === false) {
-                    $fail[] = $rel . ' download';
-                    continue;
-                }
-                if (substr($rel, -4) === '.php' && strpos((string)$body, '<?php') === false) {
-                    $fail[] = $rel . ' invalid';
-                    continue;
-                }
-                $dest = $botRoot . '/' . $rel;
-                $dir = dirname($dest);
-                if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
-                    $fail[] = $rel . ' mkdir';
-                    continue;
-                }
-                if (@file_put_contents($dest, $body) === false) {
-                    $fail[] = $rel . ' write';
-                    continue;
-                }
-                $ok++;
             }
-            $licDir = $botRoot . '/storage/licenses';
-            if (!is_dir($licDir)) {
-                @mkdir($licDir, 0755, true);
+            try {
+                if (function_exists('ensure_professional_menus')) {
+                    $n = ensure_professional_menus();
+                    $ok++;
+                    $rows[] = array('ok', 'menus additive +' . (int)$n);
+                }
+            } catch (Throwable $e) {
+                $fail[] = 'menus: ' . $e->getMessage();
             }
             if ($fail) {
-                flash('err', "Installed {$ok} files; failed: " . implode(', ', $fail));
+                flash('err', "Installed {$ok}; failed: " . implode(', ', $fail));
             } else {
-                flash('ok', "License sample installed ({$ok} files). Test 🔑 License in Telegram.");
+                flash('ok', "License sample OK ({$ok}). Menus preserved. Test 🔑 License in Telegram.");
             }
             $tab = 'license';
         } elseif ($action === 'save_growth') {

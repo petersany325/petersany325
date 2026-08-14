@@ -11,11 +11,15 @@ class HealthRepairPlugin {
         // light heal on every request via webhook/admin is enough when do_action('bot_boot') is called
     }
 
-    /** Soft checks each request (cheap) */
+    /** Soft checks each request (cheap) — schema at most once per minute */
     public static function auto_heal_light() {
         try {
-            if (function_exists('ensure_schema')) {
+            $stampFile = dirname(__DIR__, 2) . '/storage/schema_heal.stamp';
+            $now = time();
+            $last = is_file($stampFile) ? (int)@file_get_contents($stampFile) : 0;
+            if (($now - $last) >= 60 && function_exists('ensure_schema')) {
                 ensure_schema();
+                @file_put_contents($stampFile, (string)$now);
             }
             self::ensure_branding_defaults();
         } catch (Exception $e) {

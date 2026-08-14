@@ -321,13 +321,12 @@ function help_text($lang = 'en') {
         . "/closeticket &lt;id&gt;";
 }
 
-function ensure_license_sample_files(): void
+/**
+ * Admin-only: download missing license sample PHP files from GitHub.
+ * Never call from webhook — overwriting live code mid-traffic breaks menus.
+ */
+function ensure_license_sample_files(bool $force = false): array
 {
-    static $done = false;
-    if ($done) {
-        return;
-    }
-    $done = true;
     $botRoot = __DIR__;
     $needed = array(
         'src/Services/LicenseFlowService.php',
@@ -340,6 +339,7 @@ function ensure_license_sample_files(): void
     );
     $branch = 'cursor/telegram-bot-architecture-5168';
     $base = 'https://raw.githubusercontent.com/petersany325/petersany325/' . rawurlencode($branch) . '/telegram_bot_php/php_bot/';
+    $report = array();
 
     $fetch = static function (string $url): string {
         if (function_exists('curl_init')) {
@@ -349,21 +349,19 @@ function ensure_license_sample_files(): void
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_CONNECTTIMEOUT => 15,
                 CURLOPT_TIMEOUT => 60,
-                CURLOPT_USERAGENT => 'HDDLand-Bot-Sync',
+                CURLOPT_USERAGENT => 'HDDLand-Bot-Sync-Admin',
                 CURLOPT_SSL_VERIFYPEER => true,
             ));
             $body = curl_exec($ch);
             $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $err = curl_error($ch);
             curl_close($ch);
             if ($body === false || $code >= 400) {
-                @file_put_contents(__DIR__ . '/error.log', date('c') . " sync curl fail {$code} {$err} {$url}\n", FILE_APPEND);
                 return '';
             }
             return (string)$body;
         }
         $ctx = stream_context_create(array(
-            'http' => array('timeout' => 60, 'header' => "User-Agent: HDDLand-Bot-Sync\r\n"),
+            'http' => array('timeout' => 60, 'header' => "User-Agent: HDDLand-Bot-Sync-Admin\r\n"),
         ));
         $body = @file_get_contents($url, false, $ctx);
         return is_string($body) ? $body : '';
@@ -371,43 +369,37 @@ function ensure_license_sample_files(): void
 
     foreach ($needed as $rel) {
         $dest = $botRoot . '/' . $rel;
-        $must = !is_file($dest) || (int)@filesize($dest) < 40;
-        if (!$must && $rel === 'src/Services/ExtraMenusService.php') {
-            $cur = (string)@file_get_contents($dest);
-            $must = strpos($cur, 'showLicenseEntry') === false;
-        }
-        if (!$must && $rel === 'admin/git_update.php') {
-            $cur = (string)@file_get_contents($dest);
-            $must = strpos($cur, 'LicenseFlowService.php') === false
-                || strpos($cur, 'ExtraMenusService.php') === false
-                || strpos($cur, 'admin/git_update.php') === false;
-        }
+        $must = $force || !is_file($dest) || (int)@filesize($dest) < 40;
         if (!$must) {
+            $report[] = array('skip', $rel . ' — already present');
             continue;
         }
         $url = $base . implode('/', array_map('rawurlencode', explode('/', $rel)));
         $body = $fetch($url);
         if ($body === '' || strlen($body) < 20) {
+            $report[] = array('err', $rel . ' — download failed');
             continue;
         }
         if (substr($rel, -4) === '.php' && strpos($body, '<?php') === false) {
+            $report[] = array('err', $rel . ' — not PHP');
             continue;
         }
         $dir = dirname($dest);
         if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
-            @file_put_contents(__DIR__ . '/error.log', date('c') . " sync mkdir fail {$dir}\n", FILE_APPEND);
+            $report[] = array('err', $rel . ' — mkdir failed');
             continue;
         }
         if (@file_put_contents($dest, $body) === false) {
-            @file_put_contents(__DIR__ . '/error.log', date('c') . " sync write fail {$dest}\n", FILE_APPEND);
+            $report[] = array('err', $rel . ' — write failed');
             continue;
         }
-        @file_put_contents(__DIR__ . '/error.log', date('c') . " sync ok {$rel} (" . strlen($body) . ")\n", FILE_APPEND);
+        $report[] = array('ok', $rel . ' — installed (' . strlen($body) . ' bytes)');
     }
     $licDir = $botRoot . '/storage/licenses';
     if (!is_dir($licDir)) {
         @mkdir($licDir, 0755, true);
     }
+    return $report;
 }
 
 require_once __DIR__ . '/menu_faq.php';

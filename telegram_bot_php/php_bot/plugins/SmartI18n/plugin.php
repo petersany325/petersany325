@@ -139,7 +139,7 @@ class SmartI18nPlugin {
         $hit = self::dictionary_lookup($text, $lang);
         if ($hit !== null) {
             if ($persistMenuId) {
-                try { save_menu_translation($persistMenuId, $lang, $hit, null); } catch (Exception $e) {}
+                try { save_menu_translation($persistMenuId, $lang, $hit, null, false); } catch (Exception $e) {}
             }
             return $hit;
         }
@@ -155,7 +155,7 @@ class SmartI18nPlugin {
         if ($ai !== null) {
             self::cache_set($text, $lang, $ai);
             if ($persistMenuId) {
-                try { save_menu_translation($persistMenuId, $lang, $ai, null); } catch (Exception $e) {}
+                try { save_menu_translation($persistMenuId, $lang, $ai, null, false); } catch (Exception $e) {}
             }
             return $ai;
         }
@@ -248,7 +248,7 @@ class SmartI18nPlugin {
                     $hit = self::dictionary_lookup((string)$m['title'], $lang);
                     if ($hit !== null) {
                         try {
-                            save_menu_translation((int)$m['id'], $lang, $hit, null);
+                            save_menu_translation((int)$m['id'], $lang, $hit, null, false);
                         } catch (Exception $e) {
                         }
                     }

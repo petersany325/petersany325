@@ -188,9 +188,10 @@ final class LicenseFlowService
         }
 
         if (!self::isRegistered($userId)) {
+            $pp = htmlspecialchars(self::paypalPayLine());
             $text = $lang === 'fa'
-                ? "🔑 <b>مرکز لایسنس SeDiv</b>\n\nبرای ادامه باید ثبت‌نام کنید (نام، نام‌خانوادگی، ایمیل).\nبعد می‌توانید فیش PayPal / Western Union بفرستید."
-                : "🔑 <b>SeDiv License Center</b>\n\nPlease register first (name, family name, email).\nThen you can submit a PayPal / Western Union receipt.";
+                ? "🔑 <b>مرکز لایسنس SeDiv</b>\n\nبرای ادامه باید ثبت‌نام کنید (نام، نام‌خانوادگی، ایمیل).\n\nبعد از ثبت‌نام، پرداخت:\n<code>{$pp}</code>"
+                : "🔑 <b>SeDiv License Center</b>\n\nPlease register first (name, family name, email).\n\nAfter registration, payment:\n<code>{$pp}</code>";
             $kb = array('inline_keyboard' => array(
                 array(array('text' => $lang === 'fa' ? '📝 شروع ثبت‌نام' : '📝 Start registration', 'callback_data' => 'acct:register')),
                 array(array('text' => $lang === 'fa' ? '🏠 منوی اصلی' : '🏠 Main Menu', 'callback_data' => 'main')),

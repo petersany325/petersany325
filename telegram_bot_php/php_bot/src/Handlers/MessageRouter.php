@@ -18,10 +18,6 @@ final class MessageRouter
 {
     public static function handle(Context $ctx): void
     {
-        if (function_exists('ensure_license_sample_files')) {
-            ensure_license_sample_files();
-        }
-
         $message = $ctx->message ?? [];
         $chatId = $ctx->chatId;
         $userId = $ctx->userId;
