@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v10.3';
+    public const CODE_VERSION = '2026-08-14-v10.4';
 
     private string $assets;
     private Settings $settings;
@@ -169,6 +169,67 @@ final class Handlers
         if (($user['flow'] ?? '') === 'support:compose' && $text !== '' && !str_starts_with($text, '/')) {
             $this->forwardSupportFromMain($chatId, $user, $text);
             return;
+        }
+
+        // Friend room create / join flows
+        if (($user['flow'] ?? '') === 'fr:create' && $text !== '' && !str_starts_with($text, '/')) {
+            $room = $this->db->createFriendRoom($tid, $text);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $code = htmlspecialchars((string)$room['code'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $title = htmlspecialchars((string)$room['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $this->uiText(
+                $chatId,
+                $user,
+                "گپ گروهی ساخته شد ✅\nعنوان: <b>{$title}</b>\nکد دعوت: <code>{$code}</code>\n\n" .
+                "این کد را برای دوستانت (دختر و پسر) بفرست.\nپیام‌هایت همین‌جا به همه اعضای گپ می‌رسد.",
+                ['reply_markup' => Keyboards::roomActiveInline((string)$room['code'])]
+            );
+            return;
+        }
+        if (($user['flow'] ?? '') === 'fr:join' && $text !== '' && !str_starts_with($text, '/')) {
+            $result = $this->db->joinFriendRoom($tid, $text);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            if (!($result['ok'] ?? false)) {
+                $err = match ((string)($result['error'] ?? '')) {
+                    'full' => 'ظرفیت گپ پر است.',
+                    'closed' => 'این گپ بسته شده.',
+                    default => 'کد گپ پیدا نشد.',
+                };
+                $this->uiText($chatId, $user, $err, ['reply_markup' => Keyboards::friendsInline()]);
+                return;
+            }
+            $room = $result['room'];
+            $this->announceRoom($room, "یک عضو جدید وارد گپ شد.");
+            $this->enterRoomUi($chatId, $user, $room);
+            return;
+        }
+        if (($user['flow'] ?? '') === 'set:bio' && $text !== '') {
+            $bio = mb_substr(trim($text), 0, 180);
+            if ($bio === '-' || mb_strtolower($bio) === 'پاک') {
+                $bio = null;
+            }
+            $this->db->updateUser($tid, ['bio' => $bio, 'flow' => null]);
+            $fresh = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $fresh);
+            $this->showProfile($chatId, $fresh);
+            return;
+        }
+
+        // Active friend-room chat relay (mixed gender group)
+        if (($user['status'] ?? '') === 'room' && !empty($user['active_room_id'])) {
+            if (in_array($text, ['🚪 ترک گپ', '/leave'], true)) {
+                $this->db->leaveFriendRoom($tid);
+                $fresh = $this->db->findUser($tid) ?? $user;
+                $this->clearUi($chatId, $fresh);
+                $this->showFriends($chatId, $fresh);
+                return;
+            }
+            if ($text !== '' || !empty($message['photo']) || !empty($message['voice']) || !empty($message['sticker'])) {
+                $this->relayRoomMessage($user, $message);
+                return;
+            }
         }
 
         // Avatar upload
@@ -582,16 +643,9 @@ final class Handlers
             if (in_array($g, ['male', 'female'], true)) {
                 $filters['gender'] = $g;
             }
-            $encoded = rawurlencode(json_encode($filters, JSON_UNESCAPED_UNICODE));
-            $this->db->updateUser($tid, [
-                'flow' => 'browse:' . $encoded,
-                'browse_cursor' => 0,
-            ]);
             $this->tg->answerCallback($id, 'جستجو رایگان ✅');
             $this->stripCallbackMenu($cq);
-            $user = $this->db->findUser($tid) ?? $user;
-            $this->clearUi($chatId, $user);
-            $this->showNextBrowseCard($chatId, $user);
+            $this->beginBrowse($chatId, $user, $filters);
             return;
         }
 
@@ -603,11 +657,49 @@ final class Handlers
             $this->showNextBrowseCard($chatId, $user);
             return;
         }
+        if ($data === 'br:list') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->db->updateUser($tid, ['browse_view' => 'list']);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->renderBrowseBatch($chatId, $user, 0);
+            return;
+        }
         if (str_starts_with($data, 'br:req:')) {
             $code = substr($data, strlen('br:req:'));
             $this->tg->answerCallback($id);
             $this->stripCallbackMenu($cq);
             $this->sendBrowseRequest($chatId, $user, $code);
+            return;
+        }
+        if (str_starts_with($data, 'br:friend:')) {
+            $code = substr($data, strlen('br:friend:'));
+            $target = $this->db->findByPublicCode($code);
+            if (!$target) {
+                $this->tg->answerCallback($id, 'کاربر پیدا نشد', true);
+                return;
+            }
+            $to = (int)$target['telegram_id'];
+            $res = $this->db->requestFriendship($tid, $to);
+            if ($res === 'already') {
+                $this->tg->answerCallback($id, 'قبلاً دوست هستید', true);
+                return;
+            }
+            if ($res === 'pending') {
+                $this->tg->answerCallback($id, 'درخواست قبلی در انتظار است', true);
+                return;
+            }
+            $fromName = htmlspecialchars((string)($user['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            try {
+                $this->tg->sendMessage(
+                    $to,
+                    "درخواست دوستی جدید از <b>{$fromName}</b>",
+                    ['reply_markup' => Keyboards::friendRequestInline($tid)]
+                );
+            } catch (Throwable $e) {
+            }
+            $this->tg->answerCallback($id, 'درخواست دوستی ارسال شد');
             return;
         }
         if (str_starts_with($data, 'br:msg:')) {
@@ -657,6 +749,86 @@ final class Handlers
             $this->showNextBrowseCard($chatId, $user);
             return;
         }
+
+        // Display modes + batch list
+        if ($data === 'vw:noop') {
+            $this->tg->answerCallback($id);
+            return;
+        }
+        if ($data === 'vw:pick' || str_starts_with($data, 'vw:')) {
+            if ($data === 'vw:pick') {
+                $cache = $this->db->getBrowseCache($user) ?? [];
+                $found = count($cache['ids'] ?? []);
+                $this->tg->answerCallback($id);
+                $this->stripCallbackMenu($cq);
+                $this->clearUi($chatId, $user);
+                $this->uiText(
+                    $chatId,
+                    $user,
+                    "حالت نمایش نتایج را انتخاب کن:",
+                    ['reply_markup' => Keyboards::browseViewPicker(max(1, $found))]
+                );
+                return;
+            }
+            $mode = substr($data, 3);
+            if (!in_array($mode, ['card', 'list', 'photo', 'menu'], true)) {
+                $this->tg->answerCallback($id, 'نامعتبر', true);
+                return;
+            }
+            $this->db->updateUser($tid, ['browse_view' => $mode, 'browse_cursor' => 0]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id, 'حالت نمایش ست شد');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            if ($mode === 'card') {
+                $this->showNextBrowseCard($chatId, $user);
+            } else {
+                $this->renderBrowseBatch($chatId, $user, 0);
+            }
+            return;
+        }
+        if (str_starts_with($data, 'bl:p:')) {
+            $page = (int)substr($data, strlen('bl:p:'));
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->renderBrowseBatch($chatId, $user, max(0, $page));
+            return;
+        }
+        if (str_starts_with($data, 'bl:o:')) {
+            $idx = (int)substr($data, strlen('bl:o:'));
+            $cache = $this->db->getBrowseCache($user) ?? [];
+            $ids = $cache['ids'] ?? [];
+            if (!isset($ids[$idx])) {
+                $this->tg->answerCallback($id, 'کاربر در فهرست نیست', true);
+                return;
+            }
+            $target = $this->db->findUser((int)$ids[$idx]);
+            if (!$target) {
+                $this->tg->answerCallback($id, 'کاربر پیدا نشد', true);
+                return;
+            }
+            $this->db->updateUser($tid, ['browse_cursor' => $idx]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->renderBrowseCard($chatId, $user, $target);
+            return;
+        }
+
+        // Privacy
+        if ($data === 'pr:home' || str_starts_with($data, 'pr:')) {
+            $this->handlePrivacyCallback($cq, $user, $id, $data, $chatId, $tid);
+            return;
+        }
+
+        // Friend rooms + friendship responses
+        if (str_starts_with($data, 'fr:') || str_starts_with($data, 'frnd:')) {
+            $this->handleFriendsCallback($cq, $user, $id, $data, $chatId, $tid);
+            return;
+        }
+
         if ($data === 'support:compose') {
             $this->db->updateUser($tid, ['flow' => 'support:compose']);
             $this->tg->answerCallback($id);
@@ -775,6 +947,26 @@ final class Handlers
                 $this->clearUi($chatId, $user);
                 $this->uiText($chatId, $user, "🖼 <b>عکس پروفایل</b>\nیک عکس همین‌جا بفرست.");
                 break;
+            case 'edit:namehub':
+                $this->clearUi($chatId, $user);
+                $this->uiText(
+                    $chatId,
+                    $user,
+                    "🔤 <b>نام کاربری</b>\nفعلی: <b>" .
+                    htmlspecialchars((string)($user['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
+                    "</b>\nدستی بنویس یا خودکار بساز.",
+                    ['reply_markup' => Keyboards::nameHubInline()]
+                );
+                break;
+            case 'edit:nameauto':
+                $auto = $this->db->generateDisplayName();
+                $this->db->updateUser($tid, ['display_name' => $auto, 'flow' => null]);
+                $user = $this->db->findUser($tid) ?? $user;
+                $this->tg->answerCallback($id, 'نام خودکار ست شد');
+                $this->stripCallbackMenu($cq);
+                $this->clearUi($chatId, $user);
+                $this->showProfile($chatId, $user);
+                break;
             case 'edit:displayname':
                 $this->db->updateUser($tid, ['flow' => 'set:displayname']);
                 $user = $this->db->findUser($tid) ?? $user;
@@ -782,9 +974,20 @@ final class Handlers
                 $this->uiText(
                     $chatId,
                     $user,
-                    "🔤 <b>نام کاربری</b>\nنام نمایشی جدیدت را بنویس (۲ تا ۳۲ کاراکتر).\nفعلی: <b>" .
+                    "🔤 <b>نام کاربری دستی</b>\nنام نمایشی جدیدت را بنویس (۲ تا ۳۲ کاراکتر).\nفعلی: <b>" .
                     htmlspecialchars((string)($user['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
                     '</b>'
+                );
+                break;
+            case 'edit:bio':
+                $this->db->updateUser($tid, ['flow' => 'set:bio']);
+                $user = $this->db->findUser($tid) ?? $user;
+                $this->clearUi($chatId, $user);
+                $cur = htmlspecialchars((string)($user['bio'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $this->uiText(
+                    $chatId,
+                    $user,
+                    "📝 <b>بیو / معرفی</b>\nحداکثر ۱۸۰ کاراکتر.\nفعلی: {$cur}\n\nبرای پاک کردن بنویس: <code>پاک</code>"
                 );
                 break;
             case 'pay:100':
@@ -1033,7 +1236,8 @@ final class Handlers
             $chatId,
             $user,
             "🔍 <b>جستجوی کاربران</b> · کاملاً رایگان\n" .
-            "کارت پروفایل را ببین، بعد تصمیم بگیر.\n" .
+            "نزدیک من: سیستم تا ۱۰۰ نفر نزدیک را خودکار پیدا می‌کند.\n" .
+            "نمایش: کارت · فهرست ستونی · با عکس · منوی دکمه‌ای\n" .
             "سکه فقط برای درخواست گفتگو یا پیام کوتاه کم می‌شود.",
             ['reply_markup' => Keyboards::searchHubInline()]
         );
@@ -1047,9 +1251,8 @@ final class Handlers
             $chatId,
             $user,
             "👥 <b>چت با دوستان</b>\n\n" .
-            "لینک دعوتت را برای دوستانت بفرست.\n" .
-            "هر نفری که با لینک تو وارد شود، <b>+{$invite} سکه</b> می‌گیری.\n" .
-            "بعد از ورود می‌توانی از جستجو یا چت ناشناس به هم وصل شوید.",
+            "گپ گروهی بساز (دختر و پسر با هم)، کد بده و با دوستانت حرف بزن.\n" .
+            "یا با لینک دعوت، دوست جدید بیاور و <b>+{$invite} سکه</b> بگیر.",
             ['reply_markup' => Keyboards::friendsInline()]
         );
     }
@@ -1073,18 +1276,44 @@ final class Handlers
     private function showProfile(int $chatId, array &$user): void
     {
         $this->clearUi($chatId, $user);
+        $this->db->ensureIdentity($user);
+        $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         $g = $user['gender'] === 'female' ? 'دختر' : ($user['gender'] === 'male' ? 'پسر' : '-');
         $dn = htmlspecialchars((string)($user['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $prov = htmlspecialchars((string)($user['province'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $city = htmlspecialchars((string)($user['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $pc = htmlspecialchars((string)($user['public_code'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $text = "پروفایل من\n" .
+        $bio = trim((string)($user['bio'] ?? ''));
+        $bioLine = $bio !== ''
+            ? htmlspecialchars($bio, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            : '<i>بیو هنوز نوشته نشده</i>';
+        $vis = match ((string)($user['profile_visibility'] ?? 'public')) {
+            'hidden' => 'مخفی کامل',
+            'friends' => 'فقط دوستان',
+            default => 'عمومی',
+        };
+        $flags = [];
+        foreach ([
+            'show_gender' => 'جنسیت',
+            'show_age' => 'سن',
+            'show_province' => 'استان',
+            'show_city' => 'شهر',
+            'show_online' => 'آنلاین',
+            'show_avatar' => 'عکس',
+        ] as $k => $label) {
+            $flags[] = ((int)($user[$k] ?? 1) === 1 ? '✅' : '🚫') . $label;
+        }
+        $text = "👤 <b>پروفایل من</b>\n" .
             "────────────\n" .
             "<b>{$dn}</b>\n" .
             "کد عمومی: <code>{$pc}</code>\n" .
             "{$g} · سن " . ($user['age'] ?? '-') . "\n" .
             "{$prov} / {$city}\n" .
-            "سکه: <b>" . (int)$user['coins'] . "</b>";
+            "سکه: <b>" . (int)$user['coins'] . "</b>\n" .
+            "نمایش پروفایل: <b>{$vis}</b>\n" .
+            "فیلدها: " . implode(' · ', $flags) . "\n" .
+            "────────────\n" .
+            "📝 {$bioLine}";
 
         $avatar = (string)($user['avatar_file_id'] ?? '');
         if ($avatar !== '') {
@@ -1303,13 +1532,19 @@ final class Handlers
         }
         if ($data === 'sr:nearby') {
             $city = (string)($user['city'] ?? '');
-            if ($city === '') {
-                $this->tg->answerCallback($id, 'اول شهر پروفایلت را کامل کن', true);
+            $prov = (string)($user['province'] ?? '');
+            if ($city === '' || $prov === '') {
+                $this->tg->answerCallback($id, 'اول استان و شهر پروفایلت را کامل کن', true);
                 return;
             }
-            $this->tg->answerCallback($id, 'نزدیک تو');
+            $this->tg->answerCallback($id, 'جستجوی نزدیک‌ترین‌ها…');
             $this->stripCallbackMenu($cq);
-            $this->beginBrowse($chatId, $user, ['nearby_city' => $city]);
+            $this->beginBrowse($chatId, $user, [
+                'nearby_rank' => 1,
+                'nearby_city' => $city,
+                'nearby_province' => $prov,
+                'pick_view' => 1,
+            ], 100);
             return;
         }
         if ($data === 'sr:sameprov') {
@@ -1491,17 +1726,40 @@ final class Handlers
     }
 
     /** @param array<string,mixed> $filters */
-    private function beginBrowse(int $chatId, array &$user, array $filters): void
+    private function beginBrowse(int $chatId, array &$user, array $filters, int $limit = 100): void
     {
         $tid = (int)$user['telegram_id'];
+        unset($filters['pick_view']);
+        $rows = $this->db->listBrowseProfiles($tid, $filters, $limit);
+        $ids = [];
+        foreach ($rows as $row) {
+            $ids[] = (int)$row['telegram_id'];
+        }
         $encoded = rawurlencode(json_encode($filters, JSON_UNESCAPED_UNICODE));
         $this->db->updateUser($tid, [
             'flow' => 'browse:' . $encoded,
             'browse_cursor' => 0,
         ]);
+        $this->db->setBrowseCache($tid, [
+            'ids' => $ids,
+            'filters' => $filters,
+            'page' => 0,
+        ]);
         $user = $this->db->findUser($tid) ?? $user;
         $this->clearUi($chatId, $user);
-        $this->showNextBrowseCard($chatId, $user);
+        $found = count($ids);
+        if ($found === 0) {
+            $this->uiText($chatId, $user, "کسی با این فیلتر پیدا نشد.\nفیلتر دیگری را امتحان کن.", [
+                'reply_markup' => Keyboards::searchHubInline(),
+            ]);
+            return;
+        }
+        $hint = !empty($filters['nearby_rank'])
+            ? "📍 سیستم نزدیک‌ترین‌ها را پیدا کرد: <b>{$found}</b> نفر (حداکثر ۱۰۰)\nحالت نمایش را انتخاب کن:"
+            : "<b>{$found}</b> نفر پیدا شد.\nحالت نمایش را انتخاب کن:";
+        $this->uiText($chatId, $user, $hint, [
+            'reply_markup' => Keyboards::browseViewPicker($found),
+        ]);
     }
 
     /** @return array{province?:string,city?:string,gender?:string} */
@@ -1519,8 +1777,34 @@ final class Handlers
     private function showNextBrowseCard(int $chatId, array &$user): void
     {
         $tid = (int)$user['telegram_id'];
+        $cache = $this->db->getBrowseCache($user);
+        $ids = $cache['ids'] ?? null;
+        if (is_array($ids) && $ids !== []) {
+            $idx = (int)($user['browse_cursor'] ?? 0);
+            if ($idx >= count($ids)) {
+                $idx = 0;
+            }
+            $target = $this->db->findUser((int)$ids[$idx]);
+            if (!$target) {
+                // skip missing
+                $this->db->updateUser($tid, ['browse_cursor' => $idx + 1]);
+                $user = $this->db->findUser($tid) ?? $user;
+                if ($idx + 1 < count($ids)) {
+                    $this->showNextBrowseCard($chatId, $user);
+                } else {
+                    $this->uiText($chatId, $user, 'به انتهای فهرست رسیدی.', [
+                        'reply_markup' => Keyboards::searchHubInline(),
+                    ]);
+                }
+                return;
+            }
+            $this->db->updateUser($tid, ['browse_cursor' => $idx + 1, 'browse_view' => 'card']);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->renderBrowseCard($chatId, $user, $target);
+            return;
+        }
+
         $filters = $this->browseFiltersFromUser($user);
-        // Keep browse flow sticky
         if (!str_starts_with((string)($user['flow'] ?? ''), 'browse:')) {
             $encoded = rawurlencode(json_encode($filters, JSON_UNESCAPED_UNICODE));
             $this->db->updateUser($tid, ['flow' => 'browse:' . $encoded]);
@@ -1530,7 +1814,7 @@ final class Handlers
         $target = $this->db->nextBrowseProfile($tid, $cursor, $filters);
         if (!$target) {
             $this->uiText($chatId, $user, "کسی با این فیلتر پیدا نشد.\nاستان دیگری را امتحان کن یا بعداً برگرد.", [
-                'reply_markup' => Keyboards::findProvinces(),
+                'reply_markup' => Keyboards::searchHubInline(),
             ]);
             return;
         }
@@ -1541,38 +1825,177 @@ final class Handlers
         $this->renderBrowseCard($chatId, $user, $target);
     }
 
-    private function renderBrowseCard(int $chatId, array &$viewer, array $target): void
+    private function renderBrowseBatch(int $chatId, array &$user, int $page): void
+    {
+        $cache = $this->db->getBrowseCache($user);
+        $ids = $cache['ids'] ?? [];
+        if ($ids === []) {
+            $this->uiText($chatId, $user, 'فهرست خالی است. دوباره جستجو کن.', [
+                'reply_markup' => Keyboards::searchHubInline(),
+            ]);
+            return;
+        }
+        $mode = (string)($user['browse_view'] ?? 'list');
+        $perPage = $mode === 'photo' ? 5 : ($mode === 'menu' ? 10 : 8);
+        $total = count($ids);
+        $totalPages = (int)ceil($total / $perPage);
+        $page = max(0, min($page, max(0, $totalPages - 1)));
+        $slice = array_slice($ids, $page * $perPage, $perPage, true);
+
+        if ($mode === 'menu') {
+            $items = [];
+            foreach ($slice as $i => $tidTarget) {
+                $t = $this->db->findUser((int)$tidTarget);
+                if (!$t) {
+                    continue;
+                }
+                $label = $this->shortProfileLabel($t, true);
+                $items[] = ['i' => (int)$i, 'label' => $label];
+            }
+            $this->uiText(
+                $chatId,
+                $user,
+                "🎛 <b>منوی کاربران</b> · صفحه " . ($page + 1) . "/{$totalPages}\nروی اسم بزن تا کارت کامل باز شود.",
+                ['reply_markup' => Keyboards::browseMenuGrid($items, $page, $totalPages)]
+            );
+            return;
+        }
+
+        if ($mode === 'photo') {
+            $this->uiText(
+                $chatId,
+                $user,
+                "🖼 <b>نمایش با عکس</b> · " . ($page + 1) . "/{$totalPages} از {$total} نفر",
+                ['reply_markup' => Keyboards::browseListNav($page, $totalPages)]
+            );
+            foreach ($slice as $i => $tidTarget) {
+                $t = $this->db->findUser((int)$tidTarget);
+                if (!$t) {
+                    continue;
+                }
+                $caption = $this->formatPublicProfile($user, $t, true);
+                $req = $this->settings->getInt('request_cost', 1);
+                $msg = $this->settings->getInt('message_cost', 1);
+                $markup = ['inline_keyboard' => [
+                    [['text' => 'باز کردن کارت', 'callback_data' => 'bl:o:' . (int)$i]],
+                    [
+                        ['text' => "درخواست · {$req}", 'callback_data' => 'br:req:' . preg_replace('/[^A-Za-z0-9_]/', '', (string)$t['public_code'])],
+                        ['text' => "پیام · {$msg}", 'callback_data' => 'br:msg:' . preg_replace('/[^A-Za-z0-9_]/', '', (string)$t['public_code'])],
+                    ],
+                ]];
+                $avatar = ((int)($t['show_avatar'] ?? 1) === 1) ? (string)($t['avatar_file_id'] ?? '') : '';
+                if ($avatar !== '') {
+                    $this->uiPhotoFileId($chatId, $user, $avatar, $caption, $markup);
+                } else {
+                    $this->uiText($chatId, $user, $caption, ['reply_markup' => $markup]);
+                }
+            }
+            return;
+        }
+
+        // list / columnar default
+        $lines = ["📋 <b>فهرست ستونی</b> · {$total} نفر · صفحه " . ($page + 1) . "/{$totalPages}", '────────────'];
+        $buttons = [];
+        $row = [];
+        $n = $page * $perPage;
+        foreach ($slice as $i => $tidTarget) {
+            $n++;
+            $t = $this->db->findUser((int)$tidTarget);
+            if (!$t) {
+                continue;
+            }
+            $lines[] = $n . '. ' . $this->shortProfileLabel($t, false);
+            $row[] = ['text' => (string)$n, 'callback_data' => 'bl:o:' . (int)$i];
+            if (count($row) === 4) {
+                $buttons[] = $row;
+                $row = [];
+            }
+        }
+        if ($row) {
+            $buttons[] = $row;
+        }
+        $navKb = Keyboards::browseListNav($page, $totalPages);
+        $buttons = array_merge($buttons, $navKb['inline_keyboard']);
+        $this->uiText($chatId, $user, implode("\n", $lines), [
+            'reply_markup' => ['inline_keyboard' => $buttons],
+        ]);
+    }
+
+    private function shortProfileLabel(array $target, bool $compact): string
+    {
+        $dn = (string)($target['display_name'] ?? 'کاربر');
+        if (mb_strlen($dn) > 14) {
+            $dn = mb_substr($dn, 0, 14) . '…';
+        }
+        $g = '';
+        if ((int)($target['show_gender'] ?? 1) === 1) {
+            $g = ($target['gender'] ?? '') === 'female' ? '👩' : (($target['gender'] ?? '') === 'male' ? '👨' : '');
+        }
+        $age = ((int)($target['show_age'] ?? 1) === 1) ? (string)(int)($target['age'] ?? 0) : '';
+        $city = ((int)($target['show_city'] ?? 1) === 1) ? (string)($target['city'] ?? '') : '';
+        if ($compact) {
+            return trim($g . ' ' . $dn . ($age !== '' ? ' ' . $age : ''));
+        }
+        $parts = array_filter([$dn, $g !== '' ? (($target['gender'] ?? '') === 'female' ? 'دختر' : 'پسر') : null, $age !== '' ? $age . 'ساله' : null, $city !== '' ? $city : null]);
+        return htmlspecialchars(implode(' · ', $parts), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+
+    private function formatPublicProfile(array $viewer, array $target, bool $short = false): string
     {
         $this->db->ensureIdentity($target);
         $target = $this->db->findUser((int)$target['telegram_id']) ?? $target;
         $dn = htmlspecialchars((string)($target['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $g = ($target['gender'] ?? '') === 'female' ? 'دختر' : (($target['gender'] ?? '') === 'male' ? 'پسر' : '—');
-        $prov = htmlspecialchars((string)($target['province'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $city = htmlspecialchars((string)($target['city'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $pc = htmlspecialchars((string)($target['public_code'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $age = (int)($target['age'] ?? 0);
-        $online = 'آفلاین';
-        if (!empty($target['last_seen_at'])) {
-            $ts = strtotime((string)$target['last_seen_at']);
-            if ($ts && (time() - $ts) < 300) {
-                $online = 'آنلاین الان';
-            } elseif ($ts && (time() - $ts) < 3600) {
-                $online = 'فعال اخیراً';
-            }
+        $lines = ["<b>{$dn}</b>"];
+        $meta = [];
+        if ((int)($target['show_gender'] ?? 1) === 1) {
+            $meta[] = ($target['gender'] ?? '') === 'female' ? 'دختر' : (($target['gender'] ?? '') === 'male' ? 'پسر' : '—');
         }
-        // Modern, calm card — not competitor green spam layout.
-        $caption =
-            "<b>{$dn}</b>\n" .
-            "{$g} · {$age} ساله\n" .
-            "{$prov} · {$city}\n" .
-            "{$online}\n" .
-            "────────\n" .
-            "شناسه: <code>{$pc}</code>";
+        if ((int)($target['show_age'] ?? 1) === 1) {
+            $meta[] = (int)($target['age'] ?? 0) . ' ساله';
+        }
+        if ($meta) {
+            $lines[] = implode(' · ', $meta);
+        }
+        $loc = [];
+        if ((int)($target['show_province'] ?? 1) === 1) {
+            $loc[] = htmlspecialchars((string)($target['province'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        }
+        if ((int)($target['show_city'] ?? 1) === 1) {
+            $loc[] = htmlspecialchars((string)($target['city'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        }
+        if ($loc) {
+            $lines[] = implode(' · ', $loc);
+        }
+        if ((int)($target['show_online'] ?? 1) === 1) {
+            $online = 'آفلاین';
+            if (!empty($target['last_seen_at'])) {
+                $ts = strtotime((string)$target['last_seen_at']);
+                if ($ts && (time() - $ts) < 300) {
+                    $online = 'آنلاین الان';
+                } elseif ($ts && (time() - $ts) < 3600) {
+                    $online = 'فعال اخیراً';
+                }
+            }
+            $lines[] = $online;
+        }
+        $bio = trim((string)($target['bio'] ?? ''));
+        if ($bio !== '' && !$short) {
+            $lines[] = '────────';
+            $lines[] = htmlspecialchars($bio, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        }
+        $pc = htmlspecialchars((string)($target['public_code'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $lines[] = '────────';
+        $lines[] = "شناسه: <code>{$pc}</code>";
+        return implode("\n", $lines);
+    }
 
+    private function renderBrowseCard(int $chatId, array &$viewer, array $target): void
+    {
+        $caption = $this->formatPublicProfile($viewer, $target, false);
         $req = $this->settings->getInt('request_cost', 1);
         $msg = $this->settings->getInt('message_cost', 1);
         $markup = Keyboards::browseProfileInline((string)$target['public_code'], $req, $msg);
-        $avatar = (string)($target['avatar_file_id'] ?? '');
+        $avatar = ((int)($target['show_avatar'] ?? 1) === 1) ? (string)($target['avatar_file_id'] ?? '') : '';
         if ($avatar !== '') {
             $this->uiPhotoFileId($chatId, $viewer, $avatar, $caption, $markup);
         } else {
@@ -1684,5 +2107,256 @@ final class Handlers
         $this->clearUi($chatId, $user);
         $this->uiText($chatId, $user, $sent > 0 ? 'پیامت به پشتیبانی رسید ✅' : 'پیامت ثبت شد. به‌زودی بررسی می‌شود.');
         $this->showSupport($chatId, $user);
+    }
+
+    private function handlePrivacyCallback(
+        array $cq,
+        array &$user,
+        string $id,
+        string $data,
+        int $chatId,
+        int $tid
+    ): void {
+        if ($data === 'pr:home') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "👁 <b>حریم خصوصی</b>\nمشخص کن پروفایلت برای چه کسانی دیده شود و کدام فیلدها نمایش داده شوند.",
+                ['reply_markup' => Keyboards::privacyHomeInline($user)]
+            );
+            return;
+        }
+        if (str_starts_with($data, 'pr:vis:')) {
+            $vis = substr($data, strlen('pr:vis:'));
+            if (!in_array($vis, ['public', 'hidden', 'friends'], true)) {
+                $this->tg->answerCallback($id, 'نامعتبر', true);
+                return;
+            }
+            $this->db->updateUser($tid, ['profile_visibility' => $vis]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id, 'ذخیره شد');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "👁 حریم خصوصی به‌روز شد.",
+                ['reply_markup' => Keyboards::privacyHomeInline($user)]
+            );
+            return;
+        }
+        if (str_starts_with($data, 'pr:tog:')) {
+            $field = substr($data, strlen('pr:tog:'));
+            $allowed = ['show_age', 'show_city', 'show_province', 'show_gender', 'show_online', 'show_avatar'];
+            if (!in_array($field, $allowed, true)) {
+                $this->tg->answerCallback($id, 'نامعتبر', true);
+                return;
+            }
+            $cur = (int)($user[$field] ?? 1) === 1 ? 1 : 0;
+            $this->db->updateUser($tid, [$field => $cur === 1 ? 0 : 1]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id, 'تغییر کرد');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "👁 نمایش فیلدها به‌روز شد.",
+                ['reply_markup' => Keyboards::privacyHomeInline($user)]
+            );
+            return;
+        }
+        $this->tg->answerCallback($id);
+    }
+
+    private function handleFriendsCallback(
+        array $cq,
+        array &$user,
+        string $id,
+        string $data,
+        int $chatId,
+        int $tid
+    ): void {
+        if (str_starts_with($data, 'frnd:ok:') || str_starts_with($data, 'frnd:no:')) {
+            $accept = str_starts_with($data, 'frnd:ok:');
+            $other = (int)substr($data, strlen($accept ? 'frnd:ok:' : 'frnd:no:'));
+            $ok = $this->db->respondFriendship($tid, $other, $accept);
+            $this->tg->answerCallback($id, $ok ? ($accept ? 'دوست شدید' : 'رد شد') : 'درخواستی نبود', !$ok);
+            if ($ok && $accept) {
+                try {
+                    $this->tg->sendMessage($other, 'درخواست دوستی‌ات قبول شد ✅');
+                } catch (Throwable $e) {
+                }
+            }
+            return;
+        }
+
+        if ($data === 'fr:create') {
+            $this->db->updateUser($tid, ['flow' => 'fr:create']);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "🏠 <b>ساخت گپ گروهی</b>\nیک نام برای گپ بنویس (مثلاً: گپ جمعه).\nدختر و پسر می‌توانند با کد دعوت وارد شوند."
+            );
+            return;
+        }
+        if ($data === 'fr:join') {
+            $this->db->updateUser($tid, ['flow' => 'fr:join']);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->uiText($chatId, $user, "🔑 کد گپ را بفرست:");
+            return;
+        }
+        if ($data === 'fr:leave') {
+            $this->db->leaveFriendRoom($tid);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id, 'از گپ خارج شدی');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->showFriends($chatId, $user);
+            return;
+        }
+        if ($data === 'fr:list') {
+            $rooms = $this->db->listUserRooms($tid);
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            if (!$rooms) {
+                $this->uiText($chatId, $user, 'هنوز گپی نداری.', ['reply_markup' => Keyboards::friendsInline()]);
+                return;
+            }
+            $rows = [];
+            $lines = ["📂 <b>گپ‌های من</b>"];
+            foreach ($rooms as $r) {
+                $title = htmlspecialchars((string)$r['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $code = htmlspecialchars((string)$r['code'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $lines[] = "• {$title} — <code>{$code}</code>";
+                $rows[] = [['text' => 'ورود: ' . mb_substr((string)$r['title'], 0, 20), 'callback_data' => 'fr:enter:' . (int)$r['id']]];
+            }
+            $rows[] = [['text' => 'بازگشت', 'callback_data' => 'menu:friends']];
+            $this->uiText($chatId, $user, implode("\n", $lines), ['reply_markup' => ['inline_keyboard' => $rows]]);
+            return;
+        }
+        if ($data === 'fr:friends') {
+            $friends = $this->db->listFriends($tid);
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            if (!$friends) {
+                $this->uiText(
+                    $chatId,
+                    $user,
+                    "هنوز دوستی نداری.\nاز جستجوی کاربران «افزودن دوست» را بزن.",
+                    ['reply_markup' => Keyboards::friendsInline()]
+                );
+                return;
+            }
+            $lines = ['👥 <b>لیست دوستان</b>'];
+            foreach ($friends as $f) {
+                $lines[] = '• ' . $this->shortProfileLabel($f, false);
+            }
+            $this->uiText($chatId, $user, implode("\n", $lines), ['reply_markup' => Keyboards::friendsInline()]);
+            return;
+        }
+        if ($data === 'fr:members') {
+            $roomId = (int)($user['active_room_id'] ?? 0);
+            $room = $roomId > 0 ? $this->db->findFriendRoom($roomId) : null;
+            if (!$room) {
+                $this->tg->answerCallback($id, 'گپ فعالی نیست', true);
+                return;
+            }
+            $members = $this->db->listRoomMembers($roomId);
+            $lines = ['👥 <b>اعضای گپ</b> · ' . count($members) . ' نفر'];
+            foreach ($members as $m) {
+                $g = ($m['gender'] ?? '') === 'female' ? '👩' : (($m['gender'] ?? '') === 'male' ? '👨' : '•');
+                $dn = htmlspecialchars((string)($m['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $role = ($m['role'] ?? '') === 'owner' ? ' (مدیر)' : '';
+                $lines[] = "{$g} {$dn}{$role}";
+            }
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->uiText($chatId, $user, implode("\n", $lines), [
+                'reply_markup' => Keyboards::roomActiveInline((string)$room['code']),
+            ]);
+            return;
+        }
+        if (str_starts_with($data, 'fr:enter:')) {
+            $roomId = (int)substr($data, strlen('fr:enter:'));
+            if (!$this->db->enterFriendRoom($tid, $roomId)) {
+                $this->tg->answerCallback($id, 'عضو این گپ نیستی', true);
+                return;
+            }
+            $room = $this->db->findFriendRoom($roomId);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id, 'وارد گپ شدی');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            if ($room) {
+                $this->enterRoomUi($chatId, $user, $room);
+            }
+            return;
+        }
+        $this->tg->answerCallback($id);
+    }
+
+    private function enterRoomUi(int $chatId, array &$user, array $room): void
+    {
+        $title = htmlspecialchars((string)$room['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $code = htmlspecialchars((string)$room['code'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $count = count($this->db->listRoomMembers((int)$room['id']));
+        $this->uiText(
+            $chatId,
+            $user,
+            "🏠 گپ فعال: <b>{$title}</b>\nکد: <code>{$code}</code>\nاعضا: {$count}\n\nپیام بفرست تا برای همه ارسال شود.\nبرای خروج: /leave",
+            ['reply_markup' => Keyboards::roomActiveInline((string)$room['code'])]
+        );
+    }
+
+    private function announceRoom(array $room, string $text): void
+    {
+        foreach ($this->db->listRoomMembers((int)$room['id']) as $m) {
+            try {
+                $this->tg->sendMessage((int)$m['telegram_id'], $text);
+            } catch (Throwable $e) {
+            }
+        }
+    }
+
+    private function relayRoomMessage(array $user, array $message): void
+    {
+        $roomId = (int)($user['active_room_id'] ?? 0);
+        if ($roomId <= 0) {
+            return;
+        }
+        $from = (int)$user['telegram_id'];
+        $name = htmlspecialchars((string)($user['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $g = ($user['gender'] ?? '') === 'female' ? '👩' : (($user['gender'] ?? '') === 'male' ? '👨' : '');
+        $text = trim((string)($message['text'] ?? ''));
+        $prefix = "{$g}<b>{$name}</b>: ";
+        foreach ($this->db->listRoomMembers($roomId) as $m) {
+            $to = (int)$m['telegram_id'];
+            if ($to === $from) {
+                continue;
+            }
+            try {
+                if ($text !== '') {
+                    $this->tg->sendMessage($to, $prefix . htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+                } else {
+                    $this->tg->sendMessage($to, $prefix . 'پیام چندرسانه‌ای ↓');
+                    $this->tg->copyMessage($to, (int)$message['chat']['id'], (int)$message['message_id']);
+                }
+            } catch (Throwable $e) {
+            }
+        }
     }
 }

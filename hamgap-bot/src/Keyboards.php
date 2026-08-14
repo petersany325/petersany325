@@ -288,21 +288,100 @@ final class Keyboards
         return ['inline_keyboard' => [
             [['text' => "درخواست گفتگو · {$requestCost} سکه", 'callback_data' => 'br:req:' . $code]],
             [['text' => "پیام کوتاه · {$messageCost} سکه", 'callback_data' => 'br:msg:' . $code]],
+            [['text' => '➕ افزودن دوست', 'callback_data' => 'br:friend:' . $code]],
             [
                 ['text' => 'بعدی', 'callback_data' => 'br:next'],
                 ['text' => 'گزارش', 'callback_data' => 'br:rep:' . $code],
             ],
             [
                 ['text' => 'بلاک', 'callback_data' => 'br:blk:' . $code],
-                ['text' => 'پایان جستجو', 'callback_data' => 'menu:main'],
+                ['text' => 'بازگشت به فهرست', 'callback_data' => 'br:list'],
+            ],
+            [
+                ['text' => 'حالت نمایش', 'callback_data' => 'vw:pick'],
+                ['text' => 'پایان جستجو', 'callback_data' => 'menu:find'],
             ],
         ]];
+    }
+
+    public static function browseViewPicker(int $found): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => "{$found} نفر پیدا شد — حالت نمایش را انتخاب کن", 'callback_data' => 'vw:noop']],
+            [
+                ['text' => '🃏 کارت تکی', 'callback_data' => 'vw:card'],
+                ['text' => '📋 فهرست ستونی', 'callback_data' => 'vw:list'],
+            ],
+            [
+                ['text' => '🖼 با عکس', 'callback_data' => 'vw:photo'],
+                ['text' => '🎛 منوی دکمه‌ای', 'callback_data' => 'vw:menu'],
+            ],
+            [['text' => 'بازگشت', 'callback_data' => 'menu:find']],
+        ]];
+    }
+
+    public static function browseListNav(int $page, int $totalPages): array
+    {
+        $rows = [];
+        $nav = [];
+        if ($page > 0) {
+            $nav[] = ['text' => '‹ قبلی', 'callback_data' => 'bl:p:' . ($page - 1)];
+        }
+        $nav[] = ['text' => ($page + 1) . '/' . max(1, $totalPages), 'callback_data' => 'vw:noop'];
+        if ($page + 1 < $totalPages) {
+            $nav[] = ['text' => 'بعدی ›', 'callback_data' => 'bl:p:' . ($page + 1)];
+        }
+        $rows[] = $nav;
+        $rows[] = [
+            ['text' => 'حالت نمایش', 'callback_data' => 'vw:pick'],
+            ['text' => 'پایان', 'callback_data' => 'menu:find'],
+        ];
+        return ['inline_keyboard' => $rows];
+    }
+
+    /** @param list<array{i:int,label:string}> $items */
+    public static function browseMenuGrid(array $items, int $page, int $totalPages): array
+    {
+        $rows = [];
+        $row = [];
+        foreach ($items as $it) {
+            $row[] = ['text' => $it['label'], 'callback_data' => 'bl:o:' . $it['i']];
+            if (count($row) === 2) {
+                $rows[] = $row;
+                $row = [];
+            }
+        }
+        if ($row) {
+            $rows[] = $row;
+        }
+        $nav = [];
+        if ($page > 0) {
+            $nav[] = ['text' => '‹', 'callback_data' => 'bl:p:' . ($page - 1)];
+        }
+        $nav[] = ['text' => ($page + 1) . '/' . max(1, $totalPages), 'callback_data' => 'vw:noop'];
+        if ($page + 1 < $totalPages) {
+            $nav[] = ['text' => '›', 'callback_data' => 'bl:p:' . ($page + 1)];
+        }
+        $rows[] = $nav;
+        $rows[] = [
+            ['text' => 'حالت نمایش', 'callback_data' => 'vw:pick'],
+            ['text' => 'پایان', 'callback_data' => 'menu:find'],
+        ];
+        return ['inline_keyboard' => $rows];
     }
 
     public static function profileInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => 'تنظیمات پروفایل', 'callback_data' => 'menu:profile_settings']],
+            [['text' => '✏️ ویرایش مشخصات', 'callback_data' => 'menu:profile_settings']],
+            [
+                ['text' => '🖼 عکس پروفایل', 'callback_data' => 'edit:avatar'],
+                ['text' => '👁 حریم خصوصی', 'callback_data' => 'pr:home'],
+            ],
+            [
+                ['text' => '🔤 نام کاربری', 'callback_data' => 'edit:namehub'],
+                ['text' => '📝 بیو / معرفی', 'callback_data' => 'edit:bio'],
+            ],
             [['text' => 'دعوت دوستان · +۳۰ سکه', 'callback_data' => 'menu:invite']],
             [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
         ]];
@@ -311,13 +390,56 @@ final class Keyboards
     public static function profileSettingsInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => 'عکس پروفایل', 'callback_data' => 'edit:avatar']],
-            [['text' => 'نام کاربری', 'callback_data' => 'edit:displayname']],
+            [['text' => '🖼 عکس پروفایل', 'callback_data' => 'edit:avatar']],
+            [['text' => '🔤 نام کاربری (دستی / خودکار)', 'callback_data' => 'edit:namehub']],
+            [['text' => '📝 بیو / معرفی کوتاه', 'callback_data' => 'edit:bio']],
             [
                 ['text' => 'جنسیت', 'callback_data' => 'edit:gender'],
                 ['text' => 'سن', 'callback_data' => 'edit:age'],
             ],
             [['text' => 'استان / شهر', 'callback_data' => 'edit:location']],
+            [['text' => '👁 حریم خصوصی و نمایش', 'callback_data' => 'pr:home']],
+            [['text' => 'بازگشت به پروفایل', 'callback_data' => 'menu:profile']],
+        ]];
+    }
+
+    public static function nameHubInline(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '✍️ نوشتن نام دستی', 'callback_data' => 'edit:displayname']],
+            [['text' => '🎲 ساخت نام خودکار هم‌گپ', 'callback_data' => 'edit:nameauto']],
+            [['text' => 'بازگشت', 'callback_data' => 'menu:profile_settings']],
+        ]];
+    }
+
+    public static function privacyHomeInline(array $user): array
+    {
+        $vis = (string)($user['profile_visibility'] ?? 'public');
+        $mark = static function (string $key, array $user): string {
+            return ((int)($user[$key] ?? 1) === 1) ? '✅' : '🚫';
+        };
+        $visLabel = match ($vis) {
+            'hidden' => 'مخفی کامل',
+            'friends' => 'فقط دوستان',
+            default => 'عمومی',
+        };
+        return ['inline_keyboard' => [
+            [['text' => "وضعیت پروفایل: {$visLabel}", 'callback_data' => 'vw:noop']],
+            [
+                ['text' => '🌍 عمومی', 'callback_data' => 'pr:vis:public'],
+                ['text' => '🔒 مخفی', 'callback_data' => 'pr:vis:hidden'],
+            ],
+            [['text' => '👥 فقط دوستان / خاص', 'callback_data' => 'pr:vis:friends']],
+            [['text' => $mark('show_gender', $user) . ' جنسیت', 'callback_data' => 'pr:tog:show_gender']],
+            [
+                ['text' => $mark('show_age', $user) . ' سن', 'callback_data' => 'pr:tog:show_age'],
+                ['text' => $mark('show_online', $user) . ' آنلاین', 'callback_data' => 'pr:tog:show_online'],
+            ],
+            [
+                ['text' => $mark('show_province', $user) . ' استان', 'callback_data' => 'pr:tog:show_province'],
+                ['text' => $mark('show_city', $user) . ' شهر', 'callback_data' => 'pr:tog:show_city'],
+            ],
+            [['text' => $mark('show_avatar', $user) . ' عکس پروفایل', 'callback_data' => 'pr:tog:show_avatar']],
             [['text' => 'بازگشت به پروفایل', 'callback_data' => 'menu:profile']],
         ]];
     }
@@ -357,8 +479,32 @@ final class Keyboards
     public static function friendsInline(): array
     {
         return ['inline_keyboard' => [
+            [['text' => '🏠 ساخت گپ گروهی دوستان', 'callback_data' => 'fr:create']],
+            [['text' => '🔑 ورود با کد گپ', 'callback_data' => 'fr:join']],
+            [['text' => '📂 گپ‌های من', 'callback_data' => 'fr:list']],
+            [['text' => '👥 لیست دوستان', 'callback_data' => 'fr:friends']],
             [['text' => 'لینک دعوت من', 'callback_data' => 'menu:invite']],
             [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
+        ]];
+    }
+
+    public static function roomActiveInline(string $code): array
+    {
+        $code = preg_replace('/[^A-Za-z0-9]/', '', $code) ?? '';
+        return ['inline_keyboard' => [
+            [['text' => '👥 اعضای گپ', 'callback_data' => 'fr:members']],
+            [['text' => '🚪 ترک گپ', 'callback_data' => 'fr:leave']],
+            [['text' => 'منوی دوستان', 'callback_data' => 'menu:friends']],
+        ]];
+    }
+
+    public static function friendRequestInline(int $fromTid): array
+    {
+        return ['inline_keyboard' => [
+            [
+                ['text' => '✅ قبول', 'callback_data' => 'frnd:ok:' . $fromTid],
+                ['text' => '❌ رد', 'callback_data' => 'frnd:no:' . $fromTid],
+            ],
         ]];
     }
 

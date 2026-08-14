@@ -162,24 +162,32 @@ final class Database
         )->execute([$blockerId, $blockedId]);
     }
 
-    /**
-     * Browse next complete profile matching optional filters.
-     * @param array{province?:string,city?:string,gender?:string} $filters
-     */
-    public function nextBrowseProfile(int $viewerTid, int $afterId, array $filters = []): ?array
+    /** @param array<string,mixed> $filters */
+    private function browseWhereSql(int $viewerTid, array $filters, array &$params): string
     {
-        $sql = "SELECT u.* FROM users u
+        $sql = "FROM users u
             WHERE u.telegram_id <> ?
               AND u.gender IS NOT NULL AND u.age IS NOT NULL
               AND u.province IS NOT NULL AND u.city IS NOT NULL
               AND u.status <> 'banned'
-              AND u.id > ?
+              AND COALESCE(u.profile_visibility, 'public') <> 'hidden'
               AND NOT EXISTS (
                   SELECT 1 FROM user_blocks b
                   WHERE (b.blocker_id = ? AND b.blocked_id = u.telegram_id)
                      OR (b.blocker_id = u.telegram_id AND b.blocked_id = ?)
+              )
+              AND (
+                  COALESCE(u.profile_visibility, 'public') = 'public'
+                  OR (
+                      COALESCE(u.profile_visibility, 'public') = 'friends'
+                      AND EXISTS (
+                          SELECT 1 FROM friendships f
+                          WHERE f.status = 'accepted'
+                            AND ((f.user_a = LEAST(?, u.telegram_id) AND f.user_b = GREATEST(?, u.telegram_id)))
+                      )
+                  )
               )";
-        $params = [$viewerTid, $afterId, $viewerTid, $viewerTid];
+        $params = [$viewerTid, $viewerTid, $viewerTid, $viewerTid, $viewerTid];
         if (!empty($filters['gender']) && in_array($filters['gender'], ['male', 'female'], true)) {
             $sql .= ' AND u.gender = ?';
             $params[] = $filters['gender'];
@@ -198,7 +206,7 @@ final class Database
         if (!empty($filters['new_only'])) {
             $sql .= ' AND u.created_at >= (NOW() - INTERVAL 7 DAY)';
         }
-        if (!empty($filters['nearby_city'])) {
+        if (!empty($filters['nearby_city']) && empty($filters['nearby_rank'])) {
             $sql .= ' AND u.city = ?';
             $params[] = $filters['nearby_city'];
         }
@@ -218,24 +226,286 @@ final class Database
             $sql .= ' AND ABS(u.age - ?) <= 3';
             $params[] = (int)$filters['viewer_age'];
         }
-        $order = ' ORDER BY u.id ASC';
-        if (!empty($filters['online_only'])) {
-            $order = ' ORDER BY u.last_seen_at DESC, u.id ASC';
-        } elseif (!empty($filters['new_only'])) {
-            $order = ' ORDER BY u.created_at DESC, u.id ASC';
+        return $sql;
+    }
+
+    /** @param array<string,mixed> $filters */
+    private function browseOrderSql(array $filters, array &$params): string
+    {
+        if (!empty($filters['nearby_rank'])) {
+            $city = (string)($filters['nearby_city'] ?? '');
+            $prov = (string)($filters['nearby_province'] ?? '');
+            $params[] = $city;
+            $params[] = $prov;
+            return ' ORDER BY CASE
+                WHEN u.city = ? THEN 0
+                WHEN u.province = ? THEN 1
+                ELSE 2 END ASC,
+                (u.last_seen_at IS NULL) ASC, u.last_seen_at DESC, u.id DESC';
         }
-        $sql .= $order . ' LIMIT 1';
+        if (!empty($filters['online_only'])) {
+            return ' ORDER BY u.last_seen_at DESC, u.id DESC';
+        }
+        if (!empty($filters['new_only'])) {
+            return ' ORDER BY u.created_at DESC, u.id DESC';
+        }
+        return ' ORDER BY u.id ASC';
+    }
+
+    /**
+     * Browse next complete profile matching optional filters.
+     * @param array<string,mixed> $filters
+     */
+    public function nextBrowseProfile(int $viewerTid, int $afterId, array $filters = []): ?array
+    {
+        $params = [];
+        $where = $this->browseWhereSql($viewerTid, $filters, $params);
+        // id cursor only works with id ASC; for ranked modes use cache instead
+        if (empty($filters['nearby_rank']) && empty($filters['online_only']) && empty($filters['new_only'])) {
+            $where .= ' AND u.id > ?';
+            $params[] = $afterId;
+        }
+        $order = $this->browseOrderSql($filters, $params);
+        $sql = 'SELECT u.* ' . $where . $order . ' LIMIT 1';
         $st = $this->pdo->prepare($sql);
         $st->execute($params);
         $row = $st->fetch();
         if ($row) {
             return $row;
         }
-        // wrap around
-        if ($afterId > 0) {
+        if ($afterId > 0 && empty($filters['nearby_rank'])) {
             return $this->nextBrowseProfile($viewerTid, 0, $filters);
         }
         return null;
+    }
+
+    /**
+     * Batch profiles for modern list/menu/photo views (e.g. nearest 100).
+     * @param array<string,mixed> $filters
+     * @return list<array>
+     */
+    public function listBrowseProfiles(int $viewerTid, array $filters = [], int $limit = 100): array
+    {
+        $limit = max(1, min(100, $limit));
+        $params = [];
+        $where = $this->browseWhereSql($viewerTid, $filters, $params);
+        $order = $this->browseOrderSql($filters, $params);
+        $sql = 'SELECT u.* ' . $where . $order . ' LIMIT ' . $limit;
+        $st = $this->pdo->prepare($sql);
+        $st->execute($params);
+        return $st->fetchAll() ?: [];
+    }
+
+    public function setBrowseCache(int $telegramId, array $payload): void
+    {
+        $this->updateUser($telegramId, [
+            'browse_cache' => json_encode($payload, JSON_UNESCAPED_UNICODE),
+        ]);
+    }
+
+    /** @return array<string,mixed>|null */
+    public function getBrowseCache(array $user): ?array
+    {
+        $raw = (string)($user['browse_cache'] ?? '');
+        if ($raw === '') {
+            return null;
+        }
+        $decoded = json_decode($raw, true);
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    public function areFriends(int $a, int $b): bool
+    {
+        if ($a === $b) {
+            return false;
+        }
+        $lo = min($a, $b);
+        $hi = max($a, $b);
+        $st = $this->pdo->prepare(
+            "SELECT 1 FROM friendships WHERE user_a = ? AND user_b = ? AND status = 'accepted' LIMIT 1"
+        );
+        $st->execute([$lo, $hi]);
+        return (bool)$st->fetchColumn();
+    }
+
+    public function requestFriendship(int $fromId, int $toId): string
+    {
+        if ($fromId === $toId) {
+            return 'self';
+        }
+        $lo = min($fromId, $toId);
+        $hi = max($fromId, $toId);
+        $st = $this->pdo->prepare('SELECT * FROM friendships WHERE user_a = ? AND user_b = ? LIMIT 1');
+        $st->execute([$lo, $hi]);
+        $row = $st->fetch();
+        if ($row) {
+            if ($row['status'] === 'accepted') {
+                return 'already';
+            }
+            if ($row['status'] === 'pending') {
+                return 'pending';
+            }
+            $this->pdo->prepare(
+                "UPDATE friendships SET status = 'pending', requested_by = ?, updated_at = NOW() WHERE id = ?"
+            )->execute([$fromId, (int)$row['id']]);
+            return 'ok';
+        }
+        $this->pdo->prepare(
+            "INSERT INTO friendships (user_a, user_b, status, requested_by) VALUES (?, ?, 'pending', ?)"
+        )->execute([$lo, $hi, $fromId]);
+        return 'ok';
+    }
+
+    public function respondFriendship(int $responderId, int $otherId, bool $accept): bool
+    {
+        $lo = min($responderId, $otherId);
+        $hi = max($responderId, $otherId);
+        $st = $this->pdo->prepare(
+            "SELECT * FROM friendships WHERE user_a = ? AND user_b = ? AND status = 'pending' LIMIT 1"
+        );
+        $st->execute([$lo, $hi]);
+        $row = $st->fetch();
+        if (!$row || (int)$row['requested_by'] === $responderId) {
+            return false;
+        }
+        $status = $accept ? 'accepted' : 'declined';
+        $this->pdo->prepare('UPDATE friendships SET status = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([$status, (int)$row['id']]);
+        return true;
+    }
+
+    /** @return list<array> */
+    public function listFriends(int $telegramId, int $limit = 40): array
+    {
+        $limit = max(1, min(100, $limit));
+        $st = $this->pdo->prepare(
+            "SELECT u.* FROM friendships f
+             JOIN users u ON u.telegram_id = IF(f.user_a = ?, f.user_b, f.user_a)
+             WHERE (f.user_a = ? OR f.user_b = ?) AND f.status = 'accepted'
+             ORDER BY f.updated_at DESC LIMIT {$limit}"
+        );
+        $st->execute([$telegramId, $telegramId, $telegramId]);
+        return $st->fetchAll() ?: [];
+    }
+
+    public function createFriendRoom(int $ownerId, string $title): array
+    {
+        $code = $this->generateRoomCode();
+        $title = mb_substr(trim($title), 0, 64);
+        if ($title === '') {
+            $title = 'گپ دوستان';
+        }
+        $this->pdo->prepare(
+            'INSERT INTO friend_rooms (code, owner_id, title, is_open, max_members) VALUES (?, ?, ?, 1, 50)'
+        )->execute([$code, $ownerId, $title]);
+        $roomId = (int)$this->pdo->lastInsertId();
+        $this->pdo->prepare(
+            "INSERT INTO friend_room_members (room_id, telegram_id, role) VALUES (?, ?, 'owner')"
+        )->execute([$roomId, $ownerId]);
+        $this->updateUser($ownerId, ['active_room_id' => $roomId, 'status' => 'room']);
+        return $this->findFriendRoom($roomId) ?? ['id' => $roomId, 'code' => $code, 'title' => $title];
+    }
+
+    public function generateRoomCode(): string
+    {
+        for ($i = 0; $i < 10; $i++) {
+            $code = strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
+            $st = $this->pdo->prepare('SELECT id FROM friend_rooms WHERE code = ? LIMIT 1');
+            $st->execute([$code]);
+            if (!$st->fetch()) {
+                return $code;
+            }
+        }
+        return strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+    }
+
+    public function findFriendRoom(int $id): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM friend_rooms WHERE id = ? LIMIT 1');
+        $st->execute([$id]);
+        $row = $st->fetch();
+        return $row ?: null;
+    }
+
+    public function findFriendRoomByCode(string $code): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM friend_rooms WHERE code = ? LIMIT 1');
+        $st->execute([strtoupper(trim($code))]);
+        $row = $st->fetch();
+        return $row ?: null;
+    }
+
+    /** @return list<array> */
+    public function listRoomMembers(int $roomId): array
+    {
+        $st = $this->pdo->prepare(
+            'SELECT m.*, u.display_name, u.gender, u.public_code
+             FROM friend_room_members m
+             JOIN users u ON u.telegram_id = m.telegram_id
+             WHERE m.room_id = ?
+             ORDER BY m.joined_at ASC'
+        );
+        $st->execute([$roomId]);
+        return $st->fetchAll() ?: [];
+    }
+
+    /** @return list<array> */
+    public function listUserRooms(int $telegramId, int $limit = 20): array
+    {
+        $limit = max(1, min(50, $limit));
+        $st = $this->pdo->prepare(
+            "SELECT r.* FROM friend_rooms r
+             JOIN friend_room_members m ON m.room_id = r.id
+             WHERE m.telegram_id = ?
+             ORDER BY r.created_at DESC LIMIT {$limit}"
+        );
+        $st->execute([$telegramId]);
+        return $st->fetchAll() ?: [];
+    }
+
+    public function joinFriendRoom(int $telegramId, string $code): array
+    {
+        $room = $this->findFriendRoomByCode($code);
+        if (!$room) {
+            return ['ok' => false, 'error' => 'not_found'];
+        }
+        if (!(int)$room['is_open']) {
+            return ['ok' => false, 'error' => 'closed'];
+        }
+        $members = $this->listRoomMembers((int)$room['id']);
+        if (count($members) >= (int)$room['max_members']) {
+            return ['ok' => false, 'error' => 'full'];
+        }
+        $this->pdo->prepare(
+            "INSERT IGNORE INTO friend_room_members (room_id, telegram_id, role) VALUES (?, ?, 'member')"
+        )->execute([(int)$room['id'], $telegramId]);
+        $this->updateUser($telegramId, ['active_room_id' => (int)$room['id'], 'status' => 'room']);
+        return ['ok' => true, 'room' => $room];
+    }
+
+    public function leaveFriendRoom(int $telegramId): void
+    {
+        $user = $this->findUser($telegramId);
+        $roomId = (int)($user['active_room_id'] ?? 0);
+        if ($roomId > 0) {
+            $this->pdo->prepare(
+                "DELETE FROM friend_room_members WHERE room_id = ? AND telegram_id = ? AND role <> 'owner'"
+            )->execute([$roomId, $telegramId]);
+        }
+        $this->updateUser($telegramId, ['active_room_id' => null, 'status' => 'idle', 'flow' => null]);
+    }
+
+    public function enterFriendRoom(int $telegramId, int $roomId): bool
+    {
+        $st = $this->pdo->prepare(
+            'SELECT 1 FROM friend_room_members WHERE room_id = ? AND telegram_id = ? LIMIT 1'
+        );
+        $st->execute([$roomId, $telegramId]);
+        if (!$st->fetchColumn()) {
+            return false;
+        }
+        $this->updateUser($telegramId, ['active_room_id' => $roomId, 'status' => 'room', 'flow' => null]);
+        return true;
     }
 
     public function countUsers(): array

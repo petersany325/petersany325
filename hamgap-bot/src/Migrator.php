@@ -19,6 +19,17 @@ final class Migrator
         self::addColumn($pdo, 'users', 'public_code', 'VARCHAR(16) NULL');
         self::addColumn($pdo, 'users', 'last_seen_at', 'TIMESTAMP NULL');
         self::addColumn($pdo, 'users', 'browse_cursor', 'BIGINT NULL');
+        self::addColumn($pdo, 'users', 'bio', 'VARCHAR(180) NULL');
+        self::addColumn($pdo, 'users', 'profile_visibility', "VARCHAR(16) NOT NULL DEFAULT 'public'");
+        self::addColumn($pdo, 'users', 'show_age', 'TINYINT(1) NOT NULL DEFAULT 1');
+        self::addColumn($pdo, 'users', 'show_city', 'TINYINT(1) NOT NULL DEFAULT 1');
+        self::addColumn($pdo, 'users', 'show_province', 'TINYINT(1) NOT NULL DEFAULT 1');
+        self::addColumn($pdo, 'users', 'show_gender', 'TINYINT(1) NOT NULL DEFAULT 1');
+        self::addColumn($pdo, 'users', 'show_online', 'TINYINT(1) NOT NULL DEFAULT 1');
+        self::addColumn($pdo, 'users', 'show_avatar', 'TINYINT(1) NOT NULL DEFAULT 1');
+        self::addColumn($pdo, 'users', 'browse_view', "VARCHAR(16) NOT NULL DEFAULT 'card'");
+        self::addColumn($pdo, 'users', 'browse_cache', 'MEDIUMTEXT NULL');
+        self::addColumn($pdo, 'users', 'active_room_id', 'BIGINT UNSIGNED NULL');
         self::widenFlowColumn($pdo);
         self::ensureSearchPrefFlexible($pdo);
         self::ensureReferralUnique($pdo);
@@ -29,7 +40,76 @@ final class Migrator
         self::ensureContactRequestsTable($pdo);
         self::ensureSupportTicketsTable($pdo);
         self::ensureAdminSessionsTable($pdo);
+        self::ensureFriendshipsTable($pdo);
+        self::ensureFriendRoomsTables($pdo);
+        self::ensureStatusIncludesRoom($pdo);
         (new Settings($db))->seedDefaults();
+    }
+
+    private static function ensureStatusIncludesRoom(PDO $pdo): void
+    {
+        $st = $pdo->query("SHOW COLUMNS FROM users LIKE 'status'");
+        $col = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$col) {
+            return;
+        }
+        $type = strtolower((string)($col['Type'] ?? ''));
+        if (str_contains($type, 'room')) {
+            return;
+        }
+        try {
+            $pdo->exec(
+                "ALTER TABLE users MODIFY status ENUM('idle','searching','chatting','banned','room') NOT NULL DEFAULT 'idle'"
+            );
+        } catch (Throwable $e) {
+            // non-fatal on restricted hosts
+        }
+    }
+
+    private static function ensureFriendshipsTable(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS friendships (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                user_a BIGINT NOT NULL,
+                user_b BIGINT NOT NULL,
+                status ENUM('pending','accepted','declined') NOT NULL DEFAULT 'pending',
+                requested_by BIGINT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_friend_pair (user_a, user_b),
+                KEY idx_friend_b_status (user_b, status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    private static function ensureFriendRoomsTables(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS friend_rooms (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                code VARCHAR(10) NOT NULL,
+                owner_id BIGINT NOT NULL,
+                title VARCHAR(64) NOT NULL,
+                is_open TINYINT(1) NOT NULL DEFAULT 1,
+                max_members INT NOT NULL DEFAULT 50,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_room_code (code),
+                KEY idx_room_owner (owner_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS friend_room_members (
+                room_id BIGINT UNSIGNED NOT NULL,
+                telegram_id BIGINT NOT NULL,
+                role ENUM('owner','member') NOT NULL DEFAULT 'member',
+                joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (room_id, telegram_id),
+                KEY idx_member_user (telegram_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
     }
 
     private static function ensureAdminSessionsTable(PDO $pdo): void
