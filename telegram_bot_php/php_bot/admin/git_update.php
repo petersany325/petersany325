@@ -12,13 +12,19 @@ $files = array(
     'src/Handlers/MessageRouter.php',
     'src/Handlers/CallbackRouter.php',
     'src/Services/SupportFormService.php',
+    'src/Services/UserOptionsService.php',
+    'src/Services/LicenseFlowService.php',
     'src/BotKernel.php',
     'src/Support/Presenter.php',
     'reply_buttons.php',
     'i18n_world.php',
     'bootstrap.php',
+    'settings_lib.php',
     'plugins/SmartI18n/plugin.php',
     'admin/settings.php',
+    'admin/layout_header.php',
+    'admin/user_options.php',
+    'admin/receipts.php',
 );
 
 $report = array();
