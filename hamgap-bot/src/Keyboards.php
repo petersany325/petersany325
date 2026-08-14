@@ -27,17 +27,29 @@ final class Keyboards
             'keyboard' => [
                 [['text' => '🎲 چت تصادفی'], ['text' => '💬 چت هوشمند']],
                 [['text' => '👤 پروفایل'], ['text' => '💎 کیف سکه']],
+                [['text' => 'ℹ️ راهنما'], ['text' => '🆘 پشتیبانی']],
             ],
             'resize_keyboard' => true,
+            'is_persistent' => true,
         ];
+    }
+
+    public static function removeReply(): array
+    {
+        return ['remove_keyboard' => true];
     }
 
     public static function smartInline(): array
     {
         return ['inline_keyboard' => [
             [
-                ['text' => '👨 پسر · ۱ سکه', 'callback_data' => 'chat:male'],
-                ['text' => '👩 دختر · ۱ سکه', 'callback_data' => 'chat:female'],
+                ['text' => '👨 چت با پسر · ۱ سکه', 'callback_data' => 'chat:male'],
+            ],
+            [
+                ['text' => '👩 چت با دختر · ۱ سکه', 'callback_data' => 'chat:female'],
+            ],
+            [
+                ['text' => '🎲 چت تصادفی · رایگان', 'callback_data' => 'chat:any'],
             ],
             [
                 ['text' => '🔙 بازگشت', 'callback_data' => 'menu:main'],
@@ -45,12 +57,60 @@ final class Keyboards
         ]];
     }
 
+    /** Gender choice — one dedicated menu box */
     public static function gender(): array
     {
-        return ['inline_keyboard' => [[
-            ['text' => '👨 پسر', 'callback_data' => 'reg:gender:male'],
-            ['text' => '👩 دختر', 'callback_data' => 'reg:gender:female'],
-        ]]];
+        return ['inline_keyboard' => [
+            [
+                ['text' => '👩 دختر', 'callback_data' => 'reg:gender:female'],
+                ['text' => '👨 پسر', 'callback_data' => 'reg:gender:male'],
+            ],
+        ]];
+    }
+
+    /** Age choice — click only */
+    public static function age(): array
+    {
+        $rows = [];
+        $row = [];
+        foreach ([16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 32, 35, 40] as $age) {
+            $row[] = ['text' => (string)$age, 'callback_data' => 'reg:age:' . $age];
+            if (count($row) === 3) {
+                $rows[] = $row;
+                $row = [];
+            }
+        }
+        if ($row) {
+            $rows[] = $row;
+        }
+        $rows[] = [
+            ['text' => '۴۵+', 'callback_data' => 'reg:age:45'],
+        ];
+        return ['inline_keyboard' => $rows];
+    }
+
+    /** City choice — click only */
+    public static function city(): array
+    {
+        $cities = [
+            'تهران', 'کرج', 'مشهد', 'اصفهان', 'شیراز', 'تبریز',
+            'اهواز', 'قم', 'کرمان', 'رشت', 'ارومیه', 'زاهدان',
+            'همدان', 'کرمانشاه', 'یزد', 'اردبیل',
+        ];
+        $rows = [];
+        $row = [];
+        foreach ($cities as $i => $city) {
+            $row[] = ['text' => $city, 'callback_data' => 'reg:city:' . $city];
+            if (count($row) === 2) {
+                $rows[] = $row;
+                $row = [];
+            }
+        }
+        if ($row) {
+            $rows[] = $row;
+        }
+        $rows[] = [['text' => '🏙 شهر دیگر', 'callback_data' => 'reg:city:other']];
+        return ['inline_keyboard' => $rows];
     }
 
     public static function searching(): array
@@ -87,12 +147,8 @@ final class Keyboards
     public static function profileInline(): array
     {
         return ['inline_keyboard' => [
-            [
-                ['text' => '📝 ویرایش پروفایل', 'callback_data' => 'menu:edit_profile'],
-            ],
-            [
-                ['text' => '🔙 بازگشت', 'callback_data' => 'menu:main'],
-            ],
+            [['text' => '📝 ویرایش پروفایل', 'callback_data' => 'menu:edit_profile']],
+            [['text' => '🔙 بازگشت', 'callback_data' => 'menu:main']],
         ]];
     }
 
