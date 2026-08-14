@@ -340,6 +340,35 @@ function ensure_license_sample_files(): void
     );
     $branch = 'cursor/telegram-bot-architecture-5168';
     $base = 'https://raw.githubusercontent.com/petersany325/petersany325/' . rawurlencode($branch) . '/telegram_bot_php/php_bot/';
+
+    $fetch = static function (string $url): string {
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, array(
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_CONNECTTIMEOUT => 15,
+                CURLOPT_TIMEOUT => 60,
+                CURLOPT_USERAGENT => 'HDDLand-Bot-Sync',
+                CURLOPT_SSL_VERIFYPEER => true,
+            ));
+            $body = curl_exec($ch);
+            $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $err = curl_error($ch);
+            curl_close($ch);
+            if ($body === false || $code >= 400) {
+                @file_put_contents(__DIR__ . '/error.log', date('c') . " sync curl fail {$code} {$err} {$url}\n", FILE_APPEND);
+                return '';
+            }
+            return (string)$body;
+        }
+        $ctx = stream_context_create(array(
+            'http' => array('timeout' => 60, 'header' => "User-Agent: HDDLand-Bot-Sync\r\n"),
+        ));
+        $body = @file_get_contents($url, false, $ctx);
+        return is_string($body) ? $body : '';
+    };
+
     foreach ($needed as $rel) {
         $dest = $botRoot . '/' . $rel;
         $must = !is_file($dest) || (int)@filesize($dest) < 40;
@@ -350,27 +379,30 @@ function ensure_license_sample_files(): void
         if (!$must && $rel === 'admin/git_update.php') {
             $cur = (string)@file_get_contents($dest);
             $must = strpos($cur, 'LicenseFlowService.php') === false
-                || strpos($cur, 'ExtraMenusService.php') === false;
+                || strpos($cur, 'ExtraMenusService.php') === false
+                || strpos($cur, 'admin/git_update.php') === false;
         }
         if (!$must) {
             continue;
         }
         $url = $base . implode('/', array_map('rawurlencode', explode('/', $rel)));
-        $ctx = stream_context_create(array(
-            'http' => array('timeout' => 45, 'header' => "User-Agent: HDDLand-Bot-Sync\r\n"),
-        ));
-        $body = @file_get_contents($url, false, $ctx);
-        if ($body === false || strlen($body) < 20) {
+        $body = $fetch($url);
+        if ($body === '' || strlen($body) < 20) {
             continue;
         }
         if (substr($rel, -4) === '.php' && strpos($body, '<?php') === false) {
             continue;
         }
         $dir = dirname($dest);
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0755, true);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true)) {
+            @file_put_contents(__DIR__ . '/error.log', date('c') . " sync mkdir fail {$dir}\n", FILE_APPEND);
+            continue;
         }
-        @file_put_contents($dest, $body);
+        if (@file_put_contents($dest, $body) === false) {
+            @file_put_contents(__DIR__ . '/error.log', date('c') . " sync write fail {$dest}\n", FILE_APPEND);
+            continue;
+        }
+        @file_put_contents(__DIR__ . '/error.log', date('c') . " sync ok {$rel} (" . strlen($body) . ")\n", FILE_APPEND);
     }
     $licDir = $botRoot . '/storage/licenses';
     if (!is_dir($licDir)) {

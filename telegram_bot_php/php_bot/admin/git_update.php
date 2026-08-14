@@ -26,6 +26,7 @@ $files = array(
     'admin/layout_header.php',
     'admin/user_options.php',
     'admin/receipts.php',
+    'admin/git_update.php',
 );
 
 $report = array();
@@ -33,18 +34,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'pull'
     $botRoot = dirname(__DIR__);
     foreach ($files as $rel) {
         $url = $base . implode('/', array_map('rawurlencode', explode('/', $rel)));
-        $ctx = stream_context_create(array(
-            'http' => array(
-                'timeout' => 60,
-                'header' => "User-Agent: HDDLand-Admin-Updater\r\n",
-            ),
-        ));
-        $body = @file_get_contents($url, false, $ctx);
-        if ($body === false || strlen($body) < 20) {
+        $body = '';
+        if (function_exists('curl_init')) {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, array(
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_CONNECTTIMEOUT => 15,
+                CURLOPT_TIMEOUT => 60,
+                CURLOPT_USERAGENT => 'HDDLand-Admin-Updater',
+            ));
+            $body = curl_exec($ch);
+            $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            if ($body === false || $code >= 400) {
+                $body = false;
+            }
+        } else {
+            $ctx = stream_context_create(array(
+                'http' => array(
+                    'timeout' => 60,
+                    'header' => "User-Agent: HDDLand-Admin-Updater\r\n",
+                ),
+            ));
+            $body = @file_get_contents($url, false, $ctx);
+        }
+        if ($body === false || strlen((string)$body) < 20) {
             $report[] = array('err', $rel . ' — download failed');
             continue;
         }
-        if (strpos($body, '<?php') === false) {
+        if (strpos((string)$body, '<?php') === false && substr($rel, -4) === '.php') {
             $report[] = array('err', $rel . ' — not a PHP file');
             continue;
         }
@@ -58,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'pull'
             $report[] = array('err', $rel . ' — write failed');
             continue;
         }
-        $report[] = array('ok', $rel . ' — updated (' . strlen($body) . ' bytes)');
+        $report[] = array('ok', $rel . ' — updated (' . strlen((string)$body) . ' bytes)');
     }
     flash('ok', 'Git update finished. See report below.');
 }
