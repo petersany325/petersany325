@@ -55,7 +55,7 @@ final class MessageRouter
         }
 
         // Account registration + license flow text steps
-        if ($text !== '' && LicenseFlowService::handleText($chatId, $userId, $text, $lang)) {
+        if ($text !== '' && class_exists(LicenseFlowService::class, true) && LicenseFlowService::handleText($chatId, $userId, $text, $lang)) {
             return;
         }
 

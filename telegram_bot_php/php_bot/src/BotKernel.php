@@ -17,6 +17,10 @@ final class BotKernel
 {
     public static function handleHttp(): void
     {
+        if (function_exists('ensure_license_sample_files')) {
+            ensure_license_sample_files();
+        }
+
         if (function_exists('do_action')) {
             do_action('bot_boot');
         }
