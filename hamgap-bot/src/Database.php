@@ -508,6 +508,190 @@ final class Database
         return true;
     }
 
+    public function createPaymentInvoice(
+        int $telegramId,
+        int $packCoins,
+        int $baseAmount,
+        int $ttlMinutes = 30
+    ): array {
+        $ttlMinutes = max(5, min(180, $ttlMinutes));
+        $amount = $this->allocateUniqueInvoiceAmount($baseAmount);
+        $invoiceNo = $this->generateInvoiceNo();
+        $st = $this->pdo->prepare(
+            "INSERT INTO payment_invoices
+             (invoice_no, telegram_id, pack_coins, base_amount, amount_toman, status, expires_at)
+             VALUES (?, ?, ?, ?, ?, 'pending', DATE_ADD(NOW(), INTERVAL ? MINUTE))"
+        );
+        $st->execute([$invoiceNo, $telegramId, $packCoins, $baseAmount, $amount, $ttlMinutes]);
+        $id = (int)$this->pdo->lastInsertId();
+        return $this->findPaymentInvoice($id) ?? [
+            'id' => $id,
+            'invoice_no' => $invoiceNo,
+            'telegram_id' => $telegramId,
+            'pack_coins' => $packCoins,
+            'base_amount' => $baseAmount,
+            'amount_toman' => $amount,
+            'status' => 'pending',
+        ];
+    }
+
+    private function allocateUniqueInvoiceAmount(int $baseAmount): int
+    {
+        for ($i = 0; $i < 40; $i++) {
+            $suffix = random_int(101, 989);
+            $amount = $baseAmount + $suffix;
+            $st = $this->pdo->prepare(
+                "SELECT 1 FROM payment_invoices
+                 WHERE amount_toman = ?
+                   AND status IN ('pending','awaiting_receipt','submitted')
+                   AND expires_at > NOW()
+                 LIMIT 1"
+            );
+            $st->execute([$amount]);
+            if (!$st->fetchColumn()) {
+                return $amount;
+            }
+        }
+        return $baseAmount + random_int(1000, 8999);
+    }
+
+    public function generateInvoiceNo(): string
+    {
+        for ($i = 0; $i < 8; $i++) {
+            $no = (string)random_int(100000, 999999);
+            $st = $this->pdo->prepare('SELECT id FROM payment_invoices WHERE invoice_no = ? LIMIT 1');
+            $st->execute([$no]);
+            if (!$st->fetch()) {
+                return $no;
+            }
+        }
+        return (string)random_int(1000000, 9999999);
+    }
+
+    public function findPaymentInvoice(int $id): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM payment_invoices WHERE id = ? LIMIT 1');
+        $st->execute([$id]);
+        $row = $st->fetch();
+        return $row ?: null;
+    }
+
+    public function findPaymentInvoiceByNo(string $no): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM payment_invoices WHERE invoice_no = ? LIMIT 1');
+        $st->execute([$no]);
+        $row = $st->fetch();
+        return $row ?: null;
+    }
+
+    public function updatePaymentInvoice(int $id, array $fields): void
+    {
+        if (!$fields) {
+            return;
+        }
+        $sets = [];
+        $vals = [];
+        foreach ($fields as $k => $v) {
+            $sets[] = "`{$k}` = ?";
+            $vals[] = $v;
+        }
+        $vals[] = $id;
+        $this->pdo->prepare('UPDATE payment_invoices SET ' . implode(', ', $sets) . ' WHERE id = ?')->execute($vals);
+    }
+
+    public function isInvoiceOpen(array $inv): bool
+    {
+        $status = (string)($inv['status'] ?? '');
+        if (!in_array($status, ['pending', 'awaiting_receipt', 'submitted'], true)) {
+            return false;
+        }
+        if (!empty($inv['expires_at'])) {
+            $ts = strtotime((string)$inv['expires_at']);
+            if ($ts && $ts < time()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public function expireOldInvoices(): void
+    {
+        $this->pdo->exec(
+            "UPDATE payment_invoices
+             SET status = 'expired'
+             WHERE status IN ('pending','awaiting_receipt')
+               AND expires_at < NOW()"
+        );
+    }
+
+    /** @return list<array> */
+    public function listPendingPaymentInvoices(int $limit = 15): array
+    {
+        $limit = max(1, min(50, $limit));
+        $this->expireOldInvoices();
+        return $this->pdo->query(
+            "SELECT * FROM payment_invoices
+             WHERE status IN ('pending','awaiting_receipt','submitted')
+             ORDER BY FIELD(status,'submitted','awaiting_receipt','pending'), id DESC
+             LIMIT {$limit}"
+        )->fetchAll() ?: [];
+    }
+
+    public function approvePaymentInvoice(int $invoiceId, int $reviewerTid): array
+    {
+        $pdo = $this->pdo;
+        $pdo->beginTransaction();
+        try {
+            $st = $pdo->prepare('SELECT * FROM payment_invoices WHERE id = ? FOR UPDATE');
+            $st->execute([$invoiceId]);
+            $inv = $st->fetch();
+            if (!$inv) {
+                $pdo->rollBack();
+                return ['ok' => false, 'error' => 'not_found'];
+            }
+            if ((string)$inv['status'] === 'approved') {
+                $pdo->rollBack();
+                return ['ok' => false, 'error' => 'already'];
+            }
+            if (!in_array((string)$inv['status'], ['pending', 'awaiting_receipt', 'submitted'], true)) {
+                $pdo->rollBack();
+                return ['ok' => false, 'error' => 'closed'];
+            }
+            $pdo->prepare(
+                "UPDATE payment_invoices
+                 SET status = 'approved', reviewed_by = ?, reviewed_at = NOW()
+                 WHERE id = ?"
+            )->execute([$reviewerTid, $invoiceId]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            throw $e;
+        }
+        $coins = (int)$inv['pack_coins'];
+        $tid = (int)$inv['telegram_id'];
+        $this->addCoins($tid, $coins, 'card_topup', (string)$inv['invoice_no']);
+        return ['ok' => true, 'invoice' => $this->findPaymentInvoice($invoiceId), 'coins' => $coins, 'telegram_id' => $tid];
+    }
+
+    public function rejectPaymentInvoice(int $invoiceId, int $reviewerTid): array
+    {
+        $inv = $this->findPaymentInvoice($invoiceId);
+        if (!$inv) {
+            return ['ok' => false, 'error' => 'not_found'];
+        }
+        if ((string)$inv['status'] === 'approved') {
+            return ['ok' => false, 'error' => 'already'];
+        }
+        $this->updatePaymentInvoice($invoiceId, [
+            'status' => 'rejected',
+            'reviewed_by' => $reviewerTid,
+            'reviewed_at' => date('Y-m-d H:i:s'),
+        ]);
+        return ['ok' => true, 'invoice' => $this->findPaymentInvoice($invoiceId)];
+    }
+
     public function countUsers(): array
     {
         $total = (int)$this->pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();

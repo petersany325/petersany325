@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v10.5';
+    public const CODE_VERSION = '2026-08-14-v10.6';
 
     private string $assets;
     private Settings $settings;
@@ -248,6 +248,16 @@ final class Handlers
             $fresh = $this->db->findUser($tid) ?? $user;
             $this->clearUi($chatId, $fresh);
             $this->showProfile($chatId, $fresh);
+            return;
+        }
+
+        // Payment receipt photo
+        if (!empty($message['photo']) && str_starts_with((string)($user['flow'] ?? ''), 'pay:receipt:')) {
+            $invId = (int)substr((string)$user['flow'], strlen('pay:receipt:'));
+            $photos = $message['photo'];
+            $best = end($photos);
+            $fileId = (string)($best['file_id'] ?? '');
+            $this->submitPaymentReceipt($chatId, $user, $invId, $fileId);
             return;
         }
 
@@ -840,7 +850,13 @@ final class Handlers
         }
 
         if ($data === 'pay:soon') {
-            $this->tg->answerCallback($id, 'پرداخت به‌زودی فعال می‌شود', true);
+            $this->tg->answerCallback($id, 'درگاه بانکی به‌زودی فعال می‌شود', true);
+            return;
+        }
+
+        // Card-to-card payment
+        if (str_starts_with($data, 'pay:') || str_starts_with($data, 'payadm:')) {
+            $this->handlePaymentCallback($cq, $user, $id, $data, $chatId, $tid);
             return;
         }
 
@@ -991,18 +1007,6 @@ final class Handlers
                     $chatId,
                     $user,
                     "📝 <b>بیو / معرفی</b>\nحداکثر ۱۸۰ کاراکتر.\nفعلی: {$cur}\n\nبرای پاک کردن بنویس: <code>پاک</code>"
-                );
-                break;
-            case 'pay:100':
-            case 'pay:300':
-            case 'pay:1000':
-                $pack = substr($data, strlen('pay:'));
-                $this->clearUi($chatId, $user);
-                $this->uiText(
-                    $chatId,
-                    $user,
-                    "💳 <b>خرید {$pack} سکه</b>\nروش پرداخت را انتخاب کن:",
-                    ['reply_markup' => Keyboards::payMethodInline($pack)]
                 );
                 break;
             default:
@@ -1340,7 +1344,8 @@ final class Handlers
             "موجودی: <b>" . (int)$user['coins'] . "</b> سکه\n\n" .
             "جستجو رایگان است.\n" .
             "هر پیام کوتاه: {$msgCost} سکه · هر درخواست گفتگو: {$reqCost} سکه\n" .
-            "دعوت دوست: +{$invite} سکه";
+            "دعوت دوست: +{$invite} سکه\n\n" .
+            "برای خرید سکه یک بسته را انتخاب کن. فاکتور با مبلغ یکتا صادر می‌شود.";
         if (is_file($path)) {
             $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::walletInline($invite));
         } else {
@@ -2119,6 +2124,304 @@ final class Handlers
         $this->clearUi($chatId, $user);
         $this->uiText($chatId, $user, $sent > 0 ? 'پیامت به پشتیبانی رسید ✅' : 'پیامت ثبت شد. به‌زودی بررسی می‌شود.');
         $this->showSupport($chatId, $user);
+    }
+
+    private function handlePaymentCallback(
+        array $cq,
+        array &$user,
+        string $id,
+        string $data,
+        int $chatId,
+        int $tid
+    ): void {
+        if (str_starts_with($data, 'payadm:')) {
+            if (!$this->canReviewPayments($tid)) {
+                $this->tg->answerCallback($id, 'دسترسی ادمین نداری', true);
+                return;
+            }
+            $ok = str_starts_with($data, 'payadm:ok:');
+            $invId = (int)substr($data, strlen($ok ? 'payadm:ok:' : 'payadm:no:'));
+            if ($ok) {
+                $res = $this->db->approvePaymentInvoice($invId, $tid);
+                if (!($res['ok'] ?? false)) {
+                    $msg = match ((string)($res['error'] ?? '')) {
+                        'already' => 'قبلاً تأیید شده',
+                        'closed' => 'این فاکتور بسته است',
+                        default => 'فاکتور پیدا نشد',
+                    };
+                    $this->tg->answerCallback($id, $msg, true);
+                    return;
+                }
+                $coins = (int)$res['coins'];
+                $userTid = (int)$res['telegram_id'];
+                $inv = $res['invoice'];
+                $this->tg->answerCallback($id, 'تأیید شد');
+                try {
+                    $this->tg->sendMessage(
+                        $userTid,
+                        "✅ پرداختت تأیید شد.\n" .
+                        "<b>+{$coins} سکه</b> به حسابت اضافه شد.\n" .
+                        "شماره فاکتور: <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>'
+                    );
+                } catch (Throwable $e) {
+                }
+                $this->tg->sendMessage($chatId, "فاکتور {$inv['invoice_no']} تأیید و {$coins} سکه شارژ شد.");
+                return;
+            }
+            $res = $this->db->rejectPaymentInvoice($invId, $tid);
+            if (!($res['ok'] ?? false)) {
+                $this->tg->answerCallback($id, 'رد نشد / پیدا نشد', true);
+                return;
+            }
+            $inv = $res['invoice'];
+            $this->tg->answerCallback($id, 'رد شد');
+            try {
+                $this->tg->sendMessage(
+                    (int)$inv['telegram_id'],
+                    "❌ فیش فاکتور <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
+                    "</code> رد شد.\nاگر مبلغ اشتباه واریز کردی، دوباره از کیف‌پول فاکتور جدید بگیر."
+                );
+            } catch (Throwable $e) {
+            }
+            $this->tg->sendMessage($chatId, "فاکتور {$inv['invoice_no']} رد شد.");
+            return;
+        }
+
+        if (str_starts_with($data, 'pay:pack:')) {
+            $coins = (int)substr($data, strlen('pay:pack:'));
+            if (!in_array($coins, [100, 300, 1000], true)) {
+                $this->tg->answerCallback($id, 'بسته نامعتبر', true);
+                return;
+            }
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->createAndShowInvoice($chatId, $user, $coins);
+            return;
+        }
+
+        if ($data === 'pay:copycard') {
+            $card = preg_replace('/\D+/', '', $this->settings->get('pay_card_number')) ?? '';
+            if ($card === '') {
+                $this->tg->answerCallback($id, 'شماره کارت تنظیم نشده', true);
+                return;
+            }
+            $this->tg->answerCallback($id, $card, true);
+            $this->tg->sendMessage($chatId, "شماره کارت (لمس کن تا کپی شود):\n<code>{$card}</code>");
+            return;
+        }
+
+        if (str_starts_with($data, 'pay:copyamt:')) {
+            $invId = (int)substr($data, strlen('pay:copyamt:'));
+            $inv = $this->db->findPaymentInvoice($invId);
+            if (!$inv || (int)$inv['telegram_id'] !== $tid) {
+                $this->tg->answerCallback($id, 'فاکتور نامعتبر', true);
+                return;
+            }
+            $rial = ((int)$inv['amount_toman']) * 10;
+            $this->tg->answerCallback($id, (string)$rial, true);
+            $this->tg->sendMessage(
+                $chatId,
+                "مبلغ دقیق به ریال (لمس کن تا کپی شود):\n<code>{$rial}</code>\n" .
+                "به تومان: <code>" . (int)$inv['amount_toman'] . "</code>"
+            );
+            return;
+        }
+
+        if (str_starts_with($data, 'pay:receipt:')) {
+            $invId = (int)substr($data, strlen('pay:receipt:'));
+            $inv = $this->db->findPaymentInvoice($invId);
+            if (!$inv || (int)$inv['telegram_id'] !== $tid || !$this->db->isInvoiceOpen($inv)) {
+                $this->tg->answerCallback($id, 'فاکتور منقضی یا نامعتبر است', true);
+                return;
+            }
+            $this->db->updatePaymentInvoice($invId, ['status' => 'awaiting_receipt']);
+            $this->db->updateUser($tid, ['flow' => 'pay:receipt:' . $invId]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback(
+                $id,
+                "⚠️ دقیقاً همان مبلغ فاکتور را واریز کن. مبلغ = کد شناسایی تراکنش توست. مبلغ اشتباه تأیید نمی‌شود.",
+                true
+            );
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $amt = $this->formatMoney((int)$inv['amount_toman']);
+            $this->uiText(
+                $chatId,
+                $user,
+                "📷 <b>ارسال فیش واریزی</b>\n" .
+                "فاکتور: <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>\n" .
+                "مبلغ دقیق: <b>{$amt}</b> تومان\n\n" .
+                "عکس واضح رسید کارت‌به‌کارت را همین‌جا بفرست."
+            );
+            return;
+        }
+
+        $this->tg->answerCallback($id);
+    }
+
+    private function canReviewPayments(int $tid): bool
+    {
+        if (!empty($this->config['admin_ids']) && in_array($tid, array_map('intval', (array)$this->config['admin_ids']), true)) {
+            return true;
+        }
+        $u = $this->db->findUser($tid);
+        if ($u && !empty($u['is_admin'])) {
+            return true;
+        }
+        return $this->db->hasValidAdminSession($tid);
+    }
+
+    private function createAndShowInvoice(int $chatId, array &$user, int $packCoins): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $card = preg_replace('/\D+/', '', $this->settings->get('pay_card_number')) ?? '';
+        if ($card === '' || strlen($card) < 16) {
+            $this->uiText(
+                $chatId,
+                $user,
+                "هنوز شماره کارت فروشگاه تنظیم نشده.\nاز بات ادمین بخش «پرداخت کارت‌به‌کارت» را کامل کن.",
+                ['reply_markup' => Keyboards::walletInline($this->settings->getInt('invite_reward', 30))]
+            );
+            return;
+        }
+        $base = $this->settings->getInt('pack_' . $packCoins . '_price', match ($packCoins) {
+            100 => 50000,
+            300 => 120000,
+            1000 => 350000,
+            default => 50000,
+        });
+        $ttl = $this->settings->getInt('pay_invoice_minutes', 30);
+        $this->db->expireOldInvoices();
+        $inv = $this->db->createPaymentInvoice($tid, $packCoins, $base, $ttl);
+        $user = $this->db->findUser($tid) ?? $user;
+        $this->clearUi($chatId, $user);
+        $this->uiText($chatId, $user, $this->invoiceText($inv), [
+            'reply_markup' => Keyboards::payInvoiceInline((int)$inv['id']),
+        ]);
+    }
+
+    private function invoiceText(array $inv): string
+    {
+        $coins = (int)$inv['pack_coins'];
+        $amt = (int)$inv['amount_toman'];
+        $amtFmt = $this->formatMoney($amt);
+        $rial = $amt * 10;
+        $no = htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $card = preg_replace('/\D+/', '', $this->settings->get('pay_card_number')) ?? '';
+        $cardFmt = $this->formatCard($card);
+        $holder = htmlspecialchars($this->settings->get('pay_card_holder'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $bank = htmlspecialchars($this->settings->get('pay_bank_name'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $ttl = $this->settings->getInt('pay_invoice_minutes', 30);
+        $channel = trim($this->settings->get('pay_trust_channel'));
+        $lines = [
+            "فاکتور <b>{$coins}</b> سکه به مبلغ <b>{$amtFmt}</b> تومان برات صادر شد.",
+            '',
+            'لطفاً <b>دقیقاً همین مبلغ</b> را کارت‌به‌کارت واریز کن.',
+            'این مبلغ، کد شناسایی فاکتور توست تا واریزی‌ات از بقیه جدا شود.',
+            '',
+            '⚠️ اگر مبلغ اشتباه بفرستی، فیش تأیید نمی‌شود.',
+            "⏱ اعتبار فاکتور: <b>{$ttl}</b> دقیقه",
+            '',
+            "شماره کارت:\n<code>{$card}</code>",
+            $cardFmt !== $card ? "نمایش: <b>{$cardFmt}</b>" : '',
+            $holder !== '' ? "به نام: <b>{$holder}</b>" : '',
+            $bank !== '' ? "بانک: <b>{$bank}</b>" : '',
+            "شماره فاکتور: <code>{$no}</code>",
+            "مبلغ به ریال: <code>{$rial}</code>",
+        ];
+        if ($channel !== '') {
+            $ch = ltrim($channel, '@');
+            $lines[] = '';
+            $lines[] = 'کانال رضایت مشتریان: @' . htmlspecialchars($ch, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        }
+        $lines[] = '';
+        $lines[] = 'بعد از واریز، دکمه «ارسال فیش واریزی» را بزن و عکس رسید را بفرست.';
+        return implode("\n", array_filter($lines, static fn ($l) => $l !== null));
+    }
+
+    private function formatMoney(int $n): string
+    {
+        return number_format($n, 0, '.', '٬');
+    }
+
+    private function formatCard(string $digits): string
+    {
+        $digits = preg_replace('/\D+/', '', $digits) ?? '';
+        if (strlen($digits) < 16) {
+            return $digits;
+        }
+        return trim(chunk_split(substr($digits, 0, 16), 4, '-'), '-');
+    }
+
+    private function submitPaymentReceipt(int $chatId, array &$user, int $invId, string $fileId): void
+    {
+        $tid = (int)$user['telegram_id'];
+        if ($fileId === '') {
+            $this->tg->sendMessage($chatId, 'عکس فیش معتبر نبود. دوباره بفرست.');
+            return;
+        }
+        $inv = $this->db->findPaymentInvoice($invId);
+        if (!$inv || (int)$inv['telegram_id'] !== $tid || !$this->db->isInvoiceOpen($inv)) {
+            $this->db->updateUser($tid, ['flow' => null]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->uiText($chatId, $user, 'فاکتور منقضی یا نامعتبر است. دوباره از کیف‌پول فاکتور بگیر.');
+            return;
+        }
+        $this->db->updatePaymentInvoice($invId, [
+            'status' => 'submitted',
+            'receipt_file_id' => $fileId,
+        ]);
+        $this->db->updateUser($tid, ['flow' => null]);
+        $user = $this->db->findUser($tid) ?? $user;
+        $this->clearUi($chatId, $user);
+        $this->notifyAdminsOfReceipt($inv, $fileId, $user);
+        $this->uiText(
+            $chatId,
+            $user,
+            "✅ فیش فاکتور <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
+            "</code> ثبت شد.\nبعد از بررسی ادمین، سکه خودکار به حسابت اضافه می‌شود.",
+            ['reply_markup' => Keyboards::walletInline($this->settings->getInt('invite_reward', 30))]
+        );
+    }
+
+    private function notifyAdminsOfReceipt(array $inv, string $fileId, array $user): void
+    {
+        $amt = $this->formatMoney((int)$inv['amount_toman']);
+        $dn = htmlspecialchars((string)($user['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $caption =
+            "📥 <b>فیش جدید کارت‌به‌کارت</b>\n" .
+            "کاربر: <b>{$dn}</b>\n" .
+            "Telegram ID: <code>" . (int)$inv['telegram_id'] . "</code>\n" .
+            "فاکتور: <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>\n" .
+            "سکه: <b>" . (int)$inv['pack_coins'] . "</b>\n" .
+            "مبلغ دقیق: <b>{$amt}</b> تومان\n" .
+            "در اپ بانک همین مبلغ را پیدا کن → تأیید بزن.";
+        $markup = Keyboards::payAdminReviewInline((int)$inv['id']);
+        $targets = [];
+        foreach (($this->config['admin_ids'] ?? []) as $aid) {
+            $targets[] = (int)$aid;
+        }
+        foreach ($this->db->listSupportStaff(true) as $row) {
+            // optional: only admins; skip support for money unless also admin
+        }
+        $targets = array_values(array_unique(array_filter($targets)));
+        if (!$targets) {
+            // fallback: any user marked is_admin
+            $rows = $this->db->pdo()->query("SELECT telegram_id FROM users WHERE is_admin = 1")->fetchAll() ?: [];
+            foreach ($rows as $r) {
+                $targets[] = (int)$r['telegram_id'];
+            }
+        }
+        foreach ($targets as $aid) {
+            try {
+                $this->tg->sendPhotoFileId($aid, $fileId, $caption, $markup);
+            } catch (Throwable $e) {
+                try {
+                    $this->tg->sendMessage($aid, $caption, ['reply_markup' => $markup]);
+                } catch (Throwable $e2) {
+                }
+            }
+        }
     }
 
     private function handlePrivacyCallback(

@@ -455,19 +455,50 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [['text' => "دعوت دوست · +{$inviteReward} سکه", 'callback_data' => 'menu:invite']],
-            [['text' => '۱۰۰ سکه — ۵۰٬۰۰۰ تومان', 'callback_data' => 'pay:100']],
-            [['text' => '۳۰۰ سکه — ۱۲۰٬۰۰۰ تومان', 'callback_data' => 'pay:300']],
-            [['text' => '۱۰۰۰ سکه — ۳۵۰٬۰۰۰ تومان', 'callback_data' => 'pay:1000']],
+            [['text' => '۱۰۰ سکه — ۵۰٬۰۰۰ تومان', 'callback_data' => 'pay:pack:100']],
+            [['text' => '۳۰۰ سکه — ۱۲۰٬۰۰۰ تومان', 'callback_data' => 'pay:pack:300']],
+            [['text' => '۱۰۰۰ سکه — ۳۵۰٬۰۰۰ تومان', 'callback_data' => 'pay:pack:1000']],
             [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
         ]];
     }
 
-    public static function payMethodInline(string $pack): array
+    public static function payInvoiceInline(int $invoiceId): array
+    {
+        $id = (string)$invoiceId;
+        return ['inline_keyboard' => [
+            [['text' => '📋 کپی مبلغ (ریال)', 'callback_data' => 'pay:copyamt:' . $id]],
+            [['text' => '💳 کپی شماره کارت', 'callback_data' => 'pay:copycard']],
+            [['text' => '📷 ارسال فیش واریزی', 'callback_data' => 'pay:receipt:' . $id]],
+            [['text' => 'بازگشت به کیف‌پول', 'callback_data' => 'menu:wallet']],
+        ]];
+    }
+
+    public static function payAdminReviewInline(int $invoiceId): array
+    {
+        $id = (string)$invoiceId;
+        return ['inline_keyboard' => [
+            [
+                ['text' => '✅ تأیید و شارژ سکه', 'callback_data' => 'payadm:ok:' . $id],
+                ['text' => '❌ رد فیش', 'callback_data' => 'payadm:no:' . $id],
+            ],
+        ]];
+    }
+
+    public static function adminPayHome(): array
     {
         return ['inline_keyboard' => [
-            [['text' => 'درگاه بانکی (به‌زودی)', 'callback_data' => 'pay:soon']],
-            [['text' => 'کارت‌به‌کارت (به‌زودی)', 'callback_data' => 'pay:soon']],
-            [['text' => 'بازگشت', 'callback_data' => 'menu:wallet']],
+            [['text' => 'شماره کارت', 'callback_data' => 'adm:set:pay_card_number']],
+            [['text' => 'نام صاحب حساب', 'callback_data' => 'adm:set:pay_card_holder']],
+            [['text' => 'نام بانک', 'callback_data' => 'adm:set:pay_bank_name']],
+            [['text' => 'کانال رضایت (اختیاری)', 'callback_data' => 'adm:set:pay_trust_channel']],
+            [['text' => 'اعتبار فاکتور (دقیقه)', 'callback_data' => 'adm:set:pay_invoice_minutes']],
+            [
+                ['text' => 'قیمت ۱۰۰ سکه', 'callback_data' => 'adm:set:pack_100_price'],
+                ['text' => 'قیمت ۳۰۰', 'callback_data' => 'adm:set:pack_300_price'],
+            ],
+            [['text' => 'قیمت ۱۰۰۰ سکه', 'callback_data' => 'adm:set:pack_1000_price']],
+            [['text' => '📥 فیش‌های در انتظار', 'callback_data' => 'adm:pay:pending']],
+            [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
         ]];
     }
 
@@ -524,6 +555,7 @@ final class Keyboards
             [['text' => '🚩 گزارش‌ها', 'callback_data' => 'adm:reports']],
             [['text' => '🆘 پشتیبانی و کارمندان', 'callback_data' => 'adm:support']],
             [['text' => '⚙️ تنظیمات عمومی', 'callback_data' => 'adm:general']],
+            [['text' => '💳 پرداخت کارت‌به‌کارت', 'callback_data' => 'adm:pay']],
             [['text' => '🛡 امنیت و رمز', 'callback_data' => 'adm:security']],
             [['text' => '🚪 خروج از پنل', 'callback_data' => 'adm:logout']],
         ]];

@@ -28,6 +28,15 @@ final class Settings
         // password hash is set on first deploy; never store plaintext here
         'admin_password_hash' => '',
         'admin_session_hours' => '12',
+        // Card-to-card top-up
+        'pay_card_number' => '',
+        'pay_card_holder' => '',
+        'pay_bank_name' => '',
+        'pay_trust_channel' => '',
+        'pay_invoice_minutes' => '30',
+        'pack_100_price' => '50000',
+        'pack_300_price' => '120000',
+        'pack_1000_price' => '350000',
     ];
 
     public function __construct(private Database $db)

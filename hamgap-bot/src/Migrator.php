@@ -44,7 +44,32 @@ final class Migrator
         self::ensureFriendshipsTable($pdo);
         self::ensureFriendRoomsTables($pdo);
         self::ensureStatusIncludesRoom($pdo);
+        self::ensurePaymentInvoicesTable($pdo);
         (new Settings($db))->seedDefaults();
+    }
+
+    private static function ensurePaymentInvoicesTable(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS payment_invoices (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                invoice_no VARCHAR(16) NOT NULL,
+                telegram_id BIGINT NOT NULL,
+                pack_coins INT NOT NULL,
+                base_amount INT NOT NULL,
+                amount_toman INT NOT NULL,
+                status ENUM('pending','awaiting_receipt','submitted','approved','rejected','expired') NOT NULL DEFAULT 'pending',
+                receipt_file_id VARCHAR(255) NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                reviewed_by BIGINT NULL,
+                reviewed_at TIMESTAMP NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_invoice_no (invoice_no),
+                KEY idx_amount_status (amount_toman, status),
+                KEY idx_user_status (telegram_id, status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
     }
 
     private static function ensureStatusIncludesRoom(PDO $pdo): void

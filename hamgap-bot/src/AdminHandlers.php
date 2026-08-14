@@ -134,7 +134,8 @@ final class AdminHandlers
             if (in_array($key, [
                 'invite_reward', 'message_cost', 'request_cost', 'welcome_coins',
                 'connect_any_cost', 'connect_gender_cost', 'connect_province_cost', 'connect_age_cost',
-                'admin_session_hours',
+                'admin_session_hours', 'pay_invoice_minutes',
+                'pack_100_price', 'pack_300_price', 'pack_1000_price',
             ], true)) {
                 if (!ctype_digit($value)) {
                     $this->tg->sendMessage($chatId, 'فقط عدد بفرست.');
@@ -147,7 +148,14 @@ final class AdminHandlers
                     return;
                 }
             }
-            if (in_array($key, ['support_bot_username', 'main_bot_username'], true)) {
+            if ($key === 'pay_card_number') {
+                $value = preg_replace('/\D+/', '', $value) ?? '';
+                if (strlen($value) < 16 || strlen($value) > 19) {
+                    $this->tg->sendMessage($chatId, 'شماره کارت باید ۱۶ تا ۱۹ رقم باشد.');
+                    return;
+                }
+            }
+            if (in_array($key, ['support_bot_username', 'main_bot_username', 'pay_trust_channel'], true)) {
                 $value = ltrim($value, '@');
             }
             $this->settings->set($key, $value);
@@ -372,9 +380,19 @@ final class AdminHandlers
             return;
         }
         if ($data === 'adm:general') {
-            $this->tg->sendMessage($chatId, '⚙️ تنظیمات عمومی برند و متن‌ها:', [
-                'reply_markup' => Keyboards::adminGeneral(),
-            ]);
+            $all = $this->settings->all();
+            $brand = htmlspecialchars((string)$all['brand_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $main = htmlspecialchars((string)$all['main_bot_username'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $this->tg->sendMessage(
+                $chatId,
+                "⚙️ <b>تنظیمات عمومی</b>\nبرند: <b>{$brand}</b>\nبات اصلی: <b>@{$main}</b>",
+                ['reply_markup' => Keyboards::adminGeneral()]
+            );
+            return;
+        }
+
+        if ($data === 'adm:pay' || $data === 'adm:pay:pending' || str_starts_with($data, 'payadm:')) {
+            $this->handlePayAdmin($chatId, $tid, $data);
             return;
         }
         if ($data === 'adm:user:find') {
@@ -561,7 +579,7 @@ final class AdminHandlers
     {
         $dn = htmlspecialchars((string)($u['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $pc = htmlspecialchars((string)($u['public_code'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $g = (string)($u['gender'] ?? '-');
+        $g = Gender::label((string)($u['gender'] ?? ''));
         $this->tg->sendMessage(
             $chatId,
             "👤 <b>{$dn}</b>\n" .
@@ -641,5 +659,103 @@ final class AdminHandlers
             return true;
         }
         return false;
+    }
+
+    private function handlePayAdmin(int $chatId, int $tid, string $data): void
+    {
+        if (str_starts_with($data, 'payadm:')) {
+            $ok = str_starts_with($data, 'payadm:ok:');
+            $invId = (int)substr($data, strlen($ok ? 'payadm:ok:' : 'payadm:no:'));
+            $mainToken = (string)($this->config['bot_token'] ?? '');
+            $mainTg = $mainToken !== '' ? new Telegram($mainToken) : $this->tg;
+            if ($ok) {
+                $res = $this->db->approvePaymentInvoice($invId, $tid);
+                if (!($res['ok'] ?? false)) {
+                    $this->tg->sendMessage($chatId, 'تأیید نشد (قبلاً بسته شده یا پیدا نشد).');
+                    return;
+                }
+                $coins = (int)$res['coins'];
+                $inv = $res['invoice'];
+                try {
+                    $mainTg->sendMessage(
+                        (int)$res['telegram_id'],
+                        "✅ پرداختت تأیید شد.\n<b>+{$coins} سکه</b> اضافه شد.\nفاکتور: <code>" .
+                        htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>'
+                    );
+                } catch (Throwable $e) {
+                }
+                $this->tg->sendMessage($chatId, "✅ فاکتور {$inv['invoice_no']} تأیید و {$coins} سکه شارژ شد.");
+                return;
+            }
+            $res = $this->db->rejectPaymentInvoice($invId, $tid);
+            if (!($res['ok'] ?? false)) {
+                $this->tg->sendMessage($chatId, 'رد نشد.');
+                return;
+            }
+            $inv = $res['invoice'];
+            try {
+                $mainTg->sendMessage(
+                    (int)$inv['telegram_id'],
+                    "❌ فیش فاکتور <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
+                    "</code> رد شد. از کیف‌پول دوباره فاکتور بگیر."
+                );
+            } catch (Throwable $e) {
+            }
+            $this->tg->sendMessage($chatId, "فاکتور {$inv['invoice_no']} رد شد.");
+            return;
+        }
+
+        if ($data === 'adm:pay:pending') {
+            $rows = $this->db->listPendingPaymentInvoices(20);
+            if (!$rows) {
+                $this->tg->sendMessage($chatId, 'فیش در انتظاری نیست.', [
+                    'reply_markup' => Keyboards::adminPayHome(),
+                ]);
+                return;
+            }
+            foreach ($rows as $inv) {
+                $amt = number_format((int)$inv['amount_toman'], 0, '.', '٬');
+                $text =
+                    "فاکتور <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>\n" .
+                    'کاربر: <code>' . (int)$inv['telegram_id'] . "</code>\n" .
+                    'سکه: <b>' . (int)$inv['pack_coins'] . "</b>\n" .
+                    "مبلغ: <b>{$amt}</b> تومان\n" .
+                    'وضعیت: <b>' . htmlspecialchars((string)$inv['status'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>';
+                $fileId = (string)($inv['receipt_file_id'] ?? '');
+                $markup = Keyboards::payAdminReviewInline((int)$inv['id']);
+                if ($fileId !== '') {
+                    try {
+                        $this->tg->sendPhotoFileId($chatId, $fileId, $text, $markup);
+                        continue;
+                    } catch (Throwable $e) {
+                    }
+                }
+                $this->tg->sendMessage($chatId, $text, ['reply_markup' => $markup]);
+            }
+            return;
+        }
+
+        // adm:pay home
+        $card = $this->settings->get('pay_card_number');
+        $holder = $this->settings->get('pay_card_holder');
+        $bank = $this->settings->get('pay_bank_name');
+        $ttl = $this->settings->get('pay_invoice_minutes');
+        $p100 = $this->settings->get('pack_100_price');
+        $p300 = $this->settings->get('pack_300_price');
+        $p1000 = $this->settings->get('pack_1000_price');
+        $ch = $this->settings->get('pay_trust_channel');
+        $cardShow = $card !== '' ? $card : '— هنوز تنظیم نشده —';
+        $this->tg->sendMessage(
+            $chatId,
+            "💳 <b>پرداخت کارت‌به‌کارت</b>\n\n" .
+            "شماره کارت: <code>" . htmlspecialchars($cardShow, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>\n" .
+            'صاحب حساب: <b>' . htmlspecialchars($holder !== '' ? $holder : '—', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
+            'بانک: <b>' . htmlspecialchars($bank !== '' ? $bank : '—', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
+            'کانال رضایت: <b>' . ($ch !== '' ? '@' . htmlspecialchars($ch, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '—') . "</b>\n" .
+            "اعتبار فاکتور: <b>{$ttl}</b> دقیقه\n" .
+            "قیمت‌ها: ۱۰۰=<b>{$p100}</b> · ۳۰۰=<b>{$p300}</b> · ۱۰۰۰=<b>{$p1000}</b> تومان\n\n" .
+            "کاربر مبلغ یکتا می‌بیند → واریز می‌کند → فیش می‌فرستد → تو تأیید می‌کنی تا سکه خودکار شارژ شود.",
+            ['reply_markup' => Keyboards::adminPayHome()]
+        );
     }
 }
