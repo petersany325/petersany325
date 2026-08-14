@@ -35,9 +35,12 @@ DEFAULT_FILES = [
     ("src/Matcher.php", f"{REMOTE}/src"),
     ("src/Migrator.php", f"{REMOTE}/src"),
     ("src/Gender.php", f"{REMOTE}/src"),
+    ("src/Settings.php", f"{REMOTE}/src"),
+    ("src/AdminHandlers.php", f"{REMOTE}/src"),
     ("src/Telegram.php", f"{REMOTE}/src"),
     ("src/IranLocations.php", f"{REMOTE}/src"),
     ("public/webhook.php", REMOTE),
+    ("public/webhook_admin.php", REMOTE),
     ("public/version.php", REMOTE),
 ]
 
