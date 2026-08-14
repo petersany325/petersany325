@@ -210,7 +210,11 @@ def run_authenticity_check(device_info, eeprom_words, extras=None):
     usb_id = (device_info or {}).get("id")
     dtype = (device_info or {}).get("type")
 
-    steps.append(("INFO", "desc=%s SN=%s ID=%s type=%s" % (desc, serial, usb_id, dtype)))
+    try:
+        id_hex = "0x%08X" % (int(usb_id) & 0xFFFFFFFF,)
+    except Exception:
+        id_hex = repr(usb_id)
+    steps.append(("INFO", "desc=%s SN=%s ID=%s type=%s" % (desc, serial, id_hex, dtype)))
 
     s, f = _score_id_vid_pid(usb_id, dtype)
     score += s
@@ -278,5 +282,10 @@ def demo_from_report_sample():
 
 
 if __name__ == "__main__":
+    import sys
     r = demo_from_report_sample()
-    print(format_authenticity_report(r).encode("utf-8"))
+    text = format_authenticity_report(r)
+    if sys.version_info[0] < 3:
+        print(text.encode("utf-8"))
+    else:
+        print(text)
