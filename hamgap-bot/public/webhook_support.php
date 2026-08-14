@@ -11,13 +11,6 @@ if (!is_file($configFile)) {
 }
 
 $config = require $configFile;
-$token = (string)($config['support_bot_token'] ?? '');
-if ($token === '') {
-    http_response_code(503);
-    echo 'support bot not configured';
-    exit;
-}
-
 require __DIR__ . '/src/Database.php';
 require __DIR__ . '/src/Settings.php';
 require __DIR__ . '/src/Migrator.php';
@@ -43,6 +36,15 @@ try {
     $db = new Database($config['db']);
     Migrator::ensure($db);
     $settings = new Settings($db);
+    $token = (string)($config['support_bot_token'] ?? '');
+    if ($token === '') {
+        $token = $settings->get('support_bot_token', '');
+    }
+    if ($token === '') {
+        http_response_code(503);
+        echo 'support bot not configured';
+        exit;
+    }
     $tg = new Telegram($token);
     $handler = new SupportHandlers($config, $db, $tg, $settings);
     $handler->handle($update);
