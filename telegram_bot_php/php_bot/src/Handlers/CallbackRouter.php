@@ -293,7 +293,23 @@ final class CallbackRouter
             return;
         }
 
-        $extras = array('cart','orders','checkout','license','renew','demo','profile','feedback','referral','contact','brands','news','miniapp','vipdl');
+        // Main Menu → 🔑 License: guided pipeline (bypass old ExtraMenus help page)
+        if ($data === 'license') {
+            answer_callback($id);
+            if (function_exists('feature_on') && !feature_on('license')) {
+                Presenter::editOrSend(
+                    $chatId,
+                    $msgId,
+                    Presenter::featureDisabled($lang, 'این بخش فعلاً غیرفعال است.', 'This section is currently disabled.'),
+                    main_keyboard($lang)
+                );
+                return;
+            }
+            LicenseFlowService::showLicenseEntry($chatId, $msgId, $userId, $lang);
+            return;
+        }
+
+        $extras = array('cart','orders','checkout','renew','demo','profile','feedback','referral','contact','brands','news','miniapp','vipdl');
         if (in_array($data, $extras, true)) {
             answer_callback($id);
             \HddLand\Bot\Services\ExtraMenusService::show($data, $chatId, $msgId, $userId, $lang);

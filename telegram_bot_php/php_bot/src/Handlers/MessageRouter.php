@@ -317,10 +317,17 @@ final class MessageRouter
                 send_message($chatId, $res['msg']);
                 break;
 
+            case 'license':
+                if (function_exists('feature_on') && !feature_on('license')) {
+                    send_message($chatId, Presenter::featureDisabled($lang, 'این بخش فعلاً غیرفعال است.', 'This section is currently disabled.'), main_keyboard($lang));
+                    break;
+                }
+                LicenseFlowService::showLicenseEntry($chatId, 0, $userId, $lang);
+                break;
+
             case 'cart':
             case 'orders':
             case 'checkout':
-            case 'license':
             case 'renew':
             case 'demo':
             case 'profile':
