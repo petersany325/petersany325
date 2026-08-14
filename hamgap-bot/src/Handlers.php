@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v4';
+    public const CODE_VERSION = '2026-08-14-v5';
 
     private string $assets;
 
@@ -84,7 +84,7 @@ final class Handlers
         }
 
         // Waiting for custom city text
-        if (($user['status'] ?? '') === 'idle' && ($user['search_pref'] ?? '') === 'reg:city_other') {
+        if (($user['flow'] ?? '') === 'reg:city_other') {
             $this->saveCity($chatId, $user, $text);
             return;
         }
@@ -112,14 +112,14 @@ final class Handlers
             return;
         }
 
-        // Edit flows that still need text (custom city only; age/gender are buttons)
-        if (($user['status'] ?? '') === 'idle' && ($user['search_pref'] ?? '') === 'edit:city_other') {
+        // Edit flows that still need text (custom city)
+        if (($user['flow'] ?? '') === 'edit:city_other') {
             $city = mb_substr(trim($text), 0, 64);
             if (mb_strlen($city) < 2) {
                 $this->tg->sendMessage($chatId, 'نام شهر معتبر بفرست.');
                 return;
             }
-            $this->db->updateUser($tid, ['city' => $city, 'search_pref' => null]);
+            $this->db->updateUser($tid, ['city' => $city, 'flow' => null]);
             $this->showProfile($chatId, $this->db->findUser($tid) ?? $user);
             return;
         }
@@ -158,7 +158,7 @@ final class Handlers
                 return;
             }
             $editing = $this->isProfileComplete($user);
-            $this->db->updateUser($tid, ['gender' => $g, 'search_pref' => null]);
+            $this->db->updateUser($tid, ['gender' => $g, 'flow' => null]);
             $this->tg->answerCallback($id, $g === 'female' ? 'دختر ✅' : 'پسر ✅');
             if ($editing) {
                 $this->showProfile($chatId, $this->db->findUser($tid) ?? $user);
@@ -175,7 +175,7 @@ final class Handlers
                 return;
             }
             $wasComplete = $this->isProfileComplete($user);
-            $this->db->updateUser($tid, ['age' => $age, 'search_pref' => null]);
+            $this->db->updateUser($tid, ['age' => $age, 'flow' => null]);
             $this->tg->answerCallback($id, "سن {$age} ✅");
             $fresh = $this->db->findUser($tid) ?? $user;
             if ($wasComplete) {
@@ -191,16 +191,20 @@ final class Handlers
         }
 
         if ($data === 'reg:city:other') {
-            $this->db->updateUser($tid, ['search_pref' => 'reg:city_other']);
-            $this->tg->answerCallback($id);
-            $this->tg->sendMessage($chatId, "نام شهرت را بنویس و ارسال کن:");
+            $flow = $this->isProfileComplete($user) ? 'edit:city_other' : 'reg:city_other';
+            $this->db->updateUser($tid, ['flow' => $flow]);
+            $this->tg->answerCallback($id, 'نام شهر را بفرست');
+            $this->tg->sendMessage(
+                $chatId,
+                "🏙 <b>شهر دیگر</b>\nنام شهرت را همین‌جا بنویس و ارسال کن:"
+            );
             return;
         }
 
         if (str_starts_with($data, 'reg:city:')) {
             $city = substr($data, strlen('reg:city:'));
             $city = mb_substr(trim($city), 0, 64);
-            if (mb_strlen($city) < 2) {
+            if ($city === '' || $city === 'other' || mb_strlen($city) < 2) {
                 $this->tg->answerCallback($id, 'نامعتبر', true);
                 return;
             }
@@ -381,7 +385,7 @@ final class Handlers
             return;
         }
         $wasComplete = $this->isProfileComplete($user);
-        $this->db->updateUser($tid, ['city' => $city, 'search_pref' => null]);
+        $this->db->updateUser($tid, ['city' => $city, 'flow' => null]);
         $fresh = $this->db->findUser($tid) ?? $user;
         if ($wasComplete) {
             $this->showProfile($chatId, $fresh);

@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     coins INT NOT NULL DEFAULT 35,
   status ENUM('idle','searching','chatting','banned') NOT NULL DEFAULT 'idle',
   search_pref ENUM('any','male','female') NULL,
+  flow VARCHAR(64) NULL,
   partner_id BIGINT NULL,
   is_admin TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
