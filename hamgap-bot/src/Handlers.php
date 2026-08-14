@@ -2,12 +2,12 @@
 declare(strict_types=1);
 
 /**
- * HamGap bot handlers — registration is click-only menus where possible.
- * CODE_VERSION bumps on every deploy so we can verify updates landed.
+ * HamGap handlers — brand onboarding + safe UI cleanup.
+ * CODE_VERSION verifies deploys. Migrator keeps DB forward-compatible.
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v5';
+    public const CODE_VERSION = '2026-08-14-v6';
 
     private string $assets;
 
@@ -36,7 +36,6 @@ final class Handlers
         return htmlspecialchars((string)$this->config['bot_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
-    /** پیام اول — معرفی کوتاه + هدیه */
     private function welcomeTextFirst(): string
     {
         return "به هم‌گپ خوش اومدی 👋\n\n" .
@@ -46,7 +45,6 @@ final class Handlers
             "اول پروفایلت رو بساز تا وصل شی.";
     }
 
-    /** پیام دوم — توضیح کامل + دکمه‌های دختر/پسر زیر همین پیام */
     private function welcomeTextSecond(): string
     {
         return "سلام 😊 عزیز ✋\n\n" .
@@ -54,6 +52,65 @@ final class Handlers
             "یا به یه نفر بصورت ناشناس وصل شی و باهاش چت کنی ❗️\n\n" .
             "استفاده از این ربات رایگانه و اطلاعات تلگرام شما مثل اسم، عکس پروفایل یا موقعیت GPS کاملاً محرمانه هست 😎\n\n" .
             "برای شروع بهم بگو دختری یا پسری؟ 👇";
+    }
+
+    /** Delete previous bot UI menus (or at least strip their buttons). */
+    private function clearUi(int $chatId, array &$user): void
+    {
+        $tid = (int)$user['telegram_id'];
+        foreach ($this->db->getUiMessages($user) as $mid) {
+            $deleted = false;
+            try {
+                $resp = $this->tg->deleteMessage($chatId, $mid);
+                $deleted = (bool)($resp['ok'] ?? false);
+            } catch (Throwable $e) {
+                $deleted = false;
+            }
+            if (!$deleted) {
+                try {
+                    $this->tg->clearInlineKeyboard($chatId, $mid);
+                } catch (Throwable $e) {
+                    // ignore — message may already be gone
+                }
+            }
+        }
+        $this->db->setUiMessages($tid, []);
+        $user['ui_messages'] = null;
+    }
+
+    private function rememberUi(array &$user, array $resp): void
+    {
+        $mid = Telegram::messageIdFrom($resp);
+        if ($mid === null) {
+            return;
+        }
+        $user = $this->db->addUiMessage((int)$user['telegram_id'], $user, $mid);
+    }
+
+    private function uiText(int $chatId, array &$user, string $text, array $extra = []): void
+    {
+        $resp = $this->tg->sendMessage($chatId, $text, $extra);
+        $this->rememberUi($user, $resp);
+    }
+
+    private function uiPhoto(int $chatId, array &$user, string $path, string $caption, array $markup = []): void
+    {
+        $resp = $this->tg->sendPhoto($chatId, $path, $caption, $markup);
+        $this->rememberUi($user, $resp);
+    }
+
+    private function stripCallbackMenu(array $cq): void
+    {
+        $message = $cq['message'] ?? [];
+        $chatId = (int)($message['chat']['id'] ?? 0);
+        $mid = (int)($message['message_id'] ?? 0);
+        if ($chatId > 0 && $mid > 0) {
+            try {
+                $this->tg->clearInlineKeyboard($chatId, $mid);
+            } catch (Throwable $e) {
+                // ignore
+            }
+        }
     }
 
     private function onMessage(array $message): void
@@ -79,18 +136,17 @@ final class Handlers
         $text = trim((string)($message['text'] ?? ''));
 
         if ($text === '/start' || str_starts_with($text, '/start ') || $text === '🏠 منوی اصلی') {
+            $this->clearUi($chatId, $user);
             $this->ensureProfileOrMain($chatId, $user, true);
             return;
         }
 
-        // Waiting for custom city text
         if (($user['flow'] ?? '') === 'reg:city_other') {
             $this->saveCity($chatId, $user, $text);
             return;
         }
 
         if (!$this->isProfileComplete($user)) {
-            // Force click menus — ignore free text except custom city above.
             $this->ensureProfileOrMain($chatId, $user, false);
             return;
         }
@@ -112,7 +168,6 @@ final class Handlers
             return;
         }
 
-        // Edit flows that still need text (custom city)
         if (($user['flow'] ?? '') === 'edit:city_other') {
             $city = mb_substr(trim($text), 0, 64);
             if (mb_strlen($city) < 2) {
@@ -120,18 +175,20 @@ final class Handlers
                 return;
             }
             $this->db->updateUser($tid, ['city' => $city, 'flow' => null]);
-            $this->showProfile($chatId, $this->db->findUser($tid) ?? $user);
+            $fresh = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $fresh);
+            $this->showProfile($chatId, $fresh);
             return;
         }
 
         match ($text) {
             '🎲 چت تصادفی' => $this->startChat($chatId, $user, 'any'),
-            '💬 چت هوشمند' => $this->showSmart($chatId),
+            '💬 چت هوشمند' => $this->showSmart($chatId, $user),
             '👤 پروفایل' => $this->showProfile($chatId, $user),
             '💎 کیف سکه' => $this->showWallet($chatId, $user),
-            'ℹ️ راهنما' => $this->showHelp($chatId),
-            '🆘 پشتیبانی' => $this->showSupport($chatId),
-            default => $this->showMain($chatId, 'از منوی زیر یک گزینه را لمس کن 🙂'),
+            'ℹ️ راهنما' => $this->showHelp($chatId, $user),
+            '🆘 پشتیبانی' => $this->showSupport($chatId, $user),
+            default => $this->showMain($chatId, $user, 'از منوی زیر یک گزینه را لمس کن 🙂'),
         };
     }
 
@@ -150,7 +207,6 @@ final class Handlers
             return;
         }
 
-        // --- Registration / profile field callbacks (always allowed) ---
         if (str_starts_with($data, 'reg:gender:')) {
             $g = substr($data, strlen('reg:gender:'));
             if (!in_array($g, ['male', 'female'], true)) {
@@ -160,11 +216,14 @@ final class Handlers
             $editing = $this->isProfileComplete($user);
             $this->db->updateUser($tid, ['gender' => $g, 'flow' => null]);
             $this->tg->answerCallback($id, $g === 'female' ? 'دختر ✅' : 'پسر ✅');
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
             if ($editing) {
-                $this->showProfile($chatId, $this->db->findUser($tid) ?? $user);
+                $this->showProfile($chatId, $user);
                 return;
             }
-            $this->askAgeMenu($chatId);
+            $this->askAgeMenu($chatId, $user);
             return;
         }
 
@@ -177,7 +236,9 @@ final class Handlers
             $wasComplete = $this->isProfileComplete($user);
             $this->db->updateUser($tid, ['age' => $age, 'flow' => null]);
             $this->tg->answerCallback($id, "سن {$age} ✅");
+            $this->stripCallbackMenu($cq);
             $fresh = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $fresh);
             if ($wasComplete) {
                 $this->showProfile($chatId, $fresh);
                 return;
@@ -186,7 +247,7 @@ final class Handlers
                 $this->finishRegistration($chatId, $fresh);
                 return;
             }
-            $this->askCityMenu($chatId);
+            $this->askCityMenu($chatId, $fresh);
             return;
         }
 
@@ -194,8 +255,12 @@ final class Handlers
             $flow = $this->isProfileComplete($user) ? 'edit:city_other' : 'reg:city_other';
             $this->db->updateUser($tid, ['flow' => $flow]);
             $this->tg->answerCallback($id, 'نام شهر را بفرست');
-            $this->tg->sendMessage(
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->uiText(
                 $chatId,
+                $user,
                 "🏙 <b>شهر دیگر</b>\nنام شهرت را همین‌جا بنویس و ارسال کن:"
             );
             return;
@@ -209,93 +274,91 @@ final class Handlers
                 return;
             }
             $this->tg->answerCallback($id, "{$city} ✅");
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
             $this->saveCity($chatId, $user, $city);
             return;
         }
 
-        // Incomplete profile: only registration callbacks above
         $user = $this->db->findUser($tid) ?? $user;
         if (!$this->isProfileComplete($user)) {
             $this->tg->answerCallback($id, 'اول پروفایل را کامل کن', true);
+            $this->stripCallbackMenu($cq);
             $this->ensureProfileOrMain($chatId, $user, false);
             return;
         }
 
+        $this->tg->answerCallback($id);
+        $this->stripCallbackMenu($cq);
+
         switch ($data) {
             case 'menu:main':
-                $this->tg->answerCallback($id);
-                $this->showMain($chatId);
+                $this->clearUi($chatId, $user);
+                $this->showMain($chatId, $user);
                 break;
             case 'menu:smart':
-                $this->tg->answerCallback($id);
-                $this->showSmart($chatId);
+                $this->clearUi($chatId, $user);
+                $this->showSmart($chatId, $user);
                 break;
             case 'menu:profile':
-                $this->tg->answerCallback($id);
+                $this->clearUi($chatId, $user);
                 $this->showProfile($chatId, $user);
                 break;
             case 'menu:edit_profile':
-                $this->tg->answerCallback($id);
-                $this->tg->sendMessage($chatId, "📝 <b>ویرایش پروفایل</b>\nکدام مورد را می‌خواهی تغییر بدهی؟", [
+                $this->clearUi($chatId, $user);
+                $this->uiText($chatId, $user, "📝 <b>ویرایش پروفایل</b>\nکدام مورد را می‌خواهی تغییر بدهی؟", [
                     'reply_markup' => Keyboards::editProfileInline(),
                 ]);
                 break;
             case 'menu:wallet':
-                $this->tg->answerCallback($id);
+                $this->clearUi($chatId, $user);
                 $this->showWallet($chatId, $user);
                 break;
             case 'menu:help':
-                $this->tg->answerCallback($id);
-                $this->showHelp($chatId);
+                $this->showHelp($chatId, $user);
                 break;
             case 'menu:support':
-                $this->tg->answerCallback($id);
-                $this->showSupport($chatId);
+                $this->showSupport($chatId, $user);
                 break;
             case 'chat:any':
-                $this->tg->answerCallback($id);
                 $this->startChat($chatId, $user, 'any');
                 break;
             case 'chat:male':
-                $this->tg->answerCallback($id);
                 $this->startChat($chatId, $user, 'male');
                 break;
             case 'chat:female':
-                $this->tg->answerCallback($id);
                 $this->startChat($chatId, $user, 'female');
                 break;
             case 'chat:cancel':
                 $this->matcher->cancelSearch($user);
-                $this->tg->answerCallback($id, 'جستجو لغو شد');
-                $this->showMain($chatId, 'جستجو لغو شد.');
+                $user = $this->db->findUser($tid) ?? $user;
+                $this->clearUi($chatId, $user);
+                $this->showMain($chatId, $user, 'جستجو لغو شد.');
                 break;
             case 'chat:end':
-                $this->tg->answerCallback($id);
                 $this->endAndMenu($chatId, $user);
                 break;
             case 'chat:next':
-                $this->tg->answerCallback($id);
                 $this->nextChat($chatId, $user);
                 break;
             case 'chat:report':
-                $this->tg->answerCallback($id, 'گزارش ثبت شد');
                 $this->report($chatId, $user);
                 break;
             case 'edit:gender':
-                $this->tg->answerCallback($id);
-                $this->tg->sendMessage($chatId, "جنسیت جدید را انتخاب کن 👇", [
+                $this->clearUi($chatId, $user);
+                $this->uiText($chatId, $user, "جنسیت جدید را انتخاب کن 👇", [
                     'reply_markup' => Keyboards::gender(),
                 ]);
                 break;
             case 'edit:age':
-                $this->tg->answerCallback($id);
-                $this->tg->sendMessage($chatId, "سن جدید را انتخاب کن 👇", [
+                $this->clearUi($chatId, $user);
+                $this->uiText($chatId, $user, "سن جدید را انتخاب کن 👇", [
                     'reply_markup' => Keyboards::age(),
                 ]);
                 break;
             case 'edit:city':
-                $this->tg->answerCallback($id);
-                $this->tg->sendMessage($chatId, "شهر جدید را انتخاب کن 👇", [
+                $this->clearUi($chatId, $user);
+                $this->uiText($chatId, $user, "شهر جدید را انتخاب کن 👇", [
                     'reply_markup' => Keyboards::city(),
                 ]);
                 break;
@@ -303,7 +366,7 @@ final class Handlers
                 $this->tg->answerCallback($id, 'پرداخت به‌زودی فعال می‌شود', true);
                 break;
             default:
-                $this->tg->answerCallback($id);
+                break;
         }
     }
 
@@ -315,61 +378,52 @@ final class Handlers
         return !empty($user['gender']) && !empty($user['age']) && !empty($user['city']);
     }
 
-    private function ensureProfileOrMain(int $chatId, array $user, bool $withWelcome): void
+    private function ensureProfileOrMain(int $chatId, array &$user, bool $freshStart): void
     {
         if ($this->isProfileComplete($user)) {
-            $this->showMain($chatId, $withWelcome ? 'دوباره خوش اومدی 🌿' : '');
+            $this->showMain($chatId, $user, $freshStart ? 'دوباره خوش اومدی 🌿' : '');
             return;
         }
 
-        // مرحله ۱: اگر جنسیت ندارد → پیام اول + پیام دوم با ۲ دکمه دختر/پسر
         if (empty($user['gender'])) {
-            if ($withWelcome) {
-                $this->tg->sendMessage($chatId, $this->welcomeTextFirst(), [
+            if ($freshStart) {
+                $this->uiText($chatId, $user, $this->welcomeTextFirst(), [
                     'reply_markup' => Keyboards::removeReply(),
                 ]);
             }
-            $this->tg->sendMessage($chatId, $this->welcomeTextSecond(), [
+            $this->uiText($chatId, $user, $this->welcomeTextSecond(), [
                 'reply_markup' => Keyboards::gender(),
             ]);
             return;
         }
 
-        // مرحله ۲: سن — فقط از منوی دکمه
         if (empty($user['age'])) {
-            if ($withWelcome) {
-                $this->tg->sendMessage($chatId, $this->welcomeTextFirst());
+            if ($freshStart) {
+                $this->uiText($chatId, $user, $this->welcomeTextFirst());
             }
-            $this->askAgeMenu($chatId);
+            $this->askAgeMenu($chatId, $user);
             return;
         }
 
-        // مرحله ۳: شهر — فقط از منوی دکمه
-        if ($withWelcome) {
-            $this->tg->sendMessage($chatId, $this->welcomeTextFirst());
+        if ($freshStart) {
+            $this->uiText($chatId, $user, $this->welcomeTextFirst());
         }
-        $this->askCityMenu($chatId);
+        $this->askCityMenu($chatId, $user);
     }
 
-    private function askGenderMenu(int $chatId): void
+    private function askAgeMenu(int $chatId, array &$user): void
     {
-        $this->tg->sendMessage($chatId, $this->welcomeTextSecond(), [
-            'reply_markup' => Keyboards::gender(),
-        ]);
-    }
-
-    private function askAgeMenu(int $chatId): void
-    {
-        $this->tg->sendMessage(
+        $this->uiText(
             $chatId,
+            $user,
             "سن‌ات چند ساله؟\nمثلاً: <b>24</b>\n\nاز منوی زیر انتخاب کن 👇",
             ['reply_markup' => Keyboards::age()]
         );
     }
 
-    private function askCityMenu(int $chatId): void
+    private function askCityMenu(int $chatId, array &$user): void
     {
-        $this->tg->sendMessage($chatId, "شهر خودت رو از منوی زیر انتخاب کن 👇", [
+        $this->uiText($chatId, $user, "شهر خودت رو از منوی زیر انتخاب کن 👇", [
             'reply_markup' => Keyboards::city(),
         ]);
     }
@@ -379,7 +433,7 @@ final class Handlers
         $tid = (int)$user['telegram_id'];
         $city = mb_substr(trim($city), 0, 64);
         if (mb_strlen($city) < 2) {
-            $this->tg->sendMessage($chatId, 'نام شهر معتبر بفرست یا از منو انتخاب کن.', [
+            $this->uiText($chatId, $user, 'نام شهر معتبر بفرست یا از منو انتخاب کن.', [
                 'reply_markup' => Keyboards::city(),
             ]);
             return;
@@ -387,6 +441,7 @@ final class Handlers
         $wasComplete = $this->isProfileComplete($user);
         $this->db->updateUser($tid, ['city' => $city, 'flow' => null]);
         $fresh = $this->db->findUser($tid) ?? $user;
+        $this->clearUi($chatId, $fresh);
         if ($wasComplete) {
             $this->showProfile($chatId, $fresh);
             return;
@@ -402,15 +457,17 @@ final class Handlers
     {
         $this->showMain(
             $chatId,
+            $user,
             "پروفایل آماده شد ✅\n۳۵ سکه هدیه گرفتی.\nحالا می‌تونی چت رو شروع کنی."
         );
     }
 
-    private function showHelp(int $chatId): void
+    private function showHelp(int $chatId, array &$user): void
     {
         $name = $this->botName();
-        $this->tg->sendMessage(
+        $this->uiText(
             $chatId,
+            $user,
             "📘 <b>راهنمای {$name}</b>\n\n" .
             "🔻 <b>{$name} چیه؟</b>\n" .
             "ربات چت ناشناس برای حرف‌زدن با افراد جدید — بدون نمایش هویت.\n\n" .
@@ -426,17 +483,18 @@ final class Handlers
         );
     }
 
-    private function showSupport(int $chatId): void
+    private function showSupport(int $chatId, array &$user): void
     {
-        $this->tg->sendMessage(
+        $this->uiText(
             $chatId,
+            $user,
             "🆘 <b>پشتیبانی هم‌گپ</b>\n\n" .
             "اگر مشکل، انتقاد یا پیشنهادی داری از همین بخش پیام بده.\n" .
             "پشتیبانی فقط از داخل ربات است."
         );
     }
 
-    private function showMain(int $chatId, string $extra = ''): void
+    private function showMain(int $chatId, array &$user, string $extra = ''): void
     {
         $caption = trim(
             ($extra !== '' ? $extra . "\n\n" : '') .
@@ -444,31 +502,33 @@ final class Handlers
         );
         $path = $this->assets . '/menu-main.jpg';
         if (is_file($path)) {
-            $this->tg->sendPhoto($chatId, $path, $caption, Keyboards::mainInline());
+            $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::mainInline());
         } else {
-            $this->tg->sendMessage($chatId, $caption, [
+            $this->uiText($chatId, $user, $caption, [
                 'reply_markup' => Keyboards::mainInline(),
             ]);
         }
-        $this->tg->sendMessage($chatId, 'منوی سریع پایین صفحه 👇', [
+        // Reply keyboard (bottom) is not deleted via deleteMessage the same way;
+        // keep a short helper text tracked too.
+        $this->uiText($chatId, $user, 'منوی سریع پایین صفحه 👇', [
             'reply_markup' => Keyboards::mainReply(),
         ]);
     }
 
-    private function showSmart(int $chatId): void
+    private function showSmart(int $chatId, array &$user): void
     {
         $path = $this->assets . '/menu-smart.jpg';
         $caption = "💬 <b>چت هوشمند</b>\nمخاطبت رو از منوی زیر انتخاب کن.\nهزینه فقط بعد از اتصال موفق کم می‌شود.";
         if (is_file($path)) {
-            $this->tg->sendPhoto($chatId, $path, $caption, Keyboards::smartInline());
+            $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::smartInline());
         } else {
-            $this->tg->sendMessage($chatId, $caption, [
+            $this->uiText($chatId, $user, $caption, [
                 'reply_markup' => Keyboards::smartInline(),
             ]);
         }
     }
 
-    private function showProfile(int $chatId, array $user): void
+    private function showProfile(int $chatId, array &$user): void
     {
         $g = $user['gender'] === 'female' ? 'دختر' : ($user['gender'] === 'male' ? 'پسر' : '-');
         $text = "👤 <b>پروفایل من</b>\n" .
@@ -476,29 +536,29 @@ final class Handlers
             "سن: <b>" . ($user['age'] ?? '-') . "</b>\n" .
             "شهر: <b>" . htmlspecialchars((string)($user['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
             "سکه: <b>" . (int)$user['coins'] . "</b>";
-        $this->tg->sendMessage($chatId, $text, [
+        $this->uiText($chatId, $user, $text, [
             'reply_markup' => Keyboards::profileInline(),
         ]);
     }
 
-    private function showWallet(int $chatId, array $user): void
+    private function showWallet(int $chatId, array &$user): void
     {
         $path = $this->assets . '/menu-wallet.jpg';
         $caption = "💎 موجودی: <b>" . (int)$user['coins'] . "</b> سکه\nاز منوی زیر پکیج را انتخاب کن.";
         if (is_file($path)) {
-            $this->tg->sendPhoto($chatId, $path, $caption, Keyboards::walletInline());
+            $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::walletInline());
         } else {
-            $this->tg->sendMessage($chatId, $caption, [
+            $this->uiText($chatId, $user, $caption, [
                 'reply_markup' => Keyboards::walletInline(),
             ]);
         }
     }
 
-    private function startChat(int $chatId, array $user, string $pref): void
+    private function startChat(int $chatId, array &$user, string $pref): void
     {
         $result = $this->matcher->startSearch($user, $pref);
         if (!($result['ok'] ?? false) && ($result['error'] ?? '') === 'no_coins') {
-            $this->tg->sendMessage($chatId, "سکه کافی نداری.\nاز کیف سکه شارژ کن یا چت تصادفی رایگان برو.");
+            $this->uiText($chatId, $user, "سکه کافی نداری.\nاز کیف سکه شارژ کن یا چت تصادفی رایگان برو.");
             $this->showWallet($chatId, $user);
             return;
         }
@@ -509,8 +569,10 @@ final class Handlers
         }
 
         $label = $pref === 'male' ? 'پسر' : ($pref === 'female' ? 'دختر' : 'تصادفی');
-        $this->tg->sendMessage(
+        $this->clearUi($chatId, $user);
+        $this->uiText(
             $chatId,
+            $user,
             "🔍 در حال پیدا کردن مخاطب ({$label})...\nلطفاً صبر کن.",
             ['reply_markup' => Keyboards::searching()]
         );
@@ -521,14 +583,19 @@ final class Handlers
         $path = $this->assets . '/menu-chat.jpg';
         $caption = "✅ وصل شدید!\nهویت‌ها مخفی است · محترمانه گفتگو کنید.";
         foreach ([$a, $b] as $cid) {
+            $u = $this->db->findUser($cid);
+            if (!$u) {
+                continue;
+            }
+            $this->clearUi($cid, $u);
             if (is_file($path)) {
-                $this->tg->sendPhoto($cid, $path, $caption, Keyboards::chattingInline());
+                $this->uiPhoto($cid, $u, $path, $caption, Keyboards::chattingInline());
             } else {
-                $this->tg->sendMessage($cid, $caption, [
+                $this->uiText($cid, $u, $caption, [
                     'reply_markup' => Keyboards::chattingInline(),
                 ]);
             }
-            $this->tg->sendMessage($cid, 'چت فعال شد. پیام بفرست 👇', [
+            $this->uiText($cid, $u, 'چت فعال شد. پیام بفرست 👇', [
                 'reply_markup' => Keyboards::chattingReply(),
             ]);
         }
@@ -537,22 +604,33 @@ final class Handlers
     private function endAndMenu(int $chatId, array $user): void
     {
         $partnerId = $this->matcher->endChat($user, true);
+        $this->clearUi($chatId, $user);
         $this->tg->sendMessage($chatId, 'چت پایان یافت.');
+        $fresh = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         if ($partnerId) {
-            $this->tg->sendMessage($partnerId, 'طرف مقابل چت را پایان داد.');
-            $this->showMain($partnerId);
+            $p = $this->db->findUser($partnerId);
+            if ($p) {
+                $this->clearUi($partnerId, $p);
+                $this->tg->sendMessage($partnerId, 'طرف مقابل چت را پایان داد.');
+                $this->showMain($partnerId, $p);
+            }
         }
-        $this->showMain($chatId);
+        $this->showMain($chatId, $fresh);
     }
 
     private function nextChat(int $chatId, array $user): void
     {
         $partnerId = $this->matcher->endChat($user, true);
         if ($partnerId) {
-            $this->tg->sendMessage($partnerId, 'طرف مقابل رفت سراغ نفر بعدی.');
-            $this->showMain($partnerId);
+            $p = $this->db->findUser($partnerId);
+            if ($p) {
+                $this->clearUi($partnerId, $p);
+                $this->tg->sendMessage($partnerId, 'طرف مقابل رفت سراغ نفر بعدی.');
+                $this->showMain($partnerId, $p);
+            }
         }
         $fresh = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+        $this->clearUi($chatId, $fresh);
         $this->startChat($chatId, $fresh, 'any');
     }
 

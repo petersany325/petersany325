@@ -81,4 +81,48 @@ final class Database
         $sql = 'UPDATE users SET ' . implode(', ', $cols) . ' WHERE telegram_id = ?';
         $this->pdo->prepare($sql)->execute($vals);
     }
+
+    /** @return list<int> */
+    public function getUiMessages(array $user): array
+    {
+        $raw = $user['ui_messages'] ?? null;
+        if (!$raw) {
+            return [];
+        }
+        $decoded = json_decode((string)$raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($decoded as $id) {
+            if (is_numeric($id)) {
+                $ids[] = (int)$id;
+            }
+        }
+        return array_values(array_unique($ids));
+    }
+
+    public function setUiMessages(int $telegramId, array $messageIds): void
+    {
+        $messageIds = array_values(array_unique(array_map('intval', $messageIds)));
+        // Keep last 30 UI messages max
+        if (count($messageIds) > 30) {
+            $messageIds = array_slice($messageIds, -30);
+        }
+        $this->updateUser($telegramId, [
+            'ui_messages' => $messageIds ? json_encode($messageIds) : null,
+        ]);
+    }
+
+    public function addUiMessage(int $telegramId, array $user, int $messageId): array
+    {
+        $ids = $this->getUiMessages($user);
+        $ids[] = $messageId;
+        $this->setUiMessages($telegramId, $ids);
+        $user['ui_messages'] = json_encode($this->getUiMessages(array_merge($user, [
+            'ui_messages' => json_encode($ids),
+        ])));
+        // refresh
+        return $this->findUser($telegramId) ?? $user;
+    }
 }

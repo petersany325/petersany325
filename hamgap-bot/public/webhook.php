@@ -12,6 +12,7 @@ if (!is_file($configFile)) {
 
 $config = require $configFile;
 require __DIR__ . '/src/Database.php';
+require __DIR__ . '/src/Migrator.php';
 require __DIR__ . '/src/Telegram.php';
 require __DIR__ . '/src/Keyboards.php';
 require __DIR__ . '/src/Matcher.php';
@@ -22,6 +23,7 @@ if (function_exists('opcache_invalidate')) {
     foreach ([
         __DIR__ . '/config.php',
         __DIR__ . '/src/Database.php',
+        __DIR__ . '/src/Migrator.php',
         __DIR__ . '/src/Telegram.php',
         __DIR__ . '/src/Keyboards.php',
         __DIR__ . '/src/Matcher.php',
@@ -49,6 +51,7 @@ if (!is_array($update)) {
 
 try {
     $db = new Database($config['db']);
+    Migrator::ensure($db);
     $tg = new Telegram($config['bot_token']);
     $matcher = new Matcher($db);
     $handler = new Handlers($config, $db, $tg, $matcher);

@@ -11,8 +11,6 @@ final class Telegram
     {
         $url = 'https://api.telegram.org/bot' . $this->token . '/' . $method;
 
-        // Telegram multipart expects reply_markup as JSON string.
-        // JSON body expects reply_markup as object/array.
         if ($filePath !== null) {
             if (isset($params['reply_markup']) && is_array($params['reply_markup'])) {
                 $params['reply_markup'] = json_encode($params['reply_markup'], JSON_UNESCAPED_UNICODE);
@@ -100,5 +98,29 @@ final class Telegram
             'from_chat_id' => $fromChatId,
             'message_id' => $messageId,
         ]);
+    }
+
+    public function deleteMessage(int $chatId, int $messageId): array
+    {
+        return $this->api('deleteMessage', [
+            'chat_id' => $chatId,
+            'message_id' => $messageId,
+        ]);
+    }
+
+    /** Remove inline buttons without deleting the message (fallback). */
+    public function clearInlineKeyboard(int $chatId, int $messageId): array
+    {
+        return $this->api('editMessageReplyMarkup', [
+            'chat_id' => $chatId,
+            'message_id' => $messageId,
+            'reply_markup' => ['inline_keyboard' => []],
+        ]);
+    }
+
+    public static function messageIdFrom(array $apiResponse): ?int
+    {
+        $id = $apiResponse['result']['message_id'] ?? null;
+        return is_numeric($id) ? (int)$id : null;
     }
 }
