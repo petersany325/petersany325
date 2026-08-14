@@ -49,13 +49,18 @@ final class Database
                 'UPDATE users SET username = ?, first_name = ? WHERE telegram_id = ?'
             );
             $st->execute([$username, $firstName, $telegramId]);
+            $user = $this->findUser($telegramId) ?? $user;
+            $this->ensureIdentity($user);
             return $this->findUser($telegramId) ?? $user;
         }
 
+        $display = $this->generateDisplayName();
+        $ref = $this->generateReferralCode();
         $st = $this->pdo->prepare(
-            'INSERT INTO users (telegram_id, username, first_name, coins) VALUES (?, ?, ?, 35)'
+            'INSERT INTO users (telegram_id, username, first_name, coins, display_name, referral_code)
+             VALUES (?, ?, ?, 35, ?, ?)'
         );
-        $st->execute([$telegramId, $username, $firstName]);
+        $st->execute([$telegramId, $username, $firstName, $display, $ref]);
         $user = $this->findUser($telegramId);
         if (!$user) {
             throw new RuntimeException('Failed to create user');
@@ -64,6 +69,67 @@ final class Database
             'INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, 35, ?)'
         )->execute([(int)$user['id'], 'welcome_gift']);
         return $user;
+    }
+
+    public function ensureIdentity(array $user): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $fields = [];
+        if (empty($user['display_name'])) {
+            $fields['display_name'] = $this->generateDisplayName();
+        }
+        if (empty($user['referral_code'])) {
+            $fields['referral_code'] = $this->generateReferralCode();
+        }
+        if ($fields) {
+            $this->updateUser($tid, $fields);
+        }
+    }
+
+    public function generateDisplayName(): string
+    {
+        for ($i = 0; $i < 8; $i++) {
+            $name = 'همگپ_' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 6));
+            $st = $this->pdo->prepare('SELECT id FROM users WHERE display_name = ? LIMIT 1');
+            $st->execute([$name]);
+            if (!$st->fetch()) {
+                return $name;
+            }
+        }
+        return 'همگپ_' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+    }
+
+    public function generateReferralCode(): string
+    {
+        for ($i = 0; $i < 8; $i++) {
+            $code = strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+            $st = $this->pdo->prepare('SELECT id FROM users WHERE referral_code = ? LIMIT 1');
+            $st->execute([$code]);
+            if (!$st->fetch()) {
+                return $code;
+            }
+        }
+        return strtoupper(substr(bin2hex(random_bytes(5)), 0, 10));
+    }
+
+    public function findByReferralCode(string $code): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM users WHERE referral_code = ? LIMIT 1');
+        $st->execute([strtoupper(trim($code))]);
+        $row = $st->fetch();
+        return $row ?: null;
+    }
+
+    public function addCoins(int $telegramId, int $amount, string $reason, ?string $meta = null): void
+    {
+        $user = $this->findUser($telegramId);
+        if (!$user) {
+            return;
+        }
+        $this->pdo->prepare('UPDATE users SET coins = coins + ? WHERE telegram_id = ?')->execute([$amount, $telegramId]);
+        $this->pdo->prepare(
+            'INSERT INTO coin_transactions (user_id, amount, reason, meta) VALUES (?, ?, ?, ?)'
+        )->execute([(int)$user['id'], $amount, $reason, $meta]);
     }
 
     public function updateUser(int $telegramId, array $fields): void

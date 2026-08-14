@@ -82,6 +82,20 @@ final class Telegram
         return $this->api('sendPhoto', $params, $path, 'photo');
     }
 
+    public function sendPhotoFileId(int $chatId, string $fileId, string $caption, array $replyMarkup = []): array
+    {
+        $params = [
+            'chat_id' => $chatId,
+            'photo' => $fileId,
+            'caption' => $caption,
+            'parse_mode' => 'HTML',
+        ];
+        if ($replyMarkup) {
+            $params['reply_markup'] = $replyMarkup;
+        }
+        return $this->api('sendPhoto', $params);
+    }
+
     public function answerCallback(string $id, string $text = '', bool $alert = false): array
     {
         return $this->api('answerCallbackQuery', [

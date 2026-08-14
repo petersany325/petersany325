@@ -2,12 +2,12 @@
 declare(strict_types=1);
 
 /**
- * HamGap handlers — brand onboarding + safe UI cleanup.
+ * HamGap handlers v9 — connect / find / profile / wallet / invite.
  * CODE_VERSION verifies deploys. Migrator keeps DB forward-compatible.
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v8';
+    public const CODE_VERSION = '2026-08-14-v9';
 
     private string $assets;
 
@@ -36,12 +36,18 @@ final class Handlers
         return htmlspecialchars((string)$this->config['bot_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
+    private function botUsername(): string
+    {
+        $u = trim((string)($this->config['bot_username'] ?? 'HamGapXBot'));
+        return $u !== '' ? $u : 'HamGapXBot';
+    }
+
     private function welcomeTextFirst(): string
     {
         return "به هم‌گپ خوش اومدی 👋\n\n" .
             "یه ربات چت ناشناس برای گپ‌زدن امن و سریع با آدم‌های جدید.\n\n" .
             "🎁 ۳۵ سکه هدیه برای شروع داری.\n" .
-            "🎲 چت تصادفی هم کاملاً رایگان و نامحدوده.\n\n" .
+            "🎲 چت شانسی هم کاملاً رایگان و نامحدوده.\n\n" .
             "اول پروفایلت رو بساز تا وصل شی.";
     }
 
@@ -99,6 +105,12 @@ final class Handlers
         $this->rememberUi($user, $resp);
     }
 
+    private function uiPhotoFileId(int $chatId, array &$user, string $fileId, string $caption, array $markup = []): void
+    {
+        $resp = $this->tg->sendPhotoFileId($chatId, $fileId, $caption, $markup);
+        $this->rememberUi($user, $resp);
+    }
+
     private function stripCallbackMenu(array $cq): void
     {
         $message = $cq['message'] ?? [];
@@ -135,11 +147,40 @@ final class Handlers
 
         $text = trim((string)($message['text'] ?? ''));
 
-        if ($text === '/start' || str_starts_with($text, '/start ') || $text === '🏠 منوی اصلی') {
-            // 1) clear old UI menus
+        // Avatar upload
+        if (!empty($message['photo']) && ($user['flow'] ?? '') === 'set:avatar') {
+            $photos = $message['photo'];
+            $best = end($photos);
+            $fileId = (string)($best['file_id'] ?? '');
+            if ($fileId === '') {
+                $this->tg->sendMessage($chatId, 'عکس معتبر دریافت نشد. دوباره بفرست.');
+                return;
+            }
+            $this->db->updateUser($tid, [
+                'avatar_file_id' => $fileId,
+                'flow' => null,
+            ]);
+            $fresh = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $fresh);
+            $this->showProfile($chatId, $fresh);
+            return;
+        }
+
+        // /start [ref_CODE] or main menu reset
+        if (
+            $text === '/start' ||
+            str_starts_with($text, '/start ') ||
+            $text === '🏠 منوی اصلی'
+        ) {
+            $refCode = null;
+            if (preg_match('/^\/start(?:\s+ref_([A-Za-z0-9]+))?/u', $text, $m)) {
+                $refCode = $m[1] ?? null;
+            }
+            $this->maybeApplyReferral($user, $refCode);
+
             $this->clearUi($chatId, $user);
-            // 2) incomplete profiles restart from zero (brand-clean onboarding)
             if (!$this->isProfileComplete($user)) {
+                // Reset incomplete profile fields; keep display_name / avatar / referral
                 $this->db->updateUser($tid, [
                     'gender' => null,
                     'age' => null,
@@ -152,7 +193,6 @@ final class Handlers
                 ]);
                 $user = $this->db->findUser($tid) ?? $user;
             }
-            // 3) output fresh screens
             $this->ensureProfileOrMain($chatId, $user, true);
             return;
         }
@@ -166,6 +206,28 @@ final class Handlers
             // Do NOT stack menus. Clear once, show only the current step.
             $this->clearUi($chatId, $user);
             $this->ensureProfileOrMain($chatId, $user, false);
+            return;
+        }
+
+        // Slash commands (profile complete)
+        if ($text === '/profile') {
+            $this->clearUi($chatId, $user);
+            $this->showProfile($chatId, $user);
+            return;
+        }
+        if ($text === '/coins') {
+            $this->clearUi($chatId, $user);
+            $this->showWallet($chatId, $user);
+            return;
+        }
+        if ($text === '/search') {
+            $this->clearUi($chatId, $user);
+            $this->showFind($chatId, $user);
+            return;
+        }
+        if ($text === '/link') {
+            $this->clearUi($chatId, $user);
+            $this->showInvite($chatId, $user);
             return;
         }
 
@@ -199,14 +261,43 @@ final class Handlers
             return;
         }
 
+        if (($user['flow'] ?? '') === 'set:displayname') {
+            $name = trim($text);
+            $len = mb_strlen($name);
+            if ($len < 2 || $len > 32) {
+                $this->tg->sendMessage($chatId, 'نام کاربری باید بین ۲ تا ۳۲ کاراکتر باشد.');
+                return;
+            }
+            // Block telegram @handles and urls
+            if (preg_match('/[@\/\\\\]|https?:/iu', $name)) {
+                $this->tg->sendMessage($chatId, 'نام کاربری نامعتبر است. بدون لینک و @ بفرست.');
+                return;
+            }
+            $this->db->updateUser($tid, [
+                'display_name' => mb_substr($name, 0, 32),
+                'flow' => null,
+            ]);
+            $fresh = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $fresh);
+            $this->showProfile($chatId, $fresh);
+            return;
+        }
+
+        if (($user['flow'] ?? '') === 'set:avatar') {
+            $this->tg->sendMessage($chatId, 'لطفاً یک عکس بفرست (نه متن).');
+            return;
+        }
+
         match ($text) {
-            '🎲 چت تصادفی' => $this->startChat($chatId, $user, 'any'),
-            '💬 چت هوشمند' => $this->showSmart($chatId, $user),
-            '👤 پروفایل' => $this->showProfile($chatId, $user),
-            '💎 کیف سکه' => $this->showWallet($chatId, $user),
+            '🔗 وصلم کن به ناشناس' => $this->showConnect($chatId, $user),
+            '🔍 پیدا کردن مخاطب' => $this->showFind($chatId, $user),
+            '💎 سکه‌ها' => $this->showWallet($chatId, $user),
+            '👤 پروفایل من' => $this->showProfile($chatId, $user),
             'ℹ️ راهنما' => $this->showHelp($chatId, $user),
-            '🆘 پشتیبانی' => $this->showSupport($chatId, $user),
-            default => $this->showMain($chatId, $user, 'از منوی زیر یک گزینه را لمس کن 🙂'),
+            default => (function () use ($chatId, &$user): void {
+                $this->clearUi($chatId, $user);
+                $this->showMain($chatId, $user, 'از منوی زیر یک گزینه را لمس کن 🙂');
+            })(),
         };
     }
 
@@ -225,6 +316,7 @@ final class Handlers
             return;
         }
 
+        // ——— Registration ———
         if (str_starts_with($data, 'reg:gender:')) {
             $g = substr($data, strlen('reg:gender:'));
             if (!in_array($g, ['male', 'female'], true)) {
@@ -358,6 +450,105 @@ final class Handlers
             return;
         }
 
+        // ——— Find flow (before generic answer so we can toast) ———
+        if (str_starts_with($data, 'find:prov:')) {
+            $idx = (int)substr($data, strlen('find:prov:'));
+            $provinces = IranLocations::provinces();
+            if (!isset($provinces[$idx])) {
+                $this->tg->answerCallback($id, 'استان نامعتبر', true);
+                return;
+            }
+            $province = $provinces[$idx];
+            $this->db->updateUser($tid, ['flow' => 'find:' . $idx]);
+            $this->tg->answerCallback($id, "{$province} ✅");
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $safe = htmlspecialchars($province, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $this->uiText($chatId, $user, "🏙 شهر مورد نظر در استان <b>{$safe}</b> را انتخاب کن 👇", [
+                'reply_markup' => Keyboards::findCities($province),
+            ]);
+            return;
+        }
+
+        if (str_starts_with($data, 'find:ci:')) {
+            $cityIdx = (int)substr($data, strlen('find:ci:'));
+            $flow = (string)($user['flow'] ?? '');
+            if (!preg_match('/^find:(\d+)$/', $flow, $fm)) {
+                $this->tg->answerCallback($id, 'اول استان را انتخاب کن', true);
+                $this->stripCallbackMenu($cq);
+                $this->clearUi($chatId, $user);
+                $this->showFind($chatId, $user);
+                return;
+            }
+            $provIdx = (int)$fm[1];
+            $provinces = IranLocations::provinces();
+            if (!isset($provinces[$provIdx])) {
+                $this->tg->answerCallback($id, 'استان نامعتبر', true);
+                return;
+            }
+            $province = $provinces[$provIdx];
+            $cities = IranLocations::cities($province);
+            if (!isset($cities[$cityIdx])) {
+                $this->tg->answerCallback($id, 'شهر نامعتبر', true);
+                return;
+            }
+            $city = $cities[$cityIdx];
+            $this->db->updateUser($tid, ['flow' => 'find:' . $provIdx . ':' . $cityIdx]);
+            $this->tg->answerCallback($id, "{$city} ✅");
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $pSafe = htmlspecialchars($province, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $cSafe = htmlspecialchars($city, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $this->uiText(
+                $chatId,
+                $user,
+                "🔍 جستجو در <b>{$pSafe}</b> / <b>{$cSafe}</b>\nجنسیت مخاطب را انتخاب کن 👇",
+                ['reply_markup' => Keyboards::findGenderInline()]
+            );
+            return;
+        }
+
+        if (str_starts_with($data, 'find:gender:')) {
+            $g = substr($data, strlen('find:gender:'));
+            if (!in_array($g, ['male', 'female', 'any'], true)) {
+                $this->tg->answerCallback($id, 'نامعتبر', true);
+                return;
+            }
+            $flow = (string)($user['flow'] ?? '');
+            $filters = [];
+            $note = '';
+            if (preg_match('/^find:(\d+):(\d+)$/', $flow, $fm)) {
+                $provinces = IranLocations::provinces();
+                $provIdx = (int)$fm[1];
+                $cityIdx = (int)$fm[2];
+                if (isset($provinces[$provIdx])) {
+                    $province = $provinces[$provIdx];
+                    $cities = IranLocations::cities($province);
+                    $city = $cities[$cityIdx] ?? '';
+                    $filters['province'] = $province;
+                    $pSafe = htmlspecialchars($province, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    $cSafe = htmlspecialchars($city, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    $note = $city !== ''
+                        ? "محدوده: {$pSafe} / {$cSafe}"
+                        : "محدوده: {$pSafe}";
+                }
+            }
+            $this->db->updateUser($tid, ['flow' => null]);
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->startChat($chatId, $user, $g, $filters, $note);
+            return;
+        }
+
+        if ($data === 'pay:soon') {
+            $this->tg->answerCallback($id, 'پرداخت به‌زودی فعال می‌شود', true);
+            return;
+        }
+
         $this->tg->answerCallback($id);
         $this->stripCallbackMenu($cq);
 
@@ -366,18 +557,24 @@ final class Handlers
                 $this->clearUi($chatId, $user);
                 $this->showMain($chatId, $user);
                 break;
-            case 'menu:smart':
+            case 'menu:connect':
                 $this->clearUi($chatId, $user);
-                $this->showSmart($chatId, $user);
+                $this->showConnect($chatId, $user);
+                break;
+            case 'menu:find':
+                $this->clearUi($chatId, $user);
+                $this->db->updateUser($tid, ['flow' => null]);
+                $user = $this->db->findUser($tid) ?? $user;
+                $this->showFind($chatId, $user);
                 break;
             case 'menu:profile':
                 $this->clearUi($chatId, $user);
                 $this->showProfile($chatId, $user);
                 break;
-            case 'menu:edit_profile':
+            case 'menu:profile_settings':
                 $this->clearUi($chatId, $user);
-                $this->uiText($chatId, $user, "📝 <b>ویرایش پروفایل</b>\nکدام مورد را می‌خواهی تغییر بدهی؟", [
-                    'reply_markup' => Keyboards::editProfileInline(),
+                $this->uiText($chatId, $user, "🛠 <b>تنظیمات پروفایل</b>\nکدام مورد را می‌خواهی تغییر بدهی؟", [
+                    'reply_markup' => Keyboards::profileSettingsInline(),
                 ]);
                 break;
             case 'menu:wallet':
@@ -385,10 +582,12 @@ final class Handlers
                 $this->showWallet($chatId, $user);
                 break;
             case 'menu:help':
+                $this->clearUi($chatId, $user);
                 $this->showHelp($chatId, $user);
                 break;
-            case 'menu:support':
-                $this->showSupport($chatId, $user);
+            case 'menu:invite':
+                $this->clearUi($chatId, $user);
+                $this->showInvite($chatId, $user);
                 break;
             case 'chat:any':
                 $this->startChat($chatId, $user, 'any');
@@ -398,6 +597,12 @@ final class Handlers
                 break;
             case 'chat:female':
                 $this->startChat($chatId, $user, 'female');
+                break;
+            case 'chat:province':
+                $this->startChat($chatId, $user, 'province');
+                break;
+            case 'chat:age':
+                $this->startChat($chatId, $user, 'age');
                 break;
             case 'chat:cancel':
                 $this->matcher->cancelSearch($user);
@@ -416,13 +621,13 @@ final class Handlers
                 break;
             case 'edit:gender':
                 $this->clearUi($chatId, $user);
-                $this->uiText($chatId, $user, "جنسیت جدید را انتخاب کن 👇", [
+                $this->uiText($chatId, $user, 'جنسیت جدید را انتخاب کن 👇', [
                     'reply_markup' => Keyboards::gender(),
                 ]);
                 break;
             case 'edit:age':
                 $this->clearUi($chatId, $user);
-                $this->uiText($chatId, $user, "سن جدید را انتخاب کن 👇", [
+                $this->uiText($chatId, $user, 'سن جدید را انتخاب کن 👇', [
                     'reply_markup' => Keyboards::age(),
                 ]);
                 break;
@@ -433,11 +638,72 @@ final class Handlers
                 $user = $this->db->findUser($tid) ?? $user;
                 $this->askProvinceMenu($chatId, $user);
                 break;
-            case 'pay:soon':
-                $this->tg->answerCallback($id, 'پرداخت به‌زودی فعال می‌شود', true);
+            case 'edit:avatar':
+                $this->db->updateUser($tid, ['flow' => 'set:avatar']);
+                $user = $this->db->findUser($tid) ?? $user;
+                $this->clearUi($chatId, $user);
+                $this->uiText($chatId, $user, "🖼 <b>عکس پروفایل</b>\nیک عکس همین‌جا بفرست.");
+                break;
+            case 'edit:displayname':
+                $this->db->updateUser($tid, ['flow' => 'set:displayname']);
+                $user = $this->db->findUser($tid) ?? $user;
+                $this->clearUi($chatId, $user);
+                $this->uiText(
+                    $chatId,
+                    $user,
+                    "🔤 <b>نام کاربری</b>\nنام نمایشی جدیدت را بنویس (۲ تا ۳۲ کاراکتر).\nفعلی: <b>" .
+                    htmlspecialchars((string)($user['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
+                    '</b>'
+                );
+                break;
+            case 'pay:100':
+            case 'pay:300':
+            case 'pay:1000':
+                $pack = substr($data, strlen('pay:'));
+                $this->clearUi($chatId, $user);
+                $this->uiText(
+                    $chatId,
+                    $user,
+                    "💳 <b>خرید {$pack} سکه</b>\nروش پرداخت را انتخاب کن:",
+                    ['reply_markup' => Keyboards::payMethodInline($pack)]
+                );
                 break;
             default:
                 break;
+        }
+    }
+
+    private function maybeApplyReferral(array &$user, ?string $refCode): void
+    {
+        if ($refCode === null || $refCode === '') {
+            return;
+        }
+        if (!empty($user['referred_by'])) {
+            return;
+        }
+        // Only attach referral during early onboarding (no gender yet)
+        if (!empty($user['gender'])) {
+            return;
+        }
+        $referrer = $this->db->findByReferralCode($refCode);
+        if (!$referrer) {
+            return;
+        }
+        $refTid = (int)$referrer['telegram_id'];
+        $myTid = (int)$user['telegram_id'];
+        if ($refTid === $myTid) {
+            return;
+        }
+        $this->db->updateUser($myTid, ['referred_by' => $refTid]);
+        $this->db->addCoins($refTid, 20, 'referral', (string)$myTid);
+        $user = $this->db->findUser($myTid) ?? $user;
+        try {
+            $this->tg->sendMessage(
+                $refTid,
+                "🎉 یک دوست با لینک دعوتت وارد شد!\n<b>+۲۰ سکه</b> به حسابت اضافه شد."
+            );
+        } catch (Throwable $e) {
+            // ignore notify failures
         }
     }
 
@@ -502,7 +768,7 @@ final class Handlers
 
     private function askProvinceMenu(int $chatId, array &$user): void
     {
-        $this->uiText($chatId, $user, "استان خودت رو از منوی زیر انتخاب کن 👇", [
+        $this->uiText($chatId, $user, 'استان خودت رو از منوی زیر انتخاب کن 👇', [
             'reply_markup' => Keyboards::provinces(),
         ]);
     }
@@ -557,39 +823,30 @@ final class Handlers
         $this->showMain(
             $chatId,
             $user,
-            "پروفایل آماده شد ✅\n۳۵ سکه هدیه گرفتی.\nحالا می‌تونی چت رو شروع کنی."
+            "پروفایل آماده شد ✅\n۳۵ سکه هدیه گرفتی.\nحالا می‌تونی وصل شی یا مخاطب پیدا کنی."
         );
     }
 
     private function showHelp(int $chatId, array &$user): void
     {
+        $this->clearUi($chatId, $user);
         $name = $this->botName();
         $this->uiText(
             $chatId,
             $user,
             "📘 <b>راهنمای {$name}</b>\n\n" .
             "🔻 <b>{$name} چیه؟</b>\n" .
-            "ربات چت ناشناس برای حرف‌زدن با افراد جدید — بدون نمایش هویت.\n\n" .
-            "🔻 <b>چجوری رایگان استفاده کنم؟</b>\n" .
-            "از «🎲 چت تصادفی» رایگان و نامحدود چت کن.\n\n" .
-            "🔻 <b>چت پسر / دختر؟</b>\n" .
-            "از «💬 چت هوشمند» — هر اتصال موفق ۱ سکه.\n\n" .
-            "🔻 <b>ویرایش پروفایل</b>\n" .
-            "منو → 👤 پروفایل → 📝 ویرایش پروفایل\n\n" .
-            "🔻 <b>پشتیبانی</b>\n" .
-            "منو → 🆘 پشتیبانی\n\n" .
+            "ربات چت ناشناس برای حرف‌زدن با افراد جدید — بدون نمایش هویت تلگرام.\n\n" .
+            "🔻 <b>وصلم کن به ناشناس</b>\n" .
+            "چت شانسی رایگان، یا فیلتر دختر/پسر/هم‌استان/هم‌سن.\n\n" .
+            "🔻 <b>پیدا کردن مخاطب</b>\n" .
+            "استان و شهر را انتخاب کن، بعد جنسیت — جستجو شروع می‌شود.\n\n" .
+            "🔻 <b>سکه‌ها</b>\n" .
+            "برای فیلترهای غیررایگان. با دعوت دوست +۲۰ سکه بگیر.\n\n" .
+            "🔻 <b>پروفایل</b>\n" .
+            "نام کاربری، عکس، جنسیت، سن و موقعیت را مدیریت کن.\n\n" .
+            "دستورها: /profile /coins /search /link\n\n" .
             "⚠️ رمز، کارت بانکی و لینک مشکوک را نفرست."
-        );
-    }
-
-    private function showSupport(int $chatId, array &$user): void
-    {
-        $this->uiText(
-            $chatId,
-            $user,
-            "🆘 <b>پشتیبانی هم‌گپ</b>\n\n" .
-            "اگر مشکل، انتقاد یا پیشنهادی داری از همین بخش پیام بده.\n" .
-            "پشتیبانی فقط از داخل ربات است."
         );
     }
 
@@ -607,44 +864,72 @@ final class Handlers
                 'reply_markup' => Keyboards::mainInline(),
             ]);
         }
-        // Reply keyboard (bottom) is not deleted via deleteMessage the same way;
-        // keep a short helper text tracked too.
         $this->uiText($chatId, $user, 'منوی سریع پایین صفحه 👇', [
             'reply_markup' => Keyboards::mainReply(),
         ]);
     }
 
-    private function showSmart(int $chatId, array &$user): void
+    private function showConnect(int $chatId, array &$user): void
     {
+        $this->clearUi($chatId, $user);
         $path = $this->assets . '/menu-smart.jpg';
-        $caption = "💬 <b>چت هوشمند</b>\nمخاطبت رو از منوی زیر انتخاب کن.\nهزینه فقط بعد از اتصال موفق کم می‌شود.";
+        $caption = "🔗 <b>وصلم کن به ناشناس</b>\n" .
+            "نوع اتصال را انتخاب کن.\n" .
+            "هزینه فقط بعد از اتصال موفق کم می‌شود.";
         if (is_file($path)) {
-            $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::smartInline());
+            $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::connectInline());
         } else {
             $this->uiText($chatId, $user, $caption, [
-                'reply_markup' => Keyboards::smartInline(),
+                'reply_markup' => Keyboards::connectInline(),
             ]);
         }
     }
 
+    private function showFind(int $chatId, array &$user): void
+    {
+        $this->clearUi($chatId, $user);
+        $this->db->updateUser((int)$user['telegram_id'], ['flow' => null]);
+        $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+        $this->uiText(
+            $chatId,
+            $user,
+            "🔍 <b>پیدا کردن مخاطب</b>\nاول استان مورد نظرت را انتخاب کن 👇",
+            ['reply_markup' => Keyboards::findProvinces()]
+        );
+    }
+
     private function showProfile(int $chatId, array &$user): void
     {
+        $this->clearUi($chatId, $user);
         $g = $user['gender'] === 'female' ? 'دختر' : ($user['gender'] === 'male' ? 'پسر' : '-');
+        $dn = htmlspecialchars((string)($user['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $prov = htmlspecialchars((string)($user['province'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $city = htmlspecialchars((string)($user['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $text = "👤 <b>پروفایل من</b>\n" .
+            "نام کاربری: <b>{$dn}</b>\n" .
             "جنسیت: <b>{$g}</b>\n" .
             "سن: <b>" . ($user['age'] ?? '-') . "</b>\n" .
-            "استان: <b>" . htmlspecialchars((string)($user['province'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
-            "شهر: <b>" . htmlspecialchars((string)($user['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
+            "استان: <b>{$prov}</b>\n" .
+            "شهر: <b>{$city}</b>\n" .
             "سکه: <b>" . (int)$user['coins'] . "</b>";
-        $this->uiText($chatId, $user, $text, [
-            'reply_markup' => Keyboards::profileInline(),
-        ]);
+
+        $avatar = (string)($user['avatar_file_id'] ?? '');
+        if ($avatar !== '') {
+            $this->uiPhotoFileId($chatId, $user, $avatar, $text, Keyboards::profileInline());
+        } else {
+            $this->uiText($chatId, $user, $text, [
+                'reply_markup' => Keyboards::profileInline(),
+            ]);
+        }
     }
 
     private function showWallet(int $chatId, array &$user): void
     {
+        $this->clearUi($chatId, $user);
         $path = $this->assets . '/menu-wallet.jpg';
-        $caption = "💎 موجودی: <b>" . (int)$user['coins'] . "</b> سکه\nاز منوی زیر پکیج را انتخاب کن.";
+        $caption = "💎 <b>سکه‌های تو</b>\n" .
+            "موجودی: <b>" . (int)$user['coins'] . "</b> سکه\n\n" .
+            "با دعوت دوست +۲۰ سکه بگیر، یا از پکیج‌های زیر شارژ کن.";
         if (is_file($path)) {
             $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::walletInline());
         } else {
@@ -654,12 +939,62 @@ final class Handlers
         }
     }
 
-    private function startChat(int $chatId, array &$user, string $pref): void
+    private function showInvite(int $chatId, array &$user): void
     {
-        $result = $this->matcher->startSearch($user, $pref);
-        if (!($result['ok'] ?? false) && ($result['error'] ?? '') === 'no_coins') {
-            $this->uiText($chatId, $user, "سکه کافی نداری.\nاز کیف سکه شارژ کن یا چت تصادفی رایگان برو.");
-            $this->showWallet($chatId, $user);
+        $this->db->ensureIdentity($user);
+        $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+        $code = (string)($user['referral_code'] ?? '');
+        $uname = $this->botUsername();
+        $link = 'https://t.me/' . $uname . '?start=ref_' . $code;
+        $safeLink = htmlspecialchars($link, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $this->uiText(
+            $chatId,
+            $user,
+            "✨ <b>دعوت دوستان</b>\n\n" .
+            "لینک اختصاصی تو:\n<code>{$safeLink}</code>\n\n" .
+            "هر دوست جدیدی که با این لینک وارد شود و ثبت‌نام را شروع کند، <b>+۲۰ سکه</b> به تو می‌رسد."
+        );
+    }
+
+    private function prefLabel(string $pref): string
+    {
+        return match ($pref) {
+            'male' => 'پسر',
+            'female' => 'دختر',
+            'province' => 'هم‌استان',
+            'age' => 'هم‌سن',
+            'any' => 'شانسی',
+            default => 'مخاطب',
+        };
+    }
+
+    private function startChat(
+        int $chatId,
+        array &$user,
+        string $pref,
+        array $filters = [],
+        string $extraNote = ''
+    ): void {
+        $result = $this->matcher->startSearch($user, $pref, $filters);
+
+        if (!($result['ok'] ?? false)) {
+            $err = (string)($result['error'] ?? '');
+            if ($err === 'no_coins') {
+                $this->uiText($chatId, $user, "سکه کافی نداری.\nاز بخش سکه‌ها شارژ کن یا چت شانسی رایگان برو.");
+                $this->showWallet($chatId, $user);
+                return;
+            }
+            if ($err === 'need_province') {
+                $this->uiText($chatId, $user, 'برای هم‌استان، اول استان پروفایلت را کامل کن.');
+                $this->showProfile($chatId, $user);
+                return;
+            }
+            if ($err === 'need_age') {
+                $this->uiText($chatId, $user, 'برای هم‌سن، اول سن پروفایلت را کامل کن.');
+                $this->showProfile($chatId, $user);
+                return;
+            }
+            $this->uiText($chatId, $user, 'الان نشد شروع کنیم. دوباره تلاش کن.');
             return;
         }
 
@@ -668,12 +1003,13 @@ final class Handlers
             return;
         }
 
-        $label = $pref === 'male' ? 'پسر' : ($pref === 'female' ? 'دختر' : 'تصادفی');
+        $label = $this->prefLabel($pref);
+        $note = $extraNote !== '' ? "\n{$extraNote}" : '';
         $this->clearUi($chatId, $user);
         $this->uiText(
             $chatId,
             $user,
-            "🔍 در حال پیدا کردن مخاطب ({$label})...\nلطفاً صبر کن.",
+            "🔍 در حال پیدا کردن مخاطب ({$label})...{$note}\nلطفاً صبر کن.",
             ['reply_markup' => Keyboards::searching()]
         );
     }

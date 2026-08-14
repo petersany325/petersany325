@@ -7,10 +7,32 @@ final class Matcher
     {
     }
 
-    public function startSearch(array $user, string $pref): array
+    public static function costFor(string $pref): int
+    {
+        return match ($pref) {
+            'any' => 0,
+            'male', 'female' => 1,
+            'province', 'age' => 2,
+            default => 1,
+        };
+    }
+
+    /**
+     * @param array{province?:string,city?:string} $filters Optional location filters (find flow).
+     */
+    public function startSearch(array $user, string $pref, array $filters = []): array
     {
         $tid = (int)$user['telegram_id'];
-        $cost = $pref === 'any' ? 0 : 1;
+        $cost = self::costFor($pref);
+
+        if (in_array($pref, ['province', 'age'], true)) {
+            if ($pref === 'province' && empty($user['province'])) {
+                return ['ok' => false, 'error' => 'need_province'];
+            }
+            if ($pref === 'age' && empty($user['age'])) {
+                return ['ok' => false, 'error' => 'need_age'];
+            }
+        }
 
         if ($cost > 0 && (int)$user['coins'] < $cost) {
             return ['ok' => false, 'error' => 'no_coins'];
@@ -28,7 +50,7 @@ final class Matcher
         ]);
         $user = $this->db->findUser($tid) ?? $user;
 
-        $partner = $this->findPartner($user, $pref);
+        $partner = $this->findPartner($user, $pref, $filters);
         if (!$partner) {
             return ['ok' => true, 'matched' => false];
         }
@@ -36,11 +58,18 @@ final class Matcher
         return $this->connect($user, $partner, $pref, $cost);
     }
 
-    private function findPartner(array $user, string $pref): ?array
+    /**
+     * @param array{province?:string,city?:string} $filters
+     */
+    private function findPartner(array $user, string $pref, array $filters = []): ?array
     {
         $pdo = $this->db->pdo();
         $myGender = (string)$user['gender'];
         $myId = (int)$user['telegram_id'];
+        $myProvince = (string)($user['province'] ?? '');
+        $myAge = (int)($user['age'] ?? 0);
+        $filterProvince = isset($filters['province']) ? (string)$filters['province'] : '';
+        $filterCity = isset($filters['city']) ? (string)$filters['city'] : '';
 
         $pdo->beginTransaction();
         try {
@@ -50,14 +79,57 @@ final class Matcher
                 if ((int)$row['telegram_id'] === $myId) {
                     continue;
                 }
-                $theirPref = $row['search_pref'] ?? 'any';
+                $theirPref = (string)($row['search_pref'] ?? 'any');
                 $theirGender = (string)$row['gender'];
-                $acceptsMe = ($theirPref === 'any' || $theirPref === $myGender);
-                $iAcceptThem = ($pref === 'any' || $pref === $theirGender);
-                if ($acceptsMe && $iAcceptThem) {
-                    $partner = $row;
-                    break;
+
+                // Gender compatibility for classic prefs
+                if (in_array($pref, ['any', 'male', 'female'], true)) {
+                    $acceptsMe = ($theirPref === 'any' || $theirPref === $myGender || in_array($theirPref, ['province', 'age'], true));
+                    $iAcceptThem = ($pref === 'any' || $pref === $theirGender);
+                    if (!$acceptsMe || !$iAcceptThem) {
+                        continue;
+                    }
                 }
+
+                if ($pref === 'province') {
+                    if ($myProvince === '' || (string)($row['province'] ?? '') !== $myProvince) {
+                        continue;
+                    }
+                }
+
+                if ($pref === 'age') {
+                    $theirAge = (int)($row['age'] ?? 0);
+                    if ($myAge <= 0 || $theirAge <= 0 || abs($myAge - $theirAge) > 3) {
+                        continue;
+                    }
+                }
+
+                // If they want province/age, enforce their constraint too
+                if ($theirPref === 'province') {
+                    if ($myProvince === '' || (string)($row['province'] ?? '') !== $myProvince) {
+                        continue;
+                    }
+                }
+                if ($theirPref === 'age') {
+                    $theirAge = (int)($row['age'] ?? 0);
+                    if ($myAge <= 0 || $theirAge <= 0 || abs($myAge - $theirAge) > 3) {
+                        continue;
+                    }
+                }
+                if (in_array($theirPref, ['male', 'female'], true) && $theirPref !== $myGender) {
+                    continue;
+                }
+
+                // Optional find-flow location filters
+                if ($filterProvince !== '' && (string)($row['province'] ?? '') !== $filterProvince) {
+                    continue;
+                }
+                if ($filterCity !== '' && (string)($row['city'] ?? '') !== $filterCity) {
+                    continue;
+                }
+
+                $partner = $row;
+                break;
             }
             $pdo->commit();
             return $partner;
