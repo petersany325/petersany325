@@ -229,25 +229,34 @@ final class Handlers
     private function ensureProfileOrMain(int $chatId, array $user): void
     {
         if (!$this->isProfileComplete($user)) {
+            $name = htmlspecialchars((string)$this->config['bot_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $welcome =
+                "به <b>{$name}</b> خوش اومدی 👋\n\n" .
+                "یه ربات چت ناشناس برای گپ‌زدن امن و سریع با آدم‌های جدید.\n\n" .
+                "🎁 ۳ سکه هدیه برای شروع داری.\n" .
+                "🎲 چت تصادفی هم کاملاً رایگان و نامحدوده.\n\n" .
+                "اول پروفایلت رو بساز تا وصل شی.";
+
+            // Always show the intro on /start during registration.
             if (empty($user['gender'])) {
-                $name = htmlspecialchars((string)$this->config['bot_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $this->tg->sendMessage(
                     $chatId,
-                    "به <b>{$name}</b> خوش اومدی 👋\n\n" .
-                    "یه ربات چت ناشناس برای گپ‌زدن امن و سریع با آدم‌های جدید.\n\n" .
-                    "🎁 ۳ سکه هدیه برای شروع داری.\n" .
-                    "🎲 چت تصادفی هم کاملاً رایگان و نامحدوده.\n\n" .
-                    "اول پروفایلت رو بساز تا وصل شی.\n" .
-                    "پسر هستی یا دختر؟",
+                    $welcome . "\n\nپسر هستی یا دختر؟",
                     ['reply_markup' => json_encode(Keyboards::gender(), JSON_UNESCAPED_UNICODE)]
                 );
                 return;
             }
             if (empty($user['age'])) {
-                $this->tg->sendMessage($chatId, "سن‌ات چند ساله؟\nمثلاً: <b>24</b>");
+                $this->tg->sendMessage(
+                    $chatId,
+                    $welcome . "\n\nسن‌ات چند ساله؟\nمثلاً: <b>24</b>"
+                );
                 return;
             }
-            $this->tg->sendMessage($chatId, 'شهرت کجاست؟ مثلاً: تهران');
+            $this->tg->sendMessage(
+                $chatId,
+                $welcome . "\n\nشهرت کجاست؟ مثلاً: تهران"
+            );
             return;
         }
         $this->showMain($chatId, "دوباره خوش اومدی 🌿");

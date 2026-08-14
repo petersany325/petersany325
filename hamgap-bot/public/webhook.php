@@ -17,6 +17,20 @@ require __DIR__ . '/src/Keyboards.php';
 require __DIR__ . '/src/Matcher.php';
 require __DIR__ . '/src/Handlers.php';
 
+// Bust shared-hosting OPcache so code updates apply immediately.
+if (function_exists('opcache_invalidate')) {
+    foreach ([
+        __DIR__ . '/config.php',
+        __DIR__ . '/src/Database.php',
+        __DIR__ . '/src/Telegram.php',
+        __DIR__ . '/src/Keyboards.php',
+        __DIR__ . '/src/Matcher.php',
+        __DIR__ . '/src/Handlers.php',
+        __FILE__,
+    ] as $f) {
+        @opcache_invalidate($f, true);
+    }
+}
 // Optional secret token in URL: webhook.php?secret=...
 $secret = $_GET['secret'] ?? '';
 if (!hash_equals((string)$config['webhook_secret'], (string)$secret)) {
