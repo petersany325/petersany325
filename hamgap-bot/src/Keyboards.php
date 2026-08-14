@@ -51,6 +51,7 @@ final class Keyboards
                 ['text' => '👩 فقط دختر', 'callback_data' => 'chat:female'],
                 ['text' => '👨 فقط پسر', 'callback_data' => 'chat:male'],
             ],
+            [['text' => '🌈 فقط شیمیل / دوجنسه', 'callback_data' => 'chat:shemale']],
             [['text' => '🏙 هم‌استان', 'callback_data' => 'chat:province']],
             [['text' => '🎂 هم‌سن', 'callback_data' => 'chat:age']],
             [['text' => 'بازگشت', 'callback_data' => 'menu:main']],
@@ -75,6 +76,7 @@ final class Keyboards
                 ['text' => '👩 آنلاین دختر', 'callback_data' => 'sr:online:female'],
                 ['text' => '👨 آنلاین پسر', 'callback_data' => 'sr:online:male'],
             ],
+            [['text' => '🌈 آنلاین شیمیل / دوجنسه', 'callback_data' => 'sr:online:shemale']],
             [['text' => '💬 چت ناشناس سریع', 'callback_data' => 'menu:connect']],
             [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
         ]];
@@ -87,6 +89,7 @@ final class Keyboards
                 ['text' => '👩 دختر', 'callback_data' => 'adv:gender:female'],
                 ['text' => '👨 پسر', 'callback_data' => 'adv:gender:male'],
             ],
+            [['text' => '🌈 شیمیل / دوجنسه', 'callback_data' => 'adv:gender:shemale']],
             [['text' => 'همه', 'callback_data' => 'adv:gender:any']],
             [['text' => 'بازگشت به جستجو', 'callback_data' => 'menu:find']],
         ]];
@@ -149,6 +152,7 @@ final class Keyboards
                 ['text' => '👩 دختر · رایگان', 'callback_data' => 'find:gender:female'],
                 ['text' => '👨 پسر · رایگان', 'callback_data' => 'find:gender:male'],
             ],
+            [['text' => '🌈 شیمیل / دوجنسه · رایگان', 'callback_data' => 'find:gender:shemale']],
             [['text' => 'همه · رایگان', 'callback_data' => 'find:gender:any']],
             [['text' => 'بازگشت', 'callback_data' => 'menu:find']],
         ]];
@@ -156,10 +160,13 @@ final class Keyboards
 
     public static function gender(): array
     {
-        return ['inline_keyboard' => [[
-            ['text' => '👩 دختر', 'callback_data' => 'reg:gender:female'],
-            ['text' => '👨 پسر', 'callback_data' => 'reg:gender:male'],
-        ]]];
+        return ['inline_keyboard' => [
+            [
+                ['text' => '👩 دختر', 'callback_data' => 'reg:gender:female'],
+                ['text' => '👨 پسر', 'callback_data' => 'reg:gender:male'],
+            ],
+            [['text' => '🌈 شیمیل / دوجنسه', 'callback_data' => 'reg:gender:shemale']],
+        ]];
     }
 
     public static function age(): array

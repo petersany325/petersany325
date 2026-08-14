@@ -188,7 +188,7 @@ final class Database
                   )
               )";
         $params = [$viewerTid, $viewerTid, $viewerTid, $viewerTid, $viewerTid];
-        if (!empty($filters['gender']) && in_array($filters['gender'], ['male', 'female'], true)) {
+        if (!empty($filters['gender']) && Gender::isValid((string)$filters['gender'])) {
             $sql .= ' AND u.gender = ?';
             $params[] = $filters['gender'];
         }

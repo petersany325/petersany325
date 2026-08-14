@@ -527,7 +527,7 @@ final class AdminHandlers
             $this->db->updateUser($tid, ['flow' => 'adm:edit:' . $field . ':' . $target]);
             $hints = [
                 'display_name' => 'نام نمایشی جدید (۲–۳۲ کاراکتر)',
-                'gender' => 'male یا female',
+                'gender' => 'male / female / shemale',
                 'age' => 'سن عددی ۱۳–۸۰',
                 'province' => 'نام استان',
                 'city' => 'نام شهر',
@@ -615,7 +615,7 @@ final class AdminHandlers
         }
         if ($field === 'gender') {
             $g = strtolower(trim($value));
-            if (!in_array($g, ['male', 'female'], true)) {
+            if (!Gender::isValid($g)) {
                 return false;
             }
             $this->db->updateUser($targetId, ['gender' => $g]);

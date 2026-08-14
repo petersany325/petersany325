@@ -32,6 +32,7 @@ final class Migrator
         self::addColumn($pdo, 'users', 'active_room_id', 'BIGINT UNSIGNED NULL');
         self::widenFlowColumn($pdo);
         self::ensureSearchPrefFlexible($pdo);
+        self::ensureGenderIncludesShemale($pdo);
         self::ensureReferralUnique($pdo);
         self::ensurePublicCodeUnique($pdo);
         self::ensureSettingsTable($pdo);
@@ -160,6 +161,34 @@ final class Migrator
         $type = strtolower((string)($col['Type'] ?? ''));
         if (str_contains($type, 'enum')) {
             $pdo->exec('ALTER TABLE users MODIFY search_pref VARCHAR(32) NULL');
+        }
+    }
+
+    private static function ensureGenderIncludesShemale(PDO $pdo): void
+    {
+        $st = $pdo->query("SHOW COLUMNS FROM users LIKE 'gender'");
+        $col = $st->fetch(PDO::FETCH_ASSOC);
+        if (!$col) {
+            return;
+        }
+        $type = strtolower((string)($col['Type'] ?? ''));
+        if (str_contains($type, 'shemale')) {
+            return;
+        }
+        try {
+            if (str_contains($type, 'enum')) {
+                $pdo->exec(
+                    "ALTER TABLE users MODIFY gender ENUM('male','female','shemale') NULL"
+                );
+            } else {
+                $pdo->exec('ALTER TABLE users MODIFY gender VARCHAR(16) NULL');
+            }
+        } catch (Throwable $e) {
+            try {
+                $pdo->exec('ALTER TABLE users MODIFY gender VARCHAR(16) NULL');
+            } catch (Throwable $e2) {
+                // non-fatal
+            }
         }
     }
 

@@ -34,6 +34,7 @@ DEFAULT_FILES = [
     ("src/Keyboards.php", f"{REMOTE}/src"),
     ("src/Matcher.php", f"{REMOTE}/src"),
     ("src/Migrator.php", f"{REMOTE}/src"),
+    ("src/Gender.php", f"{REMOTE}/src"),
     ("src/Telegram.php", f"{REMOTE}/src"),
     ("src/IranLocations.php", f"{REMOTE}/src"),
     ("public/webhook.php", REMOTE),

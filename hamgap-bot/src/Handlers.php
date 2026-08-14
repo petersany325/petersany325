@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v10.4';
+    public const CODE_VERSION = '2026-08-14-v10.5';
 
     private string $assets;
     private Settings $settings;
@@ -60,7 +60,7 @@ final class Handlers
             "به 《 هم‌گپ 》 خوش اومدی ، توی این ربات می‌تونی افراد نزدیکت رو پیدا کنی و باهاشون آشنا شی " .
             "یا به یه نفر بصورت ناشناس وصل شی و باهاش چت کنی ❗️\n\n" .
             "استفاده از این ربات رایگانه و اطلاعات تلگرام شما مثل اسم، عکس پروفایل یا موقعیت GPS کاملاً محرمانه هست 😎\n\n" .
-            "برای شروع بهم بگو دختری یا پسری؟ 👇";
+            "برای شروع جنسیتت را انتخاب کن 👇";
     }
 
     /** Delete previous bot UI menus (or at least strip their buttons). */
@@ -421,13 +421,13 @@ final class Handlers
         // ——— Registration ———
         if (str_starts_with($data, 'reg:gender:')) {
             $g = substr($data, strlen('reg:gender:'));
-            if (!in_array($g, ['male', 'female'], true)) {
+            if (!Gender::isValid($g)) {
                 $this->tg->answerCallback($id, 'نامعتبر', true);
                 return;
             }
             $editing = $this->isProfileComplete($user);
             $this->db->updateUser($tid, ['gender' => $g, 'flow' => null]);
-            $this->tg->answerCallback($id, $g === 'female' ? 'دختر ✅' : 'پسر ✅');
+            $this->tg->answerCallback($id, Gender::short($g) . ' ✅');
             $this->stripCallbackMenu($cq);
             $user = $this->db->findUser($tid) ?? $user;
             $this->clearUi($chatId, $user);
@@ -620,7 +620,7 @@ final class Handlers
 
         if (str_starts_with($data, 'find:gender:')) {
             $g = substr($data, strlen('find:gender:'));
-            if (!in_array($g, ['male', 'female', 'any'], true)) {
+            if (!Gender::isFilter($g)) {
                 $this->tg->answerCallback($id, 'نامعتبر', true);
                 return;
             }
@@ -640,7 +640,7 @@ final class Handlers
                     }
                 }
             }
-            if (in_array($g, ['male', 'female'], true)) {
+            if (Gender::isValid($g)) {
                 $filters['gender'] = $g;
             }
             $this->tg->answerCallback($id, 'جستجو رایگان ✅');
@@ -900,6 +900,9 @@ final class Handlers
                 break;
             case 'chat:female':
                 $this->startChat($chatId, $user, 'female');
+                break;
+            case 'chat:shemale':
+                $this->startChat($chatId, $user, 'shemale');
                 break;
             case 'chat:province':
                 $this->startChat($chatId, $user, 'province');
@@ -1279,7 +1282,7 @@ final class Handlers
         $this->clearUi($chatId, $user);
         $this->db->ensureIdentity($user);
         $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
-        $g = $user['gender'] === 'female' ? 'دختر' : ($user['gender'] === 'male' ? 'پسر' : '-');
+        $g = Gender::label((string)($user['gender'] ?? ''));
         $dn = htmlspecialchars((string)($user['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $prov = htmlspecialchars((string)($user['province'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $city = htmlspecialchars((string)($user['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -1370,6 +1373,7 @@ final class Handlers
         return match ($pref) {
             'male' => 'پسر',
             'female' => 'دختر',
+            'shemale' => 'شیمیل / دوجنسه',
             'province' => 'هم‌استان',
             'age' => 'هم‌سن',
             'any' => 'شانسی',
@@ -1519,6 +1523,8 @@ final class Handlers
                 $filters['gender'] = 'female';
             } elseif ($data === 'sr:online:male') {
                 $filters['gender'] = 'male';
+            } elseif ($data === 'sr:online:shemale') {
+                $filters['gender'] = 'shemale';
             }
             $this->tg->answerCallback($id, 'آنلاین‌ها');
             $this->stripCallbackMenu($cq);
@@ -1651,7 +1657,7 @@ final class Handlers
 
         if (str_starts_with($data, 'adv:gender:')) {
             $g = substr($data, strlen('adv:gender:'));
-            if (!in_array($g, ['any', 'male', 'female'], true)) {
+            if (!Gender::isFilter($g)) {
                 $this->tg->answerCallback($id, 'نامعتبر', true);
                 return;
             }
@@ -1703,7 +1709,7 @@ final class Handlers
             $gender = $gPart;
             $body = $loc;
         }
-        if ($gender && in_array($gender, ['male', 'female'], true)) {
+        if ($gender && Gender::isValid($gender)) {
             $filters['gender'] = $gender;
         }
         if ($body === 'all' || $body === '') {
@@ -1930,14 +1936,19 @@ final class Handlers
         }
         $g = '';
         if ((int)($target['show_gender'] ?? 1) === 1) {
-            $g = ($target['gender'] ?? '') === 'female' ? '👩' : (($target['gender'] ?? '') === 'male' ? '👨' : '');
+            $g = Gender::emoji((string)($target['gender'] ?? ''));
         }
         $age = ((int)($target['show_age'] ?? 1) === 1) ? (string)(int)($target['age'] ?? 0) : '';
         $city = ((int)($target['show_city'] ?? 1) === 1) ? (string)($target['city'] ?? '') : '';
         if ($compact) {
             return trim($g . ' ' . $dn . ($age !== '' ? ' ' . $age : ''));
         }
-        $parts = array_filter([$dn, $g !== '' ? (($target['gender'] ?? '') === 'female' ? 'دختر' : 'پسر') : null, $age !== '' ? $age . 'ساله' : null, $city !== '' ? $city : null]);
+        $parts = array_filter([
+            $dn,
+            ((int)($target['show_gender'] ?? 1) === 1) ? Gender::short((string)($target['gender'] ?? '')) : null,
+            $age !== '' ? $age . 'ساله' : null,
+            $city !== '' ? $city : null,
+        ]);
         return htmlspecialchars(implode(' · ', $parts), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
 
@@ -1949,7 +1960,7 @@ final class Handlers
         $lines = ["<b>{$dn}</b>"];
         $meta = [];
         if ((int)($target['show_gender'] ?? 1) === 1) {
-            $meta[] = ($target['gender'] ?? '') === 'female' ? 'دختر' : (($target['gender'] ?? '') === 'male' ? 'پسر' : '—');
+            $meta[] = Gender::label((string)($target['gender'] ?? ''));
         }
         if ((int)($target['show_age'] ?? 1) === 1) {
             $meta[] = (int)($target['age'] ?? 0) . ' ساله';
@@ -2278,7 +2289,7 @@ final class Handlers
             $members = $this->db->listRoomMembers($roomId);
             $lines = ['👥 <b>اعضای گپ</b> · ' . count($members) . ' نفر'];
             foreach ($members as $m) {
-                $g = ($m['gender'] ?? '') === 'female' ? '👩' : (($m['gender'] ?? '') === 'male' ? '👨' : '•');
+                $g = Gender::emoji((string)($m['gender'] ?? ''));
                 $dn = htmlspecialchars((string)($m['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
                 $role = ($m['role'] ?? '') === 'owner' ? ' (مدیر)' : '';
                 $lines[] = "{$g} {$dn}{$role}";
@@ -2341,7 +2352,7 @@ final class Handlers
         }
         $from = (int)$user['telegram_id'];
         $name = htmlspecialchars((string)($user['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $g = ($user['gender'] ?? '') === 'female' ? '👩' : (($user['gender'] ?? '') === 'male' ? '👨' : '');
+        $g = Gender::emoji((string)($user['gender'] ?? ''));
         $text = trim((string)($message['text'] ?? ''));
         $prefix = "{$g}<b>{$name}</b>: ";
         foreach ($this->db->listRoomMembers($roomId) as $m) {

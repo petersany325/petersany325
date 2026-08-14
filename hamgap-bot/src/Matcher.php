@@ -14,7 +14,7 @@ final class Matcher
         if ($settings) {
             return match ($pref) {
                 'any' => $settings->getInt('connect_any_cost', 0),
-                'male', 'female' => $settings->getInt('connect_gender_cost', 0),
+                'male', 'female', 'shemale' => $settings->getInt('connect_gender_cost', 0),
                 'province' => $settings->getInt('connect_province_cost', 0),
                 'age' => $settings->getInt('connect_age_cost', 0),
                 default => 0,
@@ -92,7 +92,7 @@ final class Matcher
                 $theirPref = (string)($row['search_pref'] ?? 'any');
                 $theirGender = (string)$row['gender'];
 
-                if (in_array($pref, ['any', 'male', 'female'], true)) {
+                if (in_array($pref, ['any', 'male', 'female', 'shemale'], true)) {
                     $acceptsMe = ($theirPref === 'any' || $theirPref === $myGender || in_array($theirPref, ['province', 'age'], true));
                     $iAcceptThem = ($pref === 'any' || $pref === $theirGender);
                     if (!$acceptsMe || !$iAcceptThem) {
@@ -124,7 +124,7 @@ final class Matcher
                         continue;
                     }
                 }
-                if (in_array($theirPref, ['male', 'female'], true) && $theirPref !== $myGender) {
+                if (in_array($theirPref, ['male', 'female', 'shemale'], true) && $theirPref !== $myGender) {
                     continue;
                 }
 
