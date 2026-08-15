@@ -27,10 +27,14 @@ final class Matcher
     /**
      * @param array{province?:string,city?:string} $filters Optional location filters (find flow).
      */
-    public function startSearch(array $user, string $pref, array $filters = []): array
+    public function startSearch(array $user, string $pref, array $filters = [], string $mode = 'normal'): array
     {
         $tid = (int)$user['telegram_id'];
         $cost = self::costFor($pref, $this->settings);
+        require_once __DIR__ . '/ChatModes.php';
+        if (!ChatModes::isValid($mode)) {
+            $mode = ChatModes::NORMAL;
+        }
 
         if (in_array($pref, ['province', 'age'], true)) {
             if ($pref === 'province' && empty($user['province'])) {
@@ -53,22 +57,23 @@ final class Matcher
         $this->db->updateUser($tid, [
             'status' => 'searching',
             'search_pref' => $pref,
+            'chat_mode' => $mode,
             'partner_id' => null,
         ]);
         $user = $this->db->findUser($tid) ?? $user;
 
-        $partner = $this->findPartner($user, $pref, $filters);
+        $partner = $this->findPartner($user, $pref, $filters, $mode);
         if (!$partner) {
             return ['ok' => true, 'matched' => false];
         }
 
-        return $this->connect($user, $partner, $pref, $cost);
+        return $this->connect($user, $partner, $pref, $cost, $mode);
     }
 
     /**
      * @param array{province?:string,city?:string} $filters
      */
-    private function findPartner(array $user, string $pref, array $filters = []): ?array
+    private function findPartner(array $user, string $pref, array $filters = [], string $mode = 'normal'): ?array
     {
         $pdo = $this->db->pdo();
         $myGender = (string)$user['gender'];
@@ -77,6 +82,7 @@ final class Matcher
         $myAge = (int)($user['age'] ?? 0);
         $filterProvince = isset($filters['province']) ? (string)$filters['province'] : '';
         $filterCity = isset($filters['city']) ? (string)$filters['city'] : '';
+        $mode = $mode !== '' ? $mode : 'normal';
 
         $pdo->beginTransaction();
         try {
@@ -87,6 +93,13 @@ final class Matcher
                     continue;
                 }
                 if ($this->db->isBlocked($myId, (int)$row['telegram_id']) || $this->db->isBlocked((int)$row['telegram_id'], $myId)) {
+                    continue;
+                }
+                $theirMode = (string)($row['chat_mode'] ?? 'normal');
+                if ($theirMode === '') {
+                    $theirMode = 'normal';
+                }
+                if ($theirMode !== $mode) {
                     continue;
                 }
                 $theirPref = (string)($row['search_pref'] ?? 'any');
@@ -148,11 +161,12 @@ final class Matcher
         }
     }
 
-    private function connect(array $user, array $partner, string $matchType, int $cost): array
+    private function connect(array $user, array $partner, string $matchType, int $cost, string $mode = 'normal'): array
     {
         $pdo = $this->db->pdo();
         $a = (int)$user['telegram_id'];
         $b = (int)$partner['telegram_id'];
+        $storedType = $mode !== '' && $mode !== 'normal' ? ($mode . ':' . $matchType) : $matchType;
 
         $pdo->beginTransaction();
         try {
@@ -185,14 +199,14 @@ final class Matcher
 
             $pdo->prepare(
                 "INSERT INTO chats (user_a, user_b, match_type, status) VALUES (?, ?, ?, 'active')"
-            )->execute([$a, $b, $matchType]);
+            )->execute([$a, $b, $storedType]);
 
             $pdo->prepare(
-                "UPDATE users SET status = 'chatting', partner_id = ?, search_pref = NULL WHERE telegram_id = ?"
-            )->execute([$b, $a]);
+                "UPDATE users SET status = 'chatting', partner_id = ?, search_pref = NULL, chat_mode = ? WHERE telegram_id = ?"
+            )->execute([$b, $mode, $a]);
             $pdo->prepare(
-                "UPDATE users SET status = 'chatting', partner_id = ?, search_pref = NULL WHERE telegram_id = ?"
-            )->execute([$a, $b]);
+                "UPDATE users SET status = 'chatting', partner_id = ?, search_pref = NULL, chat_mode = ? WHERE telegram_id = ?"
+            )->execute([$a, $mode, $b]);
 
             $pdo->commit();
             return [
@@ -200,6 +214,7 @@ final class Matcher
                 'matched' => true,
                 'partner' => $map[$b],
                 'me' => $this->db->findUser($a),
+                'mode' => $mode,
             ];
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
@@ -221,6 +236,7 @@ final class Matcher
                 'status' => 'idle',
                 'partner_id' => null,
                 'search_pref' => null,
+                'chat_mode' => null,
             ]);
         } else {
             $this->db->wipeUserChats($tid);
@@ -230,6 +246,7 @@ final class Matcher
             'status' => 'idle',
             'partner_id' => null,
             'search_pref' => null,
+            'chat_mode' => null,
         ]);
 
         return $partnerId;
@@ -240,6 +257,7 @@ final class Matcher
         $this->db->updateUser((int)$user['telegram_id'], [
             'status' => 'idle',
             'search_pref' => null,
+            'chat_mode' => null,
             'partner_id' => null,
         ]);
     }

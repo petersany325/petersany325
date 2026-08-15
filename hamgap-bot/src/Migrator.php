@@ -59,6 +59,12 @@ final class Migrator
         self::ensureChatWaitNoticesTable($pdo);
         self::addColumn($pdo, 'users', 'ban_reason', 'VARCHAR(64) NULL');
         self::addColumn($pdo, 'users', 'likes_count', 'INT NOT NULL DEFAULT 0');
+        self::addColumn($pdo, 'users', 'chat_mode', 'VARCHAR(16) NULL');
+        self::addColumn($pdo, 'users', 'gps_lat', 'DOUBLE NULL');
+        self::addColumn($pdo, 'users', 'gps_lng', 'DOUBLE NULL');
+        self::addColumn($pdo, 'users', 'gps_checked_at', 'DATETIME NULL');
+        self::addColumn($pdo, 'users', 'profile_bonus_claimed', 'TINYINT(1) NOT NULL DEFAULT 0');
+        self::addColumn($pdo, 'friend_rooms', 'room_kind', "VARCHAR(16) NOT NULL DEFAULT 'friends'");
         $settings = new Settings($db);
         $settings->seedDefaults();
         // v10.8.1: auto-ban after 10 reports (migrate previous default of 5)

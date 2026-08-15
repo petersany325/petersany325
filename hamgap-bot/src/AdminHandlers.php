@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.20-admin';
+    public const CODE_VERSION = '2026-08-15-v10.22-admin';
 
     /** Keys editable via adm:set: — anything else is rejected. */
     public const ALLOWED_SET_KEYS = [
@@ -15,7 +15,10 @@ final class AdminHandlers
         'connect_any_cost', 'connect_gender_cost', 'connect_province_cost', 'connect_age_cost',
         'admin_session_hours', 'admin_username',
         'pay_invoice_minutes', 'pay_card_number', 'pay_card_holder', 'pay_bank_name', 'pay_trust_channel',
-        'pack_100_price', 'pack_300_price', 'pack_1000_price',
+        'pack_170_price', 'pack_350_price', 'pack_500_price', 'pack_750_price', 'pack_1000_price', 'pack_unlimited_price',
+        'pack_100_price', 'pack_300_price',
+        'low_coin_warn', 'profile_complete_bonus', 'private_room_entry_cost', 'private_room_add_cost',
+        'vip_bad_words', 'rules_normal', 'rules_hot', 'rules_vipclub',
         'like_cost', 'room_create_cost', 'room_join_cost', 'report_ban_threshold', 'notify_free_cost',
         'support_bot_username', 'support_hours', 'support_welcome',
         'staff_default_password', 'staff_session_hours',
@@ -162,7 +165,9 @@ final class AdminHandlers
                 'message_cost', 'request_cost', 'welcome_coins',
                 'connect_any_cost', 'connect_gender_cost', 'connect_province_cost', 'connect_age_cost',
                 'admin_session_hours', 'staff_session_hours', 'pay_invoice_minutes',
-                'pack_100_price', 'pack_300_price', 'pack_1000_price',
+                'pack_170_price', 'pack_350_price', 'pack_500_price', 'pack_750_price', 'pack_1000_price', 'pack_unlimited_price',
+                'pack_100_price', 'pack_300_price',
+                'low_coin_warn', 'profile_complete_bonus', 'private_room_entry_cost', 'private_room_add_cost',
                 'like_cost', 'room_create_cost', 'room_join_cost', 'report_ban_threshold', 'notify_free_cost',
                 'vip_price_30', 'vip_days', 'vip_min_account_days', 'vip_min_likes', 'vip_max_reports',
                 'vip_require_occupation', 'vip_require_avatar',
@@ -445,7 +450,9 @@ final class AdminHandlers
                 "آستانه بلاک با گزارش: <b>{$all['report_ban_threshold']}</b>\n" .
                 "خبر آزاد شدن از چت: <b>{$all['notify_free_cost']}</b> سکه\n" .
                 "چت شانسی/جنسیت/استان/سن: " .
-                "{$all['connect_any_cost']}/{$all['connect_gender_cost']}/{$all['connect_province_cost']}/{$all['connect_age_cost']}",
+                "{$all['connect_any_cost']}/{$all['connect_gender_cost']}/{$all['connect_province_cost']}/{$all['connect_age_cost']}\n" .
+                "آستانه کمبود سکه: <b>{$all['low_coin_warn']}</b> · بونوس تکمیل پروفایل: <b>{$all['profile_complete_bonus']}</b>\n" .
+                "صفحه خصوصی ورود/افزودن: <b>{$all['private_room_entry_cost']}</b> / <b>{$all['private_room_add_cost']}</b>",
                 ['reply_markup' => Keyboards::adminCoins()]
             );
             return;
@@ -1158,14 +1165,16 @@ final class AdminHandlers
         }
 
         // adm:pay home
+        require_once __DIR__ . '/CoinCatalog.php';
         $card = $this->settings->get('pay_card_number');
         $holder = $this->settings->get('pay_card_holder');
         $bank = $this->settings->get('pay_bank_name');
         $ttl = $this->settings->get('pay_invoice_minutes');
-        $p100 = $this->settings->get('pack_100_price');
-        $p300 = $this->settings->get('pack_300_price');
-        $p1000 = $this->settings->get('pack_1000_price');
-        $ch = $this->settings->get('pay_trust_channel');
+        $prices = CoinCatalog::prices($this->settings);
+        $priceLines = [];
+        foreach (CoinCatalog::packs() as $p) {
+            $priceLines[] = $p['label'] . '=<b>' . (int)($prices[$p['id']] ?? $p['default_price']) . '</b>';
+        }
         $cardShow = $card !== '' ? $card : '— هنوز تنظیم نشده —';
         $this->tg->sendMessage(
             $chatId,
@@ -1174,9 +1183,10 @@ final class AdminHandlers
             'صاحب حساب: <b>' . htmlspecialchars($holder !== '' ? $holder : '—', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
             'بانک: <b>' . htmlspecialchars($bank !== '' ? $bank : '—', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
             'کانال رضایت: <b>' . ($ch !== '' ? '@' . htmlspecialchars($ch, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '—') . "</b>\n" .
-            "اعتبار فاکتور: <b>{$ttl}</b> دقیقه\n" .
-            "قیمت‌ها: ۱۰۰=<b>{$p100}</b> · ۳۰۰=<b>{$p300}</b> · ۱۰۰۰=<b>{$p1000}</b> تومان\n\n" .
-            "کاربر مبلغ یکتا می‌بیند → واریز می‌کند → فیش می‌فرستد → تو تأیید می‌کنی تا سکه خودکار شارژ شود.",
+            "اعتبار فاکتور: <b>{$ttl}</b> دقیقه\n\n" .
+            "قیمت بسته‌ها (تومان):\n" . implode("\n", $priceLines) . "\n\n" .
+            "تعریف قیمت فقط برای ادمین است.\n" .
+            "کارمند پشتیبانی فقط فیش را تأیید/رد می‌کند تا سکه شارژ شود.",
             ['reply_markup' => Keyboards::adminPayHome()]
         );
     }

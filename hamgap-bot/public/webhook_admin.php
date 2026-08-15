@@ -19,6 +19,7 @@ require __DIR__ . '/src/Gender.php';
 require __DIR__ . '/src/Occupation.php';
 require __DIR__ . '/src/IranLocations.php';
 require __DIR__ . '/src/Keyboards.php';
+require __DIR__ . '/src/CoinCatalog.php';
 require __DIR__ . '/src/AdminHandlers.php';
 
 $secret = $_GET['secret'] ?? '';

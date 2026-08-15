@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.21';
+    public const CODE_VERSION = '2026-08-15-v10.22';
 
     private string $assets;
     private Settings $settings;
@@ -127,14 +127,11 @@ final class Handlers
             "برای شروع جنسیتت را انتخاب کن 👇";
     }
 
-    /** @return array{100:int,300:int,1000:int} */
+    /** @return array<string,int> pack id => price toman */
     private function packPrices(): array
     {
-        return [
-            100 => $this->settings->getInt('pack_100_price', 50000),
-            300 => $this->settings->getInt('pack_300_price', 120000),
-            1000 => $this->settings->getInt('pack_1000_price', 350000),
-        ];
+        require_once __DIR__ . '/CoinCatalog.php';
+        return CoinCatalog::prices($this->settings);
     }
 
     /** @return array{any:int,gender:int,province:int,age:int} */
@@ -266,6 +263,18 @@ final class Handlers
         }
 
         $text = trim((string)($message['text'] ?? ''));
+
+        // GPS share (VIP club / profile enrichment)
+        if (isset($message['location']) && is_array($message['location'])) {
+            $this->handleIncomingLocation($chatId, $user, $message['location']);
+            return;
+        }
+
+        // Adding a member to private dedicated page
+        if (($user['flow'] ?? '') === 'prv:add' && $text !== '' && !str_starts_with($text, '/')) {
+            $this->finishPrivateAddMember($chatId, $user, $text);
+            return;
+        }
 
         // Always allow restoring HamGap menu / canceling type mode
         if ($text === '📂 منوی هم‌گپ' || $text === '/menu') {
@@ -435,6 +444,7 @@ final class Handlers
                 $fresh = $this->db->findUser($tid) ?? $user;
                 $this->clearUi($chatId, $fresh);
                 $this->uiText($chatId, $fresh, '✅ عکس <b>عمومی</b> ذخیره شد — در جستجو برای همه دیده می‌شود.');
+                $this->tryGrantProfileBonus($chatId, $fresh);
                 $this->showAlbumHub($chatId, $fresh);
                 return;
             }
@@ -564,6 +574,31 @@ final class Handlers
             }
             if ($this->isHamGapMenuLabel($text)) {
                 $this->endAndMenu($chatId, $user);
+                return;
+            }
+            // VIP club bad-word filter
+            require_once __DIR__ . '/ChatModes.php';
+            require_once __DIR__ . '/VipFilter.php';
+            if ((string)($user['chat_mode'] ?? '') === ChatModes::VIP
+                && $text !== ''
+                && VipFilter::containsBadWord($text, $this->settings)
+            ) {
+                $this->tg->sendMessage(
+                    $chatId,
+                    "🚫 در کلاب VIP استفاده از کلمات رکیک ممنوع است.\nاز چت اخراج شدی."
+                );
+                $partnerId = (int)$user['partner_id'];
+                $this->matcher->endChat($user, true);
+                try {
+                    $this->tg->sendMessage($partnerId, 'طرف مقابل به‌خاطر نقض قوانین کلاب VIP از چت خارج شد.');
+                    $p = $this->db->findUser($partnerId);
+                    if ($p) {
+                        $this->showMain($partnerId, $p);
+                    }
+                } catch (Throwable $e) {
+                }
+                $fresh = $this->db->findUser($tid) ?? $user;
+                $this->showMain($chatId, $fresh);
                 return;
             }
             $this->tg->copyMessage((int)$user['partner_id'], $chatId, (int)$message['message_id']);
@@ -1086,6 +1121,12 @@ final class Handlers
             return;
         }
 
+        // Chat mode picker + rules gate
+        if ($data === 'gps:share' || str_starts_with($data, 'mode:') || str_starts_with($data, 'prv:')) {
+            $this->handleModeAndPrivateCallbacks($cq, $user, $id, $data, $chatId, $tid);
+            return;
+        }
+
         // Chat request accept / hold / decline / inbox / unblock
         if ($data === 'req:inbox' || str_starts_with($data, 'req:') || str_starts_with($data, 'blk:')) {
             $this->handleRequestCallback($cq, $user, $id, $data, $chatId, $tid);
@@ -1222,6 +1263,14 @@ final class Handlers
             return;
         }
 
+        // chat:{mode}:{pref} e.g. chat:hot:female
+        if (preg_match('/^chat:(normal|hot|vipclub):(any|male|female|shemale|province|age)$/', $data, $m)) {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->startChat($chatId, $user, $m[2], [], '', $m[1]);
+            return;
+        }
+
         $this->tg->answerCallback($id);
         $this->stripCallbackMenu($cq);
 
@@ -1291,22 +1340,14 @@ final class Handlers
                 $this->showInviteMilestones($chatId, $user);
                 break;
             case 'chat:any':
-                $this->startChat($chatId, $user, 'any');
-                break;
             case 'chat:male':
-                $this->startChat($chatId, $user, 'male');
-                break;
             case 'chat:female':
-                $this->startChat($chatId, $user, 'female');
-                break;
             case 'chat:shemale':
-                $this->startChat($chatId, $user, 'shemale');
-                break;
             case 'chat:province':
-                $this->startChat($chatId, $user, 'province');
-                break;
             case 'chat:age':
-                $this->startChat($chatId, $user, 'age');
+                // legacy callbacks without mode → ordinary chat
+                $pref = substr($data, strlen('chat:'));
+                $this->startChat($chatId, $user, $pref, [], '', 'normal');
                 break;
             case 'chat:cancel':
                 $this->matcher->cancelSearch($user);
@@ -2064,24 +2105,105 @@ final class Handlers
         $this->uiText($chatId, $user, '⬇️ منوی هم‌گپ', [
             'reply_markup' => Keyboards::mainReply($this->settings->getInt('invite_reward', 30)),
         ]);
+        $this->maybeNudgeIncompleteProfile($chatId, $user);
+        $this->maybeWarnLowCoins($chatId, $user);
+    }
+
+    /** Missing enrichment fields (photo / GPS) after basic registration. */
+    private function missingEnrichmentFields(array $user): array
+    {
+        $miss = [];
+        if (trim((string)($user['avatar_file_id'] ?? '')) === '') {
+            $miss[] = 'عکس';
+        }
+        if ($user['gps_lat'] === null || $user['gps_lat'] === '' || $user['gps_lng'] === null || $user['gps_lng'] === '') {
+            $miss[] = 'موقعیت GPS';
+        }
+        return $miss;
+    }
+
+    private function maybeNudgeIncompleteProfile(int $chatId, array &$user): void
+    {
+        if (!$this->isProfileComplete($user)) {
+            return;
+        }
+        if ((int)($user['profile_bonus_claimed'] ?? 0) === 1) {
+            return;
+        }
+        $miss = $this->missingEnrichmentFields($user);
+        if (!$miss) {
+            return;
+        }
+        $bonus = max(0, $this->settings->getInt('profile_complete_bonus', 5));
+        $list = implode(' ، ', $miss);
+        $steps = count($miss);
+        $this->tg->trySendMessage(
+            $chatId,
+            "🔔 فقط <b>{$steps}</b> قدم تا تکمیل پروفایل!\n\n" .
+            "اطلاعات تکمیل‌نشده شما: <b>{$list}</b>\n\n" .
+            "پروفایل را کامل کن 👇 و <b>{$bonus}</b> سکه هدیه بگیر.",
+            ['reply_markup' => Keyboards::profileNudgeInline()]
+        );
+    }
+
+    private function maybeWarnLowCoins(int $chatId, array &$user, bool $force = false): void
+    {
+        $warnAt = max(0, $this->settings->getInt('low_coin_warn', 5));
+        $have = (int)($user['coins'] ?? 0);
+        if (!$force && ($warnAt <= 0 || $have > $warnAt)) {
+            return;
+        }
+        if ($have > $warnAt) {
+            return;
+        }
+        $invite = $this->settings->getInt('invite_reward', 30);
+        $this->tg->trySendMessage(
+            $chatId,
+            "⚠️ <b>توجه:</b> سکه‌ات کم شده! (آستانه {$warnAt} · موجودی <b>{$have}</b>)\n\n" .
+            "💡 با دعوت هر دوست <b>+{$invite}</b> سکه بگیر.\n" .
+            "❗️ یا از پنل خرید سکه 💰 موجودی را افزایش بده.",
+            ['reply_markup' => Keyboards::needCoinsInline($invite)]
+        );
+    }
+
+    private function tryGrantProfileBonus(int $chatId, array &$user): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $user = $this->db->findUser($tid) ?? $user;
+        if ((int)($user['profile_bonus_claimed'] ?? 0) === 1) {
+            return;
+        }
+        if (!$this->isProfileComplete($user) || $this->missingEnrichmentFields($user)) {
+            return;
+        }
+        $bonus = max(0, $this->settings->getInt('profile_complete_bonus', 5));
+        $this->db->updateUser($tid, ['profile_bonus_claimed' => 1]);
+        if ($bonus > 0) {
+            $this->db->addCoins($tid, $bonus, 'profile_complete_bonus', null);
+        }
+        $user = $this->db->findUser($tid) ?? $user;
+        try {
+            $this->tg->sendMessage(
+                $chatId,
+                "✅ پروفایلت کامل شد!" .
+                ($bonus > 0 ? "\n<b>+{$bonus} سکه</b> هدیه تکمیل پروفایل به حسابت اضافه شد." : '')
+            );
+        } catch (Throwable $e) {
+        }
     }
 
     private function showConnect(int $chatId, array &$user): void
     {
         $this->clearUi($chatId, $user);
+        require_once __DIR__ . '/ChatModes.php';
         $path = $this->assets . '/menu-smart.jpg';
-        $costs = $this->connectCosts();
-        $lines = [
-            "💬 <b>چت ناشناس</b>",
-            "بدون نمایش هویت تلگرام وصل شو.",
-            '',
-            '• شانسی: ' . ($costs['any'] > 0 ? "{$costs['any']} سکه" : 'رایگان'),
-            '• فیلتر جنسیت: ' . ($costs['gender'] > 0 ? "{$costs['gender']} سکه" : 'رایگان'),
-            '• هم‌استان: ' . ($costs['province'] > 0 ? "{$costs['province']} سکه" : 'رایگان'),
-            '• هم‌سن: ' . ($costs['age'] > 0 ? "{$costs['age']} سکه" : 'رایگان'),
-        ];
-        $caption = implode("\n", $lines);
-        $kb = Keyboards::connectInline($costs);
+        $caption =
+            "💬 <b>چت ناشناس</b>\n" .
+            "اول نوع چت را انتخاب کن؛ بعد قوانین همان روم را بخوان و وارد شو.\n\n" .
+            "• <b>چت معمولی</b> — دوستی و گفتگوی محترمانه\n" .
+            "• <b>چت هات</b> — آشنایی و رابطه · فضای آزادتر\n" .
+            "• <b>کلاب VIP</b> — جدی و سطح‌بالا · شهر واقعی + بدون توهین";
+        $kb = Keyboards::connectModeInline();
         if (is_file($path)) {
             $this->uiPhoto($chatId, $user, $path, $caption, $kb);
         } else {
@@ -2089,6 +2211,50 @@ final class Handlers
                 'reply_markup' => $kb,
             ]);
         }
+        $this->pinHamGapMenu($chatId, $user);
+    }
+
+    private function showChatRules(int $chatId, array &$user, string $mode): void
+    {
+        require_once __DIR__ . '/ChatModes.php';
+        if (!ChatModes::isValid($mode)) {
+            $mode = ChatModes::NORMAL;
+        }
+        $this->clearUi($chatId, $user);
+        $this->uiText(
+            $chatId,
+            $user,
+            ChatModes::rules($mode, $this->settings),
+            ['reply_markup' => Keyboards::chatRulesInline($mode)]
+        );
+        $this->pinHamGapMenu($chatId, $user);
+    }
+
+    private function showConnectPrefs(int $chatId, array &$user, string $mode): void
+    {
+        require_once __DIR__ . '/ChatModes.php';
+        if (!ChatModes::isValid($mode)) {
+            $mode = ChatModes::NORMAL;
+        }
+        $this->clearUi($chatId, $user);
+        $costs = $this->connectCosts();
+        $label = ChatModes::label($mode);
+        $lines = [
+            "🎯 <b>{$label}</b> — فیلتر اتصال",
+            "بدون نمایش هویت تلگرام وصل شو.",
+            '',
+            '• شانسی: ' . ($costs['any'] > 0 ? "{$costs['any']} سکه" : 'رایگان'),
+            '• فیلتر جنسیت: ' . ($costs['gender'] > 0 ? "{$costs['gender']} سکه" : 'رایگان'),
+            '• هم‌استان: ' . ($costs['province'] > 0 ? "{$costs['province']} سکه" : 'رایگان'),
+            '• هم‌سن: ' . ($costs['age'] > 0 ? "{$costs['age']} سکه" : 'رایگان'),
+        ];
+        if ($mode === ChatModes::VIP) {
+            $lines[] = '';
+            $lines[] = '⭐ در این روم کلمات رکیک ممنوع است و گزارش تخلف جدی گرفته می‌شود.';
+        }
+        $this->uiText($chatId, $user, implode("\n", $lines), [
+            'reply_markup' => Keyboards::connectInline($costs, $mode),
+        ]);
         $this->pinHamGapMenu($chatId, $user);
     }
 
@@ -2408,7 +2574,9 @@ final class Handlers
             "جستجو رایگان است.\n" .
             "هر پیام کوتاه: {$msgCost} سکه · هر درخواست گفتگو: {$reqCost} سکه\n" .
             "دعوت دوست: +{$invite} سکه\n\n" .
-            "برای خرید سکه یک بسته را انتخاب کن. فاکتور با مبلغ یکتا صادر می‌شود.";
+            "بسته سکه را انتخاب کن → فاکتور با مبلغ یکتا → کارت‌به‌کارت → ارسال فیش.\n" .
+            "بعد از «تأیید پول انجام شد» توسط کارمند/ادمین، سکه شارژ می‌شود.\n" .
+            "بسته ویژه نامحدود = ۳۰۰۰ سکه (نه بی‌نهایت واقعی).";
         $kb = Keyboards::walletInline($invite, $packs);
         if (is_file($path)) {
             $this->uiPhoto($chatId, $user, $path, $caption, $kb);
@@ -2425,8 +2593,19 @@ final class Handlers
         array &$user,
         string $pref,
         array $filters = [],
-        string $extraNote = ''
+        string $extraNote = '',
+        string $mode = 'normal'
     ): void {
+        require_once __DIR__ . '/ChatModes.php';
+        if (!ChatModes::isValid($mode)) {
+            $mode = ChatModes::NORMAL;
+        }
+        if ($mode === ChatModes::VIP) {
+            if ($user['gps_lat'] === null || $user['gps_lat'] === '' || $user['gps_lng'] === null || $user['gps_lng'] === '') {
+                $this->askVipGps($chatId, $user);
+                return;
+            }
+        }
         if (($user['status'] ?? '') === 'chatting') {
             $ended = [(int)$user['telegram_id']];
             $oldPartner = $this->matcher->endChat($user, true);
@@ -2446,7 +2625,7 @@ final class Handlers
             $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         }
 
-        $result = $this->matcher->startSearch($user, $pref, $filters);
+        $result = $this->matcher->startSearch($user, $pref, $filters, $mode);
 
         if (!($result['ok'] ?? false)) {
             $err = (string)($result['error'] ?? '');
@@ -2470,25 +2649,50 @@ final class Handlers
         }
 
         if (!empty($result['matched'])) {
-            $this->notifyConnected($chatId, (int)$result['partner']['telegram_id']);
+            $this->notifyConnected($chatId, (int)$result['partner']['telegram_id'], $mode);
+            $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+            $this->maybeWarnLowCoins($chatId, $user);
             return;
         }
 
         $label = $this->prefLabel($pref);
+        $modeLabel = ChatModes::label($mode);
         $note = $extraNote !== '' ? "\n{$extraNote}" : '';
         $this->clearUi($chatId, $user);
         $this->uiText(
             $chatId,
             $user,
-            "🔍 در حال پیدا کردن مخاطب ({$label})...{$note}\nلطفاً صبر کن.",
+            "🔍 در حال پیدا کردن مخاطب ({$modeLabel} · {$label})...{$note}\nلطفاً صبر کن.",
             ['reply_markup' => Keyboards::searching()]
         );
     }
 
-    private function notifyConnected(int $a, int $b): void
+    private function askVipGps(int $chatId, array &$user): void
     {
+        $this->db->updateUser((int)$user['telegram_id'], ['flow' => 'gps:vipclub']);
+        $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+        $this->clearUi($chatId, $user);
+        $city = htmlspecialchars((string)($user['city'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $this->tg->sendMessage(
+            $chatId,
+            "📍 <b>کلاب VIP</b> نیاز به تأیید موقعیت واقعی دارد.\n" .
+            "شهر پروفایل تو: <b>{$city}</b>\n\n" .
+            "دکمه زیر را بزن و موقعیت فعلی‌ات را بفرست (برای بقیه مخفی می‌ماند).",
+            ['reply_markup' => Keyboards::requestLocationInline()]
+        );
+    }
+
+    private function notifyConnected(int $a, int $b, string $mode = 'normal'): void
+    {
+        require_once __DIR__ . '/ChatModes.php';
         $path = $this->assets . '/menu-chat.jpg';
-        $caption = "✅ وصل شدید!\nهویت‌ها مخفی است · محترمانه گفتگو کنید.";
+        $modeLabel = ChatModes::label($mode);
+        $extra = match ($mode) {
+            ChatModes::HOT => "\n🔥 روم هات · احترام متقابل را فراموش نکن.",
+            ChatModes::VIP => "\n⭐ کلاب VIP · بدون توهین · گزارش تخلف = اخراج.",
+            default => "\n💬 چت معمولی · محترمانه گفتگو کنید.",
+        };
+        $caption = "✅ وصل شدید! ({$modeLabel})\nهویت‌ها مخفی است.{$extra}";
         foreach ([$a, $b] as $cid) {
             $u = $this->db->findUser($cid);
             if (!$u) {
@@ -2546,7 +2750,12 @@ final class Handlers
         $this->flushChatWaitNotices($endedIds);
         $fresh = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         $this->clearUi($chatId, $fresh);
-        $this->startChat($chatId, $fresh, 'any');
+        $mode = (string)($user['chat_mode'] ?? 'normal');
+        require_once __DIR__ . '/ChatModes.php';
+        if (!ChatModes::isValid($mode)) {
+            $mode = ChatModes::NORMAL;
+        }
+        $this->startChat($chatId, $fresh, 'any', [], '', $mode);
     }
 
     private function report(int $chatId, array $user): void
@@ -4095,11 +4304,60 @@ final class Handlers
             $this->flushChatWaitNotices($freed);
         }
         $this->db->updateContactRequest($reqId, ['status' => 'accepted']);
-        $this->db->openPrivateChat($fromId, $tid, 'request');
-        $this->tg->answerCallback($id, 'چت خصوصی باز شد');
+        $entry = max(0, $this->settings->getInt('private_room_entry_cost', 2));
+        $opened = $this->db->openPrivateRequestRoom($fromId, $tid, $entry);
+        if (!($opened['ok'] ?? false)) {
+            $err = (string)($opened['error'] ?? '');
+            if ($err === 'no_coins') {
+                $this->tg->answerCallback($id, 'سکه کافی نیست', true);
+                $this->db->updateContactRequest($reqId, ['status' => 'pending']);
+                $this->showNeedCoins($chatId, $user, $entry, 'ورود صفحه خصوصی');
+                try {
+                    $this->tg->sendMessage(
+                        $fromId,
+                        "درخواست پذیرفته شد ولی برای باز شدن صفحه خصوصی هر دو نفر باید {$entry} سکه داشته باشند."
+                    );
+                } catch (Throwable $e) {
+                }
+                return;
+            }
+            // fallback to classic 1:1 private chat
+            $this->db->openPrivateChat($fromId, $tid, 'request');
+            $this->tg->answerCallback($id, 'چت خصوصی باز شد');
+            $this->stripCallbackMenu($cq);
+            $me = $this->db->findUser($tid) ?? $user;
+            $them = $this->db->findUser($fromId);
+            foreach ([[$chatId, $me], [$fromId, $them]] as $pair) {
+                if (!$pair[1]) {
+                    continue;
+                }
+                $cid = (int)$pair[0];
+                $u = $pair[1];
+                $this->clearUi($cid, $u);
+                $this->uiText(
+                    $cid,
+                    $u,
+                    "✅ چت خصوصی فعال شد.\nهویت تلگرام مخفی است · محترمانه صحبت کنید.\nپایان چت = پاک شدن کامل تاریخچه.",
+                    ['reply_markup' => Keyboards::chattingInline()]
+                );
+                $this->uiText($cid, $u, 'پیام بفرست 👇', [
+                    'reply_markup' => Keyboards::chattingReply(),
+                ]);
+            }
+            return;
+        }
+        $room = $opened['room'];
+        $addCost = max(0, $this->settings->getInt('private_room_add_cost', 2));
+        $this->tg->answerCallback($id, 'صفحه اختصاصی باز شد');
         $this->stripCallbackMenu($cq);
         $me = $this->db->findUser($tid) ?? $user;
         $them = $this->db->findUser($fromId);
+        $code = htmlspecialchars((string)$room['code'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $body =
+            "✅ <b>صفحه چت اختصاصی</b> باز شد (−{$entry} سکه برای هر نفر).\n" .
+            "کد صفحه: <code>{$code}</code>\n" .
+            "می‌تونی تا ۴ نفر عضو کنی · افزودن هر نفر: {$addCost} سکه\n" .
+            "با آرامش چت کنید · بستن صفحه = پاک‌سازی کامل.";
         foreach ([[$chatId, $me], [$fromId, $them]] as $pair) {
             if (!$pair[1]) {
                 continue;
@@ -4107,12 +4365,9 @@ final class Handlers
             $cid = (int)$pair[0];
             $u = $pair[1];
             $this->clearUi($cid, $u);
-            $this->uiText(
-                $cid,
-                $u,
-                "✅ چت خصوصی فعال شد.\nهویت تلگرام مخفی است · محترمانه صحبت کنید.\nپایان چت = پاک شدن کامل تاریخچه.",
-                ['reply_markup' => Keyboards::chattingInline()]
-            );
+            $this->uiText($cid, $u, $body, [
+                'reply_markup' => Keyboards::roomActiveInline((string)$room['code'], true, $addCost),
+            ]);
             $this->uiText($cid, $u, 'پیام بفرست 👇', [
                 'reply_markup' => Keyboards::chattingReply(),
             ]);
@@ -4149,7 +4404,7 @@ final class Handlers
                 $userTid = (int)$res['telegram_id'];
                 $inv = $res['invoice'];
                 $type = (string)($res['type'] ?? 'coins');
-                $this->tg->answerCallback($id, 'تأیید شد');
+                $this->tg->answerCallback($id, 'تأیید پول انجام شد');
                 try {
                     if ($type === 'vip') {
                         $days = (int)($res['days'] ?? 30);
@@ -4162,7 +4417,7 @@ final class Handlers
                     } else {
                         $this->tg->sendMessage(
                             $userTid,
-                            "✅ پرداختت تأیید شد.\n" .
+                            "✅ <b>تأیید پول انجام شد</b>\n" .
                             "<b>+{$coins} سکه</b> به حسابت اضافه شد.\n" .
                             "شماره فاکتور: <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>'
                         );
@@ -4172,7 +4427,7 @@ final class Handlers
                 if ($type === 'vip') {
                     $this->tg->sendMessage($chatId, "فاکتور {$inv['invoice_no']} تأیید و استار کلاب فعال شد.");
                 } else {
-                    $this->tg->sendMessage($chatId, "فاکتور {$inv['invoice_no']} تأیید و {$coins} سکه شارژ شد.");
+                    $this->tg->sendMessage($chatId, "✅ تأیید پول انجام شد — فاکتور {$inv['invoice_no']} · {$coins} سکه شارژ شد.");
                 }
                 return;
             }
@@ -4182,28 +4437,30 @@ final class Handlers
                 return;
             }
             $inv = $res['invoice'];
-            $this->tg->answerCallback($id, 'رد شد');
+            $this->tg->answerCallback($id, 'تأیید پول انجام نشد');
             try {
                 $this->tg->sendMessage(
                     (int)$inv['telegram_id'],
-                    "❌ فیش فاکتور <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
+                    "❌ <b>تأیید پول انجام نشد</b>\nفیش فاکتور <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
                     "</code> رد شد.\nاگر مبلغ اشتباه واریز کردی، دوباره از کیف‌پول فاکتور جدید بگیر."
                 );
             } catch (Throwable $e) {
             }
-            $this->tg->sendMessage($chatId, "فاکتور {$inv['invoice_no']} رد شد.");
+            $this->tg->sendMessage($chatId, "فاکتور {$inv['invoice_no']} رد شد (تأیید پول انجام نشد).");
             return;
         }
 
         if (str_starts_with($data, 'pay:pack:')) {
-            $coins = (int)substr($data, strlen('pay:pack:'));
-            if (!in_array($coins, [100, 300, 1000], true)) {
+            require_once __DIR__ . '/CoinCatalog.php';
+            $packId = substr($data, strlen('pay:pack:'));
+            $pack = CoinCatalog::find($packId);
+            if (!$pack) {
                 $this->tg->answerCallback($id, 'بسته نامعتبر', true);
                 return;
             }
             $this->tg->answerCallback($id);
             $this->stripCallbackMenu($cq);
-            $this->createAndShowInvoice($chatId, $user, $coins);
+            $this->createAndShowInvoice($chatId, $user, $pack);
             return;
         }
 
@@ -4276,10 +4533,15 @@ final class Handlers
         if ($u && !empty($u['is_admin'])) {
             return true;
         }
-        return $this->db->hasValidAdminSession($tid);
+        if ($this->db->hasValidAdminSession($tid)) {
+            return true;
+        }
+        // Staff may only approve/deny receipts (no free coin grants)
+        return $this->db->isActiveSupportStaff($tid);
     }
 
-    private function createAndShowInvoice(int $chatId, array &$user, int $packCoins): void
+    /** @param array{id:string,coins:int,price_key:string,default_price:int,label:string} $pack */
+    private function createAndShowInvoice(int $chatId, array &$user, array $pack): void
     {
         $tid = (int)$user['telegram_id'];
         $card = preg_replace('/\D+/', '', $this->settings->get('pay_card_number')) ?? '';
@@ -4295,12 +4557,8 @@ final class Handlers
             );
             return;
         }
-        $base = $this->settings->getInt('pack_' . $packCoins . '_price', match ($packCoins) {
-            100 => 50000,
-            300 => 120000,
-            1000 => 350000,
-            default => 50000,
-        });
+        $packCoins = (int)$pack['coins'];
+        $base = $this->settings->getInt($pack['price_key'], (int)$pack['default_price']);
         $ttl = $this->settings->getInt('pay_invoice_minutes', 30);
         $this->db->expireOldInvoices();
         $inv = $this->db->createPaymentInvoice($tid, $packCoins, $base, $ttl);
@@ -4395,7 +4653,7 @@ final class Handlers
             $chatId,
             $user,
             "✅ فیش فاکتور <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
-            "</code> ثبت شد.\nبعد از بررسی ادمین، سکه خودکار به حسابت اضافه می‌شود.",
+            "</code> ثبت شد.\nبعد از تأیید کارمند/ادمین («تأیید پول انجام شد»)، سکه خودکار به حسابت اضافه می‌شود.",
             ['reply_markup' => Keyboards::walletInline(
                 $this->settings->getInt('invite_reward', 30),
                 $this->packPrices()
@@ -4416,27 +4674,46 @@ final class Handlers
             "مبلغ دقیق: <b>{$amt}</b> تومان\n" .
             "در اپ بانک همین مبلغ را پیدا کن → تأیید بزن.";
         $markup = Keyboards::payAdminReviewInline((int)$inv['id']);
-        $targets = [];
+
+        // Admin bot / admin IDs
+        $adminTargets = [];
         foreach (($this->config['admin_ids'] ?? []) as $aid) {
-            $targets[] = (int)$aid;
+            $adminTargets[] = (int)$aid;
         }
-        foreach ($this->db->listSupportStaff(true) as $row) {
-            // optional: only admins; skip support for money unless also admin
+        $rows = $this->db->pdo()->query("SELECT telegram_id FROM users WHERE is_admin = 1")->fetchAll() ?: [];
+        foreach ($rows as $r) {
+            $adminTargets[] = (int)$r['telegram_id'];
         }
-        $targets = array_values(array_unique(array_filter($targets)));
-        if (!$targets) {
-            // fallback: any user marked is_admin
-            $rows = $this->db->pdo()->query("SELECT telegram_id FROM users WHERE is_admin = 1")->fetchAll() ?: [];
-            foreach ($rows as $r) {
-                $targets[] = (int)$r['telegram_id'];
-            }
-        }
-        foreach ($targets as $aid) {
+        $adminTargets = array_values(array_unique(array_filter($adminTargets)));
+        $adminToken = (string)($this->config['admin_bot_token'] ?? '');
+        $adminTg = $adminToken !== '' ? new Telegram($adminToken) : $this->tg;
+        foreach ($adminTargets as $aid) {
             try {
-                $this->tg->sendPhotoFileId($aid, $fileId, $caption, $markup);
+                $adminTg->sendPhotoFileId($aid, $fileId, $caption, $markup);
             } catch (Throwable $e) {
                 try {
-                    $this->tg->sendMessage($aid, $caption, ['reply_markup' => $markup]);
+                    $adminTg->sendMessage($aid, $caption, ['reply_markup' => $markup]);
+                } catch (Throwable $e2) {
+                }
+            }
+        }
+
+        // Support staff via support bot
+        $supToken = (string)($this->config['support_bot_token'] ?? '');
+        if ($supToken === '') {
+            $supToken = $this->settings->get('support_bot_token', '');
+        }
+        $supTg = $supToken !== '' ? new Telegram($supToken) : $this->tg;
+        foreach ($this->db->listSupportStaff(true) as $row) {
+            $sid = (int)$row['telegram_id'];
+            if (in_array($sid, $adminTargets, true) && $supToken === '') {
+                continue;
+            }
+            try {
+                $supTg->sendPhotoFileId($sid, $fileId, $caption . "\n\n<i>کارمند: فقط تأیید/رد فیش (تعریف قیمت فقط ادمین)</i>", $markup);
+            } catch (Throwable $e) {
+                try {
+                    $supTg->sendMessage($sid, $caption, ['reply_markup' => $markup]);
                 } catch (Throwable $e2) {
                 }
             }
@@ -4521,7 +4798,19 @@ final class Handlers
             $this->tg->answerCallback($id, $ok ? ($accept ? 'دوست شدید' : 'رد شد') : 'درخواستی نبود', !$ok);
             if ($ok && $accept) {
                 try {
-                    $this->tg->sendMessage($other, 'درخواست دوستی‌ات قبول شد ✅');
+                    $this->tg->sendMessage(
+                        $other,
+                        "✅ درخواست دوستی‌ات قبول شد.\n" .
+                        "اگر آلبوم دوستان داشته باشد، روی کارتش «📸 آلبوم دوستان» را می‌بینی."
+                    );
+                } catch (Throwable $e) {
+                }
+                try {
+                    $this->tg->sendMessage(
+                        $tid,
+                        "دوست جدید اضافه شد ✅\n" .
+                        "اگر آلبوم دوستان داشته باشد، از کارت کاربر در جستجو می‌توانی ببینی."
+                    );
                 } catch (Throwable $e) {
                 }
             }
@@ -4668,8 +4957,10 @@ final class Handlers
             $this->tg->answerCallback($id);
             $this->stripCallbackMenu($cq);
             $this->clearUi($chatId, $user);
+            $isPrivate = (string)($room['room_kind'] ?? '') === 'private';
+            $addCost = max(0, $this->settings->getInt('private_room_add_cost', 2));
             $this->uiText($chatId, $user, implode("\n", $lines), [
-                'reply_markup' => Keyboards::roomActiveInline((string)$room['code']),
+                'reply_markup' => Keyboards::roomActiveInline((string)$room['code'], $isPrivate, $addCost),
             ]);
             return;
         }
@@ -4697,11 +4988,16 @@ final class Handlers
         $title = htmlspecialchars((string)$room['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $code = htmlspecialchars((string)$room['code'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $count = count($this->db->listRoomMembers((int)$room['id']));
+        $isPrivate = (string)($room['room_kind'] ?? '') === 'private';
+        $addCost = max(0, $this->settings->getInt('private_room_add_cost', 2));
+        $head = $isPrivate ? '🔒 صفحه اختصاصی' : '🏠 گپ فعال';
         $this->uiText(
             $chatId,
             $user,
-            "🏠 گپ فعال: <b>{$title}</b>\nکد: <code>{$code}</code>\nاعضا: {$count}\n\nپیام بفرست تا برای همه ارسال شود.\nبرای خروج: /leave",
-            ['reply_markup' => Keyboards::roomActiveInline((string)$room['code'])]
+            "{$head}: <b>{$title}</b>\nکد: <code>{$code}</code>\nاعضا: {$count}" .
+            ($isPrivate ? ' / حداکثر ۴' : '') .
+            "\n\nپیام بفرست تا برای همه ارسال شود.\nبرای خروج: /leave",
+            ['reply_markup' => Keyboards::roomActiveInline((string)$room['code'], $isPrivate, $addCost)]
         );
     }
 
@@ -4741,5 +5037,198 @@ final class Handlers
             } catch (Throwable $e) {
             }
         }
+    }
+
+    private function handleModeAndPrivateCallbacks(
+        array $cq,
+        array &$user,
+        string $id,
+        string $data,
+        int $chatId,
+        int $tid
+    ): void {
+        require_once __DIR__ . '/ChatModes.php';
+
+        if ($data === 'gps:share') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->db->updateUser($tid, ['flow' => 'gps:profile']);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->tg->sendMessage(
+                $chatId,
+                "📍 موقعیت فعلی‌ات را بفرست تا پروفایل کامل‌تر شود.\nاین موقعیت برای دیگران مخفی می‌ماند.",
+                ['reply_markup' => Keyboards::requestLocationInline()]
+            );
+            return;
+        }
+
+        if ($data === 'mode:normal' || $data === 'mode:hot' || $data === 'mode:vipclub') {
+            $mode = substr($data, strlen('mode:'));
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->showChatRules($chatId, $user, $mode);
+            return;
+        }
+
+        if (str_starts_with($data, 'mode:ok:')) {
+            $mode = substr($data, strlen('mode:ok:'));
+            if (!ChatModes::isValid($mode)) {
+                $this->tg->answerCallback($id, 'نامعتبر', true);
+                return;
+            }
+            $this->tg->answerCallback($id, 'قوانین پذیرفته شد');
+            $this->stripCallbackMenu($cq);
+            if ($mode === ChatModes::VIP
+                && ($user['gps_lat'] === null || $user['gps_lat'] === '' || $user['gps_lng'] === null || $user['gps_lng'] === '')
+            ) {
+                $this->askVipGps($chatId, $user);
+                return;
+            }
+            $this->showConnectPrefs($chatId, $user, $mode);
+            return;
+        }
+
+        if ($data === 'prv:add') {
+            if (($user['status'] ?? '') !== 'room' || empty($user['active_room_id'])) {
+                $this->tg->answerCallback($id, 'صفحه اختصاصی فعالی نداری', true);
+                return;
+            }
+            $room = $this->db->findFriendRoom((int)$user['active_room_id']);
+            if (!$room || (string)($room['room_kind'] ?? '') !== 'private') {
+                $this->tg->answerCallback($id, 'فقط در صفحه خصوصی', true);
+                return;
+            }
+            $addCost = max(0, $this->settings->getInt('private_room_add_cost', 2));
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->db->updateUser($tid, ['flow' => 'prv:add']);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->openTypeKeyboard(
+                $chatId,
+                $user,
+                "➕ افزودن نفر به صفحه (−{$addCost} سکه)\nکد عمومی کاربر را بفرست."
+            );
+            return;
+        }
+
+        $this->tg->answerCallback($id);
+    }
+
+    private function handleIncomingLocation(int $chatId, array &$user, array $loc): void
+    {
+        require_once __DIR__ . '/GeoCheck.php';
+        require_once __DIR__ . '/ChatModes.php';
+        $tid = (int)$user['telegram_id'];
+        $lat = (float)($loc['latitude'] ?? 0);
+        $lng = (float)($loc['longitude'] ?? 0);
+        if ($lat == 0.0 && $lng == 0.0) {
+            $this->tg->sendMessage($chatId, 'موقعیت معتبر دریافت نشد.');
+            return;
+        }
+        $flow = (string)($user['flow'] ?? '');
+        $city = (string)($user['city'] ?? '');
+        $check = GeoCheck::checkClaim($city, $lat, $lng);
+        $this->db->updateUser($tid, [
+            'gps_lat' => $lat,
+            'gps_lng' => $lng,
+            'gps_checked_at' => date('Y-m-d H:i:s'),
+            'flow' => null,
+        ]);
+        $user = $this->db->findUser($tid) ?? $user;
+        $this->tg->sendMessage($chatId, $check['message'], [
+            'reply_markup' => Keyboards::mainReply($this->settings->getInt('invite_reward', 30)),
+        ]);
+        $this->tryGrantProfileBonus($chatId, $user);
+
+        if ($flow === 'gps:vipclub' || str_starts_with($flow, 'gps:vip')) {
+            if (!$check['ok']) {
+                $this->uiText(
+                    $chatId,
+                    $user,
+                    "تا وقتی شهر پروفایل را درست نکنی، ورود به کلاب VIP ممکن نیست.\nاز تنظیمات پروفایل شهر را اصلاح کن.",
+                    ['reply_markup' => Keyboards::connectModeInline()]
+                );
+                return;
+            }
+            $this->showConnectPrefs($chatId, $user, ChatModes::VIP);
+            return;
+        }
+        if ($flow === 'gps:profile') {
+            $this->showProfile($chatId, $user);
+        }
+    }
+
+    private function finishPrivateAddMember(int $chatId, array &$user, string $codeOrQuery): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $this->db->updateUser($tid, ['flow' => null]);
+        $user = $this->db->findUser($tid) ?? $user;
+        $roomId = (int)($user['active_room_id'] ?? 0);
+        if ($roomId <= 0 || ($user['status'] ?? '') !== 'room') {
+            $this->uiText($chatId, $user, 'صفحه اختصاصی فعالی نداری.');
+            return;
+        }
+        $code = strtoupper(trim($codeOrQuery));
+        $target = $this->db->findByPublicCode($code);
+        if (!$target) {
+            // try display / id
+            if (ctype_digit($codeOrQuery)) {
+                $target = $this->db->findUser((int)$codeOrQuery);
+            }
+        }
+        if (!$target) {
+            $this->uiText($chatId, $user, 'کاربر پیدا نشد. کد عمومی معتبر بفرست.');
+            return;
+        }
+        $targetId = (int)$target['telegram_id'];
+        if ($targetId === $tid) {
+            $this->uiText($chatId, $user, 'نمی‌تونی خودت را اضافه کنی.');
+            return;
+        }
+        $addCost = max(0, $this->settings->getInt('private_room_add_cost', 2));
+        $res = $this->db->addMemberToPrivateRoom($roomId, $tid, $targetId, $addCost);
+        if (!($res['ok'] ?? false)) {
+            $err = (string)($res['error'] ?? '');
+            if ($err === 'no_coins') {
+                $this->showNeedCoins($chatId, $user, $addCost, 'افزودن نفر');
+                return;
+            }
+            $msg = match ($err) {
+                'full' => 'صفحه پر است (حداکثر ۴ نفر).',
+                'already' => 'این کاربر الان عضو صفحه است.',
+                'not_private' => 'این صفحه خصوصی نیست.',
+                default => 'افزودن ممکن نشد.',
+            };
+            $this->uiText($chatId, $user, $msg);
+            return;
+        }
+        $room = $res['room'];
+        $user = $this->db->findUser($tid) ?? $user;
+        $dn = htmlspecialchars((string)($target['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $this->uiText(
+            $chatId,
+            $user,
+            "✅ <b>{$dn}</b> به صفحه اضافه شد (−{$addCost} سکه).",
+            ['reply_markup' => Keyboards::roomActiveInline((string)$room['code'], true, $addCost)]
+        );
+        try {
+            $tu = $this->db->findUser($targetId);
+            if ($tu) {
+                $this->clearUi($targetId, $tu);
+                $this->uiText(
+                    $targetId,
+                    $tu,
+                    "📩 به یک <b>صفحه چت اختصاصی</b> دعوت و اضافه شدی.\nپیام بفرست 👇",
+                    ['reply_markup' => Keyboards::roomActiveInline((string)$room['code'], true, $addCost)]
+                );
+                $this->uiText($targetId, $tu, 'چت گروهی خصوصی', [
+                    'reply_markup' => Keyboards::chattingReply(),
+                ]);
+            }
+        } catch (Throwable $e) {
+        }
+        $this->maybeWarnLowCoins($chatId, $user);
     }
 }

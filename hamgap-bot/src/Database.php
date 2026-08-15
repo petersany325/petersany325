@@ -694,22 +694,127 @@ final class Database
         return $row ?: null;
     }
 
-    public function createFriendRoom(int $ownerId, string $title): array
+    public function createFriendRoom(int $ownerId, string $title, int $maxMembers = 50, string $kind = 'friends'): array
     {
         $code = $this->generateRoomCode();
         $title = mb_substr(trim($title), 0, 64);
         if ($title === '') {
             $title = 'گپ دوستان';
         }
+        $maxMembers = max(2, min(50, $maxMembers));
+        $kind = preg_replace('/[^a-z]/', '', strtolower($kind)) ?: 'friends';
         $this->pdo->prepare(
-            'INSERT INTO friend_rooms (code, owner_id, title, is_open, max_members) VALUES (?, ?, ?, 1, 50)'
-        )->execute([$code, $ownerId, $title]);
+            'INSERT INTO friend_rooms (code, owner_id, title, is_open, max_members, room_kind) VALUES (?, ?, ?, 1, ?, ?)'
+        )->execute([$code, $ownerId, $title, $maxMembers, $kind]);
         $roomId = (int)$this->pdo->lastInsertId();
         $this->pdo->prepare(
             "INSERT INTO friend_room_members (room_id, telegram_id, role) VALUES (?, ?, 'owner')"
         )->execute([$roomId, $ownerId]);
-        $this->updateUser($ownerId, ['active_room_id' => $roomId, 'status' => 'room']);
-        return $this->findFriendRoom($roomId) ?? ['id' => $roomId, 'code' => $code, 'title' => $title];
+        $this->updateUser($ownerId, ['active_room_id' => $roomId, 'status' => 'room', 'partner_id' => null, 'search_pref' => null, 'chat_mode' => null]);
+        return $this->findFriendRoom($roomId) ?? ['id' => $roomId, 'code' => $code, 'title' => $title, 'room_kind' => $kind];
+    }
+
+    /**
+     * Dedicated private page after chat-request accept (2–4 people).
+     * @return array{ok:bool,room?:array,error?:string}
+     */
+    public function openPrivateRequestRoom(int $a, int $b, int $entryCost = 2): array
+    {
+        $entryCost = max(0, $entryCost);
+        $ua = $this->findUser($a);
+        $ub = $this->findUser($b);
+        if (!$ua || !$ub) {
+            return ['ok' => false, 'error' => 'missing'];
+        }
+        if ($entryCost > 0) {
+            if ((int)$ua['coins'] < $entryCost || (int)$ub['coins'] < $entryCost) {
+                return ['ok' => false, 'error' => 'no_coins'];
+            }
+        }
+        $this->wipeUserChats($a);
+        $this->wipeUserChats($b);
+        if (!empty($ua['active_room_id'])) {
+            $this->leaveFriendRoom($a);
+        }
+        if (!empty($ub['active_room_id'])) {
+            $this->leaveFriendRoom($b);
+        }
+        if ($entryCost > 0) {
+            if (!$this->spendCoins($a, $entryCost, 'private_room_entry', (string)$b)) {
+                return ['ok' => false, 'error' => 'no_coins'];
+            }
+            if (!$this->spendCoins($b, $entryCost, 'private_room_entry', (string)$a)) {
+                $this->addCoins($a, $entryCost, 'private_room_entry_refund', 'peer_fail');
+                return ['ok' => false, 'error' => 'no_coins'];
+            }
+        }
+        $dnA = (string)($ua['display_name'] ?? 'کاربر');
+        $dnB = (string)($ub['display_name'] ?? 'کاربر');
+        $title = 'چت خصوصی ' . mb_substr($dnA, 0, 12) . ' · ' . mb_substr($dnB, 0, 12);
+        $room = $this->createFriendRoom($a, $title, 4, 'private');
+        $roomId = (int)$room['id'];
+        $this->pdo->prepare(
+            "INSERT IGNORE INTO friend_room_members (room_id, telegram_id, role) VALUES (?, ?, 'member')"
+        )->execute([$roomId, $b]);
+        $this->updateUser($b, ['active_room_id' => $roomId, 'status' => 'room', 'partner_id' => null, 'flow' => null]);
+        return ['ok' => true, 'room' => $this->findFriendRoom($roomId) ?? $room];
+    }
+
+    public function addMemberToPrivateRoom(int $roomId, int $inviterId, int $targetId, int $addCost = 2): array
+    {
+        $room = $this->findFriendRoom($roomId);
+        if (!$room || (string)($room['room_kind'] ?? '') !== 'private') {
+            return ['ok' => false, 'error' => 'not_private'];
+        }
+        $members = $this->listRoomMembers($roomId);
+        if (count($members) >= (int)$room['max_members']) {
+            return ['ok' => false, 'error' => 'full'];
+        }
+        foreach ($members as $m) {
+            if ((int)$m['telegram_id'] === $targetId) {
+                return ['ok' => false, 'error' => 'already'];
+            }
+        }
+        $isMember = false;
+        foreach ($members as $m) {
+            if ((int)$m['telegram_id'] === $inviterId) {
+                $isMember = true;
+                break;
+            }
+        }
+        if (!$isMember) {
+            return ['ok' => false, 'error' => 'not_member'];
+        }
+        $addCost = max(0, $addCost);
+        if ($addCost > 0 && !$this->spendCoins($inviterId, $addCost, 'private_room_add', (string)$targetId)) {
+            return ['ok' => false, 'error' => 'no_coins'];
+        }
+        $target = $this->findUser($targetId);
+        if (!$target || ($target['status'] ?? '') === 'banned') {
+            if ($addCost > 0) {
+                $this->addCoins($inviterId, $addCost, 'private_room_add_refund', 'bad_target');
+            }
+            return ['ok' => false, 'error' => 'bad_target'];
+        }
+        // Leave previous room / chat
+        if (($target['status'] ?? '') === 'room' && !empty($target['active_room_id'])) {
+            $this->leaveFriendRoom($targetId);
+        }
+        if (($target['status'] ?? '') === 'chatting') {
+            $this->wipeUserChats($targetId);
+        }
+        $this->pdo->prepare(
+            "INSERT IGNORE INTO friend_room_members (room_id, telegram_id, role) VALUES (?, ?, 'member')"
+        )->execute([$roomId, $targetId]);
+        $this->updateUser($targetId, [
+            'active_room_id' => $roomId,
+            'status' => 'room',
+            'partner_id' => null,
+            'search_pref' => null,
+            'chat_mode' => null,
+            'flow' => null,
+        ]);
+        return ['ok' => true, 'room' => $room];
     }
 
     public function generateRoomCode(): string

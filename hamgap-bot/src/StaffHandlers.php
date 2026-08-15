@@ -4,7 +4,8 @@ declare(strict_types=1);
 /**
  * Support-staff moderation panel (password-gated) on the support bot.
  * Scope: search, ban/unban, rename, DM/chat, open tickets, change own password.
- * Not included: economy settings, hard-delete, payments, staff admin CRUD.
+ * Receipt approve/deny is handled by SupportHandlers (payadm) — staff cannot set prices.
+ * Not included: economy price settings, hard-delete, staff admin CRUD.
  */
 final class StaffHandlers
 {

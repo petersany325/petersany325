@@ -726,16 +726,17 @@ final class Keyboards
 
     public static function walletInline(int $inviteReward = 30, array $packPrices = []): array
     {
-        $p100 = self::formatToman((int)($packPrices[100] ?? 50000));
-        $p300 = self::formatToman((int)($packPrices[300] ?? 120000));
-        $p1000 = self::formatToman((int)($packPrices[1000] ?? 350000));
-        return ['inline_keyboard' => [
+        $rows = [
             [['text' => "دعوت دوست · +{$inviteReward} سکه", 'callback_data' => 'menu:invite']],
-            [['text' => "۱۰۰ سکه — {$p100} تومان", 'callback_data' => 'pay:pack:100']],
-            [['text' => "۳۰۰ سکه — {$p300} تومان", 'callback_data' => 'pay:pack:300']],
-            [['text' => "۱۰۰۰ سکه — {$p1000} تومان", 'callback_data' => 'pay:pack:1000']],
-            [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
-        ]];
+        ];
+        foreach (CoinCatalog::packs() as $p) {
+            $price = (int)($packPrices[$p['id']] ?? $p['default_price']);
+            $fmt = self::formatToman($price);
+            $extra = !empty($p['badge']) ? " ({$p['badge']})" : '';
+            $rows[] = [['text' => "{$p['label']}{$extra} — {$fmt} تومان", 'callback_data' => 'pay:pack:' . $p['id']]];
+        }
+        $rows[] = [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']];
+        return ['inline_keyboard' => $rows];
     }
 
     public static function formatToman(int $amount): string
@@ -743,24 +744,48 @@ final class Keyboards
         return number_format($amount, 0, '', '٬');
     }
 
-    public static function connectInline(array $costs = []): array
+    public static function connectModeInline(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '💬 چت معمولی', 'callback_data' => 'mode:normal']],
+            [['text' => '🔥 چت هات', 'callback_data' => 'mode:hot']],
+            [['text' => '⭐ کلاب VIP', 'callback_data' => 'mode:vipclub']],
+            [['text' => 'بازگشت', 'callback_data' => 'menu:main']],
+        ]];
+    }
+
+    public static function chatRulesInline(string $mode): array
+    {
+        $mode = preg_replace('/[^a-z]/', '', $mode) ?? 'normal';
+        return ['inline_keyboard' => [
+            [['text' => '✅ قوانین را خواندم — ورود', 'callback_data' => 'mode:ok:' . $mode]],
+            [['text' => 'انصراف', 'callback_data' => 'menu:connect']],
+        ]];
+    }
+
+    public static function connectInline(array $costs = [], string $mode = 'normal'): array
     {
         $any = (int)($costs['any'] ?? 0);
         $gender = (int)($costs['gender'] ?? 0);
         $prov = (int)($costs['province'] ?? 0);
         $age = (int)($costs['age'] ?? 0);
+        $mode = preg_replace('/[^a-z]/', '', $mode) ?: 'normal';
         $lab = static function (string $title, int $cost): string {
             return $cost > 0 ? "{$title} · {$cost}🪙" : "{$title} · رایگان";
         };
+        $p = static function (string $pref) use ($mode): string {
+            return 'chat:' . $mode . ':' . $pref;
+        };
         return ['inline_keyboard' => [
-            [['text' => $lab('🎲 چت شانسی', $any), 'callback_data' => 'chat:any']],
+            [['text' => $lab('🎲 چت شانسی', $any), 'callback_data' => $p('any')]],
             [
-                ['text' => $lab('👩 فقط دختر', $gender), 'callback_data' => 'chat:female'],
-                ['text' => $lab('👨 فقط پسر', $gender), 'callback_data' => 'chat:male'],
+                ['text' => $lab('👩 فقط دختر', $gender), 'callback_data' => $p('female')],
+                ['text' => $lab('👨 فقط پسر', $gender), 'callback_data' => $p('male')],
             ],
-            [['text' => $lab('🌈 فقط شیمیل / دوجنسه', $gender), 'callback_data' => 'chat:shemale']],
-            [['text' => $lab('🏙 هم‌استان', $prov), 'callback_data' => 'chat:province']],
-            [['text' => $lab('🎂 هم‌سن', $age), 'callback_data' => 'chat:age']],
+            [['text' => $lab('🌈 فقط شیمیل / دوجنسه', $gender), 'callback_data' => $p('shemale')]],
+            [['text' => $lab('🏙 هم‌استان', $prov), 'callback_data' => $p('province')]],
+            [['text' => $lab('🎂 هم‌سن', $age), 'callback_data' => $p('age')]],
+            [['text' => 'تغییر نوع چت', 'callback_data' => 'menu:connect']],
             [['text' => 'بازگشت', 'callback_data' => 'menu:main']],
         ]];
     }
@@ -781,28 +806,27 @@ final class Keyboards
         $id = (string)$invoiceId;
         return ['inline_keyboard' => [
             [
-                ['text' => '✅ تأیید و شارژ سکه', 'callback_data' => 'payadm:ok:' . $id],
-                ['text' => '❌ رد فیش', 'callback_data' => 'payadm:no:' . $id],
+                ['text' => '✅ تأیید پول انجام شد — شارژ سکه', 'callback_data' => 'payadm:ok:' . $id],
+                ['text' => '❌ تأیید پول انجام نشد', 'callback_data' => 'payadm:no:' . $id],
             ],
         ]];
     }
 
     public static function adminPayHome(): array
     {
-        return ['inline_keyboard' => [
+        $rows = [
             [['text' => 'شماره کارت', 'callback_data' => 'adm:set:pay_card_number']],
             [['text' => 'نام صاحب حساب', 'callback_data' => 'adm:set:pay_card_holder']],
             [['text' => 'نام بانک', 'callback_data' => 'adm:set:pay_bank_name']],
             [['text' => 'کانال رضایت (اختیاری)', 'callback_data' => 'adm:set:pay_trust_channel']],
             [['text' => 'اعتبار فاکتور (دقیقه)', 'callback_data' => 'adm:set:pay_invoice_minutes']],
-            [
-                ['text' => 'قیمت ۱۰۰ سکه', 'callback_data' => 'adm:set:pack_100_price'],
-                ['text' => 'قیمت ۳۰۰', 'callback_data' => 'adm:set:pack_300_price'],
-            ],
-            [['text' => 'قیمت ۱۰۰۰ سکه', 'callback_data' => 'adm:set:pack_1000_price']],
-            [['text' => '📥 فیش‌های در انتظار', 'callback_data' => 'adm:pay:pending']],
-            [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
-        ]];
+        ];
+        foreach (CoinCatalog::packs() as $p) {
+            $rows[] = [['text' => 'قیمت ' . $p['label'], 'callback_data' => 'adm:set:' . $p['price_key']]];
+        }
+        $rows[] = [['text' => '📥 فیش‌های در انتظار', 'callback_data' => 'adm:pay:pending']];
+        $rows[] = [['text' => 'بازگشت', 'callback_data' => 'adm:home']];
+        return ['inline_keyboard' => $rows];
     }
 
     public static function supportInline(?string $supportUsername): array
@@ -894,14 +918,44 @@ final class Keyboards
         ]];
     }
 
-    public static function roomActiveInline(string $code): array
+    public static function roomActiveInline(string $code, bool $isPrivate = false, int $addCost = 2): array
     {
         $code = preg_replace('/[^A-Za-z0-9]/', '', $code) ?? '';
+        $rows = [];
+        if ($isPrivate) {
+            $rows[] = [['text' => "➕ افزودن نفر (−{$addCost} سکه)", 'callback_data' => 'prv:add']];
+            $rows[] = [['text' => '👥 اعضای صفحه', 'callback_data' => 'fr:members']];
+            $rows[] = [['text' => '🚪 ترک صفحه اختصاصی', 'callback_data' => 'fr:leave']];
+            $rows[] = [['text' => '🗑 بستن صفحه', 'callback_data' => 'fr:close']];
+        } else {
+            $rows[] = [['text' => '👥 اعضای گپ', 'callback_data' => 'fr:members']];
+            $rows[] = [['text' => '🗑 بستن و پاک‌سازی کامل', 'callback_data' => 'fr:close']];
+            $rows[] = [['text' => '🚪 ترک گپ', 'callback_data' => 'fr:leave']];
+            $rows[] = [['text' => 'منوی دوستان', 'callback_data' => 'menu:friends']];
+        }
+        $rows[] = [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']];
+        return ['inline_keyboard' => $rows];
+    }
+
+    public static function requestLocationInline(): array
+    {
+        return [
+            'keyboard' => [
+                [['text' => '📍 ارسال موقعیت مکانی', 'request_location' => true]],
+                [['text' => '📂 منوی هم‌گپ']],
+            ],
+            'resize_keyboard' => true,
+            'one_time_keyboard' => true,
+        ];
+    }
+
+    public static function profileNudgeInline(): array
+    {
         return ['inline_keyboard' => [
-            [['text' => '👥 اعضای گپ', 'callback_data' => 'fr:members']],
-            [['text' => '🗑 بستن و پاک‌سازی کامل', 'callback_data' => 'fr:close']],
-            [['text' => '🚪 ترک گپ', 'callback_data' => 'fr:leave']],
-            [['text' => 'منوی دوستان', 'callback_data' => 'menu:friends']],
+            [['text' => '👤 تکمیل پروفایل', 'callback_data' => 'menu:profile']],
+            [['text' => '🖼 افزودن عکس', 'callback_data' => 'edit:avatar']],
+            [['text' => '📍 تأیید موقعیت GPS', 'callback_data' => 'gps:share']],
+            [['text' => 'بعداً', 'callback_data' => 'menu:main']],
         ]];
     }
 
@@ -1036,6 +1090,14 @@ final class Keyboards
             [['text' => 'هزینه فیلتر جنسیت', 'callback_data' => 'adm:set:connect_gender_cost']],
             [['text' => 'هزینه هم‌استان', 'callback_data' => 'adm:set:connect_province_cost']],
             [['text' => 'هزینه هم‌سن', 'callback_data' => 'adm:set:connect_age_cost']],
+            [['text' => 'هشدار کمبود سکه (آستانه)', 'callback_data' => 'adm:set:low_coin_warn']],
+            [['text' => 'بونوس تکمیل پروفایل', 'callback_data' => 'adm:set:profile_complete_bonus']],
+            [['text' => 'ورود صفحه چت خصوصی', 'callback_data' => 'adm:set:private_room_entry_cost']],
+            [['text' => 'افزودن نفر به صفحه خصوصی', 'callback_data' => 'adm:set:private_room_add_cost']],
+            [['text' => 'کلمات ممنوع VIP (با ویرگول)', 'callback_data' => 'adm:set:vip_bad_words']],
+            [['text' => 'متن قوانین چت معمولی', 'callback_data' => 'adm:set:rules_normal']],
+            [['text' => 'متن قوانین چت هات', 'callback_data' => 'adm:set:rules_hot']],
+            [['text' => 'متن قوانین کلاب VIP', 'callback_data' => 'adm:set:rules_vipclub']],
             [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
         ]];
     }

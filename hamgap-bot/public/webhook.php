@@ -20,6 +20,10 @@ require __DIR__ . '/src/Gender.php';
 require __DIR__ . '/src/Occupation.php';
 require __DIR__ . '/src/Keyboards.php';
 require __DIR__ . '/src/Matcher.php';
+require __DIR__ . '/src/CoinCatalog.php';
+require __DIR__ . '/src/ChatModes.php';
+require __DIR__ . '/src/GeoCheck.php';
+require __DIR__ . '/src/VipFilter.php';
 require __DIR__ . '/src/Handlers.php';
 
 if (function_exists('opcache_invalidate')) {
@@ -34,6 +38,10 @@ if (function_exists('opcache_invalidate')) {
         __DIR__ . '/src/Occupation.php',
         __DIR__ . '/src/Keyboards.php',
         __DIR__ . '/src/Matcher.php',
+        __DIR__ . '/src/CoinCatalog.php',
+        __DIR__ . '/src/ChatModes.php',
+        __DIR__ . '/src/GeoCheck.php',
+        __DIR__ . '/src/VipFilter.php',
         __DIR__ . '/src/Handlers.php',
         __FILE__,
     ] as $f) {

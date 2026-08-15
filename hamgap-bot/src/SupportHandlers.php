@@ -83,6 +83,12 @@ final class SupportHandlers
             return;
         }
 
+        // Receipt approve / deny (staff may confirm payment → coins auto-added)
+        if (str_starts_with($data, 'payadm:')) {
+            $this->handlePayReview($id, $chatId, $tid, $data);
+            return;
+        }
+
         if (str_starts_with($data, 'sup:take:')) {
             $ticketId = (int)substr($data, strlen('sup:take:'));
             $this->acceptTicket($id, $chatId, $msgId, $tid, $ticketId);
@@ -410,6 +416,71 @@ final class SupportHandlers
         }
 
         return $sent;
+    }
+
+    private function handlePayReview(string $callbackId, int $chatId, int $tid, string $data): void
+    {
+        require_once __DIR__ . '/Keyboards.php';
+        $ok = str_starts_with($data, 'payadm:ok:');
+        $invId = (int)substr($data, strlen($ok ? 'payadm:ok:' : 'payadm:no:'));
+        $mainToken = (string)($this->config['bot_token'] ?? '');
+        $mainTg = $mainToken !== '' ? new Telegram($mainToken) : $this->tg;
+        if ($ok) {
+            $res = $this->db->approvePaymentInvoice($invId, $tid);
+            if (!($res['ok'] ?? false)) {
+                $msg = match ((string)($res['error'] ?? '')) {
+                    'already' => 'قبلاً تأیید شده',
+                    'closed' => 'این فاکتور بسته است',
+                    default => 'فاکتور پیدا نشد',
+                };
+                $this->tg->answerCallback($callbackId, $msg, true);
+                return;
+            }
+            $coins = (int)$res['coins'];
+            $inv = $res['invoice'];
+            $type = (string)($res['type'] ?? 'coins');
+            $this->tg->answerCallback($callbackId, 'تأیید پول انجام شد');
+            try {
+                if ($type === 'vip') {
+                    $days = (int)($res['days'] ?? 30);
+                    $mainTg->sendMessage(
+                        (int)$res['telegram_id'],
+                        "✅ پرداخت استار کلاب تأیید شد.\nعضویت <b>{$days} روزه</b> فعال شد ⭐"
+                    );
+                } else {
+                    $mainTg->sendMessage(
+                        (int)$res['telegram_id'],
+                        "✅ <b>تأیید پول انجام شد</b>\n<b>+{$coins} سکه</b> به حسابت اضافه شد.\nفاکتور: <code>" .
+                        htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>'
+                    );
+                }
+            } catch (Throwable $e) {
+            }
+            $this->tg->sendMessage(
+                $chatId,
+                $type === 'vip'
+                    ? "✅ فاکتور {$inv['invoice_no']} تأیید و استار کلاب فعال شد."
+                    : "✅ تأیید پول انجام شد — فاکتور {$inv['invoice_no']} · {$coins} سکه شارژ شد."
+            );
+            return;
+        }
+        $res = $this->db->rejectPaymentInvoice($invId, $tid);
+        if (!($res['ok'] ?? false)) {
+            $this->tg->answerCallback($callbackId, 'رد نشد', true);
+            return;
+        }
+        $inv = $res['invoice'];
+        $this->tg->answerCallback($callbackId, 'تأیید پول انجام نشد');
+        try {
+            $mainTg->sendMessage(
+                (int)$inv['telegram_id'],
+                "❌ <b>تأیید پول انجام نشد</b>\nفاکتور <code>" .
+                htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
+                "</code> رد شد.\nاگر مبلغ اشتباه واریز کردی، دوباره از کیف‌پول فاکتور بگیر."
+            );
+        } catch (Throwable $e) {
+        }
+        $this->tg->sendMessage($chatId, "فاکتور {$inv['invoice_no']} رد شد (تأیید پول انجام نشد).");
     }
 
     private function deliverToCustomer(int $userTid, string $html): bool
