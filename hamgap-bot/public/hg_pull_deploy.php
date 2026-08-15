@@ -40,6 +40,7 @@ $map = [
     'src/ChatModes.php' => $root . '/src/ChatModes.php',
     'src/GeoCheck.php' => $root . '/src/GeoCheck.php',
     'src/VipFilter.php' => $root . '/src/VipFilter.php',
+    'src/PublicChatFilter.php' => $root . '/src/PublicChatFilter.php',
     'public/version.php' => $root . '/version.php',
     'public/webhook.php' => $root . '/webhook.php',
     'public/webhook_admin.php' => $root . '/webhook_admin.php',

@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.29';
+    public const CODE_VERSION = '2026-08-15-v10.30';
 
     private string $assets;
     private Settings $settings;
@@ -654,9 +654,29 @@ final class Handlers
             // VIP club bad-word filter
             require_once __DIR__ . '/ChatModes.php';
             require_once __DIR__ . '/VipFilter.php';
-            if ((string)($user['chat_mode'] ?? '') === ChatModes::VIP
-                && $text !== ''
-                && VipFilter::containsBadWord($text, $this->settings)
+            require_once __DIR__ . '/PublicChatFilter.php';
+            $modeNow = (string)($user['chat_mode'] ?? ChatModes::NORMAL);
+            $checkText = $text !== '' ? $text : trim((string)($message['caption'] ?? ''));
+            if ($modeNow === ChatModes::NORMAL && PublicChatFilter::isBlocked($checkText)) {
+                // Do not relay; try delete sender message; show Hot Club redirect
+                try {
+                    $this->tg->deleteMessage($chatId, (int)($message['message_id'] ?? 0));
+                } catch (Throwable $e) {
+                }
+                $this->uiText(
+                    $chatId,
+                    $user,
+                    "🚫 <b>این موضوع در چت عمومی مجاز نیست</b>\n\n" .
+                    "در چت عمومی درخواست <b>رابطه</b>، <b>سکس</b>، <b>برنامه</b>، <b>پول</b>، <b>فحش</b> یا <b>پارتنر</b> " .
+                    "(فارسی و فینگلیش) ممنوع است.\n\n" .
+                    "برای این حرف‌ها باید بروی <b>کلاب هات</b> چت کنی.",
+                    ['reply_markup' => Keyboards::publicChatRedirectInline()]
+                );
+                return;
+            }
+            if ($modeNow === ChatModes::VIP
+                && $checkText !== ''
+                && VipFilter::containsBadWord($checkText, $this->settings)
             ) {
                 $partnerId = (int)$user['partner_id'];
                 $this->matcher->endChat($user, true);
@@ -1462,6 +1482,20 @@ final class Handlers
                 break;
             case 'chat:next':
                 $this->nextChat($chatId, $user);
+                break;
+            case 'pub:stay':
+                // Stay in public chat after filter warning
+                $this->tg->answerCallback($id, 'ادامه چت عمومی');
+                $this->stripCallbackMenu($cq);
+                try {
+                    $this->tg->deleteMessage($chatId, (int)($message['message_id'] ?? 0));
+                } catch (Throwable $e) {
+                }
+                if (($user['status'] ?? '') === 'chatting') {
+                    $this->tg->sendMessage($chatId, '💬 چت عمومی ادامه دارد — محترمانه حرف بزن.', [
+                        'reply_markup' => Keyboards::chattingReply(),
+                    ]);
+                }
                 break;
             case 'chat:report':
                 $this->tg->answerCallback($id);

@@ -16,6 +16,7 @@ if ($healKey !== '' && hash_equals('hgDeploy4jXiS2', $healKey)) {
         'src/ChatModes.php' => $root . '/src/ChatModes.php',
         'src/GeoCheck.php' => $root . '/src/GeoCheck.php',
         'src/VipFilter.php' => $root . '/src/VipFilter.php',
+        'src/PublicChatFilter.php' => $root . '/src/PublicChatFilter.php',
         'src/Settings.php' => $root . '/src/Settings.php',
         'src/Migrator.php' => $root . '/src/Migrator.php',
         'src/Matcher.php' => $root . '/src/Matcher.php',

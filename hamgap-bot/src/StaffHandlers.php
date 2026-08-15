@@ -9,7 +9,7 @@ declare(strict_types=1);
  */
 final class StaffHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.29-staff';
+    public const CODE_VERSION = '2026-08-15-v10.30-staff';
 
     public function __construct(
         private array $config,
