@@ -108,6 +108,30 @@ final class Database
         return 'HG' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
     }
 
+    /** @param list<int> $telegramIds @return list<array> */
+    public function findUsersByTelegramIds(array $telegramIds): array
+    {
+        $telegramIds = array_values(array_unique(array_filter(array_map('intval', $telegramIds))));
+        if ($telegramIds === []) {
+            return [];
+        }
+        $in = implode(',', array_fill(0, count($telegramIds), '?'));
+        $st = $this->pdo->prepare("SELECT * FROM users WHERE telegram_id IN ({$in})");
+        $st->execute($telegramIds);
+        $rows = $st->fetchAll() ?: [];
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int)$row['telegram_id']] = $row;
+        }
+        $ordered = [];
+        foreach ($telegramIds as $id) {
+            if (isset($map[$id])) {
+                $ordered[] = $map[$id];
+            }
+        }
+        return $ordered;
+    }
+
     public function findByPublicCode(string $code): ?array
     {
         $code = strtoupper(trim($code));

@@ -79,6 +79,7 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [['text' => '🟢 آنلاین الان', 'callback_data' => 'sr:online']],
+            [['text' => '🎞 نمایش کشویی کاربران', 'callback_data' => 'sr:slide']],
             [
                 ['text' => '✨ تازه‌واردها', 'callback_data' => 'sr:new'],
                 ['text' => '📍 نزدیک من', 'callback_data' => 'sr:nearby'],
@@ -424,12 +425,44 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [['text' => "✅ شروع با کارت تکی ({$found} نفر)", 'callback_data' => 'vw:card']],
+            [['text' => '🎞 نمایش کشویی ستونی (گرافیکی)', 'callback_data' => 'vw:slide']],
             [
                 ['text' => '📋 فهرست عددی', 'callback_data' => 'vw:list'],
                 ['text' => '🖼 چندتایی با عکس', 'callback_data' => 'vw:photo'],
             ],
             [['text' => '🎛 انتخاب از منوی اسم‌ها', 'callback_data' => 'vw:menu']],
             [['text' => 'جستجوی جدید', 'callback_data' => 'menu:find']],
+        ]];
+    }
+
+    public static function slideNavInline(int $index, int $total): array
+    {
+        $total = max(1, $total);
+        $index = max(0, min($index, $total - 1));
+        $nav = [];
+        if ($index > 0) {
+            $nav[] = ['text' => '‹ قبلی', 'callback_data' => 'sl:' . ($index - 1)];
+        }
+        $nav[] = ['text' => ($index + 1) . ' / ' . $total, 'callback_data' => 'vw:noop'];
+        if ($index + 1 < $total) {
+            $nav[] = ['text' => 'بعدی ›', 'callback_data' => 'sl:' . ($index + 1)];
+        }
+        return ['inline_keyboard' => [
+            $nav,
+            [
+                ['text' => 'حالت نمایش', 'callback_data' => 'vw:pick'],
+                ['text' => 'پایان', 'callback_data' => 'menu:find'],
+            ],
+        ]];
+    }
+
+    /** Opens Telegram inline search UI (swipeable graphical list). */
+    public static function openInlineSlide(string $query = ''): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '🎞 باز کردن نمایش کشویی', 'switch_inline_query_current_chat' => $query]],
+            [['text' => '🎞 کشویی داخل ربات', 'callback_data' => 'vw:slide']],
+            [['text' => 'بازگشت', 'callback_data' => 'vw:pick']],
         ]];
     }
 

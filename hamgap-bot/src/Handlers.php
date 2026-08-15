@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.9';
+    public const CODE_VERSION = '2026-08-15-v10.10';
 
     private string $assets;
     private Settings $settings;
@@ -25,6 +25,10 @@ final class Handlers
 
     public function handle(array $update): void
     {
+        if (isset($update['inline_query'])) {
+            $this->onInlineQuery($update['inline_query']);
+            return;
+        }
         if (isset($update['callback_query'])) {
             $this->onCallback($update['callback_query']);
             return;
@@ -909,7 +913,7 @@ final class Handlers
                 return;
             }
             $mode = substr($data, 3);
-            if (!in_array($mode, ['card', 'list', 'photo', 'menu'], true)) {
+            if (!in_array($mode, ['card', 'list', 'photo', 'menu', 'slide'], true)) {
                 $this->tg->answerCallback($id, 'نامعتبر', true);
                 return;
             }
@@ -920,9 +924,21 @@ final class Handlers
             $this->clearUi($chatId, $user);
             if ($mode === 'card') {
                 $this->showNextBrowseCard($chatId, $user);
+            } elseif ($mode === 'slide') {
+                $this->openSlideMode($chatId, $user);
             } else {
                 $this->renderBrowseBatch($chatId, $user, 0);
             }
+            return;
+        }
+        if (str_starts_with($data, 'sl:')) {
+            $idx = (int)substr($data, strlen('sl:'));
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->db->updateUser($tid, ['browse_view' => 'slide', 'browse_cursor' => $idx]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->renderSlideCard($chatId, $user, $idx);
             return;
         }
         if (str_starts_with($data, 'bl:p:')) {
@@ -1321,9 +1337,9 @@ final class Handlers
         $caption =
             "ℹ️ <b>راهنمای {$name}</b>\n\n" .
             "💬 چت ناشناس — اتصال رندوم رایگان\n" .
-            "🔍 جستجو — نزدیک‌ترین‌ها + کارت/فهرست/عکس/منو\n" .
+            "🔍 جستجو — کارت · کشویی ستونی · فهرست · عکس\n" .
             "👤 پروفایل — عکس، نام، بیو، لایک، حریم خصوصی\n" .
-            "📩 چت خصوصی — درخواست با تأیید / رزرو · پایان = پاک شدن تاریخچه\n" .
+            "📩 چت خصوصی — درخواست با تأیید · اگر طرف مقابل مشغول بود می‌تونی خبر پایان چت بگیری\n" .
             "✉️ پیام بدون درخواست — هر پیام {$msgCost} سکه · درخواست {$reqCost} سکه\n" .
             "👥 گپ دوستان — ساخت/ورود با سکه · بستن = پاک‌سازی کامل\n" .
             "🚩 گزارش تخلف — با ۱۰ گزارش (قابل تنظیم در ادمین) خودکار مسدود؛ فعال‌سازی با پشتیبانی\n" .
@@ -1883,6 +1899,26 @@ final class Handlers
             $this->beginBrowse($chatId, $user, $filters);
             return;
         }
+        if ($data === 'sr:slide') {
+            $this->tg->answerCallback($id, 'نمایش کشویی');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            // Seed cache with online users then open slide / inline
+            $rows = $this->db->listBrowseProfiles($tid, ['online_only' => 1], 50);
+            $ids = [];
+            foreach ($rows as $row) {
+                $ids[] = (int)$row['telegram_id'];
+            }
+            $this->db->setBrowseCache($tid, ['ids' => $ids, 'filters' => ['online_only' => 1], 'page' => 0]);
+            $this->db->updateUser($tid, [
+                'flow' => 'browse:' . rawurlencode(json_encode(['online_only' => 1], JSON_UNESCAPED_UNICODE)),
+                'browse_view' => 'slide',
+                'browse_cursor' => 0,
+            ]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->openSlideMode($chatId, $user);
+            return;
+        }
         if ($data === 'sr:new') {
             $this->tg->answerCallback($id, 'تازه‌واردها');
             $this->stripCallbackMenu($cq);
@@ -2124,9 +2160,246 @@ final class Handlers
         $this->uiText(
             $chatId,
             $user,
-            "{$title}\nکارت اول را باز کردم. با دکمه‌ها چت بخواه، پیام بده، گزارش کن یا بلاک کن.\nبرای تغییر نحوه نمایش از «حالت نمایش» استفاده کن."
+            "{$title}\nکارت اول را باز کردم. با دکمه‌ها چت بخواه، پیام بده، گزارش کن یا بلاک کن.\nبرای تغییر نحوه نمایش از «حالت نمایش» استفاده کن — حالت <b>کشویی ستونی</b> محیط گرافیکی دارد."
         );
         $this->showNextBrowseCard($chatId, $user);
+    }
+
+    private function publicBaseUrl(): string
+    {
+        $u = trim((string)($this->config['public_base_url'] ?? ''));
+        if ($u !== '') {
+            return rtrim($u, '/');
+        }
+        return 'https://dev.hdd-land.com';
+    }
+
+    private function supportsInlineQueries(): bool
+    {
+        static $cached = null;
+        if ($cached !== null) {
+            return $cached;
+        }
+        try {
+            $me = $this->tg->getMe();
+            $cached = (bool)($me['result']['supports_inline_queries'] ?? false);
+        } catch (Throwable $e) {
+            $cached = false;
+        }
+        return $cached;
+    }
+
+    private function openSlideMode(int $chatId, array &$user): void
+    {
+        $cache = $this->db->getBrowseCache($user) ?? [];
+        $ids = $cache['ids'] ?? [];
+        if ($ids === []) {
+            $this->uiText($chatId, $user, 'اول یک جستجو انجام بده، بعد نمایش کشویی را باز کن.', [
+                'reply_markup' => Keyboards::searchHubInline(),
+            ]);
+            return;
+        }
+        $uname = $this->botUsername();
+        $lines = [
+            '🎞 <b>نمایش کشویی ستونی</b>',
+            'کاربران را یکی‌یکی با عکس ورق بزن — مثل گالری روان.',
+            'گزارش تخلف و بلاک هم روی هر کارت هست.',
+        ];
+        if ($this->supportsInlineQueries()) {
+            $lines[] = '';
+            $lines[] = "برای لیست کشویی تلگرام (Inline) روی دکمه بزن یا در چت بنویس:";
+            $lines[] = '<code>@' . htmlspecialchars($uname, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . ' آنلاین</code>';
+            $this->uiText($chatId, $user, implode("\n", $lines), [
+                'reply_markup' => Keyboards::openInlineSlide('آنلاین'),
+            ]);
+        } else {
+            $lines[] = '';
+            $lines[] = '💡 برای فعال شدن حالت اینلاین تلگرام، ادمین باید در @BotFather گزینه Inline Mode را روشن کند.';
+            $this->uiText($chatId, $user, implode("\n", $lines));
+        }
+        $this->renderSlideCard($chatId, $user, 0);
+    }
+
+    private function renderSlideCard(int $chatId, array &$viewer, int $index): void
+    {
+        $cache = $this->db->getBrowseCache($viewer) ?? [];
+        $ids = $cache['ids'] ?? [];
+        if ($ids === []) {
+            $this->uiText($chatId, $viewer, 'فهرست خالی است.', [
+                'reply_markup' => Keyboards::searchHubInline(),
+            ]);
+            return;
+        }
+        $total = count($ids);
+        $index = max(0, min($index, $total - 1));
+        $target = $this->db->findUser((int)$ids[$index]);
+        if (!$target) {
+            if ($index + 1 < $total) {
+                $this->renderSlideCard($chatId, $viewer, $index + 1);
+            } else {
+                $this->uiText($chatId, $viewer, 'کاربری برای نمایش نماند.');
+            }
+            return;
+        }
+        $this->db->updateUser((int)$viewer['telegram_id'], ['browse_cursor' => $index, 'browse_view' => 'slide']);
+        $viewer = $this->db->findUser((int)$viewer['telegram_id']) ?? $viewer;
+
+        $caption = "🎞 <b>کشویی</b> · " . ($index + 1) . "/{$total}\n────────\n" .
+            $this->formatPublicProfile($viewer, $target, false);
+        $req = $this->settings->getInt('request_cost', 1);
+        $msg = $this->settings->getInt('message_cost', 2);
+        $like = $this->settings->getInt('like_cost', 0);
+        $likes = $this->db->countLikes((int)$target['telegram_id']);
+        $profileKb = Keyboards::browseProfileInline((string)$target['public_code'], $req, $msg, $like, $likes);
+        $navKb = Keyboards::slideNavInline($index, $total);
+        $rows = array_merge($navKb['inline_keyboard'], $profileKb['inline_keyboard']);
+        // Drop duplicate "حالت نمایش/پایان" from profile if present at end — keep nav's
+        $markup = ['inline_keyboard' => $rows];
+        $avatar = ((int)($target['show_avatar'] ?? 1) === 1) ? (string)($target['avatar_file_id'] ?? '') : '';
+        if ($avatar !== '') {
+            $this->uiPhotoFileId($chatId, $viewer, $avatar, $caption, $markup);
+        } else {
+            $this->uiText($chatId, $viewer, $caption, ['reply_markup' => $markup]);
+        }
+    }
+
+    private function onInlineQuery(array $iq): void
+    {
+        $qid = (string)($iq['id'] ?? '');
+        $from = $iq['from'] ?? [];
+        $tid = (int)($from['id'] ?? 0);
+        $query = trim((string)($iq['query'] ?? ''));
+        $offset = (int)($iq['offset'] ?? 0);
+        if ($qid === '' || $tid <= 0) {
+            return;
+        }
+        $user = $this->db->upsertUser($tid, $from['username'] ?? null, $from['first_name'] ?? null);
+        $this->db->touchSeen($tid);
+        $user = $this->db->findUser($tid) ?? $user;
+        if (($user['status'] ?? '') === 'banned') {
+            $this->tg->answerInlineQuery($qid, [], 1, true, '', [
+                'text' => 'حساب مسدود است — پشتیبانی',
+                'start_parameter' => 'support',
+            ]);
+            return;
+        }
+
+        $profiles = $this->resolveInlineProfiles($user, $query, $offset, 40);
+        $results = [];
+        $thumbFallback = $this->publicBaseUrl() . '/assets/banners/menu-main.jpg';
+        $req = $this->settings->getInt('request_cost', 1);
+        $msg = $this->settings->getInt('message_cost', 2);
+        $like = $this->settings->getInt('like_cost', 0);
+        foreach ($profiles as $target) {
+            $code = preg_replace('/[^A-Za-z0-9_]/', '', (string)($target['public_code'] ?? '')) ?? '';
+            if ($code === '') {
+                continue;
+            }
+            $title = (string)($target['display_name'] ?? 'کاربر');
+            $descParts = [];
+            if ((int)($target['show_age'] ?? 1) === 1 && !empty($target['age'])) {
+                $descParts[] = (int)$target['age'] . ' ساله';
+            }
+            if ((int)($target['show_city'] ?? 1) === 1 && !empty($target['city'])) {
+                $descParts[] = (string)$target['city'];
+            } elseif ((int)($target['show_province'] ?? 1) === 1 && !empty($target['province'])) {
+                $descParts[] = (string)$target['province'];
+            }
+            $presence = $this->formatPresence($target, false);
+            if ($presence !== '') {
+                // strip emoji noise for description length
+                $descParts[] = preg_replace('/[^\p{L}\p{N}\s‌]/u', '', $presence) ?: $presence;
+            }
+            $description = implode(' · ', array_filter($descParts));
+            $caption = $this->formatPublicProfile($user, $target, true);
+            $likes = $this->db->countLikes((int)$target['telegram_id']);
+            $markup = Keyboards::browseProfileInline($code, $req, $msg, $like, $likes);
+            $avatar = ((int)($target['show_avatar'] ?? 1) === 1) ? (string)($target['avatar_file_id'] ?? '') : '';
+            if ($avatar !== '') {
+                $results[] = [
+                    'type' => 'photo',
+                    'id' => substr($code, 0, 64),
+                    'photo_file_id' => $avatar,
+                    'title' => $title,
+                    'description' => mb_substr($description, 0, 120),
+                    'caption' => $caption,
+                    'parse_mode' => 'HTML',
+                    'reply_markup' => $markup,
+                ];
+            } else {
+                $results[] = [
+                    'type' => 'article',
+                    'id' => substr($code, 0, 64),
+                    'title' => $title,
+                    'description' => mb_substr($description, 0, 120),
+                    'thumb_url' => $thumbFallback,
+                    'input_message_content' => [
+                        'message_text' => $caption,
+                        'parse_mode' => 'HTML',
+                        'disable_web_page_preview' => true,
+                    ],
+                    'reply_markup' => $markup,
+                ];
+            }
+        }
+        $next = count($profiles) >= 40 ? (string)($offset + 40) : '';
+        $button = [
+            'text' => 'باز کردن هم‌گپ',
+            'start_parameter' => 'inline',
+        ];
+        try {
+            $this->tg->answerInlineQuery($qid, $results, 2, true, $next, $button);
+        } catch (Throwable $e) {
+            try {
+                $this->tg->answerInlineQuery($qid, [], 1, true);
+            } catch (Throwable $e2) {
+            }
+        }
+    }
+
+    /** @return list<array> */
+    private function resolveInlineProfiles(array $viewer, string $query, int $offset, int $limit): array
+    {
+        $q = mb_strtolower(trim($query));
+        $filters = [];
+        $useCache = ($q === '' || $q === 'cache' || $q === 'لیست' || $q === 'نتایج');
+        if ($useCache) {
+            $cache = $this->db->getBrowseCache($viewer) ?? [];
+            $ids = $cache['ids'] ?? [];
+            if (is_array($ids) && $ids !== []) {
+                $slice = array_slice($ids, $offset, $limit);
+                return $this->db->findUsersByTelegramIds($slice);
+            }
+            $filters = ['online_only' => 1];
+        } elseif (str_contains($q, 'آنلاین') || str_contains($q, 'online')) {
+            $filters = ['online_only' => 1];
+            if (str_contains($q, 'دختر')) {
+                $filters['gender'] = 'female';
+            } elseif (str_contains($q, 'پسر')) {
+                $filters['gender'] = 'male';
+            } elseif (str_contains($q, 'شیمیل') || str_contains($q, 'دوجنسه')) {
+                $filters['gender'] = 'shemale';
+            }
+        } elseif (str_contains($q, 'تازه') || str_contains($q, 'new')) {
+            $filters = ['new_only' => 1];
+        } elseif (str_contains($q, 'نزدیک') || str_contains($q, 'near')) {
+            $city = (string)($viewer['city'] ?? '');
+            $prov = (string)($viewer['province'] ?? '');
+            if ($city !== '' && $prov !== '') {
+                $filters = [
+                    'nearby_rank' => 1,
+                    'nearby_city' => $city,
+                    'nearby_province' => $prov,
+                ];
+            } else {
+                $filters = ['online_only' => 1];
+            }
+        } else {
+            $filters = ['online_only' => 1];
+        }
+        // listBrowseProfiles has no offset — fetch and slice
+        $rows = $this->db->listBrowseProfiles((int)$viewer['telegram_id'], $filters, min(100, $offset + $limit));
+        return array_slice($rows, $offset, $limit);
     }
 
     /** @return array{province?:string,city?:string,gender?:string} */
@@ -3311,6 +3584,7 @@ final class Handlers
             $cost = $this->settings->getInt('room_create_cost', 5);
             if ((int)$user['coins'] < $cost) {
                 $this->tg->answerCallback($id, 'سکه کافی نداری', true);
+                $this->showNeedCoins($chatId, $user, $cost, 'ساخت گپ');
                 return;
             }
             $this->db->updateUser($tid, ['flow' => 'fr:create']);

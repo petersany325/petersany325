@@ -96,6 +96,32 @@ final class Telegram
         return $this->api('sendPhoto', $params);
     }
 
+    public function answerInlineQuery(
+        string $inlineQueryId,
+        array $results,
+        int $cacheTime = 1,
+        bool $isPersonal = true,
+        string $nextOffset = '',
+        ?array $button = null
+    ): array {
+        $params = [
+            'inline_query_id' => $inlineQueryId,
+            'results' => $results,
+            'cache_time' => $cacheTime,
+            'is_personal' => $isPersonal,
+            'next_offset' => $nextOffset,
+        ];
+        if ($button) {
+            $params['button'] = $button;
+        }
+        return $this->api('answerInlineQuery', $params);
+    }
+
+    public function getMe(): array
+    {
+        return $this->api('getMe');
+    }
+
     public function answerCallback(string $id, string $text = '', bool $alert = false): array
     {
         return $this->api('answerCallbackQuery', [
