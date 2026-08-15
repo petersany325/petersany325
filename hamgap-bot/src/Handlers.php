@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.27';
+    public const CODE_VERSION = '2026-08-15-v10.28';
 
     private string $assets;
     private Settings $settings;
@@ -650,7 +650,10 @@ final class Handlers
         }
 
         match (true) {
-            in_array($text, ['🔗 وصلم کن به ناشناس', '🔗 وصل ناشناس', '💬 چت ناشناس', '💬 چت معمولی'], true)
+            in_array($text, [
+                '🔗 وصلم کن به ناشناس', '🔗 وصل ناشناس',
+                '💬 چت ناشناس', '💬 چت معمولی', '💬 چت عمومی', 'چت عمومی',
+            ], true)
                 => $this->showConnect($chatId, $user),
             in_array($text, [
                 '🔥 چت کلاب هات', '🔥 کلاب هات', '🔥 چت هات', 'چت هات', 'چت کلاب هات', 'کلاب هات',
@@ -664,7 +667,7 @@ final class Handlers
                 => $this->showWallet($chatId, $user),
             in_array($text, ['👤 پروفایل من', '👤 پروفایل'], true)
                 => $this->showProfile($chatId, $user),
-            $text === '⭐ استار کلاب'
+            in_array($text, ['⭐ استار کلاب', '⭐ کلاب استار', 'کلاب استار'], true)
                 => $this->showVip($chatId, $user),
             in_array($text, ['📊 گزارش من', 'گزارش من', '/reportme', '/status'], true)
                 => $this->showUserReport($chatId, $user),
@@ -684,10 +687,10 @@ final class Handlers
     private function isHamGapMenuLabel(string $text): bool
     {
         if (in_array($text, [
-            '💬 چت ناشناس', '💬 چت معمولی',
+            '💬 چت ناشناس', '💬 چت معمولی', '💬 چت عمومی', 'چت عمومی',
             '🔥 چت کلاب هات', '🔥 کلاب هات', '🔥 چت هات', 'چت کلاب هات', 'کلاب هات',
             '🔍 جستجوی کاربران', '👫 چت با دوستان', '👥 چت با دوستان',
-            '👤 پروفایل', '💎 کیف‌پول', '⭐ استار کلاب', '📊 گزارش من',
+            '👤 پروفایل', '💎 کیف‌پول', '⭐ استار کلاب', '⭐ کلاب استار', 'کلاب استار', '📊 گزارش من',
             '🆘 پشتیبانی', 'ℹ️ راهنما', '⌨️ کیبورد تایپ',
             '📂 منوی هم‌گپ', '⏭ بعدی', '🛑 پایان چت', '📥 درخواست‌ها', '🚩 گزارش',
         ], true)) {
@@ -2090,7 +2093,8 @@ final class Handlers
         $banAt = max(1, $this->settings->getInt('report_ban_threshold', 10));
         $caption =
             "ℹ️ <b>راهنمای {$name}</b>\n\n" .
-            "💬 چت ناشناس — اتصال رندوم (هزینه از پنل ادمین)\n" .
+            "💬 چت عمومی — اتصال رندوم (هزینه از پنل ادمین)\n" .
+            "🔥 کلاب هات / ⭐ کلاب استار — از صفحه چت عمومی قابل دسترسی\n" .
             "🔍 جستجو — کارت · کشویی ستونی · فهرست · عکس\n" .
             "👤 پروفایل — عکس، نام، بیو، تخصص/تحصیلات، لایک، حریم خصوصی\n" .
             "🎓 تخصص — پزشک، مهندس، دانشجو و… (خوداظهاری · قابل فیلتر در جستجو)\n" .
@@ -2117,7 +2121,9 @@ final class Handlers
     {
         $caption = trim(
             ($extra !== '' ? $extra . "\n\n" : '') .
-            "《 <b>{$this->botName()}</b> 》\nچت ناشناس · کلاب هات · امن"
+            "《 <b>{$this->botName()}</b> 》\n" .
+            "<b>💬 چت عمومی</b>\n" .
+            "اول اینجا هستی · بعد می‌تونی بری کلاب هات یا کلاب استار"
         );
         $path = $this->assets . '/menu-main.jpg';
         if (is_file($path)) {
@@ -2127,10 +2133,10 @@ final class Handlers
                 'reply_markup' => Keyboards::mainInline(),
             ]);
         }
-        // Force-refresh reply keyboard so new items (چت کلاب هات) appear for existing users
+        // Force-refresh reply keyboard so existing users see چت عمومی first
         $this->tg->sendMessage(
             $chatId,
-            "⬇️ منوی هم‌گپ\n<b>🔥 چت کلاب هات</b> الان در ردیف اول منو است.",
+            "⬇️ منوی هم‌گپ\nالان در <b>💬 چت عمومی</b> هستی.\nاز همین‌جا برو <b>کلاب هات</b> یا <b>کلاب استار</b>.",
             ['reply_markup' => Keyboards::mainReply($this->settings->getInt('invite_reward', 30))]
         );
         $this->maybeNudgeIncompleteProfile($chatId, $user);
@@ -2229,11 +2235,11 @@ final class Handlers
         require_once __DIR__ . '/ChatModes.php';
         $path = $this->assets . '/menu-smart.jpg';
         $caption =
-            "💬 <b>چت ناشناس</b>\n" .
-            "نوع چت را انتخاب کن؛ بعد قوانین همان روم را بخوان و وارد شو.\n\n" .
-            "• <b>چت معمولی</b> — دوستی و گفتگوی محترمانه\n" .
-            "• <b>کلاب هات</b> — آشنایی و رابطه · فضای آزادتر\n" .
-            "• <b>کلاب VIP</b> — فقط اعضای استار · جدی و سطح‌بالا";
+            "💬 <b>چت عمومی</b>\n" .
+            "────────────\n" .
+            "الان در <b>چت عمومی</b> هستی — گفتگوی محترمانه و دوستی.\n\n" .
+            "برای شروع، «ورود به چت عمومی» را بزن.\n" .
+            "بعداً می‌تونی بری <b>کلاب هات</b> یا <b>کلاب استار</b>.";
         $kb = Keyboards::connectModeInline();
         if (is_file($path)) {
             $this->uiPhoto($chatId, $user, $path, $caption, $kb);
@@ -2268,10 +2274,10 @@ final class Handlers
 
         $memberships = [];
         if ($status === 'chatting') {
-            $lab = $mode !== '' ? ChatModes::label($mode) : 'چت ناشناس';
+            $lab = $mode !== '' ? ChatModes::label($mode) : 'چت عمومی';
             $memberships[] = "💬 الان در <b>{$lab}</b> هستی (چت فعال)";
         } elseif ($status === 'searching') {
-            $lab = $mode !== '' ? ChatModes::label($mode) : 'چت ناشناس';
+            $lab = $mode !== '' ? ChatModes::label($mode) : 'چت عمومی';
             $memberships[] = "🔍 در صف جستجوی <b>{$lab}</b>";
         } elseif ($status === 'room' && !empty($user['active_room_id'])) {
             $room = $this->db->findFriendRoom((int)$user['active_room_id']);
@@ -2317,8 +2323,11 @@ final class Handlers
 
         $this->uiText($chatId, $user, $text, [
             'reply_markup' => ['inline_keyboard' => [
-                [['text' => '🔥 چت کلاب هات', 'callback_data' => 'menu:hot']],
-                [['text' => '💬 چت ناشناس', 'callback_data' => 'menu:connect']],
+                [['text' => '💬 چت عمومی', 'callback_data' => 'menu:connect']],
+                [
+                    ['text' => '🔥 کلاب هات', 'callback_data' => 'menu:hot'],
+                    ['text' => '⭐ کلاب استار', 'callback_data' => 'menu:vip'],
+                ],
                 [['text' => '💎 کیف‌پول', 'callback_data' => 'menu:wallet']],
                 [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
             ]],
@@ -2403,14 +2412,19 @@ final class Handlers
         $costs = $this->connectCosts();
         $label = ChatModes::label($mode);
         $lines = [
-            "🎯 <b>{$label}</b> — فیلتر اتصال",
-            "بدون نمایش هویت تلگرام وصل شو.",
+            "💬 <b>{$label}</b>",
+            '────────────',
+            'فیلتر اتصال — بدون نمایش هویت تلگرام وصل شو.',
             '',
             '• شانسی: ' . ($costs['any'] > 0 ? "{$costs['any']} سکه" : 'رایگان'),
             '• فیلتر جنسیت: ' . ($costs['gender'] > 0 ? "{$costs['gender']} سکه" : 'رایگان'),
             '• هم‌استان: ' . ($costs['province'] > 0 ? "{$costs['province']} سکه" : 'رایگان'),
             '• هم‌سن: ' . ($costs['age'] > 0 ? "{$costs['age']} سکه" : 'رایگان'),
         ];
+        if ($mode === ChatModes::NORMAL) {
+            $lines[] = '';
+            $lines[] = 'از همین صفحه می‌تونی بری <b>کلاب هات</b> یا <b>کلاب استار</b>.';
+        }
         if ($mode === ChatModes::VIP) {
             $lines[] = '';
             $lines[] = '⭐ در این روم کلمات رکیک ممنوع است و گزارش تخلف جدی گرفته می‌شود.';
@@ -2876,9 +2890,9 @@ final class Handlers
         $extra = match ($mode) {
             ChatModes::HOT => "\n🔥 روم هات · احترام متقابل را فراموش نکن.",
             ChatModes::VIP => "\n⭐ کلاب VIP · بدون توهین · گزارش تخلف = اخراج.",
-            default => "\n💬 چت معمولی · محترمانه گفتگو کنید.",
+            default => "\n💬 چت عمومی · محترمانه گفتگو کنید.",
         };
-        $caption = "✅ وصل شدید! ({$modeLabel})\nهویت‌ها مخفی است.{$extra}";
+        $caption = "✅ وصل شدید!\n💬 <b>{$modeLabel}</b>\nهویت‌ها مخفی است.{$extra}";
         foreach ([$a, $b] as $cid) {
             $u = $this->db->findUser($cid);
             if (!$u) {

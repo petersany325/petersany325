@@ -7,8 +7,8 @@ final class Keyboards
     {
         return [
             'keyboard' => [
-                [['text' => '🔥 چت کلاب هات']],
-                [['text' => '💬 چت ناشناس'], ['text' => '⭐ استار کلاب']],
+                [['text' => '💬 چت عمومی']],
+                [['text' => '🔥 کلاب هات'], ['text' => '⭐ کلاب استار']],
                 [['text' => '🔍 جستجوی کاربران'], ['text' => '👫 چت با دوستان']],
                 [['text' => '👤 پروفایل'], ['text' => '💎 کیف‌پول']],
                 [['text' => '📊 گزارش من'], ['text' => "✨ دعوت دوستان · +{$inviteReward}"]],
@@ -44,8 +44,11 @@ final class Keyboards
     public static function mainInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => '🔥 چت کلاب هات', 'callback_data' => 'menu:hot']],
-            [['text' => '💬 چت ناشناس · معمولی', 'callback_data' => 'menu:connect']],
+            [['text' => '💬 چت عمومی', 'callback_data' => 'menu:connect']],
+            [
+                ['text' => '🔥 کلاب هات', 'callback_data' => 'menu:hot'],
+                ['text' => '⭐ کلاب استار', 'callback_data' => 'menu:vip'],
+            ],
             [
                 ['text' => '🔍 جستجوی کاربران', 'callback_data' => 'menu:find'],
                 ['text' => '👫 چت با دوستان', 'callback_data' => 'menu:friends'],
@@ -54,7 +57,6 @@ final class Keyboards
                 ['text' => '👤 پروفایل', 'callback_data' => 'menu:profile'],
                 ['text' => '💎 کیف‌پول', 'callback_data' => 'menu:wallet'],
             ],
-            [['text' => '⭐ استار کلاب', 'callback_data' => 'menu:vip']],
             [['text' => '📊 گزارش من', 'callback_data' => 'menu:report']],
             [
                 ['text' => '🆘 پشتیبانی', 'callback_data' => 'menu:support'],
@@ -67,8 +69,11 @@ final class Keyboards
     public static function helpInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => '🔥 چت کلاب هات', 'callback_data' => 'menu:hot']],
-            [['text' => '💬 چت ناشناس', 'callback_data' => 'menu:connect']],
+            [['text' => '💬 چت عمومی', 'callback_data' => 'menu:connect']],
+            [
+                ['text' => '🔥 کلاب هات', 'callback_data' => 'menu:hot'],
+                ['text' => '⭐ کلاب استار', 'callback_data' => 'menu:vip'],
+            ],
             [['text' => '🔍 جستجوی کاربران', 'callback_data' => 'menu:find'],
                 ['text' => '👫 چت با دوستان', 'callback_data' => 'menu:friends']],
             [['text' => '💎 کیف‌پول', 'callback_data' => 'menu:wallet'],
@@ -108,7 +113,7 @@ final class Keyboards
                 ['text' => '👨 آنلاین پسر', 'callback_data' => 'sr:online:male'],
             ],
             [['text' => '🌈 آنلاین شیمیل / دوجنسه', 'callback_data' => 'sr:online:shemale']],
-            [['text' => '💬 چت ناشناس سریع', 'callback_data' => 'menu:connect']],
+            [['text' => '💬 چت عمومی سریع', 'callback_data' => 'menu:connect']],
             [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
         ]];
     }
@@ -748,12 +753,15 @@ final class Keyboards
         return number_format($amount, 0, '', '٬');
     }
 
+    /** Public chat hub: labeled چت عمومی, then Hot / Star exits. */
     public static function connectModeInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => '🔥 چت کلاب هات', 'callback_data' => 'mode:hot']],
-            [['text' => '💬 چت معمولی', 'callback_data' => 'mode:normal']],
-            [['text' => '⭐ کلاب VIP (استار)', 'callback_data' => 'mode:vipclub']],
+            [['text' => '✅ ورود به چت عمومی', 'callback_data' => 'mode:normal']],
+            [
+                ['text' => '🔥 کلاب هات', 'callback_data' => 'mode:hot'],
+                ['text' => '⭐ کلاب استار', 'callback_data' => 'mode:vipclub'],
+            ],
             [['text' => 'بازگشت', 'callback_data' => 'menu:main']],
         ]];
     }
@@ -761,10 +769,19 @@ final class Keyboards
     public static function chatRulesInline(string $mode): array
     {
         $mode = preg_replace('/[^a-z]/', '', $mode) ?? 'normal';
-        return ['inline_keyboard' => [
+        $rows = [
             [['text' => '✅ قوانین را خواندم — ورود', 'callback_data' => 'mode:ok:' . $mode]],
-            [['text' => 'انصراف', 'callback_data' => 'menu:connect']],
-        ]];
+        ];
+        if ($mode === 'normal') {
+            $rows[] = [
+                ['text' => '🔥 کلاب هات', 'callback_data' => 'mode:hot'],
+                ['text' => '⭐ کلاب استار', 'callback_data' => 'mode:vipclub'],
+            ];
+        } else {
+            $rows[] = [['text' => '💬 بازگشت به چت عمومی', 'callback_data' => 'menu:connect']];
+        }
+        $rows[] = [['text' => 'انصراف', 'callback_data' => 'menu:connect']];
+        return ['inline_keyboard' => $rows];
     }
 
     public static function connectInline(array $costs = [], string $mode = 'normal'): array
@@ -780,7 +797,7 @@ final class Keyboards
         $p = static function (string $pref) use ($mode): string {
             return 'chat:' . $mode . ':' . $pref;
         };
-        return ['inline_keyboard' => [
+        $rows = [
             [['text' => $lab('🎲 چت شانسی', $any), 'callback_data' => $p('any')]],
             [
                 ['text' => $lab('👩 فقط دختر', $gender), 'callback_data' => $p('female')],
@@ -789,9 +806,17 @@ final class Keyboards
             [['text' => $lab('🌈 فقط شیمیل / دوجنسه', $gender), 'callback_data' => $p('shemale')]],
             [['text' => $lab('🏙 هم‌استان', $prov), 'callback_data' => $p('province')]],
             [['text' => $lab('🎂 هم‌سن', $age), 'callback_data' => $p('age')]],
-            [['text' => 'تغییر نوع چت', 'callback_data' => 'menu:connect']],
-            [['text' => 'بازگشت', 'callback_data' => 'menu:main']],
-        ]];
+        ];
+        if ($mode === 'normal') {
+            $rows[] = [
+                ['text' => '🔥 کلاب هات', 'callback_data' => 'mode:hot'],
+                ['text' => '⭐ کلاب استار', 'callback_data' => 'mode:vipclub'],
+            ];
+        } else {
+            $rows[] = [['text' => '💬 بازگشت به چت عمومی', 'callback_data' => 'menu:connect']];
+        }
+        $rows[] = [['text' => 'بازگشت به منو', 'callback_data' => 'menu:main']];
+        return ['inline_keyboard' => $rows];
     }
 
     public static function payInvoiceInline(int $invoiceId): array
@@ -1110,9 +1135,9 @@ final class Keyboards
             [['text' => 'ورود صفحه چت خصوصی', 'callback_data' => 'adm:set:private_room_entry_cost']],
             [['text' => 'افزودن نفر به صفحه خصوصی', 'callback_data' => 'adm:set:private_room_add_cost']],
             [['text' => 'کلمات ممنوع VIP (با ویرگول)', 'callback_data' => 'adm:set:vip_bad_words']],
-            [['text' => 'متن قوانین چت معمولی', 'callback_data' => 'adm:set:rules_normal']],
+            [['text' => 'متن قوانین چت عمومی', 'callback_data' => 'adm:set:rules_normal']],
             [['text' => 'متن قوانین چت هات', 'callback_data' => 'adm:set:rules_hot']],
-            [['text' => 'متن قوانین کلاب VIP', 'callback_data' => 'adm:set:rules_vipclub']],
+            [['text' => 'متن قوانین کلاب استار', 'callback_data' => 'adm:set:rules_vipclub']],
             [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
         ]];
     }
