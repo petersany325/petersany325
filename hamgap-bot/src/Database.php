@@ -41,7 +41,7 @@ final class Database
         return $row ?: null;
     }
 
-    public function upsertUser(int $telegramId, ?string $username, ?string $firstName): array
+    public function upsertUser(int $telegramId, ?string $username, ?string $firstName, int $welcomeCoins = 35): array
     {
         $user = $this->findUser($telegramId);
         if ($user) {
@@ -54,21 +54,24 @@ final class Database
             return $this->findUser($telegramId) ?? $user;
         }
 
+        $welcomeCoins = max(0, $welcomeCoins);
         $display = $this->generateDisplayName();
         $ref = $this->generateReferralCode();
         $pub = $this->generatePublicCode();
         $st = $this->pdo->prepare(
             'INSERT INTO users (telegram_id, username, first_name, coins, display_name, referral_code, public_code, last_seen_at)
-             VALUES (?, ?, ?, 35, ?, ?, ?, NOW())'
+             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())'
         );
-        $st->execute([$telegramId, $username, $firstName, $display, $ref, $pub]);
+        $st->execute([$telegramId, $username, $firstName, $welcomeCoins, $display, $ref, $pub]);
         $user = $this->findUser($telegramId);
         if (!$user) {
             throw new RuntimeException('Failed to create user');
         }
-        $this->pdo->prepare(
-            'INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, 35, ?)'
-        )->execute([(int)$user['id'], 'welcome_gift']);
+        if ($welcomeCoins > 0) {
+            $this->pdo->prepare(
+                'INSERT INTO coin_transactions (user_id, amount, reason) VALUES (?, ?, ?)'
+            )->execute([(int)$user['id'], $welcomeCoins, 'welcome_gift']);
+        }
         return $user;
     }
 
@@ -1135,6 +1138,27 @@ final class Database
         $this->pdo->prepare(
             'INSERT INTO coin_transactions (user_id, amount, reason, meta) VALUES (?, ?, ?, ?)'
         )->execute([(int)$user['id'], $amount, $reason, $meta]);
+    }
+
+    /** True if this user already has a ledger row for reason(+optional meta). */
+    public function hasCoinReason(int $telegramId, string $reason, ?string $meta = null): bool
+    {
+        $user = $this->findUser($telegramId);
+        if (!$user) {
+            return false;
+        }
+        if ($meta === null) {
+            $st = $this->pdo->prepare(
+                'SELECT id FROM coin_transactions WHERE user_id = ? AND reason = ? LIMIT 1'
+            );
+            $st->execute([(int)$user['id'], $reason]);
+        } else {
+            $st = $this->pdo->prepare(
+                'SELECT id FROM coin_transactions WHERE user_id = ? AND reason = ? AND meta = ? LIMIT 1'
+            );
+            $st->execute([(int)$user['id'], $reason, $meta]);
+        }
+        return (bool)$st->fetchColumn();
     }
 
     public function updateUser(int $telegramId, array $fields): void

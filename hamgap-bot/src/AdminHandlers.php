@@ -6,7 +6,19 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-14-v10.3-admin';
+    public const CODE_VERSION = '2026-08-15-v10.12-admin';
+
+    /** Keys editable via adm:set: — anything else is rejected. */
+    public const ALLOWED_SET_KEYS = [
+        'invite_reward', 'message_cost', 'request_cost', 'welcome_coins',
+        'connect_any_cost', 'connect_gender_cost', 'connect_province_cost', 'connect_age_cost',
+        'admin_session_hours', 'admin_username',
+        'pay_invoice_minutes', 'pay_card_number', 'pay_card_holder', 'pay_bank_name', 'pay_trust_channel',
+        'pack_100_price', 'pack_300_price', 'pack_1000_price',
+        'like_cost', 'room_create_cost', 'room_join_cost', 'report_ban_threshold', 'notify_free_cost',
+        'support_bot_username', 'support_hours', 'support_welcome',
+        'brand_name', 'main_bot_username',
+    ];
 
     public function __construct(
         private array $config,
@@ -41,7 +53,12 @@ final class AdminHandlers
             return;
         }
         $text = trim((string)($message['text'] ?? ''));
-        $user = $this->db->upsertUser($tid, $from['username'] ?? null, $from['first_name'] ?? null);
+        $user = $this->db->upsertUser(
+            $tid,
+            $from['username'] ?? null,
+            $from['first_name'] ?? null,
+            $this->settings->getInt('welcome_coins', 35)
+        );
         $flow = (string)($user['flow'] ?? '');
 
         // ——— Auth gate ———
@@ -126,6 +143,11 @@ final class AdminHandlers
 
         if (str_starts_with($flow, 'adm:set:')) {
             $key = substr($flow, strlen('adm:set:'));
+            if (!in_array($key, self::ALLOWED_SET_KEYS, true)) {
+                $this->db->updateUser($tid, ['flow' => null]);
+                $this->tg->sendMessage($chatId, 'کلید تنظیمات نامعتبر است.');
+                return;
+            }
             $value = trim($text);
             if ($value === '') {
                 $this->tg->sendMessage($chatId, 'مقدار خالی قبول نیست.');
@@ -459,6 +481,10 @@ final class AdminHandlers
         }
         if (str_starts_with($data, 'adm:set:')) {
             $key = substr($data, strlen('adm:set:'));
+            if (!in_array($key, self::ALLOWED_SET_KEYS, true)) {
+                $this->tg->sendMessage($chatId, 'کلید تنظیمات نامعتبر است.');
+                return;
+            }
             $this->db->updateUser($tid, ['flow' => 'adm:set:' . $key]);
             $cur = $this->settings->get($key);
             if ($key === 'report_ban_threshold') {

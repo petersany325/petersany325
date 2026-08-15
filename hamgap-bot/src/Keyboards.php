@@ -79,22 +79,6 @@ final class Keyboards
         return ['remove_keyboard' => true];
     }
 
-    public static function connectInline(): array
-    {
-        // Anonymous chat filters — free; monetize message/request elsewhere.
-        return ['inline_keyboard' => [
-            [['text' => '🎲 چت شانسی · رایگان', 'callback_data' => 'chat:any']],
-            [
-                ['text' => '👩 فقط دختر', 'callback_data' => 'chat:female'],
-                ['text' => '👨 فقط پسر', 'callback_data' => 'chat:male'],
-            ],
-            [['text' => '🌈 فقط شیمیل / دوجنسه', 'callback_data' => 'chat:shemale']],
-            [['text' => '🏙 هم‌استان', 'callback_data' => 'chat:province']],
-            [['text' => '🎂 هم‌سن', 'callback_data' => 'chat:age']],
-            [['text' => 'بازگشت', 'callback_data' => 'menu:main']],
-        ]];
-    }
-
     /** Modern search hub — calm & structured (not competitor green spam). */
     public static function searchHubInline(): array
     {
@@ -374,12 +358,14 @@ final class Keyboards
         int $requestCost,
         int $messageCost,
         int $likeCost = 0,
-        int $likeCount = 0
+        int $likeCount = 0,
+        int $notifyCost = 1
     ): array {
         $code = preg_replace('/[^A-Za-z0-9_]/', '', $publicCode) ?? '';
         $likeLabel = $likeCost > 0
             ? "🤍 لایک · {$likeCount} (−{$likeCost})"
             : "🤍 لایک · {$likeCount}";
+        $waitLabel = "چت کردنش تموم شد بهم خبر بده 🔔 · {$notifyCost}🪙";
         return ['inline_keyboard' => [
             [['text' => $likeLabel, 'callback_data' => 'br:like:' . $code]],
             [
@@ -390,7 +376,7 @@ final class Keyboards
                 ['text' => 'گزارش تخلف 🚨', 'callback_data' => 'br:rep:' . $code],
                 ['text' => 'بلاک 🚫', 'callback_data' => 'br:blk:' . $code],
             ],
-            [['text' => 'چت کردنش تموم شد بهم خبر بده 🔔 · ۱🪙', 'callback_data' => 'br:wait:' . $code]],
+            [['text' => $waitLabel, 'callback_data' => 'br:wait:' . $code]],
             [
                 ['text' => '➕ دوست', 'callback_data' => 'br:friend:' . $code],
                 ['text' => 'کاربر بعدی ⏭', 'callback_data' => 'br:next'],
@@ -540,7 +526,7 @@ final class Keyboards
         return ['inline_keyboard' => $rows];
     }
 
-    public static function profileInline(): array
+    public static function profileInline(int $inviteReward = 30): array
     {
         return ['inline_keyboard' => [
             [['text' => '✏️ ویرایش مشخصات', 'callback_data' => 'menu:profile_settings']],
@@ -556,7 +542,7 @@ final class Keyboards
                 ['text' => '🚫 بلاک‌شده‌ها', 'callback_data' => 'menu:blocks'],
                 ['text' => '📥 درخواست‌های چت', 'callback_data' => 'req:inbox'],
             ],
-            [['text' => 'دعوت دوستان · +۳۰ سکه', 'callback_data' => 'menu:invite']],
+            [['text' => "دعوت دوستان · +{$inviteReward} سکه", 'callback_data' => 'menu:invite']],
             [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
         ]];
     }
@@ -649,14 +635,44 @@ final class Keyboards
         ]];
     }
 
-    public static function walletInline(int $inviteReward = 30): array
+    public static function walletInline(int $inviteReward = 30, array $packPrices = []): array
     {
+        $p100 = self::formatToman((int)($packPrices[100] ?? 50000));
+        $p300 = self::formatToman((int)($packPrices[300] ?? 120000));
+        $p1000 = self::formatToman((int)($packPrices[1000] ?? 350000));
         return ['inline_keyboard' => [
             [['text' => "دعوت دوست · +{$inviteReward} سکه", 'callback_data' => 'menu:invite']],
-            [['text' => '۱۰۰ سکه — ۵۰٬۰۰۰ تومان', 'callback_data' => 'pay:pack:100']],
-            [['text' => '۳۰۰ سکه — ۱۲۰٬۰۰۰ تومان', 'callback_data' => 'pay:pack:300']],
-            [['text' => '۱۰۰۰ سکه — ۳۵۰٬۰۰۰ تومان', 'callback_data' => 'pay:pack:1000']],
+            [['text' => "۱۰۰ سکه — {$p100} تومان", 'callback_data' => 'pay:pack:100']],
+            [['text' => "۳۰۰ سکه — {$p300} تومان", 'callback_data' => 'pay:pack:300']],
+            [['text' => "۱۰۰۰ سکه — {$p1000} تومان", 'callback_data' => 'pay:pack:1000']],
             [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
+        ]];
+    }
+
+    public static function formatToman(int $amount): string
+    {
+        return number_format($amount, 0, '', '٬');
+    }
+
+    public static function connectInline(array $costs = []): array
+    {
+        $any = (int)($costs['any'] ?? 0);
+        $gender = (int)($costs['gender'] ?? 0);
+        $prov = (int)($costs['province'] ?? 0);
+        $age = (int)($costs['age'] ?? 0);
+        $lab = static function (string $title, int $cost): string {
+            return $cost > 0 ? "{$title} · {$cost}🪙" : "{$title} · رایگان";
+        };
+        return ['inline_keyboard' => [
+            [['text' => $lab('🎲 چت شانسی', $any), 'callback_data' => 'chat:any']],
+            [
+                ['text' => $lab('👩 فقط دختر', $gender), 'callback_data' => 'chat:female'],
+                ['text' => $lab('👨 فقط پسر', $gender), 'callback_data' => 'chat:male'],
+            ],
+            [['text' => $lab('🌈 فقط شیمیل / دوجنسه', $gender), 'callback_data' => 'chat:shemale']],
+            [['text' => $lab('🏙 هم‌استان', $prov), 'callback_data' => 'chat:province']],
+            [['text' => $lab('🎂 هم‌سن', $age), 'callback_data' => 'chat:age']],
+            [['text' => 'بازگشت', 'callback_data' => 'menu:main']],
         ]];
     }
 

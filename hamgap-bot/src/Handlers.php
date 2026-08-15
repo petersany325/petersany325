@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.11';
+    public const CODE_VERSION = '2026-08-15-v10.12';
 
     private string $assets;
     private Settings $settings;
@@ -107,9 +107,13 @@ final class Handlers
 
     private function welcomeTextFirst(): string
     {
+        $gift = max(0, $this->settings->getInt('welcome_coins', 35));
+        $giftLine = $gift > 0
+            ? "🎁 {$gift} سکه هدیه برای شروع داری.\n"
+            : '';
         return "به هم‌گپ خوش اومدی 👋\n\n" .
             "یه ربات چت ناشناس برای گپ‌زدن امن و سریع با آدم‌های جدید.\n\n" .
-            "🎁 ۳۵ سکه هدیه برای شروع داری.\n" .
+            $giftLine .
             "🎲 چت شانسی هم کاملاً رایگان و نامحدوده.\n\n" .
             "اول پروفایلت رو بساز تا وصل شی.";
     }
@@ -119,8 +123,41 @@ final class Handlers
         return "سلام 😊 عزیز ✋\n\n" .
             "به 《 هم‌گپ 》 خوش اومدی ، توی این ربات می‌تونی افراد نزدیکت رو پیدا کنی و باهاشون آشنا شی " .
             "یا به یه نفر بصورت ناشناس وصل شی و باهاش چت کنی ❗️\n\n" .
-            "استفاده از این ربات رایگانه و اطلاعات تلگرام شما مثل اسم، عکس پروفایل یا موقعیت GPS کاملاً محرمانه هست 😎\n\n" .
+            "اطلاعات تلگرام شما مثل اسم و عکس پروفایل محرمانه می‌مونه 😎\n\n" .
             "برای شروع جنسیتت را انتخاب کن 👇";
+    }
+
+    /** @return array{100:int,300:int,1000:int} */
+    private function packPrices(): array
+    {
+        return [
+            100 => $this->settings->getInt('pack_100_price', 50000),
+            300 => $this->settings->getInt('pack_300_price', 120000),
+            1000 => $this->settings->getInt('pack_1000_price', 350000),
+        ];
+    }
+
+    /** @return array{any:int,gender:int,province:int,age:int} */
+    private function connectCosts(): array
+    {
+        return [
+            'any' => $this->settings->getInt('connect_any_cost', 0),
+            'gender' => $this->settings->getInt('connect_gender_cost', 0),
+            'province' => $this->settings->getInt('connect_province_cost', 0),
+            'age' => $this->settings->getInt('connect_age_cost', 0),
+        ];
+    }
+
+    private function browseProfileMarkup(array $target): array
+    {
+        return Keyboards::browseProfileInline(
+            (string)$target['public_code'],
+            $this->settings->getInt('request_cost', 1),
+            $this->settings->getInt('message_cost', 2),
+            $this->settings->getInt('like_cost', 0),
+            $this->db->countLikes((int)$target['telegram_id']),
+            max(1, $this->settings->getInt('notify_free_cost', 1))
+        );
     }
 
     /** Delete previous bot UI menus (or at least strip their buttons). */
@@ -200,7 +237,8 @@ final class Handlers
         $user = $this->db->upsertUser(
             $tid,
             $from['username'] ?? null,
-            $from['first_name'] ?? null
+            $from['first_name'] ?? null,
+            $this->settings->getInt('welcome_coins', 35)
         );
         $this->db->ensureIdentity($user);
         $this->db->touchSeen($tid);
@@ -575,7 +613,12 @@ final class Handlers
         $chatId = (int)($message['chat']['id'] ?? 0);
         $from = $cq['from'] ?? [];
         $tid = (int)($from['id'] ?? 0);
-        $user = $this->db->upsertUser($tid, $from['username'] ?? null, $from['first_name'] ?? null);
+        $user = $this->db->upsertUser(
+            $tid,
+            $from['username'] ?? null,
+            $from['first_name'] ?? null,
+            $this->settings->getInt('welcome_coins', 35)
+        );
         $this->db->touchSeen($tid);
         $user = $this->db->findUser($tid) ?? $user;
 
@@ -1282,8 +1325,8 @@ final class Handlers
         if (!empty($user['referred_by'])) {
             return;
         }
-        // Only attach referral during early onboarding (no gender yet)
-        if (!empty($user['gender'])) {
+        // فقط قبل از تکمیل پروفایل معرف را ذخیره می‌کنیم
+        if ($this->isProfileComplete($user)) {
             return;
         }
         $referrer = $this->db->findByReferralCode($refCode);
@@ -1296,13 +1339,32 @@ final class Handlers
             return;
         }
         $this->db->updateUser($myTid, ['referred_by' => $refTid]);
-        $reward = $this->settings->getInt('invite_reward', 30);
-        $this->db->addCoins($refTid, $reward, 'referral', (string)$myTid);
+        // پاداش فقط بعد از تکمیل پروفایل در finishRegistration پرداخت می‌شود
         $user = $this->db->findUser($myTid) ?? $user;
+    }
+
+    private function payReferralIfDue(array $user): void
+    {
+        $refTid = (int)($user['referred_by'] ?? 0);
+        if ($refTid <= 0) {
+            return;
+        }
+        $myTid = (int)$user['telegram_id'];
+        if ($refTid === $myTid || !$this->db->findUser($refTid)) {
+            return;
+        }
+        if ($this->db->hasCoinReason($refTid, 'referral', (string)$myTid)) {
+            return;
+        }
+        $reward = max(0, $this->settings->getInt('invite_reward', 30));
+        if ($reward <= 0) {
+            return;
+        }
+        $this->db->addCoins($refTid, $reward, 'referral', (string)$myTid);
         try {
             $this->tg->sendMessage(
                 $refTid,
-                "یک دوست با لینک دعوتت وارد شد.\n<b>+{$reward} سکه</b> به حسابت اضافه شد."
+                "یک دوست با لینک دعوتت ثبت‌نام را کامل کرد.\n<b>+{$reward} سکه</b> به حسابت اضافه شد."
             );
         } catch (Throwable $e) {
             // ignore notify failures
@@ -1422,13 +1484,16 @@ final class Handlers
     {
         $this->db->ensureIdentity($user);
         $fresh = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+        $this->payReferralIfDue($fresh);
         $dn = htmlspecialchars((string)($fresh['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $gift = max(0, $this->settings->getInt('welcome_coins', 35));
+        $giftLine = $gift > 0 ? "{$gift} سکه هدیه گرفتی.\n" : '';
         $this->showMain(
             $chatId,
             $fresh,
             "پروفایل آماده شد ✅\n" .
             "نام کاربری تو: <b>{$dn}</b>\n" .
-            "۳۵ سکه هدیه گرفتی.\n" .
+            $giftLine .
             "از «پروفایل من» می‌تونی عکس و نام را عوض کنی."
         );
         // Show full profile card right after welcome so the auto username is visible.
@@ -1442,16 +1507,17 @@ final class Handlers
         $invite = $this->settings->getInt('invite_reward', 30);
         $msgCost = $this->settings->getInt('message_cost', 2);
         $reqCost = $this->settings->getInt('request_cost', 1);
+        $banAt = max(1, $this->settings->getInt('report_ban_threshold', 10));
         $caption =
             "ℹ️ <b>راهنمای {$name}</b>\n\n" .
-            "💬 چت ناشناس — اتصال رندوم رایگان\n" .
+            "💬 چت ناشناس — اتصال رندوم (هزینه از پنل ادمین)\n" .
             "🔍 جستجو — کارت · کشویی ستونی · فهرست · عکس\n" .
             "👤 پروفایل — عکس، نام، بیو، لایک، حریم خصوصی\n" .
             "📩 چت خصوصی — درخواست با تأیید · اگر طرف مقابل مشغول بود می‌تونی خبر پایان چت بگیری\n" .
             "✉️ پیام بدون درخواست — هر پیام {$msgCost} سکه · درخواست {$reqCost} سکه\n" .
             "👥 گپ دوستان — ساخت/ورود با سکه · بستن = پاک‌سازی کامل\n" .
-            "🚩 گزارش تخلف — با ۱۰ گزارش (قابل تنظیم در ادمین) خودکار مسدود؛ فعال‌سازی با پشتیبانی\n" .
-            "✨ دعوت — هر دعوت +{$invite} سکه\n\n" .
+            "🚩 گزارش تخلف — با {$banAt} گزارش (قابل تنظیم در ادمین) خودکار مسدود؛ فعال‌سازی با پشتیبانی\n" .
+            "✨ دعوت — هر دعوت کامل‌شده +{$invite} سکه\n\n" .
             "دستورها: /profile /coins /search /link\n" .
             "رمز و کارت بانکی را در چت نفرست.";
         $path = $this->assets . '/menu-help.jpg';
@@ -1488,14 +1554,23 @@ final class Handlers
     {
         $this->clearUi($chatId, $user);
         $path = $this->assets . '/menu-smart.jpg';
-        $caption = "💬 <b>چت ناشناس</b>\n" .
-            "بدون نمایش هویت تلگرام وصل شو.\n" .
-            "همه حالت‌ها رایگان است.";
+        $costs = $this->connectCosts();
+        $lines = [
+            "💬 <b>چت ناشناس</b>",
+            "بدون نمایش هویت تلگرام وصل شو.",
+            '',
+            '• شانسی: ' . ($costs['any'] > 0 ? "{$costs['any']} سکه" : 'رایگان'),
+            '• فیلتر جنسیت: ' . ($costs['gender'] > 0 ? "{$costs['gender']} سکه" : 'رایگان'),
+            '• هم‌استان: ' . ($costs['province'] > 0 ? "{$costs['province']} سکه" : 'رایگان'),
+            '• هم‌سن: ' . ($costs['age'] > 0 ? "{$costs['age']} سکه" : 'رایگان'),
+        ];
+        $caption = implode("\n", $lines);
+        $kb = Keyboards::connectInline($costs);
         if (is_file($path)) {
-            $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::connectInline());
+            $this->uiPhoto($chatId, $user, $path, $caption, $kb);
         } else {
             $this->uiText($chatId, $user, $caption, [
-                'reply_markup' => Keyboards::connectInline(),
+                'reply_markup' => $kb,
             ]);
         }
         $this->pinHamGapMenu($chatId, $user);
@@ -1599,11 +1674,13 @@ final class Handlers
             "📝 {$bioLine}";
 
         $avatar = (string)($user['avatar_file_id'] ?? '');
+        $invite = $this->settings->getInt('invite_reward', 30);
+        $kb = Keyboards::profileInline($invite);
         if ($avatar !== '') {
-            $this->uiPhotoFileId($chatId, $user, $avatar, $text, Keyboards::profileInline());
+            $this->uiPhotoFileId($chatId, $user, $avatar, $text, $kb);
         } else {
             $this->uiText($chatId, $user, $text, [
-                'reply_markup' => Keyboards::profileInline(),
+                'reply_markup' => $kb,
             ]);
         }
         $this->pinHamGapMenu($chatId, $user);
@@ -1615,6 +1692,7 @@ final class Handlers
         $invite = $this->settings->getInt('invite_reward', 30);
         $msgCost = $this->settings->getInt('message_cost', 1);
         $reqCost = $this->settings->getInt('request_cost', 1);
+        $packs = $this->packPrices();
         $path = $this->assets . '/menu-wallet.jpg';
         $caption = "کیف‌پول تو\n" .
             "موجودی: <b>" . (int)$user['coins'] . "</b> سکه\n\n" .
@@ -1622,11 +1700,12 @@ final class Handlers
             "هر پیام کوتاه: {$msgCost} سکه · هر درخواست گفتگو: {$reqCost} سکه\n" .
             "دعوت دوست: +{$invite} سکه\n\n" .
             "برای خرید سکه یک بسته را انتخاب کن. فاکتور با مبلغ یکتا صادر می‌شود.";
+        $kb = Keyboards::walletInline($invite, $packs);
         if (is_file($path)) {
-            $this->uiPhoto($chatId, $user, $path, $caption, Keyboards::walletInline($invite));
+            $this->uiPhoto($chatId, $user, $path, $caption, $kb);
         } else {
             $this->uiText($chatId, $user, $caption, [
-                'reply_markup' => Keyboards::walletInline($invite),
+                'reply_markup' => $kb,
             ]);
         }
         $this->pinHamGapMenu($chatId, $user);
@@ -1646,7 +1725,7 @@ final class Handlers
             $user,
             "دعوت دوستان\n\n" .
             "لینک اختصاصی تو:\n<code>{$safeLink}</code>\n\n" .
-            "هر دوست جدیدی که با این لینک وارد شود، <b>+{$invite} سکه</b> می‌گیری."
+            "هر دوستی که با این لینک بیاید و پروفایلش را کامل کند، <b>+{$invite} سکه</b> می‌گیری."
         );
         $this->pinHamGapMenu($chatId, $user);
     }
@@ -1695,7 +1774,8 @@ final class Handlers
         if (!($result['ok'] ?? false)) {
             $err = (string)($result['error'] ?? '');
             if ($err === 'no_coins') {
-                $this->showNeedCoins($chatId, $user, 1, 'شروع چت');
+                $need = max(1, Matcher::costFor($pref, $this->settings));
+                $this->showNeedCoins($chatId, $user, $need, 'شروع چت');
                 return;
             }
             if ($err === 'need_province') {
@@ -2362,11 +2442,7 @@ final class Handlers
 
         $caption = "🎞 <b>کشویی</b> · " . ($index + 1) . "/{$total}\n────────\n" .
             $this->formatPublicProfile($viewer, $target, false);
-        $req = $this->settings->getInt('request_cost', 1);
-        $msg = $this->settings->getInt('message_cost', 2);
-        $like = $this->settings->getInt('like_cost', 0);
-        $likes = $this->db->countLikes((int)$target['telegram_id']);
-        $profileKb = Keyboards::browseProfileInline((string)$target['public_code'], $req, $msg, $like, $likes);
+        $profileKb = $this->browseProfileMarkup($target);
         $navKb = Keyboards::slideNavInline($index, $total);
         $rows = array_merge($navKb['inline_keyboard'], $profileKb['inline_keyboard']);
         // Drop duplicate "حالت نمایش/پایان" from profile if present at end — keep nav's
@@ -2389,7 +2465,12 @@ final class Handlers
         if ($qid === '' || $tid <= 0) {
             return;
         }
-        $user = $this->db->upsertUser($tid, $from['username'] ?? null, $from['first_name'] ?? null);
+        $user = $this->db->upsertUser(
+            $tid,
+            $from['username'] ?? null,
+            $from['first_name'] ?? null,
+            $this->settings->getInt('welcome_coins', 35)
+        );
         $this->db->touchSeen($tid);
         $user = $this->db->findUser($tid) ?? $user;
         if (($user['status'] ?? '') === 'banned') {
@@ -2406,6 +2487,7 @@ final class Handlers
         $req = $this->settings->getInt('request_cost', 1);
         $msg = $this->settings->getInt('message_cost', 2);
         $like = $this->settings->getInt('like_cost', 0);
+        $notify = max(1, $this->settings->getInt('notify_free_cost', 1));
         foreach ($profiles as $target) {
             $code = preg_replace('/[^A-Za-z0-9_]/', '', (string)($target['public_code'] ?? '')) ?? '';
             if ($code === '') {
@@ -2429,7 +2511,7 @@ final class Handlers
             $description = implode(' · ', array_filter($descParts));
             $caption = $this->formatPublicProfile($user, $target, true);
             $likes = $this->db->countLikes((int)$target['telegram_id']);
-            $markup = Keyboards::browseProfileInline($code, $req, $msg, $like, $likes);
+            $markup = Keyboards::browseProfileInline($code, $req, $msg, $like, $likes, $notify);
             $avatar = ((int)($target['show_avatar'] ?? 1) === 1) ? (string)($target['avatar_file_id'] ?? '') : '';
             if ($avatar !== '') {
                 $results[] = [
@@ -2792,11 +2874,7 @@ final class Handlers
     private function renderBrowseCard(int $chatId, array &$viewer, array $target): void
     {
         $caption = $this->formatPublicProfile($viewer, $target, false);
-        $req = $this->settings->getInt('request_cost', 1);
-        $msg = $this->settings->getInt('message_cost', 2);
-        $like = $this->settings->getInt('like_cost', 0);
-        $likes = $this->db->countLikes((int)$target['telegram_id']);
-        $markup = Keyboards::browseProfileInline((string)$target['public_code'], $req, $msg, $like, $likes);
+        $markup = $this->browseProfileMarkup($target);
         $avatar = ((int)($target['show_avatar'] ?? 1) === 1) ? (string)($target['avatar_file_id'] ?? '') : '';
         if ($avatar !== '') {
             $this->uiPhotoFileId($chatId, $viewer, $avatar, $caption, $markup);
@@ -2910,6 +2988,7 @@ final class Handlers
         $user = $this->db->findUser($tid) ?? $user;
         $this->clearUi($chatId, $user);
         $this->uiText($chatId, $user, "پیام ارسال شد (−{$cost} سکه).\nتا وقتی هر دو طرف چت خصوصی را تأیید نکنند، هر پیام جداگانه سکه کم می‌کند.");
+        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function showNeedCoins(int $chatId, array &$user, int $needed, string $action = ''): void
@@ -2929,6 +3008,7 @@ final class Handlers
             "❗️ اگر دوستی نداری که دعوت کنی، از پنل خرید سکه 💰 استفاده کن و موجودی‌ات را افزایش بده.",
             ['reply_markup' => Keyboards::needCoinsInline($invite)]
         );
+        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function subscribeChatWait(
@@ -3067,8 +3147,9 @@ final class Handlers
         $rows = $this->db->listBlockedUsers((int)$user['telegram_id']);
         if (!$rows) {
             $this->uiText($chatId, $user, "لیست بلاک خالی است.", [
-                'reply_markup' => Keyboards::profileInline(),
+                'reply_markup' => Keyboards::profileInline($this->settings->getInt('invite_reward', 30)),
             ]);
+            $this->pinHamGapMenu($chatId, $user);
             return;
         }
         $lines = ["🚫 <b>کاربران بلاک‌شده</b>"];
@@ -3081,6 +3162,7 @@ final class Handlers
         }
         $kb[] = [['text' => 'بازگشت به پروفایل', 'callback_data' => 'menu:profile']];
         $this->uiText($chatId, $user, implode("\n", $lines), ['reply_markup' => ['inline_keyboard' => $kb]]);
+        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function supportContactLine(): string
@@ -3448,7 +3530,10 @@ final class Handlers
                 $chatId,
                 $user,
                 "هنوز شماره کارت فروشگاه تنظیم نشده.\nاز بات ادمین بخش «پرداخت کارت‌به‌کارت» را کامل کن.",
-                ['reply_markup' => Keyboards::walletInline($this->settings->getInt('invite_reward', 30))]
+                ['reply_markup' => Keyboards::walletInline(
+                    $this->settings->getInt('invite_reward', 30),
+                    $this->packPrices()
+                )]
             );
             return;
         }
@@ -3548,7 +3633,10 @@ final class Handlers
             $user,
             "✅ فیش فاکتور <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
             "</code> ثبت شد.\nبعد از بررسی ادمین، سکه خودکار به حسابت اضافه می‌شود.",
-            ['reply_markup' => Keyboards::walletInline($this->settings->getInt('invite_reward', 30))]
+            ['reply_markup' => Keyboards::walletInline(
+                $this->settings->getInt('invite_reward', 30),
+                $this->packPrices()
+            )]
         );
     }
 
