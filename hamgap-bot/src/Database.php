@@ -1470,7 +1470,7 @@ final class Database
         }
     }
 
-    public function createAdminSession(int $telegramId, int $hours = 12): void
+    public function createAdminSession(int $telegramId, int $hours = 2): void
     {
         $hours = max(1, min(72, $hours));
         $this->pdo->prepare(
@@ -1478,6 +1478,17 @@ final class Database
              VALUES (?, NOW(), DATE_ADD(NOW(), INTERVAL ? HOUR))
              ON DUPLICATE KEY UPDATE logged_in_at = NOW(), expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR)'
         )->execute([$telegramId, $hours, $hours]);
+    }
+
+    public function touchAdminSession(int $telegramId, int $hours = 2): void
+    {
+        if (!$this->hasValidAdminSession($telegramId)) {
+            return;
+        }
+        $hours = max(1, min(72, $hours));
+        $this->pdo->prepare(
+            'UPDATE admin_sessions SET expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR) WHERE telegram_id = ?'
+        )->execute([$hours, $telegramId]);
     }
 
     public function destroyAdminSession(int $telegramId): void
@@ -1494,7 +1505,7 @@ final class Database
         return (bool)$st->fetchColumn();
     }
 
-    public function createStaffSession(int $telegramId, int $hours = 12): void
+    public function createStaffSession(int $telegramId, int $hours = 2): void
     {
         $hours = max(1, min(72, $hours));
         $sql = 'INSERT INTO staff_sessions (telegram_id, logged_in_at, expires_at)
@@ -1506,12 +1517,26 @@ final class Database
             $this->pdo->exec(
                 "CREATE TABLE IF NOT EXISTS staff_sessions (
                     telegram_id BIGINT NOT NULL,
-                    logged_in_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    expires_at TIMESTAMP NOT NULL,
+                    logged_in_at DATETIME NOT NULL,
+                    expires_at DATETIME NOT NULL,
                     PRIMARY KEY (telegram_id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
             );
             $this->pdo->prepare($sql)->execute([$telegramId, $hours, $hours]);
+        }
+    }
+
+    public function touchStaffSession(int $telegramId, int $hours = 2): void
+    {
+        if (!$this->hasValidStaffSession($telegramId)) {
+            return;
+        }
+        $hours = max(1, min(72, $hours));
+        try {
+            $this->pdo->prepare(
+                'UPDATE staff_sessions SET expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR) WHERE telegram_id = ?'
+            )->execute([$hours, $telegramId]);
+        } catch (Throwable $e) {
         }
     }
 
@@ -1533,6 +1558,22 @@ final class Database
             return (bool)$st->fetchColumn();
         } catch (Throwable $e) {
             return false;
+        }
+    }
+
+    /** Remaining staff session minutes; 0 if none. */
+    public function staffSessionMinutesLeft(int $telegramId): int
+    {
+        try {
+            $st = $this->pdo->prepare(
+                'SELECT TIMESTAMPDIFF(MINUTE, NOW(), expires_at) FROM staff_sessions
+                 WHERE telegram_id = ? AND expires_at > NOW() LIMIT 1'
+            );
+            $st->execute([$telegramId]);
+            $m = $st->fetchColumn();
+            return $m === false ? 0 : max(0, (int)$m);
+        } catch (Throwable $e) {
+            return 0;
         }
     }
 

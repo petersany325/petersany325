@@ -11,7 +11,7 @@ final class Keyboards
                 [['text' => '💬 چت ناشناس'], ['text' => '⭐ استار کلاب']],
                 [['text' => '🔍 جستجوی کاربران'], ['text' => '👫 چت با دوستان']],
                 [['text' => '👤 پروفایل'], ['text' => '💎 کیف‌پول']],
-                [['text' => "✨ دعوت دوستان · +{$inviteReward}"]],
+                [['text' => '📊 گزارش من'], ['text' => "✨ دعوت دوستان · +{$inviteReward}"]],
                 [['text' => '🆘 پشتیبانی'], ['text' => 'ℹ️ راهنما']],
                 [['text' => '⌨️ کیبورد تایپ']],
             ],
@@ -55,6 +55,7 @@ final class Keyboards
                 ['text' => '💎 کیف‌پول', 'callback_data' => 'menu:wallet'],
             ],
             [['text' => '⭐ استار کلاب', 'callback_data' => 'menu:vip']],
+            [['text' => '📊 گزارش من', 'callback_data' => 'menu:report']],
             [
                 ['text' => '🆘 پشتیبانی', 'callback_data' => 'menu:support'],
                 ['text' => 'ℹ️ راهنما', 'callback_data' => 'menu:help'],

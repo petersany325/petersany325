@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.26';
+    public const CODE_VERSION = '2026-08-15-v10.27';
 
     private string $assets;
     private Settings $settings;
@@ -666,6 +666,8 @@ final class Handlers
                 => $this->showProfile($chatId, $user),
             $text === '⭐ استار کلاب'
                 => $this->showVip($chatId, $user),
+            in_array($text, ['📊 گزارش من', 'گزارش من', '/reportme', '/status'], true)
+                => $this->showUserReport($chatId, $user),
             str_starts_with($text, '✨ دعوت')
                 => $this->showInvite($chatId, $user),
             $text === '🆘 پشتیبانی'
@@ -685,7 +687,8 @@ final class Handlers
             '💬 چت ناشناس', '💬 چت معمولی',
             '🔥 چت کلاب هات', '🔥 کلاب هات', '🔥 چت هات', 'چت کلاب هات', 'کلاب هات',
             '🔍 جستجوی کاربران', '👫 چت با دوستان', '👥 چت با دوستان',
-            '👤 پروفایل', '💎 کیف‌پول', '⭐ استار کلاب', '🆘 پشتیبانی', 'ℹ️ راهنما', '⌨️ کیبورد تایپ',
+            '👤 پروفایل', '💎 کیف‌پول', '⭐ استار کلاب', '📊 گزارش من',
+            '🆘 پشتیبانی', 'ℹ️ راهنما', '⌨️ کیبورد تایپ',
             '📂 منوی هم‌گپ', '⏭ بعدی', '🛑 پایان چت', '📥 درخواست‌ها', '🚩 گزارش',
         ], true)) {
             return true;
@@ -1292,6 +1295,10 @@ final class Handlers
             case 'menu:hot':
                 $this->clearUi($chatId, $user);
                 $this->openHotClub($chatId, $user);
+                break;
+            case 'menu:report':
+                $this->clearUi($chatId, $user);
+                $this->showUserReport($chatId, $user);
                 break;
             case 'menu:find':
                 $this->clearUi($chatId, $user);
@@ -2242,6 +2249,132 @@ final class Handlers
     {
         require_once __DIR__ . '/ChatModes.php';
         $this->showChatRules($chatId, $user, ChatModes::HOT);
+    }
+
+    /** User status report: coins, memberships, chat level 1–6 stars. */
+    private function showUserReport(int $chatId, array &$user): void
+    {
+        require_once __DIR__ . '/ChatModes.php';
+        $tid = (int)$user['telegram_id'];
+        $user = $this->db->findUser($tid) ?? $user;
+        $this->clearUi($chatId, $user);
+
+        $coins = (int)($user['coins'] ?? 0);
+        $level = $this->chatLevel($user);
+        $stars = str_repeat('⭐', $level) . str_repeat('☆', 6 - $level);
+        $dn = htmlspecialchars((string)($user['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $status = (string)($user['status'] ?? 'idle');
+        $mode = (string)($user['chat_mode'] ?? '');
+
+        $memberships = [];
+        if ($status === 'chatting') {
+            $lab = $mode !== '' ? ChatModes::label($mode) : 'چت ناشناس';
+            $memberships[] = "💬 الان در <b>{$lab}</b> هستی (چت فعال)";
+        } elseif ($status === 'searching') {
+            $lab = $mode !== '' ? ChatModes::label($mode) : 'چت ناشناس';
+            $memberships[] = "🔍 در صف جستجوی <b>{$lab}</b>";
+        } elseif ($status === 'room' && !empty($user['active_room_id'])) {
+            $room = $this->db->findFriendRoom((int)$user['active_room_id']);
+            if ($room) {
+                $title = htmlspecialchars((string)$room['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $kind = (string)($room['room_kind'] ?? '') === 'private' ? 'صفحه اختصاصی' : 'گپ دوستان';
+                $memberships[] = "🏠 الان داخل {$kind}: <b>{$title}</b>";
+            }
+        }
+
+        $rooms = $this->db->listUserRooms($tid, 10);
+        if ($rooms) {
+            foreach ($rooms as $r) {
+                $title = htmlspecialchars((string)$r['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $code = htmlspecialchars((string)$r['code'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $kind = (string)($r['room_kind'] ?? '') === 'private' ? '🔒 اختصاصی' : '👫 دوستان';
+                $memberships[] = "{$kind} · {$title} (<code>{$code}</code>)";
+            }
+        }
+
+        if (Database::isVipActive($user)) {
+            $until = htmlspecialchars((string)($user['vip_until'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $memberships[] = "⭐ عضو <b>استار کلاب</b>" . ($until !== '' ? " تا {$until}" : '');
+        }
+
+        if (!$memberships) {
+            $memberships[] = 'هنوز عضو چت/گپ فعالی نیستی.';
+        }
+
+        $likes = $this->db->countLikes($tid);
+        $invites = $this->db->countSuccessfulInvites($tid);
+        $ageDays = $this->db->accountAgeDays($user);
+
+        $text =
+            "📊 <b>گزارش من</b>\n" .
+            "────────────\n" .
+            "نام: <b>{$dn}</b>\n" .
+            "سکه: <b>{$coins}</b> 🪙\n" .
+            "لول چت: <b>{$level}/۶</b>  {$stars}\n" .
+            "لایک دریافتی: <b>{$likes}</b> · دعوت موفق: <b>{$invites}</b> · عضویت: <b>{$ageDays}</b> روز\n\n" .
+            "📍 <b>عضویت‌های چت</b>\n• " . implode("\n• ", $memberships) . "\n\n" .
+            "<i>لول با پروفایل کامل، لایک، دعوت، استار کلاب و فعالیت بالا می‌رود (۱ تا ۶ ستاره).</i>";
+
+        $this->uiText($chatId, $user, $text, [
+            'reply_markup' => ['inline_keyboard' => [
+                [['text' => '🔥 چت کلاب هات', 'callback_data' => 'menu:hot']],
+                [['text' => '💬 چت ناشناس', 'callback_data' => 'menu:connect']],
+                [['text' => '💎 کیف‌پول', 'callback_data' => 'menu:wallet']],
+                [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
+            ]],
+        ]);
+        $this->pinHamGapMenu($chatId, $user);
+    }
+
+    /** Chat level 1–6 based on profile, likes, invites, VIP, age. */
+    private function chatLevel(array $user): int
+    {
+        $score = 0;
+        if ($this->isProfileComplete($user)) {
+            $score += 1;
+        }
+        if (trim((string)($user['avatar_file_id'] ?? '')) !== '') {
+            $score += 1;
+        }
+        $likes = $this->db->countLikes((int)$user['telegram_id']);
+        if ($likes >= 3) {
+            $score += 1;
+        }
+        if ($likes >= 15) {
+            $score += 1;
+        }
+        $invites = $this->db->countSuccessfulInvites((int)$user['telegram_id']);
+        if ($invites >= 1) {
+            $score += 1;
+        }
+        if ($invites >= 5) {
+            $score += 1;
+        }
+        if (Database::isVipActive($user)) {
+            $score += 2;
+        }
+        if ($this->db->accountAgeDays($user) >= 7) {
+            $score += 1;
+        }
+        if ((int)($user['coins'] ?? 0) >= 100) {
+            $score += 1;
+        }
+        if ($score <= 1) {
+            return 1;
+        }
+        if ($score <= 3) {
+            return 2;
+        }
+        if ($score <= 5) {
+            return 3;
+        }
+        if ($score <= 7) {
+            return 4;
+        }
+        if ($score <= 9) {
+            return 5;
+        }
+        return 6;
     }
 
     private function showChatRules(int $chatId, array &$user, string $mode): void

@@ -9,7 +9,7 @@ declare(strict_types=1);
  */
 final class StaffHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.24-staff';
+    public const CODE_VERSION = '2026-08-15-v10.27-staff';
 
     public function __construct(
         private array $config,
@@ -57,19 +57,21 @@ final class StaffHandlers
             return true;
         }
 
-        // Login / logout / home without full session for login button
+        // Login / logout / home — honor existing session (no re-auth for ~2h)
         if ($data === 'stf:login' || $data === 'stf:home') {
             $this->tg->answerCallback($id);
             $this->ensureUser($tid, $from);
-            if ($data === 'stf:home' && $this->isLoggedIn($tid)) {
+            if ($this->isLoggedIn($tid)) {
+                $this->touchSession($tid);
                 $this->home($chatId);
                 return true;
             }
-            // Not logged in → start password login, then open panel
             $this->db->updateUser($tid, ['flow' => 'stf:login:pass']);
+            $hours = max(2, $this->settings->getInt('staff_session_hours', 2));
             $this->tg->trySendMessage(
                 $chatId,
                 "🔐 برای باز شدن پنل، رمز عبور کارمند را بفرست:\n" .
+                "بعد از ورود تا حدود <b>{$hours} ساعت</b> دوباره رمز نمی‌خواهد.\n" .
                 "(اگر ادمین رمز را عوض کرده، همان رمز جدید را بزن)"
             );
             return true;
@@ -91,6 +93,7 @@ final class StaffHandlers
 
         $this->tg->answerCallback($id);
         $this->ensureUser($tid, $from);
+        $this->touchSession($tid);
 
         if ($data === 'stf:home') {
             $this->home($chatId);
@@ -197,12 +200,20 @@ final class StaffHandlers
         // Commands always available to staff
         if ($text === '/panel' || $text === '/staff' || $text === 'پنل کارمند') {
             if ($this->isLoggedIn($tid)) {
+                $this->touchSession($tid);
+                $left = $this->db->staffSessionMinutesLeft($tid);
+                $this->tg->trySendMessage(
+                    $chatId,
+                    "✅ هنوز وارد هستی — حدود <b>{$left}</b> دقیقه از نشست مانده.\nرمز دوباره لازم نیست."
+                );
                 $this->home($chatId);
             } else {
                 $this->db->updateUser($tid, ['flow' => 'stf:login:pass']);
+                $hours = max(2, $this->settings->getInt('staff_session_hours', 2));
                 $this->tg->trySendMessage(
                     $chatId,
-                    "🔐 برای باز شدن پنل، رمز کارمند را بفرست:"
+                    "🔐 برای باز شدن پنل، رمز کارمند را بفرست:\n" .
+                    "بعد از ورود تا حدود <b>{$hours} ساعت</b> دوباره رمز نمی‌خواهد."
                 );
             }
             return true;
@@ -214,13 +225,21 @@ final class StaffHandlers
             return true;
         }
         if ($text === '/login' || $text === 'ورود پنل') {
+            if ($this->isLoggedIn($tid)) {
+                $this->touchSession($tid);
+                $left = $this->db->staffSessionMinutesLeft($tid);
+                $this->tg->trySendMessage($chatId, "✅ قبلاً وارد شدی (~{$left} دقیقه مانده). پنل باز شد.");
+                $this->home($chatId);
+                return true;
+            }
             $this->db->updateUser($tid, ['flow' => 'stf:login:pass']);
             $default = $this->settings->get('staff_default_password', 'HamGapStaff1');
             $this->db->ensureSupportStaffPassword($tid, $default);
+            $hours = max(2, $this->settings->getInt('staff_session_hours', 2));
             $this->tg->trySendMessage(
                 $chatId,
                 "🔐 رمز عبور پنل کارمند را بفرست:\n" .
-                "اگر ادمین رمز پیش‌فرض را عوض کرده، همان را وارد کن."
+                "بعد از ورود تا حدود <b>{$hours} ساعت</b> رمز دوباره لازم نیست."
             );
             return true;
         }
@@ -235,12 +254,12 @@ final class StaffHandlers
                     $chatId,
                     "رمز نادرست است.\n" .
                     "دوباره /login بزن.\n" .
-                    "ادمین می‌تواند از لیست کارمندان → 🔑 رمز را ریست کند، یا «رمز پیش‌فرض کارمند» را عوض کند."
+                    "ادمین می‌تواند از لیست کارمندان → 🔑 رمز را ریست کند."
                 );
                 return true;
             }
+            $hours = max(2, $this->settings->getInt('staff_session_hours', 2));
             try {
-                $hours = $this->settings->getInt('staff_session_hours', 12);
                 $this->db->createStaffSession($tid, $hours);
             } catch (Throwable $e) {
                 $this->tg->trySendMessage(
@@ -254,7 +273,10 @@ final class StaffHandlers
                 $this->tg->trySendMessage($chatId, 'نشست ساخته نشد. یک‌بار دیگر /login را بزن.');
                 return true;
             }
-            $this->tg->trySendMessage($chatId, '✅ ورود موفق — پنل باز شد.');
+            $this->tg->trySendMessage(
+                $chatId,
+                "✅ ورود موفق — پنل باز شد.\nتا حدود <b>{$hours} ساعت</b> رمز دوباره نمی‌خواهد (با کار کردن تمدید می‌شود)."
+            );
             $this->home($chatId);
             return true;
         }
@@ -267,6 +289,8 @@ final class StaffHandlers
             }
             return false;
         }
+
+        $this->touchSession($tid);
 
         // Password change (pending hash — no long flow value)
         if ($flow === 'stf:pwd:new' && $text !== '') {
@@ -391,18 +415,28 @@ final class StaffHandlers
 
     public function home(int $chatId): void
     {
+        $hours = max(2, $this->settings->getInt('staff_session_hours', 2));
+        $left = $this->db->staffSessionMinutesLeft($chatId);
+        $sess = $left > 0
+            ? "⏱ نشست فعال: حدود <b>{$left}</b> دقیقه مانده (با کار در پنل تمدید می‌شود)\n"
+            : "⏱ بعد از ورود تا حدود <b>{$hours} ساعت</b> رمز دوباره لازم نیست\n";
         $this->tg->trySendMessage(
             $chatId,
             "🛠 <b>پنل کارمند هم‌گپ</b>\n" .
+            $sess .
             "نسخه: <code>" . self::CODE_VERSION . "</code>\n\n" .
             "• جستجو و کارت کاربر\n" .
+            "• افزودن سکه / فیش‌های در انتظار\n" .
             "• مسدود / رفع مسدود\n" .
-            "• تغییر نام نمایشی\n" .
-            "• پیام مستقیم به کاربر\n" .
-            "• تیکت‌های باز پشتیبانی\n" .
-            "• تغییر رمز پنل",
+            "• تغییر نام · پیام · تیکت‌ها",
             ['reply_markup' => Keyboards::staffMain()]
         );
+    }
+
+    private function touchSession(int $tid): void
+    {
+        $hours = max(2, $this->settings->getInt('staff_session_hours', 2));
+        $this->db->touchStaffSession($tid, $hours);
     }
 
     private function askFind(int $chatId, int $tid): void

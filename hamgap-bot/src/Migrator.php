@@ -72,6 +72,13 @@ final class Migrator
         if ($cur === '' || $cur === '5') {
             $settings->set('report_ban_threshold', '10');
         }
+        // v10.27: support/admin sessions default 2 hours (was often broken / too short)
+        foreach (['staff_session_hours', 'admin_session_hours'] as $k) {
+            $h = (int)$settings->get($k, '2');
+            if ($h < 2) {
+                $settings->set($k, '2');
+            }
+        }
     }
 
     private static function ensureChatWaitNoticesTable(PDO $pdo): void
@@ -238,11 +245,16 @@ final class Migrator
         $pdo->exec(
             "CREATE TABLE IF NOT EXISTS admin_sessions (
                 telegram_id BIGINT NOT NULL,
-                logged_in_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                expires_at TIMESTAMP NOT NULL,
+                logged_in_at DATETIME NOT NULL,
+                expires_at DATETIME NOT NULL,
                 PRIMARY KEY (telegram_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
+        try {
+            $pdo->exec('ALTER TABLE admin_sessions MODIFY logged_in_at DATETIME NOT NULL');
+            $pdo->exec('ALTER TABLE admin_sessions MODIFY expires_at DATETIME NOT NULL');
+        } catch (Throwable $e) {
+        }
     }
 
     private static function ensureStaffSessionsTable(PDO $pdo): void
@@ -250,11 +262,17 @@ final class Migrator
         $pdo->exec(
             "CREATE TABLE IF NOT EXISTS staff_sessions (
                 telegram_id BIGINT NOT NULL,
-                logged_in_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                expires_at TIMESTAMP NOT NULL,
+                logged_in_at DATETIME NOT NULL,
+                expires_at DATETIME NOT NULL,
                 PRIMARY KEY (telegram_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
+        // Prefer DATETIME to avoid TIMESTAMP timezone quirks that expire sessions early
+        try {
+            $pdo->exec('ALTER TABLE staff_sessions MODIFY logged_in_at DATETIME NOT NULL');
+            $pdo->exec('ALTER TABLE staff_sessions MODIFY expires_at DATETIME NOT NULL');
+        } catch (Throwable $e) {
+        }
     }
 
     private static function addColumn(PDO $pdo, string $table, string $column, string $definition): void

@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.22-admin';
+    public const CODE_VERSION = '2026-08-15-v10.27-admin';
 
     /** Keys editable via adm:set: — anything else is rejected. */
     public const ALLOWED_SET_KEYS = [
@@ -72,11 +72,12 @@ final class AdminHandlers
         if (!$this->isLoggedIn($tid)) {
             if ($text === '/start' || $text === '/admin' || $text === '/login') {
                 $this->db->updateUser($tid, ['flow' => 'adm:login:user']);
+                $hours = max(2, $this->settings->getInt('admin_session_hours', 2));
                 $this->tg->sendMessage(
                     $chatId,
                     "🔐 <b>ورود به پنل ادمین هم‌گپ</b>\n\n" .
                     "نام کاربری ادمین را بفرست.\n" .
-                    "بدون ورود، هیچ گزینه‌ای در دسترس نیست."
+                    "بعد از ورود تا حدود <b>{$hours} ساعت</b> دوباره یوزر/رمز نمی‌خواهد."
                 );
                 return;
             }
@@ -98,16 +99,22 @@ final class AdminHandlers
                     $this->tg->sendMessage($chatId, 'رمز نادرست است. دوباره /login بزن.');
                     return;
                 }
-                $hours = $this->settings->getInt('admin_session_hours', 12);
+                $hours = max(2, $this->settings->getInt('admin_session_hours', 2));
                 $this->db->createAdminSession($tid, $hours);
                 $this->db->updateUser($tid, ['flow' => null, 'is_admin' => 1]);
-                $this->tg->sendMessage($chatId, "✅ ورود موفق\nنشست تا حدود {$hours} ساعت فعال است.");
+                $this->tg->sendMessage(
+                    $chatId,
+                    "✅ ورود موفق\nتا حدود <b>{$hours} ساعت</b> یوزر/رمز دوباره لازم نیست (با کار در پنل تمدید می‌شود)."
+                );
                 $this->home($chatId);
                 return;
             }
             $this->tg->sendMessage($chatId, "برای ورود به پنل ادمین /login را بزن.");
             return;
         }
+
+        // Keep session alive while working
+        $this->db->touchAdminSession($tid, max(2, $this->settings->getInt('admin_session_hours', 2)));
 
         // Logged in
         if ($text === '/logout' || $text === 'خروج') {
@@ -117,7 +124,7 @@ final class AdminHandlers
             return;
         }
 
-        if ($text === '/start' || $text === '/admin' || $text === 'خانه') {
+        if ($text === '/start' || $text === '/admin' || $text === '/login' || $text === 'خانه') {
             $this->db->updateUser($tid, ['flow' => null]);
             $this->home($chatId);
             return;
@@ -350,6 +357,8 @@ final class AdminHandlers
             $this->tg->answerCallback($id, 'اول /login کن', true);
             return;
         }
+
+        $this->db->touchAdminSession($tid, max(2, $this->settings->getInt('admin_session_hours', 2)));
 
         // Emergency: accept/close support tickets that were pushed to admin bot
         if (str_starts_with($data, 'sup:')) {
