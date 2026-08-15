@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.25';
+    public const CODE_VERSION = '2026-08-15-v10.26';
 
     private string $assets;
     private Settings $settings;
@@ -652,7 +652,9 @@ final class Handlers
         match (true) {
             in_array($text, ['🔗 وصلم کن به ناشناس', '🔗 وصل ناشناس', '💬 چت ناشناس', '💬 چت معمولی'], true)
                 => $this->showConnect($chatId, $user),
-            in_array($text, ['🔥 کلاب هات', '🔥 چت هات', 'چت هات'], true)
+            in_array($text, [
+                '🔥 چت کلاب هات', '🔥 کلاب هات', '🔥 چت هات', 'چت هات', 'چت کلاب هات', 'کلاب هات',
+            ], true)
                 => $this->openHotClub($chatId, $user),
             in_array($text, ['🔍 پیدا کردن مخاطب', '🔍 جستجوی کاربران'], true)
                 => $this->showFind($chatId, $user),
@@ -680,7 +682,8 @@ final class Handlers
     private function isHamGapMenuLabel(string $text): bool
     {
         if (in_array($text, [
-            '💬 چت ناشناس', '💬 چت معمولی', '🔥 کلاب هات', '🔥 چت هات',
+            '💬 چت ناشناس', '💬 چت معمولی',
+            '🔥 چت کلاب هات', '🔥 کلاب هات', '🔥 چت هات', 'چت کلاب هات', 'کلاب هات',
             '🔍 جستجوی کاربران', '👫 چت با دوستان', '👥 چت با دوستان',
             '👤 پروفایل', '💎 کیف‌پول', '⭐ استار کلاب', '🆘 پشتیبانی', 'ℹ️ راهنما', '⌨️ کیبورد تایپ',
             '📂 منوی هم‌گپ', '⏭ بعدی', '🛑 پایان چت', '📥 درخواست‌ها', '🚩 گزارش',
@@ -2107,7 +2110,7 @@ final class Handlers
     {
         $caption = trim(
             ($extra !== '' ? $extra . "\n\n" : '') .
-            "《 <b>{$this->botName()}</b> 》\nچت ناشناس · امن · سریع"
+            "《 <b>{$this->botName()}</b> 》\nچت ناشناس · کلاب هات · امن"
         );
         $path = $this->assets . '/menu-main.jpg';
         if (is_file($path)) {
@@ -2117,9 +2120,12 @@ final class Handlers
                 'reply_markup' => Keyboards::mainInline(),
             ]);
         }
-        $this->uiText($chatId, $user, '⬇️ منوی هم‌گپ', [
-            'reply_markup' => Keyboards::mainReply($this->settings->getInt('invite_reward', 30)),
-        ]);
+        // Force-refresh reply keyboard so new items (چت کلاب هات) appear for existing users
+        $this->tg->sendMessage(
+            $chatId,
+            "⬇️ منوی هم‌گپ\n<b>🔥 چت کلاب هات</b> الان در ردیف اول منو است.",
+            ['reply_markup' => Keyboards::mainReply($this->settings->getInt('invite_reward', 30))]
+        );
         $this->maybeNudgeIncompleteProfile($chatId, $user);
         $this->maybeWarnLowCoins($chatId, $user);
     }
