@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.13';
+    public const CODE_VERSION = '2026-08-15-v10.14';
 
     private string $assets;
     private Settings $settings;
@@ -1130,6 +1130,12 @@ final class Handlers
             return;
         }
 
+        // Occupation / education tag
+        if (str_starts_with($data, 'occ:')) {
+            $this->handleOccupationCallback($cq, $user, $id, $data, $chatId, $tid);
+            return;
+        }
+
         // Friend rooms + friendship responses
         if (str_starts_with($data, 'fr:') || str_starts_with($data, 'frnd:')) {
             $this->handleFriendsCallback($cq, $user, $id, $data, $chatId, $tid);
@@ -1319,6 +1325,10 @@ final class Handlers
                     $user,
                     "📝 <b>بیو / معرفی</b>\nحداکثر ۱۸۰ کاراکتر.\nفعلی: {$cur}\n\nبرای پاک کردن بنویس: <code>پاک</code>"
                 );
+                break;
+            case 'edit:occupation':
+                $this->clearUi($chatId, $user);
+                $this->askOccupation($chatId, $user, false);
                 break;
             default:
                 break;
@@ -1682,6 +1692,76 @@ final class Handlers
             "دوستات رو دعوت کن و برای هر نفر <b>+{$invite}</b> سکه بگیر ✨"
         );
         $this->showProfile($chatId, $fresh);
+        // Optional occupation tag right after signup
+        if (empty($fresh['occupation'])) {
+            $this->askOccupation($chatId, $fresh, true);
+        }
+    }
+
+    private function askOccupation(int $chatId, array &$user, bool $afterSignup): void
+    {
+        $cur = Occupation::badge((string)($user['occupation'] ?? ''));
+        $curLine = $cur !== '' ? "فعلی: <b>{$cur}</b>\n\n" : '';
+        $note = $afterSignup
+            ? "اختیاریه — می‌تونی رد شی.\n"
+            : '';
+        $this->uiText(
+            $chatId,
+            $user,
+            "🎓 <b>تخصص / تحصیلات</b>\n" .
+            $note .
+            $curLine .
+            "این تگ <i>خوداظهاری</i> است و مدرک رسمی نیست.\n" .
+            "برای تفکیک بهتر در جستجو انتخاب کن 👇",
+            [
+                'reply_markup' => Keyboards::occupationInline(
+                    $afterSignup,
+                    $afterSignup ? 'menu:main' : 'menu:profile_settings'
+                ),
+            ]
+        );
+        $this->pinHamGapMenu($chatId, $user);
+    }
+
+    private function handleOccupationCallback(
+        array $cq,
+        array &$user,
+        string $id,
+        string $data,
+        int $chatId,
+        int $tid
+    ): void {
+        if ($data === 'occ:skip') {
+            $this->tg->answerCallback($id, 'باشه');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->showMain($chatId, $user, 'هر وقت خواستی از تنظیمات پروفایل تخصصت را اضافه کن.');
+            return;
+        }
+        if ($data === 'occ:clear') {
+            $this->db->updateUser($tid, ['occupation' => null]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id, 'پاک شد');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->showProfile($chatId, $user);
+            return;
+        }
+        if (str_starts_with($data, 'occ:set:')) {
+            $key = substr($data, strlen('occ:set:'));
+            if (!Occupation::isValid($key)) {
+                $this->tg->answerCallback($id, 'نامعتبر', true);
+                return;
+            }
+            $this->db->updateUser($tid, ['occupation' => $key, 'show_occupation' => 1]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id, Occupation::short($key) . ' ✅');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->showProfile($chatId, $user);
+            return;
+        }
+        $this->tg->answerCallback($id);
     }
 
     private function showHelp(int $chatId, array &$user): void
@@ -1696,7 +1776,8 @@ final class Handlers
             "ℹ️ <b>راهنمای {$name}</b>\n\n" .
             "💬 چت ناشناس — اتصال رندوم (هزینه از پنل ادمین)\n" .
             "🔍 جستجو — کارت · کشویی ستونی · فهرست · عکس\n" .
-            "👤 پروفایل — عکس، نام، بیو، لایک، حریم خصوصی\n" .
+            "👤 پروفایل — عکس، نام، بیو، تخصص/تحصیلات، لایک، حریم خصوصی\n" .
+            "🎓 تخصص — پزشک، مهندس، دانشجو و… (خوداظهاری · قابل فیلتر در جستجو)\n" .
             "📩 چت خصوصی — درخواست با تأیید · اگر طرف مقابل مشغول بود می‌تونی خبر پایان چت بگیری\n" .
             "✉️ پیام بدون درخواست — هر پیام {$msgCost} سکه · درخواست {$reqCost} سکه\n" .
             "👥 گپ دوستان — ساخت/ورود با سکه · بستن = پاک‌سازی کامل\n" .
@@ -1820,6 +1901,7 @@ final class Handlers
         $this->db->ensureIdentity($user);
         $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         $g = Gender::label((string)($user['gender'] ?? ''));
+        $occBadge = Occupation::badge((string)($user['occupation'] ?? ''));
         $dn = htmlspecialchars((string)($user['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $prov = htmlspecialchars((string)($user['province'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $city = htmlspecialchars((string)($user['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -1836,6 +1918,7 @@ final class Handlers
         $flags = [];
         foreach ([
             'show_gender' => 'جنسیت',
+            'show_occupation' => 'تخصص',
             'show_age' => 'سن',
             'show_province' => 'استان',
             'show_city' => 'شهر',
@@ -1844,11 +1927,15 @@ final class Handlers
         ] as $k => $label) {
             $flags[] = ((int)($user[$k] ?? 1) === 1 ? '✅' : '🚫') . $label;
         }
+        $occLine = $occBadge !== ''
+            ? "تخصص: <b>" . htmlspecialchars($occBadge, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b> <i>(خوداظهاری)</i>\n"
+            : "تخصص: <i>ثبت نشده</i>\n";
         $text = "👤 <b>پروفایل من</b>\n" .
             "────────────\n" .
             "<b>{$dn}</b>\n" .
             "کد عمومی: <code>{$pc}</code>\n" .
             "{$g} · سن " . ($user['age'] ?? '-') . "\n" .
+            $occLine .
             "{$prov} / {$city}\n" .
             "سکه: <b>" . (int)$user['coins'] . "</b>\n" .
             "❤️ لایک‌ها: <b>" . $this->db->countLikes((int)$user['telegram_id']) . "</b>\n" .
@@ -2310,6 +2397,36 @@ final class Handlers
             $this->tg->answerCallback($id, 'هم‌سن');
             $this->stripCallbackMenu($cq);
             $this->beginBrowse($chatId, $user, ['age_near' => 1, 'viewer_age' => $age]);
+            return;
+        }
+        if ($data === 'sr:occ') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "🎓 <b>جستجو بر اساس تخصص / تحصیلات</b>\n" .
+                "تگ‌ها خوداظهاری هستند؛ مدرک رسمی نیست.\nیکی را انتخاب کن 👇",
+                ['reply_markup' => Keyboards::occupationSearchInline()]
+            );
+            return;
+        }
+        if (str_starts_with($data, 'sr:occ:')) {
+            $key = substr($data, strlen('sr:occ:'));
+            if ($key === 'any') {
+                $this->tg->answerCallback($id, 'دارای تخصص');
+                $this->stripCallbackMenu($cq);
+                $this->beginBrowse($chatId, $user, ['has_occupation' => 1]);
+                return;
+            }
+            if (!Occupation::isValid($key)) {
+                $this->tg->answerCallback($id, 'نامعتبر', true);
+                return;
+            }
+            $this->tg->answerCallback($id, Occupation::short($key));
+            $this->stripCallbackMenu($cq);
+            $this->beginBrowse($chatId, $user, ['occupation' => $key]);
             return;
         }
 
@@ -2988,6 +3105,12 @@ final class Handlers
         }
         if ((int)($target['show_age'] ?? 1) === 1) {
             $meta[] = (int)($target['age'] ?? 0) . ' ساله';
+        }
+        if ((int)($target['show_occupation'] ?? 1) === 1) {
+            $badge = Occupation::badge((string)($target['occupation'] ?? ''));
+            if ($badge !== '') {
+                $meta[] = $badge;
+            }
         }
         if ($meta) {
             $lines[] = implode(' · ', $meta);
@@ -3873,7 +3996,7 @@ final class Handlers
         }
         if (str_starts_with($data, 'pr:tog:')) {
             $field = substr($data, strlen('pr:tog:'));
-            $allowed = ['show_age', 'show_city', 'show_province', 'show_gender', 'show_online', 'show_avatar'];
+            $allowed = ['show_age', 'show_city', 'show_province', 'show_gender', 'show_occupation', 'show_online', 'show_avatar'];
             if (!in_array($field, $allowed, true)) {
                 $this->tg->answerCallback($id, 'نامعتبر', true);
                 return;

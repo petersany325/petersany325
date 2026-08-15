@@ -27,6 +27,8 @@ final class Migrator
         self::addColumn($pdo, 'users', 'show_gender', 'TINYINT(1) NOT NULL DEFAULT 1');
         self::addColumn($pdo, 'users', 'show_online', 'TINYINT(1) NOT NULL DEFAULT 1');
         self::addColumn($pdo, 'users', 'show_avatar', 'TINYINT(1) NOT NULL DEFAULT 1');
+        self::addColumn($pdo, 'users', 'occupation', 'VARCHAR(32) NULL');
+        self::addColumn($pdo, 'users', 'show_occupation', 'TINYINT(1) NOT NULL DEFAULT 1');
         self::addColumn($pdo, 'users', 'browse_view', "VARCHAR(16) NOT NULL DEFAULT 'card'");
         self::addColumn($pdo, 'users', 'browse_cache', 'MEDIUMTEXT NULL');
         self::addColumn($pdo, 'users', 'active_room_id', 'BIGINT UNSIGNED NULL');

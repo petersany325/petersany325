@@ -94,6 +94,7 @@ final class Keyboards
                 ['text' => '🏙 هم‌استان', 'callback_data' => 'sr:sameprov'],
                 ['text' => '🎂 هم‌سن', 'callback_data' => 'sr:sameage'],
             ],
+            [['text' => '🎓 تخصص / تحصیلات', 'callback_data' => 'sr:occ']],
             [['text' => '🎛 جستجوی پیشرفته', 'callback_data' => 'sr:advanced']],
             [
                 ['text' => '👩 آنلاین دختر', 'callback_data' => 'sr:online:female'],
@@ -548,12 +549,64 @@ final class Keyboards
         ]];
     }
 
+    public static function occupationInline(bool $allowSkip = true, string $back = 'menu:profile_settings'): array
+    {
+        $rows = [
+            [
+                ['text' => '🩺 پزشک / کادر درمان', 'callback_data' => 'occ:set:doctor'],
+                ['text' => '🛠 مهندس', 'callback_data' => 'occ:set:engineer'],
+            ],
+            [
+                ['text' => '🎓 فارغ‌التحصیل', 'callback_data' => 'occ:set:graduate'],
+                ['text' => '📚 دانشجو', 'callback_data' => 'occ:set:student'],
+            ],
+            [
+                ['text' => '⚖️ حقوق / وکالت', 'callback_data' => 'occ:set:lawyer'],
+                ['text' => '💼 کسب‌وکار', 'callback_data' => 'occ:set:business'],
+            ],
+            [
+                ['text' => '🎨 هنر / رسانه', 'callback_data' => 'occ:set:arts'],
+                ['text' => '✨ سایر', 'callback_data' => 'occ:set:other'],
+            ],
+            [['text' => 'پاک کردن تخصص', 'callback_data' => 'occ:clear']],
+        ];
+        if ($allowSkip) {
+            $rows[] = [['text' => 'فعلاً رد شو', 'callback_data' => 'occ:skip']];
+        }
+        $rows[] = [['text' => 'بازگشت', 'callback_data' => $back]];
+        return ['inline_keyboard' => $rows];
+    }
+
+    public static function occupationSearchInline(): array
+    {
+        return ['inline_keyboard' => [
+            [
+                ['text' => '🩺 پزشک', 'callback_data' => 'sr:occ:doctor'],
+                ['text' => '🛠 مهندس', 'callback_data' => 'sr:occ:engineer'],
+            ],
+            [
+                ['text' => '🎓 فارغ‌التحصیل', 'callback_data' => 'sr:occ:graduate'],
+                ['text' => '📚 دانشجو', 'callback_data' => 'sr:occ:student'],
+            ],
+            [
+                ['text' => '⚖️ حقوق', 'callback_data' => 'sr:occ:lawyer'],
+                ['text' => '💼 کسب‌وکار', 'callback_data' => 'sr:occ:business'],
+            ],
+            [
+                ['text' => '🎨 هنر', 'callback_data' => 'sr:occ:arts'],
+                ['text' => 'همه با تخصص', 'callback_data' => 'sr:occ:any'],
+            ],
+            [['text' => 'بازگشت به جستجو', 'callback_data' => 'menu:find']],
+        ]];
+    }
+
     public static function profileSettingsInline(): array
     {
         return ['inline_keyboard' => [
             [['text' => '🖼 عکس پروفایل', 'callback_data' => 'edit:avatar']],
             [['text' => '🔤 نام کاربری (دستی / خودکار)', 'callback_data' => 'edit:namehub']],
             [['text' => '📝 بیو / معرفی کوتاه', 'callback_data' => 'edit:bio']],
+            [['text' => '🎓 تخصص / تحصیلات', 'callback_data' => 'edit:occupation']],
             [
                 ['text' => 'جنسیت', 'callback_data' => 'edit:gender'],
                 ['text' => 'سن', 'callback_data' => 'edit:age'],
@@ -592,6 +645,7 @@ final class Keyboards
             ],
             [['text' => '👥 فقط دوستان / خاص', 'callback_data' => 'pr:vis:friends']],
             [['text' => $mark('show_gender', $user) . ' جنسیت', 'callback_data' => 'pr:tog:show_gender']],
+            [['text' => $mark('show_occupation', $user) . ' تخصص / تحصیلات', 'callback_data' => 'pr:tog:show_occupation']],
             [
                 ['text' => $mark('show_age', $user) . ' سن', 'callback_data' => 'pr:tog:show_age'],
                 ['text' => $mark('show_online', $user) . ' آنلاین', 'callback_data' => 'pr:tog:show_online'],

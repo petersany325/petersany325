@@ -17,6 +17,7 @@ require __DIR__ . '/src/Migrator.php';
 require __DIR__ . '/src/Telegram.php';
 require __DIR__ . '/src/IranLocations.php';
 require __DIR__ . '/src/Gender.php';
+require __DIR__ . '/src/Occupation.php';
 require __DIR__ . '/src/Keyboards.php';
 require __DIR__ . '/src/Matcher.php';
 require __DIR__ . '/src/Handlers.php';
@@ -30,6 +31,7 @@ if (function_exists('opcache_invalidate')) {
         __DIR__ . '/src/Telegram.php',
         __DIR__ . '/src/IranLocations.php',
         __DIR__ . '/src/Gender.php',
+        __DIR__ . '/src/Occupation.php',
         __DIR__ . '/src/Keyboards.php',
         __DIR__ . '/src/Matcher.php',
         __DIR__ . '/src/Handlers.php',

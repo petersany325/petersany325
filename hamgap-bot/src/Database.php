@@ -470,6 +470,13 @@ final class Database
             $sql .= ' AND ABS(u.age - ?) <= 3';
             $params[] = (int)$filters['viewer_age'];
         }
+        if (!empty($filters['occupation']) && Occupation::isValid((string)$filters['occupation'])) {
+            $sql .= ' AND u.occupation = ? AND COALESCE(u.show_occupation, 1) = 1';
+            $params[] = $filters['occupation'];
+        }
+        if (!empty($filters['has_occupation'])) {
+            $sql .= " AND u.occupation IS NOT NULL AND u.occupation <> '' AND COALESCE(u.show_occupation, 1) = 1";
+        }
         return $sql;
     }
 
