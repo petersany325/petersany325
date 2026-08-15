@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.8';
+    public const CODE_VERSION = '2026-08-15-v10.8.1';
 
     private string $assets;
     private Settings $settings;
@@ -149,8 +149,7 @@ final class Handlers
         if (($user['status'] ?? '') === 'banned') {
             $this->tg->sendMessage(
                 $chatId,
-                "حسابت به‌خاطر گزارش‌های خلاف موقتاً مسدود است.\n" .
-                "برای رفع مشکل با پشتیبانی تماس بگیر."
+                $this->bannedAccountText()
             );
             return;
         }
@@ -1321,7 +1320,7 @@ final class Handlers
             "📩 چت خصوصی — درخواست با تأیید / رزرو · پایان = پاک شدن تاریخچه\n" .
             "✉️ پیام بدون درخواست — هر پیام {$msgCost} سکه · درخواست {$reqCost} سکه\n" .
             "👥 گپ دوستان — ساخت/ورود با سکه · بستن = پاک‌سازی کامل\n" .
-            "🚩 گزارش تخلف — با انتخاب دلیل (مزاحمت، فحاشی، جنسیت اشتباه و …)\n" .
+            "🚩 گزارش تخلف — با ۱۰ گزارش (قابل تنظیم در ادمین) خودکار مسدود؛ فعال‌سازی با پشتیبانی\n" .
             "✨ دعوت — هر دعوت +{$invite} سکه\n\n" .
             "دستورها: /profile /coins /search /link\n" .
             "رمز و کارت بانکی را در چت نفرست.";
@@ -1378,10 +1377,11 @@ final class Handlers
         $this->uiText(
             $chatId,
             $user,
-            "🔍 <b>جستجوی کاربران</b> · کاملاً رایگان\n" .
-            "نزدیک من: سیستم تا ۱۰۰ نفر نزدیک را خودکار پیدا می‌کند.\n" .
-            "نمایش: کارت · فهرست ستونی · با عکس · منوی دکمه‌ای\n" .
-            "سکه فقط برای درخواست گفتگو یا پیام کوتاه کم می‌شود.",
+            "🔍 <b>جستجوی کاربران</b> · رایگان\n\n" .
+            "یک گزینه را انتخاب کن؛ بعد از پیدا شدن، کارت کاربر باز می‌شود.\n" .
+            "روی کارت می‌تونی: پیام بفرستی، درخواست چت بدهی، گزارش تخلف بزنی یا بلاک کنی.\n\n" .
+            "📍 نزدیک من → تا ۱۰۰ نفر نزدیک\n" .
+            "🟢 آنلاین → کسانی که الان فعال‌اند",
             ['reply_markup' => Keyboards::searchHubInline()]
         );
     }
@@ -2530,20 +2530,42 @@ final class Handlers
         $this->uiText($chatId, $user, implode("\n", $lines), ['reply_markup' => ['inline_keyboard' => $kb]]);
     }
 
+    private function supportContactLine(): string
+    {
+        $u = trim($this->settings->get('support_bot_username'));
+        if ($u === '') {
+            $u = 'HamGapXHelpBot';
+        }
+        $u = ltrim($u, '@');
+        return "برای فعال‌سازی دوباره با پشتیبانی تماس بگیر: @{$u}";
+    }
+
+    private function bannedAccountText(): string
+    {
+        $threshold = $this->settings->getInt('report_ban_threshold', 10);
+        return "⛔️ حسابت به‌خاطر رسیدن به {$threshold} گزارش تخلف مسدود شده است.\n" .
+            $this->supportContactLine();
+    }
+
     private function applyReportAndMaybeBan(int $reporterId, int $reportedId, string $reason): void
     {
         if ($reporterId === $reportedId) {
             return;
         }
         $count = $this->db->addReport($reporterId, $reportedId, $reason);
-        $threshold = $this->settings->getInt('report_ban_threshold', 5);
+        $threshold = max(1, $this->settings->getInt('report_ban_threshold', 10));
         $target = $this->db->findUser($reportedId);
         $name = htmlspecialchars((string)($target['display_name'] ?? (string)$reportedId), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $left = max(0, $threshold - $count);
         foreach (($this->config['admin_ids'] ?? []) as $aid) {
             try {
+                $extra = $left > 0
+                    ? "\nباقی‌مانده تا بلاک خودکار: <b>{$left}</b> گزارش"
+                    : "\n⚠️ به آستانه بلاک رسید.";
                 $this->tg->sendMessage(
                     (int)$aid,
-                    "🚩 گزارش خلاف #{$count}\nروی: <b>{$name}</b>\nآیدی: <code>{$reportedId}</code>\nدلیل: {$reason}"
+                    "🚩 گزارش تخلف #{$count}/{$threshold}\nروی: <b>{$name}</b>\nآیدی: <code>{$reportedId}</code>\nدلیل: " .
+                    htmlspecialchars($reason, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . $extra
                 );
             } catch (Throwable $e) {
             }
@@ -2556,8 +2578,8 @@ final class Handlers
             try {
                 $this->tg->sendMessage(
                     $reportedId,
-                    "حسابت به‌خاطر رسیدن به {$threshold} گزارش خلاف مسدود شد.\n" .
-                    "برای رفع مشکل با پشتیبانی تماس بگیر."
+                    "⛔️ حسابت به‌خاطر رسیدن به <b>{$threshold}</b> گزارش تخلف به‌صورت خودکار مسدود شد.\n" .
+                    $this->supportContactLine()
                 );
             } catch (Throwable $e) {
             }
@@ -2565,7 +2587,8 @@ final class Handlers
                 try {
                     $this->tg->sendMessage(
                         (int)$aid,
-                        "🚫 کاربر <code>{$reportedId}</code> ({$name}) به‌خاطر {$threshold} گزارش بلاک شد."
+                        "🚫 کاربر <code>{$reportedId}</code> ({$name}) به‌خاطر {$threshold} گزارش تخلف خودکار بلاک شد.\n" .
+                        "برای فعال‌سازی از مدیریت کاربران → رفع مسدود استفاده کن."
                     );
                 } catch (Throwable $e) {
                 }

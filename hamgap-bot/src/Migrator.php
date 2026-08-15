@@ -49,7 +49,13 @@ final class Migrator
         self::ensureContactRequestsKinds($pdo);
         self::addColumn($pdo, 'users', 'ban_reason', 'VARCHAR(64) NULL');
         self::addColumn($pdo, 'users', 'likes_count', 'INT NOT NULL DEFAULT 0');
-        (new Settings($db))->seedDefaults();
+        $settings = new Settings($db);
+        $settings->seedDefaults();
+        // v10.8.1: auto-ban after 10 reports (migrate previous default of 5)
+        $cur = $settings->get('report_ban_threshold', '10');
+        if ($cur === '' || $cur === '5') {
+            $settings->set('report_ban_threshold', '10');
+        }
     }
 
     private static function ensureUserLikesTable(PDO $pdo): void

@@ -690,7 +690,7 @@ final class Keyboards
             [['text' => 'هزینه لایک', 'callback_data' => 'adm:set:like_cost']],
             [['text' => 'ساخت گپ گروهی', 'callback_data' => 'adm:set:room_create_cost']],
             [['text' => 'ورود به گپ (هر نفر)', 'callback_data' => 'adm:set:room_join_cost']],
-            [['text' => 'آستانه بلاک با گزارش', 'callback_data' => 'adm:set:report_ban_threshold']],
+            [['text' => 'بلاک خودکار بعد از چند گزارش؟', 'callback_data' => 'adm:set:report_ban_threshold']],
             [['text' => 'سکه خوش‌آمد', 'callback_data' => 'adm:set:welcome_coins']],
             [['text' => 'هزینه چت شانسی', 'callback_data' => 'adm:set:connect_any_cost']],
             [['text' => 'هزینه فیلتر جنسیت', 'callback_data' => 'adm:set:connect_gender_cost']],
@@ -759,11 +759,20 @@ final class Keyboards
         ]];
     }
 
+    public static function adminReports(int $threshold = 10): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => "تغییر آستانه بلاک (الان {$threshold})", 'callback_data' => 'adm:set:report_ban_threshold']],
+            [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
+        ]];
+    }
+
     public static function adminGeneral(): array
     {
         return ['inline_keyboard' => [
             [['text' => 'نام برند', 'callback_data' => 'adm:set:brand_name']],
             [['text' => 'یوزرنیم بات اصلی', 'callback_data' => 'adm:set:main_bot_username']],
+            [['text' => 'بلاک خودکار بعد از چند گزارش؟', 'callback_data' => 'adm:set:report_ban_threshold']],
             [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
         ]];
     }

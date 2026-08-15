@@ -143,6 +143,13 @@ final class AdminHandlers
                     return;
                 }
             }
+            if ($key === 'report_ban_threshold') {
+                $n = (int)$value;
+                if ($n < 1 || $n > 100) {
+                    $this->tg->sendMessage($chatId, 'آستانه بلاک باید بین ۱ تا ۱۰۰ باشد.');
+                    return;
+                }
+            }
             if ($key === 'admin_username') {
                 if (!preg_match('/^[A-Za-z0-9_]{3,32}$/', $value)) {
                     $this->tg->sendMessage($chatId, 'نام کاربری فقط حروف/عدد/_ و ۳ تا ۳۲ کاراکتر.');
@@ -307,6 +314,7 @@ final class AdminHandlers
                 "پیام کوتاه: <b>{$all['message_cost']}</b>\n" .
                 "درخواست گفتگو: <b>{$all['request_cost']}</b>\n" .
                 "خوش‌آمد: <b>{$all['welcome_coins']}</b>\n" .
+                "آستانه بلاک با گزارش: <b>{$all['report_ban_threshold']}</b>\n" .
                 "چت شانسی/جنسیت/استان/سن: " .
                 "{$all['connect_any_cost']}/{$all['connect_gender_cost']}/{$all['connect_province_cost']}/{$all['connect_age_cost']}",
                 ['reply_markup' => Keyboards::adminCoins()]
@@ -351,21 +359,26 @@ final class AdminHandlers
             return;
         }
         if ($data === 'adm:reports') {
+            $threshold = $this->settings->getInt('report_ban_threshold', 10);
             $rows = $this->db->recentReports(12);
+            $lines = [
+                '🚩 <b>گزارش‌های تخلف</b>',
+                "آستانه بلاک خودکار: <b>{$threshold}</b> گزارش",
+                'با رسیدن به این عدد، کاربر خودکار مسدود می‌شود و باید با پشتیبانی تماس بگیرد.',
+                '',
+            ];
             if (!$rows) {
-                $this->tg->sendMessage($chatId, 'گزارشی ثبت نشده.', [
-                    'reply_markup' => Keyboards::adminMain(),
-                ]);
-                return;
-            }
-            $lines = ["🚩 <b>گزارش‌های اخیر</b>"];
-            foreach ($rows as $r) {
-                $lines[] = '• از <code>' . (int)$r['reporter_id'] . '</code> روی <code>' .
-                    (int)$r['reported_id'] . '</code> — ' .
-                    htmlspecialchars((string)($r['reason'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $lines[] = 'هنوز گزارشی ثبت نشده.';
+            } else {
+                $lines[] = '<b>آخرین گزارش‌ها:</b>';
+                foreach ($rows as $r) {
+                    $lines[] = '• از <code>' . (int)$r['reporter_id'] . '</code> روی <code>' .
+                        (int)$r['reported_id'] . '</code> — ' .
+                        htmlspecialchars((string)($r['reason'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                }
             }
             $this->tg->sendMessage($chatId, implode("\n", $lines), [
-                'reply_markup' => Keyboards::adminMain(),
+                'reply_markup' => Keyboards::adminReports($threshold),
             ]);
             return;
         }
@@ -384,9 +397,11 @@ final class AdminHandlers
             $all = $this->settings->all();
             $brand = htmlspecialchars((string)$all['brand_name'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $main = htmlspecialchars((string)$all['main_bot_username'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $thr = htmlspecialchars((string)$all['report_ban_threshold'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $this->tg->sendMessage(
                 $chatId,
-                "⚙️ <b>تنظیمات عمومی</b>\nبرند: <b>{$brand}</b>\nبات اصلی: <b>@{$main}</b>",
+                "⚙️ <b>تنظیمات عمومی</b>\nبرند: <b>{$brand}</b>\nبات اصلی: <b>@{$main}</b>\n" .
+                "بلاک خودکار بعد از: <b>{$thr}</b> گزارش تخلف",
                 ['reply_markup' => Keyboards::adminGeneral()]
             );
             return;
@@ -445,6 +460,16 @@ final class AdminHandlers
             $key = substr($data, strlen('adm:set:'));
             $this->db->updateUser($tid, ['flow' => 'adm:set:' . $key]);
             $cur = $this->settings->get($key);
+            if ($key === 'report_ban_threshold') {
+                $this->tg->sendMessage(
+                    $chatId,
+                    "🔢 بعد از چند گزارش تخلف کاربر خودکار بلاک شود؟\n" .
+                    "عدد بین ۱ تا ۱۰۰ بفرست.\n" .
+                    "فعلی: <b>" . htmlspecialchars($cur, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
+                    "پیشنهادی: <b>10</b>"
+                );
+                return;
+            }
             $this->tg->sendMessage(
                 $chatId,
                 "مقدار جدید برای <code>{$key}</code> را بفرست.\nفعلی: <b>" .
