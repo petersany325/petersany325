@@ -11,6 +11,7 @@ if ($healKey !== '' && hash_equals('hgDeploy4jXiS2', $healKey)) {
     $root = __DIR__;
     $extra = [
         'src/SupportHandlers.php' => $root . '/src/SupportHandlers.php',
+        'src/StaffHandlers.php' => $root . '/src/StaffHandlers.php',
         'public/hg_pull_deploy.php' => $root . '/hg_pull_deploy.php',
         'public/webhook_support.php' => $root . '/webhook_support.php',
         'public/webhook_admin.php' => $root . '/webhook_admin.php',

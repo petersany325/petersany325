@@ -45,6 +45,8 @@ final class Migrator
         self::ensureContactRequestsTable($pdo);
         self::ensureSupportTicketsTable($pdo);
         self::ensureAdminSessionsTable($pdo);
+        self::ensureStaffSessionsTable($pdo);
+        self::addColumn($pdo, 'support_staff', 'password_hash', 'VARCHAR(255) NULL');
         self::ensureFriendshipsTable($pdo);
         self::ensureFriendRoomsTables($pdo);
         self::ensureStatusIncludesRoom($pdo);
@@ -213,6 +215,18 @@ final class Migrator
     {
         $pdo->exec(
             "CREATE TABLE IF NOT EXISTS admin_sessions (
+                telegram_id BIGINT NOT NULL,
+                logged_in_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                PRIMARY KEY (telegram_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    private static function ensureStaffSessionsTable(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS staff_sessions (
                 telegram_id BIGINT NOT NULL,
                 logged_in_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 expires_at TIMESTAMP NOT NULL,

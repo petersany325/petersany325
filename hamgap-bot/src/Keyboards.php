@@ -797,6 +797,57 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [['text' => '🏁 پایان گفتگوی پشتیبانی', 'callback_data' => 'sup:close:' . $ticketId]],
+            [['text' => '🛠 پنل کارمند', 'callback_data' => 'stf:home']],
+        ]];
+    }
+
+    public static function staffLogin(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '🔐 ورود به پنل کارمند', 'callback_data' => 'stf:login']],
+        ]];
+    }
+
+    public static function staffMain(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '🔎 جستجوی کاربر', 'callback_data' => 'stf:find']],
+            [
+                ['text' => '🆕 کاربران اخیر', 'callback_data' => 'stf:recent'],
+                ['text' => '🚫 مسدودها', 'callback_data' => 'stf:banned'],
+            ],
+            [['text' => '💬 پیام / چت با کاربر', 'callback_data' => 'stf:chat']],
+            [['text' => '🆘 تیکت‌های باز', 'callback_data' => 'stf:tickets']],
+            [['text' => '🔑 تغییر رمز پنل', 'callback_data' => 'stf:pwd']],
+            [['text' => '🚪 خروج از پنل', 'callback_data' => 'stf:logout']],
+        ]];
+    }
+
+    public static function staffUserActions(int $telegramId, bool $banned = false): array
+    {
+        $id = (string)$telegramId;
+        $banRow = $banned
+            ? [['text' => '✅ رفع مسدود', 'callback_data' => 'stf:unban:' . $id]]
+            : [['text' => '🚫 مسدود کردن', 'callback_data' => 'stf:ban:' . $id]];
+        return ['inline_keyboard' => [
+            $banRow,
+            [
+                ['text' => '✏️ تغییر نام', 'callback_data' => 'stf:rename:' . $id],
+                ['text' => '💬 پیام', 'callback_data' => 'stf:msg:' . $id],
+            ],
+            [['text' => '♻️ ریست پروفایل عمومی', 'callback_data' => 'stf:wipe:' . $id]],
+            [['text' => 'خانه پنل', 'callback_data' => 'stf:home']],
+        ]];
+    }
+
+    public static function staffBannedItem(int $telegramId): array
+    {
+        $id = (string)$telegramId;
+        return ['inline_keyboard' => [
+            [
+                ['text' => '👤 کارت', 'callback_data' => 'stf:card:' . $id],
+                ['text' => '✅ رفع مسدود', 'callback_data' => 'stf:unban:' . $id],
+            ],
         ]];
     }
 
@@ -1022,9 +1073,15 @@ final class Keyboards
             }
             $active = (int)($r['is_active'] ?? 0) === 1;
             if ($active) {
-                $kb[] = [['text' => "🔴 غیرفعال‌سازی {$sid}", 'callback_data' => 'adm:staff:off:' . $sid]];
+                $kb[] = [
+                    ['text' => "🔴 غیرفعال {$sid}", 'callback_data' => 'adm:staff:off:' . $sid],
+                    ['text' => "🔑 رمز {$sid}", 'callback_data' => 'adm:staff:pwd:' . $sid],
+                ];
             } else {
-                $kb[] = [['text' => "🟢 فعال‌سازی {$sid}", 'callback_data' => 'adm:staff:on:' . $sid]];
+                $kb[] = [
+                    ['text' => "🟢 فعال {$sid}", 'callback_data' => 'adm:staff:on:' . $sid],
+                    ['text' => "🔑 رمز {$sid}", 'callback_data' => 'adm:staff:pwd:' . $sid],
+                ];
             }
         }
         $kb[] = [['text' => 'افزودن کارمند جدید', 'callback_data' => 'adm:staff:add']];
@@ -1072,6 +1129,8 @@ final class Keyboards
             [['text' => 'یوزرنیم بات پشتیبانی', 'callback_data' => 'adm:set:support_bot_username']],
             [['text' => 'ساعات پشتیبانی', 'callback_data' => 'adm:set:support_hours']],
             [['text' => 'متن خوش‌آمد پشتیبانی', 'callback_data' => 'adm:set:support_welcome']],
+            [['text' => 'رمز پیش‌فرض کارمند', 'callback_data' => 'adm:set:staff_default_password']],
+            [['text' => 'مدت نشست کارمند (ساعت)', 'callback_data' => 'adm:set:staff_session_hours']],
             [['text' => '➕ افزودن و فعال‌سازی کارمند', 'callback_data' => 'adm:staff:add']],
             [['text' => '👥 لیست / فعال‌سازی کارمندان', 'callback_data' => 'adm:staff:list']],
             [['text' => 'بازگشت', 'callback_data' => 'adm:home']],

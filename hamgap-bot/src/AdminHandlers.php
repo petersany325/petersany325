@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.18-admin';
+    public const CODE_VERSION = '2026-08-15-v10.19-admin';
 
     /** Keys editable via adm:set: — anything else is rejected. */
     public const ALLOWED_SET_KEYS = [
@@ -18,6 +18,7 @@ final class AdminHandlers
         'pack_100_price', 'pack_300_price', 'pack_1000_price',
         'like_cost', 'room_create_cost', 'room_join_cost', 'report_ban_threshold', 'notify_free_cost',
         'support_bot_username', 'support_hours', 'support_welcome',
+        'staff_default_password', 'staff_session_hours',
         'brand_name', 'main_bot_username',
         'vip_price_30', 'vip_days', 'vip_min_account_days', 'vip_min_likes', 'vip_max_reports',
         'vip_require_occupation', 'vip_require_avatar',
@@ -240,13 +241,38 @@ final class AdminHandlers
                 return;
             }
             $this->db->addSupportStaff($targetId, $label);
-            $this->notifyNewSupportStaff($targetId);
+            $defaultPwd = $this->settings->get('staff_default_password', 'HamGapStaff1');
+            $issued = $this->db->ensureSupportStaffPassword($targetId, $defaultPwd);
+            $this->notifyNewSupportStaff($targetId, $issued !== '' ? $issued : $defaultPwd);
+            $pwdNote = $issued !== ''
+                ? "\nرمز اولیه پنل: <code>" . htmlspecialchars($issued, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>"
+                : "\nرمز پنل از قبل تنظیم شده (در صورت نیاز ریست کن).";
             $this->tg->sendMessage(
                 $chatId,
-                "✅ کارمند <code>{$targetId}</code> اضافه و <b>فعال</b> شد.\n" .
-                "اگر پیام‌ها به او نرسد، باید بات پشتیبانی را /start بزند.",
+                "✅ کارمند <code>{$targetId}</code> اضافه و <b>فعال</b> شد.{$pwdNote}\n" .
+                "باید بات پشتیبانی را /start بزند و با /login وارد پنل شود.",
                 ['reply_markup' => Keyboards::adminSupport()]
             );
+            return;
+        }
+
+        if (str_starts_with($flow, 'adm:staff:pwd:')) {
+            $sid = (int)substr($flow, strlen('adm:staff:pwd:'));
+            $this->db->updateUser($tid, ['flow' => null]);
+            if ($sid <= 0 || mb_strlen($text) < 6) {
+                $this->tg->sendMessage($chatId, 'رمز نامعتبر (حداقل ۶ کاراکتر).');
+                return;
+            }
+            if (!$this->db->getSupportStaff($sid)) {
+                $this->db->addSupportStaff($sid);
+            }
+            $this->db->setSupportStaffPassword($sid, $text);
+            $this->tg->sendMessage(
+                $chatId,
+                "✅ رمز پنل کارمند <code>{$sid}</code> ذخیره شد.\n" .
+                "رمز موقت: <code>" . htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>"
+            );
+            $this->notifyNewSupportStaff($sid, $text);
             return;
         }
 
@@ -586,6 +612,7 @@ final class AdminHandlers
         if (str_starts_with($data, 'adm:staff:off:')) {
             $sid = (int)substr($data, strlen('adm:staff:off:'));
             $this->db->deactivateSupportStaff($sid);
+            $this->db->destroyStaffSession($sid);
             $this->tg->sendMessage($chatId, "🔴 کارمند <code>{$sid}</code> غیرفعال شد.");
             $u = $this->db->findUser($sid);
             if ($u) {
@@ -598,11 +625,16 @@ final class AdminHandlers
         if (str_starts_with($data, 'adm:staff:on:')) {
             $sid = (int)substr($data, strlen('adm:staff:on:'));
             $this->db->activateSupportStaff($sid);
-            $this->notifyNewSupportStaff($sid);
+            $defaultPwd = $this->settings->get('staff_default_password', 'HamGapStaff1');
+            $issued = $this->db->ensureSupportStaffPassword($sid, $defaultPwd);
+            $this->notifyNewSupportStaff($sid, $issued !== '' ? $issued : null);
             $this->tg->sendMessage(
                 $chatId,
                 "🟢 کارمند <code>{$sid}</code> فعال شد.\n" .
-                "باید بات پشتیبانی را /start زده باشد تا تیکت‌ها به او برسد."
+                ($issued !== ''
+                    ? ("رمز اولیه پنل: <code>" . htmlspecialchars($issued, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>\n")
+                    : '') .
+                "باید بات پشتیبانی را /start و /login بزند."
             );
             $u = $this->db->findUser($sid);
             if ($u) {
@@ -610,6 +642,12 @@ final class AdminHandlers
             } else {
                 $this->showStaffList($chatId);
             }
+            return;
+        }
+        if (str_starts_with($data, 'adm:staff:pwd:')) {
+            $sid = (int)substr($data, strlen('adm:staff:pwd:'));
+            $this->db->updateUser($tid, ['flow' => 'adm:staff:pwd:' . $sid]);
+            $this->tg->sendMessage($chatId, "رمز جدید پنل کارمند <code>{$sid}</code> را بفرست (حداقل ۶ کاراکتر):");
             return;
         }
         if (str_starts_with($data, 'adm:flagadmin:on:')) {
@@ -910,16 +948,20 @@ final class AdminHandlers
         ]);
     }
 
-    private function notifyNewSupportStaff(int $telegramId): void
+    private function notifyNewSupportStaff(int $telegramId, ?string $plainPassword = null): void
     {
         $supUser = trim($this->settings->get('support_bot_username'));
         $supUser = $supUser !== '' ? ltrim($supUser, '@') : 'HamGapXHelpBot';
+        $pwdLine = $plainPassword !== null && $plainPassword !== ''
+            ? ("\n🔑 رمز پنل کارمند: <code>" . htmlspecialchars($plainPassword, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>\n")
+            : "\n";
         $msg =
             "✅ تو به‌عنوان <b>کارمند پشتیبانی هم‌گپ</b> فعال شدی.\n\n" .
             "۱) بات پشتیبانی را باز کن و /start بزن: @{$supUser}\n" .
-            "۲) وقتی کاربر سؤال بفرستد، متن سؤال را می‌بینی.\n" .
-            "۳) «پذیرش پشتیبانی» را بزن تا چت باز شود و مستقیم جواب بده.\n\n" .
-            "اگر وضعیتت غیرفعال بود، ادمین از پنل می‌تواند دوباره فعال کند.";
+            "۲) با /login یا /panel وارد پنل شو.{$pwdLine}" .
+            "۳) در پنل: جستجو، بلاک، رفع بلاک، تغییر نام، پیام به کاربر\n" .
+            "۴) وقتی سؤال کاربر آمد «پذیرش پشتیبانی» را بزن و جواب بده.\n\n" .
+            "بعد از ورود، از منوی پنل می‌توانی رمز را عوض کنی.";
         try {
             $token = (string)($this->config['support_bot_token'] ?? '');
             if ($token === '') {
@@ -928,7 +970,6 @@ final class AdminHandlers
             $supTg = $token !== '' ? new Telegram($token) : $this->tg;
             $supTg->sendMessage($telegramId, $msg);
         } catch (Throwable $e) {
-            // Staff may not have started support bot yet — try main bot.
             try {
                 $mainToken = (string)($this->config['bot_token'] ?? '');
                 if ($mainToken !== '') {

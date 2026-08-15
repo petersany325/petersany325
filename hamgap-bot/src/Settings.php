@@ -37,6 +37,8 @@ final class Settings
         // password hash is set on first deploy; never store plaintext here
         'admin_password_hash' => '',
         'admin_session_hours' => '12',
+        'staff_session_hours' => '12',
+        'staff_default_password' => 'HamGapStaff1',
         // Card-to-card top-up
         'pay_card_number' => '',
         'pay_card_holder' => '',

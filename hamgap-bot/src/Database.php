@@ -1333,6 +1333,78 @@ final class Database
         return (bool)$st->fetchColumn();
     }
 
+    public function createStaffSession(int $telegramId, int $hours = 12): void
+    {
+        $hours = max(1, min(72, $hours));
+        $this->pdo->prepare(
+            'INSERT INTO staff_sessions (telegram_id, logged_in_at, expires_at)
+             VALUES (?, NOW(), DATE_ADD(NOW(), INTERVAL ? HOUR))
+             ON DUPLICATE KEY UPDATE logged_in_at = NOW(), expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR)'
+        )->execute([$telegramId, $hours, $hours]);
+    }
+
+    public function destroyStaffSession(int $telegramId): void
+    {
+        $this->pdo->prepare('DELETE FROM staff_sessions WHERE telegram_id = ?')->execute([$telegramId]);
+    }
+
+    public function hasValidStaffSession(int $telegramId): bool
+    {
+        $st = $this->pdo->prepare(
+            'SELECT 1 FROM staff_sessions WHERE telegram_id = ? AND expires_at > NOW() LIMIT 1'
+        );
+        $st->execute([$telegramId]);
+        return (bool)$st->fetchColumn();
+    }
+
+    public function setSupportStaffPassword(int $telegramId, string $plainPassword): void
+    {
+        $hash = password_hash($plainPassword, PASSWORD_DEFAULT);
+        $this->pdo->prepare(
+            'UPDATE support_staff SET password_hash = ? WHERE telegram_id = ?'
+        )->execute([$hash, $telegramId]);
+    }
+
+    public function verifySupportStaffPassword(int $telegramId, string $plainPassword): bool
+    {
+        $row = $this->getSupportStaff($telegramId);
+        if (!$row || (int)($row['is_active'] ?? 0) !== 1) {
+            return false;
+        }
+        $hash = (string)($row['password_hash'] ?? '');
+        if ($hash === '') {
+            return false;
+        }
+        return password_verify($plainPassword, $hash);
+    }
+
+    /** If staff has no password yet, set default and return plaintext once; otherwise return ''. */
+    public function ensureSupportStaffPassword(int $telegramId, string $defaultPlain): string
+    {
+        $row = $this->getSupportStaff($telegramId);
+        if (!$row) {
+            $this->addSupportStaff($telegramId);
+            $row = $this->getSupportStaff($telegramId);
+        }
+        $hash = (string)($row['password_hash'] ?? '');
+        if ($hash !== '') {
+            return '';
+        }
+        $plain = $defaultPlain !== '' ? $defaultPlain : 'HamGapStaff1';
+        $this->setSupportStaffPassword($telegramId, $plain);
+        return $plain;
+    }
+
+    /** @return list<array> */
+    public function listOpenSupportTickets(int $limit = 15): array
+    {
+        $limit = max(1, min(40, $limit));
+        $st = $this->pdo->query(
+            "SELECT * FROM support_tickets WHERE status = 'open' ORDER BY updated_at DESC LIMIT {$limit}"
+        );
+        return $st->fetchAll() ?: [];
+    }
+
     /** @return list<array> */
     public function recentUsers(int $limit = 10): array
     {

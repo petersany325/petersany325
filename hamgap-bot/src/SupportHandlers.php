@@ -19,6 +19,14 @@ final class SupportHandlers
 
     public function handle(array $update): void
     {
+        // Staff moderation panel (password-gated) — handle first when relevant
+        require_once __DIR__ . '/StaffHandlers.php';
+        require_once __DIR__ . '/Gender.php';
+        $staffPanel = new StaffHandlers($this->config, $this->db, $this->tg, $this->settings);
+        if ($staffPanel->handle($update)) {
+            return;
+        }
+
         if (isset($update['callback_query'])) {
             $this->onCallback($update['callback_query']);
             return;
@@ -121,7 +129,10 @@ final class SupportHandlers
                     $chatId,
                     "✅ کارمند پشتیبانی: <b>فعال</b>\n" .
                     "ساعات: <b>" . htmlspecialchars($hours, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>" .
-                    $extra
+                    $extra . "\n\n" .
+                    "🛠 برای جستجو / بلاک / تغییر نام / پیام:\n" .
+                    "<b>/panel</b> یا /login",
+                    ['reply_markup' => Keyboards::staffLogin()]
                 );
                 return;
             }
