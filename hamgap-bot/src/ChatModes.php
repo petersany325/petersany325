@@ -22,7 +22,7 @@ final class ChatModes
     public static function label(string $mode): string
     {
         return match ($mode) {
-            self::HOT => 'چت هات',
+            self::HOT => 'کلاب هات',
             self::VIP => 'کلاب VIP',
             default => 'چت معمولی',
         };
@@ -36,7 +36,7 @@ final class ChatModes
         }
         return match ($mode) {
             self::HOT =>
-                "🔥 <b>قوانین چت هات</b>\n\n" .
+                "🔥 <b>قوانین کلاب هات</b>\n\n" .
                 "این روم برای کسانی است که دنبال آشنایی و رابطه هستند و فضای گفتگو آزادتر است.\n\n" .
                 "✅ احترام متقابل الزامی است.\n" .
                 "✅ اجبار، تهدید، اخاذی و آزار ممنوع است.\n" .
