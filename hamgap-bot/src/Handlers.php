@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.24';
+    public const CODE_VERSION = '2026-08-15-v10.25';
 
     private string $assets;
     private Settings $settings;
@@ -650,8 +650,10 @@ final class Handlers
         }
 
         match (true) {
-            in_array($text, ['🔗 وصلم کن به ناشناس', '🔗 وصل ناشناس', '💬 چت ناشناس'], true)
+            in_array($text, ['🔗 وصلم کن به ناشناس', '🔗 وصل ناشناس', '💬 چت ناشناس', '💬 چت معمولی'], true)
                 => $this->showConnect($chatId, $user),
+            in_array($text, ['🔥 کلاب هات', '🔥 چت هات', 'چت هات'], true)
+                => $this->openHotClub($chatId, $user),
             in_array($text, ['🔍 پیدا کردن مخاطب', '🔍 جستجوی کاربران'], true)
                 => $this->showFind($chatId, $user),
             in_array($text, ['👥 وصل به دوستان', '👥 چت با دوستان', '👫 چت با دوستان'], true)
@@ -678,7 +680,8 @@ final class Handlers
     private function isHamGapMenuLabel(string $text): bool
     {
         if (in_array($text, [
-            '💬 چت ناشناس', '🔍 جستجوی کاربران', '👫 چت با دوستان', '👥 چت با دوستان',
+            '💬 چت ناشناس', '💬 چت معمولی', '🔥 کلاب هات', '🔥 چت هات',
+            '🔍 جستجوی کاربران', '👫 چت با دوستان', '👥 چت با دوستان',
             '👤 پروفایل', '💎 کیف‌پول', '⭐ استار کلاب', '🆘 پشتیبانی', 'ℹ️ راهنما', '⌨️ کیبورد تایپ',
             '📂 منوی هم‌گپ', '⏭ بعدی', '🛑 پایان چت', '📥 درخواست‌ها', '🚩 گزارش',
         ], true)) {
@@ -1282,6 +1285,10 @@ final class Handlers
             case 'menu:connect':
                 $this->clearUi($chatId, $user);
                 $this->showConnect($chatId, $user);
+                break;
+            case 'menu:hot':
+                $this->clearUi($chatId, $user);
+                $this->openHotClub($chatId, $user);
                 break;
             case 'menu:find':
                 $this->clearUi($chatId, $user);
@@ -2210,10 +2217,10 @@ final class Handlers
         $path = $this->assets . '/menu-smart.jpg';
         $caption =
             "💬 <b>چت ناشناس</b>\n" .
-            "اول نوع چت را انتخاب کن؛ بعد قوانین همان روم را بخوان و وارد شو.\n\n" .
+            "نوع چت را انتخاب کن؛ بعد قوانین همان روم را بخوان و وارد شو.\n\n" .
             "• <b>چت معمولی</b> — دوستی و گفتگوی محترمانه\n" .
-            "• <b>چت هات</b> — آشنایی و رابطه · فضای آزادتر\n" .
-            "• <b>کلاب VIP</b> — جدی و سطح‌بالا · شهر واقعی + بدون توهین";
+            "• <b>کلاب هات</b> — آشنایی و رابطه · فضای آزادتر\n" .
+            "• <b>کلاب VIP</b> — فقط اعضای استار · جدی و سطح‌بالا";
         $kb = Keyboards::connectModeInline();
         if (is_file($path)) {
             $this->uiPhoto($chatId, $user, $path, $caption, $kb);
@@ -2223,6 +2230,12 @@ final class Handlers
             ]);
         }
         $this->pinHamGapMenu($chatId, $user);
+    }
+
+    private function openHotClub(int $chatId, array &$user): void
+    {
+        require_once __DIR__ . '/ChatModes.php';
+        $this->showChatRules($chatId, $user, ChatModes::HOT);
     }
 
     private function showChatRules(int $chatId, array &$user, string $mode): void

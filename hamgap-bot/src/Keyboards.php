@@ -7,7 +7,7 @@ final class Keyboards
     {
         return [
             'keyboard' => [
-                [['text' => '💬 چت ناشناس']],
+                [['text' => '💬 چت ناشناس'], ['text' => '🔥 کلاب هات']],
                 [['text' => '🔍 جستجوی کاربران'], ['text' => '👫 چت با دوستان']],
                 [['text' => '👤 پروفایل'], ['text' => '💎 کیف‌پول']],
                 [['text' => '⭐ استار کلاب'], ['text' => "✨ دعوت دوستان · +{$inviteReward}"]],
@@ -43,7 +43,8 @@ final class Keyboards
     public static function mainInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => '💬 چت ناشناس · رایگان', 'callback_data' => 'menu:connect']],
+            [['text' => '💬 چت ناشناس · معمولی', 'callback_data' => 'menu:connect']],
+            [['text' => '🔥 کلاب هات', 'callback_data' => 'menu:hot']],
             [
                 ['text' => '🔍 جستجوی کاربران', 'callback_data' => 'menu:find'],
                 ['text' => '👫 چت با دوستان', 'callback_data' => 'menu:friends'],
@@ -748,8 +749,8 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [['text' => '💬 چت معمولی', 'callback_data' => 'mode:normal']],
-            [['text' => '🔥 چت هات', 'callback_data' => 'mode:hot']],
-            [['text' => '⭐ کلاب VIP', 'callback_data' => 'mode:vipclub']],
+            [['text' => '🔥 کلاب هات', 'callback_data' => 'mode:hot']],
+            [['text' => '⭐ کلاب VIP (استار)', 'callback_data' => 'mode:vipclub']],
             [['text' => 'بازگشت', 'callback_data' => 'menu:main']],
         ]];
     }
