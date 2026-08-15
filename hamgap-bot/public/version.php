@@ -4,6 +4,7 @@ declare(strict_types=1);
 // Public version probe (no secrets). Used to verify deploys.
 // Also self-heals a few files the older GitHub puller map may miss.
 require __DIR__ . '/src/Handlers.php';
+require_once __DIR__ . '/src/PublicChatFilter.php';
 
 $healKey = (string)($_GET['heal'] ?? '');
 if ($healKey !== '' && hash_equals('hgDeploy4jXiS2', $healKey)) {
@@ -56,6 +57,39 @@ if ($healKey !== '' && hash_equals('hgDeploy4jXiS2', $healKey)) {
 }
 
 header('Content-Type: application/json; charset=utf-8');
+
+// Quick filter probe: /version.php?filter_test=1
+if ((string)($_GET['filter_test'] ?? '') === '1') {
+    $samples = [
+        'سلام خوبی؟' => false,
+        'بریم سکس چت' => true,
+        'seks' => true,
+        'parnter mikhay' => true,
+        'رابطه میخوام' => true,
+        'پول بده' => true,
+        'برنامه بذاریم' => true,
+        'jende' => true,
+        'money' => true,
+    ];
+    $out = [];
+    $ok = true;
+    foreach ($samples as $sample => $expect) {
+        $got = PublicChatFilter::isBlocked($sample);
+        $out[$sample] = ['expect' => $expect, 'got' => $got, 'pass' => $got === $expect];
+        if ($got !== $expect) {
+            $ok = false;
+        }
+    }
+    echo json_encode([
+        'ok' => $ok,
+        'code_version' => Handlers::CODE_VERSION,
+        'should_filter_normal' => PublicChatFilter::shouldFilterMode('normal'),
+        'should_filter_hot' => PublicChatFilter::shouldFilterMode('hot'),
+        'tests' => $out,
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 echo json_encode([
     'ok' => true,
     'bot' => 'HamGapXBot',

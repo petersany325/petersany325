@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.30';
+    public const CODE_VERSION = '2026-08-15-v10.31';
 
     private string $assets;
     private Settings $settings;
@@ -651,27 +651,39 @@ final class Handlers
                 $this->endAndMenu($chatId, $user);
                 return;
             }
-            // VIP club bad-word filter
+            // Public chat filter (normal / empty mode) — block sex/money/partner talk
             require_once __DIR__ . '/ChatModes.php';
             require_once __DIR__ . '/VipFilter.php';
             require_once __DIR__ . '/PublicChatFilter.php';
-            $modeNow = (string)($user['chat_mode'] ?? ChatModes::NORMAL);
+            $modeNow = strtolower(trim((string)($user['chat_mode'] ?? 'normal')));
+            if ($modeNow === '' || $modeNow === 'null') {
+                $modeNow = ChatModes::NORMAL;
+            }
             $checkText = $text !== '' ? $text : trim((string)($message['caption'] ?? ''));
-            if ($modeNow === ChatModes::NORMAL && PublicChatFilter::isBlocked($checkText)) {
-                // Do not relay; try delete sender message; show Hot Club redirect
+            if (PublicChatFilter::shouldFilterMode($modeNow) && PublicChatFilter::isBlocked($checkText)) {
+                // Never relay to partner
                 try {
-                    $this->tg->deleteMessage($chatId, (int)($message['message_id'] ?? 0));
+                    $mid = (int)($message['message_id'] ?? 0);
+                    if ($mid > 0) {
+                        $this->tg->deleteMessage($chatId, $mid);
+                    }
                 } catch (Throwable $e) {
                 }
-                $this->uiText(
-                    $chatId,
-                    $user,
+                $warn =
                     "🚫 <b>این موضوع در چت عمومی مجاز نیست</b>\n\n" .
-                    "در چت عمومی درخواست <b>رابطه</b>، <b>سکس</b>، <b>برنامه</b>، <b>پول</b>، <b>فحش</b> یا <b>پارتنر</b> " .
+                    "در چت عمومی درخواست رابطه، سکس، برنامه، پول، فحش یا پارتنر " .
                     "(فارسی و فینگلیش) ممنوع است.\n\n" .
-                    "برای این حرف‌ها باید بروی <b>کلاب هات</b> چت کنی.",
-                    ['reply_markup' => Keyboards::publicChatRedirectInline()]
-                );
+                    "برای این حرف‌ها باید بروی <b>کلاب هات</b> چت کنی.";
+                try {
+                    $this->uiText($chatId, $user, $warn, [
+                        'reply_markup' => Keyboards::publicChatRedirectInline(),
+                    ]);
+                } catch (Throwable $e) {
+                    $this->tg->trySendMessage($chatId, strip_tags($warn), [
+                        'reply_markup' => Keyboards::publicChatRedirectInline(),
+                        'parse_mode' => 'HTML',
+                    ]);
+                }
                 return;
             }
             if ($modeNow === ChatModes::VIP
@@ -1496,6 +1508,33 @@ final class Handlers
                         'reply_markup' => Keyboards::chattingReply(),
                     ]);
                 }
+                break;
+            case 'pub:gohot':
+                // Leave public chat cleanly, then open Hot Club
+                $this->tg->answerCallback($id, 'کلاب هات');
+                $this->stripCallbackMenu($cq);
+                if (($user['status'] ?? '') === 'chatting') {
+                    $ended = [$tid];
+                    $partnerId = $this->matcher->endChat($user, true);
+                    if ($partnerId) {
+                        $ended[] = $partnerId;
+                    }
+                    $this->wipeSessionHistoryFor($ended);
+                    if ($partnerId) {
+                        $p = $this->db->findUser($partnerId);
+                        if ($p) {
+                            try {
+                                $this->tg->sendMessage($partnerId, 'طرف مقابل چت را ترک کرد.');
+                                $this->showMain($partnerId, $p);
+                            } catch (Throwable $e) {
+                            }
+                        }
+                    }
+                    $this->flushChatWaitNotices($ended);
+                    $user = $this->db->findUser($tid) ?? $user;
+                }
+                $this->clearUi($chatId, $user);
+                $this->openHotClub($chatId, $user);
                 break;
             case 'chat:report':
                 $this->tg->answerCallback($id);

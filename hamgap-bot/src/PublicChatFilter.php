@@ -2,86 +2,91 @@
 declare(strict_types=1);
 
 /**
- * Blocks relationship / sex / meetup / money / vulgar / partner talk in public (normal) chat.
- * Matches Persian and Finglish (Latin) variants.
+ * Blocks relationship / sex / meetup / money / vulgar / partner talk in public chat.
+ * Persian + Finglish + common spellings. Matching is aggressive (substring after normalize).
  */
 final class PublicChatFilter
 {
-    /**
-     * Compact tokens searched inside a normalized haystack (spaces stripped for Latin).
-     * Keep terms specific enough to avoid blocking normal friendly chat.
-     *
-     * @return list<string>
-     */
+    /** @return list<string> */
     public static function blockedTokens(): array
     {
         return [
-            // Persian — sex / vulgar
-            'سکس', 'سکسی', 'جق', 'کص', 'کسکش', 'کیر', 'کونی', 'جنده', 'مادرجنده',
-            'لاشی', 'لاشیه', 'گایید', 'بگا', 'بگام', 'میگامت', 'دیوث', 'چاقال',
-            'کون', 'ممه', 'سینههات', 'لخت', 'برهنه', 'پورن', 'سکسیی',
-            // Persian — relationship / partner
-            'رابطه', 'پارتنر', 'پارنتر', 'پارتنری', 'دوست‌دختر', 'دوستدختر',
-            'دوست‌پسر', 'دوستپسر', 'صیغه', 'صيغه',
-            // Persian — meetup / plan
-            'برنامه', 'برنامه‌ای', 'برنامهء', 'قراربذاریم', 'قراربذاریم',
-            'میایخونه', 'بیایپیشم', 'بیاپیشم', 'هتل', 'مهمونی‌خصوصی',
-            // Persian — money / scam-ish asks in chat
-            'پول‌بده', 'پولبده', 'برام‌پول', 'کارت‌به‌کارت', 'کارتبکارت',
-            'شبا', 'واریزکن', 'برات‌واریز', 'هزینه‌اتو',
-            // Finglish / English — sex / vulgar
-            'sex', 'seks', 'sexy', 'jensei', 'jensi', 'kos', 'koss', 'kir', 'koni',
-            'jende', 'jnde', 'gayeedi', 'begam', 'fuck', 'fck', 'fuk', 'porn',
-            'xxx', 'pussy', 'dick', 'cock', 'nude', 'naked', 'blowjob', 'anal',
-            // Finglish — partner / relationship
-            'partner', 'parnter', 'partener', 'parter', 'partenr',
-            'relationship', 'rabete', 'rabeteh', 'dustdokhtar', 'dustpesar',
-            'girlfriend', 'boyfriend', 'sighe', 'sigheh',
-            // Finglish — meetup / plan
-            'barname', 'barnameh', 'gharar', 'meetup', 'meetme', 'comeover',
-            'hotel', 'otagh', 'otag',
-            // Finglish — money
-            'poolbede', 'polbede', 'bede pool', 'money', 'cardbecard', 'shaba',
-            'variz', 'paypal',
+            // sex / vulgar — FA
+            'سکس', 'سکسی', 'سكسی', 'سكش', 'جق', 'کص', 'كس', 'کصکش', 'کسکش',
+            'کیر', 'كير', 'کونی', 'كونی', 'جنده', 'مادرجنده', 'لاشی', 'لاشیه',
+            'گایید', 'بگا', 'بگام', 'میگامت', 'دیوث', 'چاقال', 'کون', 'كون',
+            'ممه', 'لخت', 'برهنه', 'پورن', 'پورنو', 'شهوتی', 'ارگاسم',
+            // relationship / partner — FA
+            'رابطه', 'پارتنر', 'پارنتر', 'پارتنری', 'پارتنرشیپ',
+            'دوستدختر', 'دوستپسر', 'دوست دختر', 'دوست پسر', 'صیغه', 'صيغه',
+            // meetup / plan — FA
+            'برنامه', 'قرار بذاریم', 'قراربذاریم', 'میای خونه', 'بیای پیشم',
+            'بیا پیشم', 'هتل', 'اتاق خلوت',
+            // money — FA
+            'پول', 'پول بده', 'پولبده', 'کارت به کارت', 'کارتبکارت',
+            'شبا', 'واریز', 'هزینه',
+            // sex / vulgar — finglish/en
+            'sex', 'seks', 'sexy', 'sexx', 'seksi', 'jens', 'jensi', 'jensei',
+            'kos', 'koss', 'kosi', 'kir', 'koni', 'koon', 'jende', 'jnde',
+            'koskesh', 'madarjende', 'fuck', 'fck', 'fuk', 'f*ck', 'porn',
+            'porno', 'xxx', 'pussy', 'dick', 'cock', 'nude', 'naked',
+            'blowjob', 'anal', 'horny', 'orgasm',
+            // partner / relationship — finglish
+            'partner', 'parnter', 'partener', 'parter', 'partenr', 'partnr',
+            'relationship', 'rabete', 'rabeteh', 'rabete', 'sighe', 'sigheh',
+            'girlfriend', 'boyfriend', 'gf', 'bf', 'dustdokhtar', 'dustpesar',
+            // meetup — finglish
+            'barname', 'barnameh', 'barnam', 'gharar', 'meetup', 'meetme',
+            'comeover', 'hotel', 'otagh', 'otag',
+            // money — finglish
+            'money', 'pool', 'pol', 'poolbede', 'polbede', 'variz', 'shaba',
+            'cardbecard', 'paypal', 'cash',
         ];
     }
 
-    /** Extra multi-word / phrase patterns on spaced normalized text. */
+    /** @return list<string> */
     private static function phrasePatterns(): array
     {
         return [
-            '/\b(sex|seks|sexy)\b/u',
-            '/\b(partner|parnter|partener|parter)\b/u',
-            '/\b(fuck|fck|porn|xxx)\b/u',
-            '/\b(meetup|meet\s*up|come\s*over)\b/u',
-            '/\b(girl\s*friend|boy\s*friend)\b/u',
-            '/\b(need|want|give)\s+(money|pool|pol)\b/u',
-            '/\b(pool|pol)\s+(bede|bedeh|bezan)\b/u',
-            '/رابطه\s*(جنسی|سکسی)?/u',
-            '/درخواست\s*(رابطه|سکس|پارتنر|پول)/u',
+            '/\b(sex|seks|sexy|sexx|porn|xxx|fuck|fck)\b/i',
+            '/\b(partner|parnter|partener|parter|partnr)\b/i',
+            '/\b(girlfriend|boyfriend|meetup|meet\s*up)\b/i',
+            '/\b(money|paypal|cash)\b/i',
+            '/\b(pool|pol)\b/i',
+            '/(سکس|سكسی|رابطه|پارتنر|پارنتر|برنامه|پول|جنده|کص|کیر)/u',
             '/(میای|بیای|بیا)\s*(خونه|پیشم|پیش\s*من)/u',
             '/(برنامه|قرار)\s*(بذاریم|داری|داریم|چیه)/u',
-            '/پول\s*(بده|میخوام|لازم|داری)/u',
+            '/پول\s*(بده|میخوام|لازم|داری|بده\s*بهم)/u',
             '/کارت\s*(به|ب)\s*کارت/u',
+            '/دوست\s*(دختر|پسر)/u',
         ];
     }
 
     public static function normalize(string $text): string
     {
-        $text = mb_strtolower(trim($text));
+        $text = trim($text);
         if ($text === '') {
             return '';
         }
-        // Arabic Yeh/Kaf → Persian
-        $text = str_replace(['ي', 'ك', 'ة'], ['ی', 'ک', 'ه'], $text);
-        // Zero-width / tatweel / punctuation noise
-        $text = preg_replace('/[\x{200B}-\x{200D}\x{FEFF}\x{0640}]+/u', '', $text) ?? $text;
+        if (function_exists('mb_strtolower')) {
+            $text = mb_strtolower($text, 'UTF-8');
+        } else {
+            $text = strtolower($text);
+        }
+        // Arabic Yeh/Kaf/Heh → Persian
+        $text = str_replace(
+            ['ي', 'ى', 'ك', 'ة', 'ؤ', 'إ', 'أ', 'آ'],
+            ['ی', 'ی', 'ک', 'ه', 'و', 'ا', 'ا', 'ا'],
+            $text
+        );
+        // Zero-width, tatweel, soft hyphen
+        $text = preg_replace('/[\x{200B}-\x{200F}\x{202A}-\x{202E}\x{FEFF}\x{0640}\x{00AD}]+/u', '', $text) ?? $text;
+        // Keep letters/numbers/spaces only
         $text = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $text) ?? $text;
         $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
         return trim($text);
     }
 
-    /** Compact form for Latin token matching (spaces removed). */
     public static function compact(string $normalized): string
     {
         return preg_replace('/\s+/u', '', $normalized) ?? $normalized;
@@ -98,23 +103,62 @@ final class PublicChatFilter
             return false;
         }
         $compact = self::compact($norm);
+        // Also a latin-only compact for finglish inside mixed strings
+        $latin = strtolower(preg_replace('/[^a-z0-9]+/i', '', $raw) ?? '');
 
         foreach (self::blockedTokens() as $token) {
             $t = self::normalize($token);
             if ($t === '') {
                 continue;
             }
-            // Persian / multi-byte: substring on spaced + compact
-            if (mb_strpos($norm, $t) !== false || mb_strpos($compact, self::compact($t)) !== false) {
+            $tc = self::compact($t);
+            $isLatin = (bool)preg_match('/^[a-z0-9]+$/i', $token);
+            $shortLatin = $isLatin && strlen($token) <= 4;
+
+            if ($shortLatin) {
+                // Word-boundary only — avoid "anal" in "analysis", "pol" in "police"
+                if (preg_match('/\b' . preg_quote(strtolower($token), '/') . '\b/i', $norm)
+                    || preg_match('/\b' . preg_quote(strtolower($token), '/') . '\b/i', $raw)
+                ) {
+                    return true;
+                }
+                continue;
+            }
+
+            if (self::contains($norm, $t) || ($tc !== '' && self::contains($compact, $tc))) {
+                return true;
+            }
+            if ($isLatin && $latin !== '' && str_contains($latin, strtolower($token))) {
                 return true;
             }
         }
 
         foreach (self::phrasePatterns() as $re) {
-            if (preg_match($re, $norm)) {
+            if (@preg_match($re, $norm) || @preg_match($re, $raw)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static function contains(string $haystack, string $needle): bool
+    {
+        if ($needle === '' || $haystack === '') {
+            return false;
+        }
+        if (function_exists('mb_strpos')) {
+            return mb_strpos($haystack, $needle, 0, 'UTF-8') !== false;
+        }
+        return str_contains($haystack, $needle);
+    }
+
+    /** True when mode should use the public-chat filter (everything except hot/vip). */
+    public static function shouldFilterMode(?string $mode): bool
+    {
+        $mode = strtolower(trim((string)$mode));
+        if ($mode === '' || $mode === 'null' || $mode === 'normal') {
+            return true;
+        }
+        return $mode !== 'hot' && $mode !== 'vipclub';
     }
 }

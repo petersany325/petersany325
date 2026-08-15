@@ -24,6 +24,7 @@ require __DIR__ . '/src/CoinCatalog.php';
 require __DIR__ . '/src/ChatModes.php';
 require __DIR__ . '/src/GeoCheck.php';
 require __DIR__ . '/src/VipFilter.php';
+require __DIR__ . '/src/PublicChatFilter.php';
 require __DIR__ . '/src/Handlers.php';
 
 if (function_exists('opcache_invalidate')) {
@@ -42,6 +43,7 @@ if (function_exists('opcache_invalidate')) {
         __DIR__ . '/src/ChatModes.php',
         __DIR__ . '/src/GeoCheck.php',
         __DIR__ . '/src/VipFilter.php',
+        __DIR__ . '/src/PublicChatFilter.php',
         __DIR__ . '/src/Handlers.php',
         __FILE__,
     ] as $f) {
