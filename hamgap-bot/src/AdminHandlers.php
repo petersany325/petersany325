@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.16-admin';
+    public const CODE_VERSION = '2026-08-15-v10.17-admin';
 
     /** Keys editable via adm:set: — anything else is rejected. */
     public const ALLOWED_SET_KEYS = [
@@ -218,13 +218,35 @@ final class AdminHandlers
 
         if ($flow === 'adm:staff:add') {
             $this->db->updateUser($tid, ['flow' => null]);
-            if (!ctype_digit($text)) {
-                $this->tg->sendMessage($chatId, 'آیدی عددی تلگرام کارمند را بفرست.');
+            $targetId = 0;
+            $label = null;
+            if (ctype_digit($text)) {
+                $targetId = (int)$text;
+            } else {
+                $u = $this->db->findByUsername($text);
+                if ($u) {
+                    $targetId = (int)$u['telegram_id'];
+                    $uname = trim((string)($u['username'] ?? ''));
+                    $label = $uname !== '' ? $uname : null;
+                }
+            }
+            if ($targetId <= 0) {
+                $this->tg->sendMessage(
+                    $chatId,
+                    "آیدی عددی تلگرام یا @یوزرنیم کارمند را بفرست.\n" .
+                    "مثال: <code>123456789</code> یا <code>@username</code>\n" .
+                    "برای یوزرنیم باید حداقل یک‌بار بات اصلی را /start زده باشد."
+                );
                 return;
             }
-            $this->db->addSupportStaff((int)$text);
-            $this->tg->sendMessage($chatId, 'کارمند اضافه شد ✅');
-            $this->home($chatId);
+            $this->db->addSupportStaff($targetId, $label);
+            $this->notifyNewSupportStaff($targetId);
+            $this->tg->sendMessage(
+                $chatId,
+                "✅ کارمند <code>{$targetId}</code> اضافه و <b>فعال</b> شد.\n" .
+                "اگر پیام‌ها به او نرسد، باید بات پشتیبانی را /start بزند.",
+                ['reply_markup' => Keyboards::adminSupport()]
+            );
             return;
         }
 
@@ -513,47 +535,69 @@ final class AdminHandlers
         }
         if ($data === 'adm:user:find') {
             $this->db->updateUser($tid, ['flow' => 'adm:user:find']);
-            $this->tg->sendMessage($chatId, 'آیدی عددی، کد عمومی (HG…) یا کد دعوت را بفرست.');
+            $this->tg->sendMessage($chatId, 'آیدی عددی، @یوزرنیم، کد عمومی (HG…) یا کد دعوت را بفرست.');
             return;
         }
         if ($data === 'adm:staff:add') {
             $this->db->updateUser($tid, ['flow' => 'adm:staff:add']);
-            $this->tg->sendMessage($chatId, 'آیدی عددی تلگرام کارمند را بفرست.');
+            $this->tg->sendMessage(
+                $chatId,
+                "آیدی عددی تلگرام یا @یوزرنیم کارمند را بفرست.\n" .
+                "بعد از ثبت، وضعیت او <b>فعال</b> می‌شود."
+            );
             return;
         }
         if ($data === 'adm:staff:list') {
-            $rows = $this->db->listSupportStaff(false);
-            if (!$rows) {
-                $this->tg->sendMessage($chatId, 'کارمندی ثبت نشده.');
-                return;
-            }
-            $lines = ["👥 <b>کارمندان پشتیبانی</b>"];
-            foreach ($rows as $r) {
-                $active = !empty($r['is_active']) ? 'فعال' : 'غیرفعال';
-                $lines[] = '• <code>' . (int)$r['telegram_id'] . '</code> — ' . $active .
-                    ' · [حذف: /]';
-            }
-            $this->tg->sendMessage($chatId, implode("\n", $lines), [
-                'reply_markup' => Keyboards::adminSupport(),
-            ]);
-            // also send deactivate buttons
-            $kb = [];
-            foreach ($rows as $r) {
-                if (!empty($r['is_active'])) {
-                    $sid = (int)$r['telegram_id'];
-                    $kb[] = [['text' => "غیرفعال {$sid}", 'callback_data' => 'adm:staff:off:' . $sid]];
-                }
-            }
-            $kb[] = [['text' => 'بازگشت', 'callback_data' => 'adm:support']];
-            $this->tg->sendMessage($chatId, 'برای غیرفعال‌سازی کارمند:', [
-                'reply_markup' => ['inline_keyboard' => $kb],
-            ]);
+            $this->showStaffList($chatId);
             return;
         }
         if (str_starts_with($data, 'adm:staff:off:')) {
             $sid = (int)substr($data, strlen('adm:staff:off:'));
             $this->db->deactivateSupportStaff($sid);
-            $this->tg->sendMessage($chatId, "کارمند {$sid} غیرفعال شد.");
+            $this->tg->sendMessage($chatId, "🔴 کارمند <code>{$sid}</code> غیرفعال شد.");
+            $u = $this->db->findUser($sid);
+            if ($u) {
+                $this->showUserCard($chatId, $u);
+            } else {
+                $this->showStaffList($chatId);
+            }
+            return;
+        }
+        if (str_starts_with($data, 'adm:staff:on:')) {
+            $sid = (int)substr($data, strlen('adm:staff:on:'));
+            $this->db->activateSupportStaff($sid);
+            $this->notifyNewSupportStaff($sid);
+            $this->tg->sendMessage(
+                $chatId,
+                "🟢 کارمند <code>{$sid}</code> فعال شد.\n" .
+                "باید بات پشتیبانی را /start زده باشد تا تیکت‌ها به او برسد."
+            );
+            $u = $this->db->findUser($sid);
+            if ($u) {
+                $this->showUserCard($chatId, $u);
+            } else {
+                $this->showStaffList($chatId);
+            }
+            return;
+        }
+        if (str_starts_with($data, 'adm:flagadmin:on:')) {
+            $sid = (int)substr($data, strlen('adm:flagadmin:on:'));
+            $this->db->updateUser($sid, ['is_admin' => 1]);
+            $this->tg->sendMessage($chatId, "🛡 پرچم ادمین برای <code>{$sid}</code> روشن شد (اعلان‌های مدیریتی).");
+            $u = $this->db->findUser($sid);
+            if ($u) {
+                $this->showUserCard($chatId, $u);
+            }
+            return;
+        }
+        if (str_starts_with($data, 'adm:flagadmin:off:')) {
+            $sid = (int)substr($data, strlen('adm:flagadmin:off:'));
+            $this->db->updateUser($sid, ['is_admin' => 0]);
+            $this->tg->sendMessage($chatId, "پرچم ادمین برای <code>{$sid}</code> خاموش شد.");
+            $u = $this->db->findUser($sid);
+            if ($u) {
+                $this->showUserCard($chatId, $u);
+            }
             return;
         }
         if (str_starts_with($data, 'adm:set:')) {
@@ -771,13 +815,23 @@ final class AdminHandlers
         $banLine = ($u['status'] ?? '') === 'banned'
             ? ("دلیل مسدود: <b>" . htmlspecialchars($banReason !== '' ? $banReason : '—', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n")
             : '';
+        $tid = (int)$u['telegram_id'];
+        $staffRow = $this->db->getSupportStaff($tid);
+        $staffActive = $staffRow !== null && (int)($staffRow['is_active'] ?? 0) === 1;
+        $staffLine = $staffRow === null
+            ? "کارمند پشتیبانی: <b>ثبت نشده</b>\n"
+            : ('کارمند پشتیبانی: <b>' . ($staffActive ? 'فعال ✅' : 'غیرفعال ⛔') . "</b>\n");
+        $isPanelAdmin = !empty($u['is_admin']);
+        $adminLine = 'پرچم ادمین: <b>' . ($isPanelAdmin ? 'روشن' : 'خاموش') . "</b>\n";
         $this->tg->sendMessage(
             $chatId,
             "👤 <b>{$dn}</b>\n" .
             "کد: <code>{$pc}</code>\n" .
-            'تلگرام: <code>' . (int)$u['telegram_id'] . "</code>\n" .
+            'تلگرام: <code>' . $tid . "</code>\n" .
             "وضعیت: <b>{$statusLabel}</b>\n" .
             $banLine .
+            $staffLine .
+            $adminLine .
             "جنسیت/سن: <b>{$g}</b> / <b>" . ($u['age'] ?? '-') . "</b>\n" .
             'سکه: <b>' . (int)$u['coins'] . "</b>\n" .
             'استان/شهر: ' . htmlspecialchars((string)($u['province'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
@@ -785,14 +839,82 @@ final class AdminHandlers
             ((($u['status'] ?? '') === 'banned')
                 ? "\n\nاگر باید با نام جدید برگردد → «حذف کامل برای ثبت‌نام دوباره»."
                 : ''),
-            ['reply_markup' => Keyboards::adminUserActions((int)$u['telegram_id'])]
+            ['reply_markup' => Keyboards::adminUserActions(
+                $tid,
+                $staffActive,
+                $staffRow !== null,
+                $isPanelAdmin
+            )]
         );
+    }
+
+    private function showStaffList(int $chatId): void
+    {
+        $rows = $this->db->listSupportStaff(false);
+        if (!$rows) {
+            $this->tg->sendMessage(
+                $chatId,
+                "کارمندی ثبت نشده.\nاز «افزودن و فعال‌سازی کارمند» استفاده کن.",
+                ['reply_markup' => Keyboards::adminSupport()]
+            );
+            return;
+        }
+        $lines = [
+            "👥 <b>کارمندان پشتیبانی</b>",
+            "با دکمه‌های زیر می‌توانی فعال/غیرفعال کنی.",
+            '',
+        ];
+        foreach ($rows as $r) {
+            $active = (int)($r['is_active'] ?? 0) === 1;
+            $label = trim((string)($r['display_label'] ?? ''));
+            $extra = $label !== '' ? ' · @' . htmlspecialchars($label, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '';
+            $lines[] = '• <code>' . (int)$r['telegram_id'] . '</code> — <b>' .
+                ($active ? 'فعال ✅' : 'غیرفعال ⛔') . '</b>' . $extra;
+        }
+        $lines[] = '';
+        $lines[] = '⚠️ کارمند باید بات پشتیبانی را یک‌بار /start بزند تا تیکت به او برسد.';
+        $this->tg->sendMessage($chatId, implode("\n", $lines), [
+            'reply_markup' => Keyboards::adminStaffListControls($rows),
+        ]);
+    }
+
+    private function notifyNewSupportStaff(int $telegramId): void
+    {
+        $supUser = trim($this->settings->get('support_bot_username'));
+        $supUser = $supUser !== '' ? ltrim($supUser, '@') : 'HamGapXHelpBot';
+        $msg =
+            "✅ تو به‌عنوان <b>کارمند پشتیبانی هم‌گپ</b> فعال شدی.\n\n" .
+            "۱) بات پشتیبانی را باز کن و /start بزن: @{$supUser}\n" .
+            "۲) وقتی تیکت آمد، پاسخ بده با:\n" .
+            "<code>/reply TELEGRAM_ID متن پاسخ</code>\n\n" .
+            "اگر وضعیتت غیرفعال بود، ادمین از پنل می‌تواند دوباره فعال کند.";
+        try {
+            $token = (string)($this->config['support_bot_token'] ?? '');
+            if ($token === '') {
+                $token = $this->settings->get('support_bot_token', '');
+            }
+            $supTg = $token !== '' ? new Telegram($token) : $this->tg;
+            $supTg->sendMessage($telegramId, $msg);
+        } catch (Throwable $e) {
+            // Staff may not have started support bot yet — try main bot.
+            try {
+                $mainToken = (string)($this->config['bot_token'] ?? '');
+                if ($mainToken !== '') {
+                    (new Telegram($mainToken))->sendMessage($telegramId, $msg);
+                }
+            } catch (Throwable $e2) {
+            }
+        }
     }
 
     private function resolveUserQuery(string $text): ?array
     {
         if (ctype_digit($text)) {
             return $this->db->findUser((int)$text);
+        }
+        $byUser = $this->db->findByUsername($text);
+        if ($byUser) {
+            return $byUser;
         }
         $code = strtoupper(ltrim($text, '@'));
         return $this->db->findByPublicCode($code) ?? $this->db->findByReferralCode($code);

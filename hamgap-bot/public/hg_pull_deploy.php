@@ -27,6 +27,7 @@ $map = [
     'src/Keyboards.php' => $root . '/src/Keyboards.php',
     'src/Database.php' => $root . '/src/Database.php',
     'src/AdminHandlers.php' => $root . '/src/AdminHandlers.php',
+    'src/SupportHandlers.php' => $root . '/src/SupportHandlers.php',
     'src/Occupation.php' => $root . '/src/Occupation.php',
     'src/Settings.php' => $root . '/src/Settings.php',
     'src/Matcher.php' => $root . '/src/Matcher.php',

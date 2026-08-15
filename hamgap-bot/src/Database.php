@@ -1062,6 +1062,20 @@ final class Database
         return $this->pdo->query($sql)->fetchAll() ?: [];
     }
 
+    public function getSupportStaff(int $telegramId): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM support_staff WHERE telegram_id = ? LIMIT 1');
+        $st->execute([$telegramId]);
+        $row = $st->fetch();
+        return $row ?: null;
+    }
+
+    public function isActiveSupportStaff(int $telegramId): bool
+    {
+        $row = $this->getSupportStaff($telegramId);
+        return $row !== null && (int)($row['is_active'] ?? 0) === 1;
+    }
+
     public function addSupportStaff(int $telegramId, ?string $label = null): void
     {
         $this->pdo->prepare(
@@ -1070,9 +1084,34 @@ final class Database
         )->execute([$telegramId, $label]);
     }
 
+    public function setSupportStaffActive(int $telegramId, bool $active): void
+    {
+        $this->pdo->prepare('UPDATE support_staff SET is_active = ? WHERE telegram_id = ?')
+            ->execute([$active ? 1 : 0, $telegramId]);
+    }
+
+    public function activateSupportStaff(int $telegramId): void
+    {
+        // Ensure row exists and is active (re-add if missing).
+        $this->addSupportStaff($telegramId);
+        $this->setSupportStaffActive($telegramId, true);
+    }
+
     public function deactivateSupportStaff(int $telegramId): void
     {
-        $this->pdo->prepare('UPDATE support_staff SET is_active = 0 WHERE telegram_id = ?')->execute([$telegramId]);
+        $this->setSupportStaffActive($telegramId, false);
+    }
+
+    public function findByUsername(string $username): ?array
+    {
+        $username = ltrim(trim($username), '@');
+        if ($username === '') {
+            return null;
+        }
+        $st = $this->pdo->prepare('SELECT * FROM users WHERE LOWER(username) = LOWER(?) LIMIT 1');
+        $st->execute([$username]);
+        $row = $st->fetch();
+        return $row ?: null;
     }
 
     public function wipePublicProfile(int $telegramId): void

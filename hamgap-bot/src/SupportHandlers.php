@@ -25,23 +25,52 @@ final class SupportHandlers
         $tid = (int)($from['id'] ?? 0);
         $text = trim((string)($message['text'] ?? ''));
 
-        $staffIds = array_map(static fn($r) => (int)$r['telegram_id'], $this->db->listSupportStaff(true));
-        $isStaff = in_array($tid, $staffIds, true);
+        $staffRow = $this->db->getSupportStaff($tid);
+        $isStaffActive = $staffRow !== null && (int)($staffRow['is_active'] ?? 0) === 1;
+        $isStaffInactive = $staffRow !== null && !$isStaffActive;
 
-        if ($isStaff && str_starts_with($text, '/reply ')) {
-            // /reply TELEGRAM_ID message...
+        if ($isStaffInactive) {
+            $this->tg->sendMessage(
+                $chatId,
+                "⛔ حساب کارمندی پشتیبانی تو <b>غیرفعال</b> است.\n" .
+                "از ادمین بخواه از پنل ادمین → «پشتیبانی و کارمندان» → «لیست / فعال‌سازی کارمندان» وضعیتت را فعال کند.\n" .
+                "یا از «مدیریت کاربران» کارت تو را باز کند و دکمه فعال‌سازی کارمند را بزند."
+            );
+            return;
+        }
+
+        $staffIds = array_map(
+            static fn($r) => (int)$r['telegram_id'],
+            $this->db->listSupportStaff(true)
+        );
+
+        if ($isStaffActive && str_starts_with($text, '/reply ')) {
             if (!preg_match('/^\/reply\s+(\d+)\s+(.+)$/us', $text, $m)) {
                 $this->tg->sendMessage($chatId, "فرمت:\n<code>/reply 123456789 متن پاسخ</code>");
                 return;
             }
             $to = (int)$m[1];
             $body = $m[2];
-            $this->tg->sendMessage($to, "💬 <b>پاسخ پشتیبانی هم‌گپ</b>\n" . htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+            $this->tg->sendMessage(
+                $to,
+                "💬 <b>پاسخ پشتیبانی هم‌گپ</b>\n" . htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            );
             $this->tg->sendMessage($chatId, 'ارسال شد ✅');
             return;
         }
 
         if ($text === '/start') {
+            if ($isStaffActive) {
+                $hours = $this->settings->get('support_hours');
+                $this->tg->sendMessage(
+                    $chatId,
+                    "✅ وضعیت کارمندی: <b>فعال</b>\n" .
+                    "ساعات پاسخگویی: <b>" . htmlspecialchars($hours, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n\n" .
+                    "تیکت‌های کاربران اینجا می‌آید.\n" .
+                    "پاسخ:\n<code>/reply TELEGRAM_ID متن پاسخ</code>"
+                );
+                return;
+            }
             $welcome = $this->settings->get('support_welcome');
             $hours = $this->settings->get('support_hours');
             $this->tg->sendMessage(
@@ -52,14 +81,24 @@ final class SupportHandlers
             return;
         }
 
+        if ($isStaffActive) {
+            $this->tg->sendMessage(
+                $chatId,
+                "برای پاسخ به کاربر بنویس:\n<code>/reply TELEGRAM_ID متن</code>\n" .
+                "وضعیتت: فعال ✅"
+            );
+            return;
+        }
+
         if ($text === '') {
             $this->tg->sendMessage($chatId, 'فعلاً فقط متن پشتیبانی می‌شود.');
             return;
         }
 
-        // Open/update ticket and notify staff
         $pdo = $this->db->pdo();
-        $st = $pdo->prepare("SELECT id FROM support_tickets WHERE user_telegram_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1");
+        $st = $pdo->prepare(
+            "SELECT id FROM support_tickets WHERE user_telegram_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1"
+        );
         $st->execute([$tid]);
         $ticketId = $st->fetchColumn();
         if ($ticketId) {
@@ -83,12 +122,10 @@ final class SupportHandlers
                 $this->tg->sendMessage($sid, $payload);
                 $sent++;
             } catch (Throwable $e) {
-                // continue
             }
         }
 
         if ($sent === 0) {
-            // Fallback: notify main bot admins
             foreach (($this->config['admin_ids'] ?? []) as $aid) {
                 try {
                     $this->tg->sendMessage((int)$aid, $payload);
@@ -98,8 +135,11 @@ final class SupportHandlers
             }
         }
 
-        $this->tg->sendMessage($chatId, $sent > 0
-            ? 'پیامت ثبت شد. به‌زودی پاسخ می‌دهیم ✅'
-            : 'پیامت ثبت شد. فعلاً کارمند آنلاینی نیست؛ به‌زودی بررسی می‌شود.');
+        $this->tg->sendMessage(
+            $chatId,
+            $sent > 0
+                ? 'پیامت ثبت شد. به‌زودی پاسخ می‌دهیم ✅'
+                : "پیامت ثبت شد.\nفعلاً کارمند فعالی در دسترس نیست یا هنوز بات پشتیبانی را /start نزده؛ به‌زودی بررسی می‌شود."
+        );
     }
 }
