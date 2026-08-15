@@ -954,7 +954,6 @@ final class Keyboards
         return ['inline_keyboard' => [
             [['text' => '👤 تکمیل پروفایل', 'callback_data' => 'menu:profile']],
             [['text' => '🖼 افزودن عکس', 'callback_data' => 'edit:avatar']],
-            [['text' => '📍 تأیید موقعیت GPS', 'callback_data' => 'gps:share']],
             [['text' => 'بعداً', 'callback_data' => 'menu:main']],
         ]];
     }
@@ -969,11 +968,16 @@ final class Keyboards
         ]];
     }
 
-    public static function vipHubInline(bool $eligible, bool $active, bool $pending): array
+    public static function vipHubInline(bool $eligible, bool $active, bool $pending, bool $needGps = false): array
     {
         $rows = [];
         if ($active) {
             $rows[] = [['text' => '🔁 تمدید اشتراک ۳۰ روزه', 'callback_data' => 'vip:buy']];
+            if ($needGps) {
+                $rows[] = [['text' => '📍 تأیید موقعیت GPS (فقط استار)', 'callback_data' => 'gps:share']];
+            } else {
+                $rows[] = [['text' => '📍 به‌روزرسانی موقعیت GPS', 'callback_data' => 'gps:share']];
+            }
         } elseif ($eligible) {
             $rows[] = [['text' => '💳 خرید اشتراک استار کلاب', 'callback_data' => 'vip:buy']];
         } elseif ($pending) {

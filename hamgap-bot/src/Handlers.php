@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.22';
+    public const CODE_VERSION = '2026-08-15-v10.23';
 
     private string $assets;
     private Settings $settings;
@@ -1940,22 +1940,30 @@ final class Handlers
         $occLine = $occ !== ''
             ? "تخصص تو: <b>" . htmlspecialchars($occ, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n"
             : "تخصص تو: ثبت نشده\n";
+        $gpsLine = '';
+        if ($active) {
+            $gpsLine = $this->hasGps($user)
+                ? "📍 موقعیت GPS: <b>تأیید شده</b> (فقط برای استار کلاب)\n"
+                : "📍 موقعیت GPS: <b>ثبت نشده</b> — برای چت کلاب VIP لازم است\n";
+        }
         $text =
             "⭐ <b>استار کلاب هم‌گپ</b>\n\n" .
             "کلاب اعضای متشخص‌تر: پروفایل کامل، تخصص مشخص، رفتار تمیز.\n" .
             "عضویت پولی است؛ ولی پول به‌تنهایی کافی نیست.\n\n" .
             $status .
             $occLine .
+            $gpsLine .
             $why .
             "\n🎁 مزایا:\n" .
             "• بج ⭐ روی کارت پروفایل\n" .
             "• فیلتر جستجوی «فقط استارها»\n" .
+            "• موقعیت GPS اختصاصی (برای بقیه کاربران نمایش داده نمی‌شود)\n" .
             "• اولویت دیده شدن در جمع حرفه‌ای‌تر\n\n" .
             "💳 اشتراک {$days} روزه: <b>{$priceFmt}</b> تومان\n" .
             "<i>تخصص‌ها خوداظهاری هستند و مدرک رسمی نیستند.</i>";
 
         $this->uiText($chatId, $user, $text, [
-            'reply_markup' => Keyboards::vipHubInline($elig['ok'], $active, $pending),
+            'reply_markup' => Keyboards::vipHubInline($elig['ok'], $active, $pending, $active && !$this->hasGps($user)),
         ]);
         $this->pinHamGapMenu($chatId, $user);
     }
@@ -2109,17 +2117,20 @@ final class Handlers
         $this->maybeWarnLowCoins($chatId, $user);
     }
 
-    /** Missing enrichment fields (photo / GPS) after basic registration. */
+    /** Missing enrichment fields after basic registration (GPS is Star Club only). */
     private function missingEnrichmentFields(array $user): array
     {
         $miss = [];
         if (trim((string)($user['avatar_file_id'] ?? '')) === '') {
             $miss[] = 'عکس';
         }
-        if ($user['gps_lat'] === null || $user['gps_lat'] === '' || $user['gps_lng'] === null || $user['gps_lng'] === '') {
-            $miss[] = 'موقعیت GPS';
-        }
         return $miss;
+    }
+
+    private function hasGps(array $user): bool
+    {
+        return $user['gps_lat'] !== null && $user['gps_lat'] !== ''
+            && $user['gps_lng'] !== null && $user['gps_lng'] !== '';
     }
 
     private function maybeNudgeIncompleteProfile(int $chatId, array &$user): void
@@ -2601,7 +2612,16 @@ final class Handlers
             $mode = ChatModes::NORMAL;
         }
         if ($mode === ChatModes::VIP) {
-            if ($user['gps_lat'] === null || $user['gps_lat'] === '' || $user['gps_lng'] === null || $user['gps_lng'] === '') {
+            if (!Database::isVipActive($user)) {
+                $this->uiText(
+                    $chatId,
+                    $user,
+                    "⭐ چت کلاب VIP فقط برای اعضای تأییدشدهٔ <b>استار کلاب</b> است.\nاز منوی استار کلاب عضویت/تأیید بگیر.",
+                    ['reply_markup' => Keyboards::connectModeInline()]
+                );
+                return;
+            }
+            if (!$this->hasGps($user)) {
                 $this->askVipGps($chatId, $user);
                 return;
             }
@@ -2669,13 +2689,27 @@ final class Handlers
 
     private function askVipGps(int $chatId, array &$user): void
     {
+        if (!Database::isVipActive($user)) {
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "📍 موقعیت GPS فقط برای اعضای تأییدشدهٔ <b>استار کلاب</b> است.\nاز منوی استار کلاب عضویت بگیر.",
+                ['reply_markup' => ['inline_keyboard' => [
+                    [['text' => '⭐ استار کلاب', 'callback_data' => 'menu:vip']],
+                    [['text' => 'بازگشت', 'callback_data' => 'menu:connect']],
+                ]]]
+            );
+            return;
+        }
         $this->db->updateUser((int)$user['telegram_id'], ['flow' => 'gps:vipclub']);
         $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         $this->clearUi($chatId, $user);
         $city = htmlspecialchars((string)($user['city'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $this->tg->sendMessage(
             $chatId,
-            "📍 <b>کلاب VIP</b> نیاز به تأیید موقعیت واقعی دارد.\n" .
+            "📍 <b>استار کلاب</b> · تأیید موقعیت واقعی\n" .
+            "این بخش فقط برای اعضای استار است و برای بقیه کاربران دیده نمی‌شود.\n" .
             "شهر پروفایل تو: <b>{$city}</b>\n\n" .
             "دکمه زیر را بزن و موقعیت فعلی‌ات را بفرست (برای بقیه مخفی می‌ماند).",
             ['reply_markup' => Keyboards::requestLocationInline()]
@@ -5050,21 +5084,33 @@ final class Handlers
         require_once __DIR__ . '/ChatModes.php';
 
         if ($data === 'gps:share') {
+            if (!Database::isVipActive($user)) {
+                $this->tg->answerCallback($id, 'فقط اعضای استار کلاب', true);
+                return;
+            }
             $this->tg->answerCallback($id);
             $this->stripCallbackMenu($cq);
-            $this->db->updateUser($tid, ['flow' => 'gps:profile']);
-            $user = $this->db->findUser($tid) ?? $user;
-            $this->clearUi($chatId, $user);
-            $this->tg->sendMessage(
-                $chatId,
-                "📍 موقعیت فعلی‌ات را بفرست تا پروفایل کامل‌تر شود.\nاین موقعیت برای دیگران مخفی می‌ماند.",
-                ['reply_markup' => Keyboards::requestLocationInline()]
-            );
+            $this->askVipGps($chatId, $user);
             return;
         }
 
         if ($data === 'mode:normal' || $data === 'mode:hot' || $data === 'mode:vipclub') {
             $mode = substr($data, strlen('mode:'));
+            if ($mode === ChatModes::VIP && !Database::isVipActive($user)) {
+                $this->tg->answerCallback($id, 'فقط اعضای استار کلاب', true);
+                $this->stripCallbackMenu($cq);
+                $this->clearUi($chatId, $user);
+                $this->uiText(
+                    $chatId,
+                    $user,
+                    "⭐ ورود به کلاب VIP فقط برای اعضای تأییدشدهٔ استار کلاب است.",
+                    ['reply_markup' => ['inline_keyboard' => [
+                        [['text' => '⭐ استار کلاب', 'callback_data' => 'menu:vip']],
+                        [['text' => 'بازگشت', 'callback_data' => 'menu:connect']],
+                    ]]]
+                );
+                return;
+            }
             $this->tg->answerCallback($id);
             $this->stripCallbackMenu($cq);
             $this->showChatRules($chatId, $user, $mode);
@@ -5077,11 +5123,13 @@ final class Handlers
                 $this->tg->answerCallback($id, 'نامعتبر', true);
                 return;
             }
+            if ($mode === ChatModes::VIP && !Database::isVipActive($user)) {
+                $this->tg->answerCallback($id, 'فقط اعضای استار کلاب', true);
+                return;
+            }
             $this->tg->answerCallback($id, 'قوانین پذیرفته شد');
             $this->stripCallbackMenu($cq);
-            if ($mode === ChatModes::VIP
-                && ($user['gps_lat'] === null || $user['gps_lat'] === '' || $user['gps_lng'] === null || $user['gps_lng'] === '')
-            ) {
+            if ($mode === ChatModes::VIP && !$this->hasGps($user)) {
                 $this->askVipGps($chatId, $user);
                 return;
             }
@@ -5121,13 +5169,26 @@ final class Handlers
         require_once __DIR__ . '/GeoCheck.php';
         require_once __DIR__ . '/ChatModes.php';
         $tid = (int)$user['telegram_id'];
+        $flow = (string)($user['flow'] ?? '');
+
+        // GPS is Star Club only — ignore location from other users
+        if (!Database::isVipActive($user)) {
+            $this->db->updateUser($tid, ['flow' => null]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->sendMessage(
+                $chatId,
+                "📍 موقعیت GPS فقط برای اعضای تأییدشدهٔ <b>استار کلاب</b> ذخیره می‌شود.\nبرای بقیه کاربران این قابلیت فعال نیست.",
+                ['reply_markup' => Keyboards::mainReply($this->settings->getInt('invite_reward', 30))]
+            );
+            return;
+        }
+
         $lat = (float)($loc['latitude'] ?? 0);
         $lng = (float)($loc['longitude'] ?? 0);
         if ($lat == 0.0 && $lng == 0.0) {
             $this->tg->sendMessage($chatId, 'موقعیت معتبر دریافت نشد.');
             return;
         }
-        $flow = (string)($user['flow'] ?? '');
         $city = (string)($user['city'] ?? '');
         $check = GeoCheck::checkClaim($city, $lat, $lng);
         $this->db->updateUser($tid, [
@@ -5140,7 +5201,6 @@ final class Handlers
         $this->tg->sendMessage($chatId, $check['message'], [
             'reply_markup' => Keyboards::mainReply($this->settings->getInt('invite_reward', 30)),
         ]);
-        $this->tryGrantProfileBonus($chatId, $user);
 
         if ($flow === 'gps:vipclub' || str_starts_with($flow, 'gps:vip')) {
             if (!$check['ok']) {
@@ -5155,9 +5215,8 @@ final class Handlers
             $this->showConnectPrefs($chatId, $user, ChatModes::VIP);
             return;
         }
-        if ($flow === 'gps:profile') {
-            $this->showProfile($chatId, $user);
-        }
+        // Star Club hub refresh after GPS share
+        $this->showVip($chatId, $user);
     }
 
     private function finishPrivateAddMember(int $chatId, array &$user, string $codeOrQuery): void
