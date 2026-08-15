@@ -35,6 +35,9 @@ $map = [
     'src/Gender.php' => $root . '/src/Gender.php',
     'src/IranLocations.php' => $root . '/src/IranLocations.php',
     'public/version.php' => $root . '/version.php',
+    'public/webhook.php' => $root . '/webhook.php',
+    'public/webhook_admin.php' => $root . '/webhook_admin.php',
+    'public/webhook_support.php' => $root . '/webhook_support.php',
 ];
 
 $only = (string)($_GET['only'] ?? '');
