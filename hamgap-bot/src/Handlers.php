@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.10';
+    public const CODE_VERSION = '2026-08-15-v10.11';
 
     private string $assets;
     private Settings $settings;
@@ -36,6 +36,62 @@ final class Handlers
         if (isset($update['message'])) {
             $this->onMessage($update['message']);
         }
+    }
+
+    private function isTypeKeyboardFlow(array $user): bool
+    {
+        $flow = (string)($user['flow'] ?? '');
+        if ($flow === 'kb:type' || $flow === 'support:compose' || $flow === 'set:displayname'
+            || $flow === 'set:avatar' || $flow === 'set:bio' || $flow === 'fr:create'
+            || $flow === 'fr:join' || $flow === 'edit:city_other' || $flow === 'cr:other') {
+            return true;
+        }
+        foreach (['br:compose:', 'br:repother:', 'pay:receipt:'] as $p) {
+            if (str_starts_with($flow, $p)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Keep HamGap reply menu pinned (does not replace inline menus). */
+    private function pinHamGapMenu(int $chatId, array &$user): void
+    {
+        if ($this->isTypeKeyboardFlow($user)) {
+            return;
+        }
+        if (($user['status'] ?? '') === 'chatting') {
+            $this->tg->sendMessage($chatId, '💬 چت فعال — از منوی پایین استفاده کن', [
+                'reply_markup' => Keyboards::chattingReply(),
+            ]);
+            return;
+        }
+        $invite = $this->settings->getInt('invite_reward', 30);
+        $this->tg->sendMessage($chatId, '⬇️ منوی هم‌گپ', [
+            'reply_markup' => Keyboards::mainReply($invite),
+        ]);
+    }
+
+    /** Open phone typing keyboard; show a way back to HamGap menu. */
+    private function openTypeKeyboard(int $chatId, array &$user, string $hint): void
+    {
+        $this->tg->sendMessage(
+            $chatId,
+            $hint . "\n\n⌨️ کیبورد تایپ باز است.\nبعد از نوشتن، «📂 منوی هم‌گپ» را بزن.",
+            ['reply_markup' => Keyboards::backToMenuReply()]
+        );
+    }
+
+    private function restoreHamGapMenu(int $chatId, array &$user, string $note = ''): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $flow = (string)($user['flow'] ?? '');
+        if ($flow === 'kb:type') {
+            $this->db->updateUser($tid, ['flow' => null]);
+            $user = $this->db->findUser($tid) ?? $user;
+        }
+        $this->clearUi($chatId, $user);
+        $this->showMain($chatId, $user, $note !== '' ? $note : 'منوی هم‌گپ فعال شد.');
     }
 
     private function botName(): string
@@ -159,6 +215,36 @@ final class Handlers
         }
 
         $text = trim((string)($message['text'] ?? ''));
+
+        // Always allow restoring HamGap menu / canceling type mode
+        if ($text === '📂 منوی هم‌گپ' || $text === '/menu') {
+            $this->db->updateUser($tid, ['flow' => null]);
+            $user = $this->db->findUser($tid) ?? $user;
+            if (($user['status'] ?? '') === 'chatting') {
+                $this->endAndMenu($chatId, $user);
+            } else {
+                $this->restoreHamGapMenu($chatId, $user);
+            }
+            return;
+        }
+        if ($text === '⌨️ کیبورد تایپ') {
+            $this->db->updateUser($tid, ['flow' => 'kb:type']);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->openTypeKeyboard(
+                $chatId,
+                $user,
+                "⌨️ کیبورد تایپ فعال شد.\nحالا می‌تونی متن آزاد بنویسی."
+            );
+            return;
+        }
+        // Cancel compose if user taps another HamGap menu item
+        if ($text !== '' && $this->isTypeKeyboardFlow($user) && $this->isHamGapMenuLabel($text)
+            && !in_array($text, ['📂 منوی هم‌گپ', '⌨️ کیبورد تایپ'], true)) {
+            $this->db->updateUser($tid, ['flow' => null]);
+            $user = $this->db->findUser($tid) ?? $user;
+            // fall through to normal menu routing below
+        }
 
         // Admin flows / login on main bot
         if (str_starts_with((string)($user['flow'] ?? ''), 'adm:') || $text === '/admin' || $text === '/login' || $text === '/logout') {
@@ -381,7 +467,7 @@ final class Handlers
         }
 
         if (($user['status'] ?? '') === 'chatting' && !empty($user['partner_id'])) {
-            if (in_array($text, ['🛑 پایان چت', '🛑 پایان', '/end'], true)) {
+            if (in_array($text, ['🛑 پایان چت', '🛑 پایان', '/end', '📂 منوی هم‌گپ'], true)) {
                 $this->endAndMenu($chatId, $user);
                 return;
             }
@@ -395,6 +481,10 @@ final class Handlers
             }
             if (in_array($text, ['📥 درخواست‌ها', '/requests'], true)) {
                 $this->showRequestInbox($chatId, $user);
+                return;
+            }
+            if ($this->isHamGapMenuLabel($text)) {
+                $this->endAndMenu($chatId, $user);
                 return;
             }
             $this->tg->copyMessage((int)$user['partner_id'], $chatId, (int)$message['message_id']);
@@ -441,20 +531,40 @@ final class Handlers
             return;
         }
 
-        match ($text) {
-            '🔗 وصلم کن به ناشناس', '🔗 وصل ناشناس', '💬 چت ناشناس' => $this->showConnect($chatId, $user),
-            '🔍 پیدا کردن مخاطب', '🔍 جستجوی کاربران' => $this->showFind($chatId, $user),
-            '👥 وصل به دوستان', '👥 چت با دوستان' => $this->showFriends($chatId, $user),
-            '💎 سکه‌ها', '💎 کیف‌پول' => $this->showWallet($chatId, $user),
-            '👤 پروفایل من', '👤 پروفایل' => $this->showProfile($chatId, $user),
-            '✨ دعوت دوستان · +۳۰', '✨ دعوت دوستان' => $this->showInvite($chatId, $user),
-            '🆘 پشتیبانی' => $this->showSupport($chatId, $user),
-            'ℹ️ راهنما' => $this->showHelp($chatId, $user),
+        match (true) {
+            in_array($text, ['🔗 وصلم کن به ناشناس', '🔗 وصل ناشناس', '💬 چت ناشناس'], true)
+                => $this->showConnect($chatId, $user),
+            in_array($text, ['🔍 پیدا کردن مخاطب', '🔍 جستجوی کاربران'], true)
+                => $this->showFind($chatId, $user),
+            in_array($text, ['👥 وصل به دوستان', '👥 چت با دوستان', '👫 چت با دوستان'], true)
+                => $this->showFriends($chatId, $user),
+            in_array($text, ['💎 سکه‌ها', '💎 کیف‌پول'], true)
+                => $this->showWallet($chatId, $user),
+            in_array($text, ['👤 پروفایل من', '👤 پروفایل'], true)
+                => $this->showProfile($chatId, $user),
+            str_starts_with($text, '✨ دعوت')
+                => $this->showInvite($chatId, $user),
+            $text === '🆘 پشتیبانی'
+                => $this->showSupport($chatId, $user),
+            $text === 'ℹ️ راهنما'
+                => $this->showHelp($chatId, $user),
             default => (function () use ($chatId, &$user): void {
                 $this->clearUi($chatId, $user);
-                $this->showMain($chatId, $user, 'از منوی زیر یک گزینه را لمس کن.');
+                $this->showMain($chatId, $user, 'از منوی هم‌گپ پایین صفحه یک گزینه را لمس کن.');
             })(),
         };
+    }
+
+    private function isHamGapMenuLabel(string $text): bool
+    {
+        if (in_array($text, [
+            '💬 چت ناشناس', '🔍 جستجوی کاربران', '👫 چت با دوستان', '👥 چت با دوستان',
+            '👤 پروفایل', '💎 کیف‌پول', '🆘 پشتیبانی', 'ℹ️ راهنما', '⌨️ کیبورد تایپ',
+            '📂 منوی هم‌گپ', '⏭ بعدی', '🛑 پایان چت', '📥 درخواست‌ها', '🚩 گزارش',
+        ], true)) {
+            return true;
+        }
+        return str_starts_with($text, '✨ دعوت');
     }
 
     private function onCallback(array $cq): void
@@ -814,7 +924,7 @@ final class Handlers
             $cost = $this->settings->getInt('message_cost', 1);
             $this->clearUi($chatId, $user);
             $dn = htmlspecialchars((string)($target['display_name'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $this->uiText(
+            $this->openTypeKeyboard(
                 $chatId,
                 $user,
                 "پیام کوتاه برای <b>{$dn}</b>\nهزینه ارسال: <b>{$cost}</b> سکه\nمتن را همین‌جا بنویس."
@@ -989,7 +1099,7 @@ final class Handlers
             $this->stripCallbackMenu($cq);
             $user = $this->db->findUser($tid) ?? $user;
             $this->clearUi($chatId, $user);
-            $this->uiText($chatId, $user, "پیام پشتیبانی را بنویس.\nهمکاران ما پاسخ می‌دهند.");
+            $this->openTypeKeyboard($chatId, $user, "پیام پشتیبانی را بنویس.\nهمکاران ما پاسخ می‌دهند.");
             return;
         }
 
@@ -1114,7 +1224,7 @@ final class Handlers
                 $this->db->updateUser($tid, ['flow' => 'set:avatar']);
                 $user = $this->db->findUser($tid) ?? $user;
                 $this->clearUi($chatId, $user);
-                $this->uiText($chatId, $user, "🖼 <b>عکس پروفایل</b>\nیک عکس همین‌جا بفرست.");
+                $this->openTypeKeyboard($chatId, $user, "🖼 <b>عکس پروفایل</b>\nیک عکس همین‌جا بفرست.");
                 break;
             case 'edit:namehub':
                 $this->clearUi($chatId, $user);
@@ -1140,7 +1250,7 @@ final class Handlers
                 $this->db->updateUser($tid, ['flow' => 'set:displayname']);
                 $user = $this->db->findUser($tid) ?? $user;
                 $this->clearUi($chatId, $user);
-                $this->uiText(
+                $this->openTypeKeyboard(
                     $chatId,
                     $user,
                     "🔤 <b>نام کاربری دستی</b>\nنام نمایشی جدیدت را بنویس (۲ تا ۳۲ کاراکتر).\nفعلی: <b>" .
@@ -1153,7 +1263,7 @@ final class Handlers
                 $user = $this->db->findUser($tid) ?? $user;
                 $this->clearUi($chatId, $user);
                 $cur = htmlspecialchars((string)($user['bio'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $this->uiText(
+                $this->openTypeKeyboard(
                     $chatId,
                     $user,
                     "📝 <b>بیو / معرفی</b>\nحداکثر ۱۸۰ کاراکتر.\nفعلی: {$cur}\n\nبرای پاک کردن بنویس: <code>پاک</code>"
@@ -1216,9 +1326,7 @@ final class Handlers
 
         if (empty($user['gender'])) {
             if ($freshStart) {
-                $this->uiText($chatId, $user, $this->welcomeTextFirst(), [
-                    'reply_markup' => Keyboards::removeReply(),
-                ]);
+                $this->uiText($chatId, $user, $this->welcomeTextFirst());
             }
             $this->uiText($chatId, $user, $this->welcomeTextSecond(), [
                 'reply_markup' => Keyboards::gender(),
@@ -1354,6 +1462,7 @@ final class Handlers
                 'reply_markup' => Keyboards::helpInline(),
             ]);
         }
+        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function showMain(int $chatId, array &$user, string $extra = ''): void
@@ -1370,8 +1479,8 @@ final class Handlers
                 'reply_markup' => Keyboards::mainInline(),
             ]);
         }
-        $this->uiText($chatId, $user, 'منوی سریع پایین صفحه 👇', [
-            'reply_markup' => Keyboards::mainReply(),
+        $this->uiText($chatId, $user, '⬇️ منوی هم‌گپ', [
+            'reply_markup' => Keyboards::mainReply($this->settings->getInt('invite_reward', 30)),
         ]);
     }
 
@@ -1389,6 +1498,7 @@ final class Handlers
                 'reply_markup' => Keyboards::connectInline(),
             ]);
         }
+        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function showFind(int $chatId, array &$user): void
@@ -1406,6 +1516,7 @@ final class Handlers
             "🟢 آنلاین → کسانی که الان فعال‌اند",
             ['reply_markup' => Keyboards::searchHubInline()]
         );
+        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function showFriends(int $chatId, array &$user): void
@@ -1424,6 +1535,7 @@ final class Handlers
             "یا با لینک دعوت دوست جدید بیاور و <b>+{$invite} سکه</b> بگیر.",
             ['reply_markup' => Keyboards::friendsInline($createCost)]
         );
+        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function showSupport(int $chatId, array &$user): void
@@ -1440,6 +1552,7 @@ final class Handlers
             "پشتیبانی و خدمات هم‌گپ\n{$line}\nساعات پاسخگویی: <b>{$hours}</b>",
             ['reply_markup' => Keyboards::supportInline($u !== '' ? $u : null)]
         );
+        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function showProfile(int $chatId, array &$user): void
@@ -1493,6 +1606,7 @@ final class Handlers
                 'reply_markup' => Keyboards::profileInline(),
             ]);
         }
+        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function showWallet(int $chatId, array &$user): void
@@ -1515,6 +1629,7 @@ final class Handlers
                 'reply_markup' => Keyboards::walletInline($invite),
             ]);
         }
+        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function showInvite(int $chatId, array &$user): void
@@ -1533,6 +1648,7 @@ final class Handlers
             "لینک اختصاصی تو:\n<code>{$safeLink}</code>\n\n" .
             "هر دوست جدیدی که با این لینک وارد شود، <b>+{$invite} سکه</b> می‌گیری."
         );
+        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function prefLabel(string $pref): string
@@ -1771,7 +1887,7 @@ final class Handlers
             $user = $this->db->findUser($tid) ?? $user;
             $this->clearUi($chatId, $user);
             $dn = htmlspecialchars((string)($target['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $this->uiText(
+            $this->openTypeKeyboard(
                 $chatId,
                 $user,
                 "✏️ توضیح گزارش برای <b>{$dn}</b> را بنویس و بفرست.\n(حداکثر چند خط کوتاه)"
@@ -1839,7 +1955,7 @@ final class Handlers
             $this->stripCallbackMenu($cq);
             $user = $this->db->findUser($tid) ?? $user;
             $this->clearUi($chatId, $user);
-            $this->uiText($chatId, $user, "✏️ دلیل گزارش را کوتاه بنویس و بفرست.");
+            $this->openTypeKeyboard($chatId, $user, "✏️ دلیل گزارش را کوتاه بنویس و بفرست.");
             return;
         }
         $label = $labels[$reasonKey];
@@ -3297,7 +3413,7 @@ final class Handlers
             $this->stripCallbackMenu($cq);
             $this->clearUi($chatId, $user);
             $amt = $this->formatMoney((int)$inv['amount_toman']);
-            $this->uiText(
+            $this->openTypeKeyboard(
                 $chatId,
                 $user,
                 "📷 <b>ارسال فیش واریزی</b>\n" .
@@ -3592,7 +3708,7 @@ final class Handlers
             $this->tg->answerCallback($id);
             $this->stripCallbackMenu($cq);
             $this->clearUi($chatId, $user);
-            $this->uiText(
+            $this->openTypeKeyboard(
                 $chatId,
                 $user,
                 "نام گپ را بنویس (مثلاً: گپ جمعه).\nبعد از ارسال نام، <b>{$cost}</b> سکه کم می‌شود."
@@ -3606,7 +3722,7 @@ final class Handlers
             $this->tg->answerCallback($id);
             $this->stripCallbackMenu($cq);
             $this->clearUi($chatId, $user);
-            $this->uiText($chatId, $user, "🔑 کد گپ را بفرست:\n(ورود: <b>{$joinCost}</b> سکه)");
+            $this->openTypeKeyboard($chatId, $user, "🔑 کد گپ را بفرست:\n(ورود: <b>{$joinCost}</b> سکه)");
             return;
         }
         if ($data === 'fr:leave' || $data === 'fr:close') {

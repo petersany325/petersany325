@@ -3,19 +3,40 @@ declare(strict_types=1);
 
 final class Keyboards
 {
-    public static function mainReply(): array
+    public static function mainReply(int $inviteReward = 30): array
     {
         return [
             'keyboard' => [
                 [['text' => '💬 چت ناشناس']],
-                [['text' => '🔍 جستجوی کاربران'], ['text' => '👥 چت با دوستان']],
+                [['text' => '🔍 جستجوی کاربران'], ['text' => '👫 چت با دوستان']],
                 [['text' => '👤 پروفایل'], ['text' => '💎 کیف‌پول']],
-                [['text' => '✨ دعوت دوستان · +۳۰'], ['text' => '🆘 پشتیبانی']],
-                [['text' => 'ℹ️ راهنما']],
+                [['text' => "✨ دعوت دوستان · +{$inviteReward}"], ['text' => '🆘 پشتیبانی']],
+                [['text' => 'ℹ️ راهنما'], ['text' => '⌨️ کیبورد تایپ']],
             ],
             'resize_keyboard' => true,
             'is_persistent' => true,
+            'input_field_placeholder' => 'از منوی هم‌گپ انتخاب کن…',
         ];
+    }
+
+    /** Shown while typing is needed — one button to restore HamGap menu. */
+    public static function backToMenuReply(): array
+    {
+        return [
+            'keyboard' => [
+                [['text' => '📂 منوی هم‌گپ']],
+            ],
+            'resize_keyboard' => true,
+            'is_persistent' => true,
+            'input_field_placeholder' => 'اینجا بنویس…',
+        ];
+    }
+
+    public static function typeModeInline(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '📂 بازگشت به منوی هم‌گپ', 'callback_data' => 'menu:main']],
+        ]];
     }
 
     public static function mainInline(): array
@@ -24,7 +45,7 @@ final class Keyboards
             [['text' => '💬 چت ناشناس · رایگان', 'callback_data' => 'menu:connect']],
             [
                 ['text' => '🔍 جستجوی کاربران', 'callback_data' => 'menu:find'],
-                ['text' => '👥 چت با دوستان', 'callback_data' => 'menu:friends'],
+                ['text' => '👫 چت با دوستان', 'callback_data' => 'menu:friends'],
             ],
             [
                 ['text' => '👤 پروفایل', 'callback_data' => 'menu:profile'],
@@ -41,12 +62,12 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [['text' => '💬 چت ناشناس', 'callback_data' => 'menu:connect']],
+            [['text' => '🔍 جستجوی کاربران', 'callback_data' => 'menu:find'],
+                ['text' => '👫 چت با دوستان', 'callback_data' => 'menu:friends']],
+            [['text' => '💎 کیف‌پول', 'callback_data' => 'menu:wallet'],
+                ['text' => '👤 پروفایل', 'callback_data' => 'menu:profile']],
             [
-                ['text' => '🔍 جستجو', 'callback_data' => 'menu:find'],
-                ['text' => '👤 پروفایل', 'callback_data' => 'menu:profile'],
-            ],
-            [
-                ['text' => '💎 کیف‌پول', 'callback_data' => 'menu:wallet'],
+                ['text' => 'ℹ️ راهنما', 'callback_data' => 'menu:help'],
                 ['text' => '🆘 پشتیبانی', 'callback_data' => 'menu:support'],
             ],
             [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
@@ -303,8 +324,11 @@ final class Keyboards
             'keyboard' => [
                 [['text' => '⏭ بعدی'], ['text' => '🛑 پایان چت']],
                 [['text' => '📥 درخواست‌ها'], ['text' => '🚩 گزارش']],
+                [['text' => '📂 منوی هم‌گپ']],
             ],
             'resize_keyboard' => true,
+            'is_persistent' => true,
+            'input_field_placeholder' => 'پیام چت را بنویس…',
         ];
     }
 
