@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.8.1';
+    public const CODE_VERSION = '2026-08-15-v10.9';
 
     private string $assets;
     private Settings $settings;
@@ -188,8 +188,8 @@ final class Handlers
             $cost = $this->settings->getInt('room_create_cost', 5);
             if (!$this->db->spendCoins($tid, $cost, 'room_create', null)) {
                 $this->db->updateUser($tid, ['flow' => null]);
-                $this->tg->sendMessage($chatId, "سکه کافی نداری. ساخت گپ {$cost} سکه لازم دارد.");
-                $this->showWallet($chatId, $user);
+                $user = $this->db->findUser($tid) ?? $user;
+                $this->showNeedCoins($chatId, $user, $cost, 'ساخت گپ');
                 return;
             }
             $room = $this->db->createFriendRoom($tid, $text);
@@ -212,8 +212,8 @@ final class Handlers
             $joinCost = $this->settings->getInt('room_join_cost', 1);
             if ($joinCost > 0 && !$this->db->spendCoins($tid, $joinCost, 'room_join', trim($text))) {
                 $this->db->updateUser($tid, ['flow' => null]);
-                $this->tg->sendMessage($chatId, "سکه کافی نداری. ورود به گپ {$joinCost} سکه است.");
-                $this->showWallet($chatId, $user);
+                $user = $this->db->findUser($tid) ?? $user;
+                $this->showNeedCoins($chatId, $user, $joinCost, 'ورود به گپ');
                 return;
             }
             $result = $this->db->joinFriendRoom($tid, $text);
@@ -748,6 +748,7 @@ final class Handlers
             $likeCost = $this->settings->getInt('like_cost', 0);
             if ($likeCost > 0 && !$this->db->spendCoins($tid, $likeCost, 'like', (string)$to)) {
                 $this->tg->answerCallback($id, 'سکه کافی نداری', true);
+                $this->showNeedCoins($chatId, $user, $likeCost, 'لایک');
                 return;
             }
             $res = $this->db->addLike($tid, $to);
@@ -863,6 +864,11 @@ final class Handlers
             $this->stripCallbackMenu($cq);
             $this->clearUi($chatId, $user);
             $this->showNextBrowseCard($chatId, $user);
+            return;
+        }
+        if (str_starts_with($data, 'br:wait:')) {
+            $code = substr($data, strlen('br:wait:'));
+            $this->subscribeChatWait($cq, $user, $id, $chatId, $tid, $code);
             return;
         }
         if (str_starts_with($data, 'cr:')) {
@@ -1533,13 +1539,31 @@ final class Handlers
         array $filters = [],
         string $extraNote = ''
     ): void {
+        if (($user['status'] ?? '') === 'chatting') {
+            $ended = [(int)$user['telegram_id']];
+            $oldPartner = $this->matcher->endChat($user, true);
+            if ($oldPartner) {
+                $ended[] = $oldPartner;
+                $p = $this->db->findUser($oldPartner);
+                if ($p) {
+                    try {
+                        $this->clearUi($oldPartner, $p);
+                        $this->tg->sendMessage($oldPartner, 'طرف مقابل چت را ترک کرد.');
+                        $this->showMain($oldPartner, $p);
+                    } catch (Throwable $e) {
+                    }
+                }
+            }
+            $this->flushChatWaitNotices($ended);
+            $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+        }
+
         $result = $this->matcher->startSearch($user, $pref, $filters);
 
         if (!($result['ok'] ?? false)) {
             $err = (string)($result['error'] ?? '');
             if ($err === 'no_coins') {
-                $this->uiText($chatId, $user, "سکه کافی نداری.\nاز بخش سکه‌ها شارژ کن یا چت شانسی رایگان برو.");
-                $this->showWallet($chatId, $user);
+                $this->showNeedCoins($chatId, $user, 1, 'شروع چت');
                 return;
             }
             if ($err === 'need_province') {
@@ -1597,7 +1621,11 @@ final class Handlers
 
     private function endAndMenu(int $chatId, array $user): void
     {
+        $endedIds = [(int)$user['telegram_id']];
         $partnerId = $this->matcher->endChat($user, true);
+        if ($partnerId) {
+            $endedIds[] = $partnerId;
+        }
         $this->clearUi($chatId, $user);
         $this->tg->sendMessage($chatId, 'چت پایان یافت.\nتاریخچه این گفتگو پاک شد و لاگی نگه داشته نمی‌شود.');
         $fresh = $this->db->findUser((int)$user['telegram_id']) ?? $user;
@@ -1609,13 +1637,16 @@ final class Handlers
                 $this->showMain($partnerId, $p);
             }
         }
+        $this->flushChatWaitNotices($endedIds);
         $this->showMain($chatId, $fresh);
     }
 
     private function nextChat(int $chatId, array $user): void
     {
+        $endedIds = [(int)$user['telegram_id']];
         $partnerId = $this->matcher->endChat($user, true);
         if ($partnerId) {
+            $endedIds[] = $partnerId;
             $p = $this->db->findUser($partnerId);
             if ($p) {
                 $this->clearUi($partnerId, $p);
@@ -1623,6 +1654,7 @@ final class Handlers
                 $this->showMain($partnerId, $p);
             }
         }
+        $this->flushChatWaitNotices($endedIds);
         $fresh = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         $this->clearUi($chatId, $fresh);
         $this->startChat($chatId, $fresh, 'any');
@@ -2407,8 +2439,7 @@ final class Handlers
         }
         $cost = $this->settings->getInt('request_cost', 1);
         if (!$this->db->spendCoins($tid, $cost, 'chat_request', (string)$to)) {
-            $this->uiText($chatId, $user, 'سکه کافی نداری.');
-            $this->showWallet($chatId, $user);
+            $this->showNeedCoins($chatId, $user, $cost, 'درخواست چت');
             return;
         }
         $reqId = $this->db->createContactRequest($tid, $to, 'request');
@@ -2416,7 +2447,7 @@ final class Handlers
         $fromCode = htmlspecialchars((string)($user['public_code'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $busy = (($target['status'] ?? '') === 'chatting');
         $extra = $busy
-            ? "\n\nالان در چت دیگری است — می‌توانی رزرو کنی یا قبول فوری بزنی."
+            ? "\n\n⏳ الان در چت دیگری است — می‌توانی رزرو کنی یا بعداً از درخواست‌ها قبول کنی."
             : "\n\nبا قبول، چت خصوصی دو نفره باز می‌شود.";
         try {
             $this->tg->sendMessage(
@@ -2427,6 +2458,19 @@ final class Handlers
         } catch (Throwable $e) {
         }
         $user = $this->db->findUser($tid) ?? $user;
+        $dn = htmlspecialchars((string)($target['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        if ($busy) {
+            $notifyCost = max(0, $this->settings->getInt('notify_free_cost', 1));
+            $this->uiText(
+                $chatId,
+                $user,
+                "⏳ <b>{$dn}</b> الان در حال چت است.\n" .
+                "درخواستت ارسال شد (−{$cost} سکه).\n\n" .
+                "اگر می‌خوای وقتی چتش تموم شد خبرت کنیم، گزینه زیر را بزن (−{$notifyCost} سکه).",
+                ['reply_markup' => Keyboards::busyNotifyInline((string)$target['public_code'], $notifyCost)]
+            );
+            return;
+        }
         $this->uiText($chatId, $user, "درخواست چت ارسال شد (−{$cost} سکه).\nتا وقتی طرف مقابل قبول کند، چت باز نمی‌شود.");
         $this->showNextBrowseCard($chatId, $user);
     }
@@ -2456,8 +2500,8 @@ final class Handlers
         }
         if (!$this->db->spendCoins($tid, $cost, 'direct_message', (string)$to)) {
             $this->db->updateUser($tid, ['flow' => null]);
-            $this->uiText($chatId, $user, 'سکه کافی نداری.');
-            $this->showWallet($chatId, $user);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->showNeedCoins($chatId, $user, $cost, 'ارسال پیام');
             return;
         }
         $this->db->createContactRequest($tid, $to, 'message', $body);
@@ -2477,6 +2521,126 @@ final class Handlers
         $user = $this->db->findUser($tid) ?? $user;
         $this->clearUi($chatId, $user);
         $this->uiText($chatId, $user, "پیام ارسال شد (−{$cost} سکه).\nتا وقتی هر دو طرف چت خصوصی را تأیید نکنند، هر پیام جداگانه سکه کم می‌کند.");
+    }
+
+    private function showNeedCoins(int $chatId, array &$user, int $needed, string $action = ''): void
+    {
+        $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+        $invite = $this->settings->getInt('invite_reward', 30);
+        $have = (int)($user['coins'] ?? 0);
+        $actionBit = $action !== '' ? " برای «{$action}»" : '';
+        $this->clearUi($chatId, $user);
+        $this->uiText(
+            $chatId,
+            $user,
+            "⚠️ <b>توجه: سکه کافی نداری!</b>" .
+            ($needed > 0 ? " ({$needed} سکه مورد نیاز{$actionBit})" : '') . "\n" .
+            "موجودی الان: <b>{$have}</b> سکه\n\n" .
+            "💡 برای به‌دست آوردن سکه می‌تونی ربات را به دوستات معرفی کنی و به ازای هر دعوت <b>+{$invite}</b> سکه هدیه بگیری.\n\n" .
+            "❗️ اگر دوستی نداری که دعوت کنی، از پنل خرید سکه 💰 استفاده کن و موجودی‌ات را افزایش بده.",
+            ['reply_markup' => Keyboards::needCoinsInline($invite)]
+        );
+    }
+
+    private function subscribeChatWait(
+        array $cq,
+        array &$user,
+        string $id,
+        int $chatId,
+        int $tid,
+        string $code
+    ): void {
+        $target = $this->db->findByPublicCode($code);
+        if (!$target) {
+            $this->tg->answerCallback($id, 'کاربر پیدا نشد', true);
+            return;
+        }
+        $to = (int)$target['telegram_id'];
+        if ($to === $tid) {
+            $this->tg->answerCallback($id, 'برای خودت ممکن نیست', true);
+            return;
+        }
+        if ($this->db->isBlocked($tid, $to) || $this->db->isBlocked($to, $tid)) {
+            $this->tg->answerCallback($id, 'امکان‌پذیر نیست', true);
+            return;
+        }
+        if ($this->db->hasPendingChatWait($tid, $to)) {
+            $this->tg->answerCallback($id, 'قبلاً ثبت شده — وقتی آزاد شد خبرت می‌کنیم', true);
+            return;
+        }
+        // If already free, no need to wait
+        if (($target['status'] ?? '') !== 'chatting') {
+            $this->tg->answerCallback($id, 'الان آزاد است');
+            $reqCost = $this->settings->getInt('request_cost', 1);
+            $dn = htmlspecialchars((string)($target['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "🔔 <b>{$dn}</b> الان آزاد است.\nمی‌تونی همین حالا درخواست چت بفرستی.",
+                ['reply_markup' => Keyboards::freeNowInline((string)$target['public_code'], $reqCost)]
+            );
+            return;
+        }
+        $cost = max(0, $this->settings->getInt('notify_free_cost', 1));
+        if ($cost > 0 && !$this->db->spendCoins($tid, $cost, 'notify_free', (string)$to)) {
+            $this->tg->answerCallback($id, 'سکه کافی نداری', true);
+            $this->showNeedCoins($chatId, $user, $cost, 'خبر پایان چت');
+            return;
+        }
+        $res = $this->db->addChatWaitNotice($tid, $to);
+        if ($res === 'already') {
+            if ($cost > 0) {
+                $this->db->addCoins($tid, $cost, 'notify_free_refund', 'already');
+            }
+            $this->tg->answerCallback($id, 'قبلاً ثبت شده', true);
+            return;
+        }
+        $this->tg->answerCallback($id, 'ثبت شد 🔔');
+        $this->stripCallbackMenu($cq);
+        $user = $this->db->findUser($tid) ?? $user;
+        $dn = htmlspecialchars((string)($target['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $this->clearUi($chatId, $user);
+        $this->uiText(
+            $chatId,
+            $user,
+            "🔔 خبررسانی ثبت شد" . ($cost > 0 ? " (−{$cost} سکه)" : '') . ".\n" .
+            "وقتی چت <b>{$dn}</b> تمام شود، همین‌جا خبرت می‌کنیم تا بتوانی وصل شوی."
+        );
+    }
+
+    /** @param list<int> $targetIds */
+    private function flushChatWaitNotices(array $targetIds): void
+    {
+        $seen = [];
+        $reqCost = $this->settings->getInt('request_cost', 1);
+        foreach ($targetIds as $targetId) {
+            $targetId = (int)$targetId;
+            if ($targetId <= 0 || isset($seen[$targetId])) {
+                continue;
+            }
+            $seen[$targetId] = true;
+            $target = $this->db->findUser($targetId);
+            if (!$target) {
+                continue;
+            }
+            $dn = htmlspecialchars((string)($target['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $code = (string)($target['public_code'] ?? '');
+            foreach ($this->db->listPendingChatWaiters($targetId) as $row) {
+                $waiterId = (int)$row['waiter_id'];
+                $this->db->markChatWaitNotified((int)$row['id']);
+                try {
+                    $this->tg->sendMessage(
+                        $waiterId,
+                        "🔔 چت <b>{$dn}</b> تمام شد!\nالان آزاد است — می‌تونی درخواست چت بفرستی و وصل شی.",
+                        ['reply_markup' => Keyboards::freeNowInline($code, $reqCost)]
+                    );
+                } catch (Throwable $e) {
+                }
+            }
+        }
     }
 
     private function forwardSupportFromMain(int $chatId, array &$user, string $text): void
@@ -2691,9 +2855,11 @@ final class Handlers
             return;
         }
 
+        $freed = [];
         if (($user['status'] ?? '') === 'chatting' && !empty($user['partner_id'])) {
             $old = (int)$user['partner_id'];
             $this->matcher->endChat($user, true);
+            $freed[] = $old;
             try {
                 $this->tg->sendMessage($old, 'طرف مقابل رفت سراغ درخواست چت دیگری. تاریخچه پاک شد.');
             } catch (Throwable $e) {
@@ -2701,7 +2867,18 @@ final class Handlers
         }
         $fromUser = $this->db->findUser($fromId);
         if ($fromUser && ($fromUser['status'] ?? '') === 'chatting') {
+            $oldFromPartner = !empty($fromUser['partner_id']) ? (int)$fromUser['partner_id'] : null;
             $this->matcher->endChat($fromUser, true);
+            if ($oldFromPartner) {
+                $freed[] = $oldFromPartner;
+                try {
+                    $this->tg->sendMessage($oldFromPartner, 'طرف مقابل چت را ترک کرد. تاریخچه پاک شد.');
+                } catch (Throwable $e) {
+                }
+            }
+        }
+        if ($freed) {
+            $this->flushChatWaitNotices($freed);
         }
         $this->db->updateContactRequest($reqId, ['status' => 'accepted']);
         $this->db->openPrivateChat($fromId, $tid, 'request');

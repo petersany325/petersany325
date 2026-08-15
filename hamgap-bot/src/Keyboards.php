@@ -365,6 +365,7 @@ final class Keyboards
                 ['text' => 'گزارش تخلف 🚨', 'callback_data' => 'br:rep:' . $code],
                 ['text' => 'بلاک 🚫', 'callback_data' => 'br:blk:' . $code],
             ],
+            [['text' => 'چت کردنش تموم شد بهم خبر بده 🔔 · ۱🪙', 'callback_data' => 'br:wait:' . $code]],
             [
                 ['text' => '➕ دوست', 'callback_data' => 'br:friend:' . $code],
                 ['text' => 'کاربر بعدی ⏭', 'callback_data' => 'br:next'],
@@ -560,6 +561,37 @@ final class Keyboards
         ]];
     }
 
+    public static function busyNotifyInline(string $publicCode, int $notifyCost = 1): array
+    {
+        $code = preg_replace('/[^A-Za-z0-9_]/', '', $publicCode) ?? '';
+        return ['inline_keyboard' => [
+            [['text' => "🔔 خبرم کن وقتی آزاد شد · {$notifyCost}🪙", 'callback_data' => 'br:wait:' . $code]],
+            [
+                ['text' => 'کاربر بعدی', 'callback_data' => 'br:next'],
+                ['text' => 'جستجو', 'callback_data' => 'menu:find'],
+            ],
+        ]];
+    }
+
+    public static function freeNowInline(string $publicCode, int $requestCost = 1): array
+    {
+        $code = preg_replace('/[^A-Za-z0-9_]/', '', $publicCode) ?? '';
+        return ['inline_keyboard' => [
+            [['text' => "درخواست چت · {$requestCost}🪙", 'callback_data' => 'br:req:' . $code]],
+            [['text' => 'جستجوی کاربران', 'callback_data' => 'menu:find']],
+            [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
+        ]];
+    }
+
+    public static function needCoinsInline(int $inviteReward = 30): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => "✨ دعوت دوستان و دریافت سکه رایگان (+{$inviteReward})", 'callback_data' => 'menu:invite']],
+            [['text' => '💳 خرید سکه 💰', 'callback_data' => 'menu:wallet']],
+            [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
+        ]];
+    }
+
     public static function walletInline(int $inviteReward = 30): array
     {
         return ['inline_keyboard' => [
@@ -690,6 +722,7 @@ final class Keyboards
             [['text' => 'هزینه لایک', 'callback_data' => 'adm:set:like_cost']],
             [['text' => 'ساخت گپ گروهی', 'callback_data' => 'adm:set:room_create_cost']],
             [['text' => 'ورود به گپ (هر نفر)', 'callback_data' => 'adm:set:room_join_cost']],
+            [['text' => 'هزینه خبر آزاد شدن از چت', 'callback_data' => 'adm:set:notify_free_cost']],
             [['text' => 'بلاک خودکار بعد از چند گزارش؟', 'callback_data' => 'adm:set:report_ban_threshold']],
             [['text' => 'سکه خوش‌آمد', 'callback_data' => 'adm:set:welcome_coins']],
             [['text' => 'هزینه چت شانسی', 'callback_data' => 'adm:set:connect_any_cost']],

@@ -136,7 +136,7 @@ final class AdminHandlers
                 'connect_any_cost', 'connect_gender_cost', 'connect_province_cost', 'connect_age_cost',
                 'admin_session_hours', 'pay_invoice_minutes',
                 'pack_100_price', 'pack_300_price', 'pack_1000_price',
-                'like_cost', 'room_create_cost', 'room_join_cost', 'report_ban_threshold',
+                'like_cost', 'room_create_cost', 'room_join_cost', 'report_ban_threshold', 'notify_free_cost',
             ], true)) {
                 if (!ctype_digit($value)) {
                     $this->tg->sendMessage($chatId, 'فقط عدد بفرست.');
@@ -315,6 +315,7 @@ final class AdminHandlers
                 "درخواست گفتگو: <b>{$all['request_cost']}</b>\n" .
                 "خوش‌آمد: <b>{$all['welcome_coins']}</b>\n" .
                 "آستانه بلاک با گزارش: <b>{$all['report_ban_threshold']}</b>\n" .
+                "خبر آزاد شدن از چت: <b>{$all['notify_free_cost']}</b> سکه\n" .
                 "چت شانسی/جنسیت/استان/سن: " .
                 "{$all['connect_any_cost']}/{$all['connect_gender_cost']}/{$all['connect_province_cost']}/{$all['connect_age_cost']}",
                 ['reply_markup' => Keyboards::adminCoins()]

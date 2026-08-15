@@ -47,6 +47,7 @@ final class Migrator
         self::ensurePaymentInvoicesTable($pdo);
         self::ensureUserLikesTable($pdo);
         self::ensureContactRequestsKinds($pdo);
+        self::ensureChatWaitNoticesTable($pdo);
         self::addColumn($pdo, 'users', 'ban_reason', 'VARCHAR(64) NULL');
         self::addColumn($pdo, 'users', 'likes_count', 'INT NOT NULL DEFAULT 0');
         $settings = new Settings($db);
@@ -56,6 +57,23 @@ final class Migrator
         if ($cur === '' || $cur === '5') {
             $settings->set('report_ban_threshold', '10');
         }
+    }
+
+    private static function ensureChatWaitNoticesTable(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS chat_wait_notices (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                waiter_id BIGINT NOT NULL,
+                target_id BIGINT NOT NULL,
+                status ENUM('pending','notified','cancelled') NOT NULL DEFAULT 'pending',
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                notified_at TIMESTAMP NULL DEFAULT NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_waiter_target (waiter_id, target_id),
+                KEY idx_target_pending (target_id, status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
     }
 
     private static function ensureUserLikesTable(PDO $pdo): void

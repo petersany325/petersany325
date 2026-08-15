@@ -117,6 +117,53 @@ final class Database
         return $row ?: null;
     }
 
+    public function addChatWaitNotice(int $waiterId, int $targetId): string
+    {
+        if ($waiterId === $targetId) {
+            return 'self';
+        }
+        $st = $this->pdo->prepare(
+            'SELECT status FROM chat_wait_notices WHERE waiter_id = ? AND target_id = ? LIMIT 1'
+        );
+        $st->execute([$waiterId, $targetId]);
+        $cur = $st->fetchColumn();
+        if ($cur === 'pending') {
+            return 'already';
+        }
+        $this->pdo->prepare(
+            'INSERT INTO chat_wait_notices (waiter_id, target_id, status) VALUES (?, ?, \'pending\')
+             ON DUPLICATE KEY UPDATE status = \'pending\', notified_at = NULL, created_at = CURRENT_TIMESTAMP'
+        )->execute([$waiterId, $targetId]);
+        return 'ok';
+    }
+
+    public function hasPendingChatWait(int $waiterId, int $targetId): bool
+    {
+        $st = $this->pdo->prepare(
+            "SELECT 1 FROM chat_wait_notices WHERE waiter_id = ? AND target_id = ? AND status = 'pending' LIMIT 1"
+        );
+        $st->execute([$waiterId, $targetId]);
+        return (bool)$st->fetchColumn();
+    }
+
+    /** @return list<array{waiter_id:int,target_id:int,id:int}> */
+    public function listPendingChatWaiters(int $targetId): array
+    {
+        $st = $this->pdo->prepare(
+            "SELECT id, waiter_id, target_id FROM chat_wait_notices
+             WHERE target_id = ? AND status = 'pending'"
+        );
+        $st->execute([$targetId]);
+        return $st->fetchAll() ?: [];
+    }
+
+    public function markChatWaitNotified(int $id): void
+    {
+        $this->pdo->prepare(
+            "UPDATE chat_wait_notices SET status = 'notified', notified_at = NOW() WHERE id = ?"
+        )->execute([$id]);
+    }
+
     public function spendCoins(int $telegramId, int $amount, string $reason, ?string $meta = null): bool
     {
         if ($amount <= 0) {
