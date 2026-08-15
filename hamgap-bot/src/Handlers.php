@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.20';
+    public const CODE_VERSION = '2026-08-15-v10.21';
 
     private string $assets;
     private Settings $settings;
@@ -42,7 +42,7 @@ final class Handlers
     {
         $flow = (string)($user['flow'] ?? '');
         if ($flow === 'kb:type' || $flow === 'support:compose' || $flow === 'set:displayname'
-            || $flow === 'set:avatar' || $flow === 'set:bio' || $flow === 'fr:create'
+            || $flow === 'set:avatar' || $flow === 'set:album' || $flow === 'set:bio' || $flow === 'fr:create'
             || $flow === 'fr:join' || $flow === 'edit:city_other' || $flow === 'cr:other') {
             return true;
         }
@@ -148,9 +148,9 @@ final class Handlers
         ];
     }
 
-    private function browseProfileMarkup(array $target): array
+    private function browseProfileMarkup(array $viewer, array $target): array
     {
-        return Keyboards::browseProfileInline(
+        $markup = Keyboards::browseProfileInline(
             (string)$target['public_code'],
             $this->settings->getInt('request_cost', 1),
             $this->settings->getInt('message_cost', 2),
@@ -158,6 +158,19 @@ final class Handlers
             $this->db->countLikes((int)$target['telegram_id']),
             max(1, $this->settings->getInt('notify_free_cost', 1))
         );
+        $viewerId = (int)$viewer['telegram_id'];
+        $targetId = (int)$target['telegram_id'];
+        if ($viewerId !== $targetId
+            && $this->db->areFriends($viewerId, $targetId)
+            && $this->db->countAlbumPhotos($targetId) > 0
+        ) {
+            $code = preg_replace('/[^A-Za-z0-9_]/', '', (string)$target['public_code']) ?? '';
+            array_unshift(
+                $markup['inline_keyboard'],
+                [['text' => '📸 آلبوم دوستان', 'callback_data' => 'alb:view:' . $code]]
+            );
+        }
+        return $markup;
     }
 
     /** Delete previous bot UI menus (or at least strip their buttons). */
@@ -404,8 +417,8 @@ final class Handlers
             }
         }
 
-        // Avatar upload
-        if (!empty($message['photo']) && ($user['flow'] ?? '') === 'set:avatar') {
+        // Avatar / album upload
+        if (!empty($message['photo']) && in_array((string)($user['flow'] ?? ''), ['set:avatar', 'set:album'], true)) {
             $photos = $message['photo'];
             $best = end($photos);
             $fileId = (string)($best['file_id'] ?? '');
@@ -413,13 +426,41 @@ final class Handlers
                 $this->tg->sendMessage($chatId, 'عکس معتبر دریافت نشد. دوباره بفرست.');
                 return;
             }
-            $this->db->updateUser($tid, [
-                'avatar_file_id' => $fileId,
-                'flow' => null,
-            ]);
+            $flow = (string)($user['flow'] ?? '');
+            if ($flow === 'set:avatar') {
+                $this->db->updateUser($tid, [
+                    'avatar_file_id' => $fileId,
+                    'flow' => null,
+                ]);
+                $fresh = $this->db->findUser($tid) ?? $user;
+                $this->clearUi($chatId, $fresh);
+                $this->uiText($chatId, $fresh, '✅ عکس <b>عمومی</b> ذخیره شد — در جستجو برای همه دیده می‌شود.');
+                $this->showAlbumHub($chatId, $fresh);
+                return;
+            }
+            // Friends-only album
+            $res = $this->db->addAlbumPhoto($tid, $fileId);
+            $this->db->updateUser($tid, ['flow' => null]);
             $fresh = $this->db->findUser($tid) ?? $user;
             $this->clearUi($chatId, $fresh);
-            $this->showProfile($chatId, $fresh);
+            if ($res === 'full') {
+                $this->uiText(
+                    $chatId,
+                    $fresh,
+                    'آلبوم دوستان پر است (حداکثر ' . Database::ALBUM_MAX_PHOTOS . " عکس).\nاول یکی را حذف کن."
+                );
+            } elseif ($res === 'ok') {
+                $n = $this->db->countAlbumPhotos($tid);
+                $this->uiText(
+                    $chatId,
+                    $fresh,
+                    "✅ عکس به آلبوم <b>دوستان</b> اضافه شد ({$n}/" . Database::ALBUM_MAX_PHOTOS . ").\n" .
+                    "فقط دوستان تأییدشده این عکس‌ها را می‌بینند."
+                );
+            } else {
+                $this->uiText($chatId, $fresh, 'ذخیره عکس ناموفق بود.');
+            }
+            $this->showAlbumHub($chatId, $fresh);
             return;
         }
 
@@ -565,7 +606,11 @@ final class Handlers
         }
 
         if (($user['flow'] ?? '') === 'set:avatar') {
-            $this->tg->sendMessage($chatId, 'لطفاً یک عکس بفرست (نه متن).');
+            $this->tg->sendMessage($chatId, 'لطفاً یک عکس عمومی بفرست (نه متن).');
+            return;
+        }
+        if (($user['flow'] ?? '') === 'set:album') {
+            $this->tg->sendMessage($chatId, 'لطفاً یک عکس برای آلبوم دوستان بفرست (نه متن).');
             return;
         }
 
@@ -1165,6 +1210,12 @@ final class Handlers
             return;
         }
 
+        // Album (public avatar + friends-only photos)
+        if ($data === 'menu:album' || str_starts_with($data, 'alb:')) {
+            $this->handleAlbumCallback($cq, $user, $id, $data, $chatId, $tid);
+            return;
+        }
+
         // Card-to-card payment
         if (str_starts_with($data, 'pay:') || str_starts_with($data, 'payadm:')) {
             $this->handlePaymentCallback($cq, $user, $id, $data, $chatId, $tid);
@@ -1202,6 +1253,10 @@ final class Handlers
                 $this->uiText($chatId, $user, "🛠 <b>تنظیمات پروفایل</b>\nکدام مورد را می‌خواهی تغییر بدهی؟", [
                     'reply_markup' => Keyboards::profileSettingsInline(),
                 ]);
+                break;
+            case 'menu:album':
+                $this->clearUi($chatId, $user);
+                $this->showAlbumHub($chatId, $user);
                 break;
             case 'menu:wallet':
                 $this->clearUi($chatId, $user);
@@ -1293,7 +1348,11 @@ final class Handlers
                 $this->db->updateUser($tid, ['flow' => 'set:avatar']);
                 $user = $this->db->findUser($tid) ?? $user;
                 $this->clearUi($chatId, $user);
-                $this->openTypeKeyboard($chatId, $user, "🖼 <b>عکس پروفایل</b>\nیک عکس همین‌جا بفرست.");
+                $this->openTypeKeyboard(
+                    $chatId,
+                    $user,
+                    "🖼 <b>عکس عمومی</b>\nیک عکس همین‌جا بفرست.\nاین عکس در جستجو برای همه دیده می‌شود."
+                );
                 break;
             case 'edit:namehub':
                 $this->clearUi($chatId, $user);
@@ -2117,10 +2176,11 @@ final class Handlers
             'show_province' => 'استان',
             'show_city' => 'شهر',
             'show_online' => 'آنلاین',
-            'show_avatar' => 'عکس',
+            'show_avatar' => 'عکس عمومی',
         ] as $k => $label) {
             $flags[] = ((int)($user[$k] ?? 1) === 1 ? '✅' : '🚫') . $label;
         }
+        $albumCount = $this->db->countAlbumPhotos((int)$user['telegram_id']);
         $occLine = $occBadge !== ''
             ? "تخصص: <b>" . htmlspecialchars($occBadge, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b> <i>(خوداظهاری)</i>\n"
             : "تخصص: <i>ثبت نشده</i>\n";
@@ -2137,6 +2197,7 @@ final class Handlers
             "{$prov} / {$city}\n" .
             "سکه: <b>" . (int)$user['coins'] . "</b>\n" .
             "❤️ لایک‌ها: <b>" . $this->db->countLikes((int)$user['telegram_id']) . "</b>\n" .
+            "📸 آلبوم دوستان: <b>{$albumCount}/" . Database::ALBUM_MAX_PHOTOS . "</b>\n" .
             "نمایش پروفایل: <b>{$vis}</b>\n" .
             "فیلدها: " . implode(' · ', $flags) . "\n" .
             "────────────\n" .
@@ -2153,6 +2214,185 @@ final class Handlers
             ]);
         }
         $this->pinHamGapMenu($chatId, $user);
+    }
+
+    private function showAlbumHub(int $chatId, array &$user): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $hasPublic = trim((string)($user['avatar_file_id'] ?? '')) !== '';
+        $count = $this->db->countAlbumPhotos($tid);
+        $max = Database::ALBUM_MAX_PHOTOS;
+        $this->uiText(
+            $chatId,
+            $user,
+            "📸 <b>آلبوم عکس</b>\n\n" .
+            "• <b>عکس عمومی</b>: در جستجو برای همه دیده می‌شود" .
+            ($hasPublic ? " ✅" : " — هنوز ندارید") . "\n" .
+            "• <b>آلبوم دوستان</b>: فقط بعد از قبول دوستی ({$count}/{$max})\n\n" .
+            "دوستان تأییدشده می‌توانند همه عکس‌های آلبوم را ببینند.",
+            ['reply_markup' => Keyboards::albumHubInline($count, $max, $hasPublic)]
+        );
+        $this->pinHamGapMenu($chatId, $user);
+    }
+
+    private function handleAlbumCallback(
+        array $cq,
+        array &$user,
+        string $id,
+        string $data,
+        int $chatId,
+        int $tid
+    ): void {
+        if ($data === 'menu:album') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->showAlbumHub($chatId, $user);
+            return;
+        }
+        if ($data === 'alb:add') {
+            $n = $this->db->countAlbumPhotos($tid);
+            if ($n >= Database::ALBUM_MAX_PHOTOS) {
+                $this->tg->answerCallback($id, 'آلبوم پر است', true);
+                return;
+            }
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->db->updateUser($tid, ['flow' => 'set:album']);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->openTypeKeyboard(
+                $chatId,
+                $user,
+                "📸 <b>عکس آلبوم دوستان</b> ({$n}/" . Database::ALBUM_MAX_PHOTOS . ")\n" .
+                "عکس را همین‌جا بفرست.\nفقط دوستان تأییدشده می‌بینند."
+            );
+            return;
+        }
+        if ($data === 'alb:manage') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $photos = $this->db->listAlbumPhotos($tid);
+            $this->clearUi($chatId, $user);
+            if (!$photos) {
+                $this->uiText($chatId, $user, 'آلبوم دوستان خالی است.', [
+                    'reply_markup' => Keyboards::albumHubInline(0, Database::ALBUM_MAX_PHOTOS, trim((string)($user['avatar_file_id'] ?? '')) !== ''),
+                ]);
+                return;
+            }
+            $this->uiText($chatId, $user, "🗑 <b>حذف عکس آلبوم</b>\nیکی را انتخاب کن:");
+            $i = 1;
+            foreach ($photos as $p) {
+                $fid = (string)($p['file_id'] ?? '');
+                $pid = (int)($p['id'] ?? 0);
+                if ($fid === '' || $pid <= 0) {
+                    continue;
+                }
+                $this->uiPhotoFileId(
+                    $chatId,
+                    $user,
+                    $fid,
+                    "عکس آلبوم #{$i}",
+                    ['inline_keyboard' => [[['text' => "🗑 حذف این عکس", 'callback_data' => 'alb:del:' . $pid]]]]
+                );
+                $i++;
+            }
+            $this->uiText($chatId, $user, 'بازگشت:', [
+                'reply_markup' => ['inline_keyboard' => [[['text' => 'بازگشت به آلبوم', 'callback_data' => 'menu:album']]]],
+            ]);
+            return;
+        }
+        if ($data === 'alb:preview') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->sendAlbumToViewer($chatId, $user, $user, true);
+            return;
+        }
+        if (str_starts_with($data, 'alb:del:')) {
+            $photoId = (int)substr($data, strlen('alb:del:'));
+            $ok = $this->db->deleteAlbumPhoto($tid, $photoId);
+            $this->tg->answerCallback($id, $ok ? 'حذف شد' : 'پیدا نشد', !$ok);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->showAlbumHub($chatId, $user);
+            return;
+        }
+        if (str_starts_with($data, 'alb:view:')) {
+            $code = substr($data, strlen('alb:view:'));
+            $target = $this->db->findByPublicCode($code);
+            if (!$target) {
+                $this->tg->answerCallback($id, 'کاربر پیدا نشد', true);
+                return;
+            }
+            $targetId = (int)$target['telegram_id'];
+            if ($targetId !== $tid && !$this->db->areFriends($tid, $targetId)) {
+                $this->tg->answerCallback($id, 'فقط دوستان تأییدشده', true);
+                return;
+            }
+            if ($this->db->countAlbumPhotos($targetId) < 1) {
+                $this->tg->answerCallback($id, 'آلبوم خالی است', true);
+                return;
+            }
+            $this->tg->answerCallback($id, 'آلبوم دوستان');
+            $this->stripCallbackMenu($cq);
+            $this->sendAlbumToViewer($chatId, $user, $target, $targetId === $tid);
+            return;
+        }
+        $this->tg->answerCallback($id);
+    }
+
+    private function sendAlbumToViewer(int $chatId, array &$viewer, array $owner, bool $isOwner): void
+    {
+        $ownerId = (int)$owner['telegram_id'];
+        $photos = $this->db->listAlbumPhotos($ownerId);
+        $dn = htmlspecialchars((string)($owner['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        if (!$photos) {
+            $this->uiText(
+                $chatId,
+                $viewer,
+                $isOwner ? 'آلبوم دوستان خالی است.' : "آلبوم دوستان <b>{$dn}</b> خالی است.",
+                ['reply_markup' => $isOwner
+                    ? Keyboards::albumHubInline(0, Database::ALBUM_MAX_PHOTOS, trim((string)($owner['avatar_file_id'] ?? '')) !== '')
+                    : ['inline_keyboard' => [[['text' => 'بازگشت', 'callback_data' => 'menu:find']]]]
+                ]
+            );
+            return;
+        }
+        $this->uiText(
+            $chatId,
+            $viewer,
+            $isOwner
+                ? "👀 <b>پیش‌نمایش آلبوم دوستان تو</b>\nفقط دوستان تأییدشده این‌ها را می‌بینند:"
+                : "📸 <b>آلبوم دوستان {$dn}</b>\nچون دوست هستید می‌توانی ببینی:"
+        );
+        $i = 1;
+        foreach ($photos as $p) {
+            $fid = (string)($p['file_id'] ?? '');
+            if ($fid === '') {
+                continue;
+            }
+            $this->uiPhotoFileId($chatId, $viewer, $fid, "عکس {$i} از آلبوم", [
+                'inline_keyboard' => [],
+            ]);
+            $i++;
+        }
+        if ($isOwner) {
+            $this->uiText($chatId, $viewer, 'مدیریت:', [
+                'reply_markup' => Keyboards::albumHubInline(
+                    count($photos),
+                    Database::ALBUM_MAX_PHOTOS,
+                    trim((string)($owner['avatar_file_id'] ?? '')) !== ''
+                ),
+            ]);
+        } else {
+            $this->uiText($chatId, $viewer, 'ادامه جستجو:', [
+                'reply_markup' => ['inline_keyboard' => [
+                    [['text' => 'جستجوی کاربران', 'callback_data' => 'menu:find']],
+                ]],
+            ]);
+        }
     }
 
     private function showWallet(int $chatId, array &$user): void
@@ -2915,7 +3155,7 @@ final class Handlers
 
         $caption = "🎞 <b>کشویی</b> · " . ($index + 1) . "/{$total}\n────────\n" .
             $this->formatPublicProfile($viewer, $target, false);
-        $profileKb = $this->browseProfileMarkup($target);
+        $profileKb = $this->browseProfileMarkup($viewer, $target);
         $navKb = Keyboards::slideNavInline($index, $total);
         $rows = array_merge($navKb['inline_keyboard'], $profileKb['inline_keyboard']);
         // Drop duplicate "حالت نمایش/پایان" from profile if present at end — keep nav's
@@ -3363,7 +3603,7 @@ final class Handlers
     private function renderBrowseCard(int $chatId, array &$viewer, array $target): void
     {
         $caption = $this->formatPublicProfile($viewer, $target, false);
-        $markup = $this->browseProfileMarkup($target);
+        $markup = $this->browseProfileMarkup($viewer, $target);
         $avatar = ((int)($target['show_avatar'] ?? 1) === 1) ? (string)($target['avatar_file_id'] ?? '') : '';
         if ($avatar !== '') {
             $this->uiPhotoFileId($chatId, $viewer, $avatar, $caption, $markup);

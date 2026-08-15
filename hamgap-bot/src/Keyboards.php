@@ -535,8 +535,9 @@ final class Keyboards
     {
         return ['inline_keyboard' => [
             [['text' => '✏️ ویرایش مشخصات', 'callback_data' => 'menu:profile_settings']],
+            [['text' => '📸 آلبوم عکس', 'callback_data' => 'menu:album']],
             [
-                ['text' => '🖼 عکس پروفایل', 'callback_data' => 'edit:avatar'],
+                ['text' => '🖼 عکس عمومی', 'callback_data' => 'edit:avatar'],
                 ['text' => '👁 حریم خصوصی', 'callback_data' => 'pr:home'],
             ],
             [
@@ -606,7 +607,8 @@ final class Keyboards
     public static function profileSettingsInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => '🖼 عکس پروفایل', 'callback_data' => 'edit:avatar']],
+            [['text' => '📸 آلبوم عکس', 'callback_data' => 'menu:album']],
+            [['text' => '🖼 عکس عمومی (برای همه)', 'callback_data' => 'edit:avatar']],
             [['text' => '🔤 نام کاربری (دستی / خودکار)', 'callback_data' => 'edit:namehub']],
             [['text' => '📝 بیو / معرفی کوتاه', 'callback_data' => 'edit:bio']],
             [['text' => '🎓 تخصص / تحصیلات', 'callback_data' => 'edit:occupation']],
@@ -618,6 +620,34 @@ final class Keyboards
             [['text' => '👁 حریم خصوصی و نمایش', 'callback_data' => 'pr:home']],
             [['text' => 'بازگشت به پروفایل', 'callback_data' => 'menu:profile']],
         ]];
+    }
+
+    public static function albumHubInline(int $albumCount, int $maxAlbum, bool $hasPublic): array
+    {
+        $pub = $hasPublic ? '✅ دارد' : '❌ ندارد';
+        return ['inline_keyboard' => [
+            [['text' => "🖼 عکس عمومی ({$pub})", 'callback_data' => 'edit:avatar']],
+            [['text' => "➕ افزودن عکس دوستان ({$albumCount}/{$maxAlbum})", 'callback_data' => 'alb:add']],
+            [['text' => '🗑 مدیریت / حذف عکس دوستان', 'callback_data' => 'alb:manage']],
+            [['text' => '👀 پیش‌نمایش آلبوم من', 'callback_data' => 'alb:preview']],
+            [['text' => 'بازگشت به پروفایل', 'callback_data' => 'menu:profile']],
+        ]];
+    }
+
+    public static function albumManageInline(array $photos): array
+    {
+        $kb = [];
+        $i = 1;
+        foreach ($photos as $p) {
+            $pid = (int)($p['id'] ?? 0);
+            if ($pid <= 0) {
+                continue;
+            }
+            $kb[] = [['text' => "🗑 حذف عکس {$i}", 'callback_data' => 'alb:del:' . $pid]];
+            $i++;
+        }
+        $kb[] = [['text' => 'بازگشت به آلبوم', 'callback_data' => 'menu:album']];
+        return ['inline_keyboard' => $kb];
     }
 
     public static function nameHubInline(): array
@@ -657,7 +687,8 @@ final class Keyboards
                 ['text' => $mark('show_province', $user) . ' استان', 'callback_data' => 'pr:tog:show_province'],
                 ['text' => $mark('show_city', $user) . ' شهر', 'callback_data' => 'pr:tog:show_city'],
             ],
-            [['text' => $mark('show_avatar', $user) . ' عکس پروفایل', 'callback_data' => 'pr:tog:show_avatar']],
+            [['text' => $mark('show_avatar', $user) . ' عکس عمومی', 'callback_data' => 'pr:tog:show_avatar']],
+            [['text' => '📸 مدیریت آلبوم', 'callback_data' => 'menu:album']],
             [['text' => 'بازگشت به پروفایل', 'callback_data' => 'menu:profile']],
         ]];
     }

@@ -642,6 +642,58 @@ final class Database
         return $st->fetchAll() ?: [];
     }
 
+    public const ALBUM_MAX_PHOTOS = 3;
+
+    /** @return list<array{id:int,telegram_id:int,file_id:string}> */
+    public function listAlbumPhotos(int $telegramId): array
+    {
+        $st = $this->pdo->prepare(
+            'SELECT id, telegram_id, file_id FROM user_album_photos
+             WHERE telegram_id = ? ORDER BY id ASC'
+        );
+        $st->execute([$telegramId]);
+        return $st->fetchAll() ?: [];
+    }
+
+    public function countAlbumPhotos(int $telegramId): int
+    {
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM user_album_photos WHERE telegram_id = ?');
+        $st->execute([$telegramId]);
+        return (int)$st->fetchColumn();
+    }
+
+    public function addAlbumPhoto(int $telegramId, string $fileId): string
+    {
+        $fileId = trim($fileId);
+        if ($fileId === '') {
+            return 'empty';
+        }
+        if ($this->countAlbumPhotos($telegramId) >= self::ALBUM_MAX_PHOTOS) {
+            return 'full';
+        }
+        $this->pdo->prepare(
+            'INSERT INTO user_album_photos (telegram_id, file_id) VALUES (?, ?)'
+        )->execute([$telegramId, $fileId]);
+        return 'ok';
+    }
+
+    public function deleteAlbumPhoto(int $telegramId, int $photoId): bool
+    {
+        $st = $this->pdo->prepare(
+            'DELETE FROM user_album_photos WHERE id = ? AND telegram_id = ?'
+        );
+        $st->execute([$photoId, $telegramId]);
+        return $st->rowCount() > 0;
+    }
+
+    public function getAlbumPhoto(int $photoId): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM user_album_photos WHERE id = ? LIMIT 1');
+        $st->execute([$photoId]);
+        $row = $st->fetch();
+        return $row ?: null;
+    }
+
     public function createFriendRoom(int $ownerId, string $title): array
     {
         $code = $this->generateRoomCode();
@@ -1263,6 +1315,10 @@ final class Database
             try {
                 $pdo->prepare('DELETE FROM friendships WHERE user_a = ? OR user_b = ?')
                     ->execute([$telegramId, $telegramId]);
+            } catch (Throwable $e) {
+            }
+            try {
+                $pdo->prepare('DELETE FROM user_album_photos WHERE telegram_id = ?')->execute([$telegramId]);
             } catch (Throwable $e) {
             }
             try {

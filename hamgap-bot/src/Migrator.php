@@ -49,6 +49,7 @@ final class Migrator
         self::addColumn($pdo, 'support_staff', 'password_hash', 'VARCHAR(255) NULL');
         self::addColumn($pdo, 'support_staff', 'pending_password_hash', 'VARCHAR(255) NULL');
         self::ensureFriendshipsTable($pdo);
+        self::ensureUserAlbumTable($pdo);
         self::ensureFriendRoomsTables($pdo);
         self::ensureStatusIncludesRoom($pdo);
         self::ensurePaymentInvoicesTable($pdo);
@@ -180,6 +181,20 @@ final class Migrator
                 PRIMARY KEY (id),
                 UNIQUE KEY uq_friend_pair (user_a, user_b),
                 KEY idx_friend_b_status (user_b, status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+    }
+
+    private static function ensureUserAlbumTable(PDO $pdo): void
+    {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS user_album_photos (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                telegram_id BIGINT NOT NULL,
+                file_id VARCHAR(255) NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                KEY idx_album_user (telegram_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
     }
