@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.13-admin';
+    public const CODE_VERSION = '2026-08-15-v10.15-admin';
 
     /** Keys editable via adm:set: — anything else is rejected. */
     public const ALLOWED_SET_KEYS = [
@@ -19,6 +19,8 @@ final class AdminHandlers
         'like_cost', 'room_create_cost', 'room_join_cost', 'report_ban_threshold', 'notify_free_cost',
         'support_bot_username', 'support_hours', 'support_welcome',
         'brand_name', 'main_bot_username',
+        'vip_price_30', 'vip_days', 'vip_min_account_days', 'vip_min_likes', 'vip_max_reports',
+        'vip_require_occupation', 'vip_require_avatar',
     ];
 
     public function __construct(
@@ -161,6 +163,8 @@ final class AdminHandlers
                 'admin_session_hours', 'pay_invoice_minutes',
                 'pack_100_price', 'pack_300_price', 'pack_1000_price',
                 'like_cost', 'room_create_cost', 'room_join_cost', 'report_ban_threshold', 'notify_free_cost',
+                'vip_price_30', 'vip_days', 'vip_min_account_days', 'vip_min_likes', 'vip_max_reports',
+                'vip_require_occupation', 'vip_require_avatar',
             ], true)) {
                 if (!ctype_digit($value)) {
                     $this->tg->sendMessage($chatId, 'فقط عدد بفرست.');
@@ -346,6 +350,67 @@ final class AdminHandlers
                 "{$all['connect_any_cost']}/{$all['connect_gender_cost']}/{$all['connect_province_cost']}/{$all['connect_age_cost']}",
                 ['reply_markup' => Keyboards::adminCoins()]
             );
+            return;
+        }
+        if ($data === 'adm:vip') {
+            $all = $this->settings->all();
+            $this->tg->sendMessage(
+                $chatId,
+                "⭐ <b>استار کلاب</b>\n" .
+                "قیمت ۳۰ روز: <b>{$all['vip_price_30']}</b> تومان\n" .
+                "مدت: <b>{$all['vip_days']}</b> روز\n" .
+                "حداقل روز عضویت: <b>{$all['vip_min_account_days']}</b>\n" .
+                "حداقل لایک: <b>{$all['vip_min_likes']}</b>\n" .
+                "حداکثر گزارش: <b>{$all['vip_max_reports']}</b>\n" .
+                "اجبار تخصص/عکس: <b>{$all['vip_require_occupation']}</b> / <b>{$all['vip_require_avatar']}</b>",
+                ['reply_markup' => Keyboards::adminVip()]
+            );
+            return;
+        }
+        if ($data === 'adm:vip:pending') {
+            $rows = $this->db->listPendingVipRequests(15);
+            if (!$rows) {
+                $this->tg->sendMessage($chatId, 'درخواست معلقی نیست.', [
+                    'reply_markup' => Keyboards::adminVip(),
+                ]);
+                return;
+            }
+            $this->tg->sendMessage($chatId, '📥 درخواست‌های استار کلاب:');
+            foreach ($rows as $r) {
+                $dn = htmlspecialchars((string)($r['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                $occ = Occupation::badge((string)($r['occupation'] ?? '')) ?: '—';
+                $this->tg->sendMessage(
+                    $chatId,
+                    "• <b>{$dn}</b>\n<code>" . (int)$r['telegram_id'] . "</code>\nتخصص: {$occ}",
+                    ['reply_markup' => Keyboards::adminVipRequestActions((int)$r['telegram_id'])]
+                );
+            }
+            return;
+        }
+        if (str_starts_with($data, 'adm:vip:ok:')) {
+            $target = (int)substr($data, strlen('adm:vip:ok:'));
+            $days = max(1, $this->settings->getInt('vip_days', 30));
+            $this->db->extendVip($target, $days);
+            $this->db->updateUser($target, ['vip_request' => 'approved']);
+            $this->tg->sendMessage($chatId, "کاربر {$target} تأیید و {$days} روز استار گرفت.");
+            $mainToken = (string)($this->config['bot_token'] ?? '');
+            $mainTg = $mainToken !== '' ? new Telegram($mainToken) : $this->tg;
+            try {
+                $mainTg->sendMessage($target, "✅ درخواست استار کلاب تأیید شد.\nعضویت {$days} روزه فعال شد ⭐");
+            } catch (Throwable $e) {
+            }
+            return;
+        }
+        if (str_starts_with($data, 'adm:vip:no:')) {
+            $target = (int)substr($data, strlen('adm:vip:no:'));
+            $this->db->updateUser($target, ['vip_request' => 'rejected']);
+            $this->tg->sendMessage($chatId, "درخواست {$target} رد شد.");
+            $mainToken = (string)($this->config['bot_token'] ?? '');
+            $mainTg = $mainToken !== '' ? new Telegram($mainToken) : $this->tg;
+            try {
+                $mainTg->sendMessage($target, '❌ درخواست استار کلاب رد شد. پروفایل و شرایط را کامل‌تر کن و دوباره تلاش کن.');
+            } catch (Throwable $e) {
+            }
             return;
         }
         if ($data === 'adm:users') {
@@ -733,15 +798,29 @@ final class AdminHandlers
                 }
                 $coins = (int)$res['coins'];
                 $inv = $res['invoice'];
+                $type = (string)($res['type'] ?? 'coins');
                 try {
-                    $mainTg->sendMessage(
-                        (int)$res['telegram_id'],
-                        "✅ پرداختت تأیید شد.\n<b>+{$coins} سکه</b> اضافه شد.\nفاکتور: <code>" .
-                        htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>'
-                    );
+                    if ($type === 'vip') {
+                        $days = (int)($res['days'] ?? 30);
+                        $mainTg->sendMessage(
+                            (int)$res['telegram_id'],
+                            "✅ پرداخت استار کلاب تأیید شد.\nعضویت <b>{$days} روزه</b> فعال شد ⭐\nفاکتور: <code>" .
+                            htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>'
+                        );
+                    } else {
+                        $mainTg->sendMessage(
+                            (int)$res['telegram_id'],
+                            "✅ پرداختت تأیید شد.\n<b>+{$coins} سکه</b> اضافه شد.\nفاکتور: <code>" .
+                            htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>'
+                        );
+                    }
                 } catch (Throwable $e) {
                 }
-                $this->tg->sendMessage($chatId, "✅ فاکتور {$inv['invoice_no']} تأیید و {$coins} سکه شارژ شد.");
+                if ($type === 'vip') {
+                    $this->tg->sendMessage($chatId, "✅ فاکتور {$inv['invoice_no']} تأیید و استار کلاب فعال شد.");
+                } else {
+                    $this->tg->sendMessage($chatId, "✅ فاکتور {$inv['invoice_no']} تأیید و {$coins} سکه شارژ شد.");
+                }
                 return;
             }
             $res = $this->db->rejectPaymentInvoice($invId, $tid);

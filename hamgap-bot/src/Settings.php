@@ -46,6 +46,14 @@ final class Settings
         'pack_100_price' => '50000',
         'pack_300_price' => '120000',
         'pack_1000_price' => '350000',
+        // Star Club (VIP)
+        'vip_price_30' => '99000',
+        'vip_days' => '30',
+        'vip_min_account_days' => '3',
+        'vip_min_likes' => '3',
+        'vip_max_reports' => '2',
+        'vip_require_occupation' => '1',
+        'vip_require_avatar' => '1',
     ];
 
     public function __construct(private Database $db)

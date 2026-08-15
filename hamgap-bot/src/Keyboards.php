@@ -10,8 +10,9 @@ final class Keyboards
                 [['text' => '💬 چت ناشناس']],
                 [['text' => '🔍 جستجوی کاربران'], ['text' => '👫 چت با دوستان']],
                 [['text' => '👤 پروفایل'], ['text' => '💎 کیف‌پول']],
-                [['text' => "✨ دعوت دوستان · +{$inviteReward}"], ['text' => '🆘 پشتیبانی']],
-                [['text' => 'ℹ️ راهنما'], ['text' => '⌨️ کیبورد تایپ']],
+                [['text' => '⭐ استار کلاب'], ['text' => "✨ دعوت دوستان · +{$inviteReward}"]],
+                [['text' => '🆘 پشتیبانی'], ['text' => 'ℹ️ راهنما']],
+                [['text' => '⌨️ کیبورد تایپ']],
             ],
             'resize_keyboard' => true,
             'is_persistent' => true,
@@ -51,6 +52,7 @@ final class Keyboards
                 ['text' => '👤 پروفایل', 'callback_data' => 'menu:profile'],
                 ['text' => '💎 کیف‌پول', 'callback_data' => 'menu:wallet'],
             ],
+            [['text' => '⭐ استار کلاب', 'callback_data' => 'menu:vip']],
             [
                 ['text' => '🆘 پشتیبانی', 'callback_data' => 'menu:support'],
                 ['text' => 'ℹ️ راهنما', 'callback_data' => 'menu:help'],
@@ -95,6 +97,7 @@ final class Keyboards
                 ['text' => '🎂 هم‌سن', 'callback_data' => 'sr:sameage'],
             ],
             [['text' => '🎓 تخصص / تحصیلات', 'callback_data' => 'sr:occ']],
+            [['text' => '⭐ فقط اعضای استار کلاب', 'callback_data' => 'sr:vip']],
             [['text' => '🎛 جستجوی پیشرفته', 'callback_data' => 'sr:advanced']],
             [
                 ['text' => '👩 آنلاین دختر', 'callback_data' => 'sr:online:female'],
@@ -816,11 +819,33 @@ final class Keyboards
         ]];
     }
 
+    public static function vipHubInline(bool $eligible, bool $active, bool $pending): array
+    {
+        $rows = [];
+        if ($active) {
+            $rows[] = [['text' => '🔁 تمدید اشتراک ۳۰ روزه', 'callback_data' => 'vip:buy']];
+        } elseif ($eligible) {
+            $rows[] = [['text' => '💳 خرید اشتراک استار کلاب', 'callback_data' => 'vip:buy']];
+        } elseif ($pending) {
+            $rows[] = [['text' => '⏳ درخواست در صف بررسی ادمین', 'callback_data' => 'vip:noop']];
+        } else {
+            $rows[] = [['text' => '📨 درخواست بررسی برای عضویت', 'callback_data' => 'vip:request']];
+        }
+        $rows[] = [['text' => '⭐ جستجوی اعضای استار', 'callback_data' => 'sr:vip']];
+        $rows[] = [
+            ['text' => '🎓 تکمیل تخصص', 'callback_data' => 'edit:occupation'],
+            ['text' => '👤 پروفایل', 'callback_data' => 'menu:profile'],
+        ];
+        $rows[] = [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']];
+        return ['inline_keyboard' => $rows];
+    }
+
     public static function adminMain(): array
     {
         return ['inline_keyboard' => [
             [['text' => '📊 آمار لحظه‌ای', 'callback_data' => 'adm:stats']],
             [['text' => '🪙 سکه و هزینه‌ها', 'callback_data' => 'adm:coins']],
+            [['text' => '⭐ استار کلاب', 'callback_data' => 'adm:vip']],
             [['text' => '👥 مدیریت کاربران', 'callback_data' => 'adm:users']],
             [['text' => '🚩 گزارش‌ها', 'callback_data' => 'adm:reports']],
             [['text' => '🆘 پشتیبانی و کارمندان', 'callback_data' => 'adm:support']],
@@ -828,6 +853,37 @@ final class Keyboards
             [['text' => '💳 پرداخت کارت‌به‌کارت', 'callback_data' => 'adm:pay']],
             [['text' => '🛡 امنیت و رمز', 'callback_data' => 'adm:security']],
             [['text' => '🚪 خروج از پنل', 'callback_data' => 'adm:logout']],
+        ]];
+    }
+
+    public static function adminVip(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => 'قیمت ۳۰ روز', 'callback_data' => 'adm:set:vip_price_30']],
+            [['text' => 'مدت اشتراک (روز)', 'callback_data' => 'adm:set:vip_days']],
+            [
+                ['text' => 'حداقل روز عضویت', 'callback_data' => 'adm:set:vip_min_account_days'],
+                ['text' => 'حداقل لایک', 'callback_data' => 'adm:set:vip_min_likes'],
+            ],
+            [['text' => 'حداکثر گزارش مجاز', 'callback_data' => 'adm:set:vip_max_reports']],
+            [
+                ['text' => 'اجبار تخصص ۰/۱', 'callback_data' => 'adm:set:vip_require_occupation'],
+                ['text' => 'اجبار عکس ۰/۱', 'callback_data' => 'adm:set:vip_require_avatar'],
+            ],
+            [['text' => '📥 درخواست‌های در صف', 'callback_data' => 'adm:vip:pending']],
+            [['text' => 'بازگشت', 'callback_data' => 'adm:home']],
+        ]];
+    }
+
+    public static function adminVipRequestActions(int $telegramId): array
+    {
+        $id = (string)$telegramId;
+        return ['inline_keyboard' => [
+            [
+                ['text' => '✅ واجد شرایط + ۳۰ روز هدیه', 'callback_data' => 'adm:vip:ok:' . $id],
+                ['text' => '❌ رد', 'callback_data' => 'adm:vip:no:' . $id],
+            ],
+            [['text' => 'بازگشت', 'callback_data' => 'adm:vip']],
         ]];
     }
 

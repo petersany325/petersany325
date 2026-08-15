@@ -29,6 +29,8 @@ final class Migrator
         self::addColumn($pdo, 'users', 'show_avatar', 'TINYINT(1) NOT NULL DEFAULT 1');
         self::addColumn($pdo, 'users', 'occupation', 'VARCHAR(32) NULL');
         self::addColumn($pdo, 'users', 'show_occupation', 'TINYINT(1) NOT NULL DEFAULT 1');
+        self::addColumn($pdo, 'users', 'vip_until', 'DATETIME NULL');
+        self::addColumn($pdo, 'users', 'vip_request', "VARCHAR(16) NULL");
         self::addColumn($pdo, 'users', 'browse_view', "VARCHAR(16) NOT NULL DEFAULT 'card'");
         self::addColumn($pdo, 'users', 'browse_cache', 'MEDIUMTEXT NULL');
         self::addColumn($pdo, 'users', 'active_room_id', 'BIGINT UNSIGNED NULL');
@@ -47,6 +49,7 @@ final class Migrator
         self::ensureFriendRoomsTables($pdo);
         self::ensureStatusIncludesRoom($pdo);
         self::ensurePaymentInvoicesTable($pdo);
+        self::ensurePaymentProductColumn($pdo);
         self::ensureUserLikesTable($pdo);
         self::ensureContactRequestsKinds($pdo);
         self::ensureChatWaitNoticesTable($pdo);
@@ -76,6 +79,11 @@ final class Migrator
                 KEY idx_target_pending (target_id, status)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
         );
+    }
+
+    private static function ensurePaymentProductColumn(PDO $pdo): void
+    {
+        self::addColumn($pdo, 'payment_invoices', 'product', "VARCHAR(16) NOT NULL DEFAULT 'coins'");
     }
 
     private static function ensureUserLikesTable(PDO $pdo): void

@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.14';
+    public const CODE_VERSION = '2026-08-15-v10.15';
 
     private string $assets;
     private Settings $settings;
@@ -580,6 +580,8 @@ final class Handlers
                 => $this->showWallet($chatId, $user),
             in_array($text, ['👤 پروفایل من', '👤 پروفایل'], true)
                 => $this->showProfile($chatId, $user),
+            $text === '⭐ استار کلاب'
+                => $this->showVip($chatId, $user),
             str_starts_with($text, '✨ دعوت')
                 => $this->showInvite($chatId, $user),
             $text === '🆘 پشتیبانی'
@@ -597,7 +599,7 @@ final class Handlers
     {
         if (in_array($text, [
             '💬 چت ناشناس', '🔍 جستجوی کاربران', '👫 چت با دوستان', '👥 چت با دوستان',
-            '👤 پروفایل', '💎 کیف‌پول', '🆘 پشتیبانی', 'ℹ️ راهنما', '⌨️ کیبورد تایپ',
+            '👤 پروفایل', '💎 کیف‌پول', '⭐ استار کلاب', '🆘 پشتیبانی', 'ℹ️ راهنما', '⌨️ کیبورد تایپ',
             '📂 منوی هم‌گپ', '⏭ بعدی', '🛑 پایان چت', '📥 درخواست‌ها', '🚩 گزارش',
         ], true)) {
             return true;
@@ -1136,6 +1138,12 @@ final class Handlers
             return;
         }
 
+        // Star Club VIP
+        if (str_starts_with($data, 'vip:')) {
+            $this->handleVipCallback($cq, $user, $id, $data, $chatId, $tid);
+            return;
+        }
+
         // Friend rooms + friendship responses
         if (str_starts_with($data, 'fr:') || str_starts_with($data, 'frnd:')) {
             $this->handleFriendsCallback($cq, $user, $id, $data, $chatId, $tid);
@@ -1214,6 +1222,10 @@ final class Handlers
             case 'menu:invite':
                 $this->clearUi($chatId, $user);
                 $this->showInvite($chatId, $user);
+                break;
+            case 'menu:vip':
+                $this->clearUi($chatId, $user);
+                $this->showVip($chatId, $user);
                 break;
             case 'invite:copy':
                 $this->clearUi($chatId, $user);
@@ -1764,6 +1776,185 @@ final class Handlers
         $this->tg->answerCallback($id);
     }
 
+    /** @return array{ok:bool,reasons:list<string>} */
+    private function vipEligibility(array $user): array
+    {
+        $reasons = [];
+        if (!$this->isProfileComplete($user)) {
+            $reasons[] = 'پروفایل کامل نیست';
+        }
+        if (($user['status'] ?? '') === 'banned') {
+            $reasons[] = 'حساب مسدود است';
+        }
+        if ($this->settings->getInt('vip_require_avatar', 1) === 1
+            && trim((string)($user['avatar_file_id'] ?? '')) === '') {
+            $reasons[] = 'عکس پروفایل لازم است';
+        }
+        if ($this->settings->getInt('vip_require_occupation', 1) === 1
+            && !Occupation::isValid((string)($user['occupation'] ?? ''))) {
+            $reasons[] = 'تخصص / تحصیلات باید ثبت شود';
+        }
+        $minDays = max(0, $this->settings->getInt('vip_min_account_days', 3));
+        $ageDays = $this->db->accountAgeDays($user);
+        if ($ageDays < $minDays) {
+            $reasons[] = "حداقل {$minDays} روز از عضویت (الان {$ageDays} روز)";
+        }
+        $minLikes = max(0, $this->settings->getInt('vip_min_likes', 3));
+        $likes = $this->db->countLikes((int)$user['telegram_id']);
+        if ($likes < $minLikes) {
+            $reasons[] = "حداقل {$minLikes} لایک دریافتی (الان {$likes})";
+        }
+        $maxRep = max(0, $this->settings->getInt('vip_max_reports', 2));
+        $reps = $this->db->countReportsAgainst((int)$user['telegram_id']);
+        if ($reps > $maxRep) {
+            $reasons[] = "گزارش‌های تخلف زیاد است ({$reps} > {$maxRep})";
+        }
+        return ['ok' => $reasons === [], 'reasons' => $reasons];
+    }
+
+    private function showVip(int $chatId, array &$user): void
+    {
+        $this->clearUi($chatId, $user);
+        $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+        $active = Database::isVipActive($user);
+        $elig = $this->vipEligibility($user);
+        $pending = ((string)($user['vip_request'] ?? '') === 'pending');
+        $price = $this->settings->getInt('vip_price_30', 99000);
+        $days = max(1, $this->settings->getInt('vip_days', 30));
+        $priceFmt = Keyboards::formatToman($price);
+        $until = (string)($user['vip_until'] ?? '');
+        $untilLine = '';
+        if ($active && $until !== '') {
+            $untilLine = "اعتبار تا: <b>" . htmlspecialchars($until, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n";
+        }
+        $status = $active
+            ? "✅ عضو فعال استار کلاب هستی\n{$untilLine}"
+            : ($elig['ok']
+                ? "🟢 واجد شرایط خرید اشتراک هستی.\n"
+                : "🟡 هنوز واجد شرایط خودکار نیستی.\n");
+        $why = '';
+        if (!$active && !$elig['ok']) {
+            $why = "\n<b>برای واجد شرایط شدن:</b>\n• " . implode("\n• ", $elig['reasons']) . "\n";
+        }
+        $occ = Occupation::badge((string)($user['occupation'] ?? ''));
+        $occLine = $occ !== ''
+            ? "تخصص تو: <b>" . htmlspecialchars($occ, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n"
+            : "تخصص تو: ثبت نشده\n";
+        $text =
+            "⭐ <b>استار کلاب هم‌گپ</b>\n\n" .
+            "کلاب اعضای متشخص‌تر: پروفایل کامل، تخصص مشخص، رفتار تمیز.\n" .
+            "عضویت پولی است؛ ولی پول به‌تنهایی کافی نیست.\n\n" .
+            $status .
+            $occLine .
+            $why .
+            "\n🎁 مزایا:\n" .
+            "• بج ⭐ روی کارت پروفایل\n" .
+            "• فیلتر جستجوی «فقط استارها»\n" .
+            "• اولویت دیده شدن در جمع حرفه‌ای‌تر\n\n" .
+            "💳 اشتراک {$days} روزه: <b>{$priceFmt}</b> تومان\n" .
+            "<i>تخصص‌ها خوداظهاری هستند و مدرک رسمی نیستند.</i>";
+
+        $this->uiText($chatId, $user, $text, [
+            'reply_markup' => Keyboards::vipHubInline($elig['ok'], $active, $pending),
+        ]);
+        $this->pinHamGapMenu($chatId, $user);
+    }
+
+    private function handleVipCallback(
+        array $cq,
+        array &$user,
+        string $id,
+        string $data,
+        int $chatId,
+        int $tid
+    ): void {
+        if ($data === 'vip:noop') {
+            $this->tg->answerCallback($id, 'در صف بررسی است');
+            return;
+        }
+        if ($data === 'vip:request') {
+            $elig = $this->vipEligibility($user);
+            if ($elig['ok'] || Database::isVipActive($user)) {
+                $this->tg->answerCallback($id, 'می‌تونی مستقیم اشتراک بخری');
+                $this->stripCallbackMenu($cq);
+                $this->showVip($chatId, $user);
+                return;
+            }
+            $this->db->updateUser($tid, ['vip_request' => 'pending']);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id, 'درخواست ثبت شد');
+            $this->stripCallbackMenu($cq);
+            $this->notifyAdminsVipRequest($user);
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "📨 درخواست عضویت استار کلاب ثبت شد.\nبعد از بررسی ادمین خبرت می‌کنیم.",
+                ['reply_markup' => Keyboards::vipHubInline(false, false, true)]
+            );
+            return;
+        }
+        if ($data === 'vip:buy') {
+            $elig = $this->vipEligibility($user);
+            $active = Database::isVipActive($user);
+            if (!$elig['ok'] && !$active) {
+                $this->tg->answerCallback($id, 'هنوز واجد شرایط نیستی', true);
+                $this->stripCallbackMenu($cq);
+                $this->showVip($chatId, $user);
+                return;
+            }
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->createAndShowVipInvoice($chatId, $user);
+            return;
+        }
+        $this->tg->answerCallback($id);
+    }
+
+    private function notifyAdminsVipRequest(array $user): void
+    {
+        $dn = htmlspecialchars((string)($user['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $tid = (int)$user['telegram_id'];
+        $occ = Occupation::badge((string)($user['occupation'] ?? '')) ?: '—';
+        $msg =
+            "⭐ <b>درخواست استار کلاب</b>\n" .
+            "کاربر: <b>{$dn}</b>\n" .
+            "ID: <code>{$tid}</code>\n" .
+            "تخصص: {$occ}\n" .
+            "از پنل ادمین → استار کلاب بررسی کن.";
+        foreach (($this->config['admin_ids'] ?? []) as $aid) {
+            try {
+                $this->tg->sendMessage((int)$aid, $msg);
+            } catch (Throwable $e) {
+            }
+        }
+    }
+
+    private function createAndShowVipInvoice(int $chatId, array &$user): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $card = preg_replace('/\D+/', '', $this->settings->get('pay_card_number')) ?? '';
+        if ($card === '' || strlen($card) < 16) {
+            $this->uiText(
+                $chatId,
+                $user,
+                "هنوز شماره کارت فروشگاه تنظیم نشده.\nاز بات ادمین بخش پرداخت را کامل کن.",
+                ['reply_markup' => Keyboards::vipHubInline(true, Database::isVipActive($user), false)]
+            );
+            return;
+        }
+        $days = max(1, $this->settings->getInt('vip_days', 30));
+        $base = max(1000, $this->settings->getInt('vip_price_30', 99000));
+        $ttl = $this->settings->getInt('pay_invoice_minutes', 30);
+        $this->db->expireOldInvoices();
+        $inv = $this->db->createPaymentInvoice($tid, $days, $base, $ttl, 'vip30');
+        $user = $this->db->findUser($tid) ?? $user;
+        $this->clearUi($chatId, $user);
+        $this->uiText($chatId, $user, $this->invoiceText($inv), [
+            'reply_markup' => Keyboards::payInvoiceInline((int)$inv['id']),
+        ]);
+    }
+
     private function showHelp(int $chatId, array &$user): void
     {
         $this->clearUi($chatId, $user);
@@ -1778,6 +1969,7 @@ final class Handlers
             "🔍 جستجو — کارت · کشویی ستونی · فهرست · عکس\n" .
             "👤 پروفایل — عکس، نام، بیو، تخصص/تحصیلات، لایک، حریم خصوصی\n" .
             "🎓 تخصص — پزشک، مهندس، دانشجو و… (خوداظهاری · قابل فیلتر در جستجو)\n" .
+            "⭐ استار کلاب — عضویت برای کاربران واجد شرایط (بج + فیلتر اختصاصی)\n" .
             "📩 چت خصوصی — درخواست با تأیید · اگر طرف مقابل مشغول بود می‌تونی خبر پایان چت بگیری\n" .
             "✉️ پیام بدون درخواست — هر پیام {$msgCost} سکه · درخواست {$reqCost} سکه\n" .
             "👥 گپ دوستان — ساخت/ورود با سکه · بستن = پاک‌سازی کامل\n" .
@@ -1902,6 +2094,7 @@ final class Handlers
         $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         $g = Gender::label((string)($user['gender'] ?? ''));
         $occBadge = Occupation::badge((string)($user['occupation'] ?? ''));
+        $star = Database::isVipActive($user) ? '⭐ ' : '';
         $dn = htmlspecialchars((string)($user['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $prov = htmlspecialchars((string)($user['province'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $city = htmlspecialchars((string)($user['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -1930,12 +2123,16 @@ final class Handlers
         $occLine = $occBadge !== ''
             ? "تخصص: <b>" . htmlspecialchars($occBadge, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b> <i>(خوداظهاری)</i>\n"
             : "تخصص: <i>ثبت نشده</i>\n";
+        $vipLine = Database::isVipActive($user)
+            ? "عضویت: <b>⭐ استار کلاب</b> تا " . htmlspecialchars((string)$user['vip_until'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "\n"
+            : "عضویت: عادی — از منوی ⭐ استار کلاب ببین\n";
         $text = "👤 <b>پروفایل من</b>\n" .
             "────────────\n" .
-            "<b>{$dn}</b>\n" .
+            "<b>{$star}{$dn}</b>\n" .
             "کد عمومی: <code>{$pc}</code>\n" .
             "{$g} · سن " . ($user['age'] ?? '-') . "\n" .
             $occLine .
+            $vipLine .
             "{$prov} / {$city}\n" .
             "سکه: <b>" . (int)$user['coins'] . "</b>\n" .
             "❤️ لایک‌ها: <b>" . $this->db->countLikes((int)$user['telegram_id']) . "</b>\n" .
@@ -2427,6 +2624,12 @@ final class Handlers
             $this->tg->answerCallback($id, Occupation::short($key));
             $this->stripCallbackMenu($cq);
             $this->beginBrowse($chatId, $user, ['occupation' => $key]);
+            return;
+        }
+        if ($data === 'sr:vip') {
+            $this->tg->answerCallback($id, 'استار کلاب');
+            $this->stripCallbackMenu($cq);
+            $this->beginBrowse($chatId, $user, ['vip_only' => 1]);
             return;
         }
 
@@ -3079,13 +3282,19 @@ final class Handlers
         }
         $age = ((int)($target['show_age'] ?? 1) === 1) ? (string)(int)($target['age'] ?? 0) : '';
         $city = ((int)($target['show_city'] ?? 1) === 1) ? (string)($target['city'] ?? '') : '';
+        $occ = '';
+        if ((int)($target['show_occupation'] ?? 1) === 1) {
+            $occ = Occupation::emoji((string)($target['occupation'] ?? ''));
+        }
         $presence = $this->formatPresence($target, true);
         if ($compact) {
-            return trim($presence . ' ' . $g . ' ' . $dn . ($age !== '' ? ' ' . $age : ''));
+            $star = Database::isVipActive($target) ? '⭐' : '';
+            return trim($presence . ' ' . $star . $g . $occ . ' ' . $dn . ($age !== '' ? ' ' . $age : ''));
         }
         $parts = array_filter([
-            $dn,
+            (Database::isVipActive($target) ? '⭐ ' : '') . $dn,
             ((int)($target['show_gender'] ?? 1) === 1) ? Gender::short((string)($target['gender'] ?? '')) : null,
+            $occ !== '' ? Occupation::short((string)($target['occupation'] ?? '')) : null,
             $age !== '' ? $age . 'ساله' : null,
             $city !== '' ? $city : null,
             $presence !== '' ? $presence : null,
@@ -3098,8 +3307,12 @@ final class Handlers
         $this->db->ensureIdentity($target);
         $target = $this->db->findUser((int)$target['telegram_id']) ?? $target;
         $dn = htmlspecialchars((string)($target['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $lines = ["<b>{$dn}</b>"];
+        $star = Database::isVipActive($target) ? '⭐ ' : '';
+        $lines = ["<b>{$star}{$dn}</b>"];
         $meta = [];
+        if (Database::isVipActive($target)) {
+            $meta[] = 'استار کلاب';
+        }
         if ((int)($target['show_gender'] ?? 1) === 1) {
             $meta[] = Gender::label((string)($target['gender'] ?? ''));
         }
@@ -3680,17 +3893,32 @@ final class Handlers
                 $coins = (int)$res['coins'];
                 $userTid = (int)$res['telegram_id'];
                 $inv = $res['invoice'];
+                $type = (string)($res['type'] ?? 'coins');
                 $this->tg->answerCallback($id, 'تأیید شد');
                 try {
-                    $this->tg->sendMessage(
-                        $userTid,
-                        "✅ پرداختت تأیید شد.\n" .
-                        "<b>+{$coins} سکه</b> به حسابت اضافه شد.\n" .
-                        "شماره فاکتور: <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>'
-                    );
+                    if ($type === 'vip') {
+                        $days = (int)($res['days'] ?? 30);
+                        $this->tg->sendMessage(
+                            $userTid,
+                            "✅ پرداخت استار کلاب تأیید شد.\n" .
+                            "عضویت <b>{$days} روزه</b> فعال شد ⭐\n" .
+                            "شماره فاکتور: <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>'
+                        );
+                    } else {
+                        $this->tg->sendMessage(
+                            $userTid,
+                            "✅ پرداختت تأیید شد.\n" .
+                            "<b>+{$coins} سکه</b> به حسابت اضافه شد.\n" .
+                            "شماره فاکتور: <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>'
+                        );
+                    }
                 } catch (Throwable $e) {
                 }
-                $this->tg->sendMessage($chatId, "فاکتور {$inv['invoice_no']} تأیید و {$coins} سکه شارژ شد.");
+                if ($type === 'vip') {
+                    $this->tg->sendMessage($chatId, "فاکتور {$inv['invoice_no']} تأیید و استار کلاب فعال شد.");
+                } else {
+                    $this->tg->sendMessage($chatId, "فاکتور {$inv['invoice_no']} تأیید و {$coins} سکه شارژ شد.");
+                }
                 return;
             }
             $res = $this->db->rejectPaymentInvoice($invId, $tid);
@@ -3831,6 +4059,8 @@ final class Handlers
     private function invoiceText(array $inv): string
     {
         $coins = (int)$inv['pack_coins'];
+        $product = (string)($inv['product'] ?? 'coins');
+        $isVip = ($product === 'vip30' || $product === 'vip');
         $amt = (int)$inv['amount_toman'];
         $amtFmt = $this->formatMoney($amt);
         $rial = $amt * 10;
@@ -3841,8 +4071,11 @@ final class Handlers
         $bank = htmlspecialchars($this->settings->get('pay_bank_name'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $ttl = $this->settings->getInt('pay_invoice_minutes', 30);
         $channel = trim($this->settings->get('pay_trust_channel'));
+        $head = $isVip
+            ? "⭐ فاکتور <b>استار کلاب</b> (" . max(1, $coins > 0 ? $coins : 30) . " روز) به مبلغ <b>{$amtFmt}</b> تومان برات صادر شد."
+            : "فاکتور <b>{$coins}</b> سکه به مبلغ <b>{$amtFmt}</b> تومان برات صادر شد.";
         $lines = [
-            "فاکتور <b>{$coins}</b> سکه به مبلغ <b>{$amtFmt}</b> تومان برات صادر شد.",
+            $head,
             '',
             'لطفاً <b>دقیقاً همین مبلغ</b> را کارت‌به‌کارت واریز کن.',
             'این مبلغ، کد شناسایی فاکتور توست تا واریزی‌ات از بقیه جدا شود.',

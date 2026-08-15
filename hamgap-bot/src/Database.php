@@ -477,6 +477,9 @@ final class Database
         if (!empty($filters['has_occupation'])) {
             $sql .= " AND u.occupation IS NOT NULL AND u.occupation <> '' AND COALESCE(u.show_occupation, 1) = 1";
         }
+        if (!empty($filters['vip_only'])) {
+            $sql .= ' AND u.vip_until IS NOT NULL AND u.vip_until > NOW()';
+        }
         return $sql;
     }
 
@@ -772,17 +775,19 @@ final class Database
         int $telegramId,
         int $packCoins,
         int $baseAmount,
-        int $ttlMinutes = 30
+        int $ttlMinutes = 30,
+        string $product = 'coins'
     ): array {
         $ttlMinutes = max(5, min(180, $ttlMinutes));
+        $product = preg_replace('/[^a-z0-9_]/', '', strtolower($product)) ?: 'coins';
         $amount = $this->allocateUniqueInvoiceAmount($baseAmount);
         $invoiceNo = $this->generateInvoiceNo();
         $st = $this->pdo->prepare(
             "INSERT INTO payment_invoices
-             (invoice_no, telegram_id, pack_coins, base_amount, amount_toman, status, expires_at)
-             VALUES (?, ?, ?, ?, ?, 'pending', DATE_ADD(NOW(), INTERVAL ? MINUTE))"
+             (invoice_no, telegram_id, pack_coins, base_amount, amount_toman, status, expires_at, product)
+             VALUES (?, ?, ?, ?, ?, 'pending', DATE_ADD(NOW(), INTERVAL ? MINUTE), ?)"
         );
-        $st->execute([$invoiceNo, $telegramId, $packCoins, $baseAmount, $amount, $ttlMinutes]);
+        $st->execute([$invoiceNo, $telegramId, $packCoins, $baseAmount, $amount, $ttlMinutes, $product]);
         $id = (int)$this->pdo->lastInsertId();
         return $this->findPaymentInvoice($id) ?? [
             'id' => $id,
@@ -792,6 +797,7 @@ final class Database
             'base_amount' => $baseAmount,
             'amount_toman' => $amount,
             'status' => 'pending',
+            'product' => $product,
         ];
     }
 
@@ -931,8 +937,90 @@ final class Database
         }
         $coins = (int)$inv['pack_coins'];
         $tid = (int)$inv['telegram_id'];
-        $this->addCoins($tid, $coins, 'card_topup', (string)$inv['invoice_no']);
-        return ['ok' => true, 'invoice' => $this->findPaymentInvoice($invoiceId), 'coins' => $coins, 'telegram_id' => $tid];
+        $product = (string)($inv['product'] ?? 'coins');
+        if ($product === 'vip30' || $product === 'vip') {
+            $days = max(1, (int)($coins > 0 ? $coins : 30));
+            // pack_coins stores VIP days when product=vip30
+            if ($product === 'vip30' && $coins <= 0) {
+                $days = 30;
+            }
+            $this->extendVip($tid, $days);
+            $this->updateUser($tid, ['vip_request' => null]);
+            return [
+                'ok' => true,
+                'type' => 'vip',
+                'days' => $days,
+                'invoice' => $this->findPaymentInvoice($invoiceId),
+                'coins' => 0,
+                'telegram_id' => $tid,
+            ];
+        }
+        if ($coins > 0) {
+            $this->addCoins($tid, $coins, 'card_topup', (string)$inv['invoice_no']);
+        }
+        return ['ok' => true, 'type' => 'coins', 'invoice' => $this->findPaymentInvoice($invoiceId), 'coins' => $coins, 'telegram_id' => $tid];
+    }
+
+    public static function isVipActive(?array $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+        $until = (string)($user['vip_until'] ?? '');
+        if ($until === '') {
+            return false;
+        }
+        $ts = strtotime($until);
+        return $ts !== false && $ts > time();
+    }
+
+    public function extendVip(int $telegramId, int $days): void
+    {
+        $days = max(1, min(365, $days));
+        $user = $this->findUser($telegramId);
+        if (!$user) {
+            return;
+        }
+        $base = time();
+        $cur = (string)($user['vip_until'] ?? '');
+        if ($cur !== '') {
+            $ts = strtotime($cur);
+            if ($ts && $ts > $base) {
+                $base = $ts;
+            }
+        }
+        $until = date('Y-m-d H:i:s', $base + ($days * 86400));
+        $this->updateUser($telegramId, ['vip_until' => $until, 'vip_request' => null]);
+    }
+
+    public function countReportsAgainst(int $telegramId): int
+    {
+        $st = $this->pdo->prepare('SELECT COUNT(*) FROM reports WHERE reported_id = ?');
+        $st->execute([$telegramId]);
+        return (int)$st->fetchColumn();
+    }
+
+    public function accountAgeDays(array $user): int
+    {
+        $created = (string)($user['created_at'] ?? '');
+        if ($created === '') {
+            return 0;
+        }
+        $ts = strtotime($created);
+        if (!$ts) {
+            return 0;
+        }
+        return max(0, (int)floor((time() - $ts) / 86400));
+    }
+
+    /** @return list<array> */
+    public function listPendingVipRequests(int $limit = 20): array
+    {
+        $limit = max(1, min(50, $limit));
+        $st = $this->pdo->query(
+            "SELECT * FROM users WHERE vip_request = 'pending' ORDER BY id DESC LIMIT {$limit}"
+        );
+        return $st ? ($st->fetchAll() ?: []) : [];
     }
 
     public function rejectPaymentInvoice(int $invoiceId, int $reviewerTid): array
