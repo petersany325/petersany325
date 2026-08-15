@@ -163,6 +163,30 @@ final class Telegram
         ]);
     }
 
+    /** Batch-delete bot messages in a private chat (Telegram limit: 100). */
+    public function deleteMessages(int $chatId, array $messageIds): array
+    {
+        $ids = [];
+        foreach ($messageIds as $id) {
+            if (is_numeric($id) && (int)$id > 0) {
+                $ids[] = (int)$id;
+            }
+        }
+        $ids = array_values(array_unique($ids));
+        if (!$ids) {
+            return ['ok' => true, 'result' => true];
+        }
+        // Telegram accepts up to 100 ids per call
+        $last = ['ok' => true, 'result' => true];
+        foreach (array_chunk($ids, 100) as $chunk) {
+            $last = $this->api('deleteMessages', [
+                'chat_id' => $chatId,
+                'message_ids' => $chunk,
+            ]);
+        }
+        return $last;
+    }
+
     /** Remove inline buttons without deleting the message (fallback). */
     public function clearInlineKeyboard(int $chatId, int $messageId): array
     {

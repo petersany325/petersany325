@@ -1899,4 +1899,58 @@ final class Database
         // refresh
         return $this->findUser($telegramId) ?? $user;
     }
+
+    /** @return list<int> */
+    public function getEphemeralMessages(array $user): array
+    {
+        $raw = $user['ephemeral_messages'] ?? null;
+        if (!$raw) {
+            return [];
+        }
+        $decoded = json_decode((string)$raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($decoded as $id) {
+            if (is_numeric($id) && (int)$id > 0) {
+                $ids[] = (int)$id;
+            }
+        }
+        return array_values(array_unique($ids));
+    }
+
+    public function setEphemeralMessages(int $telegramId, array $messageIds): void
+    {
+        $messageIds = array_values(array_unique(array_filter(
+            array_map('intval', $messageIds),
+            static fn (int $id): bool => $id > 0
+        )));
+        // Keep last 400 chat message refs (enough for a session wipe)
+        if (count($messageIds) > 400) {
+            $messageIds = array_slice($messageIds, -400);
+        }
+        $this->updateUser($telegramId, [
+            'ephemeral_messages' => $messageIds ? json_encode($messageIds) : null,
+        ]);
+    }
+
+    public function addEphemeralMessage(int $telegramId, int $messageId): void
+    {
+        if ($messageId <= 0) {
+            return;
+        }
+        $user = $this->findUser($telegramId);
+        if (!$user) {
+            return;
+        }
+        $ids = $this->getEphemeralMessages($user);
+        $ids[] = $messageId;
+        $this->setEphemeralMessages($telegramId, $ids);
+    }
+
+    public function clearEphemeralMessages(int $telegramId): void
+    {
+        $this->updateUser($telegramId, ['ephemeral_messages' => null]);
+    }
 }

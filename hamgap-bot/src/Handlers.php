@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.28';
+    public const CODE_VERSION = '2026-08-15-v10.29';
 
     private string $assets;
     private Settings $settings;
@@ -192,6 +192,68 @@ final class Handlers
         }
         $this->db->setUiMessages($tid, []);
         $user['ui_messages'] = null;
+    }
+
+    /** Remember a Telegram message id so it can be wiped when the session ends. */
+    private function trackEphemeral(int $telegramId, ?int $messageId): void
+    {
+        if ($telegramId <= 0 || $messageId === null || $messageId <= 0) {
+            return;
+        }
+        $this->db->addEphemeralMessage($telegramId, $messageId);
+    }
+
+    private function trackEphemeralResp(int $telegramId, array $resp): void
+    {
+        $this->trackEphemeral($telegramId, Telegram::messageIdFrom($resp));
+    }
+
+    /** Delete all tracked chat/room messages for one user (bot-sent copies + try own msgs). */
+    private function purgeEphemeralHistory(int $chatId, array &$user): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $ids = $this->db->getEphemeralMessages($user);
+        if ($ids) {
+            try {
+                $this->tg->deleteMessages($chatId, $ids);
+            } catch (Throwable $e) {
+                foreach ($ids as $mid) {
+                    try {
+                        $this->tg->deleteMessage($chatId, $mid);
+                    } catch (Throwable $e2) {
+                    }
+                }
+            }
+        }
+        $this->db->clearEphemeralMessages($tid);
+        $user['ephemeral_messages'] = null;
+    }
+
+    /**
+     * Wipe UI chrome + ephemeral chat history for every listed user.
+     * Call BEFORE sending the "history cleared" notice so that notice stays.
+     *
+     * @param list<int> $telegramIds
+     */
+    private function wipeSessionHistoryFor(array $telegramIds): void
+    {
+        foreach (array_values(array_unique(array_map('intval', $telegramIds))) as $tid) {
+            if ($tid <= 0) {
+                continue;
+            }
+            $u = $this->db->findUser($tid);
+            if (!$u) {
+                continue;
+            }
+            try {
+                $this->clearUi($tid, $u);
+            } catch (Throwable $e) {
+            }
+            try {
+                $this->purgeEphemeralHistory($tid, $u);
+            } catch (Throwable $e) {
+            }
+        }
     }
 
     private function rememberUi(array &$user, array $resp): void
@@ -402,16 +464,29 @@ final class Handlers
         if (($user['status'] ?? '') === 'room' && !empty($user['active_room_id'])) {
             if (in_array($text, ['🚪 ترک گپ', '/leave'], true)) {
                 $result = $this->db->leaveFriendRoom($tid);
-                $fresh = $this->db->findUser($tid) ?? $user;
-                $this->clearUi($chatId, $fresh);
+                $memberIds = [(int)$tid];
                 if (!empty($result['closed']) && !empty($result['members'])) {
                     foreach ($result['members'] as $m) {
-                        $mid = (int)$m['telegram_id'];
+                        $memberIds[] = (int)$m['telegram_id'];
+                    }
+                }
+                // Delete chat copies for everyone affected (owner close = all members)
+                $this->wipeSessionHistoryFor($memberIds);
+                $fresh = $this->db->findUser($tid) ?? $user;
+                if (!empty($result['closed'])) {
+                    foreach ($memberIds as $mid) {
                         if ($mid === $tid) {
                             continue;
                         }
                         try {
-                            $this->tg->sendMessage($mid, "گپ بسته شد.\nتمام اطلاعات و تاریخچه گپ کاملاً پاک شد.");
+                            $mu = $this->db->findUser($mid);
+                            if ($mu) {
+                                $this->tg->sendMessage(
+                                    $mid,
+                                    "گپ بسته شد.\nتمام اطلاعات و تاریخچه گپ کاملاً پاک شد."
+                                );
+                                $this->showFriends($mid, $mu);
+                            }
                         } catch (Throwable $e) {
                         }
                     }
@@ -583,13 +658,14 @@ final class Handlers
                 && $text !== ''
                 && VipFilter::containsBadWord($text, $this->settings)
             ) {
-                $this->tg->sendMessage(
-                    $chatId,
-                    "🚫 در کلاب VIP استفاده از کلمات رکیک ممنوع است.\nاز چت اخراج شدی."
-                );
                 $partnerId = (int)$user['partner_id'];
                 $this->matcher->endChat($user, true);
+                $this->wipeSessionHistoryFor([$tid, $partnerId]);
                 try {
+                    $this->tg->sendMessage(
+                        $chatId,
+                        "🚫 در کلاب VIP استفاده از کلمات رکیک ممنوع است.\nاز چت اخراج شدی."
+                    );
                     $this->tg->sendMessage($partnerId, 'طرف مقابل به‌خاطر نقض قوانین کلاب VIP از چت خارج شد.');
                     $p = $this->db->findUser($partnerId);
                     if ($p) {
@@ -601,7 +677,13 @@ final class Handlers
                 $this->showMain($chatId, $fresh);
                 return;
             }
-            $this->tg->copyMessage((int)$user['partner_id'], $chatId, (int)$message['message_id']);
+            try {
+                $resp = $this->tg->copyMessage((int)$user['partner_id'], $chatId, (int)$message['message_id']);
+                $this->trackEphemeralResp((int)$user['partner_id'], $resp);
+                // Best-effort: also track sender's own message id (Telegram may refuse delete)
+                $this->trackEphemeral($tid, (int)($message['message_id'] ?? 0));
+            } catch (Throwable $e) {
+            }
             return;
         }
 
@@ -2797,10 +2879,12 @@ final class Handlers
             $oldPartner = $this->matcher->endChat($user, true);
             if ($oldPartner) {
                 $ended[] = $oldPartner;
+            }
+            $this->wipeSessionHistoryFor($ended);
+            if ($oldPartner) {
                 $p = $this->db->findUser($oldPartner);
                 if ($p) {
                     try {
-                        $this->clearUi($oldPartner, $p);
                         $this->tg->sendMessage($oldPartner, 'طرف مقابل چت را ترک کرد.');
                         $this->showMain($oldPartner, $p);
                     } catch (Throwable $e) {
@@ -2919,13 +3003,12 @@ final class Handlers
         if ($partnerId) {
             $endedIds[] = $partnerId;
         }
-        $this->clearUi($chatId, $user);
+        $this->wipeSessionHistoryFor($endedIds);
         $this->tg->sendMessage($chatId, 'چت پایان یافت.\nتاریخچه این گفتگو پاک شد و لاگی نگه داشته نمی‌شود.');
         $fresh = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         if ($partnerId) {
             $p = $this->db->findUser($partnerId);
             if ($p) {
-                $this->clearUi($partnerId, $p);
                 $this->tg->sendMessage($partnerId, 'طرف مقابل چت را پایان داد.\nتاریخچه پاک شد.');
                 $this->showMain($partnerId, $p);
             }
@@ -2940,16 +3023,17 @@ final class Handlers
         $partnerId = $this->matcher->endChat($user, true);
         if ($partnerId) {
             $endedIds[] = $partnerId;
+        }
+        $this->wipeSessionHistoryFor($endedIds);
+        if ($partnerId) {
             $p = $this->db->findUser($partnerId);
             if ($p) {
-                $this->clearUi($partnerId, $p);
                 $this->tg->sendMessage($partnerId, 'طرف مقابل رفت سراغ نفر بعدی.');
                 $this->showMain($partnerId, $p);
             }
         }
         $this->flushChatWaitNotices($endedIds);
         $fresh = $this->db->findUser((int)$user['telegram_id']) ?? $user;
-        $this->clearUi($chatId, $fresh);
         $mode = (string)($user['chat_mode'] ?? 'normal');
         require_once __DIR__ . '/ChatModes.php';
         if (!ChatModes::isValid($mode)) {
@@ -4356,9 +4440,15 @@ final class Handlers
             }
         }
         if ($count >= $threshold && ($target['status'] ?? '') !== 'banned') {
+            $wipeIds = [$reportedId];
             if ($target && ($target['status'] ?? '') === 'chatting') {
+                $partnerId = !empty($target['partner_id']) ? (int)$target['partner_id'] : null;
                 $this->matcher->endChat($target, true);
+                if ($partnerId) {
+                    $wipeIds[] = $partnerId;
+                }
             }
+            $this->wipeSessionHistoryFor($wipeIds);
             $this->db->banForReports($reportedId, 'report_threshold');
             try {
                 $this->tg->sendMessage(
@@ -4479,25 +4569,35 @@ final class Handlers
         }
 
         $freed = [];
+        $wipeIds = [];
         if (($user['status'] ?? '') === 'chatting' && !empty($user['partner_id'])) {
             $old = (int)$user['partner_id'];
             $this->matcher->endChat($user, true);
             $freed[] = $old;
-            try {
-                $this->tg->sendMessage($old, 'طرف مقابل رفت سراغ درخواست چت دیگری. تاریخچه پاک شد.');
-            } catch (Throwable $e) {
-            }
+            $wipeIds[] = $tid;
+            $wipeIds[] = $old;
         }
         $fromUser = $this->db->findUser($fromId);
         if ($fromUser && ($fromUser['status'] ?? '') === 'chatting') {
             $oldFromPartner = !empty($fromUser['partner_id']) ? (int)$fromUser['partner_id'] : null;
             $this->matcher->endChat($fromUser, true);
+            $wipeIds[] = $fromId;
             if ($oldFromPartner) {
                 $freed[] = $oldFromPartner;
-                try {
-                    $this->tg->sendMessage($oldFromPartner, 'طرف مقابل چت را ترک کرد. تاریخچه پاک شد.');
-                } catch (Throwable $e) {
+                $wipeIds[] = $oldFromPartner;
+            }
+        }
+        if ($wipeIds) {
+            $this->wipeSessionHistoryFor($wipeIds);
+        }
+        foreach ($freed as $oldPartnerId) {
+            try {
+                $this->tg->sendMessage($oldPartnerId, 'طرف مقابل چت را ترک کرد. تاریخچه پاک شد.');
+                $op = $this->db->findUser($oldPartnerId);
+                if ($op) {
+                    $this->showMain($oldPartnerId, $op);
                 }
+            } catch (Throwable $e) {
             }
         }
         if ($freed) {
@@ -5076,24 +5176,35 @@ final class Handlers
             }
             $result = $this->db->leaveFriendRoom($tid);
             $user = $this->db->findUser($tid) ?? $user;
-            $this->tg->answerCallback($id, !empty($result['closed']) ? 'گپ بسته و پاک شد' : 'از گپ خارج شدی');
-            $this->stripCallbackMenu($cq);
-            $this->clearUi($chatId, $user);
+            $memberIds = [$tid];
             if (!empty($result['closed']) && !empty($result['members'])) {
                 foreach ($result['members'] as $m) {
-                    $mid = (int)$m['telegram_id'];
+                    $memberIds[] = (int)$m['telegram_id'];
+                }
+            }
+            $this->wipeSessionHistoryFor($memberIds);
+            $this->tg->answerCallback($id, !empty($result['closed']) ? 'گپ بسته و پاک شد' : 'از گپ خارج شدی');
+            $this->stripCallbackMenu($cq);
+            if (!empty($result['closed'])) {
+                foreach ($memberIds as $mid) {
                     if ($mid === $tid) {
                         continue;
                     }
                     try {
+                        $mu = $this->db->findUser($mid);
+                        if (!$mu) {
+                            continue;
+                        }
                         $this->tg->sendMessage(
                             $mid,
                             "گپ بسته شد.\nتمام اطلاعات و تاریخچه گپ کاملاً پاک شد."
                         );
+                        $this->showFriends($mid, $mu);
                     } catch (Throwable $e) {
                     }
                 }
             }
+            $user = $this->db->findUser($tid) ?? $user;
             $this->showFriends($chatId, $user);
             return;
         }
@@ -5204,8 +5315,10 @@ final class Handlers
     private function announceRoom(array $room, string $text): void
     {
         foreach ($this->db->listRoomMembers((int)$room['id']) as $m) {
+            $to = (int)$m['telegram_id'];
             try {
-                $this->tg->sendMessage((int)$m['telegram_id'], $text);
+                $resp = $this->tg->sendMessage($to, $text);
+                $this->trackEphemeralResp($to, $resp);
             } catch (Throwable $e) {
             }
         }
@@ -5222,6 +5335,8 @@ final class Handlers
         $g = Gender::emoji((string)($user['gender'] ?? ''));
         $text = trim((string)($message['text'] ?? ''));
         $prefix = "{$g}<b>{$name}</b>: ";
+        // Track sender's original message for best-effort wipe on close
+        $this->trackEphemeral($from, (int)($message['message_id'] ?? 0));
         foreach ($this->db->listRoomMembers($roomId) as $m) {
             $to = (int)$m['telegram_id'];
             if ($to === $from) {
@@ -5229,10 +5344,13 @@ final class Handlers
             }
             try {
                 if ($text !== '') {
-                    $this->tg->sendMessage($to, $prefix . htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+                    $resp = $this->tg->sendMessage($to, $prefix . htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'));
+                    $this->trackEphemeralResp($to, $resp);
                 } else {
-                    $this->tg->sendMessage($to, $prefix . 'پیام چندرسانه‌ای ↓');
-                    $this->tg->copyMessage($to, (int)$message['chat']['id'], (int)$message['message_id']);
+                    $note = $this->tg->sendMessage($to, $prefix . 'پیام چندرسانه‌ای ↓');
+                    $this->trackEphemeralResp($to, $note);
+                    $copy = $this->tg->copyMessage($to, (int)$message['chat']['id'], (int)$message['message_id']);
+                    $this->trackEphemeralResp($to, $copy);
                 }
             } catch (Throwable $e) {
             }

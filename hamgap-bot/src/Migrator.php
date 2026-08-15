@@ -64,6 +64,7 @@ final class Migrator
         self::addColumn($pdo, 'users', 'gps_lng', 'DOUBLE NULL');
         self::addColumn($pdo, 'users', 'gps_checked_at', 'DATETIME NULL');
         self::addColumn($pdo, 'users', 'profile_bonus_claimed', 'TINYINT(1) NOT NULL DEFAULT 0');
+        self::addColumn($pdo, 'users', 'ephemeral_messages', 'MEDIUMTEXT NULL');
         self::addColumn($pdo, 'friend_rooms', 'room_kind', "VARCHAR(16) NOT NULL DEFAULT 'friends'");
         $settings = new Settings($db);
         $settings->seedDefaults();
