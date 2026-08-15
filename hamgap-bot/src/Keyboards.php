@@ -873,6 +873,7 @@ final class Keyboards
             ],
             [['text' => '💬 پیام / چت با کاربر', 'callback_data' => 'stf:chat']],
             [['text' => '🆘 تیکت‌های باز', 'callback_data' => 'stf:tickets']],
+            [['text' => '📥 فیش‌های در انتظار (تأیید سکه)', 'callback_data' => 'stf:pay:pending']],
             [['text' => '🔑 تغییر رمز پنل', 'callback_data' => 'stf:pwd']],
             [['text' => '🚪 خروج از پنل', 'callback_data' => 'stf:logout']],
         ]];
@@ -890,6 +891,12 @@ final class Keyboards
                 ['text' => '✏️ تغییر نام', 'callback_data' => 'stf:rename:' . $id],
                 ['text' => '💬 پیام', 'callback_data' => 'stf:msg:' . $id],
             ],
+            [
+                ['text' => '+۵۰ سکه', 'callback_data' => 'stf:give:' . $id . ':50'],
+                ['text' => '+۱۰۰ سکه', 'callback_data' => 'stf:give:' . $id . ':100'],
+                ['text' => '+۱۷۰ سکه', 'callback_data' => 'stf:give:' . $id . ':170'],
+            ],
+            [['text' => '➕ افزودن سکه (عدد دلخواه)', 'callback_data' => 'stf:addcoins:' . $id]],
             [['text' => '♻️ ریست پروفایل عمومی', 'callback_data' => 'stf:wipe:' . $id]],
             [['text' => 'خانه پنل', 'callback_data' => 'stf:home']],
         ]];

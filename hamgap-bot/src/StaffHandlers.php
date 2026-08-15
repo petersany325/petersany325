@@ -3,13 +3,13 @@ declare(strict_types=1);
 
 /**
  * Support-staff moderation panel (password-gated) on the support bot.
- * Scope: search, ban/unban, rename, DM/chat, open tickets, change own password.
- * Receipt approve/deny is handled by SupportHandlers (payadm) — staff cannot set prices.
+ * Scope: search, ban/unban, rename, DM/chat, open tickets, add coins, pending receipts, change own password.
+ * Receipt approve/deny is also handled by SupportHandlers (payadm).
  * Not included: economy price settings, hard-delete, staff admin CRUD.
  */
 final class StaffHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.20-staff';
+    public const CODE_VERSION = '2026-08-15-v10.24-staff';
 
     public function __construct(
         private array $config,
@@ -120,6 +120,10 @@ final class StaffHandlers
             $this->askChatTarget($chatId, $tid);
             return true;
         }
+        if ($data === 'stf:pay:pending') {
+            $this->showPendingPayments($chatId);
+            return true;
+        }
         if (str_starts_with($data, 'stf:card:')) {
             $this->showCard($chatId, (int)substr($data, strlen('stf:card:')));
             return true;
@@ -142,6 +146,22 @@ final class StaffHandlers
         }
         if (str_starts_with($data, 'stf:wipe:')) {
             $this->wipeProfile($chatId, (int)substr($data, strlen('stf:wipe:')));
+            return true;
+        }
+        if (str_starts_with($data, 'stf:give:')) {
+            $parts = explode(':', substr($data, strlen('stf:give:')));
+            $target = (int)($parts[0] ?? 0);
+            $amount = (int)($parts[1] ?? 0);
+            $this->giveCoins($chatId, $tid, $target, $amount);
+            return true;
+        }
+        if (str_starts_with($data, 'stf:addcoins:')) {
+            $target = (int)substr($data, strlen('stf:addcoins:'));
+            $this->db->updateUser($tid, ['flow' => 'stf:addcoins:' . $target]);
+            $this->tg->trySendMessage(
+                $chatId,
+                "➕ چند سکه به کاربر <code>{$target}</code> اضافه شود؟\nفقط عدد مثبت بفرست (مثلاً ۱۷۰)."
+            );
             return true;
         }
         return true;
@@ -321,6 +341,19 @@ final class StaffHandlers
             return true;
         }
 
+        // Add custom coin amount
+        if (str_starts_with($flow, 'stf:addcoins:') && $text !== '') {
+            $targetId = (int)substr($flow, strlen('stf:addcoins:'));
+            $this->db->updateUser($tid, ['flow' => null]);
+            if (!ctype_digit($text) || (int)$text < 1 || (int)$text > 100000) {
+                $this->tg->trySendMessage($chatId, 'عدد معتبر بین ۱ تا ۱۰۰۰۰۰ بفرست.');
+                $this->showCard($chatId, $targetId);
+                return true;
+            }
+            $this->giveCoins($chatId, $tid, $targetId, (int)$text);
+            return true;
+        }
+
         if ($flow === 'stf:chat:target' && $text !== '') {
             $target = $this->resolveUserQuery($text);
             $this->db->updateUser($tid, ['flow' => null]);
@@ -429,11 +462,72 @@ final class StaffHandlers
             "تلگرام: <code>{$targetId}</code>\n" .
             "وضعیت: <b>{$status}</b>\n" .
             $banLine .
+            "سکه: <b>" . (int)($u['coins'] ?? 0) . "</b>\n" .
             "جنسیت/سن: <b>{$g}</b> / <b>" . ($u['age'] ?? '-') . "</b>\n" .
             'استان/شهر: ' . htmlspecialchars((string)($u['province'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
             ' / ' . htmlspecialchars((string)($u['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
             ['reply_markup' => Keyboards::staffUserActions($targetId, ($u['status'] ?? '') === 'banned')]
         );
+    }
+
+    private function giveCoins(int $chatId, int $staffTid, int $targetId, int $amount): void
+    {
+        $amount = max(0, min(100000, $amount));
+        if ($targetId <= 0 || $amount < 1) {
+            $this->tg->trySendMessage($chatId, 'مقدار نامعتبر است.');
+            return;
+        }
+        $u = $this->db->findUser($targetId);
+        if (!$u) {
+            $this->tg->trySendMessage($chatId, 'کاربر پیدا نشد.');
+            return;
+        }
+        $this->db->addCoins($targetId, $amount, 'staff_grant', (string)$staffTid);
+        $fresh = $this->db->findUser($targetId) ?? $u;
+        $this->tg->trySendMessage(
+            $chatId,
+            "✅ <b>+{$amount}</b> سکه به کاربر <code>{$targetId}</code> اضافه شد.\n" .
+            "موجودی الان: <b>" . (int)$fresh['coins'] . '</b>'
+        );
+        $this->deliverToUser(
+            $targetId,
+            "✅ پشتیبانی <b>+{$amount} سکه</b> به حسابت اضافه کرد.\nموجودی: <b>" . (int)$fresh['coins'] . '</b>'
+        );
+        $this->showCard($chatId, $targetId);
+    }
+
+    private function showPendingPayments(int $chatId): void
+    {
+        $rows = $this->db->listPendingPaymentInvoices(20);
+        if (!$rows) {
+            $this->tg->trySendMessage($chatId, 'فیش در انتظاری نیست.', [
+                'reply_markup' => Keyboards::staffMain(),
+            ]);
+            return;
+        }
+        $this->tg->trySendMessage($chatId, "📥 <b>فیش‌های در انتظار</b>\nبا دکمه زیر تأیید/رد کن تا سکه شارژ شود.");
+        foreach ($rows as $inv) {
+            $amt = number_format((int)$inv['amount_toman'], 0, '.', '٬');
+            $text =
+                "فاکتور <code>" . htmlspecialchars((string)$inv['invoice_no'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>\n" .
+                'کاربر: <code>' . (int)$inv['telegram_id'] . "</code>\n" .
+                'سکه: <b>' . (int)$inv['pack_coins'] . "</b>\n" .
+                "مبلغ: <b>{$amt}</b> تومان\n" .
+                'وضعیت: <b>' . htmlspecialchars((string)$inv['status'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>';
+            $fileId = (string)($inv['receipt_file_id'] ?? '');
+            $markup = Keyboards::payAdminReviewInline((int)$inv['id']);
+            if ($fileId !== '') {
+                try {
+                    $this->tg->sendPhotoFileId($chatId, $fileId, $text, $markup);
+                    continue;
+                } catch (Throwable $e) {
+                }
+            }
+            $this->tg->trySendMessage($chatId, $text, ['reply_markup' => $markup]);
+        }
+        $this->tg->trySendMessage($chatId, 'بازگشت به پنل:', [
+            'reply_markup' => Keyboards::staffMain(),
+        ]);
     }
 
     private function banUser(int $chatId, int $staffTid, int $targetId): void
