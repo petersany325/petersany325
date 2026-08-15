@@ -47,6 +47,7 @@ final class Migrator
         self::ensureAdminSessionsTable($pdo);
         self::ensureStaffSessionsTable($pdo);
         self::addColumn($pdo, 'support_staff', 'password_hash', 'VARCHAR(255) NULL');
+        self::addColumn($pdo, 'support_staff', 'pending_password_hash', 'VARCHAR(255) NULL');
         self::ensureFriendshipsTable($pdo);
         self::ensureFriendRoomsTables($pdo);
         self::ensureStatusIncludesRoom($pdo);

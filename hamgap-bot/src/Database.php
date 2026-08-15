@@ -1336,46 +1336,133 @@ final class Database
     public function createStaffSession(int $telegramId, int $hours = 12): void
     {
         $hours = max(1, min(72, $hours));
-        $this->pdo->prepare(
-            'INSERT INTO staff_sessions (telegram_id, logged_in_at, expires_at)
-             VALUES (?, NOW(), DATE_ADD(NOW(), INTERVAL ? HOUR))
-             ON DUPLICATE KEY UPDATE logged_in_at = NOW(), expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR)'
-        )->execute([$telegramId, $hours, $hours]);
+        $sql = 'INSERT INTO staff_sessions (telegram_id, logged_in_at, expires_at)
+                VALUES (?, NOW(), DATE_ADD(NOW(), INTERVAL ? HOUR))
+                ON DUPLICATE KEY UPDATE logged_in_at = NOW(), expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR)';
+        try {
+            $this->pdo->prepare($sql)->execute([$telegramId, $hours, $hours]);
+        } catch (Throwable $e) {
+            $this->pdo->exec(
+                "CREATE TABLE IF NOT EXISTS staff_sessions (
+                    telegram_id BIGINT NOT NULL,
+                    logged_in_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TIMESTAMP NOT NULL,
+                    PRIMARY KEY (telegram_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+            $this->pdo->prepare($sql)->execute([$telegramId, $hours, $hours]);
+        }
     }
 
     public function destroyStaffSession(int $telegramId): void
     {
-        $this->pdo->prepare('DELETE FROM staff_sessions WHERE telegram_id = ?')->execute([$telegramId]);
+        try {
+            $this->pdo->prepare('DELETE FROM staff_sessions WHERE telegram_id = ?')->execute([$telegramId]);
+        } catch (Throwable $e) {
+        }
     }
 
     public function hasValidStaffSession(int $telegramId): bool
     {
-        $st = $this->pdo->prepare(
-            'SELECT 1 FROM staff_sessions WHERE telegram_id = ? AND expires_at > NOW() LIMIT 1'
-        );
-        $st->execute([$telegramId]);
-        return (bool)$st->fetchColumn();
+        try {
+            $st = $this->pdo->prepare(
+                'SELECT 1 FROM staff_sessions WHERE telegram_id = ? AND expires_at > NOW() LIMIT 1'
+            );
+            $st->execute([$telegramId]);
+            return (bool)$st->fetchColumn();
+        } catch (Throwable $e) {
+            return false;
+        }
     }
 
-    public function setSupportStaffPassword(int $telegramId, string $plainPassword): void
+    public function setSupportStaffPassword(int $telegramId, string $plainPassword): bool
+    {
+        $plainPassword = trim($plainPassword);
+        if ($plainPassword === '') {
+            return false;
+        }
+        if (!$this->getSupportStaff($telegramId)) {
+            $this->addSupportStaff($telegramId);
+        }
+        $hash = password_hash($plainPassword, PASSWORD_DEFAULT);
+        try {
+            $this->pdo->prepare(
+                'UPDATE support_staff SET password_hash = ?, pending_password_hash = NULL WHERE telegram_id = ?'
+            )->execute([$hash, $telegramId]);
+        } catch (Throwable $e) {
+            // Column pending may not exist yet
+            $this->pdo->prepare(
+                'UPDATE support_staff SET password_hash = ? WHERE telegram_id = ?'
+            )->execute([$hash, $telegramId]);
+        }
+        $row = $this->getSupportStaff($telegramId);
+        $stored = (string)($row['password_hash'] ?? '');
+        return $stored !== '' && password_verify($plainPassword, $stored);
+    }
+
+    public function setSupportStaffPendingPassword(int $telegramId, string $plainPassword): void
     {
         $hash = password_hash($plainPassword, PASSWORD_DEFAULT);
-        $this->pdo->prepare(
-            'UPDATE support_staff SET password_hash = ? WHERE telegram_id = ?'
-        )->execute([$hash, $telegramId]);
+        try {
+            $this->pdo->prepare(
+                'UPDATE support_staff SET pending_password_hash = ? WHERE telegram_id = ?'
+            )->execute([$hash, $telegramId]);
+        } catch (Throwable $e) {
+            // Fallback: keep in password flow via temporary overwrite of a settings key
+            $this->pdo->prepare(
+                'INSERT INTO bot_settings (setting_key, setting_value) VALUES (?, ?)
+                 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)'
+            )->execute(['staff_pending_pwd_' . $telegramId, $hash]);
+        }
     }
 
-    public function verifySupportStaffPassword(int $telegramId, string $plainPassword): bool
+    public function confirmSupportStaffPendingPassword(int $telegramId, string $plainPassword): bool
+    {
+        $row = $this->getSupportStaff($telegramId);
+        $pending = (string)($row['pending_password_hash'] ?? '');
+        if ($pending === '') {
+            $st = $this->pdo->prepare(
+                'SELECT setting_value FROM bot_settings WHERE setting_key = ? LIMIT 1'
+            );
+            $st->execute(['staff_pending_pwd_' . $telegramId]);
+            $pending = (string)($st->fetchColumn() ?: '');
+        }
+        if ($pending === '' || !password_verify($plainPassword, $pending)) {
+            return false;
+        }
+        try {
+            $this->pdo->prepare(
+                'UPDATE support_staff SET password_hash = ?, pending_password_hash = NULL WHERE telegram_id = ?'
+            )->execute([$pending, $telegramId]);
+        } catch (Throwable $e) {
+            $this->pdo->prepare(
+                'UPDATE support_staff SET password_hash = ? WHERE telegram_id = ?'
+            )->execute([$pending, $telegramId]);
+        }
+        $this->pdo->prepare('DELETE FROM bot_settings WHERE setting_key = ?')
+            ->execute(['staff_pending_pwd_' . $telegramId]);
+        return true;
+    }
+
+    public function verifySupportStaffPassword(int $telegramId, string $plainPassword, ?string $defaultPlain = null): bool
     {
         $row = $this->getSupportStaff($telegramId);
         if (!$row || (int)($row['is_active'] ?? 0) !== 1) {
             return false;
         }
-        $hash = (string)($row['password_hash'] ?? '');
-        if ($hash === '') {
+        $plainPassword = trim($plainPassword);
+        if ($plainPassword === '') {
             return false;
         }
-        return password_verify($plainPassword, $hash);
+        $hash = (string)($row['password_hash'] ?? '');
+        if ($hash !== '' && password_verify($plainPassword, $hash)) {
+            return true;
+        }
+        // Admin default password always accepted and re-syncs the staff hash
+        if ($defaultPlain !== null && $defaultPlain !== '' && hash_equals($defaultPlain, $plainPassword)) {
+            return $this->setSupportStaffPassword($telegramId, $plainPassword);
+        }
+        return false;
     }
 
     /** If staff has no password yet, set default and return plaintext once; otherwise return ''. */
@@ -1393,6 +1480,18 @@ final class Database
         $plain = $defaultPlain !== '' ? $defaultPlain : 'HamGapStaff1';
         $this->setSupportStaffPassword($telegramId, $plain);
         return $plain;
+    }
+
+    /** Force all staff rows to use this plaintext password (admin default change). */
+    public function syncAllSupportStaffPasswords(string $plainPassword): int
+    {
+        $n = 0;
+        foreach ($this->listSupportStaff(false) as $row) {
+            if ($this->setSupportStaffPassword((int)$row['telegram_id'], $plainPassword)) {
+                $n++;
+            }
+        }
+        return $n;
     }
 
     /** @return list<array> */

@@ -8,7 +8,7 @@ declare(strict_types=1);
  */
 final class StaffHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.19-staff';
+    public const CODE_VERSION = '2026-08-15-v10.20-staff';
 
     public function __construct(
         private array $config,
@@ -57,11 +57,20 @@ final class StaffHandlers
         }
 
         // Login / logout / home without full session for login button
-        if ($data === 'stf:login') {
+        if ($data === 'stf:login' || $data === 'stf:home') {
             $this->tg->answerCallback($id);
-            $this->db->updateUser($tid, ['flow' => 'stf:login:pass']);
             $this->ensureUser($tid, $from);
-            $this->tg->trySendMessage($chatId, "🔐 رمز عبور پنل کارمند را بفرست:");
+            if ($data === 'stf:home' && $this->isLoggedIn($tid)) {
+                $this->home($chatId);
+                return true;
+            }
+            // Not logged in → start password login, then open panel
+            $this->db->updateUser($tid, ['flow' => 'stf:login:pass']);
+            $this->tg->trySendMessage(
+                $chatId,
+                "🔐 برای باز شدن پنل، رمز عبور کارمند را بفرست:\n" .
+                "(اگر ادمین رمز را عوض کرده، همان رمز جدید را بزن)"
+            );
             return true;
         }
         if ($data === 'stf:logout') {
@@ -74,7 +83,8 @@ final class StaffHandlers
 
         if (!$this->isLoggedIn($tid)) {
             $this->tg->answerCallback($id, 'اول وارد پنل شو', true);
-            $this->promptLogin($chatId);
+            $this->db->updateUser($tid, ['flow' => 'stf:login:pass']);
+            $this->tg->trySendMessage($chatId, "🔐 اول رمز پنل را بفرست:");
             return true;
         }
 
@@ -142,7 +152,20 @@ final class StaffHandlers
         $from = $message['from'] ?? [];
         $tid = (int)($from['id'] ?? 0);
         $text = trim((string)($message['text'] ?? ''));
-        if ($tid <= 0 || !$this->isStaffMember($tid)) {
+        if ($tid <= 0) {
+            return false;
+        }
+
+        $panelCmds = ['/panel', '/staff', '/login', 'پنل کارمند', 'ورود پنل'];
+        if (!$this->isStaffMember($tid)) {
+            if (in_array($text, $panelCmds, true)) {
+                $this->tg->trySendMessage(
+                    $chatId,
+                    "⛔ تو در لیست <b>کارمندان فعال</b> نیستی.\n" .
+                    "ادمین باید از پنل ادمین → پشتیبانی و کارمندان، آیدی‌ات را اضافه/فعال کند."
+                );
+                return true;
+            }
             return false;
         }
 
@@ -155,7 +178,11 @@ final class StaffHandlers
             if ($this->isLoggedIn($tid)) {
                 $this->home($chatId);
             } else {
-                $this->promptLogin($chatId);
+                $this->db->updateUser($tid, ['flow' => 'stf:login:pass']);
+                $this->tg->trySendMessage(
+                    $chatId,
+                    "🔐 برای باز شدن پنل، رمز کارمند را بفرست:"
+                );
             }
             return true;
         }
@@ -165,9 +192,15 @@ final class StaffHandlers
             $this->tg->trySendMessage($chatId, 'از پنل کارمند خارج شدی.');
             return true;
         }
-        if ($text === '/login') {
+        if ($text === '/login' || $text === 'ورود پنل') {
             $this->db->updateUser($tid, ['flow' => 'stf:login:pass']);
-            $this->tg->trySendMessage($chatId, '🔐 رمز عبور پنل کارمند را بفرست:');
+            $default = $this->settings->get('staff_default_password', 'HamGapStaff1');
+            $this->db->ensureSupportStaffPassword($tid, $default);
+            $this->tg->trySendMessage(
+                $chatId,
+                "🔐 رمز عبور پنل کارمند را بفرست:\n" .
+                "اگر ادمین رمز پیش‌فرض را عوض کرده، همان را وارد کن."
+            );
             return true;
         }
 
@@ -176,51 +209,63 @@ final class StaffHandlers
             $this->db->updateUser($tid, ['flow' => null]);
             $default = $this->settings->get('staff_default_password', 'HamGapStaff1');
             $this->db->ensureSupportStaffPassword($tid, $default);
-            if (!$this->db->verifySupportStaffPassword($tid, $text)) {
+            if (!$this->db->verifySupportStaffPassword($tid, $text, $default)) {
                 $this->tg->trySendMessage(
                     $chatId,
-                    "رمز نادرست است.\nدوباره /login بزن یا از ادمین بخواه رمز را ریست کند."
+                    "رمز نادرست است.\n" .
+                    "دوباره /login بزن.\n" .
+                    "ادمین می‌تواند از لیست کارمندان → 🔑 رمز را ریست کند، یا «رمز پیش‌فرض کارمند» را عوض کند."
                 );
                 return true;
             }
-            $hours = $this->settings->getInt('staff_session_hours', 12);
-            $this->db->createStaffSession($tid, $hours);
-            $this->tg->trySendMessage($chatId, "✅ ورود موفق — نشست حدود {$hours} ساعت.");
+            try {
+                $hours = $this->settings->getInt('staff_session_hours', 12);
+                $this->db->createStaffSession($tid, $hours);
+            } catch (Throwable $e) {
+                $this->tg->trySendMessage(
+                    $chatId,
+                    "ورود انجام شد ولی نشست ذخیره نشد.\nخطا: " .
+                    htmlspecialchars($e->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                );
+                return true;
+            }
+            if (!$this->isLoggedIn($tid)) {
+                $this->tg->trySendMessage($chatId, 'نشست ساخته نشد. یک‌بار دیگر /login را بزن.');
+                return true;
+            }
+            $this->tg->trySendMessage($chatId, '✅ ورود موفق — پنل باز شد.');
             $this->home($chatId);
             return true;
         }
 
         if (!$this->isLoggedIn($tid)) {
-            // Let SupportHandlers handle ticket chat /start etc.
             if (str_starts_with($flow, 'stf:')) {
-                $this->db->updateUser($tid, ['flow' => null]);
-                $this->promptLogin($chatId);
+                $this->db->updateUser($tid, ['flow' => 'stf:login:pass']);
+                $this->tg->trySendMessage($chatId, '🔐 نشست منقضی شده. رمز پنل را بفرست:');
                 return true;
             }
             return false;
         }
 
-        // Password change
+        // Password change (pending hash — no long flow value)
         if ($flow === 'stf:pwd:new' && $text !== '') {
             if (mb_strlen($text) < 6) {
                 $this->tg->trySendMessage($chatId, 'رمز حداقل ۶ کاراکتر باشد.');
                 return true;
             }
-            $this->db->updateUser($tid, ['flow' => 'stf:pwd:confirm:' . base64_encode($text)]);
+            $this->db->setSupportStaffPendingPassword($tid, $text);
+            $this->db->updateUser($tid, ['flow' => 'stf:pwd:confirm']);
             $this->tg->trySendMessage($chatId, 'رمز جدید را دوباره بفرست:');
             return true;
         }
-        if (str_starts_with($flow, 'stf:pwd:confirm:') && $text !== '') {
-            $enc = substr($flow, strlen('stf:pwd:confirm:'));
-            $plain = base64_decode($enc, true);
+        if ($flow === 'stf:pwd:confirm' && $text !== '') {
             $this->db->updateUser($tid, ['flow' => null]);
-            if ($plain === false || !hash_equals($plain, $text)) {
+            if (!$this->db->confirmSupportStaffPendingPassword($tid, $text)) {
                 $this->tg->trySendMessage($chatId, 'تکرار رمز مطابقت نداشت. از منو دوباره تلاش کن.');
                 $this->home($chatId);
                 return true;
             }
-            $this->db->setSupportStaffPassword($tid, $plain);
-            $this->tg->trySendMessage($chatId, 'رمز پنل کارمند ذخیره شد ✅');
+            $this->tg->trySendMessage($chatId, 'رمز پنل کارمند ذخیره شد ✅ — از الان با رمز جدید وارد شو.');
             $this->home($chatId);
             return true;
         }

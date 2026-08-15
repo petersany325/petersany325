@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.19-admin';
+    public const CODE_VERSION = '2026-08-15-v10.20-admin';
 
     /** Keys editable via adm:set: — anything else is rejected. */
     public const ALLOWED_SET_KEYS = [
@@ -161,7 +161,7 @@ final class AdminHandlers
                 'invite_reward', 'invite_milestone_3', 'invite_milestone_10', 'invite_milestone_25', 'invitee_bonus',
                 'message_cost', 'request_cost', 'welcome_coins',
                 'connect_any_cost', 'connect_gender_cost', 'connect_province_cost', 'connect_age_cost',
-                'admin_session_hours', 'pay_invoice_minutes',
+                'admin_session_hours', 'staff_session_hours', 'pay_invoice_minutes',
                 'pack_100_price', 'pack_300_price', 'pack_1000_price',
                 'like_cost', 'room_create_cost', 'room_join_cost', 'report_ban_threshold', 'notify_free_cost',
                 'vip_price_30', 'vip_days', 'vip_min_account_days', 'vip_min_likes', 'vip_max_reports',
@@ -169,6 +169,12 @@ final class AdminHandlers
             ], true)) {
                 if (!ctype_digit($value)) {
                     $this->tg->sendMessage($chatId, 'فقط عدد بفرست.');
+                    return;
+                }
+            }
+            if ($key === 'staff_default_password') {
+                if (mb_strlen($value) < 6) {
+                    $this->tg->sendMessage($chatId, 'رمز پیش‌فرض کارمند حداقل ۶ کاراکتر باشد.');
                     return;
                 }
             }
@@ -197,10 +203,15 @@ final class AdminHandlers
             }
             $this->settings->set($key, $value);
             $this->db->updateUser($tid, ['flow' => null]);
+            $extra = '';
+            if ($key === 'staff_default_password') {
+                $synced = $this->db->syncAllSupportStaffPasswords($value);
+                $extra = "\nرمز همه کارمندان همگام شد: <b>{$synced}</b> نفر.";
+            }
             $this->tg->sendMessage(
                 $chatId,
                 "✅ ذخیره شد\n<code>{$key}</code> = <b>" .
-                htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>'
+                htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>' . $extra
             );
             $this->home($chatId);
             return;
@@ -266,11 +277,18 @@ final class AdminHandlers
             if (!$this->db->getSupportStaff($sid)) {
                 $this->db->addSupportStaff($sid);
             }
-            $this->db->setSupportStaffPassword($sid, $text);
+            $ok = $this->db->setSupportStaffPassword($sid, $text);
+            if (!$ok) {
+                $this->tg->sendMessage($chatId, 'ذخیره رمز ناموفق بود. دوباره تلاش کن.');
+                return;
+            }
+            // Also update default so login fallback matches
+            $this->settings->set('staff_default_password', $text);
             $this->tg->sendMessage(
                 $chatId,
-                "✅ رمز پنل کارمند <code>{$sid}</code> ذخیره شد.\n" .
-                "رمز موقت: <code>" . htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>"
+                "✅ رمز پنل کارمند <code>{$sid}</code> ذخیره و اعمال شد.\n" .
+                "رمز: <code>" . htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>\n" .
+                "کارمند با /login در بات پشتیبانی وارد شود."
             );
             $this->notifyNewSupportStaff($sid, $text);
             return;
