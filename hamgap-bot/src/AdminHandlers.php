@@ -6,11 +6,12 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.12-admin';
+    public const CODE_VERSION = '2026-08-15-v10.13-admin';
 
     /** Keys editable via adm:set: — anything else is rejected. */
     public const ALLOWED_SET_KEYS = [
-        'invite_reward', 'message_cost', 'request_cost', 'welcome_coins',
+        'invite_reward', 'invite_milestone_3', 'invite_milestone_10', 'invite_milestone_25', 'invitee_bonus',
+        'message_cost', 'request_cost', 'welcome_coins',
         'connect_any_cost', 'connect_gender_cost', 'connect_province_cost', 'connect_age_cost',
         'admin_session_hours', 'admin_username',
         'pay_invoice_minutes', 'pay_card_number', 'pay_card_holder', 'pay_bank_name', 'pay_trust_channel',
@@ -154,7 +155,8 @@ final class AdminHandlers
                 return;
             }
             if (in_array($key, [
-                'invite_reward', 'message_cost', 'request_cost', 'welcome_coins',
+                'invite_reward', 'invite_milestone_3', 'invite_milestone_10', 'invite_milestone_25', 'invitee_bonus',
+                'message_cost', 'request_cost', 'welcome_coins',
                 'connect_any_cost', 'connect_gender_cost', 'connect_province_cost', 'connect_age_cost',
                 'admin_session_hours', 'pay_invoice_minutes',
                 'pack_100_price', 'pack_300_price', 'pack_1000_price',
@@ -333,6 +335,8 @@ final class AdminHandlers
                 $chatId,
                 "🪙 <b>تنظیمات سکه و هزینه</b>\n" .
                 "پاداش دعوت: <b>{$all['invite_reward']}</b>\n" .
+                "بونوس ۳/۱۰/۲۵ دعوت: <b>{$all['invite_milestone_3']}</b> / <b>{$all['invite_milestone_10']}</b> / <b>{$all['invite_milestone_25']}</b>\n" .
+                "هدیه دعوت‌شونده: <b>{$all['invitee_bonus']}</b>\n" .
                 "پیام کوتاه: <b>{$all['message_cost']}</b>\n" .
                 "درخواست گفتگو: <b>{$all['request_cost']}</b>\n" .
                 "خوش‌آمد: <b>{$all['welcome_coins']}</b>\n" .

@@ -1161,6 +1161,36 @@ final class Database
         return (bool)$st->fetchColumn();
     }
 
+    /** Successful invites paid to this referrer (reason=referral). */
+    public function countSuccessfulInvites(int $telegramId): int
+    {
+        $user = $this->findUser($telegramId);
+        if (!$user) {
+            return 0;
+        }
+        $st = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM coin_transactions WHERE user_id = ? AND reason = ? AND amount > 0'
+        );
+        $st->execute([(int)$user['id'], 'referral']);
+        return (int)$st->fetchColumn();
+    }
+
+    /** Coins earned from invite rewards + milestones. */
+    public function sumInviteEarnings(int $telegramId): int
+    {
+        $user = $this->findUser($telegramId);
+        if (!$user) {
+            return 0;
+        }
+        $st = $this->pdo->prepare(
+            "SELECT COALESCE(SUM(amount),0) FROM coin_transactions
+             WHERE user_id = ? AND amount > 0
+               AND reason IN ('referral','invite_milestone_3','invite_milestone_10','invite_milestone_25')"
+        );
+        $st->execute([(int)$user['id']]);
+        return (int)$st->fetchColumn();
+    }
+
     public function updateUser(int $telegramId, array $fields): void
     {
         if (!$fields) {

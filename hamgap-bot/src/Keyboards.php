@@ -55,6 +55,7 @@ final class Keyboards
                 ['text' => '🆘 پشتیبانی', 'callback_data' => 'menu:support'],
                 ['text' => 'ℹ️ راهنما', 'callback_data' => 'menu:help'],
             ],
+            [['text' => '✨ دعوت دوستان و سکه رایگان', 'callback_data' => 'menu:invite']],
         ]];
     }
 
@@ -786,10 +787,37 @@ final class Keyboards
         ]];
     }
 
+    public static function inviteHubInline(string $shareUrl): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '📤 اشتراک‌گذاری برای دوستان', 'url' => $shareUrl]],
+            [['text' => '📋 متن آماده کپی', 'callback_data' => 'invite:copy']],
+            [['text' => '🏆 وضعیت جایزه‌ها', 'callback_data' => 'invite:milestones']],
+            [
+                ['text' => '💎 کیف‌پول', 'callback_data' => 'menu:wallet'],
+                ['text' => 'منوی اصلی', 'callback_data' => 'menu:main'],
+            ],
+        ]];
+    }
+
+    public static function inviteCopyDoneInline(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '📤 اشتراک‌گذاری', 'callback_data' => 'menu:invite']],
+            [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']],
+        ]];
+    }
+
     public static function adminCoins(): array
     {
         return ['inline_keyboard' => [
-            [['text' => 'پاداش دعوت', 'callback_data' => 'adm:set:invite_reward']],
+            [['text' => 'پاداش دعوت (هر نفر)', 'callback_data' => 'adm:set:invite_reward']],
+            [
+                ['text' => 'بونوس ۳ دعوت', 'callback_data' => 'adm:set:invite_milestone_3'],
+                ['text' => 'بونوس ۱۰', 'callback_data' => 'adm:set:invite_milestone_10'],
+            ],
+            [['text' => 'بونوس ۲۵ دعوت', 'callback_data' => 'adm:set:invite_milestone_25']],
+            [['text' => 'هدیه دعوت‌شونده', 'callback_data' => 'adm:set:invitee_bonus']],
             [['text' => 'هزینه پیام بدون درخواست', 'callback_data' => 'adm:set:message_cost']],
             [['text' => 'هزینه درخواست چت', 'callback_data' => 'adm:set:request_cost']],
             [['text' => 'هزینه لایک', 'callback_data' => 'adm:set:like_cost']],

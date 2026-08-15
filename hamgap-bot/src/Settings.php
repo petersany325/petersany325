@@ -11,6 +11,10 @@ final class Settings
 
     public const DEFAULTS = [
         'invite_reward' => '30',
+        'invite_milestone_3' => '50',
+        'invite_milestone_10' => '150',
+        'invite_milestone_25' => '400',
+        'invitee_bonus' => '10',
         'message_cost' => '2',
         'request_cost' => '1',
         'like_cost' => '0',

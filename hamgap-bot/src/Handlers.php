@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.12';
+    public const CODE_VERSION = '2026-08-15-v10.13';
 
     private string $assets;
     private Settings $settings;
@@ -1209,6 +1209,14 @@ final class Handlers
                 $this->clearUi($chatId, $user);
                 $this->showInvite($chatId, $user);
                 break;
+            case 'invite:copy':
+                $this->clearUi($chatId, $user);
+                $this->showInviteCopyText($chatId, $user);
+                break;
+            case 'invite:milestones':
+                $this->clearUi($chatId, $user);
+                $this->showInviteMilestones($chatId, $user);
+                break;
             case 'chat:any':
                 $this->startChat($chatId, $user, 'any');
                 break;
@@ -1357,18 +1365,188 @@ final class Handlers
             return;
         }
         $reward = max(0, $this->settings->getInt('invite_reward', 30));
-        if ($reward <= 0) {
-            return;
+        if ($reward > 0) {
+            $this->db->addCoins($refTid, $reward, 'referral', (string)$myTid);
+            try {
+                $this->tg->sendMessage(
+                    $refTid,
+                    "🎉 یک دوست با لینک دعوتت ثبت‌نام را کامل کرد.\n" .
+                    "<b>+{$reward} سکه</b> به حسابت اضافه شد.\n" .
+                    "از منوی «دعوت دوستان» آمار و جایزه‌های پله‌ای را ببین."
+                );
+            } catch (Throwable $e) {
+            }
         }
-        $this->db->addCoins($refTid, $reward, 'referral', (string)$myTid);
-        try {
-            $this->tg->sendMessage(
-                $refTid,
-                "یک دوست با لینک دعوتت ثبت‌نام را کامل کرد.\n<b>+{$reward} سکه</b> به حسابت اضافه شد."
-            );
-        } catch (Throwable $e) {
-            // ignore notify failures
+
+        // هدیه کوچک برای دعوت‌شونده (علاوه بر welcome)
+        $inviteeBonus = max(0, $this->settings->getInt('invitee_bonus', 10));
+        if ($inviteeBonus > 0 && !$this->db->hasCoinReason($myTid, 'invitee_bonus', (string)$refTid)) {
+            $this->db->addCoins($myTid, $inviteeBonus, 'invitee_bonus', (string)$refTid);
         }
+
+        $this->maybePayInviteMilestones($refTid);
+    }
+
+    private function maybePayInviteMilestones(int $refTid): void
+    {
+        $count = $this->db->countSuccessfulInvites($refTid);
+        $tiers = [
+            3 => ['key' => 'invite_milestone_3', 'default' => 50],
+            10 => ['key' => 'invite_milestone_10', 'default' => 150],
+            25 => ['key' => 'invite_milestone_25', 'default' => 400],
+        ];
+        foreach ($tiers as $need => $cfg) {
+            if ($count < $need) {
+                continue;
+            }
+            $reason = 'invite_milestone_' . $need;
+            if ($this->db->hasCoinReason($refTid, $reason)) {
+                continue;
+            }
+            $bonus = max(0, $this->settings->getInt($cfg['key'], $cfg['default']));
+            if ($bonus <= 0) {
+                continue;
+            }
+            $this->db->addCoins($refTid, $bonus, $reason, (string)$count);
+            try {
+                $this->tg->sendMessage(
+                    $refTid,
+                    "🏆 جایزه پله‌ای دعوت!\n" .
+                    "به <b>{$need}</b> دعوت موفق رسیدی.\n" .
+                    "<b>+{$bonus} سکه</b> بونوس گرفتی."
+                );
+            } catch (Throwable $e) {
+            }
+        }
+    }
+
+    private function inviteLinkFor(array $user): string
+    {
+        $code = (string)($user['referral_code'] ?? '');
+        return 'https://t.me/' . $this->botUsername() . '?start=ref_' . $code;
+    }
+
+    private function inviteSharePlain(array $user): string
+    {
+        $link = $this->inviteLinkFor($user);
+        $reward = $this->settings->getInt('invite_reward', 30);
+        $name = $this->botName();
+        return "سلام 👋\nبا هم‌گپ می‌تونی ناشناس چت کنی و آدم‌های نزدیکت رو پیدا کنی.\n" .
+            "با لینک من بیا؛ ثبت‌نام رایگانه و منم {$reward} سکه می‌گیرم ✨\n" .
+            $link . "\n\nربات: {$name}";
+    }
+
+    private function inviteShareUrl(array $user): string
+    {
+        $link = $this->inviteLinkFor($user);
+        $text = "با هم‌گپ ناشناس چت کن — لینک دعوت من:";
+        return 'https://t.me/share/url?url=' . rawurlencode($link) . '&text=' . rawurlencode($text);
+    }
+
+    private function inviteMilestoneProgressLine(int $count): string
+    {
+        $m3 = $this->settings->getInt('invite_milestone_3', 50);
+        $m10 = $this->settings->getInt('invite_milestone_10', 150);
+        $m25 = $this->settings->getInt('invite_milestone_25', 400);
+        $mark = static function (int $have, int $need): string {
+            return $have >= $need ? '✅' : '▫️';
+        };
+        return
+            "{$mark($count, 3)} ۳ دعوت → +{$m3} سکه\n" .
+            "{$mark($count, 10)} ۱۰ دعوت → +{$m10} سکه\n" .
+            "{$mark($count, 25)} ۲۵ دعوت → +{$m25} سکه";
+    }
+
+    private function showInvite(int $chatId, array &$user): void
+    {
+        $this->db->ensureIdentity($user);
+        $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+        $link = $this->inviteLinkFor($user);
+        $safeLink = htmlspecialchars($link, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $invite = $this->settings->getInt('invite_reward', 30);
+        $invitee = $this->settings->getInt('invitee_bonus', 10);
+        $tid = (int)$user['telegram_id'];
+        $okCount = $this->db->countSuccessfulInvites($tid);
+        $earned = $this->db->sumInviteEarnings($tid);
+        if ($okCount >= 25) {
+            $nextHint = 'همه جایزه‌های پله‌ای را گرفتی 🔥';
+        } elseif ($okCount >= 10) {
+            $left = 25 - $okCount;
+            $nextHint = "تا جایزه ۲۵ دعوت: <b>{$left}</b> نفر مانده";
+        } elseif ($okCount >= 3) {
+            $left = 10 - $okCount;
+            $nextHint = "تا جایزه ۱۰ دعوت: <b>{$left}</b> نفر مانده";
+        } else {
+            $left = 3 - $okCount;
+            $nextHint = "تا اولین جایزه پله‌ای: <b>{$left}</b> نفر مانده";
+        }
+
+        $text =
+            "✨ <b>هاب دعوت هم‌گپ</b>\n\n" .
+            "با دعوت دوست هم تو سکه می‌گیری، هم دوستت راحت‌تر شروع می‌کنه.\n\n" .
+            "🔗 لینک اختصاصی تو:\n<code>{$safeLink}</code>\n\n" .
+            "🎁 هر دعوت موفق (پروفایل کامل): <b>+{$invite}</b> سکه\n" .
+            "🎁 هدیه دوستت با لینک تو: <b>+{$invitee}</b> سکه اضافه\n\n" .
+            "📊 آمار تو:\n" .
+            "• دعوت موفق: <b>{$okCount}</b>\n" .
+            "• سکه کسب‌شده از دعوت: <b>{$earned}</b>\n" .
+            "• {$nextHint}\n\n" .
+            "<b>جایزه‌های پله‌ای</b>\n" .
+            $this->inviteMilestoneProgressLine($okCount) . "\n\n" .
+            "از دکمه «اشتراک‌گذاری» بفرست تو پی وی / استوری / گروه.";
+
+        $this->clearUi($chatId, $user);
+        $this->uiText($chatId, $user, $text, [
+            'reply_markup' => Keyboards::inviteHubInline($this->inviteShareUrl($user)),
+        ]);
+        $this->pinHamGapMenu($chatId, $user);
+    }
+
+    private function showInviteCopyText(int $chatId, array &$user): void
+    {
+        $this->db->ensureIdentity($user);
+        $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
+        $plain = $this->inviteSharePlain($user);
+        $safe = htmlspecialchars($plain, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $this->uiText(
+            $chatId,
+            $user,
+            "📋 <b>متن آماده</b>\nروی متن بزن و کپی کن، بعد برای دوستات بفرست:\n\n<code>{$safe}</code>",
+            ['reply_markup' => Keyboards::inviteHubInline($this->inviteShareUrl($user))]
+        );
+        $this->pinHamGapMenu($chatId, $user);
+    }
+
+    private function showInviteMilestones(int $chatId, array &$user): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $count = $this->db->countSuccessfulInvites($tid);
+        $earned = $this->db->sumInviteEarnings($tid);
+        $per = $this->settings->getInt('invite_reward', 30);
+        $text =
+            "🏆 <b>جایزه‌های دعوت</b>\n\n" .
+            "هر دوست با پروفایل کامل: <b>+{$per}</b> سکه\n" .
+            "دعوت‌های موفق تو: <b>{$count}</b>\n" .
+            "مجموع سکه دعوت: <b>{$earned}</b>\n\n" .
+            $this->inviteMilestoneProgressLine($count) . "\n\n" .
+            "نکته: پاداش فقط وقتی داده می‌شود که دوست پروفایلش را کامل کند.";
+        $this->uiText($chatId, $user, $text, [
+            'reply_markup' => Keyboards::inviteHubInline($this->inviteShareUrl($user)),
+        ]);
+        $this->pinHamGapMenu($chatId, $user);
+    }
+
+    private function prefLabel(string $pref): string
+    {
+        return match ($pref) {
+            'male' => 'پسر',
+            'female' => 'دختر',
+            'shemale' => 'شیمیل / دوجنسه',
+            'province' => 'هم‌استان',
+            'age' => 'هم‌سن',
+            'any' => 'شانسی',
+            default => 'مخاطب',
+        };
     }
 
     private function isProfileComplete(?array $user): bool
@@ -1485,18 +1663,24 @@ final class Handlers
         $this->db->ensureIdentity($user);
         $fresh = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         $this->payReferralIfDue($fresh);
+        $fresh = $this->db->findUser((int)$user['telegram_id']) ?? $fresh;
         $dn = htmlspecialchars((string)($fresh['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $gift = max(0, $this->settings->getInt('welcome_coins', 35));
+        $invitee = max(0, $this->settings->getInt('invitee_bonus', 10));
         $giftLine = $gift > 0 ? "{$gift} سکه هدیه گرفتی.\n" : '';
+        if (!empty($fresh['referred_by']) && $invitee > 0 && $this->db->hasCoinReason((int)$fresh['telegram_id'], 'invitee_bonus')) {
+            $giftLine .= "بونوس دعوت: +{$invitee} سکه.\n";
+        }
+        $invite = $this->settings->getInt('invite_reward', 30);
         $this->showMain(
             $chatId,
             $fresh,
             "پروفایل آماده شد ✅\n" .
             "نام کاربری تو: <b>{$dn}</b>\n" .
             $giftLine .
-            "از «پروفایل من» می‌تونی عکس و نام را عوض کنی."
+            "از «پروفایل من» می‌تونی عکس و نام را عوض کنی.\n" .
+            "دوستات رو دعوت کن و برای هر نفر <b>+{$invite}</b> سکه بگیر ✨"
         );
-        // Show full profile card right after welcome so the auto username is visible.
         $this->showProfile($chatId, $fresh);
     }
 
@@ -1517,7 +1701,7 @@ final class Handlers
             "✉️ پیام بدون درخواست — هر پیام {$msgCost} سکه · درخواست {$reqCost} سکه\n" .
             "👥 گپ دوستان — ساخت/ورود با سکه · بستن = پاک‌سازی کامل\n" .
             "🚩 گزارش تخلف — با {$banAt} گزارش (قابل تنظیم در ادمین) خودکار مسدود؛ فعال‌سازی با پشتیبانی\n" .
-            "✨ دعوت — هر دعوت کامل‌شده +{$invite} سکه\n\n" .
+            "✨ دعوت — هر دعوت کامل +{$invite} سکه · جایزه پله‌ای ۳/۱۰/۲۵\n\n" .
             "دستورها: /profile /coins /search /link\n" .
             "رمز و کارت بانکی را در چت نفرست.";
         $path = $this->assets . '/menu-help.jpg';
@@ -1709,38 +1893,6 @@ final class Handlers
             ]);
         }
         $this->pinHamGapMenu($chatId, $user);
-    }
-
-    private function showInvite(int $chatId, array &$user): void
-    {
-        $this->db->ensureIdentity($user);
-        $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
-        $code = (string)($user['referral_code'] ?? '');
-        $uname = $this->botUsername();
-        $link = 'https://t.me/' . $uname . '?start=ref_' . $code;
-        $safeLink = htmlspecialchars($link, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $invite = $this->settings->getInt('invite_reward', 30);
-        $this->uiText(
-            $chatId,
-            $user,
-            "دعوت دوستان\n\n" .
-            "لینک اختصاصی تو:\n<code>{$safeLink}</code>\n\n" .
-            "هر دوستی که با این لینک بیاید و پروفایلش را کامل کند، <b>+{$invite} سکه</b> می‌گیری."
-        );
-        $this->pinHamGapMenu($chatId, $user);
-    }
-
-    private function prefLabel(string $pref): string
-    {
-        return match ($pref) {
-            'male' => 'پسر',
-            'female' => 'دختر',
-            'shemale' => 'شیمیل / دوجنسه',
-            'province' => 'هم‌استان',
-            'age' => 'هم‌سن',
-            'any' => 'شانسی',
-            default => 'مخاطب',
-        };
     }
 
     private function startChat(
