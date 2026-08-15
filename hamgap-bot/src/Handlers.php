@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-14-v10.7.2';
+    public const CODE_VERSION = '2026-08-15-v10.8';
 
     private string $assets;
     private Settings $settings;
@@ -168,6 +168,15 @@ final class Handlers
         // Compose short message to a browsed profile
         if (str_starts_with((string)($user['flow'] ?? ''), 'br:compose:') && $text !== '') {
             $this->sendBrowseMessage($chatId, $user, $text);
+            return;
+        }
+        // Extra details for "other" report reason
+        if (str_starts_with((string)($user['flow'] ?? ''), 'br:repother:') && $text !== '' && !str_starts_with($text, '/')) {
+            $this->finishBrowseReportOther($chatId, $user, $text);
+            return;
+        }
+        if (($user['flow'] ?? '') === 'cr:other' && $text !== '' && !str_starts_with($text, '/')) {
+            $this->finishChatReportOther($chatId, $user, $text);
             return;
         }
         if (($user['flow'] ?? '') === 'support:compose' && $text !== '' && !str_starts_with($text, '/')) {
@@ -378,7 +387,7 @@ final class Handlers
                 return;
             }
             if (in_array($text, ['🚩 گزارش', '/report'], true)) {
-                $this->report($chatId, $user);
+                $this->showChatReportForm($chatId, $user);
                 return;
             }
             if (in_array($text, ['📥 درخواست‌ها', '/requests'], true)) {
@@ -811,13 +820,38 @@ final class Handlers
         if (str_starts_with($data, 'br:rep:')) {
             $code = substr($data, strlen('br:rep:'));
             $target = $this->db->findByPublicCode($code);
-            if ($target) {
-                $this->applyReportAndMaybeBan($tid, (int)$target['telegram_id'], 'browse_report');
+            if (!$target) {
+                $this->tg->answerCallback($id, 'کاربر پیدا نشد', true);
+                return;
             }
-            $this->tg->answerCallback($id, 'گزارش خلاف ثبت شد');
+            $this->tg->answerCallback($id);
             $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
             $this->clearUi($chatId, $user);
-            $this->showNextBrowseCard($chatId, $user);
+            $this->showReportForm($chatId, $user, $target, 'br');
+            return;
+        }
+        if (str_starts_with($data, 'br:rp:')) {
+            // br:rp:CODE:reason
+            $rest = substr($data, strlen('br:rp:'));
+            $parts = explode(':', $rest, 2);
+            $code = $parts[0] ?? '';
+            $reasonKey = $parts[1] ?? '';
+            $this->handleBrowseReportChoice($cq, $user, $id, $chatId, $tid, $code, $reasonKey);
+            return;
+        }
+        if (str_starts_with($data, 'br:rc:')) {
+            $code = substr($data, strlen('br:rc:'));
+            $this->tg->answerCallback($id, 'انصراف');
+            $this->stripCallbackMenu($cq);
+            $target = $this->db->findByPublicCode($code);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            if ($target) {
+                $this->renderBrowseCard($chatId, $user, $target);
+            } else {
+                $this->showNextBrowseCard($chatId, $user);
+            }
             return;
         }
         if (str_starts_with($data, 'br:blk:')) {
@@ -826,10 +860,20 @@ final class Handlers
             if ($target) {
                 $this->db->blockUser($tid, (int)$target['telegram_id']);
             }
-            $this->tg->answerCallback($id, 'بلاک شد');
+            $this->tg->answerCallback($id, 'کاربر بلاک شد');
             $this->stripCallbackMenu($cq);
             $this->clearUi($chatId, $user);
             $this->showNextBrowseCard($chatId, $user);
+            return;
+        }
+        if (str_starts_with($data, 'cr:')) {
+            $reasonKey = substr($data, strlen('cr:'));
+            $this->handleChatReportChoice($cq, $user, $id, $chatId, $tid, $reasonKey);
+            return;
+        }
+        if ($data === 'chat:continue') {
+            $this->tg->answerCallback($id, 'ادامه چت');
+            $this->stripCallbackMenu($cq);
             return;
         }
 
@@ -1022,7 +1066,9 @@ final class Handlers
                 $this->nextChat($chatId, $user);
                 break;
             case 'chat:report':
-                $this->report($chatId, $user);
+                $this->tg->answerCallback($id);
+                $this->stripCallbackMenu($cq);
+                $this->showChatReportForm($chatId, $user);
                 break;
             case 'edit:gender':
                 $this->clearUi($chatId, $user);
@@ -1275,7 +1321,7 @@ final class Handlers
             "📩 چت خصوصی — درخواست با تأیید / رزرو · پایان = پاک شدن تاریخچه\n" .
             "✉️ پیام بدون درخواست — هر پیام {$msgCost} سکه · درخواست {$reqCost} سکه\n" .
             "👥 گپ دوستان — ساخت/ورود با سکه · بستن = پاک‌سازی کامل\n" .
-            "🚩 گزارش خلاف — با ۵ گزارش مسدود تا تماس با پشتیبانی\n" .
+            "🚩 گزارش تخلف — با انتخاب دلیل (مزاحمت، فحاشی، جنسیت اشتباه و …)\n" .
             "✨ دعوت — هر دعوت +{$invite} سکه\n\n" .
             "دستورها: /profile /coins /search /link\n" .
             "رمز و کارت بانکی را در چت نفرست.";
@@ -1584,9 +1630,186 @@ final class Handlers
 
     private function report(int $chatId, array $user): void
     {
+        $this->showChatReportForm($chatId, $user);
+    }
+
+    private function showChatReportForm(int $chatId, array &$user): void
+    {
         $partnerId = !empty($user['partner_id']) ? (int)$user['partner_id'] : null;
+        if (!$partnerId) {
+            $this->uiText($chatId, $user, 'الان در چت نیستی.');
+            return;
+        }
+        $partner = $this->db->findUser($partnerId);
+        $dn = htmlspecialchars((string)($partner['display_name'] ?? 'طرف مقابل'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $this->clearUi($chatId, $user);
+        $this->uiText(
+            $chatId,
+            $user,
+            "⚠️ <b>فرم گزارش تخلف</b>\n\n" .
+            "چرا می‌خوای <b>{$dn}</b> را گزارش کنی؟\n\n" .
+            "توجه: همه گزارش‌ها بررسی می‌شوند.\n" .
+            "⛔️ گزارش عمداً اشتباه ممکن است حساب خودت را محدود کند.\n\n" .
+            "دلیل را انتخاب کن 👇",
+            ['reply_markup' => Keyboards::chatReportReasonsInline()]
+        );
+    }
+
+    private function showReportForm(int $chatId, array &$user, array $target, string $prefix = 'br'): void
+    {
+        $dn = htmlspecialchars((string)($target['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $pc = htmlspecialchars((string)($target['public_code'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $meta = [];
+        if ((int)($target['show_gender'] ?? 1) === 1) {
+            $meta[] = Gender::label((string)($target['gender'] ?? ''));
+        }
+        if ((int)($target['show_age'] ?? 1) === 1) {
+            $meta[] = (int)($target['age'] ?? 0) . ' ساله';
+        }
+        $loc = [];
+        if ((int)($target['show_province'] ?? 1) === 1 && !empty($target['province'])) {
+            $loc[] = htmlspecialchars((string)$target['province'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        }
+        if ((int)($target['show_city'] ?? 1) === 1 && !empty($target['city'])) {
+            $loc[] = htmlspecialchars((string)$target['city'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        }
+        $lines = [
+            '⚠️ <b>فرم گزارش تخلف</b>',
+            '',
+            "<b>{$dn}</b>",
+        ];
+        if ($meta) {
+            $lines[] = implode(' · ', $meta);
+        }
+        if ($loc) {
+            $lines[] = implode(' · ', $loc);
+        }
+        $lines[] = "شناسه: <code>{$pc}</code>";
+        $lines[] = '';
+        $lines[] = "چرا می‌خوای <b>{$dn}</b> را گزارش کنی؟";
+        $lines[] = '';
+        $lines[] = 'توجه: همه گزارش‌ها بررسی می‌شوند.';
+        $lines[] = '⛔️ گزارش عمداً اشتباه ممکن است حساب خودت را محدود کند.';
+        $lines[] = '';
+        $lines[] = 'دلیل را انتخاب کن 👇';
+        $this->uiText($chatId, $user, implode("\n", $lines), [
+            'reply_markup' => Keyboards::reportReasonsInline((string)$target['public_code'], $prefix),
+        ]);
+    }
+
+    private function handleBrowseReportChoice(
+        array $cq,
+        array &$user,
+        string $id,
+        int $chatId,
+        int $tid,
+        string $code,
+        string $reasonKey
+    ): void {
+        $labels = Keyboards::reportReasonLabels();
+        if (!isset($labels[$reasonKey])) {
+            $this->tg->answerCallback($id, 'نامعتبر', true);
+            return;
+        }
+        $target = $this->db->findByPublicCode($code);
+        if (!$target) {
+            $this->tg->answerCallback($id, 'کاربر پیدا نشد', true);
+            return;
+        }
+        if ($reasonKey === 'other') {
+            $this->db->updateUser($tid, ['flow' => 'br:repother:' . $code]);
+            $this->tg->answerCallback($id, 'توضیح را بنویس');
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $dn = htmlspecialchars((string)($target['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $this->uiText(
+                $chatId,
+                $user,
+                "✏️ توضیح گزارش برای <b>{$dn}</b> را بنویس و بفرست.\n(حداکثر چند خط کوتاه)"
+            );
+            return;
+        }
+        $label = $labels[$reasonKey];
+        $this->applyReportAndMaybeBan($tid, (int)$target['telegram_id'], $label);
+        $this->tg->answerCallback($id, 'گزارش ثبت شد');
+        $this->stripCallbackMenu($cq);
+        $this->clearUi($chatId, $user);
+        $this->uiText($chatId, $user, "✅ گزارش «{$label}» ثبت شد.\nممنون از همکاری‌ات.", [
+            'reply_markup' => ['inline_keyboard' => [
+                [['text' => 'کاربر بعدی', 'callback_data' => 'br:next']],
+                [['text' => 'بازگشت به جستجو', 'callback_data' => 'menu:find']],
+            ]],
+        ]);
+    }
+
+    private function finishBrowseReportOther(int $chatId, array &$user, string $text): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $flow = (string)($user['flow'] ?? '');
+        $code = str_starts_with($flow, 'br:repother:') ? substr($flow, strlen('br:repother:')) : '';
+        $this->db->updateUser($tid, ['flow' => null]);
+        $user = $this->db->findUser($tid) ?? $user;
+        $target = $this->db->findByPublicCode($code);
+        if (!$target) {
+            $this->uiText($chatId, $user, 'کاربر پیدا نشد.');
+            return;
+        }
+        $note = mb_substr(trim($text), 0, 400);
+        $reason = 'سایر موارد: ' . $note;
+        $this->applyReportAndMaybeBan($tid, (int)$target['telegram_id'], $reason);
+        $this->clearUi($chatId, $user);
+        $this->uiText($chatId, $user, "✅ گزارش با توضیح تو ثبت شد.\nممنون از همکاری‌ات.", [
+            'reply_markup' => ['inline_keyboard' => [
+                [['text' => 'کاربر بعدی', 'callback_data' => 'br:next']],
+                [['text' => 'بازگشت به جستجو', 'callback_data' => 'menu:find']],
+            ]],
+        ]);
+    }
+
+    private function handleChatReportChoice(
+        array $cq,
+        array &$user,
+        string $id,
+        int $chatId,
+        int $tid,
+        string $reasonKey
+    ): void {
+        $labels = Keyboards::reportReasonLabels();
+        if (!isset($labels[$reasonKey])) {
+            $this->tg->answerCallback($id, 'نامعتبر', true);
+            return;
+        }
+        $partnerId = !empty($user['partner_id']) ? (int)$user['partner_id'] : null;
+        if (!$partnerId) {
+            $this->tg->answerCallback($id, 'الان در چت نیستی', true);
+            return;
+        }
+        if ($reasonKey === 'other') {
+            $this->db->updateUser($tid, ['flow' => 'cr:other']);
+            $this->tg->answerCallback($id, 'توضیح را بنویس');
+            $this->stripCallbackMenu($cq);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->clearUi($chatId, $user);
+            $this->uiText($chatId, $user, "✏️ دلیل گزارش را کوتاه بنویس و بفرست.");
+            return;
+        }
+        $label = $labels[$reasonKey];
+        $this->applyReportAndMaybeBan($tid, $partnerId, $label);
+        $this->tg->answerCallback($id, 'گزارش ثبت شد');
+        $this->stripCallbackMenu($cq);
+        $this->endAndMenu($chatId, $user);
+    }
+
+    private function finishChatReportOther(int $chatId, array &$user, string $text): void
+    {
+        $tid = (int)$user['telegram_id'];
+        $partnerId = !empty($user['partner_id']) ? (int)$user['partner_id'] : null;
+        $this->db->updateUser($tid, ['flow' => null]);
+        $user = $this->db->findUser($tid) ?? $user;
         if ($partnerId) {
-            $this->applyReportAndMaybeBan((int)$user['telegram_id'], $partnerId, 'chat_report');
+            $note = mb_substr(trim($text), 0, 400);
+            $this->applyReportAndMaybeBan($tid, $partnerId, 'سایر موارد: ' . $note);
         }
         $this->endAndMenu($chatId, $user);
     }
@@ -1853,17 +2076,25 @@ final class Handlers
         $this->clearUi($chatId, $user);
         $found = count($ids);
         if ($found === 0) {
-            $this->uiText($chatId, $user, "کسی با این فیلتر پیدا نشد.\nفیلتر دیگری را امتحان کن.", [
+            $this->uiText($chatId, $user, "با این فیلتر کسی پیدا نشد.\nیک گزینه دیگر از جستجو را امتحان کن.", [
                 'reply_markup' => Keyboards::searchHubInline(),
             ]);
             return;
         }
-        $hint = !empty($filters['nearby_rank'])
-            ? "📍 سیستم نزدیک‌ترین‌ها را پیدا کرد: <b>{$found}</b> نفر (حداکثر ۱۰۰)\nحالت نمایش را انتخاب کن:"
-            : "<b>{$found}</b> نفر پیدا شد.\nحالت نمایش را انتخاب کن:";
-        $this->uiText($chatId, $user, $hint, [
-            'reply_markup' => Keyboards::browseViewPicker($found),
-        ]);
+        // Default: open first profile card immediately — clearer than an extra picker step.
+        $this->db->updateUser($tid, ['browse_view' => 'card', 'browse_cursor' => 0]);
+        $user = $this->db->findUser($tid) ?? $user;
+        $title = !empty($filters['nearby_rank'])
+            ? "📍 <b>{$found}</b> نفر نزدیک پیدا شد"
+            : (!empty($filters['online_only'])
+                ? "🟢 <b>{$found}</b> نفر آنلاین پیدا شد"
+                : "🔍 <b>{$found}</b> نفر پیدا شد");
+        $this->uiText(
+            $chatId,
+            $user,
+            "{$title}\nکارت اول را باز کردم. با دکمه‌ها چت بخواه، پیام بده، گزارش کن یا بلاک کن.\nبرای تغییر نحوه نمایش از «حالت نمایش» استفاده کن."
+        );
+        $this->showNextBrowseCard($chatId, $user);
     }
 
     /** @return array{province?:string,city?:string,gender?:string} */
@@ -1959,7 +2190,7 @@ final class Handlers
             $this->uiText(
                 $chatId,
                 $user,
-                "🎛 <b>منوی کاربران</b> · صفحه " . ($page + 1) . "/{$totalPages}\nروی اسم بزن تا کارت کامل باز شود.",
+                "🎛 <b>انتخاب سریع</b> · صفحه " . ($page + 1) . "/{$totalPages}\nروی اسم بزن تا مشخصات کامل و دکمه‌های چت/گزارش/بلاک باز شود.",
                 ['reply_markup' => Keyboards::browseMenuGrid($items, $page, $totalPages)]
             );
             return;
@@ -1969,7 +2200,7 @@ final class Handlers
             $this->uiText(
                 $chatId,
                 $user,
-                "🖼 <b>نمایش با عکس</b> · " . ($page + 1) . "/{$totalPages} از {$total} نفر",
+                "🖼 <b>نمایش با عکس</b> · " . ($page + 1) . "/{$totalPages} از {$total} نفر\nزیر هر کارت می‌تونی پیام، درخواست، گزارش یا بلاک بزنی.",
                 ['reply_markup' => Keyboards::browseListNav($page, $totalPages)]
             );
             foreach ($slice as $i => $tidTarget) {
@@ -1980,15 +2211,7 @@ final class Handlers
                 $caption = $this->formatPublicProfile($user, $t, true);
                 $req = $this->settings->getInt('request_cost', 1);
                 $msg = $this->settings->getInt('message_cost', 2);
-                $code = preg_replace('/[^A-Za-z0-9_]/', '', (string)$t['public_code']);
-                $markup = ['inline_keyboard' => [
-                    [['text' => 'باز کردن کارت', 'callback_data' => 'bl:o:' . (int)$i]],
-                    [
-                        ['text' => "درخواست · {$req}", 'callback_data' => 'br:req:' . $code],
-                        ['text' => "پیام · {$msg}", 'callback_data' => 'br:msg:' . $code],
-                    ],
-                    [['text' => '❤️ لایک', 'callback_data' => 'br:like:' . $code]],
-                ]];
+                $markup = Keyboards::browsePhotoInline((string)$t['public_code'], $req, $msg, (int)$i);
                 $avatar = ((int)($t['show_avatar'] ?? 1) === 1) ? (string)($t['avatar_file_id'] ?? '') : '';
                 if ($avatar !== '') {
                     $this->uiPhotoFileId($chatId, $user, $avatar, $caption, $markup);
@@ -2000,7 +2223,11 @@ final class Handlers
         }
 
         // list / columnar default
-        $lines = ["📋 <b>فهرست ستونی</b> · {$total} نفر · صفحه " . ($page + 1) . "/{$totalPages}", '────────────'];
+        $lines = [
+            "📋 <b>فهرست نتایج</b> · {$total} نفر · صفحه " . ($page + 1) . "/{$totalPages}",
+            'روی شماره بزن تا کارت کامل با گزینه‌های چت، گزارش و بلاک باز شود.',
+            '────────────',
+        ];
         $buttons = [];
         $row = [];
         $n = $page * $perPage;
@@ -2132,8 +2359,12 @@ final class Handlers
         $pc = htmlspecialchars((string)($target['public_code'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $likes = $this->db->countLikes((int)$target['telegram_id']);
         $lines[] = '────────';
-        $lines[] = "❤️ لایک: <b>{$likes}</b>";
+        $lines[] = "🤍 لایک‌ها: <b>{$likes}</b>";
         $lines[] = "شناسه: <code>{$pc}</code>";
+        if (!$short) {
+            $lines[] = '';
+            $lines[] = 'از دکمه‌های زیر یکی را انتخاب کن: پیام، درخواست چت، گزارش تخلف یا بلاک.';
+        }
         return implode("\n", $lines);
     }
 
@@ -2143,7 +2374,8 @@ final class Handlers
         $req = $this->settings->getInt('request_cost', 1);
         $msg = $this->settings->getInt('message_cost', 2);
         $like = $this->settings->getInt('like_cost', 0);
-        $markup = Keyboards::browseProfileInline((string)$target['public_code'], $req, $msg, $like);
+        $likes = $this->db->countLikes((int)$target['telegram_id']);
+        $markup = Keyboards::browseProfileInline((string)$target['public_code'], $req, $msg, $like, $likes);
         $avatar = ((int)($target['show_avatar'] ?? 1) === 1) ? (string)($target['avatar_file_id'] ?? '') : '';
         if ($avatar !== '') {
             $this->uiPhotoFileId($chatId, $viewer, $avatar, $caption, $markup);

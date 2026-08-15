@@ -291,7 +291,7 @@ final class Keyboards
             ],
             [
                 ['text' => '📥 درخواست‌ها / رزرو', 'callback_data' => 'req:inbox'],
-                ['text' => 'گزارش خلاف', 'callback_data' => 'chat:report'],
+                ['text' => 'گزارش تخلف', 'callback_data' => 'chat:report'],
             ],
         ]];
     }
@@ -307,34 +307,95 @@ final class Keyboards
         ];
     }
 
-    /** Modern profile card actions — minimal, not competitor-style green spam. */
+    /** @return array<string,string> reason_key => label */
+    public static function reportReasonLabels(): array
+    {
+        return [
+            'harass' => 'ایجاد مزاحمت',
+            'insult' => 'فحاشی و توهین',
+            'wrong_gender' => 'جنسیت اشتباه',
+            'spam' => 'تبلیغ ربات یا کانال',
+            'nsfw' => 'محتوای غیراخلاقی',
+            'privacy' => 'پخش شماره یا اطلاعات شخصی',
+            'bad_profile' => 'کلمه یا عکس نامناسب در پروفایل',
+            'other' => 'سایر موارد (توضیح بده)',
+        ];
+    }
+
+    public static function reportReasonsInline(string $publicCode, string $prefix = 'br'): array
+    {
+        $code = preg_replace('/[^A-Za-z0-9_]/', '', $publicCode) ?? '';
+        $rows = [];
+        foreach (self::reportReasonLabels() as $key => $label) {
+            $rows[] = [['text' => $label, 'callback_data' => "{$prefix}:rp:{$code}:{$key}"]];
+        }
+        $rows[] = [['text' => 'انصراف', 'callback_data' => "{$prefix}:rc:{$code}"]];
+        return ['inline_keyboard' => $rows];
+    }
+
+    public static function chatReportReasonsInline(): array
+    {
+        $rows = [];
+        foreach (self::reportReasonLabels() as $key => $label) {
+            $rows[] = [['text' => $label, 'callback_data' => 'cr:' . $key]];
+        }
+        $rows[] = [['text' => 'انصراف', 'callback_data' => 'chat:continue']];
+        return ['inline_keyboard' => $rows];
+    }
+
+    /** Profile card actions after search — clear choices for the user. */
     public static function browseProfileInline(
         string $publicCode,
         int $requestCost,
         int $messageCost,
-        int $likeCost = 0
+        int $likeCost = 0,
+        int $likeCount = 0
     ): array {
         $code = preg_replace('/[^A-Za-z0-9_]/', '', $publicCode) ?? '';
-        $likeLabel = $likeCost > 0 ? "❤️ لایک · {$likeCost} سکه" : '❤️ لایک';
+        $likeLabel = $likeCost > 0
+            ? "🤍 لایک · {$likeCount} (−{$likeCost})"
+            : "🤍 لایک · {$likeCount}";
         return ['inline_keyboard' => [
-            [['text' => "درخواست چت خصوصی · {$requestCost} سکه", 'callback_data' => 'br:req:' . $code]],
-            [['text' => "پیام بدون درخواست · {$messageCost} سکه", 'callback_data' => 'br:msg:' . $code]],
+            [['text' => $likeLabel, 'callback_data' => 'br:like:' . $code]],
             [
-                ['text' => $likeLabel, 'callback_data' => 'br:like:' . $code],
+                ['text' => "پیام مستقیم · {$messageCost}🪙", 'callback_data' => 'br:msg:' . $code],
+                ['text' => "درخواست چت · {$requestCost}🪙", 'callback_data' => 'br:req:' . $code],
+            ],
+            [
+                ['text' => 'گزارش تخلف 🚨', 'callback_data' => 'br:rep:' . $code],
+                ['text' => 'بلاک 🚫', 'callback_data' => 'br:blk:' . $code],
+            ],
+            [
                 ['text' => '➕ دوست', 'callback_data' => 'br:friend:' . $code],
+                ['text' => 'کاربر بعدی ⏭', 'callback_data' => 'br:next'],
             ],
             [
-                ['text' => 'بعدی', 'callback_data' => 'br:next'],
-                ['text' => 'گزارش خلاف', 'callback_data' => 'br:rep:' . $code],
-            ],
-            [
-                ['text' => 'بلاک', 'callback_data' => 'br:blk:' . $code],
-                ['text' => 'بازگشت به فهرست', 'callback_data' => 'br:list'],
-            ],
-            [
+                ['text' => '📋 فهرست', 'callback_data' => 'br:list'],
                 ['text' => 'حالت نمایش', 'callback_data' => 'vw:pick'],
-                ['text' => 'پایان جستجو', 'callback_data' => 'menu:find'],
             ],
+            [['text' => 'پایان جستجو', 'callback_data' => 'menu:find']],
+        ]];
+    }
+
+    /** Compact actions under photo-mode previews. */
+    public static function browsePhotoInline(
+        string $publicCode,
+        int $requestCost,
+        int $messageCost,
+        int $index
+    ): array {
+        $code = preg_replace('/[^A-Za-z0-9_]/', '', $publicCode) ?? '';
+        return ['inline_keyboard' => [
+            [['text' => 'باز کردن کارت کامل', 'callback_data' => 'bl:o:' . $index]],
+            [
+                ['text' => "پیام · {$messageCost}🪙", 'callback_data' => 'br:msg:' . $code],
+                ['text' => "درخواست · {$requestCost}🪙", 'callback_data' => 'br:req:' . $code],
+            ],
+            [
+                ['text' => 'گزارش تخلف 🚨', 'callback_data' => 'br:rep:' . $code],
+                ['text' => 'بلاک 🚫', 'callback_data' => 'br:blk:' . $code],
+            ],
+            [['text' => '🤍 لایک', 'callback_data' => 'br:like:' . $code]],
         ]];
     }
 
@@ -361,16 +422,13 @@ final class Keyboards
     public static function browseViewPicker(int $found): array
     {
         return ['inline_keyboard' => [
-            [['text' => "{$found} نفر پیدا شد — حالت نمایش را انتخاب کن", 'callback_data' => 'vw:noop']],
+            [['text' => "✅ شروع با کارت تکی ({$found} نفر)", 'callback_data' => 'vw:card']],
             [
-                ['text' => '🃏 کارت تکی', 'callback_data' => 'vw:card'],
-                ['text' => '📋 فهرست ستونی', 'callback_data' => 'vw:list'],
+                ['text' => '📋 فهرست عددی', 'callback_data' => 'vw:list'],
+                ['text' => '🖼 چندتایی با عکس', 'callback_data' => 'vw:photo'],
             ],
-            [
-                ['text' => '🖼 با عکس', 'callback_data' => 'vw:photo'],
-                ['text' => '🎛 منوی دکمه‌ای', 'callback_data' => 'vw:menu'],
-            ],
-            [['text' => 'بازگشت', 'callback_data' => 'menu:find']],
+            [['text' => '🎛 انتخاب از منوی اسم‌ها', 'callback_data' => 'vw:menu']],
+            [['text' => 'جستجوی جدید', 'callback_data' => 'menu:find']],
         ]];
     }
 
