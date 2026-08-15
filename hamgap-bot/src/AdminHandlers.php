@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.15-admin';
+    public const CODE_VERSION = '2026-08-15-v10.16-admin';
 
     /** Keys editable via adm:set: — anything else is rejected. */
     public const ALLOWED_SET_KEYS = [
@@ -440,14 +440,21 @@ final class AdminHandlers
                 ]);
                 return;
             }
-            $lines = ["🚫 <b>مسدودها</b>"];
+            $this->tg->sendMessage(
+                $chatId,
+                "🚫 <b>مسدودها</b>\n" .
+                "برای هر نفر می‌تونی رفع مسدود کنی یا حذف کامل بزنی تا با نام جدید ثبت‌نام کند."
+            );
             foreach ($rows as $r) {
-                $dn = htmlspecialchars((string)($r['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $lines[] = "• {$dn} · <code>" . (int)$r['telegram_id'] . '</code>';
+                $dn = (string)($r['display_name'] ?? 'کاربر');
+                $tidU = (int)$r['telegram_id'];
+                $label = $dn . ' · ' . $tidU;
+                $this->tg->sendMessage(
+                    $chatId,
+                    "• <b>" . htmlspecialchars($dn, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n<code>{$tidU}</code>",
+                    ['reply_markup' => Keyboards::adminBannedListItem($tidU, $label)]
+                );
             }
-            $this->tg->sendMessage($chatId, implode("\n", $lines), [
-                'reply_markup' => Keyboards::adminUsers(),
-            ]);
             return;
         }
         if ($data === 'adm:reports') {
@@ -456,7 +463,8 @@ final class AdminHandlers
             $lines = [
                 '🚩 <b>گزارش‌های تخلف</b>',
                 "آستانه بلاک خودکار: <b>{$threshold}</b> گزارش",
-                'با رسیدن به این عدد، کاربر خودکار مسدود می‌شود و باید با پشتیبانی تماس بگیرد.',
+                'با رسیدن به این عدد، کاربر خودکار مسدود می‌شود.\n' .
+                "ادمین می‌تواند رفع مسدود کند یا حذف کامل بزند تا کاربر با نام جدید ثبت‌نام کند.",
                 '',
             ];
             if (!$rows) {
@@ -575,23 +583,52 @@ final class AdminHandlers
         }
 
         // User actions
+        if (str_starts_with($data, 'adm:usercard:')) {
+            $target = (int)substr($data, strlen('adm:usercard:'));
+            $u = $this->db->findUser($target);
+            if (!$u) {
+                $this->tg->sendMessage($chatId, 'کاربر پیدا نشد (شاید قبلاً حذف شده).');
+                return;
+            }
+            $this->showUserCard($chatId, $u);
+            return;
+        }
         if (str_starts_with($data, 'adm:ban:')) {
             $target = (int)substr($data, strlen('adm:ban:'));
-            $this->db->updateUser($target, ['status' => 'banned', 'partner_id' => null, 'search_pref' => null]);
-            $this->tg->sendMessage($chatId, "کاربر {$target} مسدود شد.");
-            $u = $this->db->findUser($target);
-            if ($u) {
-                $this->showUserCard($chatId, $u);
+            $this->db->updateUser($target, [
+                'status' => 'banned',
+                'partner_id' => null,
+                'search_pref' => null,
+                'ban_reason' => 'admin',
+            ]);
+            $this->tg->sendMessage(
+                $chatId,
+                "🚫 کاربر <code>{$target}</code> مسدود شد.\n" .
+                "اگر می‌خواهی با نام جدید برگردد، حذف کامل بزن.",
+                ['reply_markup' => Keyboards::adminBanDecision($target)]
+            );
+            try {
+                $sup = trim($this->settings->get('support_bot_username'));
+                $sup = $sup !== '' ? ltrim($sup, '@') : 'HamGapXHelpBot';
+                $this->tg->sendMessage(
+                    $target,
+                    "⛔️ حسابت توسط مدیریت مسدود شد.\nبرای پیگیری با پشتیبانی تماس بگیر: @{$sup}"
+                );
+            } catch (Throwable $e) {
             }
             return;
         }
         if (str_starts_with($data, 'adm:unban:')) {
             $target = (int)substr($data, strlen('adm:unban:'));
-            $this->db->updateUser($target, ['status' => 'idle']);
-            $this->tg->sendMessage($chatId, "مسدودیت {$target} برداشته شد.");
+            $this->db->updateUser($target, ['status' => 'idle', 'ban_reason' => null]);
+            $this->tg->sendMessage($chatId, "✅ مسدودیت {$target} برداشته شد.");
             $u = $this->db->findUser($target);
             if ($u) {
                 $this->showUserCard($chatId, $u);
+            }
+            try {
+                $this->tg->sendMessage($target, '✅ مسدودیت حسابت برداشته شد. دوباره می‌تونی از بات استفاده کنی.');
+            } catch (Throwable $e) {
             }
             return;
         }
@@ -607,9 +644,18 @@ final class AdminHandlers
         }
         if (str_starts_with($data, 'adm:delask:')) {
             $target = (int)substr($data, strlen('adm:delask:'));
+            $u = $this->db->findUser($target);
+            $dn = $u
+                ? htmlspecialchars((string)($u['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                : '-';
             $this->tg->sendMessage(
                 $chatId,
-                "⚠️ حذف کامل کاربر <code>{$target}</code>\nاین کار برگشت‌ناپذیر است.",
+                "⚠️ <b>حذف کامل برای ثبت‌نام دوباره</b>\n" .
+                "کاربر: <b>{$dn}</b>\n" .
+                "آیدی: <code>{$target}</code>\n\n" .
+                "همه داده‌ها پاک می‌شود (پروفایل، سکه، گزارش، بلاک، گپ…).\n" .
+                "بعد از حذف، همان اکانت تلگرام می‌تواند با /start از صفر و با نام جدید ثبت‌نام کند.\n" .
+                "این کار برگشت‌ناپذیر است.",
                 ['reply_markup' => Keyboards::adminConfirmDelete($target)]
             );
             return;
@@ -617,7 +663,25 @@ final class AdminHandlers
         if (str_starts_with($data, 'adm:delgo:')) {
             $target = (int)substr($data, strlen('adm:delgo:'));
             $ok = $this->db->deleteUserHard($target);
-            $this->tg->sendMessage($chatId, $ok ? "کاربر {$target} کامل حذف شد." : 'کاربر پیدا نشد.');
+            if ($ok) {
+                $this->tg->sendMessage(
+                    $chatId,
+                    "✅ کاربر <code>{$target}</code> کامل حذف شد.\n" .
+                    "حالا می‌تواند /start بزند و با نام جدید ثبت‌نام کند."
+                );
+                try {
+                    $mainToken = (string)($this->config['bot_token'] ?? '');
+                    $mainTg = $mainToken !== '' ? new Telegram($mainToken) : $this->tg;
+                    $mainTg->sendMessage(
+                        $target,
+                        "حساب قبلی‌ات در هم‌گپ کامل حذف شد.\n" .
+                        "برای شروع دوباره دستور /start را بزن و پروفایل جدید بساز."
+                    );
+                } catch (Throwable $e) {
+                }
+            } else {
+                $this->tg->sendMessage($chatId, 'کاربر پیدا نشد (شاید قبلاً حذف شده).');
+            }
             return;
         }
         if (str_starts_with($data, 'adm:give:')) {
@@ -702,16 +766,25 @@ final class AdminHandlers
         $dn = htmlspecialchars((string)($u['display_name'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $pc = htmlspecialchars((string)($u['public_code'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $g = Gender::label((string)($u['gender'] ?? ''));
+        $statusLabel = htmlspecialchars((string)$u['status'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $banReason = trim((string)($u['ban_reason'] ?? ''));
+        $banLine = ($u['status'] ?? '') === 'banned'
+            ? ("دلیل مسدود: <b>" . htmlspecialchars($banReason !== '' ? $banReason : '—', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n")
+            : '';
         $this->tg->sendMessage(
             $chatId,
             "👤 <b>{$dn}</b>\n" .
             "کد: <code>{$pc}</code>\n" .
             'تلگرام: <code>' . (int)$u['telegram_id'] . "</code>\n" .
-            'وضعیت: <b>' . htmlspecialchars((string)$u['status'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
+            "وضعیت: <b>{$statusLabel}</b>\n" .
+            $banLine .
             "جنسیت/سن: <b>{$g}</b> / <b>" . ($u['age'] ?? '-') . "</b>\n" .
             'سکه: <b>' . (int)$u['coins'] . "</b>\n" .
             'استان/شهر: ' . htmlspecialchars((string)($u['province'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
-            ' / ' . htmlspecialchars((string)($u['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+            ' / ' . htmlspecialchars((string)($u['city'] ?? '-'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
+            ((($u['status'] ?? '') === 'banned')
+                ? "\n\nاگر باید با نام جدید برگردد → «حذف کامل برای ثبت‌نام دوباره»."
+                : ''),
             ['reply_markup' => Keyboards::adminUserActions((int)$u['telegram_id'])]
         );
     }

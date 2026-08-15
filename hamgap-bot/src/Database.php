@@ -1111,12 +1111,61 @@ final class Database
         $pdo = $this->pdo;
         $pdo->beginTransaction();
         try {
+            // Owned friend rooms → full wipe outside FK constraints
+            $owned = $pdo->prepare('SELECT id FROM friend_rooms WHERE owner_id = ?');
+            $owned->execute([$telegramId]);
+            $roomIds = $owned->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
             $pdo->prepare('DELETE FROM coin_transactions WHERE user_id = ?')->execute([$uid]);
-            $pdo->prepare('DELETE FROM user_blocks WHERE blocker_id = ? OR blocked_id = ?')->execute([$telegramId, $telegramId]);
-            $pdo->prepare('DELETE FROM contact_requests WHERE from_id = ? OR to_id = ?')->execute([$telegramId, $telegramId]);
-            $pdo->prepare('DELETE FROM reports WHERE reporter_id = ? OR reported_id = ?')->execute([$telegramId, $telegramId]);
-            $pdo->prepare("UPDATE chats SET status = 'ended', ended_at = NOW() WHERE status = 'active' AND (user_a = ? OR user_b = ?)")
+            $pdo->prepare('DELETE FROM user_blocks WHERE blocker_id = ? OR blocked_id = ?')
                 ->execute([$telegramId, $telegramId]);
+            $pdo->prepare('DELETE FROM contact_requests WHERE from_id = ? OR to_id = ?')
+                ->execute([$telegramId, $telegramId]);
+            $pdo->prepare('DELETE FROM reports WHERE reporter_id = ? OR reported_id = ?')
+                ->execute([$telegramId, $telegramId]);
+            try {
+                $pdo->prepare('DELETE FROM user_likes WHERE from_id = ? OR to_id = ?')
+                    ->execute([$telegramId, $telegramId]);
+            } catch (Throwable $e) {
+            }
+            try {
+                $pdo->prepare('DELETE FROM friendships WHERE user_a = ? OR user_b = ?')
+                    ->execute([$telegramId, $telegramId]);
+            } catch (Throwable $e) {
+            }
+            try {
+                $pdo->prepare('DELETE FROM chat_wait_notices WHERE waiter_id = ? OR target_id = ?')
+                    ->execute([$telegramId, $telegramId]);
+            } catch (Throwable $e) {
+            }
+            try {
+                $pdo->prepare('DELETE FROM payment_invoices WHERE telegram_id = ?')->execute([$telegramId]);
+            } catch (Throwable $e) {
+            }
+            try {
+                $pdo->prepare('DELETE FROM support_tickets WHERE user_telegram_id = ?')->execute([$telegramId]);
+            } catch (Throwable $e) {
+            }
+            try {
+                $pdo->prepare('DELETE FROM admin_sessions WHERE telegram_id = ?')->execute([$telegramId]);
+            } catch (Throwable $e) {
+            }
+            try {
+                $pdo->prepare('DELETE FROM friend_room_members WHERE telegram_id = ?')->execute([$telegramId]);
+            } catch (Throwable $e) {
+            }
+            foreach ($roomIds as $rid) {
+                $rid = (int)$rid;
+                try {
+                    $pdo->prepare('DELETE FROM friend_room_members WHERE room_id = ?')->execute([$rid]);
+                    $pdo->prepare('DELETE FROM friend_rooms WHERE id = ?')->execute([$rid]);
+                } catch (Throwable $e) {
+                }
+            }
+            $pdo->prepare('DELETE FROM chats WHERE user_a = ? OR user_b = ?')
+                ->execute([$telegramId, $telegramId]);
+            $pdo->prepare('UPDATE users SET referred_by = NULL WHERE referred_by = ?')
+                ->execute([$telegramId]);
             $pdo->prepare('DELETE FROM users WHERE telegram_id = ?')->execute([$telegramId]);
             $pdo->commit();
             return true;

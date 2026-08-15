@@ -959,8 +959,8 @@ final class Keyboards
         $id = (string)$telegramId;
         return ['inline_keyboard' => [
             [
-                ['text' => 'مسدود', 'callback_data' => 'adm:ban:' . $id],
-                ['text' => 'رفع مسدود', 'callback_data' => 'adm:unban:' . $id],
+                ['text' => '🚫 مسدود', 'callback_data' => 'adm:ban:' . $id],
+                ['text' => '✅ رفع مسدود', 'callback_data' => 'adm:unban:' . $id],
             ],
             [
                 ['text' => '+۵۰ سکه', 'callback_data' => 'adm:give:' . $id . ':50'],
@@ -978,16 +978,42 @@ final class Keyboards
             [['text' => 'ویرایش استان', 'callback_data' => 'adm:editask:province:' . $id]],
             [['text' => 'پیام به کاربر', 'callback_data' => 'adm:msg:' . $id]],
             [['text' => 'ریست پروفایل عمومی', 'callback_data' => 'adm:wipe:' . $id]],
-            [['text' => '🗑 حذف کامل کاربر', 'callback_data' => 'adm:delask:' . $id]],
+            [['text' => '🗑 حذف کامل → ثبت‌نام دوباره با نام جدید', 'callback_data' => 'adm:delask:' . $id]],
             [['text' => 'بازگشت', 'callback_data' => 'adm:users']],
+        ]];
+    }
+
+    /** After ban / auto-ban — admin chooses keep banned, unban, or wipe for fresh start. */
+    public static function adminBanDecision(int $telegramId): array
+    {
+        $id = (string)$telegramId;
+        return ['inline_keyboard' => [
+            [
+                ['text' => '✅ رفع مسدود', 'callback_data' => 'adm:unban:' . $id],
+                ['text' => '👤 کارت کاربر', 'callback_data' => 'adm:usercard:' . $id],
+            ],
+            [['text' => '🗑 حذف کامل برای ثبت‌نام دوباره', 'callback_data' => 'adm:delask:' . $id]],
         ]];
     }
 
     public static function adminConfirmDelete(int $telegramId): array
     {
         return ['inline_keyboard' => [
-            [['text' => 'بله، حذف کامل', 'callback_data' => 'adm:delgo:' . $telegramId]],
-            [['text' => 'انصراف', 'callback_data' => 'adm:users']],
+            [['text' => 'بله، حذف کامل و اجازه ثبت‌نام دوباره', 'callback_data' => 'adm:delgo:' . $telegramId]],
+            [['text' => 'انصراف', 'callback_data' => 'adm:usercard:' . $telegramId]],
+        ]];
+    }
+
+    public static function adminBannedListItem(int $telegramId, string $label): array
+    {
+        $id = (string)$telegramId;
+        $short = mb_strlen($label) > 28 ? mb_substr($label, 0, 28) . '…' : $label;
+        return ['inline_keyboard' => [
+            [['text' => $short, 'callback_data' => 'adm:usercard:' . $id]],
+            [
+                ['text' => '✅ رفع مسدود', 'callback_data' => 'adm:unban:' . $id],
+                ['text' => '🗑 حذف برای شروع دوباره', 'callback_data' => 'adm:delask:' . $id],
+            ],
         ]];
     }
 

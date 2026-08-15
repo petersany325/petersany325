@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.15';
+    public const CODE_VERSION = '2026-08-15-v10.16';
 
     private string $assets;
     private Settings $settings;
@@ -1973,7 +1973,7 @@ final class Handlers
             "📩 چت خصوصی — درخواست با تأیید · اگر طرف مقابل مشغول بود می‌تونی خبر پایان چت بگیری\n" .
             "✉️ پیام بدون درخواست — هر پیام {$msgCost} سکه · درخواست {$reqCost} سکه\n" .
             "👥 گپ دوستان — ساخت/ورود با سکه · بستن = پاک‌سازی کامل\n" .
-            "🚩 گزارش تخلف — با {$banAt} گزارش (قابل تنظیم در ادمین) خودکار مسدود؛ فعال‌سازی با پشتیبانی\n" .
+            "🚩 گزارش تخلف — با {$banAt} گزارش (قابل تنظیم) خودکار مسدود؛ ادمین می‌تواند رفع مسدود یا حذف کامل برای ثبت‌نام دوباره بزند\n" .
             "✨ دعوت — هر دعوت کامل +{$invite} سکه · جایزه پله‌ای ۳/۱۰/۲۵\n\n" .
             "دستورها: /profile /coins /search /link\n" .
             "رمز و کارت بانکی را در چت نفرست.";
@@ -3711,11 +3711,13 @@ final class Handlers
                     $this->tg->sendMessage(
                         (int)$aid,
                         "🚫 کاربر <code>{$reportedId}</code> ({$name}) به‌خاطر {$threshold} گزارش تخلف خودکار بلاک شد.\n" .
-                        "برای فعال‌سازی از مدیریت کاربران → رفع مسدود استفاده کن."
+                        "انتخاب کن: رفع مسدود، یا حذف کامل تا با نام جدید ثبت‌نام کند.",
+                        ['reply_markup' => Keyboards::adminBanDecision($reportedId)]
                     );
                 } catch (Throwable $e) {
                 }
             }
+            // Also notify logged-in admins via DB scan? skip — admin_ids + they can use admin bot list
         }
     }
 
