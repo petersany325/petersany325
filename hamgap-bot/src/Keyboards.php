@@ -770,7 +770,7 @@ final class Keyboards
     public static function publicChatRedirectInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => '🔥 برو کلاب هات', 'callback_data' => 'menu:hot']],
+            [['text' => '🔥 برو کلاب هات', 'callback_data' => 'pub:gohot']],
             [['text' => '💬 ادامه چت عمومی', 'callback_data' => 'pub:stay']],
             [['text' => '🛑 پایان چت', 'callback_data' => 'chat:end']],
         ]];

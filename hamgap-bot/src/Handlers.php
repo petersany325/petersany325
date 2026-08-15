@@ -5404,9 +5404,33 @@ final class Handlers
             return;
         }
         $from = (int)$user['telegram_id'];
+        $text = trim((string)($message['text'] ?? ''));
+        $checkText = $text !== '' ? $text : trim((string)($message['caption'] ?? ''));
+
+        // Friend/private rooms still block public-chat taboo topics → redirect to Hot Club
+        require_once __DIR__ . '/PublicChatFilter.php';
+        if (PublicChatFilter::isBlocked($checkText)) {
+            $chatId = (int)($message['chat']['id'] ?? $from);
+            try {
+                $mid = (int)($message['message_id'] ?? 0);
+                if ($mid > 0) {
+                    $this->tg->deleteMessage($chatId, $mid);
+                }
+            } catch (Throwable $e) {
+            }
+            $u = $this->db->findUser($from) ?? $user;
+            $this->uiText(
+                $chatId,
+                $u,
+                "🚫 <b>این موضوع اینجا مجاز نیست</b>\n\n" .
+                "درخواست رابطه، سکس، برنامه، پول، فحش یا پارتنر را در <b>کلاب هات</b> بگو.",
+                ['reply_markup' => Keyboards::publicChatRedirectInline()]
+            );
+            return;
+        }
+
         $name = htmlspecialchars((string)($user['display_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $g = Gender::emoji((string)($user['gender'] ?? ''));
-        $text = trim((string)($message['text'] ?? ''));
         $prefix = "{$g}<b>{$name}</b>: ";
         // Track sender's original message for best-effort wipe on close
         $this->trackEphemeral($from, (int)($message['message_id'] ?? 0));

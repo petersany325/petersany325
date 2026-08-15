@@ -369,8 +369,8 @@ final class Database
         $this->pdo->prepare(
             "INSERT INTO chats (user_a, user_b, match_type, status) VALUES (?, ?, ?, 'active')"
         )->execute([$a, $b, $matchType]);
-        $this->updateUser($a, ['status' => 'chatting', 'partner_id' => $b, 'search_pref' => null, 'flow' => null]);
-        $this->updateUser($b, ['status' => 'chatting', 'partner_id' => $a, 'search_pref' => null, 'flow' => null]);
+        $this->updateUser($a, ['status' => 'chatting', 'partner_id' => $b, 'search_pref' => null, 'flow' => null, 'chat_mode' => 'normal']);
+        $this->updateUser($b, ['status' => 'chatting', 'partner_id' => $a, 'search_pref' => null, 'flow' => null, 'chat_mode' => 'normal']);
     }
 
     public function wipeUserChats(int $telegramId): void
