@@ -2,7 +2,10 @@
 declare(strict_types=1);
 
 /**
- * Support bot — customers message here; staff listed in support_staff get relays.
+ * Support bot desk:
+ * 1) User asks → all active staff see the question + «پذیرش پشتیبانی»
+ * 2) One staff accepts → private support chat opens
+ * 3) Free-text replies both ways until closed
  */
 final class SupportHandlers
 {
@@ -16,130 +19,415 @@ final class SupportHandlers
 
     public function handle(array $update): void
     {
-        if (!isset($update['message'])) {
+        if (isset($update['callback_query'])) {
+            $this->onCallback($update['callback_query']);
             return;
         }
-        $message = $update['message'];
+        if (isset($update['message'])) {
+            $this->onMessage($update['message']);
+        }
+    }
+
+    /**
+     * Create/update ticket and notify staff (used by support bot + main bot compose).
+     * @return array{ticket_id:int, notified:int}
+     */
+    public function intakeCustomerMessage(int $userTid, string $displayName, string $text): array
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return ['ticket_id' => 0, 'notified' => 0];
+        }
+
+        $open = $this->db->findOpenSupportTicketForUser($userTid);
+        if ($open && !empty($open['staff_telegram_id'])) {
+            // Already assigned — relay to that staff
+            $ticketId = (int)$open['id'];
+            $this->db->touchSupportTicketMessage($ticketId, $text);
+            $staffId = (int)$open['staff_telegram_id'];
+            $name = htmlspecialchars($displayName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $ok = $this->tg->trySendMessage(
+                $staffId,
+                "💬 پیام جدید کاربر ({$name}):\n" .
+                htmlspecialchars(mb_substr($text, 0, 1500), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'),
+                ['reply_markup' => Keyboards::supportChatActions($ticketId)]
+            );
+            return ['ticket_id' => $ticketId, 'notified' => $ok ? 1 : 0];
+        }
+
+        $ticket = $this->db->openSupportTicket($userTid, $text);
+        $ticketId = (int)$ticket['id'];
+        $notified = $this->broadcastNewTicket($ticketId, $userTid, $displayName, $text);
+        return ['ticket_id' => $ticketId, 'notified' => $notified];
+    }
+
+    private function onCallback(array $cq): void
+    {
+        $id = (string)($cq['id'] ?? '');
+        $data = (string)($cq['data'] ?? '');
+        $from = $cq['from'] ?? [];
+        $tid = (int)($from['id'] ?? 0);
+        $chatId = (int)($cq['message']['chat']['id'] ?? $tid);
+        $msgId = (int)($cq['message']['message_id'] ?? 0);
+
+        if (!$this->canHandleSupportDesk($tid)) {
+            $this->tg->answerCallback($id, 'فقط کارمند/ادمین پشتیبانی', true);
+            return;
+        }
+
+        if (str_starts_with($data, 'sup:take:')) {
+            $ticketId = (int)substr($data, strlen('sup:take:'));
+            $this->acceptTicket($id, $chatId, $msgId, $tid, $ticketId);
+            return;
+        }
+        if (str_starts_with($data, 'sup:close:')) {
+            $ticketId = (int)substr($data, strlen('sup:close:'));
+            $this->closeTicketByStaff($id, $chatId, $tid, $ticketId);
+            return;
+        }
+
+        $this->tg->answerCallback($id);
+    }
+
+    private function onMessage(array $message): void
+    {
         $chatId = (int)($message['chat']['id'] ?? 0);
         $from = $message['from'] ?? [];
         $tid = (int)($from['id'] ?? 0);
         $text = trim((string)($message['text'] ?? ''));
+        $name = (string)($from['first_name'] ?? 'کاربر');
 
+        $isStaffActive = $this->db->isActiveSupportStaff($tid);
         $staffRow = $this->db->getSupportStaff($tid);
-        $isStaffActive = $staffRow !== null && (int)($staffRow['is_active'] ?? 0) === 1;
         $isStaffInactive = $staffRow !== null && !$isStaffActive;
 
         if ($isStaffInactive) {
-            $this->tg->sendMessage(
+            $this->tg->trySendMessage(
                 $chatId,
                 "⛔ حساب کارمندی پشتیبانی تو <b>غیرفعال</b> است.\n" .
-                "از ادمین بخواه از پنل ادمین → «پشتیبانی و کارمندان» → «لیست / فعال‌سازی کارمندان» وضعیتت را فعال کند.\n" .
-                "یا از «مدیریت کاربران» کارت تو را باز کند و دکمه فعال‌سازی کارمند را بزند."
+                "از ادمین بخواه در پنل ادمین وضعیتت را فعال کند."
             );
-            return;
-        }
-
-        $staffIds = array_map(
-            static fn($r) => (int)$r['telegram_id'],
-            $this->db->listSupportStaff(true)
-        );
-
-        if ($isStaffActive && str_starts_with($text, '/reply ')) {
-            if (!preg_match('/^\/reply\s+(\d+)\s+(.+)$/us', $text, $m)) {
-                $this->tg->sendMessage($chatId, "فرمت:\n<code>/reply 123456789 متن پاسخ</code>");
-                return;
-            }
-            $to = (int)$m[1];
-            $body = $m[2];
-            $this->tg->sendMessage(
-                $to,
-                "💬 <b>پاسخ پشتیبانی هم‌گپ</b>\n" . htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-            );
-            $this->tg->sendMessage($chatId, 'ارسال شد ✅');
             return;
         }
 
         if ($text === '/start') {
             if ($isStaffActive) {
                 $hours = $this->settings->get('support_hours');
-                $this->tg->sendMessage(
+                $assigned = $this->db->findAssignedSupportTicketForStaff($tid);
+                $extra = $assigned
+                    ? "\n\nالان تیکت #<b>" . (int)$assigned['id'] . "</b> باز است — همین‌جا جواب بنویس."
+                    : "\n\nوقتی کاربر سؤال بفرستد، متن سؤال را می‌بینی و با «پذیرش پشتیبانی» چت باز می‌شود.";
+                $this->tg->trySendMessage(
                     $chatId,
-                    "✅ وضعیت کارمندی: <b>فعال</b>\n" .
-                    "ساعات پاسخگویی: <b>" . htmlspecialchars($hours, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n\n" .
-                    "تیکت‌های کاربران اینجا می‌آید.\n" .
-                    "پاسخ:\n<code>/reply TELEGRAM_ID متن پاسخ</code>"
+                    "✅ کارمند پشتیبانی: <b>فعال</b>\n" .
+                    "ساعات: <b>" . htmlspecialchars($hours, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>" .
+                    $extra
                 );
                 return;
             }
             $welcome = $this->settings->get('support_welcome');
             $hours = $this->settings->get('support_hours');
-            $this->tg->sendMessage(
+            $this->tg->trySendMessage(
                 $chatId,
                 $welcome . "\n\nساعات پاسخگویی: <b>" .
-                htmlspecialchars($hours, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>'
+                htmlspecialchars($hours, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
+                "سؤالت را همین‌جا بنویس؛ یک کارمند پذیرش می‌کند و جواب می‌دهد."
             );
             return;
         }
 
         if ($isStaffActive) {
-            $this->tg->sendMessage(
+            $this->handleStaffMessage($chatId, $tid, $text);
+            return;
+        }
+
+        if ($text === '') {
+            $this->tg->trySendMessage($chatId, 'فعلاً فقط متن پشتیبانی می‌شود.');
+            return;
+        }
+
+        // Customer → intake
+        $result = $this->intakeCustomerMessage($tid, $name, $text);
+        $assigned = $this->db->findOpenSupportTicketForUser($tid);
+        if ($assigned && !empty($assigned['staff_telegram_id'])) {
+            $this->tg->trySendMessage($chatId, 'پیامت به کارمند پشتیبانی رسید ✅');
+            return;
+        }
+        $this->tg->trySendMessage(
+            $chatId,
+            $result['notified'] > 0
+                ? "پیامت ثبت شد ✅\nکارمندان سؤال را دیدند؛ به‌محض پذیرش، پاسخ می‌گیری."
+                : "پیامت ثبت شد.\nهنوز کارمند فعالی بات پشتیبانی را /start نزده یا در دسترس نیست. ادمین هم مطلع شد."
+        );
+    }
+
+    private function handleStaffMessage(int $chatId, int $staffTid, string $text): void
+    {
+        if ($text === '/close' || $text === 'پایان پشتیبانی') {
+            $ticket = $this->db->findAssignedSupportTicketForStaff($staffTid);
+            if (!$ticket) {
+                $this->tg->trySendMessage($chatId, 'تیکت بازی نداری.');
+                return;
+            }
+            $this->finishTicket((int)$ticket['id'], $staffTid);
+            return;
+        }
+
+        $ticket = $this->db->findAssignedSupportTicketForStaff($staffTid);
+        if (!$ticket) {
+            $this->tg->trySendMessage(
                 $chatId,
-                "برای پاسخ به کاربر بنویس:\n<code>/reply TELEGRAM_ID متن</code>\n" .
-                "وضعیتت: فعال ✅"
+                "الان تیکت بازی نداری.\n" .
+                "وقتی سؤال کاربر آمد، دکمه <b>پذیرش پشتیبانی</b> را بزن تا چت باز شود."
             );
             return;
         }
 
         if ($text === '') {
-            $this->tg->sendMessage($chatId, 'فعلاً فقط متن پشتیبانی می‌شود.');
+            $this->tg->trySendMessage($chatId, 'متن پاسخ را بنویس.');
             return;
         }
 
-        $pdo = $this->db->pdo();
-        $st = $pdo->prepare(
-            "SELECT id FROM support_tickets WHERE user_telegram_id = ? AND status = 'open' ORDER BY id DESC LIMIT 1"
+        $ticketId = (int)$ticket['id'];
+        $userId = (int)$ticket['user_telegram_id'];
+        $this->db->touchSupportTicketMessage($ticketId, $text);
+        $delivered = $this->deliverToCustomer(
+            $userId,
+            "💬 <b>پاسخ پشتیبانی هم‌گپ</b>\n" .
+            htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
         );
-        $st->execute([$tid]);
-        $ticketId = $st->fetchColumn();
-        if ($ticketId) {
-            $pdo->prepare('UPDATE support_tickets SET last_message = ?, updated_at = NOW() WHERE id = ?')
-                ->execute([$text, (int)$ticketId]);
-        } else {
-            $pdo->prepare(
-                "INSERT INTO support_tickets (user_telegram_id, status, last_message) VALUES (?, 'open', ?)"
-            )->execute([$tid, $text]);
-            $ticketId = (int)$pdo->lastInsertId();
+        $this->tg->trySendMessage(
+            $chatId,
+            $delivered
+                ? 'ارسال شد به مشتری ✅'
+                : 'ارسال به مشتری ناموفق بود (شاید بات را بلاک کرده).',
+            ['reply_markup' => Keyboards::supportChatActions($ticketId)]
+        );
+    }
+
+    /**
+     * Claim a waiting ticket (used by support bot + admin bot emergency).
+     * @return array{ok:bool,toast:string,detail:string}
+     */
+    public function claimTicket(int $staffTid, int $ticketId): array
+    {
+        if (!$this->canHandleSupportDesk($staffTid)) {
+            return [
+                'ok' => false,
+                'toast' => 'دسترسی نداری',
+                'detail' => 'فقط کارمند/ادمین پشتیبانی می‌تواند بپذیرد.',
+            ];
+        }
+        $ticket = $this->db->findSupportTicket($ticketId);
+        if (!$ticket || ($ticket['status'] ?? '') !== 'open') {
+            return ['ok' => false, 'toast' => 'تیکت نیست', 'detail' => 'تیکت پیدا نشد یا بسته شده.'];
+        }
+        if (!empty($ticket['staff_telegram_id'])) {
+            $owner = (int)$ticket['staff_telegram_id'];
+            if ($owner === $staffTid) {
+                return [
+                    'ok' => true,
+                    'toast' => 'قبلاً پذیرفتی',
+                    'detail' => "تیکت #{$ticketId} از قبل مال توست. در بات پشتیبانی جواب بده.",
+                ];
+            }
+            return [
+                'ok' => false,
+                'toast' => 'گرفته شده',
+                'detail' => 'کارمند دیگری این تیکت را پذیرفته.',
+            ];
+        }
+        if (!$this->db->assignSupportTicket($ticketId, $staffTid)) {
+            return ['ok' => false, 'toast' => 'دیر رسیدی', 'detail' => 'کسی زودتر پذیرفت.'];
+        }
+        if (!$this->db->isActiveSupportStaff($staffTid)) {
+            $this->db->activateSupportStaff($staffTid);
         }
 
-        $name = htmlspecialchars((string)($from['first_name'] ?? 'کاربر'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $payload = "🆘 تیکت #{$ticketId}\nاز: {$name} (<code>{$tid}</code>)\n\n" .
-            htmlspecialchars($text, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') .
-            "\n\nپاسخ با:\n<code>/reply {$tid} متن</code>";
+        $userId = (int)$ticket['user_telegram_id'];
+        $q = htmlspecialchars((string)($ticket['last_message'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $supUser = trim($this->settings->get('support_bot_username'));
+        $supUser = $supUser !== '' ? ltrim($supUser, '@') : 'HamGapXHelpBot';
 
+        foreach ($this->db->listSupportStaff(true) as $row) {
+            $sid = (int)$row['telegram_id'];
+            if ($sid === $staffTid) {
+                continue;
+            }
+            $this->tg->trySendMessage($sid, "تیکت #{$ticketId} توسط کارمند دیگری پذیرفته شد.");
+        }
+
+        $this->deliverToCustomer(
+            $userId,
+            "✅ کارمند پشتیبانی پیامت را پذیرفت.\nهمین‌جا می‌توانی ادامه بدهی؛ پاسخ را همین بات می‌فرستد."
+        );
+
+        // Open chat prompt on support bot for the staff
+        $openMsg =
+            "✅ تیکت #<b>{$ticketId}</b> را پذیرفتی.\n" .
+            "کاربر: <code>{$userId}</code>\n" .
+            "سؤال:\n{$q}\n\n" .
+            "از این لحظه در <b>بات پشتیبانی</b> (@{$supUser}) هر متنی بفرستی به مشتری می‌رود.\n" .
+            "برای پایان: دکمه زیر یا /close";
+        $this->tg->trySendMessage($staffTid, $openMsg, [
+            'reply_markup' => Keyboards::supportChatActions($ticketId),
+        ]);
+
+        return [
+            'ok' => true,
+            'toast' => 'پشتیبانی باز شد',
+            'detail' => $openMsg . "\n\n👉 برو @{$supUser} و جواب را همان‌جا بنویس.",
+        ];
+    }
+
+    /** @return array{ok:bool,toast:string,detail:string} */
+    public function claimClose(int $staffTid, int $ticketId): array
+    {
+        $ticket = $this->db->findSupportTicket($ticketId);
+        if (!$ticket || ($ticket['status'] ?? '') !== 'open') {
+            return ['ok' => false, 'toast' => 'بسته است', 'detail' => 'تیکت بسته است.'];
+        }
+        if ((int)($ticket['staff_telegram_id'] ?? 0) !== $staffTid && !$this->canHandleSupportDesk($staffTid)) {
+            return ['ok' => false, 'toast' => 'مال تو نیست', 'detail' => 'این تیکت مال تو نیست.'];
+        }
+        if ((int)($ticket['staff_telegram_id'] ?? 0) !== $staffTid) {
+            return ['ok' => false, 'toast' => 'مال تو نیست', 'detail' => 'این تیکت مال تو نیست.'];
+        }
+        $this->finishTicket($ticketId, $staffTid);
+        return ['ok' => true, 'toast' => 'بسته شد', 'detail' => "تیکت #{$ticketId} بسته شد ✅"];
+    }
+
+    private function acceptTicket(string $callbackId, int $chatId, int $msgId, int $staffTid, int $ticketId): void
+    {
+        $res = $this->claimTicket($staffTid, $ticketId);
+        $this->tg->answerCallback($callbackId, $res['toast'], !($res['ok'] ?? false));
+        if ($res['ok']) {
+            $this->tg->trySendMessage($chatId, $res['detail'], [
+                'reply_markup' => Keyboards::supportChatActions($ticketId),
+            ]);
+            if ($msgId > 0) {
+                try {
+                    $this->tg->clearInlineKeyboard($chatId, $msgId);
+                } catch (Throwable $e) {
+                }
+            }
+        } else {
+            $this->tg->trySendMessage($chatId, $res['detail']);
+        }
+    }
+
+    private function closeTicketByStaff(string $callbackId, int $chatId, int $staffTid, int $ticketId): void
+    {
+        $res = $this->claimClose($staffTid, $ticketId);
+        $this->tg->answerCallback($callbackId, $res['toast'], !($res['ok'] ?? false));
+        $this->tg->trySendMessage($chatId, $res['detail']);
+    }
+
+    private function finishTicket(int $ticketId, int $staffTid): void
+    {
+        $ticket = $this->db->findSupportTicket($ticketId);
+        $this->db->closeSupportTicket($ticketId);
+        $this->tg->trySendMessage($staffTid, "تیکت #{$ticketId} بسته شد ✅");
+        if ($ticket) {
+            $this->deliverToCustomer(
+                (int)$ticket['user_telegram_id'],
+                "پشتیبانی این گفتگو را بست.\nاگر باز سؤال داشتی همین‌جا پیام بفرست."
+            );
+        }
+    }
+
+    private function broadcastNewTicket(int $ticketId, int $userTid, string $displayName, string $text): int
+    {
+        $name = htmlspecialchars($displayName, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $body = htmlspecialchars(mb_substr($text, 0, 1500), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $payload =
+            "🆘 <b>سؤال جدید پشتیبانی</b>\n" .
+            "تیکت #<b>{$ticketId}</b>\n" .
+            "از: {$name} (<code>{$userTid}</code>)\n\n" .
+            "📝 {$body}\n\n" .
+            "اگر می‌خواهی خودت جواب بدهی، «پذیرش پشتیبانی» را بزن تا چت باز شود.";
+
+        $kb = Keyboards::supportTicketOffer($ticketId);
         $sent = 0;
-        foreach ($staffIds as $sid) {
-            try {
-                $this->tg->sendMessage($sid, $payload);
+
+        // Staff MUST get the offer on the SUPPORT bot (where they /start and chat).
+        foreach ($this->db->listSupportStaff(true) as $row) {
+            $sid = (int)$row['telegram_id'];
+            if ($this->tg->trySendMessage($sid, $payload, ['reply_markup' => $kb])) {
                 $sent++;
-            } catch (Throwable $e) {
             }
         }
 
-        if ($sent === 0) {
-            foreach (($this->config['admin_ids'] ?? []) as $aid) {
-                try {
-                    $this->tg->sendMessage((int)$aid, $payload);
+        // Admins get a read-only ping (accept happens on support bot).
+        $adminNote =
+            "ℹ️ تیکت پشتیبانی #{$ticketId} ثبت شد.\n" .
+            "از: {$name} (<code>{$userTid}</code>)\n" .
+            "📝 {$body}\n\n" .
+            "کارمند باید در <b>بات پشتیبانی</b> دکمه پذیرش را بزند.";
+        $adminIds = [];
+        foreach ($this->db->listPanelAdminIds() as $aid) {
+            $adminIds[$aid] = true;
+        }
+        foreach (($this->config['admin_ids'] ?? []) as $aid) {
+            $adminIds[(int)$aid] = true;
+        }
+        $adminToken = (string)($this->config['admin_bot_token'] ?? '');
+        if ($adminToken === '') {
+            $adminToken = $this->settings->get('admin_bot_token', '');
+        }
+        if ($adminToken !== '' && $adminIds) {
+            $adminTg = new Telegram($adminToken);
+            foreach (array_keys($adminIds) as $aid) {
+                $adminTg->trySendMessage((int)$aid, $adminNote);
+            }
+        }
+
+        // If no staff received on support bot, try admin bot WITH accept as emergency
+        if ($sent === 0 && $adminToken !== '') {
+            $adminTg = new Telegram($adminToken);
+            foreach ($this->db->listSupportStaff(true) as $row) {
+                $sid = (int)$row['telegram_id'];
+                if ($adminTg->trySendMessage($sid, $payload . "\n\n⚠️ این پیام اضطراری از بات ادمین است؛ بعد از پذیرش در بات پشتیبانی جواب بده.", ['reply_markup' => $kb])) {
                     $sent++;
-                } catch (Throwable $e) {
+                }
+            }
+            foreach (array_keys($adminIds) as $aid) {
+                if ($adminTg->trySendMessage((int)$aid, $payload, ['reply_markup' => $kb])) {
+                    $sent++;
                 }
             }
         }
 
-        $this->tg->sendMessage(
-            $chatId,
-            $sent > 0
-                ? 'پیامت ثبت شد. به‌زودی پاسخ می‌دهیم ✅'
-                : "پیامت ثبت شد.\nفعلاً کارمند فعالی در دسترس نیست یا هنوز بات پشتیبانی را /start نزده؛ به‌زودی بررسی می‌شود."
-        );
+        return $sent;
+    }
+
+    private function deliverToCustomer(int $userTid, string $html): bool
+    {
+        if ($this->tg->trySendMessage($userTid, $html)) {
+            return true;
+        }
+        $mainToken = (string)($this->config['bot_token'] ?? '');
+        if ($mainToken === '') {
+            return false;
+        }
+        $mainTg = new Telegram($mainToken);
+        return $mainTg->trySendMessage($userTid, $html);
+    }
+
+    private function canHandleSupportDesk(int $tid): bool
+    {
+        if ($this->db->isActiveSupportStaff($tid)) {
+            return true;
+        }
+        $u = $this->db->findUser($tid);
+        if ($u && !empty($u['is_admin'])) {
+            return true;
+        }
+        foreach (($this->config['admin_ids'] ?? []) as $aid) {
+            if ((int)$aid === $tid) {
+                return true;
+            }
+        }
+        return false;
     }
 }

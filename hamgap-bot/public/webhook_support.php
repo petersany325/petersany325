@@ -15,6 +15,7 @@ require __DIR__ . '/src/Database.php';
 require __DIR__ . '/src/Settings.php';
 require __DIR__ . '/src/Migrator.php';
 require __DIR__ . '/src/Telegram.php';
+require __DIR__ . '/src/Keyboards.php';
 require __DIR__ . '/src/SupportHandlers.php';
 
 $secret = $_GET['secret'] ?? '';

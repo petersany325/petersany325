@@ -786,6 +786,20 @@ final class Keyboards
         return ['inline_keyboard' => $rows];
     }
 
+    public static function supportTicketOffer(int $ticketId): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '✅ پذیرش پشتیبانی و باز شدن چت', 'callback_data' => 'sup:take:' . $ticketId]],
+        ]];
+    }
+
+    public static function supportChatActions(int $ticketId): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '🏁 پایان گفتگوی پشتیبانی', 'callback_data' => 'sup:close:' . $ticketId]],
+        ]];
+    }
+
     public static function friendsInline(int $createCost = 5): array
     {
         return ['inline_keyboard' => [

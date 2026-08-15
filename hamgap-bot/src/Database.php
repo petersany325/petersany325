@@ -1076,6 +1076,99 @@ final class Database
         return $row !== null && (int)($row['is_active'] ?? 0) === 1;
     }
 
+    public function findSupportTicket(int $id): ?array
+    {
+        $st = $this->pdo->prepare('SELECT * FROM support_tickets WHERE id = ? LIMIT 1');
+        $st->execute([$id]);
+        $row = $st->fetch();
+        return $row ?: null;
+    }
+
+    public function findOpenSupportTicketForUser(int $userTelegramId): ?array
+    {
+        $st = $this->pdo->prepare(
+            "SELECT * FROM support_tickets
+             WHERE user_telegram_id = ? AND status = 'open'
+             ORDER BY id DESC LIMIT 1"
+        );
+        $st->execute([$userTelegramId]);
+        $row = $st->fetch();
+        return $row ?: null;
+    }
+
+    public function findAssignedSupportTicketForStaff(int $staffTelegramId): ?array
+    {
+        $st = $this->pdo->prepare(
+            "SELECT * FROM support_tickets
+             WHERE staff_telegram_id = ? AND status = 'open'
+             ORDER BY id DESC LIMIT 1"
+        );
+        $st->execute([$staffTelegramId]);
+        $row = $st->fetch();
+        return $row ?: null;
+    }
+
+    public function openSupportTicket(int $userTelegramId, string $firstMessage): array
+    {
+        $existing = $this->findOpenSupportTicketForUser($userTelegramId);
+        if ($existing) {
+            $this->pdo->prepare(
+                'UPDATE support_tickets SET last_message = ?, updated_at = NOW() WHERE id = ?'
+            )->execute([$firstMessage, (int)$existing['id']]);
+            return $this->findSupportTicket((int)$existing['id']) ?? $existing;
+        }
+        $this->pdo->prepare(
+            "INSERT INTO support_tickets (user_telegram_id, status, last_message) VALUES (?, 'open', ?)"
+        )->execute([$userTelegramId, $firstMessage]);
+        $id = (int)$this->pdo->lastInsertId();
+        return $this->findSupportTicket($id) ?? [
+            'id' => $id,
+            'user_telegram_id' => $userTelegramId,
+            'staff_telegram_id' => null,
+            'status' => 'open',
+            'last_message' => $firstMessage,
+        ];
+    }
+
+    public function assignSupportTicket(int $ticketId, int $staffTelegramId): bool
+    {
+        $st = $this->pdo->prepare(
+            "UPDATE support_tickets
+             SET staff_telegram_id = ?, updated_at = NOW()
+             WHERE id = ? AND status = 'open' AND staff_telegram_id IS NULL"
+        );
+        $st->execute([$staffTelegramId, $ticketId]);
+        return $st->rowCount() > 0;
+    }
+
+    public function touchSupportTicketMessage(int $ticketId, string $message): void
+    {
+        $this->pdo->prepare(
+            'UPDATE support_tickets SET last_message = ?, updated_at = NOW() WHERE id = ?'
+        )->execute([$message, $ticketId]);
+    }
+
+    public function closeSupportTicket(int $ticketId): void
+    {
+        $this->pdo->prepare(
+            "UPDATE support_tickets SET status = 'closed', updated_at = NOW() WHERE id = ?"
+        )->execute([$ticketId]);
+    }
+
+    /** @return list<int> */
+    public function listPanelAdminIds(): array
+    {
+        $ids = [];
+        try {
+            $rows = $this->pdo->query('SELECT telegram_id FROM users WHERE is_admin = 1')->fetchAll() ?: [];
+            foreach ($rows as $r) {
+                $ids[] = (int)$r['telegram_id'];
+            }
+        } catch (Throwable $e) {
+        }
+        return array_values(array_unique(array_filter($ids)));
+    }
+
     public function addSupportStaff(int $telegramId, ?string $label = null): void
     {
         $this->pdo->prepare(

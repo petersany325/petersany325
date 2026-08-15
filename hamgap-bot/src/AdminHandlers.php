@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.17-admin';
+    public const CODE_VERSION = '2026-08-15-v10.18-admin';
 
     /** Keys editable via adm:set: — anything else is rejected. */
     public const ALLOWED_SET_KEYS = [
@@ -294,7 +294,39 @@ final class AdminHandlers
         $tid = (int)($from['id'] ?? 0);
 
         if (!$this->isLoggedIn($tid)) {
+            if (str_starts_with($data, 'sup:')) {
+                $this->tg->answerCallback($id, 'اول در بات ادمین /login کن یا از بات پشتیبانی پذیرش بزن', true);
+                return;
+            }
             $this->tg->answerCallback($id, 'اول /login کن', true);
+            return;
+        }
+
+        // Emergency: accept/close support tickets that were pushed to admin bot
+        if (str_starts_with($data, 'sup:')) {
+            require_once __DIR__ . '/SupportHandlers.php';
+            require_once __DIR__ . '/Keyboards.php';
+            $supToken = (string)($this->config['support_bot_token'] ?? '');
+            if ($supToken === '') {
+                $supToken = $this->settings->get('support_bot_token', '');
+            }
+            $deskTg = $supToken !== '' ? new Telegram($supToken) : $this->tg;
+            $desk = new SupportHandlers($this->config, $this->db, $deskTg, $this->settings);
+            if (str_starts_with($data, 'sup:take:')) {
+                $ticketId = (int)substr($data, strlen('sup:take:'));
+                $res = $desk->claimTicket($tid, $ticketId);
+                $this->tg->answerCallback($id, $res['toast'], !($res['ok'] ?? false));
+                $this->tg->sendMessage($chatId, $res['detail']);
+                return;
+            }
+            if (str_starts_with($data, 'sup:close:')) {
+                $ticketId = (int)substr($data, strlen('sup:close:'));
+                $res = $desk->claimClose($tid, $ticketId);
+                $this->tg->answerCallback($id, $res['toast'], !($res['ok'] ?? false));
+                $this->tg->sendMessage($chatId, $res['detail']);
+                return;
+            }
+            $this->tg->answerCallback($id);
             return;
         }
 
@@ -885,8 +917,8 @@ final class AdminHandlers
         $msg =
             "✅ تو به‌عنوان <b>کارمند پشتیبانی هم‌گپ</b> فعال شدی.\n\n" .
             "۱) بات پشتیبانی را باز کن و /start بزن: @{$supUser}\n" .
-            "۲) وقتی تیکت آمد، پاسخ بده با:\n" .
-            "<code>/reply TELEGRAM_ID متن پاسخ</code>\n\n" .
+            "۲) وقتی کاربر سؤال بفرستد، متن سؤال را می‌بینی.\n" .
+            "۳) «پذیرش پشتیبانی» را بزن تا چت باز شود و مستقیم جواب بده.\n\n" .
             "اگر وضعیتت غیرفعال بود، ادمین از پنل می‌تواند دوباره فعال کند.";
         try {
             $token = (string)($this->config['support_bot_token'] ?? '');

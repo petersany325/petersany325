@@ -69,6 +69,21 @@ final class Telegram
         ], $extra));
     }
 
+    /** True when Telegram accepted the send (ok=true). */
+    public function messageDelivered(array $apiResponse): bool
+    {
+        return !empty($apiResponse['ok']);
+    }
+
+    public function trySendMessage(int $chatId, string $text, array $extra = []): bool
+    {
+        try {
+            return $this->messageDelivered($this->sendMessage($chatId, $text, $extra));
+        } catch (Throwable $e) {
+            return false;
+        }
+    }
+
     public function sendPhoto(int $chatId, string $path, string $caption, array $replyMarkup = []): array
     {
         $params = [

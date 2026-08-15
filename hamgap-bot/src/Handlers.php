@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.17';
+    public const CODE_VERSION = '2026-08-15-v10.18';
 
     private string $assets;
     private Settings $settings;
@@ -2081,7 +2081,8 @@ final class Handlers
         $this->uiText(
             $chatId,
             $user,
-            "پشتیبانی و خدمات هم‌گپ\n{$line}\nساعات پاسخگویی: <b>{$hours}</b>",
+            "پشتیبانی و خدمات هم‌گپ\n{$line}\nساعات پاسخگویی: <b>{$hours}</b>\n\n" .
+            "سؤال را بفرست؛ کارمند متن را می‌بیند، پذیرش می‌کند و بعد جواب می‌دهد.",
             ['reply_markup' => Keyboards::supportInline($u !== '' ? $u : null)]
         );
         $this->pinHamGapMenu($chatId, $user);
@@ -3604,29 +3605,41 @@ final class Handlers
     {
         $tid = (int)$user['telegram_id'];
         $this->db->updateUser($tid, ['flow' => null]);
-        $staff = $this->db->listSupportStaff(true);
-        $payload = "پیام پشتیبانی از کاربر <code>{$tid}</code>\n" .
-            htmlspecialchars(mb_substr($text, 0, 1000), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $sent = 0;
-        foreach ($staff as $row) {
-            try {
-                $this->tg->sendMessage((int)$row['telegram_id'], $payload);
-                $sent++;
-            } catch (Throwable $e) {
-            }
+        $name = (string)($user['display_name'] ?? $user['first_name'] ?? 'کاربر');
+
+        // Always notify staff via SUPPORT bot token (they /start that bot, not the main one).
+        require_once __DIR__ . '/SupportHandlers.php';
+        $supToken = (string)($this->config['support_bot_token'] ?? '');
+        if ($supToken === '') {
+            $supToken = $this->settings->get('support_bot_token', '');
         }
-        if ($sent === 0) {
-            foreach (($this->config['admin_ids'] ?? []) as $aid) {
-                try {
-                    $this->tg->sendMessage((int)$aid, $payload);
-                    $sent++;
-                } catch (Throwable $e) {
+        $notified = 0;
+        $ticketId = 0;
+        if ($supToken !== '') {
+            $desk = new SupportHandlers($this->config, $this->db, new Telegram($supToken), $this->settings);
+            $res = $desk->intakeCustomerMessage($tid, $name, $text);
+            $notified = (int)($res['notified'] ?? 0);
+            $ticketId = (int)($res['ticket_id'] ?? 0);
+        } else {
+            // Last resort: main bot (often fails for staff who only opened support bot)
+            $staff = $this->db->listSupportStaff(true);
+            $payload = "🆘 سؤال پشتیبانی\nکاربر <code>{$tid}</code>\n" .
+                htmlspecialchars(mb_substr($text, 0, 1000), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            foreach ($staff as $row) {
+                if ($this->tg->trySendMessage((int)$row['telegram_id'], $payload)) {
+                    $notified++;
                 }
             }
         }
+
         $user = $this->db->findUser($tid) ?? $user;
         $this->clearUi($chatId, $user);
-        $this->uiText($chatId, $user, $sent > 0 ? 'پیامت به پشتیبانی رسید ✅' : 'پیامت ثبت شد. به‌زودی بررسی می‌شود.');
+        $msg = $notified > 0
+            ? ($ticketId > 0
+                ? "پیامت ثبت شد ✅ (تیکت #{$ticketId})\nکارمند سؤال را می‌بیند و بعد از پذیرش جواب می‌دهد."
+                : 'پیامت به پشتیبانی رسید ✅')
+            : "پیامت ثبت شد.\nکارمند باید بات پشتیبانی را /start زده باشد تا اعلان برسد.";
+        $this->uiText($chatId, $user, $msg);
         $this->showSupport($chatId, $user);
     }
 
