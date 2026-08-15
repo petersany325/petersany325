@@ -34,6 +34,12 @@ $files = array(
     'admin/user_options.php',
     'admin/receipts.php',
     'admin/git_update.php',
+    'admin_bot_webhook.php',
+    'src/AdminBot/AdminAuth.php',
+    'src/AdminBot/AdminUi.php',
+    'src/AdminBot/AdminScreens.php',
+    'src/AdminBot/AdminRouter.php',
+    'src/AdminBot/AdminBotKernel.php',
     'storage/licenses/.htaccess',
 );
 

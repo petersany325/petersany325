@@ -41,8 +41,10 @@ function db() {
  * allow_url_fopen is off or OpenSSL streams are blocked on shared hosts).
  * Errors are logged to error.log without the bot token.
  */
-function tg_api($method, $params = array()) {
-    $token = (string)(bot_config()['bot_token'] ?? '');
+function tg_api($method, $params = array(), $tokenOverride = null) {
+    $token = $tokenOverride !== null
+        ? trim((string)$tokenOverride)
+        : (string)(bot_config()['bot_token'] ?? '');
     if ($token === '') {
         tg_api_log($method, 'empty bot_token');
         return array('ok' => false, 'description' => 'empty bot_token');
@@ -155,6 +157,76 @@ function tg_api_log($method, $message) {
         date('c') . ' tg_api ' . $safeMethod . ': ' . $message . "\n",
         FILE_APPEND
     );
+}
+
+/** Admin console bot (@SedivSupport_bot) — separate token from public user bot */
+function admin_bot_token(): string
+{
+    return trim((string)cfg('admin_bot_token', ''));
+}
+
+function admin_tg_api(string $method, array $params = array()): array
+{
+    $token = admin_bot_token();
+    if ($token === '') {
+        return array('ok' => false, 'description' => 'admin_bot_token not configured');
+    }
+    return tg_api($method, $params, $token);
+}
+
+function admin_send_message($chatId, $text, $replyMarkup = null)
+{
+    $params = array(
+        'chat_id' => $chatId,
+        'text' => $text,
+        'parse_mode' => 'HTML',
+        'disable_web_page_preview' => true,
+    );
+    if ($replyMarkup) {
+        $params['reply_markup'] = $replyMarkup;
+    }
+    $res = admin_tg_api('sendMessage', $params);
+    if (is_array($res) && empty($res['ok'])) {
+        $desc = (string)($res['description'] ?? '');
+        if (stripos($desc, 'parse') !== false) {
+            unset($params['parse_mode']);
+            $res = admin_tg_api('sendMessage', $params);
+        }
+    }
+    return $res;
+}
+
+function admin_edit_or_send($chatId, $msgId, $text, $replyMarkup = null)
+{
+    $chatId = (int)$chatId;
+    $msgId = (int)$msgId;
+    if ($msgId > 0) {
+        $params = array(
+            'chat_id' => $chatId,
+            'message_id' => $msgId,
+            'text' => $text,
+            'parse_mode' => 'HTML',
+            'disable_web_page_preview' => true,
+        );
+        if ($replyMarkup) {
+            $params['reply_markup'] = $replyMarkup;
+        }
+        $res = admin_tg_api('editMessageText', $params);
+        if (is_array($res) && empty($res['ok'])) {
+            admin_send_message($chatId, $text, $replyMarkup);
+        }
+        return;
+    }
+    admin_send_message($chatId, $text, $replyMarkup);
+}
+
+function admin_answer_callback($id, $text = '', $alert = false)
+{
+    admin_tg_api('answerCallbackQuery', array(
+        'callback_query_id' => $id,
+        'text' => $text,
+        'show_alert' => $alert,
+    ));
 }
 
 function send_message($chatId, $text, $replyMarkup = null) {

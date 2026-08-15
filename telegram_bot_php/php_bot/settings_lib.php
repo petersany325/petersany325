@@ -122,6 +122,10 @@ function bot_defaults() {
         'ticket_fields' => "contact_name|name|Full name|نام و نام خانوادگی|1|1\nphone|phone|Mobile number (with country code)|شماره موبایل (با کد کشور)|1|1\ncustomer_id|id|Customer / License / National ID|کد مشتری / لایسنس / کد ملی|1|1\ndrive_model|text|Hard drive model (e.g. WD20EFRX)|مدل هارد (مثلاً WD20EFRX)|1|0\nerror|text|Error / symptom|خطا / علائم مشکل|1|0\nsediv_version|text|SeDiv version (if any)|نسخه SeDiv (اگر دارید)|0|0\nproblem|message|Describe your problem in detail|شرح کامل مشکل را بنویسید|1|0",
         'license_mailbox' => 'sedivlic@list.ru',
         'paypal_email' => 'sedivlic@list.ru',
+        // Admin Telegram console bot (@SedivSupport_bot) — English only
+        'admin_bot_token' => '',
+        'admin_bot_username' => 'SedivSupport_bot',
+        'admin_bot_webhook_secret' => '',
         'ticket_ask_name' => 1,
         'ticket_ask_phone' => 1,
         'ticket_ask_id' => 1,

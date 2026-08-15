@@ -8,7 +8,7 @@ require_admin();
 
 $cfg = merge_bot_defaults_into_config(bot_config());
 $tab = isset($_GET['tab']) ? (string)$_GET['tab'] : 'general';
-$allowedTabs = array('general','features','commerce','license','growth','support','integrations','messages','branding','notify','api','security','webhook');
+$allowedTabs = array('general','features','commerce','license','growth','support','integrations','messages','branding','notify','api','security','webhook','adminbot');
 if (!in_array($tab, $allowedTabs, true)) {
     $tab = 'general';
 }
@@ -286,6 +286,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $res = tg_api('deleteWebhook', array());
             flash('ok', 'Webhook deleted: ' . json_encode($res, JSON_UNESCAPED_UNICODE));
             $tab = 'webhook';
+        } elseif ($action === 'save_admin_bot') {
+            $token = trim((string)($_POST['admin_bot_token'] ?? ''));
+            $secret = trim((string)($_POST['admin_bot_webhook_secret'] ?? ''));
+            $uname = trim((string)($_POST['admin_bot_username'] ?? 'SedivSupport_bot'));
+            $confirm = trim((string)($_POST['confirm_admin_token_change'] ?? ''));
+            $current = trim((string)($cfg['admin_bot_token'] ?? ''));
+            if ($token !== '' && strpos($token, ':') !== false && strlen($token) > 20) {
+                if ($token !== $current && $confirm !== 'CHANGE' && $current !== '') {
+                    throw new RuntimeException('To replace Admin Bot token, type CHANGE. Leave blank to keep current.');
+                }
+                $cfg['admin_bot_token'] = $token;
+            }
+            if ($secret !== '') {
+                $cfg['admin_bot_webhook_secret'] = $secret;
+            }
+            $cfg['admin_bot_username'] = ltrim($uname, '@');
+            save_bot_config($cfg);
+            flash('ok', 'Admin Bot settings saved. Use Set Admin Webhook below.');
+            $tab = 'adminbot';
+        } elseif ($action === 'set_admin_webhook') {
+            $base = rtrim((string)($_POST['public_base'] ?? ''), '/');
+            if ($base === '') {
+                throw new RuntimeException('Public base URL required');
+            }
+            $token = trim((string)($cfg['admin_bot_token'] ?? ''));
+            if ($token === '') {
+                throw new RuntimeException('Save Admin Bot token first.');
+            }
+            $url = $base . '/admin_bot_webhook.php';
+            $params = array('url' => $url);
+            $secret = trim((string)($cfg['admin_bot_webhook_secret'] ?? ''));
+            if ($secret !== '') {
+                $params['secret_token'] = $secret;
+            }
+            $res = tg_api('setWebhook', $params, $token);
+            if (empty($res['ok'])) {
+                throw new RuntimeException('Admin setWebhook failed: ' . (string)($res['description'] ?? json_encode($res)));
+            }
+            flash('ok', 'Admin Bot webhook set: ' . $url);
+            $tab = 'adminbot';
+        } elseif ($action === 'admin_webhook_info') {
+            $token = trim((string)($cfg['admin_bot_token'] ?? ''));
+            if ($token === '') {
+                throw new RuntimeException('Admin bot token missing');
+            }
+            $res = tg_api('getWebhookInfo', array(), $token);
+            flash('ok', 'Admin webhook info: ' . json_encode($res, JSON_UNESCAPED_UNICODE));
+            $tab = 'adminbot';
         }
     } catch (Throwable $e) {
         flash('err', $e->getMessage());
@@ -321,6 +369,7 @@ require __DIR__ . '/layout_header.php';
     'api' => 'AI / API',
     'security' => 'Security',
     'webhook' => 'Webhook',
+    'adminbot' => 'Admin Bot',
   );
   foreach ($tabs as $k => $label): ?>
     <a class="btn sm <?= $tab === $k ? '' : 'secondary' ?>" href="?tab=<?= e($k) ?>"><?= e($label) ?></a>
@@ -703,6 +752,31 @@ require __DIR__ . '/layout_header.php';
     <form method="post"><input type="hidden" name="action" value="webhook_info"><button class="btn secondary" type="submit">Get Webhook Info</button></form>
     <form method="post" onsubmit="return confirm('Delete webhook?')"><input type="hidden" name="action" value="delete_webhook"><button class="btn danger" type="submit">Delete Webhook</button></form>
   </div>
+</div>
+
+<?php elseif ($tab === 'adminbot'): ?>
+<div class="card panel">
+  <h2>🛡 Admin Console Bot (English)</h2>
+  <p class="muted">Separate Telegram bot for staff: <code>@<?= e((string)($cfg['admin_bot_username'] ?? 'SedivSupport_bot')) ?></code>. Requires the same panel username/password as this web admin.</p>
+  <form method="post" class="stack" autocomplete="off">
+    <input type="hidden" name="action" value="save_admin_bot">
+    <label>Admin bot username (without @)</label>
+    <input name="admin_bot_username" value="<?= e((string)($cfg['admin_bot_username'] ?? 'SedivSupport_bot')) ?>">
+    <label>Admin bot token (leave blank to keep current)</label>
+    <input name="admin_bot_token" placeholder="<?= !empty($cfg['admin_bot_token']) ? '•••• configured ••••' : '123456:ABC...' ?>" autocomplete="off">
+    <label>Type CHANGE only when replacing an existing token</label>
+    <input name="confirm_admin_token_change" placeholder="CHANGE" autocomplete="off">
+    <label>Admin webhook secret (optional)</label>
+    <input name="admin_bot_webhook_secret" value="<?= e((string)($cfg['admin_bot_webhook_secret'] ?? '')) ?>" autocomplete="off">
+    <button class="btn" type="submit" style="margin-top:12px">Save Admin Bot</button>
+  </form>
+  <form method="post" class="stack" style="margin-top:18px">
+    <input type="hidden" name="action" value="set_admin_webhook">
+    <label>Public base URL</label>
+    <input name="public_base" value="https://hdd-land.com/telegram_bot/php_bot" required>
+    <button class="btn" type="submit">Set Admin Webhook → admin_bot_webhook.php</button>
+  </form>
+  <form method="post" style="margin-top:12px"><input type="hidden" name="action" value="admin_webhook_info"><button class="btn secondary" type="submit">Get Admin Webhook Info</button></form>
 </div>
 <?php endif; ?>
 
