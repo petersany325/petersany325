@@ -489,9 +489,19 @@ if (! function_exists('normalize_receipt_search_query')) {
             return $rest === '' ? '' : 'T-20N'.$rest;
         }
 
-        // Pure numeric suffix typed by staff (e.g. 1000 / 10025).
-        if (preg_match('/^\d{3,}$/', $q)) {
-            return 'T-20N'.$q;
+        // Digits-only: phone stays phone; short numbers become receipt suffix (T-20N…).
+        $digits = preg_replace('/\D+/', '', $q) ?? '';
+        if ($digits !== '' && $digits === preg_replace('/\s+/', '', $q)) {
+            // 09xxxxxxxxx / 9xxxxxxxx / +98…
+            if (preg_match('/^(0?9\d{8,10}|98\d{10}|989\d{9})$/', $digits)
+                || preg_match('/^09\d{5,}$/', $digits)
+                || (str_starts_with($digits, '9') && strlen($digits) >= 9 && strlen($digits) <= 12)) {
+                return $digits;
+            }
+
+            if (preg_match('/^\d{3,}$/', $digits)) {
+                return 'T-20N'.$digits;
+            }
         }
 
         return $q;

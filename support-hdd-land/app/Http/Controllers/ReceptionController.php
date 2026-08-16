@@ -1406,7 +1406,9 @@ class ReceptionController extends Controller
     private function searchQuery(string $q, ?string $status = null)
     {
         $phone = $this->normalizePhone($q);
-        $phoneTail = strlen($phone) >= 10 ? substr($phone, -10) : $phone;
+        $phoneTail = $phone !== ''
+            ? (strlen($phone) >= 10 ? substr($phone, -10) : $phone)
+            : '';
         $qUpper = mb_strtoupper($q);
 
         return Reception::query()
@@ -1427,15 +1429,21 @@ class ReceptionController extends Controller
                         ->orWhere('brand', 'like', $q.'%')
                         ->orWhere('model', 'like', $q.'%')
                         ->orWhereHas('customer', function ($c) use ($q, $phone, $phoneTail) {
-                            $c->where('name', 'like', $q.'%')
-                                ->orWhere('phone', $phone !== '' ? $phone : $q);
+                            $c->where(function ($cq) use ($q, $phone, $phoneTail) {
+                                if (mb_strlen($q) >= 2) {
+                                    $cq->where('name', 'like', '%'.$q.'%');
+                                } else {
+                                    $cq->where('name', 'like', $q.'%');
+                                }
 
-                            if ($phoneTail !== '' && strlen($phoneTail) >= 10) {
-                                $c->orWhere('phone', 'like', '%'.$phoneTail);
-                            } elseif (mb_strlen($q) >= 3) {
-                                $c->orWhere('name', 'like', '%'.$q.'%')
-                                    ->orWhere('phone', 'like', '%'.$q.'%');
-                            }
+                                $phoneQ = $phone !== '' ? $phone : $q;
+                                $cq->orWhere('phone', $phoneQ)
+                                    ->orWhere('phone', 'like', '%'.$phoneQ.'%');
+
+                                if ($phoneTail !== '' && strlen($phoneTail) >= 7) {
+                                    $cq->orWhere('phone', 'like', '%'.$phoneTail.'%');
+                                }
+                            });
                         });
 
                     // Fallback contains-search for short serial/ticket fragments.
