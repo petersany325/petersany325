@@ -996,16 +996,22 @@ class ReportController extends Controller
 
         $rows = (clone $query)->orderByDesc('id')->paginate(40)->withQueryString();
 
-        $sumBase = clone $query;
+        $agg = (clone $query)->toBase()->selectRaw(
+            'COUNT(*) as c,
+             COALESCE(SUM(labor_cost),0) as labor,
+             COALESCE(SUM(parts_cost),0) as parts,
+             COALESCE(SUM(total_amount),0) as total,
+             COALESCE(SUM(paid_amount),0) as paid,
+             COALESCE(SUM(GREATEST(CAST(total_amount AS SIGNED) - CAST(paid_amount AS SIGNED), 0)),0) as remaining'
+        )->first();
+
         $totals = [
-            'count' => (clone $sumBase)->count(),
-            'labor' => (int) (clone $sumBase)->sum('labor_cost'),
-            'parts' => (int) (clone $sumBase)->sum('parts_cost'),
-            'total' => (int) (clone $sumBase)->sum('total_amount'),
-            'paid' => (int) (clone $sumBase)->sum('paid_amount'),
-            'remaining' => (int) (clone $sumBase)->selectRaw(
-                'COALESCE(SUM(GREATEST(CAST(total_amount AS SIGNED) - CAST(paid_amount AS SIGNED), 0)),0) as v'
-            )->value('v'),
+            'count' => (int) ($agg->c ?? 0),
+            'labor' => (int) ($agg->labor ?? 0),
+            'parts' => (int) ($agg->parts ?? 0),
+            'total' => (int) ($agg->total ?? 0),
+            'paid' => (int) ($agg->paid ?? 0),
+            'remaining' => (int) ($agg->remaining ?? 0),
         ];
 
         $byStatus = (clone $query)
