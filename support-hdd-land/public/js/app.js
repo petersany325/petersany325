@@ -1660,6 +1660,207 @@
         hidden.value = allowFree ? raw : (prefix + raw);
     }
 
+    function escapeHtmlLite(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function highlightCustomerQuery(text, query) {
+        var safe = escapeHtmlLite(text || 'بدون نام');
+        var q = String(query || '').trim();
+        if (!q) return safe;
+        try {
+            var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+            return safe.replace(re, '<mark>$1</mark>');
+        } catch (e) {
+            return safe;
+        }
+    }
+
+    function shouldSuggestCustomersForReceipt(raw) {
+        var q = convertDigits(String(raw || '')).trim();
+        if (!q) return false;
+        if (/^t-20n/i.test(q)) return false;
+        if (/^\d+$/.test(q)) {
+            return /^09\d{2,}$/.test(q) || /^9\d{5,}$/.test(q) || q.length >= 7;
+        }
+        return q.length >= 1;
+    }
+
+    function wireReceiptCustomerSuggest(wrap) {
+        if (!wrap || wrap.getAttribute('data-customer-suggest') !== '1') return;
+        if (wrap.getAttribute('data-customer-suggest-wired') === '1') return;
+        wrap.setAttribute('data-customer-suggest-wired', '1');
+
+        var suffix = wrap.querySelector('[data-receipt-suffix]');
+        var list = wrap.querySelector('[data-receipt-customer-list]');
+        var lookupUrl = wrap.getAttribute('data-lookup-customers-url') || '';
+        var autoSubmit = wrap.getAttribute('data-auto-submit') !== '0';
+        if (!suffix || !list || !lookupUrl) return;
+
+        var timer = null;
+        var seq = 0;
+        var abortCtrl = null;
+        var cache = {};
+        var items = [];
+        var activeIndex = -1;
+
+        function clearList() {
+            list.innerHTML = '';
+            list.hidden = true;
+            items = [];
+            activeIndex = -1;
+            suffix.setAttribute('aria-expanded', 'false');
+        }
+
+        function setActive(index) {
+            activeIndex = index;
+            list.querySelectorAll('.customer-pick-item').forEach(function (el, i) {
+                el.classList.toggle('is-active', i === activeIndex);
+            });
+        }
+
+        function pickCustomer(customer) {
+            if (!customer) return;
+            var fill = (customer.phone || customer.name || '').trim();
+            if (!fill) return;
+            suffix.value = fill;
+            syncReceiptPrefixWrap(wrap);
+            clearList();
+            if (autoSubmit) {
+                var form = wrap.closest('form');
+                if (form) {
+                    // Ensure hidden field is synced before submit.
+                    syncReceiptPrefixWrap(wrap);
+                    if (typeof form.requestSubmit === 'function') form.requestSubmit();
+                    else form.submit();
+                }
+            }
+        }
+
+        function renderList(customers, query, mode) {
+            list.innerHTML = '';
+            items = Array.isArray(customers) ? customers : [];
+            activeIndex = -1;
+
+            var head = document.createElement('div');
+            head.className = 'customer-pick-head';
+            head.textContent = mode === 'recent'
+                ? 'مشتریان اخیر'
+                : ('پیشنهاد از بانک مشتری برای «' + query + '»');
+            list.appendChild(head);
+
+            if (!items.length) {
+                var empty = document.createElement('div');
+                empty.className = 'customer-pick-empty';
+                empty.textContent = 'در بانک مشتری پیدا نشد.';
+                list.appendChild(empty);
+                list.hidden = false;
+                suffix.setAttribute('aria-expanded', 'true');
+                return;
+            }
+
+            items.forEach(function (customer, index) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'customer-pick-item';
+                btn.setAttribute('role', 'option');
+                btn.setAttribute('data-suggest-index', String(index));
+
+                var name = document.createElement('span');
+                name.className = 'customer-pick-name';
+                name.innerHTML = highlightCustomerQuery(customer.name || 'بدون نام', query);
+
+                var meta = document.createElement('span');
+                meta.className = 'customer-pick-meta';
+                meta.textContent = customer.phone || '—';
+
+                btn.appendChild(name);
+                btn.appendChild(meta);
+                btn.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    pickCustomer(customer);
+                });
+                list.appendChild(btn);
+            });
+
+            list.hidden = false;
+            suffix.setAttribute('aria-expanded', 'true');
+        }
+
+        function runLookup() {
+            var q = (suffix.value || '').trim();
+            if (!shouldSuggestCustomersForReceipt(q)) {
+                clearList();
+                return;
+            }
+
+            var cacheKey = q.toLocaleLowerCase('fa');
+            if (Object.prototype.hasOwnProperty.call(cache, cacheKey)) {
+                var cached = cache[cacheKey];
+                renderList(cached.customers, q, cached.mode);
+                return;
+            }
+
+            if (abortCtrl) {
+                try { abortCtrl.abort(); } catch (e) {}
+            }
+            abortCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            var mySeq = ++seq;
+
+            var opts = {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            };
+            if (abortCtrl) opts.signal = abortCtrl.signal;
+
+            fetch(lookupUrl + '?q=' + encodeURIComponent(q), opts)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (mySeq !== seq) return;
+                    var customers = (data && data.customers) || [];
+                    var mode = (data && data.mode) || 'search';
+                    cache[cacheKey] = { customers: customers, mode: mode };
+                    renderList(customers, q, mode);
+                })
+                .catch(function (err) {
+                    if (err && err.name === 'AbortError') return;
+                    if (mySeq !== seq) return;
+                    clearList();
+                });
+        }
+
+        suffix.addEventListener('input', function () {
+            syncReceiptPrefixWrap(wrap);
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(runLookup, 160);
+        });
+
+        suffix.addEventListener('keydown', function (e) {
+            if (list.hidden || !items.length) return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setActive(Math.min(items.length - 1, activeIndex + 1));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setActive(Math.max(0, activeIndex - 1));
+            } else if (e.key === 'Enter' && activeIndex >= 0) {
+                e.preventDefault();
+                pickCustomer(items[activeIndex]);
+            } else if (e.key === 'Escape') {
+                clearList();
+            }
+        });
+
+        suffix.addEventListener('blur', function () {
+            setTimeout(clearList, 180);
+        });
+    }
+
     function initReceiptSearchInputs(root) {
         root = root || document;
         root.querySelectorAll('[data-receipt-prefix-wrap]').forEach(function (wrap) {
@@ -1681,6 +1882,7 @@
             }
 
             syncReceiptPrefixWrap(wrap);
+            wireReceiptCustomerSuggest(wrap);
         });
     }
 

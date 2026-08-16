@@ -14,9 +14,10 @@
             'autofocus' => true,
             'required' => true,
             'placeholder' => '1000 یا نام یا 09…',
-            'hint' => 'ادامه شماره قبض (T-20N…)، یا نام مشتری، موبایل، سریال را بنویسید.',
+            'hint' => 'چند حرف از نام یا موبایل را بزنید تا از بانک مشتری پیشنهاد بیاید؛ یا ادامه شماره قبض را وارد کنید.',
             'allowFree' => true,
             'inputmode' => 'text',
+            'customerSuggest' => true,
         ])
     </div>
     <div class="field-sm">
