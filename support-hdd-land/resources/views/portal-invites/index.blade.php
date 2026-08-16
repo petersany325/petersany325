@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'ارسال لینک کارتابل مشتری | '.shop_name())
 @section('page_title', 'لینک کارتابل مشتری')
-@section('window_title', 'ارسال گروهی لینک ورود')
+@section('window_title', 'ارسال تکی و گروهی لینک ورود')
 
 @section('content')
 <div class="panel">
@@ -25,6 +25,29 @@
         <div class="emp-stat tone-amber"><span>آخرین ارسال ناموفق</span><strong>{{ $stats['last_failed'] }}</strong></div>
     </div>
 </div>
+
+<section class="panel" style="margin-top:10px;">
+    <h3 style="margin-top:0;">ارسال تکی (شماره دستی)</h3>
+    <p class="muted" style="margin:0 0 10px;">شماره موبایل مشتری جدید یا موجود را وارد کنید؛ لینک کارتابل همان لحظه با متن زیر ارسال می‌شود. اگر مشتری نباشد، خودکار ثبت می‌شود.</p>
+    <form method="POST" action="{{ route('portal-invites.single') }}" style="display:grid;gap:10px;">
+        @csrf
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+            <label>موبایل
+                <input type="text" name="phone" value="{{ old('phone') }}" class="field-latin" dir="ltr" placeholder="09xxxxxxxxx" required maxlength="30" autocomplete="tel">
+            </label>
+            <label>نام مشتری <span class="muted">(اختیاری برای مشتری جدید)</span>
+                <input type="text" name="name" value="{{ old('name') }}" placeholder="مثلاً علی رضایی" maxlength="120">
+            </label>
+        </div>
+        <label>متن پیامک
+            <textarea name="template" rows="6" maxlength="1000" required>{{ old('template', $template) }}</textarea>
+        </label>
+        <p class="muted" style="margin:0;font-size:11px;">متغیرها: {name} {shop} {phone} {login_url} {office_phone}</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary" type="submit">ارسال تکی لینک کارتابل</button>
+        </div>
+    </form>
+</section>
 
 <div style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);gap:10px;align-items:start;margin-top:10px;">
     <section class="panel">

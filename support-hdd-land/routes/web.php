@@ -141,6 +141,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [PortalInviteController::class, 'index'])->name('index');
             Route::post('/template', [PortalInviteController::class, 'saveTemplate'])->name('template');
             Route::post('/start', [PortalInviteController::class, 'start'])->name('start');
+            Route::post('/single', [PortalInviteController::class, 'sendSingle'])->name('single');
             Route::match(['get', 'post'], '/run/{batch}', [PortalInviteController::class, 'run'])->name('run');
             Route::get('/report', [PortalInviteController::class, 'report'])->name('report');
             Route::post('/resend-failed', [PortalInviteController::class, 'resendFailed'])->name('resend-failed');

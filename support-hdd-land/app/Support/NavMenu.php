@@ -106,7 +106,7 @@ class NavMenu
                 'children' => [
                     ['label' => 'فهرست مشتریان', 'route' => 'customers.index', 'match' => 'customers.index|customers.show|customers.edit', 'hint' => 'جستجو، ویرایش، حذف', 'mark' => 'ف'],
                     ['label' => 'مشتری جدید', 'route' => 'customers.create', 'match' => 'customers.create', 'hint' => 'نام و موبایل یکتا', 'mark' => '+'],
-                    ['label' => 'ارسال لینک کارتابل', 'route' => 'portal-invites.index', 'match' => 'portal-invites.*', 'hint' => 'پیامک گروهی + گزارش', 'mark' => 'ل'],
+                    ['label' => 'ارسال لینک کارتابل', 'route' => 'portal-invites.index', 'match' => 'portal-invites.*', 'hint' => 'تکی + گروهی + گزارش', 'mark' => 'ل'],
                 ],
             ],
             [

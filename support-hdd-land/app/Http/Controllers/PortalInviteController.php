@@ -135,7 +135,40 @@ class PortalInviteController extends Controller
         ]);
     }
 
+    
+    public function sendSingle(Request $request, PortalInviteService $service)
+    {
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:30'],
+            'name' => ['nullable', 'string', 'max:120'],
+            'template' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'phone.required' => 'شماره موبایل را وارد کنید.',
+        ]);
+
+        $result = $service->sendToManualPhone(
+            (string) $data['phone'],
+            $data['name'] ?? null,
+            $data['template'] ?? null,
+        );
+
+        if (! $result['ok'] && ! $result['customer']) {
+            return back()->withInput()->with('error', $result['message'] ?: 'شماره موبایل معتبر نیست.');
+        }
+
+        $who = $result['customer']?->name ?: $data['phone'];
+        $extra = $result['created'] ? ' (مشتری جدید ثبت شد)' : '';
+
+        return back()->with(
+            $result['ok'] ? 'success' : 'error',
+            $result['ok']
+                ? 'لینک کارتابل برای '.$who.' ارسال شد.'.$extra
+                : 'ارسال ناموفق برای '.$who.': '.($result['message'] ?: 'خطای پنل پیامک')
+        );
+    }
+
     public function resend(Customer $customer, PortalInviteService $service)
+
     {
         $result = $service->sendToCustomer($customer);
 

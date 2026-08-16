@@ -211,4 +211,67 @@ class PortalInviteService
             'send' => $send,
         ];
     }
+
+    /**
+     * ارسال تکی لینک کارتابل با شماره دستی؛ مشتری جدید در صورت نیاز ساخته می‌شود.
+     *
+     * @return array{ok:bool,message:string,send:?PortalInviteSend,customer:?Customer,created:bool}
+     */
+    public function sendToManualPhone(string $rawPhone, ?string $name = null, ?string $template = null): array
+    {
+        $phone = User::normalizePhone($rawPhone);
+        if (! $phone || strlen($phone) < 10) {
+            return [
+                'ok' => false,
+                'message' => 'شماره موبایل معتبر نیست',
+                'send' => null,
+                'customer' => null,
+                'created' => false,
+            ];
+        }
+
+        $customer = Customer::findByPhone($phone);
+        $created = false;
+
+        if (! $customer) {
+            $displayName = trim((string) $name);
+            if ($displayName === '') {
+                $displayName = 'مشتری '.$phone;
+            }
+
+            $base = $displayName;
+            $suffix = 0;
+            while (
+                Customer::query()
+                    ->where('name', $displayName)
+                    ->whereNull('deleted_at')
+                    ->exists()
+            ) {
+                $suffix++;
+                $displayName = $base.' ('.$suffix.')';
+            }
+
+            $customer = Customer::query()->create([
+                'name' => $displayName,
+                'phone' => $phone,
+            ]);
+            $created = true;
+        } elseif (trim((string) $name) !== '') {
+            // اگر نام دستی داده شد و مشتری موجود نام پیش‌فرض دارد، به‌روز کن
+            $current = trim((string) $customer->name);
+            if ($current === '' || str_starts_with($current, 'مشتری ')) {
+                $customer->forceFill(['name' => trim((string) $name)])->save();
+            }
+        }
+
+        $result = $this->sendToCustomer($customer, $template);
+
+        return [
+            'ok' => (bool) ($result['ok'] ?? false),
+            'message' => (string) ($result['message'] ?? ''),
+            'send' => $result['send'] ?? null,
+            'customer' => $customer,
+            'created' => $created,
+        ];
+    }
 }
