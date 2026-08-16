@@ -57,7 +57,7 @@
             </div>
             <div style="grid-column:1/-1;">
                 <label>تعطیلی‌های اعلامی فروشگاه (هر تاریخ در یک خط یا با ویرگول — شمسی یا میلادی)</label>
-                <textarea name="closed_dates" rows="3" placeholder="مثلاً&#10;1404/05/25&#10;1404/06/01">{{ $options['closed_dates'] }}</textarea>
+                <textarea name="closed_dates" rows="3" placeholder="مثلاً&#10;1404/05/25&#10;1404/06/01">{{ $options['closed_dates_display'] ?? $options['closed_dates'] }}</textarea>
             </div>
             <div class="actions" style="grid-column:1/-1;margin:0;">
                 <button class="btn btn-primary" type="submit">ذخیره تنظیمات</button>

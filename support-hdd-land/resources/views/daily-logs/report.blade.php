@@ -179,6 +179,7 @@
                                             <li>
                                                 <div class="daybook-entry-title">{{ $entry->displayTitle() }}</div>
                                                 <div class="daybook-entry-meta">
+                                                    <span dir="ltr">ثبت {{ jalali_like($entry->created_at) }}</span>
                                                     @if($entry->category_name)<span>{{ $entry->category_name }}</span>@endif
                                                     @if($entry->quantity)<span>تعداد: {{ $entry->quantity }}</span>@endif
                                                     @if($entry->minutes)<span>{{ $entry->minutes }} دقیقه</span>@endif

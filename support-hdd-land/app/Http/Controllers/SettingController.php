@@ -116,7 +116,7 @@ class SettingController extends Controller
     public function updateGeneral(Request $request)
     {
         $data = $request->validate([
-            'calendar_type' => ['required', Rule::in(['jalali', 'gregorian'])],
+            'calendar_type' => ['required', Rule::in(['jalali'])],
             'calendar_digits' => ['required', Rule::in(['fa', 'en'])],
         ]);
 

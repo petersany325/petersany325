@@ -23,18 +23,13 @@ class CalendarSettings
 
     public static function type(): string
     {
-        try {
-            $v = (string) AppSetting::getValue(self::KEY_TYPE, self::TYPE_JALALI);
-        } catch (\Throwable) {
-            return self::TYPE_JALALI;
-        }
-
-        return $v === self::TYPE_GREGORIAN ? self::TYPE_GREGORIAN : self::TYPE_JALALI;
+        // Site UI is locked to Jalali; Gregorian remains only for DB storage.
+        return self::TYPE_JALALI;
     }
 
     public static function isJalali(): bool
     {
-        return self::type() === self::TYPE_JALALI;
+        return true;
     }
 
     public static function digits(): string
@@ -50,7 +45,7 @@ class CalendarSettings
 
     public static function usePersianDigits(): bool
     {
-        return self::isJalali() && self::digits() === self::DIGITS_FA;
+        return self::digits() === self::DIGITS_FA;
     }
 
     /** @return array{type:string,digits:string,is_jalali:bool} */
@@ -65,10 +60,8 @@ class CalendarSettings
 
     public static function save(string $type, string $digits): void
     {
-        AppSetting::setValue(
-            self::KEY_TYPE,
-            $type === self::TYPE_GREGORIAN ? self::TYPE_GREGORIAN : self::TYPE_JALALI
-        );
+        // Always persist Jalali for UI calendar type.
+        AppSetting::setValue(self::KEY_TYPE, self::TYPE_JALALI);
         AppSetting::setValue(
             self::KEY_DIGITS,
             $digits === self::DIGITS_EN ? self::DIGITS_EN : self::DIGITS_FA

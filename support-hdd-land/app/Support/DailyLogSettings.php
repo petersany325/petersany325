@@ -64,6 +64,19 @@ class DailyLogSettings
         return (string) AppSetting::getValue('daily_log_closed_dates', '');
     }
 
+    /** Closed dates as Jalali lines for the settings textarea. */
+    public static function closedDatesDisplay(): string
+    {
+        $dates = self::closedDates();
+        if ($dates === []) {
+            return self::closedDatesRaw();
+        }
+
+        return implode("\n", array_map(static function (string $day): string {
+            return function_exists('jalali_input') ? (jalali_input($day) ?: $day) : $day;
+        }, $dates));
+    }
+
     public static function isExemptDay(Carbon $date): bool
     {
         $day = $date->copy()->timezone('Asia/Tehran')->startOfDay();
@@ -83,7 +96,19 @@ class DailyLogSettings
         AppSetting::setValue('daily_log_skip_fridays', ! empty($data['skip_fridays']) ? '1' : '0');
 
         $closed = trim((string) ($data['closed_dates'] ?? ''));
-        // normalize lines to stored raw (keep user-friendly text)
+        // Normalize to Jalali lines when possible (storage text is display-friendly).
+        if ($closed !== '' && function_exists('parse_jalali_or_gregorian_date') && function_exists('jalali_input')) {
+            $lines = [];
+            foreach (preg_split('/[\s,;]+/', $closed) ?: [] as $piece) {
+                $piece = trim($piece);
+                if ($piece === '') {
+                    continue;
+                }
+                $parsed = parse_jalali_or_gregorian_date($piece);
+                $lines[] = $parsed ? (jalali_input($parsed) ?: $piece) : $piece;
+            }
+            $closed = implode("\n", array_values(array_unique($lines)));
+        }
         AppSetting::setValue('daily_log_closed_dates', $closed);
     }
 }

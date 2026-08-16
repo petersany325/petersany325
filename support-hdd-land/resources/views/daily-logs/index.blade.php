@@ -173,7 +173,7 @@
                         <div class="daybook-entry-body">
                             <div class="daybook-entry-top">
                                 <strong>{{ $entry->displayTitle() }}</strong>
-                                <time dir="ltr">{{ $entry->created_at?->timezone('Asia/Tehran')->format('H:i') }}</time>
+                                <time dir="ltr" title="زمان ثبت">{{ jalali_like($entry->created_at) }}</time>
                             </div>
                             <div class="daybook-entry-meta">
                                 <span class="daybook-chip">{{ $entry->category_name ?: 'آزاد' }}</span>

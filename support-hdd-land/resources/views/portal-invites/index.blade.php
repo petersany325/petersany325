@@ -70,7 +70,7 @@
                     <span class="muted">{{ $batch->status }}</span>
                 </div>
                 <div class="muted" style="font-size:11px;margin-top:2px;">
-                    {{ $batch->filterLabel() }} · {{ $batch->sent_ok }} موفق / {{ $batch->sent_fail }} ناموفق از {{ $batch->total }}
+                    {{ jalali_like($batch->created_at) }} · {{ $batch->filterLabel() }} · {{ $batch->sent_ok }} موفق / {{ $batch->sent_fail }} ناموفق از {{ $batch->total }}
                 </div>
                 <div style="margin-top:6px;display:flex;gap:6px;">
                     @if(! $batch->isFinished())

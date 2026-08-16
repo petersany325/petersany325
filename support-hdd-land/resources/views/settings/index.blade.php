@@ -18,17 +18,16 @@
     <div class="ws-panes">
         <div class="ws-pane {{ $activeTab === 'general' ? 'active' : '' }}" data-ws-pane="general">
             <h2>تنظیمات عمومی و تقویم</h2>
-            <p class="lead">نوع نمایش تاریخ در کل سیستم (قبض، جستجو، گزارش، چاپ، پورتال و …) از اینجا کنترل می‌شود. ذخیره در دیتابیس همیشه میلادی می‌ماند.</p>
+            <p class="lead">تاریخ‌های نمایش و ورودی در کل سیستم شمسی (جلالی) هستند. ذخیره در دیتابیس همیشه میلادی می‌ماند.</p>
             <form method="POST" action="{{ route('settings.general') }}" class="panel">
                 @csrf
                 <input type="hidden" name="settings_tab" value="general">
+                <input type="hidden" name="calendar_type" value="jalali">
                 <div class="accept-row accept-row-2">
                     <div>
                         <label>نوع تقویم نمایش</label>
-                        <select name="calendar_type">
-                            <option value="jalali" @selected(($calendar['type'] ?? 'jalali') === 'jalali')>شمسی (جلالی) — پیشنهادی</option>
-                            <option value="gregorian" @selected(($calendar['type'] ?? '') === 'gregorian')>میلادی</option>
-                        </select>
+                        <input type="text" value="شمسی (جلالی)" disabled>
+                        <p class="muted" style="margin:4px 0 0;font-size:11px;">تقویم نمایش سایت روی شمسی قفل است.</p>
                     </div>
                     <div>
                         <label>ارقام تاریخ</label>
@@ -36,7 +35,7 @@
                             <option value="fa" @selected(($calendar['digits'] ?? 'fa') === 'fa')>فارسی (۱۴۰۴/۰۵/۱۸)</option>
                             <option value="en" @selected(($calendar['digits'] ?? '') === 'en')>انگلیسی (1404/05/18)</option>
                         </select>
-                        <p class="muted" style="margin:4px 0 0;font-size:11px;">رقم فارسی فقط وقتی تقویم شمسی است اعمال می‌شود. فیلدهای ورود تاریخ همیشه ارقام انگلیسی می‌گیرند.</p>
+                        <p class="muted" style="margin:4px 0 0;font-size:11px;">فیلدهای ورود تاریخ همیشه ارقام انگلیسی می‌گیرند.</p>
                     </div>
                 </div>
                 <div class="panel" style="margin-top:10px;background:#f3f7ff;border-color:#b7c8e8;">

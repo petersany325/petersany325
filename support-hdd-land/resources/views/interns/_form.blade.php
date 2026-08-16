@@ -57,13 +57,13 @@
         @endphp
         <div>
             <label>از تاریخ (شمسی)</label>
-            <input type="text" name="start_date" value="{{ $startOld }}" required placeholder="1404/05/16" dir="ltr" style="text-align:left;" inputmode="numeric" autocomplete="off">
+            <input type="text" class="jalali-date" name="start_date" value="{{ $startOld }}" required placeholder="1404/05/16" dir="ltr" style="text-align:left;" inputmode="numeric" autocomplete="off">
             <p class="hint" style="margin:2px 0 0;">مثال: ۱۴۰۴/۰۵/۱۶ — در پیامک هم شمسی ارسال می‌شود</p>
             @error('start_date')<div class="alert alert-error" style="margin-top:4px;padding:4px 6px;">{{ $message }}</div>@enderror
         </div>
         <div>
             <label>تا تاریخ (شمسی)</label>
-            <input type="text" name="end_date" value="{{ $endOld }}" required placeholder="1404/06/16" dir="ltr" style="text-align:left;" inputmode="numeric" autocomplete="off">
+            <input type="text" class="jalali-date" name="end_date" value="{{ $endOld }}" required placeholder="1404/06/16" dir="ltr" style="text-align:left;" inputmode="numeric" autocomplete="off">
             @error('end_date')<div class="alert alert-error" style="margin-top:4px;padding:4px 6px;">{{ $message }}</div>@enderror
         </div>
     </div>

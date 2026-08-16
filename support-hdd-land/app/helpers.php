@@ -75,12 +75,9 @@ if (! function_exists('format_app_date')) {
 
         try {
             $dt = \Illuminate\Support\Carbon::parse($date)->timezone(config('app.timezone', 'Asia/Tehran'));
-            if (app_calendar_is_jalali()) {
-                [$y, $m, $d] = jalali_convert((int) $dt->format('Y'), (int) $dt->format('n'), (int) $dt->format('j'));
-                $base = sprintf('%04d/%02d/%02d', $y, $m, $d);
-            } else {
-                $base = $dt->format('Y/m/d');
-            }
+            // UI dates are always Jalali (Shamsi); DB/storage stays Gregorian.
+            [$y, $m, $d] = jalali_convert((int) $dt->format('Y'), (int) $dt->format('n'), (int) $dt->format('j'));
+            $base = sprintf('%04d/%02d/%02d', $y, $m, $d);
             $out = $withTime ? $base.' '.$dt->format('H:i') : $base;
             if (\App\Support\CalendarSettings::usePersianDigits()) {
                 $out = to_persian_digits($out);
@@ -197,13 +194,10 @@ if (! function_exists('jalali_input')) {
 
         try {
             $dt = \Illuminate\Support\Carbon::parse($date)->timezone(config('app.timezone', 'Asia/Tehran'));
-            if (app_calendar_is_jalali()) {
-                [$y, $m, $d] = jalali_convert((int) $dt->format('Y'), (int) $dt->format('n'), (int) $dt->format('j'));
+            // Date inputs always show Jalali (ASCII digits for typing).
+            [$y, $m, $d] = jalali_convert((int) $dt->format('Y'), (int) $dt->format('n'), (int) $dt->format('j'));
 
-                return sprintf('%04d/%02d/%02d', $y, $m, $d);
-            }
-
-            return $dt->format('Y/m/d');
+            return sprintf('%04d/%02d/%02d', $y, $m, $d);
         } catch (\Throwable) {
             return '';
         }

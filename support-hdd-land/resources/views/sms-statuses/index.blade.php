@@ -270,7 +270,7 @@
                         <tbody>
                         @forelse($logs as $log)
                             <tr>
-                                <td>{{ $log->created_at?->format('Y/m/d H:i') }}</td>
+                                <td>{{ jalali_like($log->created_at) }}</td>
                                 <td>{{ $log->phone }}</td>
                                 <td>
                                     @if($log->reception)

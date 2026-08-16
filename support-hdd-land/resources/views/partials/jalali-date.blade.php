@@ -4,8 +4,8 @@
     $required = (bool) ($required ?? false);
     $id = $id ?? null;
     $attrs = $attrs ?? '';
-    $isJalali = app_calendar_is_jalali();
-    $placeholder = $placeholder ?? ($isJalali ? '1404/05/16' : '2026/08/09');
+    $isJalali = true;
+    $placeholder = $placeholder ?? '1404/05/16';
     $class = trim('jalali-date '.($class ?? ''));
     if ($raw === null || $raw === '') {
         $display = '';
@@ -26,7 +26,7 @@
        inputmode="numeric"
        autocomplete="off"
        dir="ltr"
-       data-calendar="{{ $isJalali ? 'jalali' : 'gregorian' }}"
+       data-calendar="jalali"
        style="text-align:left;{{ $style ?? '' }}"
        @if($required) required @endif
        {!! $attrs !!}>

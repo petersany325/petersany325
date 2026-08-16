@@ -366,6 +366,7 @@ class DailyLogController extends Controller
                 'min_entries' => DailyLogSettings::minEntriesPerDay(),
                 'skip_fridays' => DailyLogSettings::skipFridays(),
                 'closed_dates' => DailyLogSettings::closedDatesRaw(),
+                'closed_dates_display' => DailyLogSettings::closedDatesDisplay(),
             ],
         ]);
     }
