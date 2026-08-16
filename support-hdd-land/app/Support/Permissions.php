@@ -22,7 +22,7 @@ class Permissions
         'reports.payments' => 'گزارش صندوق و دریافت‌ها',
         'reports.technicians' => 'گزارش عملکرد تعمیرکاران',
         'reports.customers' => 'گزارش کاربران',
-        'reports.parts' => 'گزارش کالای خرج‌شده',
+        'reports.parts' => 'گزارش کالا (خروجی / ورودی / تفکیک)',
         'reports.sms' => 'گزارش پیامک',
         'reports.messages' => 'گزارش پیام مشتری',
         'settings' => 'تنظیمات سیستم',

@@ -200,7 +200,10 @@ class NavMenu
                 'children' => [
                     ['label' => 'عملکرد تعمیرکاران', 'route' => 'reports.technicians', 'match' => 'reports.technicians*', 'permission' => 'reports.technicians', 'hint' => '', 'mark' => 'ت'],
                     ['label' => 'گزارش مشتریان', 'route' => 'reports.customers', 'match' => 'reports.customers*', 'permission' => 'reports.customers', 'hint' => '', 'mark' => 'ش'],
-                    ['label' => 'بیلان خروج', 'route' => 'reports.parts-used', 'match' => 'reports.parts-used', 'permission' => 'reports.parts', 'hint' => 'روز / هفته / ماه / سال', 'mark' => 'ب'],
+                    ['label' => 'گزارش خروجی کالا', 'route' => 'reports.parts-used', 'match' => 'reports.parts-used', 'permission' => 'reports.parts', 'hint' => 'بیلان خروج و صندوق', 'mark' => 'خ'],
+                    ['label' => 'گزارش ورودی کالا', 'route' => 'reports.goods-in', 'match' => 'reports.goods-in', 'permission' => 'reports.parts', 'hint' => 'پذیرش‌های بازه', 'mark' => 'و'],
+                    ['label' => 'گزارش غیرقابل تعمیر', 'route' => 'reports.goods-unrepairable', 'match' => 'reports.goods-unrepairable', 'permission' => 'reports.parts', 'hint' => 'کالاهای غیرقابل تعمیر', 'mark' => 'غ'],
+                    ['label' => 'تفکیک کالا / جستجوی پیشرفته', 'route' => 'reports.goods-filter', 'match' => 'reports.goods-filter', 'permission' => 'reports.parts', 'hint' => 'ریکاوری، تعمیر و فیلتر کامل', 'mark' => 'ت'],
                     ['label' => 'عملیات کارگاه', 'route' => 'reports.operations', 'match' => 'reports.operations', 'permission' => 'reports.operations', 'hint' => '', 'mark' => 'ع'],
                     ['label' => 'ارجاع / محل دستگاه', 'route' => 'reports.custody', 'match' => 'reports.custody', 'permission' => 'reports.custody', 'hint' => '', 'mark' => 'ا'],
                     ['label' => 'صندوق و دریافت‌ها', 'route' => 'reports.payments', 'match' => 'reports.payments', 'permission' => 'reports.payments', 'hint' => '', 'mark' => 'ص'],

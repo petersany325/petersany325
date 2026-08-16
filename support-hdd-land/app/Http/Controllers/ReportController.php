@@ -7,6 +7,7 @@ use App\Models\CustomerMessage;
 use App\Models\DeviceHandoff;
 use App\Models\FaultType;
 use App\Models\GatewayTransaction;
+use App\Models\LookupOption;
 use App\Models\Payment;
 use App\Models\Reception;
 use App\Models\ReceptionPart;
@@ -15,6 +16,7 @@ use App\Models\SmsLog;
 use App\Models\Technician;
 use App\Models\StockMovement;
 use App\Support\ReportSettings;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -886,6 +888,242 @@ class ReportController extends Controller
             'chartPartLabels' => $rows->take(10)->pluck('part_name')->values()->all(),
             'chartPartValues' => $rows->take(10)->pluck('qty')->map(fn ($v) => (int) $v)->values()->all(),
         ]);
+    }
+
+    /** ورودی کالا / پذیرش در بازه */
+    public function goodsIn(Request $request): View
+    {
+        [$from, $to] = $this->range($request);
+        [$fromStart, $toEnd] = $this->periodBounds($from, $to);
+
+        $rows = Reception::query()
+            ->with(['customer', 'technician', 'faultType'])
+            ->whereNotNull('received_at')
+            ->whereBetween('received_at', [$fromStart, $toEnd])
+            ->orderByDesc('received_at')
+            ->paginate(50)
+            ->withQueryString();
+
+        $all = Reception::query()
+            ->whereNotNull('received_at')
+            ->whereBetween('received_at', [$fromStart, $toEnd]);
+
+        $totals = [
+            'count' => (clone $all)->count(),
+            'labor' => (int) (clone $all)->sum('labor_cost'),
+            'parts' => (int) (clone $all)->sum('parts_cost'),
+            'total' => (int) (clone $all)->sum('total_amount'),
+            'paid' => (int) (clone $all)->sum('paid_amount'),
+            'deposit' => (int) (clone $all)->sum('deposit'),
+        ];
+
+        $byService = (clone $all)
+            ->select('service_type', DB::raw('COUNT(*) as c'))
+            ->groupBy('service_type')
+            ->orderByDesc('c')
+            ->pluck('c', 'service_type');
+
+        return view('reports.goods-in', [
+            'rows' => $rows,
+            'totals' => $totals,
+            'byService' => $byService,
+            'from' => $from,
+            'to' => $to,
+            'period' => ReportSettings::get('period', 'custom'),
+        ]);
+    }
+
+    /** غیرقابل تعمیر */
+    public function goodsUnrepairable(Request $request): View
+    {
+        [$from, $to] = $this->range($request);
+        [$fromStart, $toEnd] = $this->periodBounds($from, $to);
+        $scope = (string) $request->get('scope', 'current'); // current|received|updated
+
+        $query = Reception::query()
+            ->with(['customer', 'technician', 'faultType'])
+            ->where('status', 'unrepairable');
+
+        if ($scope === 'received') {
+            $query->whereBetween('received_at', [$fromStart, $toEnd]);
+        } elseif ($scope === 'updated') {
+            $query->whereBetween('updated_at', [$fromStart, $toEnd]);
+        }
+
+        $rows = (clone $query)->orderByDesc('updated_at')->paginate(50)->withQueryString();
+        $totals = [
+            'count' => (clone $query)->count(),
+            'labor' => (int) (clone $query)->sum('labor_cost'),
+            'parts' => (int) (clone $query)->sum('parts_cost'),
+            'total' => (int) (clone $query)->sum('total_amount'),
+            'paid' => (int) (clone $query)->sum('paid_amount'),
+        ];
+
+        return view('reports.goods-unrepairable', [
+            'rows' => $rows,
+            'totals' => $totals,
+            'scope' => $scope,
+            'from' => $from,
+            'to' => $to,
+            'period' => ReportSettings::get('period', 'custom'),
+        ]);
+    }
+
+    /** تفکیک کالا با جستجوی پیشرفته */
+    public function goodsFilter(Request $request): View
+    {
+        [$from, $to] = $this->range($request);
+        [$fromStart, $toEnd] = $this->periodBounds($from, $to);
+
+        $filters = [
+            'q' => trim((string) $request->get('q', '')),
+            'status' => (string) $request->get('status', ''),
+            'service_type' => (string) $request->get('service_type', ''),
+            'repair_type' => (string) $request->get('repair_type', ''),
+            'admission_type' => (string) $request->get('admission_type', ''),
+            'technician_id' => $request->integer('technician_id') ?: null,
+            'fault_type_id' => $request->integer('fault_type_id') ?: null,
+            'custody' => (string) $request->get('custody', ''),
+            'finance' => (string) $request->get('finance', ''), // unpaid|paid|credit
+            'date_field' => (string) $request->get('date_field', 'received_at'), // received_at|delivered_at|created_at
+            'product' => trim((string) $request->get('product', '')),
+            'serial' => trim((string) $request->get('serial', '')),
+            'warranty_return' => $request->boolean('warranty_return'),
+        ];
+
+        $query = Reception::query()->with(['customer', 'technician', 'faultType', 'custodyTechnician']);
+        $this->applyGoodsFilters($query, $filters, $fromStart, $toEnd);
+
+        $rows = (clone $query)->orderByDesc('id')->paginate(40)->withQueryString();
+
+        $sumBase = clone $query;
+        $totals = [
+            'count' => (clone $sumBase)->count(),
+            'labor' => (int) (clone $sumBase)->sum('labor_cost'),
+            'parts' => (int) (clone $sumBase)->sum('parts_cost'),
+            'total' => (int) (clone $sumBase)->sum('total_amount'),
+            'paid' => (int) (clone $sumBase)->sum('paid_amount'),
+            'remaining' => (int) (clone $sumBase)->selectRaw('COALESCE(SUM(GREATEST(total_amount - paid_amount, 0)),0) as v')->value('v'),
+        ];
+
+        $byStatus = (clone $query)
+            ->select('status', DB::raw('COUNT(*) as c'))
+            ->groupBy('status')
+            ->pluck('c', 'status');
+
+        $byService = (clone $query)
+            ->select('service_type', DB::raw('COUNT(*) as c'))
+            ->groupBy('service_type')
+            ->orderByDesc('c')
+            ->pluck('c', 'service_type');
+
+        return view('reports.goods-filter', [
+            'rows' => $rows,
+            'totals' => $totals,
+            'filters' => $filters,
+            'byStatus' => $byStatus,
+            'byService' => $byService,
+            'from' => $from,
+            'to' => $to,
+            'period' => ReportSettings::get('period', 'custom'),
+            'statuses' => Reception::availableStatuses(),
+            'serviceTypes' => LookupOption::options('service_type'),
+            'repairTypes' => LookupOption::options('repair_type'),
+            'admissionTypes' => LookupOption::options('admission_type'),
+            'technicians' => Technician::query()->orderBy('name')->get(['id', 'name', 'specialty']),
+            'faultTypes' => FaultType::query()->orderBy('name')->get(['id', 'name']),
+        ]);
+    }
+
+    /** @return array{0:\Illuminate\Support\Carbon,1:\Illuminate\Support\Carbon} */
+    private function periodBounds(string $from, string $to): array
+    {
+        $tz = config('app.timezone', 'Asia/Tehran');
+
+        return [
+            \Illuminate\Support\Carbon::parse($from, $tz)->startOfDay(),
+            \Illuminate\Support\Carbon::parse($to, $tz)->endOfDay(),
+        ];
+    }
+
+    private function applyGoodsFilters(Builder $query, array $filters, $fromStart, $toEnd): void
+    {
+        $dateField = in_array($filters['date_field'], ['received_at', 'delivered_at', 'created_at'], true)
+            ? $filters['date_field']
+            : 'received_at';
+
+        if ($dateField === 'delivered_at') {
+            $query->whereNotNull('delivered_at')->whereBetween('delivered_at', [$fromStart, $toEnd]);
+        } elseif ($dateField === 'created_at') {
+            $query->whereBetween('created_at', [$fromStart, $toEnd]);
+        } else {
+            $query->where(function (Builder $q) use ($fromStart, $toEnd) {
+                $q->whereBetween('received_at', [$fromStart, $toEnd])
+                    ->orWhere(function (Builder $inner) use ($fromStart, $toEnd) {
+                        $inner->whereNull('received_at')->whereBetween('created_at', [$fromStart, $toEnd]);
+                    });
+            });
+        }
+
+        if ($filters['status'] !== '') {
+            $query->where('status', $filters['status']);
+        }
+        if ($filters['service_type'] !== '') {
+            $query->where('service_type', $filters['service_type']);
+        }
+        if ($filters['repair_type'] !== '') {
+            $query->where('repair_type', $filters['repair_type']);
+        }
+        if ($filters['admission_type'] !== '') {
+            $query->where('admission_type', $filters['admission_type']);
+        }
+        if (! empty($filters['technician_id'])) {
+            $query->where('technician_id', $filters['technician_id']);
+        }
+        if (! empty($filters['fault_type_id'])) {
+            $query->where('fault_type_id', $filters['fault_type_id']);
+        }
+        if ($filters['custody'] !== '') {
+            $query->where('custody', $filters['custody']);
+        }
+        if ($filters['warranty_return']) {
+            $query->where('warranty_return', true);
+        }
+        if ($filters['product'] !== '') {
+            $p = $filters['product'];
+            $query->where(function (Builder $q) use ($p) {
+                $q->where('product_name', 'like', "%{$p}%")
+                    ->orWhere('brand', 'like', "%{$p}%")
+                    ->orWhere('model', 'like', "%{$p}%");
+            });
+        }
+        if ($filters['serial'] !== '') {
+            $query->where('serial_number', 'like', '%'.$filters['serial'].'%');
+        }
+        if ($filters['finance'] === 'unpaid') {
+            $query->where('total_amount', '>', 0)->whereColumn('paid_amount', '<', 'total_amount');
+        } elseif ($filters['finance'] === 'paid') {
+            $query->where('total_amount', '>', 0)->whereColumn('paid_amount', '>=', 'total_amount');
+        } elseif ($filters['finance'] === 'credit') {
+            $query->where('status', 'delivered')
+                ->where('total_amount', '>', 0)
+                ->whereColumn('paid_amount', '<', 'total_amount');
+        }
+
+        if ($filters['q'] !== '') {
+            $q = normalize_receipt_search_query($filters['q']);
+            $query->where(function (Builder $w) use ($q) {
+                $w->where('ticket_no', 'like', "%{$q}%")
+                    ->orWhere('receipt_no', 'like', "%{$q}%")
+                    ->orWhere('serial_number', 'like', "%{$q}%")
+                    ->orWhere('product_name', 'like', "%{$q}%")
+                    ->orWhere('model', 'like', "%{$q}%")
+                    ->orWhereHas('customer', function (Builder $c) use ($q) {
+                        $c->where('name', 'like', "%{$q}%")
+                            ->orWhere('phone', 'like', "%{$q}%");
+                    });
+            });
+        }
     }
 
     /** @return array{0:string,1:string} */

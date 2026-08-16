@@ -282,6 +282,15 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/parts-used', [ReportController::class, 'partsUsed'])
         ->middleware(EnsurePermission::class.':reports.parts')
         ->name('reports.parts-used');
+    Route::get('reports/goods-in', [ReportController::class, 'goodsIn'])
+        ->middleware(EnsurePermission::class.':reports.parts')
+        ->name('reports.goods-in');
+    Route::get('reports/goods-unrepairable', [ReportController::class, 'goodsUnrepairable'])
+        ->middleware(EnsurePermission::class.':reports.parts')
+        ->name('reports.goods-unrepairable');
+    Route::get('reports/goods-filter', [ReportController::class, 'goodsFilter'])
+        ->middleware(EnsurePermission::class.':reports.parts')
+        ->name('reports.goods-filter');
     Route::get('reports/sms', [ReportController::class, 'sms'])
         ->middleware(EnsurePermission::class.':reports.sms')
         ->name('reports.sms');

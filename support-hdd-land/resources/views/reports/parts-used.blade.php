@@ -1,7 +1,7 @@
 @extends('layouts.app')
-@section('title', 'بیلان خروج | '.shop_name())
-@section('page_title', 'بیلان خروج روز / هفته / ماه / سال')
-@section('window_title', 'خروج قبض + صندوق + انبار')
+@section('title', 'گزارش خروجی کالا | '.shop_name())
+@section('page_title', 'گزارش خروجی کالا')
+@section('window_title', 'بیلان خروج + صندوق + انبار')
 
 @section('content')
 @include('reports._settings')
@@ -14,7 +14,7 @@
 <div class="panel" style="margin-bottom:12px;">
     <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;">
         <div>
-            <h2 style="margin-top:0;">بیلان خروج و صندوق</h2>
+            <h2 style="margin-top:0;">گزارش خروجی کالا</h2>
             <p class="muted" style="margin:0;">
                 از {{ jalali_date($from) }} تا {{ jalali_date($to) }}
                 @if(!empty($period) && ($periodLabels[$period] ?? null))
