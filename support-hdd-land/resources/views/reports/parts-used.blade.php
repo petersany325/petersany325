@@ -1,25 +1,24 @@
 @extends('layouts.app')
-@section('title', 'گزارش خروج | '.shop_name())
-@section('page_title', 'گزارش خروج قبض و کالا')
-@section('window_title', 'خروج روز / هفته — تحویل و قطعه')
+@section('title', 'بیلان خروج | '.shop_name())
+@section('page_title', 'بیلان خروج روز / هفته / ماه / سال')
+@section('window_title', 'خروج قبض + صندوق + انبار')
 
 @section('content')
 @include('reports._settings')
 
 @php
     $periodLabels = \App\Support\ReportSettings::periodLabels();
-    $quick = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_30'];
+    $quick = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 'this_year', 'last_30'];
 @endphp
 
 <div class="panel" style="margin-bottom:12px;">
     <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;">
         <div>
-            <h2 style="margin-top:0;">گزارش خروج</h2>
+            <h2 style="margin-top:0;">بیلان خروج و صندوق</h2>
             <p class="muted" style="margin:0;">
-                تحویل قبض‌ها + خروج قطعه انبار —
                 از {{ jalali_date($from) }} تا {{ jalali_date($to) }}
                 @if(!empty($period) && ($periodLabels[$period] ?? null))
-                    ({{ $periodLabels[$period] }})
+                    — <strong>{{ $periodLabels[$period] }}</strong>
                 @endif
             </p>
         </div>
@@ -36,13 +35,45 @@
             @endforeach
         </div>
     </div>
+</div>
 
-    <div class="stats stats-compact" style="margin-top:12px;">
-        <div class="stat"><div class="label">تعداد خروج قبض</div><div class="value">{{ number_format($exitTotals['count'] ?? 0) }}</div></div>
-        <div class="stat"><div class="label">جمع اجرت خروج</div><div class="value">{{ toman((int) ($exitTotals['labor'] ?? 0)) }}</div></div>
-        <div class="stat"><div class="label">جمع قطعات روی قبض</div><div class="value">{{ toman((int) ($exitTotals['parts'] ?? 0)) }}</div></div>
-        <div class="stat"><div class="label">جمع مبلغ خروج</div><div class="value">{{ toman((int) ($exitTotals['total'] ?? 0)) }}</div></div>
-        <div class="stat"><div class="label">پرداخت‌شده</div><div class="value">{{ toman((int) ($exitTotals['paid'] ?? 0)) }}</div></div>
+<div class="split-2" style="margin-bottom:12px;">
+    <div class="panel">
+        <h3 style="margin-top:0;">بیلان خروج قبض (تحویل)</h3>
+        <div class="stats stats-compact">
+            <div class="stat"><div class="label">تعداد خروج</div><div class="value">{{ number_format($exitTotals['count'] ?? 0) }}</div></div>
+            <div class="stat"><div class="label">جمع اجرت</div><div class="value">{{ toman((int) ($exitTotals['labor'] ?? 0)) }}</div></div>
+            <div class="stat"><div class="label">جمع قطعات قبض</div><div class="value">{{ toman((int) ($exitTotals['parts'] ?? 0)) }}</div></div>
+            <div class="stat"><div class="label">جمع مبلغ خروج</div><div class="value">{{ toman((int) ($exitTotals['total'] ?? 0)) }}</div></div>
+            <div class="stat"><div class="label">پرداخت روی همان قبض‌ها</div><div class="value">{{ toman((int) ($exitTotals['paid_on_tickets'] ?? 0)) }}</div></div>
+            <div class="stat"><div class="label">مانده نسیه خروج</div><div class="value">{{ toman((int) ($exitTotals['remaining'] ?? 0)) }}</div></div>
+        </div>
+    </div>
+    <div class="panel">
+        <h3 style="margin-top:0;">بیلان صندوق دوره</h3>
+        <p class="muted" style="margin-top:0;font-size:11px;">همه دریافت‌های ثبت‌شده در همین بازه (بیعانه + تسویه)، حتی اگر قبض هنوز خروج نخورده باشد.</p>
+        <div class="stats stats-compact">
+            <div class="stat"><div class="label">تعداد سند دریافت</div><div class="value">{{ number_format($cashTotals['count'] ?? 0) }}</div></div>
+            <div class="stat"><div class="label">نقد</div><div class="value">{{ toman((int) ($cashTotals['cash'] ?? 0)) }}</div></div>
+            <div class="stat"><div class="label">کارتخوان</div><div class="value">{{ toman((int) ($cashTotals['card'] ?? 0)) }}</div></div>
+            <div class="stat"><div class="label">کارت‌به‌کارت</div><div class="value">{{ toman((int) ($cashTotals['transfer'] ?? 0)) }}</div></div>
+            <div class="stat"><div class="label">درگاه</div><div class="value">{{ toman((int) ($cashTotals['zarinpal'] ?? 0)) }}</div></div>
+            <div class="stat"><div class="label">خالص دریافتی</div><div class="value">{{ toman((int) ($cashTotals['net'] ?? 0)) }}</div></div>
+        </div>
+    </div>
+</div>
+
+<div class="panel" style="margin-bottom:12px;">
+    <h3 style="margin-top:0;">خلاصه بیلان بازه</h3>
+    <div class="table-wrap">
+        <table class="compact-table">
+            <tbody>
+            <tr><td>جمع مبلغ خروج قبض‌ها</td><td><strong>{{ toman((int) ($exitTotals['total'] ?? 0)) }}</strong></td></tr>
+            <tr><td>خالص دریافتی صندوق در بازه</td><td><strong>{{ toman((int) ($cashTotals['net'] ?? 0)) }}</strong></td></tr>
+            <tr><td>مانده نسیه روی قبض‌های خروج‌شده</td><td>{{ toman((int) ($exitTotals['remaining'] ?? 0)) }}</td></tr>
+            <tr><td>خروج قطعه انبار (بهای تمام‌شده)</td><td>{{ toman((int) ($stockTotals['amount'] ?? 0)) }}</td></tr>
+            </tbody>
+        </table>
     </div>
 </div>
 
@@ -59,7 +90,6 @@
 
 <div class="panel" style="margin-bottom:12px;">
     <h3 style="margin-top:0;">خروج قبض‌های تحویل‌شده</h3>
-    <p class="muted" style="margin-top:0;">همین جدول مبلغ خروج دستگاه/قبض را نشان می‌دهد (اجرت + قطعات ثبت‌شده روی قبض).</p>
     <div class="table-wrap">
         <table class="compact-table">
             <thead>
@@ -71,11 +101,13 @@
                 <th>اجرت</th>
                 <th>قطعات</th>
                 <th>جمع</th>
-                <th>پرداخت</th>
+                <th>پرداخت قبض</th>
+                <th>مانده</th>
             </tr>
             </thead>
             <tbody>
             @forelse($exits as $r)
+                @php $remain = max(0, (int) $r->total_amount - (int) $r->paid_amount); @endphp
                 <tr>
                     <td dir="ltr">{{ jalali_like($r->delivered_at) }}</td>
                     <td><a href="{{ route('receptions.show', $r) }}">{{ $r->ticket_no }}</a></td>
@@ -85,9 +117,10 @@
                     <td>{{ toman((int) $r->parts_cost) }}</td>
                     <td><strong>{{ toman((int) $r->total_amount) }}</strong></td>
                     <td>{{ toman((int) $r->paid_amount) }}</td>
+                    <td style="{{ $remain > 0 ? 'color:#b42318;font-weight:700;' : '' }}">{{ toman($remain) }}</td>
                 </tr>
             @empty
-                <tr><td colspan="8">در این بازه خروجی (تحویل قبض) ثبت نشده.</td></tr>
+                <tr><td colspan="9">در این بازه خروجی (تحویل قبض) ثبت نشده.</td></tr>
             @endforelse
             </tbody>
             @if($exits->isNotEmpty())
@@ -97,7 +130,47 @@
                     <th>{{ toman((int) $exitTotals['labor']) }}</th>
                     <th>{{ toman((int) $exitTotals['parts']) }}</th>
                     <th>{{ toman((int) $exitTotals['total']) }}</th>
-                    <th>{{ toman((int) $exitTotals['paid']) }}</th>
+                    <th>{{ toman((int) $exitTotals['paid_on_tickets']) }}</th>
+                    <th>{{ toman((int) $exitTotals['remaining']) }}</th>
+                </tr>
+                </tfoot>
+            @endif
+        </table>
+    </div>
+</div>
+
+<div class="panel" style="margin-bottom:12px;">
+    <h3 style="margin-top:0;">دریافت‌های صندوق در بازه</h3>
+    <div class="table-wrap">
+        <table class="compact-table">
+            <thead>
+            <tr><th>زمان</th><th>قبض</th><th>مبلغ</th><th>روش</th><th>نوع</th><th>یادداشت</th></tr>
+            </thead>
+            <tbody>
+            @forelse($payments as $p)
+                <tr>
+                    <td dir="ltr">{{ jalali_like($p->paid_at) }}</td>
+                    <td>
+                        @if($p->reception)
+                            <a href="{{ route('receptions.show', $p->reception) }}">{{ $p->reception->ticket_no }}</a>
+                        @else —
+                        @endif
+                    </td>
+                    <td>{{ toman((int) $p->amount) }}</td>
+                    <td>{{ $p->methodLabel() }}</td>
+                    <td>{{ $p->typeLabel() }}</td>
+                    <td>{{ $p->note ?: '—' }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="6">دریافتی در این بازه نیست.</td></tr>
+            @endforelse
+            </tbody>
+            @if($payments->isNotEmpty())
+                <tfoot>
+                <tr>
+                    <th colspan="2">خالص</th>
+                    <th>{{ toman((int) $cashTotals['net']) }}</th>
+                    <th colspan="3"></th>
                 </tr>
                 </tfoot>
             @endif

@@ -759,7 +759,7 @@ class ReportController extends Controller
         $fromStart = \Illuminate\Support\Carbon::parse($from, $tz)->startOfDay();
         $toEnd = \Illuminate\Support\Carbon::parse($to, $tz)->endOfDay();
 
-        // 1) Device / ticket exits (تحویل قبض) — what staff mean by «خروج».
+        // 1) Ticket exits (تحویل)
         $exits = Reception::query()
             ->with(['customer', 'technician', 'parts'])
             ->where('status', 'delivered')
@@ -773,7 +773,8 @@ class ReportController extends Controller
             'labor' => (int) $exits->sum('labor_cost'),
             'parts' => (int) $exits->sum('parts_cost'),
             'total' => (int) $exits->sum('total_amount'),
-            'paid' => (int) $exits->sum('paid_amount'),
+            'paid_on_tickets' => (int) $exits->sum('paid_amount'),
+            'remaining' => (int) $exits->sum(fn (Reception $r) => max(0, (int) $r->total_amount - (int) $r->paid_amount)),
         ];
 
         $exitDaily = $exits
@@ -781,7 +782,29 @@ class ReportController extends Controller
             ->map(fn ($g) => (int) $g->sum('total_amount'))
             ->sortKeys();
 
-        // 2) Warehouse stock outs (قطعه انبار).
+        // 2) Cash desk for the same period (all payments received)
+        $payments = Payment::query()
+            ->with(['reception', 'customer'])
+            ->whereBetween('paid_at', [$fromStart, $toEnd])
+            ->orderByDesc('paid_at')
+            ->get();
+
+        $payIn = $payments->filter(fn (Payment $p) => ($p->type ?? '') !== 'refund');
+        $payRefund = $payments->filter(fn (Payment $p) => ($p->type ?? '') === 'refund');
+        $payByMethod = $payIn->groupBy('method')->map(fn ($g) => (int) $g->sum('amount'));
+        $cashTotals = [
+            'count' => $payments->count(),
+            'in' => (int) $payIn->sum('amount'),
+            'refund' => (int) $payRefund->sum('amount'),
+            'net' => (int) $payIn->sum('amount') - (int) $payRefund->sum('amount'),
+            'cash' => (int) ($payByMethod['cash'] ?? 0),
+            'card' => (int) ($payByMethod['card'] ?? 0),
+            'transfer' => (int) ($payByMethod['transfer'] ?? 0),
+            'zarinpal' => (int) ($payByMethod['zarinpal'] ?? 0),
+            'by_method' => $payByMethod,
+        ];
+
+        // 3) Warehouse stock outs
         $movements = StockMovement::query()
             ->with(['part', 'reception', 'user', 'warehouse'])
             ->where('type', 'out')
@@ -849,6 +872,8 @@ class ReportController extends Controller
         return view('reports.parts-used', [
             'exits' => $exits,
             'exitTotals' => $exitTotals,
+            'payments' => $payments,
+            'cashTotals' => $cashTotals,
             'rows' => $rows,
             'movements' => $movements,
             'ticketParts' => $ticketParts,
