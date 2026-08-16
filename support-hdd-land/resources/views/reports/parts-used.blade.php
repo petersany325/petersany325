@@ -22,7 +22,7 @@
                 @endif
             </p>
         </div>
-        <div class="actions" style="margin:0;flex-wrap:wrap;">
+        <div class="actions no-print" style="margin:0;flex-wrap:wrap;">
             @foreach($quick as $key)
                 <form method="POST" action="{{ route('reports.settings') }}" style="display:inline;">
                     @csrf

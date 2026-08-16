@@ -1,4 +1,4 @@
-<form method="GET" action="{{ $action }}" class="acc-period">
+<form method="GET" action="{{ $action }}" class="acc-period no-print">
     @include('partials.jalali-date', ['name' => 'from', 'value' => $from ?? null])
     <span class="acc-period-sep">تا</span>
     @include('partials.jalali-date', ['name' => 'to', 'value' => $to ?? null])

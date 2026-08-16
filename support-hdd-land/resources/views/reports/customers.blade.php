@@ -9,7 +9,7 @@
 <div class="panel" style="margin-bottom:12px;">
     <h2 style="margin-top:0;">جستجوی مشتری</h2>
     <p class="muted">نام، موبایل یا کد ملی را بزنید؛ با باز کردن پرونده، همه قبض‌ها، قطعات، پرداخت‌ها و بدهی را می‌بینید.</p>
-    <form class="search-row" method="GET" action="{{ route('reports.customers') }}">
+    <form class="search-row no-print" method="GET" action="{{ route('reports.customers') }}">
         <input type="search" name="q" value="{{ $q }}" placeholder="مثلاً یوسف یا 0912..." style="min-width:260px;max-width:420px;">
         <button class="btn btn-primary" type="submit">جستجو</button>
         @if($q !== '')

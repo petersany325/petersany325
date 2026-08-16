@@ -12,6 +12,7 @@
         ['route' => 'accounting.manual', 'label' => 'سند دستی', 'icon' => '+', 'tone' => 'violet'],
     ];
 @endphp
+@include('reports._print', ['printTitle' => $accTitle, 'printRange' => isset($from, $to) ? (jalali_date($from).' تا '.jalali_date($to)) : null])
 <div class="acc-shell">
     <div class="acc-hero">
         <div>
@@ -19,7 +20,7 @@
             <h2 class="acc-hero-title">{{ $accTitle }}</h2>
             <p class="acc-hero-sub">{{ $accSub }}</p>
         </div>
-        <div class="acc-hero-actions">
+        <div class="acc-hero-actions no-print">
             @if($accShowPeriod)
                 <form method="GET" action="{{ route('accounting.index') }}" class="acc-period">
                     @include('partials.jalali-date', ['name' => 'from', 'value' => $from ?? jalali_period_range('this_month')[0]])
@@ -38,7 +39,7 @@
             @endif
         </div>
     </div>
-    <nav class="acc-nav">
+    <nav class="acc-nav no-print">
         @foreach($accNav as $item)
             <a href="{{ route($item['route']) }}"
                class="acc-nav-item tone-{{ $item['tone'] }} {{ request()->routeIs($item['route']) ? 'is-on' : '' }}">

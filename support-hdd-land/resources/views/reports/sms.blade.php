@@ -35,7 +35,7 @@
         </div>
     </div>
 
-    <form method="GET" action="{{ route('reports.sms') }}" class="panel sms-report-filters">
+    <form method="GET" action="{{ route('reports.sms') }}" class="panel sms-report-filters no-print">
         @if($receptionId)
             <input type="hidden" name="reception_id" value="{{ $receptionId }}">
         @endif

@@ -2,7 +2,7 @@
     $periodLabels = \App\Support\ReportSettings::periodLabels();
     $quick = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 'this_year', 'last_30'];
 @endphp
-<div class="actions" style="margin:0 0 10px;flex-wrap:wrap;">
+<div class="actions no-print" style="margin:0 0 10px;flex-wrap:wrap;">
     @foreach($quick as $key)
         <form method="POST" action="{{ route('reports.settings') }}" style="display:inline;">
             @csrf

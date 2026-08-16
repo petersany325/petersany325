@@ -9,7 +9,7 @@
 <div class="panel" style="margin-bottom:12px;">
     <h2 style="margin-top:0;">عملکرد تعمیرکاران</h2>
     <p class="muted">نام تعمیرکار را جستجو کنید یا روی پرونده بزنید تا کارهای دوره، قطعات، کمیسیون و دستگاه‌های دست تعمیر را ببینید.</p>
-    <form class="search-row" method="GET" action="{{ route('reports.technicians') }}">
+    <form class="search-row no-print" method="GET" action="{{ route('reports.technicians') }}">
         <input type="search" name="q" value="{{ $q }}" placeholder="نام / تخصص / موبایل" style="min-width:240px;">
         <button class="btn btn-primary" type="submit">جستجو</button>
         @if($q !== '')
