@@ -477,23 +477,41 @@ class ReportController extends Controller
                         ->whereDate('delivered_at', '<=', $to);
                 },
             ], 'labor_cost')
+            ->withSum([
+                'receptions as parts_sum' => function ($q2) use ($from, $to) {
+                    $q2->where('status', 'delivered')
+                        ->whereDate('delivered_at', '>=', $from)
+                        ->whereDate('delivered_at', '<=', $to);
+                },
+            ], 'parts_cost')
             ->orderBy('name')
             ->get()
             ->map(function (Technician $row) use ($inHandMap) {
                 $labor = (int) ($row->labor_sum ?? 0);
                 $pct = (float) ($row->commission_percent ?? 0);
+                $row->labor_sum = $labor;
+                $row->parts_sum = (int) ($row->parts_sum ?? 0);
                 $row->commission_sum = (int) round($labor * $pct / 100);
                 $row->in_hand_count = (int) ($inHandMap[$row->id] ?? 0);
 
                 return $row;
             });
 
+        $totals = [
+            'delivered' => (int) $rows->sum('delivered_count'),
+            'labor' => (int) $rows->sum('labor_sum'),
+            'parts' => (int) $rows->sum('parts_sum'),
+            'commission' => (int) $rows->sum('commission_sum'),
+        ];
+
         $chartLabels = $rows->pluck('name')->values()->all();
         $chartJobs = $rows->pluck('jobs_count')->map(fn ($v) => (int) $v)->values()->all();
         $chartLabor = $rows->pluck('labor_sum')->map(fn ($v) => (int) $v)->values()->all();
+        $chartParts = $rows->pluck('parts_sum')->map(fn ($v) => (int) $v)->values()->all();
 
         return view('reports.technicians', compact(
-            'rows', 'from', 'to', 'q', 'chartLabels', 'chartJobs', 'chartLabor'
+            'rows', 'from', 'to', 'q', 'totals',
+            'chartLabels', 'chartJobs', 'chartLabor', 'chartParts'
         ));
     }
 
