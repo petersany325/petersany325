@@ -11,7 +11,7 @@
     <p class="muted" style="margin:0 0 10px;">قبض‌هایی با وضعیت غیرقابل تعمیر — بازه {{ jalali_date($from) }} تا {{ jalali_date($to) }}.</p>
     @include('reports._period-quick')
 
-    <form method="GET" class="search-row" style="margin-bottom:10px;">
+    <form method="GET" class="search-row no-print" style="margin-bottom:10px;">
         <label>محدوده
             <select name="scope" onchange="this.form.submit()">
                 <option value="current" @selected($scope === 'current')>همه غیرقابل‌تعمیرهای فعلی</option>

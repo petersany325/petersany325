@@ -4,6 +4,7 @@
 @section('window_title', 'منوی کارمندان و گزارش روزانه')
 
 @section('content')
+@include('reports._print', ['printTitle' => 'گزارش دفتر روز کارمندان'])
 @php
     $pct = $stats['slots'] > 0 ? round(($stats['complete'] / $stats['slots']) * 100) : 0;
     $openPanel = collect($employeePanels)->first(fn ($p) => (int) $p['user']->id === (int) $openUserId) ?: ($employeePanels[0] ?? null);
@@ -21,7 +22,7 @@
             <h2>گزارش دفتر روز کارمندان</h2>
             <p class="daybook-sub">از منوی سمت راست نام کارمند را باز کنید؛ گزارش‌ها به تفکیک روز نمایش داده می‌شود. {{ $exemptNote }}</p>
         </div>
-        <div class="daybook-hero-actions">
+        <div class="daybook-hero-actions no-print">
             <a class="btn btn-secondary" href="{{ route('daily-logs.index') }}">ثبت امروز</a>
             @if(auth()->user()->canAccess('daily_logs.manage'))
                 <a class="btn btn-ghost" href="{{ route('daily-logs.settings') }}">تنظیمات</a>
@@ -29,7 +30,7 @@
         </div>
     </section>
 
-    <form method="GET" class="panel daybook-toolbar">
+    <form method="GET" class="panel daybook-toolbar no-print">
         <div class="daybook-filters" style="width:100%;">
             <div class="daybook-nav">
                 <div class="daybook-date-field">

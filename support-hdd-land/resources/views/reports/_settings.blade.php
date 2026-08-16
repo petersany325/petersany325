@@ -1,3 +1,4 @@
+@include('reports._print')
 @php
     $rs = \App\Support\ReportSettings::all();
     $periodLabels = \App\Support\ReportSettings::periodLabels();
@@ -10,7 +11,7 @@
         ];
     }
 @endphp
-<div class="panel report-settings" style="margin-bottom:12px;"
+<div class="panel report-settings no-print" style="margin-bottom:12px;"
      data-report-settings
      data-period-ranges='@json($periodRangesJalali)'>
     <form method="POST" action="{{ route('reports.settings') }}" class="report-settings-form">

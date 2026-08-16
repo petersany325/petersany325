@@ -11,7 +11,7 @@
     <p class="muted" style="margin:0 0 10px;">مثلاً فقط ریکاوری، فقط تعمیر، وضعیت خاص، تعمیرکار، سریال و … در بازه {{ jalali_date($from) }} تا {{ jalali_date($to) }}.</p>
     @include('reports._period-quick')
 
-    <form method="GET" action="{{ route('reports.goods-filter') }}" class="panel" style="margin:10px 0 0;padding:12px;background:#f8fafc;">
+    <form method="GET" action="{{ route('reports.goods-filter') }}" class="panel no-print" style="margin:10px 0 0;padding:12px;background:#f8fafc;">
         <div class="accept-row accept-row-4" style="align-items:end;">
             <div>
                 <label>جستجو کلی</label>

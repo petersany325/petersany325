@@ -7,7 +7,7 @@
 @include('reports._settings')
 
 <div class="panel" style="margin-bottom:12px;">
-    <form method="GET" action="{{ route('reports.custody') }}" class="accept-row accept-row-4" style="align-items:end;">
+    <form method="GET" action="{{ route('reports.custody') }}" class="accept-row accept-row-4 no-print" style="align-items:end;">
         <div>
             <label>شماره قبض</label>
             @include('partials.receipt-search-input', [

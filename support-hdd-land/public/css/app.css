@@ -1453,3 +1453,85 @@ label:has(> input.field-latin) .latin-hint,
   display:inline-block;margin-right:6px;font-size:10px;font-weight:700;color:#0f766e;
   letter-spacing:.02em;
 }
+
+
+/* === Report print === */
+@media print {
+  @page { margin: 12mm; }
+  html, body {
+    background: #fff !important;
+    color: #111 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .no-print,
+  .win-app-caption,
+  .win-menubar,
+  .app-toolbar,
+  .app-statusbar,
+  .staff-tabbar,
+  .staff-drawer,
+  .win-titlebar,
+  .report-settings,
+  .report-print-bar,
+  .report-charts-row,
+  .flash,
+  .alert,
+  .pagination,
+  .acc-nav,
+  .acc-hero-actions,
+  .acc-period,
+  .daybook-toolbar,
+  .daybook-hero-actions,
+  .ui-mode-toggle,
+  .mobile-only,
+  .desktop-only.win-titlebar {
+    display: none !important;
+  }
+  .app-shell,
+  .app-workspace,
+  .win-frame,
+  .win-body {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+  .panel,
+  .stat,
+  .emp-stat,
+  .acc-kpi,
+  .acc-mini {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+    background: #fff !important;
+  }
+  .compact-table,
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+  .compact-table th,
+  .compact-table td,
+  table th,
+  table td {
+    border: 1px solid #bbb !important;
+    color: #111 !important;
+  }
+  a { color: #111 !important; text-decoration: none !important; }
+  a.btn, button, .btn { display: none !important; }
+  .badge { border: 1px solid #999 !important; background: #fff !important; color: #111 !important; }
+  .table-wrap { overflow: visible !important; }
+  .split-2, .report-charts-row, .acc-kpi-grid, .acc-mini-grid, .stats, .emp-stat-row {
+    display: block !important;
+  }
+  .split-2 > *, .stats > *, .emp-stat-row > * {
+    break-inside: avoid;
+    margin-bottom: 8px;
+  }
+}
