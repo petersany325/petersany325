@@ -28,7 +28,12 @@ class ReportController extends Controller
         $redirect = $request->get('redirect');
         $appRoot = rtrim((string) config('app.url'), '/');
         if (is_string($redirect) && (str_starts_with($redirect, $appRoot.'/') || str_starts_with($redirect, '/'))) {
-            return redirect()->to($redirect)->with('success', 'تنظیمات گزارش‌ها اعمال شد.');
+            // Drop stale ?period=&from=&to= so syncFromQuery cannot overwrite the new session range.
+            $parts = parse_url($redirect);
+            $path = ($parts['path'] ?? '/');
+            $target = (str_starts_with($redirect, 'http') ? ($appRoot.$path) : $path);
+
+            return redirect()->to($target)->with('success', 'تنظیمات گزارش‌ها اعمال شد.');
         }
 
         return back()->with('success', 'تنظیمات گزارش‌ها اعمال شد.');
@@ -750,69 +755,104 @@ class ReportController extends Controller
     public function partsUsed(Request $request): View
     {
         [$from, $to] = $this->range($request);
+        $tz = config('app.timezone', 'Asia/Tehran');
+        $fromStart = \Illuminate\Support\Carbon::parse($from, $tz)->startOfDay();
+        $toEnd = \Illuminate\Support\Carbon::parse($to, $tz)->endOfDay();
 
-        // Warehouse exits are the source of truth (stock_movements).
-        $stockRows = StockMovement::query()
-            ->from('stock_movements as sm')
-            ->leftJoin('parts as p', 'p.id', '=', 'sm.part_id')
-            ->selectRaw("COALESCE(NULLIF(TRIM(p.name), ''), CONCAT('قطعه #', sm.part_id)) as part_name")
-            ->selectRaw('SUM(ABS(sm.quantity)) as qty')
-            ->selectRaw('SUM(ABS(sm.total_cost)) as amount')
-            ->where('sm.type', 'out')
-            ->whereDate('sm.created_at', '>=', $from)
-            ->whereDate('sm.created_at', '<=', $to)
-            ->groupBy('sm.part_id', 'p.name')
-            ->get()
-            ->keyBy('part_name');
+        $movements = StockMovement::query()
+            ->with(['part', 'reception', 'user', 'warehouse'])
+            ->where('type', 'out')
+            ->whereBetween('created_at', [$fromStart, $toEnd])
+            ->orderByDesc('id')
+            ->get();
 
-        // Free-text / legacy rows on tickets (may exist without stock movement).
-        $ticketRows = ReceptionPart::query()
-            ->selectRaw('part_name')
-            ->selectRaw('SUM(quantity) as qty')
-            ->selectRaw('SUM(total_price) as amount')
-            ->where(function ($q) use ($from, $to) {
-                $q->where(function ($inner) use ($from, $to) {
-                    $inner->whereNotNull('used_at')
-                        ->whereDate('used_at', '>=', $from)
-                        ->whereDate('used_at', '<=', $to);
-                })->orWhere(function ($inner) use ($from, $to) {
-                    $inner->whereNull('used_at')
-                        ->whereDate('created_at', '>=', $from)
-                        ->whereDate('created_at', '<=', $to);
-                });
+        $rows = $movements
+            ->groupBy(fn (StockMovement $m) => $m->part?->name ?: ('قطعه #'.($m->part_id ?: '—')))
+            ->map(function ($group, $name) {
+                return (object) [
+                    'part_name' => $name,
+                    'qty' => (int) $group->sum(fn (StockMovement $m) => abs((int) $m->quantity)),
+                    'amount' => (int) $group->sum(fn (StockMovement $m) => abs((int) $m->total_cost)),
+                    'docs' => $group->count(),
+                ];
             })
+            ->sortByDesc('qty')
+            ->values();
+
+        // Free-text ticket parts without warehouse part_id (legacy / manual).
+        $ticketParts = ReceptionPart::query()
+            ->with('reception')
             ->where(function ($q) {
                 $q->whereNull('part_id')->orWhere('part_id', 0);
             })
-            ->groupBy('part_name')
+            ->where(function ($q) use ($fromStart, $toEnd) {
+                $q->where(function ($inner) use ($fromStart, $toEnd) {
+                    $inner->whereNotNull('used_at')
+                        ->whereDate('used_at', '>=', $fromStart->toDateString())
+                        ->whereDate('used_at', '<=', $toEnd->toDateString());
+                })->orWhere(function ($inner) use ($fromStart, $toEnd) {
+                    $inner->whereNull('used_at')
+                        ->whereBetween('created_at', [$fromStart, $toEnd]);
+                });
+            })
+            ->orderByDesc('id')
             ->get();
 
-        foreach ($ticketRows as $row) {
-            $name = (string) $row->part_name;
-            if ($stockRows->has($name)) {
-                $cur = $stockRows->get($name);
-                $cur->qty = (int) $cur->qty + (int) $row->qty;
-                $cur->amount = (int) $cur->amount + (int) $row->amount;
+        foreach ($ticketParts->groupBy('part_name') as $name => $group) {
+            $qty = (int) $group->sum('quantity');
+            $amount = (int) $group->sum('total_price');
+            $existing = $rows->firstWhere('part_name', $name);
+            if ($existing) {
+                $existing->qty += $qty;
+                $existing->amount += $amount;
+                $existing->docs += $group->count();
             } else {
-                $stockRows->put($name, $row);
+                $rows->push((object) [
+                    'part_name' => $name,
+                    'qty' => $qty,
+                    'amount' => $amount,
+                    'docs' => $group->count(),
+                ]);
             }
         }
+        $rows = $rows->sortByDesc('qty')->values();
 
-        $rows = $stockRows->values()->sortByDesc(fn ($r) => (int) $r->qty)->values();
+        $daily = $movements
+            ->groupBy(fn (StockMovement $m) => optional($m->created_at)->timezone($tz)->toDateString())
+            ->map(fn ($g) => (int) $g->sum(fn (StockMovement $m) => abs((int) $m->quantity)))
+            ->sortKeys();
 
         $totals = [
             'lines' => $rows->count(),
-            'qty' => (int) $rows->sum(fn ($r) => (int) $r->qty),
-            'amount' => (int) $rows->sum(fn ($r) => (int) $r->amount),
+            'qty' => (int) $rows->sum('qty'),
+            'amount' => (int) $rows->sum('amount'),
+            'docs' => $movements->count() + $ticketParts->count(),
         ];
+
+        $recentFallback = collect();
+        if ($movements->isEmpty() && $ticketParts->isEmpty()) {
+            $recentFallback = StockMovement::query()
+                ->with(['part', 'reception', 'user'])
+                ->where('type', 'out')
+                ->orderByDesc('id')
+                ->limit(10)
+                ->get();
+        }
 
         return view('reports.parts-used', [
             'rows' => $rows,
+            'movements' => $movements,
+            'ticketParts' => $ticketParts,
             'from' => $from,
             'to' => $to,
             'totals' => $totals,
+            'daily' => $daily,
+            'recentFallback' => $recentFallback,
+            'period' => ReportSettings::get('period', 'custom'),
             'chartPartLabels' => $rows->take(10)->pluck('part_name')->values()->all(),
             'chartPartValues' => $rows->take(10)->pluck('qty')->map(fn ($v) => (int) $v)->values()->all(),
+            'chartDailyLabels' => jalali_day_labels($daily->keys()->values()->all()),
+            'chartDailyValues' => $daily->values()->values()->all(),
         ]);
     }
 
