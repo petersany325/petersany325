@@ -451,6 +451,17 @@ class ReportController extends Controller
             ->groupBy('custody_technician_id')
             ->pluck('total', 'custody_technician_id');
 
+        // Ready repairs not yet exited: current backlog amount (labor + parts).
+        $pendingExitMap = Reception::query()
+            ->select(
+                'technician_id',
+                DB::raw('COALESCE(SUM(COALESCE(labor_cost,0) + COALESCE(parts_cost,0)),0) as total')
+            )
+            ->where('status', 'ready')
+            ->whereNotNull('technician_id')
+            ->groupBy('technician_id')
+            ->pluck('total', 'technician_id');
+
         $query = Technician::query();
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
@@ -486,32 +497,32 @@ class ReportController extends Controller
             ], 'parts_cost')
             ->orderBy('name')
             ->get()
-            ->map(function (Technician $row) use ($inHandMap) {
+            ->map(function (Technician $row) use ($inHandMap, $pendingExitMap) {
                 $labor = (int) ($row->labor_sum ?? 0);
                 $pct = (float) ($row->commission_percent ?? 0);
                 $row->labor_sum = $labor;
                 $row->parts_sum = (int) ($row->parts_sum ?? 0);
                 $row->commission_sum = (int) round($labor * $pct / 100);
                 $row->in_hand_count = (int) ($inHandMap[$row->id] ?? 0);
+                $row->pending_exit_sum = (int) ($pendingExitMap[$row->id] ?? 0);
 
                 return $row;
             });
 
         $totals = [
-            'delivered' => (int) $rows->sum('delivered_count'),
             'labor' => (int) $rows->sum('labor_sum'),
             'parts' => (int) $rows->sum('parts_sum'),
             'commission' => (int) $rows->sum('commission_sum'),
+            'pending_exit' => (int) $rows->sum('pending_exit_sum'),
         ];
 
         $chartLabels = $rows->pluck('name')->values()->all();
         $chartJobs = $rows->pluck('jobs_count')->map(fn ($v) => (int) $v)->values()->all();
         $chartLabor = $rows->pluck('labor_sum')->map(fn ($v) => (int) $v)->values()->all();
-        $chartParts = $rows->pluck('parts_sum')->map(fn ($v) => (int) $v)->values()->all();
 
         return view('reports.technicians', compact(
             'rows', 'from', 'to', 'q', 'totals',
-            'chartLabels', 'chartJobs', 'chartLabor', 'chartParts'
+            'chartLabels', 'chartJobs', 'chartLabor'
         ));
     }
 
