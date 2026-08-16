@@ -56,10 +56,12 @@ class ReportSettings
     public static function applyRequest(Request $request): array
     {
         $current = self::all();
+        $period = (string) $request->get('period', $current['period'] ?? 'this_month');
 
-        if ($request->filled('period') && $request->get('period') !== 'custom') {
-            [$from, $to] = self::resolvePeriod((string) $request->get('period'));
-            $current['period'] = (string) $request->get('period');
+        // Preset periods always win over submitted from/to (avoids stale date fields).
+        if ($period !== '' && $period !== 'custom') {
+            [$from, $to] = self::resolvePeriod($period);
+            $current['period'] = $period;
             $current['from'] = $from;
             $current['to'] = $to;
         } else {
@@ -67,19 +69,15 @@ class ReportSettings
                 $parsed = parse_jalali_or_gregorian_date((string) $request->get('from'));
                 if ($parsed) {
                     $current['from'] = $parsed;
-                    $current['period'] = 'custom';
                 }
             }
             if ($request->filled('to')) {
                 $parsed = parse_jalali_or_gregorian_date((string) $request->get('to'));
                 if ($parsed) {
                     $current['to'] = $parsed;
-                    $current['period'] = 'custom';
                 }
             }
-            if ($request->filled('period')) {
-                $current['period'] = (string) $request->get('period');
-            }
+            $current['period'] = 'custom';
         }
 
         if ($request->has('show_charts')) {
@@ -94,8 +92,9 @@ class ReportSettings
 
         // Keep dates sane (stored as Gregorian Y-m-d for DB queries)
         try {
-            $from = Carbon::parse($current['from'])->startOfDay();
-            $to = Carbon::parse($current['to'])->endOfDay();
+            $tz = config('app.timezone', 'Asia/Tehran');
+            $from = Carbon::parse($current['from'], $tz)->startOfDay();
+            $to = Carbon::parse($current['to'], $tz)->endOfDay();
             if ($from->gt($to)) {
                 [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
             }
@@ -116,7 +115,8 @@ class ReportSettings
     /** Sync GET from/to into session without wiping chart prefs. */
     public static function syncFromQuery(Request $request): array
     {
-        if ($request->filled('from') || $request->filled('to') || $request->filled('period')) {
+        // Only honor explicit period/from/to query — ignore empty noise.
+        if ($request->filled('period') || $request->filled('from') || $request->filled('to')) {
             return self::applyRequest($request);
         }
 
@@ -129,11 +129,27 @@ class ReportSettings
         return jalali_period_range($period);
     }
 
+    /** @return array<string, array{0:string,1:string}> gregorian ranges for UI sync */
+    public static function periodRanges(): array
+    {
+        $out = [];
+        foreach (array_keys(self::periodLabels()) as $key) {
+            if ($key === 'custom') {
+                continue;
+            }
+            $out[$key] = self::resolvePeriod($key);
+        }
+
+        return $out;
+    }
+
     public static function periodLabels(): array
     {
         return [
             'today' => 'امروز',
+            'yesterday' => 'دیروز',
             'this_week' => 'این هفته',
+            'last_week' => 'هفته قبل',
             'this_month' => 'این ماه',
             'last_month' => 'ماه قبل',
             'last_30' => '۳۰ روز اخیر',

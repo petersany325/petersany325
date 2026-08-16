@@ -287,13 +287,27 @@ if (! function_exists('jalali_period_range')) {
 
         return match ($period) {
             'today' => [$to, $to],
+            'yesterday' => (static function () use ($now) {
+                $d = $now->copy()->subDay()->toDateString();
+
+                return [$d, $d];
+            })(),
             'this_week' => (static function () use ($now, $to) {
                 // هفته ایرانی: شنبه تا جمعه
                 $dow = (int) $now->dayOfWeek; // 0=Sun … 6=Sat
                 $daysFromSat = ($dow + 1) % 7;
-                $from = $now->copy()->subDays($daysFromSat)->toDateString();
+                $from = $now->copy()->startOfDay()->subDays($daysFromSat)->toDateString();
 
                 return [$from, $to];
+            })(),
+            'last_week' => (static function () use ($now) {
+                $dow = (int) $now->dayOfWeek;
+                $daysFromSat = ($dow + 1) % 7;
+                $thisSat = $now->copy()->startOfDay()->subDays($daysFromSat);
+                $from = $thisSat->copy()->subDays(7)->toDateString();
+                $toDay = $thisSat->copy()->subDay()->toDateString();
+
+                return [$from, $toDay];
             })(),
             'this_month' => [$toGreg($jy, $jm, 1), $to],
             'last_month' => (static function () use ($jy, $jm, $toGreg) {

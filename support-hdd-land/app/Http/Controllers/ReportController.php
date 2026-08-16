@@ -13,6 +13,7 @@ use App\Models\ReceptionPart;
 use App\Models\ReferralSource;
 use App\Models\SmsLog;
 use App\Models\Technician;
+use App\Models\StockMovement;
 use App\Support\ReportSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,7 +28,12 @@ class ReportController extends Controller
         $redirect = $request->get('redirect');
         $appRoot = rtrim((string) config('app.url'), '/');
         if (is_string($redirect) && (str_starts_with($redirect, $appRoot.'/') || str_starts_with($redirect, '/'))) {
-            return redirect()->to($redirect)->with('success', 'تنظیمات گزارش‌ها اعمال شد.');
+            // Drop stale ?period=&from=&to= so syncFromQuery cannot overwrite the new session range.
+            $parts = parse_url($redirect);
+            $path = ($parts['path'] ?? '/');
+            $target = (str_starts_with($redirect, 'http') ? ($appRoot.$path) : $path);
+
+            return redirect()->to($target)->with('success', 'تنظیمات گزارش‌ها اعمال شد.');
         }
 
         return back()->with('success', 'تنظیمات گزارش‌ها اعمال شد.');
@@ -451,6 +457,17 @@ class ReportController extends Controller
             ->groupBy('custody_technician_id')
             ->pluck('total', 'custody_technician_id');
 
+        // Ready repairs not yet exited: current backlog amount (labor + parts).
+        $pendingExitMap = Reception::query()
+            ->select(
+                'technician_id',
+                DB::raw('COALESCE(SUM(COALESCE(labor_cost,0) + COALESCE(parts_cost,0)),0) as total')
+            )
+            ->where('status', 'ready')
+            ->whereNotNull('technician_id')
+            ->groupBy('technician_id')
+            ->pluck('total', 'technician_id');
+
         $query = Technician::query();
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
@@ -477,23 +494,41 @@ class ReportController extends Controller
                         ->whereDate('delivered_at', '<=', $to);
                 },
             ], 'labor_cost')
+            ->withSum([
+                'receptions as parts_sum' => function ($q2) use ($from, $to) {
+                    $q2->where('status', 'delivered')
+                        ->whereDate('delivered_at', '>=', $from)
+                        ->whereDate('delivered_at', '<=', $to);
+                },
+            ], 'parts_cost')
             ->orderBy('name')
             ->get()
-            ->map(function (Technician $row) use ($inHandMap) {
+            ->map(function (Technician $row) use ($inHandMap, $pendingExitMap) {
                 $labor = (int) ($row->labor_sum ?? 0);
                 $pct = (float) ($row->commission_percent ?? 0);
+                $row->labor_sum = $labor;
+                $row->parts_sum = (int) ($row->parts_sum ?? 0);
                 $row->commission_sum = (int) round($labor * $pct / 100);
                 $row->in_hand_count = (int) ($inHandMap[$row->id] ?? 0);
+                $row->pending_exit_sum = (int) ($pendingExitMap[$row->id] ?? 0);
 
                 return $row;
             });
+
+        $totals = [
+            'labor' => (int) $rows->sum('labor_sum'),
+            'parts' => (int) $rows->sum('parts_sum'),
+            'commission' => (int) $rows->sum('commission_sum'),
+            'pending_exit' => (int) $rows->sum('pending_exit_sum'),
+        ];
 
         $chartLabels = $rows->pluck('name')->values()->all();
         $chartJobs = $rows->pluck('jobs_count')->map(fn ($v) => (int) $v)->values()->all();
         $chartLabor = $rows->pluck('labor_sum')->map(fn ($v) => (int) $v)->values()->all();
 
         return view('reports.technicians', compact(
-            'rows', 'from', 'to', 'q', 'chartLabels', 'chartJobs', 'chartLabor'
+            'rows', 'from', 'to', 'q', 'totals',
+            'chartLabels', 'chartJobs', 'chartLabor'
         ));
     }
 
@@ -720,19 +755,134 @@ class ReportController extends Controller
     public function partsUsed(Request $request): View
     {
         [$from, $to] = $this->range($request);
+        $tz = config('app.timezone', 'Asia/Tehran');
+        $fromStart = \Illuminate\Support\Carbon::parse($from, $tz)->startOfDay();
+        $toEnd = \Illuminate\Support\Carbon::parse($to, $tz)->endOfDay();
 
-        $rows = ReceptionPart::query()
-            ->select('part_name', DB::raw('SUM(quantity) as qty'), DB::raw('SUM(total_price) as amount'))
-            ->whereDate('used_at', '>=', $from)
-            ->whereDate('used_at', '<=', $to)
-            ->groupBy('part_name')
-            ->orderByDesc('qty')
+        // 1) Ticket exits (تحویل)
+        $exits = Reception::query()
+            ->with(['customer', 'technician', 'parts'])
+            ->where('status', 'delivered')
+            ->whereNotNull('delivered_at')
+            ->whereBetween('delivered_at', [$fromStart, $toEnd])
+            ->orderByDesc('delivered_at')
             ->get();
 
+        $exitTotals = [
+            'count' => $exits->count(),
+            'labor' => (int) $exits->sum('labor_cost'),
+            'parts' => (int) $exits->sum('parts_cost'),
+            'total' => (int) $exits->sum('total_amount'),
+            'paid_on_tickets' => (int) $exits->sum('paid_amount'),
+            'remaining' => (int) $exits->sum(fn (Reception $r) => max(0, (int) $r->total_amount - (int) $r->paid_amount)),
+        ];
+
+        $exitDaily = $exits
+            ->groupBy(fn (Reception $r) => optional($r->delivered_at)->timezone($tz)->toDateString())
+            ->map(fn ($g) => (int) $g->sum('total_amount'))
+            ->sortKeys();
+
+        // 2) Cash desk for the same period (all payments received)
+        $payments = Payment::query()
+            ->with(['reception', 'customer'])
+            ->whereBetween('paid_at', [$fromStart, $toEnd])
+            ->orderByDesc('paid_at')
+            ->get();
+
+        $payIn = $payments->filter(fn (Payment $p) => ($p->type ?? '') !== 'refund');
+        $payRefund = $payments->filter(fn (Payment $p) => ($p->type ?? '') === 'refund');
+        $payByMethod = $payIn->groupBy('method')->map(fn ($g) => (int) $g->sum('amount'));
+        $cashTotals = [
+            'count' => $payments->count(),
+            'in' => (int) $payIn->sum('amount'),
+            'refund' => (int) $payRefund->sum('amount'),
+            'net' => (int) $payIn->sum('amount') - (int) $payRefund->sum('amount'),
+            'cash' => (int) ($payByMethod['cash'] ?? 0),
+            'card' => (int) ($payByMethod['card'] ?? 0),
+            'transfer' => (int) ($payByMethod['transfer'] ?? 0),
+            'zarinpal' => (int) ($payByMethod['zarinpal'] ?? 0),
+            'by_method' => $payByMethod,
+        ];
+
+        // 3) Warehouse stock outs
+        $movements = StockMovement::query()
+            ->with(['part', 'reception', 'user', 'warehouse'])
+            ->where('type', 'out')
+            ->whereBetween('created_at', [$fromStart, $toEnd])
+            ->orderByDesc('id')
+            ->get();
+
+        $rows = $movements
+            ->groupBy(fn (StockMovement $m) => $m->part?->name ?: ('قطعه #'.($m->part_id ?: '—')))
+            ->map(function ($group, $name) {
+                return (object) [
+                    'part_name' => $name,
+                    'qty' => (int) $group->sum(fn (StockMovement $m) => abs((int) $m->quantity)),
+                    'amount' => (int) $group->sum(fn (StockMovement $m) => abs((int) $m->total_cost)),
+                    'docs' => $group->count(),
+                ];
+            })
+            ->sortByDesc('qty')
+            ->values();
+
+        $ticketParts = ReceptionPart::query()
+            ->with('reception')
+            ->where(function ($q) {
+                $q->whereNull('part_id')->orWhere('part_id', 0);
+            })
+            ->where(function ($q) use ($fromStart, $toEnd) {
+                $q->where(function ($inner) use ($fromStart, $toEnd) {
+                    $inner->whereNotNull('used_at')
+                        ->whereDate('used_at', '>=', $fromStart->toDateString())
+                        ->whereDate('used_at', '<=', $toEnd->toDateString());
+                })->orWhere(function ($inner) use ($fromStart, $toEnd) {
+                    $inner->whereNull('used_at')
+                        ->whereBetween('created_at', [$fromStart, $toEnd]);
+                });
+            })
+            ->orderByDesc('id')
+            ->get();
+
+        foreach ($ticketParts->groupBy('part_name') as $name => $group) {
+            $qty = (int) $group->sum('quantity');
+            $amount = (int) $group->sum('total_price');
+            $existing = $rows->firstWhere('part_name', $name);
+            if ($existing) {
+                $existing->qty += $qty;
+                $existing->amount += $amount;
+                $existing->docs += $group->count();
+            } else {
+                $rows->push((object) [
+                    'part_name' => $name,
+                    'qty' => $qty,
+                    'amount' => $amount,
+                    'docs' => $group->count(),
+                ]);
+            }
+        }
+        $rows = $rows->sortByDesc('qty')->values();
+
+        $stockTotals = [
+            'lines' => $rows->count(),
+            'qty' => (int) $rows->sum('qty'),
+            'amount' => (int) $rows->sum('amount'),
+            'docs' => $movements->count() + $ticketParts->count(),
+        ];
+
         return view('reports.parts-used', [
+            'exits' => $exits,
+            'exitTotals' => $exitTotals,
+            'payments' => $payments,
+            'cashTotals' => $cashTotals,
             'rows' => $rows,
+            'movements' => $movements,
+            'ticketParts' => $ticketParts,
+            'stockTotals' => $stockTotals,
             'from' => $from,
             'to' => $to,
+            'period' => ReportSettings::get('period', 'custom'),
+            'chartExitLabels' => jalali_day_labels($exitDaily->keys()->values()->all()),
+            'chartExitValues' => $exitDaily->values()->values()->all(),
             'chartPartLabels' => $rows->take(10)->pluck('part_name')->values()->all(),
             'chartPartValues' => $rows->take(10)->pluck('qty')->map(fn ($v) => (int) $v)->values()->all(),
         ]);

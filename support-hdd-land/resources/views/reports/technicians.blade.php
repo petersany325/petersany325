@@ -46,6 +46,8 @@
                 <th>تحویل‌شده</th>
                 <th>دست تعمیر</th>
                 <th>جمع اجرت</th>
+                <th>جمع قطعات</th>
+                <th>جمع خروج‌نخورده</th>
                 <th>کمیسیون%</th>
                 <th>مبلغ کمیسیون</th>
                 <th></th>
@@ -59,17 +61,38 @@
                     <td>{{ $row->jobs_count }}</td>
                     <td>{{ $row->delivered_count }}</td>
                     <td>{{ $row->in_hand_count }}</td>
-                    <td>{{ toman($row->labor_sum) }}</td>
+                    <td>{{ toman((int) ($row->labor_sum ?? 0)) }}</td>
+                    <td>{{ toman((int) ($row->parts_sum ?? 0)) }}</td>
+                    <td>
+                        <strong>{{ toman((int) ($row->pending_exit_sum ?? 0)) }}</strong>
+                        <div class="muted" style="font-size:10px;">آماده تحویل</div>
+                    </td>
                     <td>{{ $row->commission_percent }}٪</td>
                     <td>{{ toman($row->commission_sum ?? 0) }}</td>
                     <td><a class="btn btn-primary" href="{{ route('reports.technicians.show', $row) }}">پرونده عملکرد</a></td>
                 </tr>
             @empty
-                <tr><td colspan="9">تعمیرکاری یافت نشد.</td></tr>
+                <tr><td colspan="11">تعمیرکاری یافت نشد.</td></tr>
             @endforelse
             </tbody>
+            @if($rows->isNotEmpty())
+                <tfoot>
+                <tr>
+                    <th colspan="5">جمع کل</th>
+                    <th>{{ toman((int) ($totals['labor'] ?? 0)) }}</th>
+                    <th>{{ toman((int) ($totals['parts'] ?? 0)) }}</th>
+                    <th>{{ toman((int) ($totals['pending_exit'] ?? 0)) }}</th>
+                    <th></th>
+                    <th>{{ toman((int) ($totals['commission'] ?? 0)) }}</th>
+                    <th></th>
+                </tr>
+                </tfoot>
+            @endif
         </table>
     </div>
+    <p class="muted" style="margin:8px 0 0;font-size:11px;">
+        «جمع خروج‌نخورده» = اجرت + قطعات قبض‌هایی که وضعیت‌شان الان «آماده تحویل» است و هنوز خروج نخورده‌اند.
+    </p>
 </div>
 @endsection
 
