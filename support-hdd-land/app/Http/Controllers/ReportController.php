@@ -13,6 +13,7 @@ use App\Models\ReceptionPart;
 use App\Models\ReferralSource;
 use App\Models\SmsLog;
 use App\Models\Technician;
+use App\Models\StockMovement;
 use App\Support\ReportSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -750,18 +751,66 @@ class ReportController extends Controller
     {
         [$from, $to] = $this->range($request);
 
-        $rows = ReceptionPart::query()
-            ->select('part_name', DB::raw('SUM(quantity) as qty'), DB::raw('SUM(total_price) as amount'))
-            ->whereDate('used_at', '>=', $from)
-            ->whereDate('used_at', '<=', $to)
+        // Warehouse exits are the source of truth (stock_movements).
+        $stockRows = StockMovement::query()
+            ->from('stock_movements as sm')
+            ->leftJoin('parts as p', 'p.id', '=', 'sm.part_id')
+            ->selectRaw("COALESCE(NULLIF(TRIM(p.name), ''), CONCAT('قطعه #', sm.part_id)) as part_name")
+            ->selectRaw('SUM(ABS(sm.quantity)) as qty')
+            ->selectRaw('SUM(ABS(sm.total_cost)) as amount')
+            ->where('sm.type', 'out')
+            ->whereDate('sm.created_at', '>=', $from)
+            ->whereDate('sm.created_at', '<=', $to)
+            ->groupBy('sm.part_id', 'p.name')
+            ->get()
+            ->keyBy('part_name');
+
+        // Free-text / legacy rows on tickets (may exist without stock movement).
+        $ticketRows = ReceptionPart::query()
+            ->selectRaw('part_name')
+            ->selectRaw('SUM(quantity) as qty')
+            ->selectRaw('SUM(total_price) as amount')
+            ->where(function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->whereNotNull('used_at')
+                        ->whereDate('used_at', '>=', $from)
+                        ->whereDate('used_at', '<=', $to);
+                })->orWhere(function ($inner) use ($from, $to) {
+                    $inner->whereNull('used_at')
+                        ->whereDate('created_at', '>=', $from)
+                        ->whereDate('created_at', '<=', $to);
+                });
+            })
+            ->where(function ($q) {
+                $q->whereNull('part_id')->orWhere('part_id', 0);
+            })
             ->groupBy('part_name')
-            ->orderByDesc('qty')
             ->get();
+
+        foreach ($ticketRows as $row) {
+            $name = (string) $row->part_name;
+            if ($stockRows->has($name)) {
+                $cur = $stockRows->get($name);
+                $cur->qty = (int) $cur->qty + (int) $row->qty;
+                $cur->amount = (int) $cur->amount + (int) $row->amount;
+            } else {
+                $stockRows->put($name, $row);
+            }
+        }
+
+        $rows = $stockRows->values()->sortByDesc(fn ($r) => (int) $r->qty)->values();
+
+        $totals = [
+            'lines' => $rows->count(),
+            'qty' => (int) $rows->sum(fn ($r) => (int) $r->qty),
+            'amount' => (int) $rows->sum(fn ($r) => (int) $r->amount),
+        ];
 
         return view('reports.parts-used', [
             'rows' => $rows,
             'from' => $from,
             'to' => $to,
+            'totals' => $totals,
             'chartPartLabels' => $rows->take(10)->pluck('part_name')->values()->all(),
             'chartPartValues' => $rows->take(10)->pluck('qty')->map(fn ($v) => (int) $v)->values()->all(),
         ]);
