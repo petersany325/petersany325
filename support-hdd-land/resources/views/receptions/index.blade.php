@@ -19,13 +19,14 @@
 
     <form class="search-row" method="GET" style="align-items:end;">
         <div style="flex:1 1 260px;min-width:200px;">
-            <label>شماره قبض</label>
+            <label>جستجو (قبض / نام / موبایل)</label>
             @include('partials.receipt-search-input', [
                 'name' => 'q',
                 'value' => $q,
-                'placeholder' => '1000',
-                'hint' => 'T-20N ثابت است؛ ادامه کد را بزنید (یا نام/موبایل/سریال).',
+                'placeholder' => '1000 یا نام یا 09…',
+                'hint' => 'ادامه شماره قبض بعد از T-20N، یا نام مشتری، موبایل، سریال.',
                 'allowFree' => true,
+                'inputmode' => 'text',
             ])
         </div>
         <select name="status">
@@ -44,7 +45,8 @@
         <table>
             <thead>
             <tr>
-                <th>شماره</th>
+                <th>شماره قبض</th>
+                <th>کد سیستم</th>
                 <th>مشتری</th>
                 <th>کالا / مدل</th>
                 <th>سریال</th>
@@ -58,8 +60,11 @@
             <tbody>
             @forelse($receptions as $item)
                 <tr>
-                    <td>{{ $item->ticket_no }}</td>
-                    <td>{{ $item->customer?->name }}<div class="muted">{{ $item->customer?->phone }}</div></td>
+                    <td>
+                        <strong dir="ltr">{{ $item->receipt_no ?: '—' }}</strong>
+                    </td>
+                    <td><span class="muted" dir="ltr">{{ $item->ticket_no }}</span></td>
+                    <td>{{ $item->customer?->name }}<div class="muted" dir="ltr">{{ $item->customer?->phone }}</div></td>
                     <td>{{ $item->product_name }} {{ $item->model }}</td>
                     <td>{{ $item->serial_number ?: '—' }}</td>
                     <td>{{ $item->technician?->name ?? '—' }}</td>
@@ -75,14 +80,14 @@
                     </td>
                     <td>
                         <a class="btn btn-secondary" href="{{ route('receptions.show', $item) }}">جزئیات</a>
-                        <a class="btn btn-ghost" href="{{ route('receptions.search', ['q' => $item->ticket_no]) }}">گزارش</a>
+                        <a class="btn btn-ghost" href="{{ route('receptions.search', ['q' => $item->receipt_no ?: $item->ticket_no]) }}">گزارش</a>
                         @if($item->canCollectDebt())
                             <a class="btn btn-ghost" href="{{ route('receptions.show', $item) }}#rx-collect">ثبت دریافت</a>
                         @endif
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="9">موردی یافت نشد.</td></tr>
+                <tr><td colspan="10">موردی یافت نشد.</td></tr>
             @endforelse
             </tbody>
         </table>

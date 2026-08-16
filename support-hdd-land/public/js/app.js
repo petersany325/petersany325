@@ -1647,6 +1647,11 @@
         }
 
         if (/^\d+$/.test(raw)) {
+            // Mobile / partial mobile → free search (do not prefix T-20N)
+            if (allowFree && (/^09\d{5,}$/.test(raw) || /^9\d{8,11}$/.test(raw) || /^98\d{10,12}$/.test(raw))) {
+                hidden.value = raw;
+                return;
+            }
             hidden.value = prefix + raw;
             return;
         }

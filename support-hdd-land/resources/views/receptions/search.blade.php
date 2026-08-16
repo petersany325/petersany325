@@ -7,15 +7,16 @@
 @section('content')
 <form method="GET" action="{{ route('receptions.search') }}" class="ticket-search-bar" id="ticket-search-form">
     <div class="field">
-        <label>شماره قبض</label>
+        <label>جستجو (قبض / نام / موبایل)</label>
         @include('partials.receipt-search-input', [
             'name' => 'q',
             'value' => $q,
             'autofocus' => true,
             'required' => true,
-            'placeholder' => '1000',
-            'hint' => 'پیش‌فرض T-20N است — فقط ادامه کد را بزنید. برای نام/موبایل/سریال همان کادر را پاک و عبارت را بنویسید.',
+            'placeholder' => '1000 یا نام یا 09…',
+            'hint' => 'ادامه شماره قبض (T-20N…)، یا نام مشتری، موبایل، سریال را بنویسید.',
             'allowFree' => true,
+            'inputmode' => 'text',
         ])
     </div>
     <div class="field-sm">
@@ -51,8 +52,9 @@
                 <span class="search-hit-main">
                     <strong>{{ $reception->customer?->name ?: 'بدون نام' }}</strong>
                     <span class="meta">
-                        قبض {{ $reception->receipt_no ?: '—' }}
+                        شماره قبض <span dir="ltr">{{ $reception->receipt_no ?: '—' }}</span>
                         · {{ $reception->ticket_no }}
+                        @if($reception->customer?->phone) · <span dir="ltr">{{ $reception->customer->phone }}</span>@endif
                         · {{ $reception->product_name ?: 'دستگاه' }}
                         @if($reception->serial_number) · <span dir="ltr">{{ $reception->serial_number }}</span>@endif
                     </span>
