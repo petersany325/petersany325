@@ -1535,3 +1535,17 @@ label:has(> input.field-latin) .latin-hint,
     margin-bottom: 8px;
   }
 }
+
+
+
+/* === Receipt customer suggest === */
+.receipt-search-input.receipt-customer-suggest {
+  position: relative;
+  overflow: visible;
+}
+.receipt-search-input.receipt-customer-suggest .customer-pick-list {
+  left: 0;
+  right: 0;
+  top: calc(100% + 2px);
+  width: 100%;
+}

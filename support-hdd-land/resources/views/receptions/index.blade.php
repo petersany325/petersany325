@@ -24,9 +24,10 @@
                 'name' => 'q',
                 'value' => $q,
                 'placeholder' => '1000 یا نام یا 09…',
-                'hint' => 'ادامه شماره قبض بعد از T-20N، یا نام مشتری، موبایل، سریال.',
+                'hint' => 'ادامه شماره قبض، یا چند حرف از نام / موبایل — پیشنهاد مشتریان از بانک زیر کادر می‌آید.',
                 'allowFree' => true,
                 'inputmode' => 'text',
+                'customerSuggest' => true,
             ])
         </div>
         <select name="status">
