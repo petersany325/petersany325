@@ -1,0 +1,7 @@
+# Deny access to sensitive paths if apache allows overrides
+<Files "config.php">
+  Require all denied
+</Files>
+<FilesMatch "\.(log|sql|md|example\.php)$">
+  Require all denied
+</FilesMatch>
