@@ -759,6 +759,29 @@ class ReportController extends Controller
         $fromStart = \Illuminate\Support\Carbon::parse($from, $tz)->startOfDay();
         $toEnd = \Illuminate\Support\Carbon::parse($to, $tz)->endOfDay();
 
+        // 1) Device / ticket exits (تحویل قبض) — what staff mean by «خروج».
+        $exits = Reception::query()
+            ->with(['customer', 'technician', 'parts'])
+            ->where('status', 'delivered')
+            ->whereNotNull('delivered_at')
+            ->whereBetween('delivered_at', [$fromStart, $toEnd])
+            ->orderByDesc('delivered_at')
+            ->get();
+
+        $exitTotals = [
+            'count' => $exits->count(),
+            'labor' => (int) $exits->sum('labor_cost'),
+            'parts' => (int) $exits->sum('parts_cost'),
+            'total' => (int) $exits->sum('total_amount'),
+            'paid' => (int) $exits->sum('paid_amount'),
+        ];
+
+        $exitDaily = $exits
+            ->groupBy(fn (Reception $r) => optional($r->delivered_at)->timezone($tz)->toDateString())
+            ->map(fn ($g) => (int) $g->sum('total_amount'))
+            ->sortKeys();
+
+        // 2) Warehouse stock outs (قطعه انبار).
         $movements = StockMovement::query()
             ->with(['part', 'reception', 'user', 'warehouse'])
             ->where('type', 'out')
@@ -779,7 +802,6 @@ class ReportController extends Controller
             ->sortByDesc('qty')
             ->values();
 
-        // Free-text ticket parts without warehouse part_id (legacy / manual).
         $ticketParts = ReceptionPart::query()
             ->with('reception')
             ->where(function ($q) {
@@ -817,42 +839,27 @@ class ReportController extends Controller
         }
         $rows = $rows->sortByDesc('qty')->values();
 
-        $daily = $movements
-            ->groupBy(fn (StockMovement $m) => optional($m->created_at)->timezone($tz)->toDateString())
-            ->map(fn ($g) => (int) $g->sum(fn (StockMovement $m) => abs((int) $m->quantity)))
-            ->sortKeys();
-
-        $totals = [
+        $stockTotals = [
             'lines' => $rows->count(),
             'qty' => (int) $rows->sum('qty'),
             'amount' => (int) $rows->sum('amount'),
             'docs' => $movements->count() + $ticketParts->count(),
         ];
 
-        $recentFallback = collect();
-        if ($movements->isEmpty() && $ticketParts->isEmpty()) {
-            $recentFallback = StockMovement::query()
-                ->with(['part', 'reception', 'user'])
-                ->where('type', 'out')
-                ->orderByDesc('id')
-                ->limit(10)
-                ->get();
-        }
-
         return view('reports.parts-used', [
+            'exits' => $exits,
+            'exitTotals' => $exitTotals,
             'rows' => $rows,
             'movements' => $movements,
             'ticketParts' => $ticketParts,
+            'stockTotals' => $stockTotals,
             'from' => $from,
             'to' => $to,
-            'totals' => $totals,
-            'daily' => $daily,
-            'recentFallback' => $recentFallback,
             'period' => ReportSettings::get('period', 'custom'),
+            'chartExitLabels' => jalali_day_labels($exitDaily->keys()->values()->all()),
+            'chartExitValues' => $exitDaily->values()->values()->all(),
             'chartPartLabels' => $rows->take(10)->pluck('part_name')->values()->all(),
             'chartPartValues' => $rows->take(10)->pluck('qty')->map(fn ($v) => (int) $v)->values()->all(),
-            'chartDailyLabels' => jalali_day_labels($daily->keys()->values()->all()),
-            'chartDailyValues' => $daily->values()->values()->all(),
         ]);
     }
 
