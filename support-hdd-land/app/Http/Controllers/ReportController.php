@@ -1003,7 +1003,9 @@ class ReportController extends Controller
             'parts' => (int) (clone $sumBase)->sum('parts_cost'),
             'total' => (int) (clone $sumBase)->sum('total_amount'),
             'paid' => (int) (clone $sumBase)->sum('paid_amount'),
-            'remaining' => (int) (clone $sumBase)->selectRaw('COALESCE(SUM(GREATEST(total_amount - paid_amount, 0)),0) as v')->value('v'),
+            'remaining' => (int) (clone $sumBase)->selectRaw(
+                'COALESCE(SUM(GREATEST(CAST(total_amount AS SIGNED) - CAST(paid_amount AS SIGNED), 0)),0) as v'
+            )->value('v'),
         ];
 
         $byStatus = (clone $query)
