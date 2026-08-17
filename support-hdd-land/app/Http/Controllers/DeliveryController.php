@@ -71,8 +71,9 @@ class DeliveryController extends Controller
                 'remaining' => $r->remainingAmount(),
                 'labor_cost' => (int) $r->labor_cost,
                 'parts_cost' => (int) $r->parts_cost,
-                'has_cost' => $r->hasCostSet(),
+                'has_cost' => $r->hasCostDecision(),
                 'already_delivered' => $r->status === 'delivered',
+                'is_unrepairable' => $r->isUnrepairable(),
                 'custody_ok' => $block === null,
                 'custody_block' => $block,
                 'exit_otp_required' => (bool) $r->exit_otp_required,
@@ -160,7 +161,7 @@ class DeliveryController extends Controller
             ]);
         }
 
-        $missing = $receptions->filter(fn (Reception $r) => ! $r->hasCostSet() && $r->status !== 'delivered');
+        $missing = $receptions->filter(fn (Reception $r) => ! $r->hasCostDecision() && $r->status !== 'delivered');
         $mode = $data['settlement_mode'] ?? null;
         if ($missing->isNotEmpty()) {
             if ($mode !== ReceptionSettlementService::MODE_WAIVE && ! $request->boolean('force_without_cost')) {
@@ -222,7 +223,13 @@ class DeliveryController extends Controller
                 }
 
                 $ticketMode = $mode;
-                if ($r->remainingAmount() <= 0 && $r->hasCostSet()) {
+                $ticketNote = trim((string) ($data['note'] ?? ''));
+                if ($r->isUnrepairable() && $r->remainingAmount() <= 0 && ! $r->hasCostSet()) {
+                    $ticketMode = ReceptionSettlementService::MODE_WAIVE;
+                    if ($ticketNote === '') {
+                        $ticketNote = ReceptionSettlementService::unrepairableNoChargeNote();
+                    }
+                } elseif ($r->remainingAmount() <= 0 && $r->hasCostDecision()) {
                     $ticketMode = ReceptionSettlementService::MODE_PAID;
                 } elseif (! $ticketMode) {
                     $ticketMode = ReceptionSettlementService::MODE_PAID;
@@ -230,7 +237,7 @@ class DeliveryController extends Controller
 
                 $result = $settlement->settleAndDeliver($r, [
                     'settlement_mode' => $ticketMode,
-                    'note' => $data['note'] ?? null,
+                    'note' => $ticketNote !== '' ? $ticketNote : null,
                     'pickup_name' => $data['pickup_name'],
                     'pickup_phone' => $phone,
                     'confirm_goods_exit' => true,

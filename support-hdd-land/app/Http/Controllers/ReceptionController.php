@@ -793,7 +793,11 @@ class ReceptionController extends Controller
         $reception->recalculateTotals();
         $reception = $reception->fresh(['customer', 'faultType', 'technician', 'custodyTechnician']);
 
-        if ((int) $reception->total_amount > 0 && ! $reception->cost_confirmed_at) {
+        // غیرقابل تعمیر: تصمیم «بدون هزینه» ثبت شود تا تحویل/خروج گیر نکند.
+        if ($reception->isUnrepairable() && ! $reception->hasCostSet()) {
+            $reception->confirmCost();
+            $reception->refresh();
+        } elseif ((int) $reception->total_amount > 0 && ! $reception->cost_confirmed_at) {
             $reception->confirmCost();
             $reception->refresh();
         }
