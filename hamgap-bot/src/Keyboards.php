@@ -1019,11 +1019,10 @@ final class Keyboards
         $rows = [];
         if ($active) {
             $rows[] = [['text' => '🔁 تمدید اشتراک ۳۰ روزه', 'callback_data' => 'vip:buy']];
-            if ($needGps) {
-                $rows[] = [['text' => '📍 تأیید موقعیت GPS (فقط استار)', 'callback_data' => 'gps:share']];
-            } else {
-                $rows[] = [['text' => '📍 به‌روزرسانی موقعیت GPS', 'callback_data' => 'gps:share']];
-            }
+            $gpsLabel = $needGps
+                ? '📍 ثبت موقعیت (لازم برای چت استار)'
+                : '📍 موقعیت من · GPS یا شهر';
+            $rows[] = [['text' => $gpsLabel, 'callback_data' => 'sloc:menu']];
         } elseif ($eligible) {
             $rows[] = [['text' => '💳 خرید اشتراک استار کلاب', 'callback_data' => 'vip:buy']];
         } elseif ($pending) {
@@ -1037,6 +1036,53 @@ final class Keyboards
             ['text' => '👤 پروفایل', 'callback_data' => 'menu:profile'],
         ];
         $rows[] = [['text' => 'منوی اصلی', 'callback_data' => 'menu:main']];
+        return ['inline_keyboard' => $rows];
+    }
+
+    /** Star Club location: GPS (recommended) or pick city, then GPS verify. */
+    public static function starLocationChoiceInline(): array
+    {
+        return ['inline_keyboard' => [
+            [['text' => '📍 ارسال موقعیت مکانی (پیشنهادی)', 'callback_data' => 'sloc:gps']],
+            [['text' => '🏙 انتخاب دستی شهر', 'callback_data' => 'sloc:city']],
+            [['text' => 'بازگشت به استار کلاب', 'callback_data' => 'menu:vip']],
+        ]];
+    }
+
+    public static function starProvincesInline(): array
+    {
+        $rows = [];
+        $row = [];
+        foreach (IranLocations::provinces() as $i => $name) {
+            $row[] = ['text' => $name, 'callback_data' => 'sloc:p:' . $i];
+            if (count($row) === 2) {
+                $rows[] = $row;
+                $row = [];
+            }
+        }
+        if ($row) {
+            $rows[] = $row;
+        }
+        $rows[] = [['text' => 'بازگشت', 'callback_data' => 'sloc:menu']];
+        return ['inline_keyboard' => $rows];
+    }
+
+    public static function starCitiesInline(string $province, int $pIdx): array
+    {
+        $rows = [];
+        $row = [];
+        foreach (IranLocations::cities($province) as $i => $city) {
+            $row[] = ['text' => $city, 'callback_data' => 'sloc:c:' . $pIdx . ':' . $i];
+            if (count($row) === 2) {
+                $rows[] = $row;
+                $row = [];
+            }
+        }
+        if ($row) {
+            $rows[] = $row;
+        }
+        $rows[] = [['text' => 'تغییر استان', 'callback_data' => 'sloc:city']];
+        $rows[] = [['text' => 'بازگشت', 'callback_data' => 'sloc:menu']];
         return ['inline_keyboard' => $rows];
     }
 

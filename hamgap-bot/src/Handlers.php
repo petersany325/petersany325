@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-17-v10.33';
+    public const CODE_VERSION = '2026-08-17-v10.34';
 
     private string $assets;
     private Settings $settings;
@@ -1248,7 +1248,7 @@ final class Handlers
         }
 
         // Chat mode picker + rules gate
-        if ($data === 'gps:share' || str_starts_with($data, 'mode:') || str_starts_with($data, 'prv:')) {
+        if ($data === 'gps:share' || str_starts_with($data, 'sloc:') || str_starts_with($data, 'mode:') || str_starts_with($data, 'prv:')) {
             $this->handleModeAndPrivateCallbacks($cq, $user, $id, $data, $chatId, $tid);
             return;
         }
@@ -2943,7 +2943,7 @@ final class Handlers
                 return;
             }
             if (!$this->hasGps($user)) {
-                $this->askVipGps($chatId, $user);
+                $this->showStarLocationMenu($chatId, $user);
                 return;
             }
         }
@@ -3008,6 +3008,129 @@ final class Handlers
             "🔍 در حال پیدا کردن مخاطب ({$modeLabel} · {$label})...{$note}\nلطفاً صبر کن.",
             ['reply_markup' => Keyboards::searching()]
         );
+    }
+
+    private function showStarLocationMenu(int $chatId, array &$user): void
+    {
+        if (!Database::isVipActive($user)) {
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "📍 موقعیت فقط برای اعضای تأییدشدهٔ <b>استار کلاب</b> است.\nاز منوی استار کلاب عضویت بگیر.",
+                ['reply_markup' => ['inline_keyboard' => [
+                    [['text' => '⭐ استار کلاب', 'callback_data' => 'menu:vip']],
+                    [['text' => 'بازگشت', 'callback_data' => 'menu:connect']],
+                ]]]
+            );
+            return;
+        }
+        $this->clearUi($chatId, $user);
+        $city = htmlspecialchars((string)($user['city'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $prov = htmlspecialchars((string)($user['province'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $now = ($city !== '' || $prov !== '')
+            ? "شهر فعلی پروفایل: <b>" . trim($prov . ' / ' . $city, ' /') . "</b>\n\n"
+            : "شهر پروفایل هنوز کامل نیست.\n\n";
+        $gps = $this->hasGps($user) ? "GPS ثبت‌شده: ✅\n\n" : "GPS ثبت‌شده: ❌ — برای چت استار لازم است\n\n";
+        $this->uiText(
+            $chatId,
+            $user,
+            "📍 <b>انتخاب روش موقعیت</b> · کلاب استار\n\n" .
+            $now .
+            $gps .
+            "موقعیت برای بقیه مخفی است و فقط برای تأیید واقعی‌بودن شهر استفاده می‌شود.\n\n" .
+            "📍 <b>ارسال موقعیت مکانی</b> — دقیق و سریع (پیشنهادی)\n" .
+            "🏙 <b>انتخاب دستی شهر</b> — استان و شهر از فهرست؛ بعد GPS برای هم‌خوانی\n\n" .
+            "<i>بهترین حالت: اول شهر درست، بعد GPS.</i>",
+            ['reply_markup' => Keyboards::starLocationChoiceInline()]
+        );
+        $this->pinHamGapMenu($chatId, $user);
+    }
+
+    private function handleStarLocationCallback(
+        array $cq,
+        array &$user,
+        string $id,
+        string $data,
+        int $chatId,
+        int $tid
+    ): void {
+        if (!Database::isVipActive($user)) {
+            $this->tg->answerCallback($id, 'فقط اعضای استار کلاب', true);
+            return;
+        }
+        if ($data === 'sloc:menu') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->showStarLocationMenu($chatId, $user);
+            return;
+        }
+        if ($data === 'sloc:gps') {
+            $this->tg->answerCallback($id, 'موقعیت را بفرست');
+            $this->stripCallbackMenu($cq);
+            $this->askVipGps($chatId, $user);
+            return;
+        }
+        if ($data === 'sloc:city') {
+            $this->tg->answerCallback($id);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "🏙 استان را انتخاب کن:",
+                ['reply_markup' => Keyboards::starProvincesInline()]
+            );
+            return;
+        }
+        if (str_starts_with($data, 'sloc:p:')) {
+            $pIdx = (int)substr($data, strlen('sloc:p:'));
+            $provinces = IranLocations::provinces();
+            $province = $provinces[$pIdx] ?? '';
+            if ($province === '') {
+                $this->tg->answerCallback($id, 'نامعتبر', true);
+                return;
+            }
+            $this->tg->answerCallback($id, $province);
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->uiText(
+                $chatId,
+                $user,
+                "شهر در <b>" . htmlspecialchars($province, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b> را انتخاب کن:",
+                ['reply_markup' => Keyboards::starCitiesInline($province, $pIdx)]
+            );
+            return;
+        }
+        if (preg_match('/^sloc:c:(\d+):(\d+)$/', $data, $m)) {
+            $pIdx = (int)$m[1];
+            $cIdx = (int)$m[2];
+            $provinces = IranLocations::provinces();
+            $province = $provinces[$pIdx] ?? '';
+            $cities = $province !== '' ? IranLocations::cities($province) : [];
+            $city = $cities[$cIdx] ?? '';
+            if ($province === '' || $city === '') {
+                $this->tg->answerCallback($id, 'نامعتبر', true);
+                return;
+            }
+            $this->db->updateUser($tid, ['province' => $province, 'city' => $city]);
+            $user = $this->db->findUser($tid) ?? $user;
+            $this->tg->answerCallback($id, $city . ' ثبت شد');
+            $this->stripCallbackMenu($cq);
+            $this->clearUi($chatId, $user);
+            $this->tg->sendMessage(
+                $chatId,
+                "✅ شهر ثبت شد: <b>" .
+                htmlspecialchars($province . ' / ' . $city, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n\n" .
+                "حالا <b>موقعیت مکانی</b> را بفرست تا با همین شهر چک شود.\n" .
+                "برای بقیه کاربران مخفی می‌ماند.",
+                ['reply_markup' => Keyboards::requestLocationInline()]
+            );
+            $this->db->updateUser($tid, ['flow' => 'gps:vipclub']);
+            $user = $this->db->findUser($tid) ?? $user;
+            return;
+        }
+        $this->tg->answerCallback($id);
     }
 
     private function askVipGps(int $chatId, array &$user): void
@@ -5471,7 +5594,12 @@ final class Handlers
             }
             $this->tg->answerCallback($id);
             $this->stripCallbackMenu($cq);
-            $this->askVipGps($chatId, $user);
+            $this->showStarLocationMenu($chatId, $user);
+            return;
+        }
+
+        if (str_starts_with($data, 'sloc:')) {
+            $this->handleStarLocationCallback($cq, $user, $id, $data, $chatId, $tid);
             return;
         }
 
@@ -5511,7 +5639,7 @@ final class Handlers
             $this->tg->answerCallback($id, 'قوانین پذیرفته شد');
             $this->stripCallbackMenu($cq);
             if ($mode === ChatModes::VIP && !$this->hasGps($user)) {
-                $this->askVipGps($chatId, $user);
+                $this->showStarLocationMenu($chatId, $user);
                 return;
             }
             $this->showConnectPrefs($chatId, $user, $mode);
