@@ -2144,6 +2144,7 @@ final class Handlers
         if ($active && !$this->hasGps($user)) {
             $this->showStarLocationMenu($chatId, $user, false);
         }
+    }
 
     private function handleVipCallback(
         array $cq,
