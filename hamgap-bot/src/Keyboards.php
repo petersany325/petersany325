@@ -1039,13 +1039,12 @@ final class Keyboards
         return ['inline_keyboard' => $rows];
     }
 
-    /** Star Club location: GPS (recommended) or pick city, then GPS verify. */
+    /** Star Club location — two full-width buttons like dating bots. */
     public static function starLocationChoiceInline(): array
     {
         return ['inline_keyboard' => [
-            [['text' => '📍 ارسال موقعیت مکانی (پیشنهادی)', 'callback_data' => 'sloc:gps']],
+            [['text' => '📍 ارسال موقعیت مکانی', 'callback_data' => 'sloc:gps']],
             [['text' => '🏙 انتخاب دستی شهر', 'callback_data' => 'sloc:city']],
-            [['text' => 'بازگشت به استار کلاب', 'callback_data' => 'menu:vip']],
         ]];
     }
 

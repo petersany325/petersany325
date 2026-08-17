@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-17-v10.34';
+    public const CODE_VERSION = '2026-08-17-v10.35';
 
     private string $assets;
     private Settings $settings;
@@ -2141,7 +2141,9 @@ final class Handlers
             'reply_markup' => Keyboards::vipHubInline($elig['ok'], $active, $pending, $active && !$this->hasGps($user)),
         ]);
         $this->pinHamGapMenu($chatId, $user);
-    }
+        if ($active && !$this->hasGps($user)) {
+            $this->showStarLocationMenu($chatId, $user, false);
+        }
 
     private function handleVipCallback(
         array $cq,
@@ -3010,10 +3012,12 @@ final class Handlers
         );
     }
 
-    private function showStarLocationMenu(int $chatId, array &$user): void
+    private function showStarLocationMenu(int $chatId, array &$user, bool $clear = true): void
     {
         if (!Database::isVipActive($user)) {
-            $this->clearUi($chatId, $user);
+            if ($clear) {
+                $this->clearUi($chatId, $user);
+            }
             $this->uiText(
                 $chatId,
                 $user,
@@ -3025,26 +3029,18 @@ final class Handlers
             );
             return;
         }
-        $this->clearUi($chatId, $user);
-        $city = htmlspecialchars((string)($user['city'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $prov = htmlspecialchars((string)($user['province'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $now = ($city !== '' || $prov !== '')
-            ? "شهر فعلی پروفایل: <b>" . trim($prov . ' / ' . $city, ' /') . "</b>\n\n"
-            : "شهر پروفایل هنوز کامل نیست.\n\n";
-        $gps = $this->hasGps($user) ? "GPS ثبت‌شده: ✅\n\n" : "GPS ثبت‌شده: ❌ — برای چت استار لازم است\n\n";
+        if ($clear) {
+            $this->clearUi($chatId, $user);
+        }
         $this->uiText(
             $chatId,
             $user,
-            "📍 <b>انتخاب روش موقعیت</b> · کلاب استار\n\n" .
-            $now .
-            $gps .
-            "موقعیت برای بقیه مخفی است و فقط برای تأیید واقعی‌بودن شهر استفاده می‌شود.\n\n" .
-            "📍 <b>ارسال موقعیت مکانی</b> — دقیق و سریع (پیشنهادی)\n" .
-            "🏙 <b>انتخاب دستی شهر</b> — استان و شهر از فهرست؛ بعد GPS برای هم‌خوانی\n\n" .
-            "<i>بهترین حالت: اول شهر درست، بعد GPS.</i>",
+            "📍 <b>انتخاب روش ورود موقعیت</b>\n\n" .
+            "لطفاً یکی از روش‌های زیر را برای مشخص کردن موقعیت خود انتخاب کنید:\n\n" .
+            "📍 ارسال موقعیت مکانی: دقیق و سریع (توصیه می‌شود)\n" .
+            "🏙 انتخاب دستی شهر: انتخاب شهر از لیست",
             ['reply_markup' => Keyboards::starLocationChoiceInline()]
         );
-        $this->pinHamGapMenu($chatId, $user);
     }
 
     private function handleStarLocationCallback(
@@ -3154,10 +3150,7 @@ final class Handlers
         $city = htmlspecialchars((string)($user['city'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $this->tg->sendMessage(
             $chatId,
-            "📍 <b>استار کلاب</b> · تأیید موقعیت واقعی\n" .
-            "این بخش فقط برای اعضای استار است و برای بقیه کاربران دیده نمی‌شود.\n" .
-            "شهر پروفایل تو: <b>{$city}</b>\n\n" .
-            "دکمه زیر را بزن و موقعیت فعلی‌ات را بفرست (برای بقیه مخفی می‌ماند).",
+            "📍 موقعیت فعلی‌ات را با دکمه پایین بفرست.\nبرای بقیه کاربران مخفی می‌ماند.",
             ['reply_markup' => Keyboards::requestLocationInline()]
         );
     }
