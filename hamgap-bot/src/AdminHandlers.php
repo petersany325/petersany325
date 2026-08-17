@@ -628,7 +628,15 @@ final class AdminHandlers
         }
 
         if ($data === 'adm:pay' || $data === 'adm:pay:pending' || str_starts_with($data, 'payadm:')) {
-            $this->handlePayAdmin($chatId, $tid, $data);
+            try {
+                $this->handlePayAdmin($chatId, $tid, $data);
+            } catch (Throwable $e) {
+                $this->tg->sendMessage(
+                    $chatId,
+                    "⚠️ باز شدن بخش پرداخت ناموفق بود.\n<code>" .
+                    htmlspecialchars($e->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code>'
+                );
+            }
             return;
         }
         if ($data === 'adm:user:find') {
