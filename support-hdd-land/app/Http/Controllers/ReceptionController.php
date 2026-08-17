@@ -204,7 +204,60 @@ class ReceptionController extends Controller
         ]);
     }
 
+    public function lookupSerial(Request $request)
+    {
+        $raw = (string) $request->query('serial', '');
+        $ignoreId = $request->integer('ignore') ?: null;
+        $serial = $this->normalizeSerialNumber($raw);
+
+        if ($serial === null) {
+            return response()->json([
+                'ok' => true,
+                'exists' => false,
+                'serial' => '',
+                'message' => null,
+                'reception' => null,
+            ]);
+        }
+
+        $existing = $this->findActiveSerialConflict($serial, $ignoreId);
+        if (! $existing) {
+            return response()->json([
+                'ok' => true,
+                'exists' => false,
+                'serial' => $serial,
+                'message' => null,
+                'reception' => null,
+            ]);
+        }
+
+        $receipt = $existing->receipt_no ?: $existing->ticket_no;
+        $customerName = $existing->customer?->name;
+        $message = 'این سریال قبلاً در سیستم ثبت شده است — قبض '.$receipt;
+        if ($customerName) {
+            $message .= ' · مشتری '.$customerName;
+        }
+
+        return response()->json([
+            'ok' => true,
+            'exists' => true,
+            'serial' => $serial,
+            'message' => $message,
+            'reception' => [
+                'id' => $existing->id,
+                'ticket_no' => $existing->ticket_no,
+                'receipt_no' => $existing->receipt_no,
+                'status' => $existing->status,
+                'status_label' => method_exists($existing, 'statusLabel') ? $existing->statusLabel() : $existing->status,
+                'customer_name' => $customerName,
+                'product_name' => $existing->product_name,
+                'url' => route('receptions.show', $existing),
+            ],
+        ]);
+    }
+
     public function ensureCustomer(Request $request)
+
     {
         $data = $request->validate([
             'customer_id' => ['nullable', 'exists:customers,id'],
@@ -1902,7 +1955,7 @@ class ReceptionController extends Controller
         ]);
     }
 
-    private function serialConflictMessage(?string $serial, ?int $ignoreReceptionId = null): ?string
+    private function findActiveSerialConflict(?string $serial, ?int $ignoreReceptionId = null): ?Reception
     {
         $serial = $this->normalizeSerialNumber($serial);
         if ($serial === null) {
@@ -1910,6 +1963,7 @@ class ReceptionController extends Controller
         }
 
         $query = Reception::query()
+            ->with(['customer:id,name'])
             ->where('status', '!=', 'cancelled')
             ->whereRaw('UPPER(TRIM(serial_number)) = ?', [$serial]);
 
@@ -1917,12 +1971,26 @@ class ReceptionController extends Controller
             $query->where('id', '!=', $ignoreReceptionId);
         }
 
-        $existing = $query->orderByDesc('id')->first(['id', 'ticket_no', 'serial_number', 'status']);
+        return $query->orderByDesc('id')->first([
+            'id', 'ticket_no', 'receipt_no', 'serial_number', 'status', 'customer_id', 'product_name',
+        ]);
+    }
+
+    private function serialConflictMessage(?string $serial, ?int $ignoreReceptionId = null): ?string
+    {
+        $existing = $this->findActiveSerialConflict($serial, $ignoreReceptionId);
         if (! $existing) {
             return null;
         }
 
-        return 'این سریال قبلاً ثبت شده است (قبض '.$existing->ticket_no.'). هر سریال فقط یک قبض می‌تواند داشته باشد.';
+        $receipt = $existing->receipt_no ?: $existing->ticket_no;
+        $message = 'این سریال قبلاً در سیستم ثبت شده است — قبض '.$receipt;
+        if ($existing->customer?->name) {
+            $message .= ' · مشتری '.$existing->customer->name;
+        }
+        $message .= '. هر سریال فقط یک قبض فعال می‌تواند داشته باشد.';
+
+        return $message;
     }
 
     /** @param  array<int, array<string, mixed>>  $items */
