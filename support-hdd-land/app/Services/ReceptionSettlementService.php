@@ -44,7 +44,8 @@ class ReceptionSettlementService
             return $block;
         }
 
-        if (! $reception->hasCostSet() && $mode !== self::MODE_WAIVE) {
+        // غیرقابل تعمیر بدون هزینه است؛ نیازی به ثبت/تأیید مبلغ قبل از خروج نیست.
+        if (! $reception->hasCostDecision() && $mode !== self::MODE_WAIVE) {
             return 'قبل از تحویل، هزینه قبض را مشخص کنید یا بخشش/بدون هزینه را با دلیل انتخاب کنید.';
         }
 
@@ -63,6 +64,11 @@ class ReceptionSettlementService
 
         // credit allowed
         return null;
+    }
+
+    public static function unrepairableNoChargeNote(): string
+    {
+        return 'غیرقابل تعمیر — بدون هزینه';
     }
 
     public function assertCanDeliver(Reception $reception, ?string $mode = null): void
@@ -115,6 +121,16 @@ class ReceptionSettlementService
             $reception = Reception::query()->lockForUpdate()->findOrFail($reception->id);
             $reception->loadMissing(['customer', 'custodyTechnician', 'parts.part']);
 
+            // غیرقابل تعمیر: بدون هزینه — اگر کاربر «دریافت کامل» زد ولی مبلغ صفر است، به بخشش بدون هزینه تبدیل شود.
+            if ($reception->isUnrepairable() && ! $reception->hasCostSet() && $reception->remainingAmount() <= 0) {
+                if ($mode === self::MODE_PAID) {
+                    $mode = self::MODE_WAIVE;
+                }
+                if ($note === '') {
+                    $note = self::unrepairableNoChargeNote();
+                }
+            }
+
             if ($mode === self::MODE_PAID) {
                 $remaining = $reception->remainingAmount();
                 if ($remaining > 0) {
@@ -142,6 +158,9 @@ class ReceptionSettlementService
                     $this->accounting->postPayment($payment->fresh(['reception', 'customer']));
                 }
             } elseif ($mode === self::MODE_WAIVE) {
+                if ($note === '' && $reception->isUnrepairable()) {
+                    $note = self::unrepairableNoChargeNote();
+                }
                 if ($note === '') {
                     throw ValidationException::withMessages([
                         'note' => 'برای بخشش مانده، دلیل الزامی است.',
