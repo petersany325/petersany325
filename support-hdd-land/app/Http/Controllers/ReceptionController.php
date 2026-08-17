@@ -480,9 +480,8 @@ class ReceptionController extends Controller
             'warranty_end_date', 'estimated_delivery_at', 'next_visit_at', 'received_at',
         ]);
 
-        $data = $request->validate(array_merge($this->deviceRules(), [
-            // Customer profile is NOT edited from ticket edit — only optional reassignment.
-            'customer_id' => ['nullable', 'exists:customers,id'],
+        $data = $request->validate(array_merge($this->customerRules(), $this->deviceRules(), [
+            'fix_customer_scope' => ['nullable', 'in:profile,ticket_only'],
             'photo' => ['nullable', 'image', 'max:4096'],
             'final_fault' => ['nullable', 'string', 'max:5000'],
             'technician_notes' => ['nullable', 'string', 'max:5000'],
@@ -492,7 +491,7 @@ class ReceptionController extends Controller
             'sms_note' => ['nullable', 'string', 'max:300'],
         ]));
 
-        $customer = $this->resolveCustomerForTicketEdit($reception);
+        $customer = $this->resolveCustomerForTicketEdit($reception, $data);
 
         if (! empty($data['brand_model'])) {
             $converted = $this->toAsciiEnglish((string) $data['brand_model']);
@@ -1511,16 +1510,110 @@ class ReceptionController extends Controller
     }
 
     /**
-     * Ticket edit must never mutate the shared customer profile (name/phone/…).
-     * It may only keep the current customer or reassign the ticket to another existing customer_id.
+     * Full customer correction from ticket edit.
+     *
+     * - profile (default): update this ticket's linked customer name/phone/details
+     *   (used to fix wrong names). If typed phone belongs to another customer, reassign
+     *   this ticket to that customer instead of stealing their phone.
+     * - ticket_only: do not rename the current customer profile; attach this ticket to
+     *   an existing phone match or a newly created customer so sibling tickets stay intact.
      *
      * @param  array<string,mixed>  $data
      */
-    private function resolveCustomerForTicketEdit(Reception $reception, array $data = []): Customer
+    private function resolveCustomerForTicketEdit(Reception $reception, array $data): Customer
     {
-        // Hard lock: ticket edit cannot create/rename/reassign customers.
-        // Customer profile changes must go through the Customers module.
-        return Customer::query()->findOrFail((int) $reception->customer_id);
+        $scope = (string) ($data['fix_customer_scope'] ?? 'profile');
+        if (! in_array($scope, ['profile', 'ticket_only'], true)) {
+            $scope = 'profile';
+        }
+
+        $current = Customer::query()->findOrFail((int) $reception->customer_id);
+        $phone = $this->normalizePhone((string) ($data['customer_phone'] ?? ''));
+        if ($phone === '' || strlen($phone) < 10) {
+            throw ValidationException::withMessages([
+                'customer_phone' => 'شماره موبایل معتبر نیست.',
+            ]);
+        }
+
+        $name = trim((string) ($data['customer_name'] ?? ''));
+        if ($name === '') {
+            throw ValidationException::withMessages([
+                'customer_name' => 'نام مشتری الزامی است.',
+            ]);
+        }
+
+        $payload = [
+            'name' => $name,
+            'phone' => $phone,
+            'national_code' => $data['national_code'] ?? null,
+            'job' => $data['job'] ?? null,
+            'address' => $data['address'] ?? null,
+            'referral_source_id' => $data['referral_source_id'] ?? null,
+        ];
+
+        $byPhone = $this->findCustomerByPhone($phone);
+
+        // Phone already owned by someone else → move this ticket to that customer.
+        // Do not steal their phone onto the old profile.
+        if ($byPhone && (int) $byPhone->id !== (int) $current->id) {
+            if ($scope === 'profile') {
+                // Correct the phone-owner profile, then attach this ticket to them.
+                $this->mergeCustomerPayload($byPhone, [
+                    'name' => $name,
+                    'national_code' => $payload['national_code'],
+                    'job' => $payload['job'],
+                    'address' => $payload['address'],
+                    'referral_source_id' => $payload['referral_source_id'],
+                ], overwriteName: true);
+            }
+
+            return $byPhone->fresh();
+        }
+
+        if ($scope === 'ticket_only') {
+            $nameChanged = mb_strtolower(trim((string) $current->name)) !== mb_strtolower($name);
+            $phoneChanged = $this->normalizePhone((string) $current->phone) !== $phone;
+
+            if (! $nameChanged && ! $phoneChanged) {
+                $this->mergeCustomerPayload($current, $payload, overwriteName: true);
+
+                return $current->fresh();
+            }
+
+            // Same phone cannot create a second customer (unique index).
+            if ($byPhone && (int) $byPhone->id === (int) $current->id) {
+                $otherTickets = Reception::query()
+                    ->where('customer_id', $current->id)
+                    ->where('id', '!=', $reception->id)
+                    ->exists();
+                if ($otherTickets && $nameChanged) {
+                    throw ValidationException::withMessages([
+                        'fix_customer_scope' => 'برای جدا کردن فقط این قبض، موبایل متفاوت وارد کنید؛ یا گزینه را خاموش بگذارید تا نام پرونده مشتری (همه قبض‌هایش) اصلاح شود.',
+                    ]);
+                }
+                $this->mergeCustomerPayload($current, $payload, overwriteName: true);
+
+                return $current->fresh();
+            }
+
+            if ($byPhone) {
+                return $byPhone;
+            }
+
+            return Customer::query()->create([
+                'name' => $name,
+                'phone' => $phone,
+                'national_code' => $payload['national_code'],
+                'job' => $payload['job'],
+                'address' => $payload['address'],
+                'referral_source_id' => $payload['referral_source_id'],
+            ]);
+        }
+
+        // Default: full correction of the linked customer profile.
+        $this->mergeCustomerPayload($current, $payload, overwriteName: true);
+
+        return $current->fresh();
     }
 
     /**
