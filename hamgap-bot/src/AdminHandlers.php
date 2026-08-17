@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-17-v10.32-admin';
+    public const CODE_VERSION = '2026-08-17-v10.33-admin';
 
     /** Keys editable via adm:set: — anything else is rejected. */
     public const ALLOWED_SET_KEYS = [
@@ -1209,7 +1209,8 @@ final class AdminHandlers
         $this->tg->sendMessage(
             $chatId,
             "💳 <b>پرداخت کارت‌به‌کارت</b>\n\n" .
-            "شماره کارت: <code>" . htmlspecialchars($cardShow, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>\n" .
+            "شماره کارت فعلی:\n<code>" . htmlspecialchars($cardShow, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</code>\n" .
+            "برای عوض کردن کارت، دکمه <b>✏️ ویرایش شماره کارت</b> را بزن و ۱۶ رقم جدید را بفرست.\n\n" .
             'صاحب حساب: <b>' . htmlspecialchars($holder !== '' ? $holder : '—', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
             'بانک: <b>' . htmlspecialchars($bank !== '' ? $bank : '—', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . "</b>\n" .
             'کانال رضایت: <b>' . ($ch !== '' ? '@' . htmlspecialchars($ch, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : '—') . "</b>\n" .

@@ -854,9 +854,9 @@ final class Keyboards
     public static function adminPayHome(): array
     {
         $rows = [
-            [['text' => 'شماره کارت', 'callback_data' => 'adm:set:pay_card_number']],
-            [['text' => 'نام صاحب حساب', 'callback_data' => 'adm:set:pay_card_holder']],
-            [['text' => 'نام بانک', 'callback_data' => 'adm:set:pay_bank_name']],
+            [['text' => '✏️ ویرایش شماره کارت', 'callback_data' => 'adm:set:pay_card_number']],
+            [['text' => '👤 ویرایش نام صاحب حساب', 'callback_data' => 'adm:set:pay_card_holder']],
+            [['text' => '🏦 ویرایش نام بانک', 'callback_data' => 'adm:set:pay_bank_name']],
             [['text' => 'کانال رضایت (اختیاری)', 'callback_data' => 'adm:set:pay_trust_channel']],
             [['text' => 'اعتبار فاکتور (دقیقه)', 'callback_data' => 'adm:set:pay_invoice_minutes']],
         ];
@@ -1051,6 +1051,7 @@ final class Keyboards
             [['text' => '🆘 پشتیبانی و کارمندان', 'callback_data' => 'adm:support']],
             [['text' => '⚙️ تنظیمات عمومی', 'callback_data' => 'adm:general']],
             [['text' => '💳 پرداخت کارت‌به‌کارت', 'callback_data' => 'adm:pay']],
+            [['text' => '✏️ ویرایش شماره کارت', 'callback_data' => 'adm:set:pay_card_number']],
             [['text' => '🛡 امنیت و رمز', 'callback_data' => 'adm:security']],
             [['text' => '🚪 خروج از پنل', 'callback_data' => 'adm:logout']],
         ]];

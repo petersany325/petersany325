@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 final class Handlers
 {
-    public const CODE_VERSION = '2026-08-17-v10.32';
+    public const CODE_VERSION = '2026-08-17-v10.33';
 
     private string $assets;
     private Settings $settings;
