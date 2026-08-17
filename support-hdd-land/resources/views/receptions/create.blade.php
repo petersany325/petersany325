@@ -55,6 +55,14 @@
     </div>
 </div>
 
+<div id="serial-conflict-banner" class="serial-conflict-banner" hidden role="alert">
+    <div class="serial-conflict-banner-main">
+        <strong>سریال تکراری در سیستم</strong>
+        <span data-serial-conflict-msg></span>
+    </div>
+    <a class="btn btn-secondary btn-sm" data-serial-conflict-link href="#" target="_blank" rel="noopener">مشاهده قبض قبلی</a>
+</div>
+
 <form method="POST"
       action="{{ route('receptions.store') }}"
       enctype="multipart/form-data"
@@ -62,6 +70,7 @@
       id="reception-wizard"
       data-lookup-url="{{ route('receptions.lookup-phone') }}"
       data-lookup-customers-url="{{ route('receptions.lookup-customers') }}"
+      data-lookup-serial-url="{{ route('receptions.lookup-serial') }}"
       data-ensure-customer-url="{{ route('receptions.ensure-customer') }}"
       data-skip-phone="{{ $skipPhone ? '1' : '0' }}"
       data-old-mode="{{ $oldMode }}"
@@ -210,18 +219,19 @@
             <div class="ws-panes">
                 <div class="ws-pane active" data-ws-pane="device">
                     <div class="accept-row accept-row-5">
-                        <div>
+                        <div class="serial-field-wrap" data-serial-field-wrap>
                             <label>سریال دستگاه <span class="latin-hint">EN</span></label>
                             <input type="text"
                                    name="serial_number"
                                    value="{{ old('serial_number') }}"
                                    class="field-latin {{ $errors->has('serial_number') ? 'is-invalid' : '' }}"
                                    data-barcode data-ascii-en data-fa-en
+                                   data-online-serial-check
                                    lang="en" spellcheck="false" autocapitalize="characters"
                                    autocomplete="off" dir="ltr" inputmode="latin"
                                    placeholder="SERIAL" style="text-align:left;">
                             @error('serial_number')
-                                <div class="field-error">{{ $message }}</div>
+                                <div class="field-error" data-serial-error="1">{{ $message }}</div>
                             @enderror
                         </div>
                         <div>
@@ -481,7 +491,7 @@
         </div>
         <div class="device-card-body">
             <div class="dense-grid">
-                <label>سریال <span class="latin-hint">EN</span><input type="text" class="field-latin" data-name="serial_number" data-barcode data-ascii-en data-fa-en lang="en" spellcheck="false" autocapitalize="characters" autocomplete="off" dir="ltr" inputmode="latin" placeholder="SERIAL" style="text-align:left;"></label>
+                <label>سریال <span class="latin-hint">EN</span><input type="text" class="field-latin" data-name="serial_number" data-barcode data-ascii-en data-fa-en data-online-serial-check lang="en" spellcheck="false" autocapitalize="characters" autocomplete="off" dir="ltr" inputmode="latin" placeholder="SERIAL" style="text-align:left;"></label>
                 <label>خدمات
                     <select data-name="service_type">
                         <option value="">—</option>

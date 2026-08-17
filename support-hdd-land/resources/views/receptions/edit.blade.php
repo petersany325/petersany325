@@ -13,7 +13,9 @@
     <div class="alert alert-error">{{ $errors->first() }}</div>
 @endif
 
-<form method="POST" action="{{ route('receptions.update', $r) }}" enctype="multipart/form-data" class="accept-form">
+<form method="POST" action="{{ route('receptions.update', $r) }}" enctype="multipart/form-data" class="accept-form"
+      data-lookup-serial-url="{{ route('receptions.lookup-serial') }}"
+      data-ignore-reception-id="{{ $r->id }}">
     @csrf
     @method('PUT')
     <input type="hidden" name="customer_id" value="{{ old('customer_id', $c->id) }}">
@@ -97,11 +99,21 @@
             <div>
                 <label>سریال <span class="latin-hint">EN</span></label>
                 <input type="text" name="serial_number" value="{{ old('serial_number', $r->serial_number) }}"
-                       class="field-latin"
+                       class="field-latin {{ $errors->has('serial_number') ? 'is-invalid' : '' }}"
                        dir="ltr" style="text-align:left;"
-                       data-barcode data-ascii-en data-fa-en
+                       data-barcode data-ascii-en data-fa-en data-online-serial-check
                        lang="en" spellcheck="false" autocapitalize="characters"
                        autocomplete="off" inputmode="latin" placeholder="SERIAL">
+                @error('serial_number')
+                    <div class="field-error" data-serial-error="1">{{ $message }}</div>
+                @enderror
+                <div id="serial-conflict-banner" class="serial-conflict-banner" hidden role="alert" style="margin-top:8px;">
+                    <div class="serial-conflict-banner-main">
+                        <strong>سریال تکراری</strong>
+                        <span data-serial-conflict-msg></span>
+                    </div>
+                    <a class="btn btn-secondary btn-sm" data-serial-conflict-link href="#" target="_blank" rel="noopener">مشاهده قبض قبلی</a>
+                </div>
             </div>
             <div>
                 <label>ظرفیت هارد</label>

@@ -1115,6 +1115,9 @@
                 });
             });
 
+            var serialInput = card.querySelector('[data-name="serial_number"]');
+            if (serialInput) wireOnlineSerialField(serialInput);
+
             var toggleBtn = card.querySelector('[data-device-toggle]');
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function () { toggleCollapse(card); });
@@ -1204,31 +1207,75 @@
             return convertDigits(String(value || '')).trim().toUpperCase();
         }
 
+        var serialLookupUrl = form.getAttribute('data-lookup-serial-url') || '';
+        var serialIgnoreId = form.getAttribute('data-ignore-reception-id') || '';
+        var serialCheckTimers = {};
+        var serialCheckSeq = {};
+        var serialCheckAbort = {};
+
+        function serialConflictBanner() {
+            return document.getElementById('serial-conflict-banner');
+        }
+
+        function showSerialConflictBanner(payload) {
+            var banner = serialConflictBanner();
+            if (!banner) return;
+            var msg = banner.querySelector('[data-serial-conflict-msg]');
+            var link = banner.querySelector('[data-serial-conflict-link]');
+            if (msg) msg.textContent = (payload && payload.message) || 'این سریال قبلاً ثبت شده است.';
+            if (link) {
+                if (payload && payload.reception && payload.reception.url) {
+                    link.href = payload.reception.url;
+                    link.hidden = false;
+                    var label = payload.reception.receipt_no || payload.reception.ticket_no || 'قبض قبلی';
+                    link.textContent = 'مشاهده قبض ' + label;
+                } else {
+                    link.hidden = true;
+                    link.removeAttribute('href');
+                }
+            }
+            banner.hidden = false;
+        }
+
+        function hideSerialConflictBannerIfIdle() {
+            var banner = serialConflictBanner();
+            if (!banner) return;
+            var any = form.querySelector('[data-serial-conflict="1"]');
+            if (!any) banner.hidden = true;
+        }
+
         function clearSerialFieldError(field) {
             if (!field) return;
             field.classList.remove('is-invalid');
+            field.removeAttribute('data-serial-conflict');
+            field.removeAttribute('aria-invalid');
             var card = field.closest('[data-device-card]');
             if (card) {
                 card.classList.remove('has-field-error');
                 var tip = card.querySelector('[data-serial-error]');
                 if (tip) tip.remove();
             }
-            var wrap = field.closest('div, label');
+            var wrap = field.closest('[data-serial-field-wrap], div, label');
             if (wrap) {
                 var localTip = wrap.querySelector('[data-serial-error]');
                 if (localTip) localTip.remove();
             }
+            hideSerialConflictBannerIfIdle();
         }
 
-        function markSerialFieldError(field, message, card) {
+        function markSerialFieldError(field, message, card, meta) {
             if (!field) return;
             field.classList.add('is-invalid');
+            field.setAttribute('aria-invalid', 'true');
+            if (meta && meta.exists) {
+                field.setAttribute('data-serial-conflict', '1');
+            }
             if (card) {
                 card.classList.add('has-field-error');
                 card.classList.remove('is-collapsed');
                 card.classList.add('is-active');
             }
-            var host = field.parentNode;
+            var host = field.closest('[data-serial-field-wrap]') || field.parentNode;
             if (!host) return;
             var tip = host.querySelector('[data-serial-error]');
             if (!tip) {
@@ -1238,11 +1285,101 @@
                 host.appendChild(tip);
             }
             tip.textContent = message || 'سریال تکراری است.';
-            if (field.getAttribute('data-serial-error-wired') === '1') return;
-            field.setAttribute('data-serial-error-wired', '1');
+            if (meta && meta.exists) {
+                showSerialConflictBanner(meta);
+            }
+            if (field.getAttribute('data-serial-error-clear-wired') === '1') return;
+            field.setAttribute('data-serial-error-clear-wired', '1');
             field.addEventListener('input', function () {
-                clearSerialFieldError(field);
+                field.removeAttribute('data-serial-conflict');
             });
+        }
+
+        function checkSerialOnline(field, options) {
+            options = options || {};
+            if (!field || !serialLookupUrl) return;
+            var card = field.closest('[data-device-card]');
+            var key = field.id || field.getAttribute('name') || field.getAttribute('data-name') || 'serial';
+            var serial = normalizeSerialKey(field.value);
+            if (serialCheckTimers[key]) {
+                clearTimeout(serialCheckTimers[key]);
+                serialCheckTimers[key] = null;
+            }
+
+            var run = function () {
+                serial = normalizeSerialKey(field.value);
+                if (!serial || serial.length < 3) {
+                    clearSerialFieldError(field);
+                    return;
+                }
+
+                if (card && groupDeviceList) {
+                    var localDup = false;
+                    groupDeviceList.querySelectorAll('[data-device-card]').forEach(function (other) {
+                        if (other === card) return;
+                        var otherField = other.querySelector('[data-name="serial_number"]');
+                        if (otherField && normalizeSerialKey(otherField.value) === serial) localDup = true;
+                    });
+                    if (localDup) {
+                        markSerialFieldError(field, 'سریال تکراری در همین پذیرش گروهی است.', card, {
+                            exists: true,
+                            message: 'سریال در همین فرم تکراری است.'
+                        });
+                        return;
+                    }
+                }
+
+                if (serialCheckAbort[key]) {
+                    try { serialCheckAbort[key].abort(); } catch (e) {}
+                }
+                serialCheckAbort[key] = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+                var seq = (serialCheckSeq[key] = (serialCheckSeq[key] || 0) + 1);
+                var url = serialLookupUrl + '?serial=' + encodeURIComponent(serial);
+                if (serialIgnoreId) url += '&ignore=' + encodeURIComponent(serialIgnoreId);
+
+                var opts = {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                };
+                if (serialCheckAbort[key]) opts.signal = serialCheckAbort[key].signal;
+
+                fetch(url, opts)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (seq !== serialCheckSeq[key]) return;
+                        if (normalizeSerialKey(field.value) !== serial) return;
+                        if (data && data.exists) {
+                            markSerialFieldError(field, data.message || 'سریال تکراری است.', card, data);
+                            if (groupHint && card) {
+                                groupHint.textContent = data.message || 'سریال تکراری — قبض قبلی را ببینید.';
+                                groupHint.classList.add('is-error');
+                            }
+                        } else {
+                            clearSerialFieldError(field);
+                        }
+                    })
+                    .catch(function (err) {
+                        if (err && err.name === 'AbortError') return;
+                    });
+            };
+
+            if (options.immediate) run();
+            else serialCheckTimers[key] = setTimeout(run, options.delay != null ? options.delay : 280);
+        }
+
+        function wireOnlineSerialField(field) {
+            if (!field || field.getAttribute('data-online-serial-wired') === '1') return;
+            field.setAttribute('data-online-serial-wired', '1');
+            field.setAttribute('data-online-serial-check', '1');
+            ['input', 'change', 'blur'].forEach(function (ev) {
+                field.addEventListener(ev, function () {
+                    checkSerialOnline(field, { immediate: ev !== 'input', delay: ev === 'input' ? 320 : 0 });
+                });
+            });
+            if (normalizeSerialKey(field.value)) {
+                checkSerialOnline(field, { immediate: true });
+            }
         }
 
         function setDeviceFieldValue(card, name, value) {
@@ -1367,6 +1504,16 @@
                     seen[key] = index;
                 }
             });
+
+            if (!hasError) {
+                cards.forEach(function (card) {
+                    var field = card.querySelector('[data-name="serial_number"]');
+                    if (field && field.getAttribute('data-serial-conflict') === '1') {
+                        hasError = true;
+                        if (!firstBad) firstBad = card;
+                    }
+                });
+            }
 
             if (hasError && firstBad) {
                 collapseAllExcept(firstBad);
@@ -1557,6 +1704,21 @@
                 if (singleSerial && singleSerial.classList.contains('is-invalid') && !normalizeSerialKey(singleSerial.value)) {
                     clearSerialFieldError(singleSerial);
                 }
+                if (singleSerial && singleSerial.getAttribute('data-serial-conflict') === '1') {
+                    e.preventDefault();
+                    try { singleSerial.focus(); singleSerial.select(); } catch (err) {}
+                    showSerialConflictBanner({
+                        message: (singleSerial.parentNode.querySelector('[data-serial-error]') || {}).textContent || 'سریال تکراری است.',
+                        reception: null
+                    });
+                    return;
+                }
+            }
+
+            if (mode === 'group' && form.querySelector('[data-serial-conflict="1"]')) {
+                e.preventDefault();
+                focusFirstSerialError();
+                return;
             }
 
             var createSmsMode = form.getAttribute('data-create-sms-mode') || 'always';
@@ -1574,10 +1736,16 @@
         });
 
         var singleSerialInput = form.querySelector('#mode-single [name="serial_number"]');
-        if (singleSerialInput && singleSerialInput.classList.contains('is-invalid')) {
-            singleSerialInput.addEventListener('input', function () {
-                clearSerialFieldError(singleSerialInput);
-            });
+        if (singleSerialInput) {
+            wireOnlineSerialField(singleSerialInput);
+            if (singleSerialInput.classList.contains('is-invalid')) {
+                markSerialFieldError(
+                    singleSerialInput,
+                    (singleSerialInput.parentNode.querySelector('[data-serial-error]') || {}).textContent || 'سریال تکراری است.',
+                    null,
+                    { exists: true, message: (singleSerialInput.parentNode.querySelector('[data-serial-error]') || {}).textContent || 'سریال تکراری است.' }
+                );
+            }
         }
 
         document.addEventListener('keydown', function (e) {
@@ -2172,6 +2340,132 @@
         });
     }
 
+
+    /* =========================================================
+     * Online serial conflict checks (create / group / edit)
+     * ========================================================= */
+
+    function initOnlineSerialChecks(root) {
+        root = root || document;
+        root.querySelectorAll('form[data-lookup-serial-url]').forEach(function (form) {
+            if (form.getAttribute('data-online-serial-form-wired') === '1') return;
+            // Reception wizard wires itself; skip to avoid double timers.
+            if (form.id === 'reception-wizard') return;
+            form.setAttribute('data-online-serial-form-wired', '1');
+
+            var lookupUrl = form.getAttribute('data-lookup-serial-url') || '';
+            var ignoreId = form.getAttribute('data-ignore-reception-id') || '';
+            if (!lookupUrl) return;
+
+            function normalizeKey(value) {
+                return convertDigits(String(value || '')).trim().toUpperCase();
+            }
+
+            function banner() {
+                return form.querySelector('#serial-conflict-banner') || document.getElementById('serial-conflict-banner');
+            }
+
+            function showBanner(payload) {
+                var el = banner();
+                if (!el) return;
+                var msg = el.querySelector('[data-serial-conflict-msg]');
+                var link = el.querySelector('[data-serial-conflict-link]');
+                if (msg) msg.textContent = (payload && payload.message) || 'سریال تکراری است.';
+                if (link) {
+                    if (payload && payload.reception && payload.reception.url) {
+                        link.href = payload.reception.url;
+                        link.hidden = false;
+                        link.textContent = 'مشاهده قبض ' + (payload.reception.receipt_no || payload.reception.ticket_no || '');
+                    } else {
+                        link.hidden = true;
+                    }
+                }
+                el.hidden = false;
+            }
+
+            function hideBanner() {
+                var el = banner();
+                if (el) el.hidden = true;
+            }
+
+            function clearErr(field) {
+                if (!field) return;
+                field.classList.remove('is-invalid');
+                field.removeAttribute('data-serial-conflict');
+                var host = field.parentNode;
+                if (host) {
+                    var tip = host.querySelector('[data-serial-error]');
+                    if (tip) tip.remove();
+                }
+                if (!form.querySelector('[data-serial-conflict="1"]')) hideBanner();
+            }
+
+            function markErr(field, payload) {
+                if (!field) return;
+                field.classList.add('is-invalid');
+                field.setAttribute('data-serial-conflict', '1');
+                var host = field.parentNode;
+                if (host) {
+                    var tip = host.querySelector('[data-serial-error]');
+                    if (!tip) {
+                        tip = document.createElement('div');
+                        tip.className = 'field-error';
+                        tip.setAttribute('data-serial-error', '1');
+                        host.appendChild(tip);
+                    }
+                    tip.textContent = (payload && payload.message) || 'سریال تکراری است.';
+                }
+                showBanner(payload || {});
+            }
+
+            form.querySelectorAll('[data-online-serial-check], [name="serial_number"]').forEach(function (field) {
+                if (field.getAttribute('data-online-serial-wired') === '1') return;
+                field.setAttribute('data-online-serial-wired', '1');
+                var timer = null;
+                var seq = 0;
+                var abortCtrl = null;
+
+                var run = function (immediate) {
+                    var serial = normalizeKey(field.value);
+                    if (timer) { clearTimeout(timer); timer = null; }
+                    var exec = function () {
+                        if (!serial || serial.length < 3) { clearErr(field); return; }
+                        if (abortCtrl) { try { abortCtrl.abort(); } catch (e) {} }
+                        abortCtrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+                        var my = ++seq;
+                        var url = lookupUrl + '?serial=' + encodeURIComponent(serial);
+                        if (ignoreId) url += '&ignore=' + encodeURIComponent(ignoreId);
+                        var opts = { method: 'GET', headers: { 'Accept': 'application/json' }, credentials: 'same-origin' };
+                        if (abortCtrl) opts.signal = abortCtrl.signal;
+                        fetch(url, opts).then(function (r) { return r.json(); }).then(function (data) {
+                            if (my !== seq) return;
+                            if (normalizeKey(field.value) !== serial) return;
+                            if (data && data.exists) markErr(field, data);
+                            else clearErr(field);
+                        }).catch(function (err) {
+                            if (err && err.name === 'AbortError') return;
+                        });
+                    };
+                    if (immediate) exec();
+                    else timer = setTimeout(exec, 300);
+                };
+
+                ['input', 'change', 'blur'].forEach(function (ev) {
+                    field.addEventListener(ev, function () { run(ev !== 'input'); });
+                });
+                if (normalizeKey(field.value)) run(true);
+            });
+
+            form.addEventListener('submit', function (e) {
+                var bad = form.querySelector('[data-serial-conflict="1"]');
+                if (bad) {
+                    e.preventDefault();
+                    try { bad.focus(); bad.select(); } catch (err) {}
+                }
+            });
+        });
+    }
+
     /* =========================================================
      * Boot
      * ========================================================= */
@@ -2224,6 +2518,7 @@
         initReceptionWizard();
         initNoteMenusGlobal();
         initReceiptSearchInputs();
+        initOnlineSerialChecks();
         initStaffShell();
         initStaffLoginDeviceHint();
         initLookupEditors();

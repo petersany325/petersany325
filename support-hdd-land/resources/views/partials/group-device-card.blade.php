@@ -32,7 +32,7 @@
                        name="items[{{ $index }}][serial_number]"
                        value="{{ $serialValue }}"
                        class="field-latin {{ $hasError ? 'is-invalid' : '' }}"
-                       data-barcode data-ascii-en data-fa-en
+                       data-barcode data-ascii-en data-fa-en data-online-serial-check
                        lang="en" spellcheck="false" autocapitalize="characters"
                        autocomplete="off" dir="ltr" inputmode="latin"
                        placeholder="SERIAL" style="text-align:left;">
