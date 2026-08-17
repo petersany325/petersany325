@@ -3147,7 +3147,6 @@ final class Handlers
         $this->db->updateUser((int)$user['telegram_id'], ['flow' => 'gps:vipclub']);
         $user = $this->db->findUser((int)$user['telegram_id']) ?? $user;
         $this->clearUi($chatId, $user);
-        $city = htmlspecialchars((string)($user['city'] ?? '—'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $this->tg->sendMessage(
             $chatId,
             "📍 موقعیت فعلی‌ات را با دکمه پایین بفرست.\nبرای بقیه کاربران مخفی می‌ماند.",
