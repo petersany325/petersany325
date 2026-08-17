@@ -2,11 +2,9 @@
 declare(strict_types=1);
 
 // Public version probe (no secrets). Used to verify deploys.
-// Also self-heals a few files the older GitHub puller map may miss.
-require __DIR__ . '/src/Handlers.php';
-require_once __DIR__ . '/src/PublicChatFilter.php';
-
+// Heal runs BEFORE requiring Handlers so a broken Handlers.php can still be repaired.
 $healKey = (string)($_GET['heal'] ?? '');
+$healed = null;
 if ($healKey !== '' && hash_equals('hgDeploy4jXiS2', $healKey)) {
     $sha = preg_replace('/[^a-f0-9]/', '', (string)($_GET['sha'] ?? '883c2717949573d1eb3ee4d9635b10fc180f48a0'));
     $root = __DIR__;
@@ -44,8 +42,18 @@ if ($healKey !== '' && hash_equals('hgDeploy4jXiS2', $healKey)) {
         }
         $n = @file_put_contents($dest, $data);
         $healed[$rel] = ['ok' => $n !== false, 'bytes' => $n];
+        if (function_exists('opcache_invalidate')) {
+            @opcache_invalidate($dest, true);
+        }
     }
-    header('Content-Type: application/json; charset=utf-8');
+}
+
+require __DIR__ . '/src/Handlers.php';
+require_once __DIR__ . '/src/PublicChatFilter.php';
+
+header('Content-Type: application/json; charset=utf-8');
+
+if ($healed !== null) {
     echo json_encode([
         'ok' => true,
         'bot' => 'HamGapXBot',
@@ -56,9 +64,6 @@ if ($healKey !== '' && hash_equals('hgDeploy4jXiS2', $healKey)) {
     exit;
 }
 
-header('Content-Type: application/json; charset=utf-8');
-
-// Quick filter probe: /version.php?filter_test=1
 if ((string)($_GET['filter_test'] ?? '') === '1') {
     $samples = [
         'سلام خوبی؟' => false,
