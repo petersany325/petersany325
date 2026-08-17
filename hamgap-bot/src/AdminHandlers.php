@@ -6,7 +6,7 @@ declare(strict_types=1);
  */
 final class AdminHandlers
 {
-    public const CODE_VERSION = '2026-08-15-v10.31-admin';
+    public const CODE_VERSION = '2026-08-17-v10.32-admin';
 
     /** Keys editable via adm:set: — anything else is rejected. */
     public const ALLOWED_SET_KEYS = [
@@ -225,6 +225,12 @@ final class AdminHandlers
                 "✅ ذخیره شد\n<code>{$key}</code> = <b>" .
                 htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>' . $extra
             );
+            if (in_array($key, ['pay_card_number', 'pay_card_holder', 'pay_bank_name', 'pay_trust_channel', 'pay_invoice_minutes'], true)
+                || str_starts_with($key, 'pack_')
+            ) {
+                $this->handlePayAdmin($chatId, $tid, 'adm:pay');
+                return;
+            }
             $this->home($chatId);
             return;
         }
@@ -722,11 +728,17 @@ final class AdminHandlers
                 );
                 return;
             }
-            $this->tg->sendMessage(
-                $chatId,
-                "مقدار جدید برای <code>{$key}</code> را بفرست.\nفعلی: <b>" .
-                htmlspecialchars($cur, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>'
-            );
+            $hint = match ($key) {
+                'pay_card_number' => "💳 <b>شماره کارت بانکی</b> را بفرست (۱۶ تا ۱۹ رقم، بدون فاصله).\nفعلی: <b>" .
+                    htmlspecialchars($cur !== '' ? $cur : 'ثبت نشده', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>',
+                'pay_card_holder' => "نام صاحب حساب را بفرست.\nفعلی: <b>" .
+                    htmlspecialchars($cur !== '' ? $cur : 'ثبت نشده', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>',
+                'pay_bank_name' => "نام بانک را بفرست (مثلاً: ملی).\nفعلی: <b>" .
+                    htmlspecialchars($cur !== '' ? $cur : 'ثبت نشده', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>',
+                default => "مقدار جدید برای <code>{$key}</code> را بفرست.\nفعلی: <b>" .
+                    htmlspecialchars($cur, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</b>',
+            };
+            $this->tg->sendMessage($chatId, $hint);
             return;
         }
 
@@ -1178,6 +1190,7 @@ final class AdminHandlers
         $card = $this->settings->get('pay_card_number');
         $holder = $this->settings->get('pay_card_holder');
         $bank = $this->settings->get('pay_bank_name');
+        $ch = trim($this->settings->get('pay_trust_channel'));
         $ttl = $this->settings->get('pay_invoice_minutes');
         $prices = CoinCatalog::prices($this->settings);
         $priceLines = [];
