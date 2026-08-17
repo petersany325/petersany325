@@ -480,7 +480,9 @@ class ReceptionController extends Controller
             'warranty_end_date', 'estimated_delivery_at', 'next_visit_at', 'received_at',
         ]);
 
-        $data = $request->validate(array_merge($this->customerRules(), $this->deviceRules(), [
+        $data = $request->validate(array_merge($this->deviceRules(), [
+            // Customer profile is NOT edited from ticket edit — only optional reassignment.
+            'customer_id' => ['nullable', 'exists:customers,id'],
             'photo' => ['nullable', 'image', 'max:4096'],
             'final_fault' => ['nullable', 'string', 'max:5000'],
             'technician_notes' => ['nullable', 'string', 'max:5000'],
@@ -490,7 +492,7 @@ class ReceptionController extends Controller
             'sms_note' => ['nullable', 'string', 'max:300'],
         ]));
 
-        $customer = $this->resolveCustomer($data, $reception, ['context' => 'ticket_update']);
+        $customer = $this->resolveCustomerForTicketEdit($reception);
 
         if (! empty($data['brand_model'])) {
             $converted = $this->toAsciiEnglish((string) $data['brand_model']);
@@ -1509,12 +1511,24 @@ class ReceptionController extends Controller
     }
 
     /**
+     * Ticket edit must never mutate the shared customer profile (name/phone/…).
+     * It may only keep the current customer or reassign the ticket to another existing customer_id.
+     *
+     * @param  array<string,mixed>  $data
+     */
+    private function resolveCustomerForTicketEdit(Reception $reception, array $data = []): Customer
+    {
+        // Hard lock: ticket edit cannot create/rename/reassign customers.
+        // Customer profile changes must go through the Customers module.
+        return Customer::query()->findOrFail((int) $reception->customer_id);
+    }
+
+    /**
      * @param  array<string,mixed>  $data
      * @param  array{context?:string}  $options  context: create|ticket_update
      */
     private function resolveCustomer(array $data, ?Reception $reception = null, array $options = []): Customer
     {
-        $context = (string) ($options['context'] ?? 'create');
         $customerId = isset($data['customer_id']) && $data['customer_id'] !== '' && $data['customer_id'] !== null
             ? (int) $data['customer_id']
             : null;
@@ -1531,35 +1545,6 @@ class ReceptionController extends Controller
             'address' => $data['address'] ?? null,
             'referral_source_id' => $data['referral_source_id'] ?? null,
         ];
-
-        // Ticket edit: never rename/rephone a shared customer onto another person's identity.
-        // - If typed phone belongs to someone else → reassign this ticket to that customer.
-        // - Otherwise update non-identity fields; name changes only when safe (single-ticket customer)
-        //   or when the new name is essentially the same.
-        if ($context === 'ticket_update' && $reception) {
-            $current = $customerId
-                ? Customer::query()->find($customerId)
-                : $reception->customer;
-            if (! $current) {
-                $current = Customer::query()->findOrFail((int) $reception->customer_id);
-            }
-
-            $byPhone = $phone !== '' ? $this->findCustomerByPhone($phone) : null;
-            if ($byPhone && (int) $byPhone->id !== (int) $current->id) {
-                // Reassign ticket ownership; do not mutate either customer profile's name.
-                return $byPhone;
-            }
-
-            $otherTickets = Reception::query()
-                ->where('customer_id', $current->id)
-                ->where('id', '!=', $reception->id)
-                ->exists();
-
-            $overwriteName = ! $otherTickets;
-            $this->mergeCustomerPayload($current, $payload, overwriteName: $overwriteName);
-
-            return $current->fresh();
-        }
 
         if ($customerId) {
             $customer = Customer::query()->findOrFail($customerId);
