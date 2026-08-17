@@ -241,7 +241,9 @@ class ReceptionController extends Controller
         ];
 
         if ($customer) {
-            $customer->update($payload);
+            // Never overwrite an existing customer's name just because intake typed another name
+            // on the same mobile (family / shared phone). Fill blanks only unless same id was chosen.
+            $this->mergeCustomerPayload($customer, $payload, overwriteName: ! empty($data['customer_id']));
             $created = false;
         } else {
             $customer = Customer::create($payload);
@@ -488,7 +490,7 @@ class ReceptionController extends Controller
             'sms_note' => ['nullable', 'string', 'max:300'],
         ]));
 
-        $customer = $this->resolveCustomer($data);
+        $customer = $this->resolveCustomer($data, $reception, ['context' => 'ticket_update']);
 
         if (! empty($data['brand_model'])) {
             $converted = $this->toAsciiEnglish((string) $data['brand_model']);
@@ -1506,69 +1508,131 @@ class ReceptionController extends Controller
         ];
     }
 
-    private function resolveCustomer(array $data): Customer
+    /**
+     * @param  array<string,mixed>  $data
+     * @param  array{context?:string}  $options  context: create|ticket_update
+     */
+    private function resolveCustomer(array $data, ?Reception $reception = null, array $options = []): Customer
     {
-        $customerId = $data['customer_id'] ?? null;
-        $phone = $data['customer_phone'] ?? '';
+        $context = (string) ($options['context'] ?? 'create');
+        $customerId = isset($data['customer_id']) && $data['customer_id'] !== '' && $data['customer_id'] !== null
+            ? (int) $data['customer_id']
+            : null;
+        $phone = $this->normalizePhone((string) ($data['customer_phone'] ?? ''));
+        if ($phone === '') {
+            $phone = (string) ($data['customer_phone'] ?? '');
+        }
 
         $payload = [
-            'name' => $data['customer_name'] ?? null,
-            'phone' => $phone,
+            'name' => isset($data['customer_name']) ? trim((string) $data['customer_name']) : null,
+            'phone' => $phone !== '' ? $phone : null,
             'national_code' => $data['national_code'] ?? null,
             'job' => $data['job'] ?? null,
             'address' => $data['address'] ?? null,
             'referral_source_id' => $data['referral_source_id'] ?? null,
         ];
 
-        if ($customerId) {
-            $customer = Customer::findOrFail($customerId);
-            $updates = array_filter($payload, fn ($v) => $v !== null && $v !== '');
-            if ($updates) {
-                $customer->update($updates);
+        // Ticket edit: never rename/rephone a shared customer onto another person's identity.
+        // - If typed phone belongs to someone else → reassign this ticket to that customer.
+        // - Otherwise update non-identity fields; name changes only when safe (single-ticket customer)
+        //   or when the new name is essentially the same.
+        if ($context === 'ticket_update' && $reception) {
+            $current = $customerId
+                ? Customer::query()->find($customerId)
+                : $reception->customer;
+            if (! $current) {
+                $current = Customer::query()->findOrFail((int) $reception->customer_id);
             }
+
+            $byPhone = $phone !== '' ? $this->findCustomerByPhone($phone) : null;
+            if ($byPhone && (int) $byPhone->id !== (int) $current->id) {
+                // Reassign ticket ownership; do not mutate either customer profile's name.
+                return $byPhone;
+            }
+
+            $otherTickets = Reception::query()
+                ->where('customer_id', $current->id)
+                ->where('id', '!=', $reception->id)
+                ->exists();
+
+            $overwriteName = ! $otherTickets;
+            $this->mergeCustomerPayload($current, $payload, overwriteName: $overwriteName);
+
+            return $current->fresh();
+        }
+
+        if ($customerId) {
+            $customer = Customer::query()->findOrFail($customerId);
+            $this->mergeCustomerPayload($customer, $payload, overwriteName: true);
 
             return $customer->fresh();
         }
 
-        $existing = $this->findCustomerByPhone($phone);
+        $existing = $phone !== '' ? $this->findCustomerByPhone($phone) : null;
         if ($existing) {
-            $updates = array_filter($payload, fn ($v) => $v !== null && $v !== '');
-            if ($updates) {
-                $existing->update($updates);
-            }
+            // Shared/family mobile: keep existing name unless blank.
+            $this->mergeCustomerPayload($existing, $payload, overwriteName: false);
 
             return $existing->fresh();
         }
 
-        return Customer::create([
-            'name' => $data['customer_name'],
+        return Customer::query()->create([
+            'name' => $payload['name'] ?: 'مشتری',
             'phone' => $phone,
-            'national_code' => $data['national_code'] ?? null,
-            'job' => $data['job'] ?? null,
-            'address' => $data['address'] ?? null,
-            'referral_source_id' => $data['referral_source_id'] ?? null,
+            'national_code' => $payload['national_code'],
+            'job' => $payload['job'],
+            'address' => $payload['address'],
+            'referral_source_id' => $payload['referral_source_id'],
         ]);
+    }
+
+    /**
+     * @param  array<string,mixed>  $payload
+     */
+    private function mergeCustomerPayload(Customer $customer, array $payload, bool $overwriteName = false): void
+    {
+        $updates = [];
+        foreach ($payload as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            if ($key === 'name') {
+                $current = trim((string) $customer->name);
+                if ($current === '' || $overwriteName) {
+                    $updates['name'] = $value;
+                }
+                continue;
+            }
+
+            if ($key === 'phone') {
+                $normalized = $this->normalizePhone((string) $value) ?: (string) $value;
+                $owner = $this->findCustomerByPhone($normalized);
+                if ($owner && (int) $owner->id !== (int) $customer->id) {
+                    // Do not steal another customer's phone number.
+                    continue;
+                }
+                $updates['phone'] = $normalized;
+                continue;
+            }
+
+            $updates[$key] = $value;
+        }
+
+        if ($updates !== []) {
+            $customer->update($updates);
+        }
     }
 
     private function findCustomerByPhone(string $phone): ?Customer
     {
-        if ($phone === '') {
+        $phone = $this->normalizePhone($phone) ?: $phone;
+        if ($phone === '' || strlen($phone) < 10) {
             return null;
         }
 
-        return Customer::query()
-            ->where(function ($q) use ($phone) {
-                $q->where('phone', $phone)
-                    ->orWhere('phone', ltrim($phone, '0'))
-                    ->orWhere('phone', '0'.ltrim($phone, '0'));
-
-                $tail = substr($phone, -10);
-                if ($tail !== '') {
-                    $q->orWhere('phone', 'like', '%'.$tail);
-                }
-            })
-            ->orderByDesc('id')
-            ->first();
+        // Prefer the shared model helper (exact formats). Avoid loose LIKE that can collide.
+        return Customer::findByPhone($phone);
     }
 
     private function customerPayload(Customer $customer): array
