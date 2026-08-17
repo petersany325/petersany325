@@ -21,39 +21,59 @@
     <div class="panel" style="margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start;">
             <div>
-                <h3 style="margin:0 0 4px;">مشتری (فقط نمایش)</h3>
+                <h3 style="margin:0 0 4px;">مشتری — ویرایش کامل</h3>
                 <p class="muted" style="margin:0;font-size:11.5px;">
-                    ویرایش قبض دیگر نام/موبایل مشتری را عوض نمی‌کند تا قبض‌های دیگر قاطی نشوند.
-                    برای اصلاح پرونده مشتری از دکمه «ویرایش مشتری» استفاده کنید.
+                    اگر نام قبض اشتباه خورده، اینجا اصلاح کنید.
+                    به‌صورت پیش‌فرض نام/موبایل روی <strong>پرونده همین مشتری</strong> ذخیره می‌شود.
+                    اگر فقط همین قبض باید جدا شود و قبض‌های دیگر دست نخورند، گزینه پایین را بزنید.
                 </p>
             </div>
             <div class="actions" style="margin:0;">
                 @if(auth()->user()->canAccess('customers'))
-                    <a class="btn btn-secondary btn-sm" href="{{ route('customers.edit', $c) }}" target="_blank">ویرایش مشتری</a>
+                    <a class="btn btn-ghost btn-sm" href="{{ route('customers.edit', $c) }}" target="_blank">پرونده مشتری</a>
                 @endif
-                <a class="btn btn-ghost btn-sm" href="{{ route('customers.show', $c) }}" target="_blank">پرونده مشتری</a>
             </div>
         </div>
         <div class="accept-row accept-row-3" style="margin-top:10px;">
             <div>
                 <label>نام</label>
-                <input type="text" value="{{ $c->name }}" readonly disabled>
+                <input type="text" name="customer_name" value="{{ old('customer_name', $c->name) }}" required maxlength="120">
             </div>
             <div>
                 <label>موبایل</label>
-                <input type="text" value="{{ $c->phone }}" dir="ltr" style="text-align:left;" readonly disabled>
+                <input type="text" name="customer_phone" value="{{ old('customer_phone', $c->phone) }}" dir="ltr" style="text-align:left;" required maxlength="20">
             </div>
             <div>
                 <label>کد ملی</label>
-                <input type="text" value="{{ $c->national_code ?: '—' }}" readonly disabled>
+                <input type="text" name="national_code" value="{{ old('national_code', $c->national_code) }}">
             </div>
             <div>
                 <label>شغل</label>
-                <input type="text" value="{{ $c->job ?: '—' }}" readonly disabled>
+                <input type="text" name="job" value="{{ old('job', $c->job) }}">
+            </div>
+            <div>
+                <label>نحوه آشنایی</label>
+                <select name="referral_source_id">
+                    <option value="">—</option>
+                    @foreach($referralSources as $src)
+                        <option value="{{ $src->id }}" @selected((string) old('referral_source_id', $c->referral_source_id) === (string) $src->id)>{{ $src->name }}</option>
+                    @endforeach
+                </select>
             </div>
             <div style="grid-column:1/-1;">
                 <label>آدرس</label>
-                <input type="text" value="{{ $c->address ?: '—' }}" readonly disabled>
+                <input type="text" name="address" value="{{ old('address', $c->address) }}">
+            </div>
+            <div style="grid-column:1/-1;">
+                @include('partials.toggle', [
+                    'name' => 'fix_customer_scope',
+                    'value' => 'ticket_only',
+                    'offValue' => 'profile',
+                    'label' => 'فقط همین قبض را اصلاح کن (قبض‌های دیگر این مشتری دست نخورند)',
+                    'checked' => old('fix_customer_scope', 'profile') === 'ticket_only',
+                    'on' => 'فعال',
+                    'off' => 'خاموش',
+                ])
             </div>
         </div>
     </div>
