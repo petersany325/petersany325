@@ -31,7 +31,8 @@
   $sliderInterval = max(3000, min(15000, (int)($b['slider_interval'] ?? 6000)));
   $imageAlt = trim((string)($b['image_alt'] ?? ''));
   $fontMap = [
-    'vazirmatn' => '"Vazirmatn", Tahoma, sans-serif',
+    'estedad' => '"Estedad", "Estedad Variable", Tahoma, sans-serif',
+    'vazirmatn' => '"Estedad", "Estedad Variable", "Vazirmatn", Tahoma, sans-serif',
     'noto' => '"Noto Sans Arabic", "Vazirmatn", Tahoma, sans-serif',
     'rubik' => '"Rubik", "Vazirmatn", Tahoma, sans-serif',
     'tahoma' => 'Tahoma, Geneva, sans-serif',

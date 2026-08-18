@@ -3,14 +3,14 @@
   $theme = class_exists($themeClass) ? $themeClass::get() : [];
   // top_menu (چیپ‌های قرمز زیر بنر) عمداً از پیش‌فرض حذف شده — تکراری با منوی هدر و دسته‌هاست.
   $order = $theme['layout_order'] ?? ['banner','online','categories','featured','features','cta'];
-  $order = array_values(array_filter($order, fn ($s) => $s !== 'top_menu'));
-  if (!empty($theme['banner']['enabled']) && !in_array('banner', $order, true)) {
-    array_unshift($order, 'banner');
-  }
+  $order = array_values(array_filter($order, fn ($s) => !in_array($s, ['top_menu','banner','hero','features'], true)));
+  // بنر طراحی‌شده فروشگاهی+شرکتی همیشه بالای ویجت‌هاست.
   $featured = $featured ?? collect();
   $latest = $latest ?? collect();
   $categories = $categories ?? collect();
 @endphp
+
+@include('storefront.partials.home-hero')
 
 @foreach($order as $section)
   @if(is_string($section) && str_starts_with($section, 'block:'))
@@ -23,9 +23,6 @@
         'categories' => $categories,
       ])
     @endif
-
-  @elseif($section === 'banner' && !empty($theme['banner']['enabled']))
-    @include('theme-builder::storefront.partials.banner', ['b' => $theme['banner']])
 
   @elseif($section === 'online' && !empty($theme['online']['enabled']))
     @include('theme-builder::storefront.widgets', ['widgets'=>[['type'=>'online','settings'=>$theme['online']]], 'featured'=>$featured,'latest'=>$latest,'categories'=>$categories])
@@ -59,3 +56,5 @@
     @include('theme-builder::storefront.widgets', ['widgets'=>[['type'=>'cta','settings'=>$theme['cta']]], 'featured'=>$featured,'latest'=>$latest,'categories'=>$categories])
   @endif
 @endforeach
+
+@include('storefront.partials.home-corporate-sections')

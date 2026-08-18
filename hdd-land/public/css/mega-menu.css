@@ -253,6 +253,14 @@
 .mega-link-title{display:inline-flex;align-items:center;gap:.3rem;flex-wrap:wrap;color:var(--mega-title,inherit)}
 .mega-html{font-size:.9rem;color:var(--mega-text,var(--muted,#6b7280));line-height:1.6}
 
+.mega-panel.is-mega-panel.w-full,
+.mega-panel.is-mega-panel.w-wide{
+  min-width:min(980px,96vw);
+}
+.mega-panel.is-mega-panel .mega-grid{
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+}
+.mega-nav-pro .mega-utils{display:none!important}
 .mega-promo{
   display:block;border-radius:14px;overflow:hidden;border:1px solid var(--line,#e5e7eb);
   text-decoration:none;color:inherit;background:#0b0d12;transition:transform .25s,box-shadow .25s;
@@ -291,7 +299,7 @@
   color:var(--muted,#6b7280);font-weight:600;padding:.45rem .55rem;text-decoration:none;display:inline-flex;align-items:center
 }
 .mega-nav-pro > a:not(.mega-trigger):hover{color:var(--brand,#e23d12)}
-.mega-nav-pro .mega-utils{display:inline-flex;align-items:center;gap:.25rem;margin-right:.35rem;padding-right:.5rem;border-right:1px solid var(--line,#e5e7eb)}
+.mega-nav-pro .mega-utils{display:none!important}
 
 @media (max-width: 960px){
   .mega-panel.is-dropdown,

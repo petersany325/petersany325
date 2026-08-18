@@ -145,28 +145,19 @@
             if ($img === '' || str_ends_with($img, '/')) { $img = ''; }
             $key = mb_strtolower(($cat->slug ?? '').' '.($cat->name ?? ''));
             $iconKind = 'chip';
-            if (str_contains($key, 'nvme') || str_contains($key, 'm.2') || str_contains($key, 'ام ۲')) { $iconKind = 'nvme'; }
-            elseif (str_contains($key, 'ssd') || str_contains($key, 'اس اس دی')) { $iconKind = 'ssd'; }
-            elseif (str_contains($key, 'ram') || str_contains($key, 'رم') || str_contains($key, 'حافظه')) { $iconKind = 'ram'; }
-            elseif (str_contains($key, 'hdd') || str_contains($key, 'هارد') || str_contains($key, 'hard')) { $iconKind = 'hdd'; }
+            $fallback = 'cat-hdd.jpg';
+            if (str_contains($key, 'nvme') || str_contains($key, 'm.2') || str_contains($key, 'ام ۲')) { $iconKind = 'nvme'; $fallback = 'cat-nvme.jpg'; }
+            elseif (str_contains($key, 'ssd') || str_contains($key, 'اس اس دی')) { $iconKind = 'ssd'; $fallback = 'cat-ssd.jpg'; }
+            elseif (str_contains($key, 'ram') || str_contains($key, 'رم')) { $iconKind = 'ram'; $fallback = 'cat-ram.jpg'; }
+            elseif (str_contains($key, 'external') || str_contains($key, 'اکسترنال')) { $iconKind = 'hdd'; $fallback = 'cat-external.jpg'; }
+            elseif (str_contains($key, 'box') || str_contains($key, 'باکس')) { $iconKind = 'hdd'; $fallback = 'cat-box.jpg'; }
+            elseif (str_contains($key, 'hdd') || str_contains($key, 'هارد') || str_contains($key, 'hard')) { $iconKind = 'hdd'; $fallback = 'cat-hdd.jpg'; }
+            $photo = $img !== '' ? $img : asset('images/home/'.$fallback);
           @endphp
           <div class="home-cat" role="listitem">
             <a class="home-cat__main" href="{{ route('categories.show', $cat->slug) }}">
-              <span class="home-cat__icon home-cat__icon--{{ $iconKind }}" aria-hidden="true">
-                @if($img)
-                  <img src="{{ $img }}" alt="" width="28" height="28" loading="lazy">
-                @elseif($iconKind === 'ssd')
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M7 10h2M11 10h2M15 10h2M7 14h10"/></svg>
-                @elseif($iconKind === 'nvme')
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="8" width="20" height="8" rx="1.5"/><circle cx="6" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.2" fill="currentColor" stroke="none"/><path d="M9 12h6"/></svg>
-                @elseif($iconKind === 'ram')
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="10" rx="1.5"/><path d="M6 7V5M10 7V5M14 7V5M18 7V5M7 17v2M11 17v2M15 17v2"/></svg>
-                @elseif($iconKind === 'hdd')
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 14h18"/><circle cx="7.5" cy="17" r="1" fill="currentColor" stroke="none"/><circle cx="11" cy="17" r="1" fill="currentColor" stroke="none"/></svg>
-                @else
-                  <em>{{ mb_substr($cat->name, 0, 1) }}</em>
-                @endif
-              </span>
+              <img class="home-cat__photo" src="{{ $photo }}" alt="" width="720" height="720" loading="lazy">
+              <span class="home-cat__icon home-cat__icon--{{ $iconKind }}" aria-hidden="true"></span>
               <span class="home-cat__text">
                 <strong>{{ $cat->name }}</strong>
                 @if($kids->count())

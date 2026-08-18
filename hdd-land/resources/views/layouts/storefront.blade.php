@@ -19,8 +19,9 @@
     <title>@yield('title', \App\Models\Setting::getValue('shop_name', config('app.name', 'فروشگاه'))) </title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=62">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=42">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=63">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=44">
+    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=3">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=4">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
@@ -66,8 +67,21 @@
 </style>
 <div class="topbar">
     <div class="container">
-        <span>فروشگاه سخت‌افزار و تجهیزات ذخیره‌سازی</span>
-        <span>{{ \App\Models\Setting::getValue('shop_phone', '۰۲۱-۰۰۰۰۰۰۰۰') }}</span>
+        <div class="topbar-start">
+          <span>سرزمین هارد — تأمین‌کننده تجهیزات ذخیره‌سازی</span>
+        </div>
+        <div class="topbar-end">
+          <a href="tel:{{ preg_replace('/\D+/', '', (string) \App\Models\Setting::getValue('shop_phone', '01144447220')) }}">{{ \App\Models\Setting::getValue('shop_phone', '01144447220') }}</a>
+          @php
+            $topEmail = '';
+            try { $topEmail = trim((string) (\App\Support\FooterConfig::get()['email'] ?? '')); } catch (\Throwable $e) {}
+            if ($topEmail === '') { $topEmail = trim((string) \App\Models\Setting::getValue('shop_email', '')); }
+          @endphp
+          @if($topEmail !== '')
+            <span class="topbar-dot">·</span>
+            <a href="mailto:{{ $topEmail }}">{{ $topEmail }}</a>
+          @endif
+        </div>
     </div>
 </div>
 <header class="{{ $headerClass }}" style="{{ $headerStyle }}">
@@ -88,6 +102,10 @@
               </div>
             </div>
             <div class="header-utils">
+              <form class="hdr-search" action="{{ url('/products') }}" method="get" role="search">
+                <input type="search" name="q" placeholder="جستجوی محصول، برند یا مدل..." value="{{ request('q') }}" autocomplete="off">
+                <button type="submit" aria-label="جستجو">⌕</button>
+              </form>
               <a class="hdr-util" href="{{ url('/cart') }}">سبد@if($cartCount>0)<i>{{ $cartCount }}</i>@endif</a>
               @auth
                 <a class="hdr-util" href="{{ route('account.index') }}">حساب</a>
