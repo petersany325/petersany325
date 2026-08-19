@@ -1,0 +1,70 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index 6cf0e5b..c9c1c5f 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -1,11 +1,11 @@
+ [package]
+-name = "rustdesk"
++name = "hddlandremote"
+ version = "1.4.0"
+-authors = ["rustdesk <info@rustdesk.com>"]
++authors = ["HDD LAND <info@hdd-land.com>"]
+ edition = "2021"
+ build= "build.rs"
+-description = "RustDesk Remote Desktop"
+-default-run = "rustdesk"
++description = "HDD Land Remote Soft - Enterprise Remote Desktop"
++default-run = "hddlandremote"
+ rust-version = "1.75"
+ 
+ [lib]
+@@ -189,10 +189,10 @@ members = ["libs/scrap", "libs/hbb_common", "libs/enigo", "libs/clipboard", "lib
+ exclude = ["vdi/host", "examples/custom_plugin"]
+ 
+ [package.metadata.winres]
+-LegalCopyright = "Copyright © 2025 Purslane Ltd. All rights reserved."
+-ProductName = "RustDesk"
+-FileDescription = "RustDesk Remote Desktop"
+-OriginalFilename = "rustdesk.exe"
++LegalCopyright = "Copyright © 2026 HDD LAND. All rights reserved."
++ProductName = "HDD Land Remote Soft"
++FileDescription = "HDD Land Remote Soft - Enterprise Remote Desktop"
++OriginalFilename = "HDDLandRemote.exe"
+ 
+ [target.'cfg(target_os="windows")'.build-dependencies]
+ winres = "0.1"
+@@ -208,8 +208,8 @@ hound = "3.5"
+ docopt = "1.1"
+ 
+ [package.metadata.bundle]
+-name = "RustDesk"
+-identifier = "com.carriez.rustdesk"
++name = "HDD Land Remote Soft"
++identifier = "com.hddland.remote"
+ icon = ["res/32x32.png", "res/128x128.png", "res/128x128@2x.png"]
+ osx_minimum_system_version = "10.14"
+ 
+diff --git a/flutter/windows/runner/Runner.rc b/flutter/windows/runner/Runner.rc
+index ab1b7e0..f229054 100644
+--- a/flutter/windows/runner/Runner.rc
++++ b/flutter/windows/runner/Runner.rc
+@@ -89,13 +89,13 @@ BEGIN
+     BEGIN
+         BLOCK "040904e4"
+         BEGIN
+-            VALUE "CompanyName", "Purslane Ltd" "\0"
+-            VALUE "FileDescription", "RustDesk Remote Desktop" "\0"
++            VALUE "CompanyName", "HDD LAND" "\0"
++            VALUE "FileDescription", "HDD Land Remote Soft - Enterprise Remote Desktop" "\0"
+             VALUE "FileVersion", VERSION_AS_STRING "\0"
+-            VALUE "InternalName", "rustdesk" "\0"
+-            VALUE "LegalCopyright", "Copyright © 2025 Purslane Ltd. All rights reserved." "\0"
+-            VALUE "OriginalFilename", "rustdesk.exe" "\0"
+-            VALUE "ProductName", "RustDesk" "\0"
++            VALUE "InternalName", "hddlandremote" "\0"
++            VALUE "LegalCopyright", "Copyright © 2026 HDD LAND. All rights reserved." "\0"
++            VALUE "OriginalFilename", "HDDLandRemote.exe" "\0"
++            VALUE "ProductName", "HDD Land Remote Soft" "\0"
+             VALUE "ProductVersion", VERSION_AS_STRING "\0"
+         END
+     END
