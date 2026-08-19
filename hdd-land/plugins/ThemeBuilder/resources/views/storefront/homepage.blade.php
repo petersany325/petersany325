@@ -3,7 +3,7 @@
   $theme = class_exists($themeClass) ? $themeClass::get() : [];
   // top_menu (چیپ‌های قرمز زیر بنر) عمداً از پیش‌فرض حذف شده — تکراری با منوی هدر و دسته‌هاست.
   $order = $theme['layout_order'] ?? ['banner','online','categories','featured','features','cta'];
-  $order = array_values(array_filter($order, fn ($s) => !in_array($s, ['top_menu','banner','hero','features'], true)));
+  $order = array_values(array_filter($order, fn ($s) => !in_array($s, ['top_menu','banner','hero','features','online','cta'], true)));
   // بنر طراحی‌شده فروشگاهی+شرکتی همیشه بالای ویجت‌هاست.
   $featured = $featured ?? collect();
   $latest = $latest ?? collect();

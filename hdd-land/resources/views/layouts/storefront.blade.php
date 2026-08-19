@@ -19,9 +19,9 @@
     <title>@yield('title', \App\Models\Setting::getValue('shop_name', config('app.name', 'فروشگاه'))) </title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=63">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=44">
-    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=3">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=64">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=45">
+    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=4">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=4">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
@@ -61,14 +61,11 @@
         }
     } catch (\Throwable $e) {}
 @endphp
-<body class="{{ request()->boolean('theme_preview') ? 'theme-preview' : '' }}{{ $waBodyClass }}">
-<style id="mm-header-live">
-  .site-header{background:{{ $headerBg }} !important}
-</style>
+<body class="{{ request()->boolean('theme_preview') ? 'theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}">
 <div class="topbar">
     <div class="container">
         <div class="topbar-start">
-          <span>سرزمین هارد — تأمین‌کننده تجهیزات ذخیره‌سازی</span>
+          <span>تأمین سخت‌افزار ذخیره‌سازی برای سازمان‌ها و حرفه‌ای‌ها</span>
         </div>
         <div class="topbar-end">
           <a href="tel:{{ preg_replace('/\D+/', '', (string) \App\Models\Setting::getValue('shop_phone', '01144447220')) }}">{{ \App\Models\Setting::getValue('shop_phone', '01144447220') }}</a>
@@ -84,44 +81,52 @@
         </div>
     </div>
 </div>
-<header class="{{ $headerClass }}" style="{{ $headerStyle }}">
-    <div class="container header-row header-row-mega header-align-{{ $mmNavAlign }}">
-        <div class="header-cluster" dir="rtl">
-            <button type="button" class="nav-toggle" id="navToggle" aria-label="منو" aria-expanded="false">☰</button>
-            <a class="brand" href="{{ route('home') }}">
-                <img class="brand-logo brand-logo-official" src="{{ asset('images/hdd-land-logo.png') }}?v=2" width="78" height="48" alt="لوگوی HDD LAND">
-                <span>{{ $shopName }}</span>
-            </a>
-            <div class="header-nav-slot" id="headerNavSlot">
-              <div class="header-nav-wrap" id="headerNavWrap">
-                <div class="mobile-nav-head">
-                  <strong>منوی سایت</strong>
-                  <button type="button" class="mobile-nav-close" id="navCloseBtn" aria-label="بستن منو">×</button>
-                </div>
-                @include('mega-menu::storefront.nav')
-              </div>
+<header class="site-header hl-header">
+    <div class="container hl-headbar" dir="rtl">
+        <button type="button" class="nav-toggle" id="navToggle" aria-label="منو" aria-expanded="false">☰</button>
+        <a class="brand" href="{{ route('home') }}">
+            <img class="brand-logo brand-logo-official" src="{{ asset('images/hdd-land-logo.png') }}?v=2" width="78" height="48" alt="لوگوی HDD LAND">
+            <span>{{ $shopName }}</span>
+        </a>
+        <div class="header-nav-slot" id="headerNavSlot">
+          <div class="header-nav-wrap" id="headerNavWrap">
+            <div class="mobile-nav-head">
+              <strong>منوی سایت</strong>
+              <button type="button" class="mobile-nav-close" id="navCloseBtn" aria-label="بستن منو">×</button>
             </div>
-            <div class="header-utils">
-              <form class="hdr-search" action="{{ url('/products') }}" method="get" role="search">
-                <input type="search" name="q" placeholder="جستجوی محصول، برند یا مدل..." value="{{ request('q') }}" autocomplete="off">
-                <button type="submit" aria-label="جستجو">⌕</button>
-              </form>
-              <a class="hdr-util" href="{{ url('/cart') }}">سبد@if($cartCount>0)<i>{{ $cartCount }}</i>@endif</a>
-              @auth
-                <a class="hdr-util" href="{{ route('account.index') }}">حساب</a>
-                <form action="{{ url('/logout') }}" method="post" class="hdr-logout">@csrf
-                  <button type="submit">خروج</button>
-                </form>
-              @else
-                <a class="hdr-util" href="{{ route('login') }}">ورود</a>
-              @endauth
-            </div>
+            @include('mega-menu::storefront.nav')
+            <nav class="hl-extra-nav" aria-label="صفحات شرکت">
+              <a href="{{ url('/services') }}">خدمات سازمانی</a>
+              <a href="{{ url('/training') }}">آموزش</a>
+              <a href="{{ url('/about') }}">درباره ما</a>
+            </nav>
+          </div>
         </div>
+        <div class="hl-headbar__utils">
+          <a class="hdr-util" href="{{ url('/cart') }}">سبد خرید@if($cartCount>0)<i>{{ $cartCount }}</i>@endif</a>
+          @auth
+            <a class="hdr-util" href="{{ route('account.index') }}">حساب کاربری</a>
+            <form action="{{ url('/logout') }}" method="post" class="hdr-logout">@csrf
+              <button type="submit">خروج</button>
+            </form>
+          @else
+            <a class="hdr-util" href="{{ route('login') }}">ورود</a>
+          @endauth
+        </div>
+    </div>
+    <div class="hl-searchbar">
+      <div class="container">
+        <form class="hl-search" action="{{ url('/products') }}" method="get" role="search">
+          <input type="search" name="q" placeholder="جستجوی محصول، برند یا مدل..." value="{{ request('q') }}" autocomplete="off">
+          <button type="submit" aria-label="جستجو">جستجو</button>
+        </form>
+      </div>
     </div>
 </header>
 <div class="nav-backdrop" id="navBackdrop" hidden></div>
 
-<main class="container">
+<main class="site-main">
+    <div class="container">
     @if(session('success'))
         <div class="alert alert-success" style="margin-top:1rem">{{ session('success') }}</div>
     @endif
@@ -135,7 +140,12 @@
             </ul>
         </div>
     @endif
-    @yield('content')
+    </div>
+    @if(request()->routeIs('home'))
+      @yield('content')
+    @else
+      <div class="container">@yield('content')</div>
+    @endif
 </main>
 
 <footer class="site-footer legacy-footer" hidden>

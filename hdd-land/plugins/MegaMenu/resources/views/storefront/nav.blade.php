@@ -22,14 +22,14 @@
     $googleFontsUrl = 'https://fonts.googleapis.com/css2?'.implode('&', $parts).'&display=swap';
   }
   $navAlign = $mm['nav_align'] ?? 'right';
-  $navStyle = $mm['nav_style'] ?? 'pills';
+  $navStyle = 'underline';
   $ddSize = $mm['dropdown_size'] ?? 'auto';
   $showIcons = !empty($mm['show_icons']);
   $accent = $mm['accent'] ?? '#e23d12';
   $defaultOpen = $mm['open_mode'] ?? 'hover';
   $gapBrand = (int) ($mm['gap_brand'] ?? 18);
-  $panelFx = $mm['panel_fx'] ?? 'soft';
-  $panelBg = $mm['panel_bg'] ?? 'white';
+  $panelFx = 'soft';
+  $panelBg = 'white';
 @endphp
 @if($menuTree->count())
 <nav class="nav mega-nav mega-nav-pro nav-align-{{ $navAlign }} style-{{ $navStyle }} dd-{{ $ddSize }} panel-fx-{{ $panelFx }} panel-bg-{{ $panelBg }}"
