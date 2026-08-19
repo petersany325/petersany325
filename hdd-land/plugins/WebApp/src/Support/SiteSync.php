@@ -12,36 +12,93 @@ use App\Support\PortalNav;
  */
 class SiteSync
 {
-    /** @return array{image:string,title:string,text:string,cta_label:string,cta_url:string}|null */
-    public static function heroBanner(): ?array
+    /**
+     * Designed homepage hero, then ThemeBuilder banner as fallback.
+     *
+     * @param  array<string,mixed>|null  $s  WebApp settings
+     * @return array{image:string,title:string,text:string,cta_label:string,cta_url:string}|null
+     */
+    public static function heroBanner(?array $s = null): ?array
     {
+        $s = is_array($s) ? $s : [];
+        $designedRel = 'images/home/hero.jpg';
+        $designedFile = public_path($designedRel);
+        $designedCopy = [
+            'title' => 'مرکز تخصصی هارد، SSD و تأمین سازمانی',
+            'text' => 'تأمین تجهیزات ذخیره‌سازی برندهای معتبر با گارانتی شفاف — برای فروشگاه و سازمان.',
+            'cta_label' => 'ورود به فروشگاه',
+            'cta_url' => '/app/shop',
+        ];
+        $legacyTitles = ['', 'سرزمین هارد', 'سخت‌افزار مطمئن برای حرفه‌ای‌ها'];
+        $title = trim((string) ($s['hero_title'] ?? ''));
+        $text = trim((string) ($s['hero_text'] ?? ''));
+        $ctaLabel = trim((string) ($s['hero_cta_label'] ?? ''));
+        $ctaUrl = trim((string) ($s['hero_cta_url'] ?? '')) ?: $designedCopy['cta_url'];
+        if (in_array($title, $legacyTitles, true)) {
+            $title = $designedCopy['title'];
+        }
+        if ($text === '') {
+            $text = $designedCopy['text'];
+        }
+        if ($ctaLabel === '' || $ctaLabel === 'مشاهده محصولات') {
+            $ctaLabel = $designedCopy['cta_label'];
+        }
+
+        if (is_file($designedFile) && filesize($designedFile) > 0) {
+            return [
+                'image' => asset($designedRel),
+                'title' => $title,
+                'text' => $text,
+                'cta_label' => $ctaLabel,
+                'cta_url' => PortalNav::mapUrlForWebApp($ctaUrl),
+            ];
+        }
+
         try {
             if (! class_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class)) {
-                return null;
+                return [
+                    'image' => '',
+                    'title' => $title,
+                    'text' => $text,
+                    'cta_label' => $ctaLabel,
+                    'cta_url' => PortalNav::mapUrlForWebApp($ctaUrl),
+                ];
             }
             $theme = \Plugins\ThemeBuilder\src\ThemeConfig::get();
             $banner = $theme['banner'] ?? [];
             if (empty($banner['enabled'])) {
-                return null;
+                return [
+                    'image' => '',
+                    'title' => $title,
+                    'text' => $text,
+                    'cta_label' => $ctaLabel,
+                    'cta_url' => PortalNav::mapUrlForWebApp($ctaUrl),
+                ];
             }
             $layers = collect($banner['layers'] ?? [])->keyBy('id');
             $read = static function ($layer, string $fallback = ''): string {
                 return $layer && ! empty($layer['enabled']) && empty($layer['deleted'])
                     ? trim((string) ($layer['content'] ?? $fallback)) : $fallback;
             };
-            $title = $read($layers->get('title'), (string) ($banner['overlay_title'] ?? ''));
-            $text = $read($layers->get('text'), (string) ($banner['overlay_text'] ?? ''));
+            $bannerTitle = $read($layers->get('title'), (string) ($banner['overlay_title'] ?? ''));
+            $bannerText = $read($layers->get('text'), (string) ($banner['overlay_text'] ?? ''));
             $cta = $layers->get('cta1');
 
             return [
                 'image' => \Plugins\ThemeBuilder\src\ThemeConfig::bannerUrl($banner, 1),
-                'title' => $title,
-                'text' => $text,
-                'cta_label' => $read($cta, (string) ($banner['cta_text'] ?? 'مشاهده محصولات')),
-                'cta_url' => PortalNav::mapUrlForWebApp(trim((string) ($cta['url'] ?? $banner['cta_url'] ?? '/app/shop')) ?: '/app/shop'),
+                'title' => $title !== $designedCopy['title'] ? $title : ($bannerTitle !== '' ? $bannerTitle : $title),
+                'text' => $text !== $designedCopy['text'] ? $text : ($bannerText !== '' ? $bannerText : $text),
+                'cta_label' => $read($cta, (string) ($banner['cta_text'] ?? $ctaLabel)),
+                'cta_url' => PortalNav::mapUrlForWebApp(trim((string) ($cta['url'] ?? $banner['cta_url'] ?? $ctaUrl)) ?: $ctaUrl),
             ];
         } catch (\Throwable) {
-            return null;
+            return [
+                'image' => '',
+                'title' => $title,
+                'text' => $text,
+                'cta_label' => $ctaLabel,
+                'cta_url' => PortalNav::mapUrlForWebApp($ctaUrl),
+            ];
         }
     }
 
@@ -226,7 +283,7 @@ class SiteSync
         }
 
         $manual = [];
-        foreach ([1, 2, 3] as $i) {
+        foreach ([1, 2, 3, 4] as $i) {
             $lab = trim((string) ($s['quick_link_'.$i.'_label'] ?? ''));
             $href = trim((string) ($s['quick_link_'.$i.'_url'] ?? ''));
             if ($lab !== '' && ! PortalNav::isDeadUrl($href)) {

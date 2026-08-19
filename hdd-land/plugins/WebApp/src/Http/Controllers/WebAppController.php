@@ -28,7 +28,7 @@ class WebAppController extends Controller
             'title' => $s['app_name'],
             'categories' => $this->categories((int) ($s['categories_limit'] ?? 10)),
             'products' => $this->featuredProducts($featuredLimit),
-            'mobileHero' => SiteSync::heroBanner(),
+            'mobileHero' => SiteSync::heroBanner($s),
         ]));
     }
 
@@ -398,8 +398,12 @@ JS;
             if (Schema::hasColumn('categories', 'sort_order')) {
                 $q->orderBy('sort_order');
             }
+            $cols = ['id', 'name', 'slug'];
+            if (Schema::hasColumn('categories', 'image')) {
+                $cols[] = 'image';
+            }
 
-            return $q->orderBy('id')->limit($limit)->get();
+            return $q->orderBy('id')->limit($limit)->get($cols);
         } catch (\Throwable) {
             return collect();
         }

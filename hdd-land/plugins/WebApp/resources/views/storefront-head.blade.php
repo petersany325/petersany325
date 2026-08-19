@@ -26,5 +26,5 @@
   <link rel="apple-touch-icon" href="{{ $waIcon }}">
   <link rel="icon" type="image/png" href="{{ $waIcon }}">
   <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('images/hdd-land-icon-32.png') }}?v=1">
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=19">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=21">
 @endif

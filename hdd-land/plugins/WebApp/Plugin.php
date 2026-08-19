@@ -26,7 +26,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '2.3.2';
+        return '2.3.3';
     }
 
     public function isCore(): bool
@@ -41,11 +41,11 @@ class Plugin extends BasePlugin
             'enabled' => true,
             'app_name' => 'سرزمین هارد',
             'short_name' => 'سرزمین‌هارد',
-            'description' => 'فروشگاه تخصصی هارد و SSD — وب‌اپ سرزمین هارد',
+            'description' => 'فروشگاه تخصصی هارد، SSD و تأمین سازمانی — گارانتی شفاف و موجودی واقعی',
             'theme_color' => '#e23d12',
-            'background_color' => '#1a1d23',
+            'background_color' => '#f7f8fa',
             'surface_color' => '#ffffff',
-            'text_color' => '#1a1d23',
+            'text_color' => '#0b1220',
             'start_url' => '/app',
             'display' => 'standalone',
             'orientation' => 'portrait-primary',
@@ -59,9 +59,9 @@ class Plugin extends BasePlugin
             'offline_cache' => true,
             'offline_message' => 'اتصال اینترنت برقرار نیست. صفحات ذخیره‌شده در دسترس‌اند.',
             'hero_enabled' => true,
-            'hero_title' => 'سرزمین هارد',
-            'hero_text' => 'هارد، SSD و تجهیزات ذخیره‌سازی با گارانتی معتبر',
-            'hero_cta_label' => 'مشاهده محصولات',
+            'hero_title' => 'مرکز تخصصی هارد، SSD و تأمین سازمانی',
+            'hero_text' => 'تأمین تجهیزات ذخیره‌سازی برندهای معتبر با گارانتی شفاف — برای فروشگاه و سازمان.',
+            'hero_cta_label' => 'ورود به فروشگاه',
             'hero_cta_url' => '/app/shop',
             'show_search' => true,
             'show_categories' => true,
@@ -92,18 +92,20 @@ class Plugin extends BasePlugin
             'compact_cards' => false,
             'icon_192' => '/images/hdd-land-icon-192.png',
             'icon_512' => '/images/hdd-land-icon-512.png',
-            'categories_limit' => 10,
+            'categories_limit' => 6,
             'products_limit' => 16,
             'shop_per_page' => 24,
-            'quick_link_1_label' => 'استعلام گارانتی',
+            'quick_link_1_label' => 'گارانتی',
             'quick_link_1_url' => '/serial-check',
-            'quick_link_2_label' => 'پیگیری سفارش',
-            'quick_link_2_url' => '/orders/track',
-            'quick_link_3_label' => 'پشتیبانی',
-            'quick_link_3_url' => '/account/tickets',
+            'quick_link_2_label' => 'خدمات سازمانی',
+            'quick_link_2_url' => '/services',
+            'quick_link_3_label' => 'آموزش',
+            'quick_link_3_url' => '/training',
+            'quick_link_4_label' => 'خرید سازمانی',
+            'quick_link_4_url' => '/contact',
             // Live sync from site template/plugins
             'sync_menu_from_site' => false,
-            'sync_quick_links_from_theme' => true,
+            'sync_quick_links_from_theme' => false,
             'sync_brand_from_site' => true,
             // Legacy horizontal chip strip (desktop-like) — off by default
             'show_site_menu' => false,
@@ -111,8 +113,8 @@ class Plugin extends BasePlugin
             // Dedicated right drawer menu for WebApp
             'drawer_menu_enabled' => true,
             'drawer_side' => 'right',
-            'drawer_title' => 'منوی وب‌اپ',
-            'drawer_subtitle' => 'دسترسی سریع فروشگاه موبایل',
+            'drawer_title' => 'منوی سرزمین هارد',
+            'drawer_subtitle' => 'فروشگاه و تأمین سازمانی',
             'drawer_show_brand' => true,
             'drawer_show_full_site' => true,
             'drawer_full_site_label' => 'نسخه کامل سایت',
@@ -149,7 +151,7 @@ class Plugin extends BasePlugin
             'drawer_contact_label' => 'تماس با ما',
             'drawer_contact_url' => '/contact',
             'drawer_contact_icon' => '☎',
-            'drawer_extra_links' => '',
+            'drawer_extra_links' => "خدمات سازمانی|/services|▣\nآموزش|/training|✎\nدرباره ما|/about|ℹ",
             // Footer (sync from modern FooterConfig)
             'show_footer' => true,
             'sync_footer_from_site' => true,
@@ -166,6 +168,56 @@ class Plugin extends BasePlugin
     public static function settings(): array
     {
         return JsonSettings::get(self::SETTINGS_KEY, static::defaults());
+    }
+
+    /**
+     * Keys that should match the designed shop+corporate homepage.
+     *
+     * @return array<string,mixed>
+     */
+    public static function designedHomepageSettings(): array
+    {
+        $d = static::defaults();
+
+        return [
+            'description' => $d['description'],
+            'theme_color' => $d['theme_color'],
+            'background_color' => $d['background_color'],
+            'surface_color' => $d['surface_color'],
+            'text_color' => $d['text_color'],
+            'hero_enabled' => true,
+            'hero_title' => $d['hero_title'],
+            'hero_text' => $d['hero_text'],
+            'hero_cta_label' => $d['hero_cta_label'],
+            'hero_cta_url' => $d['hero_cta_url'],
+            'show_search' => true,
+            'show_categories' => true,
+            'show_featured' => true,
+            'show_quick_links' => true,
+            'featured_title' => $d['featured_title'],
+            'featured_limit' => $d['featured_limit'],
+            'categories_limit' => $d['categories_limit'],
+            'quick_link_1_label' => $d['quick_link_1_label'],
+            'quick_link_1_url' => $d['quick_link_1_url'],
+            'quick_link_2_label' => $d['quick_link_2_label'],
+            'quick_link_2_url' => $d['quick_link_2_url'],
+            'quick_link_3_label' => $d['quick_link_3_label'],
+            'quick_link_3_url' => $d['quick_link_3_url'],
+            'quick_link_4_label' => $d['quick_link_4_label'],
+            'quick_link_4_url' => $d['quick_link_4_url'],
+            'sync_quick_links_from_theme' => false,
+            'drawer_title' => $d['drawer_title'],
+            'drawer_subtitle' => $d['drawer_subtitle'],
+            'drawer_extra_links' => $d['drawer_extra_links'],
+        ];
+    }
+
+    /** Persist designed homepage settings onto the current live config. */
+    public static function applyDesignedHomepageSettings(): array
+    {
+        static::saveSettings(array_merge(static::settings(), static::designedHomepageSettings()));
+
+        return static::settings();
     }
 
     public static function isEnabled(): bool
@@ -245,6 +297,46 @@ class Plugin extends BasePlugin
         return asset('uploads/'.$path);
     }
 
+    /**
+     * Category photo for WebApp home — same fallbacks as the storefront homepage.
+     */
+    public static function categoryPhotoUrl(?object $cat): string
+    {
+        $slug = mb_strtolower(trim((string) ($cat->slug ?? '')));
+        $name = mb_strtolower(trim((string) ($cat->name ?? '')));
+        $key = $slug.' '.$name;
+        $img = trim((string) ($cat->image ?? ''));
+        if ($img !== '') {
+            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                return $img;
+            }
+            $rel = ltrim(str_replace('\\', '/', $img), '/');
+            if (str_starts_with($rel, 'public/')) {
+                $rel = substr($rel, 7);
+            }
+            foreach (['uploads/'.$rel, $rel, 'storage/'.$rel] as $try) {
+                if (is_file(public_path($try))) {
+                    return asset($try);
+                }
+            }
+        }
+
+        $fallback = 'cat-hdd.jpg';
+        if (str_contains($key, 'nvme') || str_contains($key, 'm.2') || str_contains($key, 'ام ۲')) {
+            $fallback = 'cat-nvme.jpg';
+        } elseif (str_contains($key, 'ssd') || str_contains($key, 'اس اس دی')) {
+            $fallback = 'cat-ssd.jpg';
+        } elseif (str_contains($key, 'ram') || str_contains($key, 'رم')) {
+            $fallback = 'cat-ram.jpg';
+        } elseif (str_contains($key, 'external') || str_contains($key, 'اکسترنال')) {
+            $fallback = 'cat-external.jpg';
+        } elseif (str_contains($key, 'box') || str_contains($key, 'باکس')) {
+            $fallback = 'cat-box.jpg';
+        }
+
+        return asset('images/home/'.$fallback);
+    }
+
     /** @param  array<string,mixed>  $data */
     public static function saveSettings(array $data): void
     {
@@ -276,9 +368,9 @@ class Plugin extends BasePlugin
             'short_name' => fn ($v) => $label($v, 24, 'سرزمین‌هارد'),
             'description' => fn ($v) => $label($v, 200),
             'theme_color' => fn ($v) => $color($v, '#e23d12'),
-            'background_color' => fn ($v) => $color($v, '#f4f6f9'),
+            'background_color' => fn ($v) => $color($v, '#f7f8fa'),
             'surface_color' => fn ($v) => $color($v, '#ffffff'),
-            'text_color' => fn ($v) => $color($v, '#1a1d23'),
+            'text_color' => fn ($v) => $color($v, '#0b1220'),
             'start_url' => function ($v) {
                 $v = trim((string) $v);
                 if ($v === '' || ! str_starts_with($v, '/')) {
@@ -293,7 +385,7 @@ class Plugin extends BasePlugin
             'install_help_android' => fn ($v) => $label($v, 160),
             'install_help_ios' => fn ($v) => $label($v, 160),
             'offline_message' => fn ($v) => $label($v, 200),
-            'hero_title' => fn ($v) => $label($v, 80),
+            'hero_title' => fn ($v) => $label($v, 90),
             'hero_text' => fn ($v) => $label($v, 200),
             'hero_cta_label' => fn ($v) => $label($v, 40),
             'hero_cta_url' => fn ($v) => $url($v, '/app/shop'),
@@ -315,13 +407,15 @@ class Plugin extends BasePlugin
             'quick_link_2_label' => fn ($v) => $label($v, 40),
             'quick_link_2_url' => fn ($v) => $url($v, '/orders/track'),
             'quick_link_3_label' => fn ($v) => $label($v, 40),
-            'quick_link_3_url' => fn ($v) => $url($v, '/account/tickets'),
+            'quick_link_3_url' => fn ($v) => $url($v, '/training'),
+            'quick_link_4_label' => fn ($v) => $label($v, 40),
+            'quick_link_4_url' => fn ($v) => $url($v, '/contact'),
             'menu_limit' => fn ($v) => max(4, min(24, (int) $v)),
             'installed_badge_text' => fn ($v) => $label($v, 80, 'نصب‌شده روی این دستگاه'),
             'install_ready_text' => fn ($v) => $label($v, 80, 'آماده نصب روی گوشی'),
             'drawer_side' => fn ($v) => in_array($v, ['right', 'left'], true) ? $v : 'right',
-            'drawer_title' => fn ($v) => $label($v, 60, 'منوی وب‌اپ'),
-            'drawer_subtitle' => fn ($v) => $label($v, 120, 'دسترسی سریع فروشگاه موبایل'),
+            'drawer_title' => fn ($v) => $label($v, 60, 'منوی سرزمین هارد'),
+            'drawer_subtitle' => fn ($v) => $label($v, 120, 'فروشگاه و تأمین سازمانی'),
             'drawer_full_site_label' => fn ($v) => $label($v, 40, 'نسخه کامل سایت'),
             'drawer_full_site_url' => fn ($v) => $url($v, '/'),
             'drawer_home_label' => fn ($v) => $label($v, 30, 'خانه'),

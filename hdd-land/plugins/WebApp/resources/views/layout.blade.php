@@ -15,7 +15,7 @@
   <title>{{ $title ?? ($s['app_name'] ?? 'سرزمین هارد') }}</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=20">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=21">
 </head>
 @php
   $anim = !empty($s['animations']);
@@ -73,7 +73,7 @@
         <img src="{{ $iconSrc }}?v=10" width="36" height="36" alt="" onerror="this.style.display='none'">
         <div>
           <strong>{{ $s['app_name'] ?? 'سرزمین هارد' }}</strong>
-          <small>{{ $s['drawer_title'] ?? 'منوی وب‌اپ' }}</small>
+          <small>{{ $s['drawer_subtitle'] ?? $s['drawer_title'] ?? 'فروشگاه و تأمین سازمانی' }}</small>
         </div>
       </div>
     @else

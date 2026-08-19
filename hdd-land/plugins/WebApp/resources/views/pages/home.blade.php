@@ -13,11 +13,22 @@
 <section class="wa-hero {{ $heroImage ? 'wa-hero-image' : '' }}" @if($heroImage) style="background-image:url('{{ $heroImage }}')" @endif>
   @if($heroImage)<div class="wa-hero-overlay"></div>@endif
   <div class="wa-hero-glow"></div>
+  <p class="wa-hero-kicker">شرکت تخصصی ذخیره‌سازی</p>
   <h1>{{ $mh['title'] ?? $s['hero_title'] ?? $s['app_name'] ?? 'سرزمین هارد' }}</h1>
   <p>{{ $mh['text'] ?? $s['hero_text'] ?? '' }}</p>
-  <a class="wa-cta" href="{{ url($mh['cta_url'] ?? $s['hero_cta_url'] ?? '/app/shop') }}">{{ $mh['cta_label'] ?? $s['hero_cta_label'] ?? 'مشاهده محصولات' }}</a>
+  <div class="wa-hero-actions">
+    <a class="wa-cta" href="{{ url($mh['cta_url'] ?? $s['hero_cta_url'] ?? '/app/shop') }}">{{ $mh['cta_label'] ?? $s['hero_cta_label'] ?? 'ورود به فروشگاه' }}</a>
+    <a class="wa-cta wa-cta-ghost" href="{{ url('/contact') }}">درخواست سازمانی</a>
+  </div>
 </section>
 @endif
+
+<section class="wa-trust" aria-label="اعتماد">
+  <div class="wa-trust-item"><strong>گارانتی شفاف</strong><span>استعلام با سریال</span></div>
+  <div class="wa-trust-item"><strong>تأمین سازمانی</strong><span>پیش‌فاکتور و عمده</span></div>
+  <div class="wa-trust-item"><strong>موجودی واقعی</strong><span>قابل سفارش</span></div>
+  <div class="wa-trust-item"><strong>پشتیبانی ۹ تا ۱۹</strong><span>مشاوره تخصصی</span></div>
+</section>
 
 @if(!empty($s['show_search']))
 <form class="wa-search" action="{{ url('/app/shop') }}" method="get">
@@ -39,9 +50,12 @@
   <strong>دسته‌ها</strong>
   <a href="{{ url('/app/shop') }}">همه</a>
 </div>
-<div class="wa-cats">
+<div class="wa-cats wa-cats-photo">
   @foreach($categories as $cat)
-    <a class="wa-cat" href="{{ url('/app/shop?cat='.urlencode($cat->slug ?? '')) }}">{{ $cat->name }}</a>
+    <a class="wa-cat-card" href="{{ url('/app/shop?cat='.urlencode($cat->slug ?? '')) }}">
+      <img src="{{ \Plugins\WebApp\Plugin::categoryPhotoUrl($cat) }}" alt="" width="360" height="360" loading="lazy">
+      <span>{{ $cat->name }}</span>
+    </a>
   @endforeach
 </div>
 @endif
@@ -99,4 +113,34 @@
   @endforelse
 </div>
 @endif
+
+<section class="wa-edu" aria-label="آموزش">
+  <div class="wa-section-head">
+    <strong>آموزش‌های هارد و ذخیره‌سازی</strong>
+    <a href="{{ url('/blog') }}">همه</a>
+  </div>
+  <div class="wa-edu-row">
+    <a class="wa-edu-card" href="{{ url('/blog') }}">
+      <img src="{{ asset('images/home/edu-hdd.jpg') }}" alt="" width="480" height="320" loading="lazy">
+      <strong>هارد مناسب دوربین و NAS</strong>
+    </a>
+    <a class="wa-edu-card" href="{{ url('/blog') }}">
+      <img src="{{ asset('images/home/edu-ssd.jpg') }}" alt="" width="480" height="320" loading="lazy">
+      <strong>SSD ساتا یا NVMe؟</strong>
+    </a>
+    <a class="wa-edu-card" href="{{ url('/blog') }}">
+      <img src="{{ asset('images/home/edu-nvme.jpg') }}" alt="" width="480" height="320" loading="lazy">
+      <strong>انتخاب NVMe حرفه‌ای</strong>
+    </a>
+  </div>
+</section>
+
+<section class="wa-corp">
+  <img src="{{ asset('images/home/corp-org.jpg') }}" alt="" width="720" height="480" loading="lazy">
+  <div>
+    <strong>پروژه‌ها و خدمات سازمانی</strong>
+    <p>استعلام، پیش‌فاکتور و تأمین عمده برای سازمان، شعب و پروژه‌های نظارتی.</p>
+    <a class="wa-cta" href="{{ url('/contact') }}">درخواست سازمانی</a>
+  </div>
+</section>
 @endsection
