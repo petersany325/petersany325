@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WD Factory Desk — Professional x64</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="titlebar">
+      <div class="titlebar-brand">
+        <span class="brand-mark">WD</span>
+        <div class="brand-text">
+          <strong>Factory Desk</strong>
+          <span>Professional · x64</span>
+        </div>
+      </div>
+      <div class="titlebar-mode">
+        <button type="button" class="mode-btn active" data-mode="sata">SATA</button>
+        <button type="button" class="mode-btn" data-mode="terminal">Terminal</button>
+      </div>
+      <div class="window-controls" aria-hidden="true">
+        <span></span><span></span><span></span>
+      </div>
+    </header>
+
+    <nav class="menubar" id="menubar" aria-label="Main menu">
+      <div class="menu">
+        <button type="button" class="menu-trigger" data-menu="file">File</button>
+        <div class="menu-panel" data-panel="file">
+          <button type="button" data-action="log">New Session</button>
+          <button type="button" data-action="log">Open Log…</button>
+          <button type="button" data-action="log">Save Report…</button>
+          <hr />
+          <button type="button" data-action="log">Exit</button>
+        </div>
+      </div>
+
+      <div class="menu">
+        <button type="button" class="menu-trigger" data-menu="port">Port</button>
+        <div class="menu-panel" data-panel="port">
+          <button type="button" data-action="detect">Detect Controllers</button>
+          <button type="button" data-action="add-port">Add Selected Port</button>
+          <button type="button" data-action="release">Release Port</button>
+          <button type="button" data-action="reset-port">Reset Port</button>
+          <hr />
+          <div class="submenu">
+            <button type="button" class="submenu-trigger">Transport ▸</button>
+            <div class="submenu-panel">
+              <button type="button" data-action="set-sata">SATA PassThrough</button>
+              <button type="button" data-action="set-terminal">Terminal (SIO)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="menu">
+        <button type="button" class="menu-trigger" data-menu="drive">Drive</button>
+        <div class="menu-panel" data-panel="drive">
+          <button type="button" data-action="identify">Identify</button>
+          <button type="button" data-action="lock">Lock Exclusive</button>
+          <button type="button" data-action="offline">Offline from Windows</button>
+          <hr />
+          <button type="button" data-action="log">Drive Info</button>
+        </div>
+      </div>
+
+      <div class="menu">
+        <button type="button" class="menu-trigger" data-menu="family">Family</button>
+        <div class="menu-panel" data-panel="family">
+          <button type="button" data-action="family-auto">Auto Detect</button>
+          <hr />
+          <div class="submenu">
+            <button type="button" class="submenu-trigger">2.5 inch ▸</button>
+            <div class="submenu-panel wide">
+              <button type="button" data-family="2.5" data-name="PALMER">46 · PALMER</button>
+              <button type="button" data-family="2.5" data-name="FIREBIRD">10 · FIREBIRD</button>
+              <button type="button" data-family="2.5" data-name="SPYGLASS">48 · SPYGLASS</button>
+              <button type="button" data-family="2.5" data-name="PEBBLEB">47 · PEBBLEB</button>
+              <button type="button" data-family="2.5" data-name="HELIOS">11 · HELIOS</button>
+              <button type="button" data-family="2.5" data-name="SHASTA2D">28 · SHASTA2D</button>
+            </div>
+          </div>
+          <div class="submenu">
+            <button type="button" class="submenu-trigger">3.5 inch ▸</button>
+            <div class="submenu-panel wide">
+              <button type="button" data-family="3.5" data-name="ATLANTIS">01 · ATLANTIS</button>
+              <button type="button" data-family="3.5" data-name="TAHOE">42 · TAHOE</button>
+              <button type="button" data-family="3.5" data-name="APOLLO">65 · APOLLO</button>
+              <button type="button" data-family="3.5" data-name="DRAGFLY4">15 · DRAGFLY4</button>
+              <button type="button" data-family="3.5" data-name="CYPRESS">02 · CYPRESS</button>
+              <button type="button" data-family="3.5" data-name="REMBRNAE">66 · REMBRNAE</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="menu">
+        <button type="button" class="menu-trigger" data-menu="process">Process</button>
+        <div class="menu-panel" data-panel="process">
+          <div class="submenu">
+            <button type="button" class="submenu-trigger">ARCO ▸</button>
+            <div class="submenu-panel">
+              <button type="button" data-action="arco-full">Full ARCO</button>
+              <button type="button" data-action="arco-hot">Hot ARCO</button>
+              <button type="button" data-action="arco-mini">Mini ARCO</button>
+            </div>
+          </div>
+          <div class="submenu">
+            <button type="button" class="submenu-trigger">SF ▸</button>
+            <div class="submenu-panel">
+              <button type="button" data-action="sf-start">Start SF</button>
+              <button type="button" data-action="sf-clear">Clear SF Log</button>
+              <button type="button" data-action="sf-recover">Recover SF</button>
+            </div>
+          </div>
+          <hr />
+          <button type="button" data-action="run-all">Run ARCO + SF</button>
+          <button type="button" data-action="stop">Stop</button>
+          <button type="button" data-action="log">Edit PST…</button>
+        </div>
+      </div>
+
+      <div class="menu">
+        <button type="button" class="menu-trigger" data-menu="tools">Tools</button>
+        <div class="menu-panel" data-panel="tools">
+          <button type="button" data-action="log">Modules / DIR</button>
+          <button type="button" data-action="log">RPM Path…</button>
+          <button type="button" data-action="log">DCM Codes…</button>
+          <button type="button" data-action="log">Clear SMART (demo)</button>
+        </div>
+      </div>
+
+      <div class="menu">
+        <button type="button" class="menu-trigger" data-menu="view">View</button>
+        <div class="menu-panel" data-panel="view">
+          <button type="button" data-tab="overview">Overview</button>
+          <button type="button" data-tab="identify">Identify</button>
+          <button type="button" data-tab="modules">Modules</button>
+          <button type="button" data-tab="logs">Logs</button>
+        </div>
+      </div>
+
+      <div class="menu">
+        <button type="button" class="menu-trigger" data-menu="help">Help</button>
+        <div class="menu-panel" data-panel="help">
+          <button type="button" data-action="log">Keyboard Map</button>
+          <button type="button" data-action="about">About Factory Desk</button>
+        </div>
+      </div>
+    </nav>
+
+    <div class="workspace">
+      <aside class="ports-pane">
+        <div class="pane-head">
+          <h2>Ports</h2>
+          <div class="toolstrip">
+            <button type="button" data-action="detect">Detect</button>
+            <button type="button" data-action="add-port">Add</button>
+            <button type="button" data-action="release">Release</button>
+          </div>
+        </div>
+        <ul class="port-tree" id="portTree"></ul>
+      </aside>
+
+      <main class="main-pane">
+        <div class="tabs" id="tabs">
+          <button type="button" class="tab active" data-tab="overview">Overview</button>
+          <button type="button" class="tab" data-tab="identify">Identify</button>
+          <button type="button" class="tab" data-tab="modules">Modules</button>
+          <button type="button" class="tab" data-tab="logs">Logs</button>
+        </div>
+
+        <section class="tab-panel active" data-panel="overview">
+          <div class="drive-hero">
+            <p class="eyebrow" id="transportLabel">SATA · PassThrough exclusive</p>
+            <h1 id="driveModel">WDC WD10JPVX-22JC3T0</h1>
+            <p class="drive-sub" id="driveSub">Select a locked port to bind drive session</p>
+          </div>
+
+          <div class="spec-grid" id="specGrid">
+            <div><span>Serial</span><strong id="specSerial">—</strong></div>
+            <div><span>Family</span><strong id="specFamily">—</strong></div>
+            <div><span>Form</span><strong id="specForm">—</strong></div>
+            <div><span>FW</span><strong id="specFw">—</strong></div>
+            <div><span>Head DCM</span><strong id="specHead">—</strong></div>
+            <div><span>Media DCM</span><strong id="specMedia">—</strong></div>
+            <div><span>Capacity</span><strong id="specCap">—</strong></div>
+            <div><span>Port</span><strong id="specPort">—</strong></div>
+          </div>
+
+          <div class="family-browser">
+            <div>
+              <h3>Family 2.5 <small>48</small></h3>
+              <ul class="family-list" id="family25"></ul>
+            </div>
+            <div>
+              <h3>Family 3.5 <small>66</small></h3>
+              <ul class="family-list" id="family35"></ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="tab-panel" data-panel="identify">
+          <pre class="mono-block" id="identifyBlock">No identify data. Use Drive → Identify after Add Port.</pre>
+        </section>
+
+        <section class="tab-panel" data-panel="modules">
+          <pre class="mono-block">DIR / modules view (prototype)
+0x0B  ROM DIR
+0x28  PST table
+0x47  DCM / config
+0xC4  ARCO overlay
+0x2407 ARCO overlay (new)</pre>
+        </section>
+
+        <section class="tab-panel" data-panel="logs">
+          <pre class="mono-block" id="logBlock"></pre>
+        </section>
+      </main>
+
+      <aside class="process-pane">
+        <div class="pane-head">
+          <h2>Run Queue</h2>
+        </div>
+        <ol class="queue" id="queue">
+          <li data-step="init" class="done"><span>1</span><div><strong>Init FW</strong><em>ready</em></div></li>
+          <li data-step="rpm"><span>2</span><div><strong>Load RPM</strong><em>idle</em></div></li>
+          <li data-step="arco"><span>3</span><div><strong>ARCO</strong><em>idle</em></div></li>
+          <li data-step="sf"><span>4</span><div><strong>SF Chain</strong><em>idle</em></div></li>
+        </ol>
+
+        <div class="telemetry">
+          <div class="telem-row"><span>PTM</span><code id="telemPtm">—</code></div>
+          <div class="telem-row"><span>Head</span><code id="telemHd">—</code></div>
+          <div class="telem-row"><span>Zone</span><code id="telemZn">—</code></div>
+          <div class="telem-row"><span>Cyl</span><code id="telemCyl">—</code></div>
+          <div class="telem-row"><span>Progress</span><code id="telemProg">0.0%</code></div>
+          <div class="progress"><i id="progressBar"></i></div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn-primary" data-action="run-all">Start ARCO + SF</button>
+          <button type="button" class="btn-ghost" data-action="stop">Stop</button>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusstrip">
+      <div id="statusLeft">No port locked — Windows storage still owns disks</div>
+      <div id="statusRight">RPM path: —</div>
+    </footer>
+    <div class="console" id="console"></div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>
