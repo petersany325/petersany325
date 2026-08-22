@@ -1202,6 +1202,7 @@ function onAction(action) {
     about: () => toast("Windex WD · HamGap · Win7/10/11 x64 factory desk"),
     "license-status": showLicenseStatus,
     "activate-license": activateFromGate,
+    "demo-unlock": demoUnlock,
     "copy-mid": copyMachineId,
     "deactivate-license": async () => {
       if (!window.confirm("Remove local license? App will lock until re-activated.")) return;
@@ -1359,6 +1360,32 @@ async function activateFromGate() {
   toast(`Licensed · ${res.editionName}`);
   input.value = "";
   await enforceLicenseGate();
+}
+
+async function demoUnlock() {
+  const err = $("#licenseErr");
+  err.hidden = true;
+  try {
+    const mid = await License.machineId();
+    const key = await License.issueBoundLicense({
+      machineId: mid,
+      edition: "PRO",
+      daysValid: 14,
+      serialId: "DEMO"
+    });
+    const res = await License.activate(key);
+    if (!res.ok) {
+      err.hidden = false;
+      err.textContent = res.error || "Demo unlock failed";
+      return;
+    }
+    log("Demo unlock · Professional · 14 days (test build)", "warn");
+    toast("Demo unlocked · 14 days");
+    await enforceLicenseGate();
+  } catch (e) {
+    err.hidden = false;
+    err.textContent = String(e.message || e);
+  }
 }
 
 async function copyMachineId() {
