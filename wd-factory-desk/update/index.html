@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Windex WD — Professional x64</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon.png" />
+  <link rel="icon" type="image/png" sizes="256x256" href="assets/app-icon.png" />
+  <link rel="apple-touch-icon" href="assets/icon-256.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="license-gate" id="licenseGate" hidden>
+    <div class="license-card">
+      <div class="license-brand">
+        <img class="brand-logo" src="assets/logo.png" width="48" height="48" alt="HamGap" />
+        <div>
+          <strong>Windex WD</strong>
+          <span>License activation required</span>
+        </div>
+      </div>
+      <p class="license-lead">Enter your serial to unlock this PC. The license binds to this Machine ID after activation.</p>
+      <div class="license-mid">
+        <span>Machine ID</span>
+        <code id="gateMachineId">…</code>
+        <button type="button" class="mini" data-action="copy-mid" title="Copy">Copy</button>
+      </div>
+      <label class="license-field">
+        <span>Serial / License key</span>
+        <input type="text" id="licenseSerialInput" placeholder="WXWD-PRO-….…." spellcheck="false" autocomplete="off" />
+      </label>
+      <p class="license-err" id="licenseErr" hidden></p>
+      <div class="license-actions">
+        <button type="button" class="btn-primary" data-action="activate-license">Activate</button>
+        <button type="button" class="btn-ghost" data-action="demo-unlock">Demo unlock (14 days)</button>
+        <a class="btn-ghost linkish" href="license-keygen.html" target="_blank" rel="noopener">Seller keygen</a>
+      </div>
+      <p class="license-note">Windows app: use <em>File → License Settings</em> after unlock. Test: <em>Demo unlock</em> or seller keygen.</p>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <header class="titlebar">
+      <div class="titlebar-brand">
+        <img class="brand-logo" src="assets/logo.png" width="40" height="40" alt="HamGap" />
+        <div class="brand-text">
+          <strong>Windex WD</strong>
+          <span>Repair WD HDD</span>
+        </div>
+      </div>
+      <div class="titlebar-mode">
+        <button type="button" class="mode-btn active" data-mode="sata">SATA</button>
+        <button type="button" class="mode-btn" data-mode="terminal">Terminal</button>
+      </div>
+      <div class="window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
+    </header>
+
+    <nav class="menubar" id="menubar" aria-label="Main menu"></nav>
+
+    <div class="workspace">
+      <aside class="ports-pane">
+        <div class="pane-head">
+          <h2>Ports</h2>
+          <div class="toolstrip">
+            <button type="button" data-action="detect">Detect</button>
+            <button type="button" data-action="add-port">Add</button>
+            <button type="button" data-action="release">Release</button>
+          </div>
+        </div>
+        <ul class="port-tree" id="portTree"></ul>
+      </aside>
+
+      <main class="main-pane">
+        <section class="family-stage" id="familyStage">
+          <div class="family-hero">
+            <p class="eyebrow" id="transportLabel">SATA · PassThrough exclusive</p>
+            <h1 id="familyTitle">Detect drive first</h1>
+            <p class="drive-sub" id="familyMeta">Port detect → Identify (Vendor / Family / Model / SN / FW) → if WD + Family known → read ROM module 0x4F → resolve FW pack for ARCO/SF</p>
+          </div>
+
+          <div class="identify-board" id="identifyBoard">
+            <div class="id-grid">
+              <div><span>Vendor</span><strong id="idVendor">—</strong></div>
+              <div><span>Family</span><strong id="idFamily">—</strong></div>
+              <div><span>Model</span><strong id="idModel">—</strong></div>
+              <div><span>Serial</span><strong id="idSerial">—</strong></div>
+              <div><span>ATA FW</span><strong id="idAtaFw">—</strong></div>
+              <div><span>ROM 4F FW</span><strong id="idRom4f">—</strong></div>
+              <div><span>Ctrl FW (0x0D)</span><strong id="idCtrlFw">—</strong></div>
+              <div><span>Family ID</span><strong id="idFamHex">—</strong></div>
+            </div>
+            <div class="id-actions">
+              <button type="button" class="primary" data-action="detect">1 · Detect Port</button>
+              <button type="button" data-action="identify-drive">2 · Identify</button>
+              <button type="button" data-action="read-rom4f">3 · Read ROM 4F</button>
+              <button type="button" data-action="resolve-fw">4 · Resolve FW Pack</button>
+              <button type="button" data-action="backup-all">5 · Full Backup First</button>
+            </div>
+            <pre class="mono-block compact" id="identifyTrace">Waiting for port detect…</pre>
+          </div>
+
+          <div class="family-ribbon" id="familyRibbon" hidden>
+            <button type="button" class="rib" data-tool="backup"><b>BK</b><span>Backup</span></button>
+            <button type="button" class="rib" data-tool="cuthead"><b>✂</b><span>Cut Head</span></button>
+            <button type="button" class="rib" data-tool="zone"><b>▣</b><span>Zone</span></button>
+            <button type="button" class="rib" data-tool="atascan"><b>ATA</b><span>ATA Scan</span></button>
+            <button type="button" class="rib" data-tool="chsscan"><b>CHS</b><span>CHS Scan</span></button>
+            <button type="button" class="rib active" data-tool="plist"><b>P</b><span>P-List</span></button>
+            <button type="button" class="rib" data-tool="glist"><b>G</b><span>G-List</span></button>
+            <button type="button" class="rib" data-tool="modules"><b>☰</b><span>Modules</span></button>
+            <button type="button" class="rib" data-tool="arco"><b>A</b><span>ARCO</span></button>
+            <button type="button" class="rib" data-tool="sf"><b>S</b><span>SF</span></button>
+            <button type="button" class="rib" data-tool="dcm"><b>D</b><span>DCM / Cap</span></button>
+          </div>
+
+          <div class="tool-workspace" id="toolWorkspace">
+            <div class="empty-hint">
+              Identify → Resolve FW Pack → <strong>Full Backup First</strong> (ROM / ROM modules / SA / tracks), then open family repair tools.
+              Set two roots under Backup → Firmware Paths: ARCO+SF pack and original HDD backup.
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="process-pane">
+        <div class="pane-head"><h2>Live Monitor</h2></div>
+        <div class="telemetry">
+          <div class="telem-row"><span>Family</span><code id="telemFamily">—</code></div>
+          <div class="telem-row"><span>FW</span><code id="telemFw">—</code></div>
+          <div class="telem-row"><span>Tool</span><code id="telemTool">—</code></div>
+          <div class="telem-row"><span>PTM</span><code id="telemPtm">—</code></div>
+          <div class="telem-row"><span>Head</span><code id="telemHd">—</code></div>
+          <div class="telem-row"><span>Zone</span><code id="telemZn">—</code></div>
+          <div class="telem-row"><span>Progress</span><code id="telemProg">0.0%</code></div>
+          <div class="progress"><i id="progressBar"></i></div>
+        </div>
+        <ol class="queue" id="queue">
+          <li data-step="init" class="done"><span>1</span><div><strong>Session</strong><em>ready</em></div></li>
+          <li data-step="family"><span>2</span><div><strong>Family / FW</strong><em>idle</em></div></li>
+          <li data-step="tool"><span>3</span><div><strong>Family Tool</strong><em>idle</em></div></li>
+          <li data-step="run"><span>4</span><div><strong>Execute</strong><em>idle</em></div></li>
+        </ol>
+        <div class="actions">
+          <button type="button" class="btn-primary" data-action="run-all">Run ARCO + SF</button>
+          <button type="button" class="btn-ghost" data-action="stop">Stop</button>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusstrip">
+      <div id="statusLeft">No family loaded</div>
+      <div id="statusRight">RPM path: —</div>
+    </footer>
+    <div class="console" id="console"></div>
+  </div>
+
+  <div class="settings-modal" id="settingsModal" hidden>
+    <div class="settings-card">
+      <div class="settings-head">
+        <h2>License &amp; Settings</h2>
+        <button type="button" class="mini" data-action="close-settings">Close</button>
+      </div>
+      <div class="settings-tabs">
+        <button type="button" class="stab active" data-stab="license">License</button>
+        <button type="button" class="stab" data-stab="paths">Project Paths</button>
+      </div>
+      <div class="settings-pane" id="pane-license">
+        <div class="kv settings-kv">
+          <span>Status</span><strong id="setLicStatus">—</strong>
+          <span>Edition</span><strong id="setLicEdition">—</strong>
+          <span>Serial ID</span><strong id="setLicSerial">—</strong>
+          <span>Days left</span><strong id="setLicDays">—</strong>
+          <span>Machine ID</span><strong id="setLicMid">—</strong>
+          <span>License file</span><strong id="setLicFile" class="path-strong">—</strong>
+        </div>
+        <label class="license-field">
+          <span>Enter / change serial</span>
+          <input type="text" id="setSerialInput" placeholder="WXWD-PRO-…" spellcheck="false" autocomplete="off" />
+        </label>
+        <p class="license-err" id="setLicErr" hidden></p>
+        <div class="license-actions">
+          <button type="button" class="btn-primary" data-action="settings-activate">Activate</button>
+          <button type="button" class="btn-ghost" data-action="demo-unlock">Demo unlock (14 days)</button>
+          <button type="button" class="btn-ghost" data-action="deactivate-license">Deactivate</button>
+        </div>
+      </div>
+      <div class="settings-pane" id="pane-paths" hidden>
+        <label class="license-field">
+          <span>App install path</span>
+          <input type="text" id="setAppRoot" spellcheck="false" />
+        </label>
+        <label class="license-field">
+          <span>Project data root</span>
+          <input type="text" id="setProjectRoot" spellcheck="false" />
+        </label>
+        <label class="license-field">
+          <span>1 · ARCO + SF pack root</span>
+          <input type="text" id="setPackRoot" spellcheck="false" />
+        </label>
+        <label class="license-field">
+          <span>2 · Backup original FW root</span>
+          <input type="text" id="setBackupRoot" spellcheck="false" />
+        </label>
+        <div class="path-source-row">
+          <span>Active FW source:</span>
+          <label class="radio-inline"><input type="radio" name="setFwSource" value="pack" /> Pack</label>
+          <label class="radio-inline"><input type="radio" name="setFwSource" value="backup" /> Backup</label>
+        </div>
+        <div class="license-actions" style="margin-top:0.75rem">
+          <button type="button" class="btn-primary" data-action="settings-save-paths">Save Paths</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" hidden></div>
+  <script src="license.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

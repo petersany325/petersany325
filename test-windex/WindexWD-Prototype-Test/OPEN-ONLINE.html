@@ -2,29 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Windex WD — Open Online</title>
+  <title>Windex WD — Local install</title>
   <style>
-    body { font-family: Segoe UI, sans-serif; background: #0a0f14; color: #e8eef4; padding: 2rem; max-width: 760px; margin: 0 auto; line-height: 1.5; }
-    h1 { color: #2dd4bf; font-size: 1.5rem; }
-    a.btn { display: inline-block; margin: 0.5rem 0; padding: 0.75rem 1.25rem; background: #2dd4bf; color: #0a0f14; text-decoration: none; border-radius: 8px; font-weight: 600; }
+    body { font-family: Segoe UI, sans-serif; background: #0a0f14; color: #e8eef4; padding: 2rem; max-width: 720px; margin: 0 auto; line-height: 1.5; }
+    h1 { color: #2dd4bf; }
     code { background: #1a2332; padding: 0.15rem 0.4rem; border-radius: 4px; }
-    .warn { color: #fbbf24; }
-    ul { padding-left: 1.25rem; }
   </style>
 </head>
 <body>
-  <h1>Windex WD — Online demo</h1>
-  <p><strong>Windows folder</strong> <code>D:\test windex\WindexWD-Prototype-Test</code> — double-click <strong>RUN.bat</strong> (not the folder, not index.html).</p>
-  <p class="warn">Browser demo (UI only, no real HDD):</p>
-  <a class="btn" href="https://htmlpreview.github.io/?https://raw.githubusercontent.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/WindexWD-Prototype-Test/resources/app/index.html" target="_blank" rel="noopener">Open via htmlpreview.github.io</a>
-  <p>After GitHub Pages deploy (if enabled):</p>
-  <a class="btn" href="https://petersany325.github.io/petersany325/" target="_blank" rel="noopener">petersany325.github.io/petersany325</a>
-  <h2>Why it did not open</h2>
-  <ul>
-    <li>Opening <code>index.html</code> directly uses <code>file://</code> — license / Demo unlock fails.</li>
-    <li>jsDelivr CDN serves HTML as <code>text/plain</code> — page shows source code, not the app.</li>
-    <li>Old <code>BUILD-EXE.bat</code> could delete <code>resources\app</code> — re-download the zip.</li>
-  </ul>
-  <p>Fix: download zip → extract → <code>CHECK.bat</code> → <code>RUN.bat</code></p>
+  <h1>Windex WD — local only</h1>
+  <p>Install path: <code>D:\test windex\WindexWD-Prototype-Test</code></p>
+  <ol>
+    <li><code>APPLY-PATH.bat</code> — set paths on this PC</li>
+    <li><code>UPDATE.bat</code> — update from <code>update\</code> folder (no internet)</li>
+    <li><code>RUN.bat</code> — start app</li>
+  </ol>
+  <p>Do not open this HTML directly. Use <strong>RUN.bat</strong>.</p>
 </body>
 </html>

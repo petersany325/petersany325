@@ -1,35 +1,28 @@
-# Windex WD — آنلاین + اجرا
+# Windex WD — اجرای محلی (بدون وب)
 
-## مسیر ذخیره‌شده (ویندوز)
+## مسیر
 
 ```
 D:\test windex\WindexWD-Prototype-Test
 ```
 
-اجرا: **RUN.bat** · چک: **CHECK.bat** · آپدیت: **UPDATE.bat**
+## دستورات
 
-## آنلاین (تست UI)
-
-https://htmlpreview.github.io/?https://raw.githubusercontent.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/WindexWD-Prototype-Test/resources/app/index.html
-
-Demo unlock → License Settings
-
-## دانلود
-
-https://github.com/petersany325/petersany325/raw/cursor/wd-factory-desk-ui-proto-a3a0/wd-factory-desk/dist/WindexWD-Prototype-Test.zip
-
-آنزیپ در `D:\test windex\`
-
-## داده‌های لاب
-
-| مسیر | نقش |
+| فایل | کار |
 |------|-----|
-| `D:\test windex\FW` | ARCO + SF |
-| `D:\test windex\Backup` | بکاپ HDD |
+| **INSTALL-HERE.bat** | مسیر + اجرا (یک‌جا) |
+| **APPLY-PATH.bat** | ذخیره مسیر D:\test windex |
+| **UPDATE.bat** | آپدیت از `update\` — **بدون اینترنت** |
+| **RUN.bat** | اجرای برنامه |
+| **CHECK.bat** | چک فایل‌ها |
+
+## داده
+
+- `D:\test windex\FW`
+- `D:\test windex\Backup`
 
 `SETUP-LAB.bat` این پوشه‌ها را می‌سازد.
 
-## علت رایج خطا
+## برند
 
-- `index.html` مستقیم → لایسنس کار نمی‌کند → **RUN.bat**
-- jsDelivr → سورس HTML نشان می‌دهد → از htmlpreview استفاده کنید
+عنوان: **Windex WD** · زیرعنوان: **Repair WD HDD**

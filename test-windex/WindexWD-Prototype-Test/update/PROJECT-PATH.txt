@@ -1,0 +1,26 @@
+Windex WD — مسیرهای ذخیره‌شده
+==============================
+
+App install (برنامه):
+  D:\test windex\WindexWD-Prototype-Test
+
+Project data root (داده‌های لاب):
+  D:\test windex
+
+ساختار:
+
+  D:\test windex\
+    WindexWD-Prototype-Test\     ← برنامه (RUN.bat, WindexWD.exe)
+      resources\app\             ← UI + project-path.json
+    FW\                          ← پکیج ARCO + SF
+      2.5\10\FIREBIRD …
+      3.5\1\701537 …
+    Backup\                      ← بکاپ اورجینال هارد
+      PALMER\WX21A84K3821\…
+
+در UI (Settings → Paths):
+  App path    = D:\test windex\WindexWD-Prototype-Test
+  Pack root   = D:\test windex\FW
+  Backup root = D:\test windex\Backup
+
+فایل JSON: resources\app\project-path.json
