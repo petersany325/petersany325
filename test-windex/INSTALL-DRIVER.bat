@@ -5,32 +5,32 @@ echo.
 echo  Windex WD — Driver install
 echo  ==========================
 echo.
-echo  [1] Modern AHCI/SATA  Win10/11 x64  ^(WxWdPass v3^)
-echo  [2] Legacy IDE        Win7 32-bit   ^(WdHd — lab only^)
+echo  [1] Windows 11 / 10 x64  — WxWdPass v3 AHCI ^(recommended^)
+echo  [2] Legacy WdHd          — Win7 32-bit IDE lab ONLY
 echo.
 choice /c 12 /n /m "Select [1] or [2]: "
 if errorlevel 2 goto legacy
-if errorlevel 1 goto ahci
+if errorlevel 1 goto win11
 
-:ahci
-if exist "%~dp0..\driver\WxWdPass-v3\install\INSTALL-AHCI.bat" (
-  call "%~dp0..\driver\WxWdPass-v3\install\INSTALL-AHCI.bat"
-) else if exist "%~dp0driver\WxWdPass-v3\install\INSTALL-AHCI.bat" (
-  call "%~dp0driver\WxWdPass-v3\install\INSTALL-AHCI.bat"
-) else (
-  echo WxWdPass v3 not found. See driver\WxWdPass-v3\docs\
+:win11
+set "DRV=%~dp0driver\WxWdPass-v3\install\INSTALL-WIN11.bat"
+if not exist "%DRV%" set "DRV=%~dp0..\driver\WxWdPass-v3\install\INSTALL-WIN11.bat"
+if not exist "%DRV%" (
+  echo ERROR: WxWdPass v3 not found under driver\WxWdPass-v3\
   pause
+  exit /b 1
 )
-exit /b 0
+call "%DRV%"
+exit /b %ERRORLEVEL%
 
 :legacy
 echo.
-echo WARNING: WdHd = Win XP/Vista/7 32-bit ONLY. Never on OS disk.
+echo NOT for Windows 11. Win XP/Vista/7 32-bit only. Never on OS disk.
 pause
 if exist "%~dp0driver\WdHdSetup\WdHdSetup.exe" (
   start "" "%~dp0driver\WdHdSetup\WdHdSetup.exe"
 ) else (
-  echo WdHdSetup not found under driver\WdHdSetup\
+  echo WdHdSetup not found.
   pause
 )
 exit /b 0

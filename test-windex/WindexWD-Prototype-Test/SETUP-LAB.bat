@@ -12,6 +12,7 @@ mkdir "%DATA%\FW" 2>nul
 mkdir "%DATA%\FW\2.5" 2>nul
 mkdir "%DATA%\FW\3.5" 2>nul
 mkdir "%DATA%\Backup" 2>nul
+mkdir "%DATA%\driver" 2>nul
 
 echo [OK] %DATA%\FW
 echo [OK] %DATA%\Backup
