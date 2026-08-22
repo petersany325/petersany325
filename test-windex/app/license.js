@@ -57,6 +57,9 @@ const License = (() => {
 
   /** Stable-ish machine fingerprint for the prototype (browser). Native: SMBIOS + disk + MachineGuid. */
   async function machineId() {
+    if (!crypto?.subtle) {
+      throw new Error("Secure context required — run RUN.bat (http://127.0.0.1:8765), do not open index.html directly");
+    }
     const parts = [
       navigator.userAgent || "",
       navigator.language || "",

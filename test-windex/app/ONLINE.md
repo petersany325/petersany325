@@ -1,35 +1,35 @@
-# Windex WD — آنلاین
+# Windex WD — آنلاین + اجرا
 
-## اجرای آنلاین (همین الان — لایو)
-
-https://tired-garlics-find.loca.lt/
-
-اگر صفحهٔ هشدار localtunnel آمد، Continue را بزنید.
-
-## لینک پایدار روی گیت‌هاب
-
-https://raw.githack.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/app/index.html
-
-Keygen:  
-https://raw.githack.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/app/license-keygen.html
-
-روی صفحه قفل: **Demo unlock (14 days)** یا **License Settings**.
-
-## نصب روی مسیر `D:\test windex`
-
-دانلود:  
-https://github.com/petersany325/petersany325/raw/cursor/wd-factory-desk-ui-proto-a3a0/wd-factory-desk/dist/WindexWD-to-D-test-windex.zip
-
-1. آنزیپ → پوشه `test-windex` را به `D:\test windex` کپی/تغییر نام کنید  
-2. اجرا: `D:\test windex\START-WINDEX-WD.bat`
-
-ساختار:
+## مسیر ذخیره‌شده (ویندوز)
 
 ```
-D:\test windex\
-  app\
-  FW\
-  Backup\
-  driver\
-  START-WINDEX-WD.bat
+D:\test windex\WindexWD-Prototype-Test
 ```
+
+اجرا: **RUN.bat** · چک: **CHECK.bat** · آپدیت: **UPDATE.bat**
+
+## آنلاین (تست UI)
+
+https://htmlpreview.github.io/?https://raw.githubusercontent.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/WindexWD-Prototype-Test/resources/app/index.html
+
+Demo unlock → License Settings
+
+## دانلود
+
+https://github.com/petersany325/petersany325/raw/cursor/wd-factory-desk-ui-proto-a3a0/wd-factory-desk/dist/WindexWD-Prototype-Test.zip
+
+آنزیپ در `D:\test windex\`
+
+## داده‌های لاب
+
+| مسیر | نقش |
+|------|-----|
+| `D:\test windex\FW` | ARCO + SF |
+| `D:\test windex\Backup` | بکاپ HDD |
+
+`SETUP-LAB.bat` این پوشه‌ها را می‌سازد.
+
+## علت رایج خطا
+
+- `index.html` مستقیم → لایسنس کار نمی‌کند → **RUN.bat**
+- jsDelivr → سورس HTML نشان می‌دهد → از htmlpreview استفاده کنید

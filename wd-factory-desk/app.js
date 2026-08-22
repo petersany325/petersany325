@@ -1329,13 +1329,25 @@ function init() {
 async function loadProjectPaths() {
   try {
     const r = await fetch("project-path.json", { cache: "no-store" });
-    if (!r.ok) return;
-    const p = await r.json();
-    if (p.appRoot) state.appRoot = p.appRoot;
-    if (p.projectRoot) state.projectRoot = p.projectRoot;
-    if (p.packRoot) state.packRoot = p.packRoot;
-    if (p.backupRoot) state.backupRoot = p.backupRoot;
-  } catch { /* file:// or missing — use constants */ }
+    if (r.ok) {
+      const p = await r.json();
+      if (p.appRoot) state.appRoot = p.appRoot;
+      if (p.projectRoot) state.projectRoot = p.projectRoot;
+      if (p.packRoot) state.packRoot = p.packRoot;
+      if (p.backupRoot) state.backupRoot = p.backupRoot;
+    }
+  } catch { /* offline or file:// before RUN.bat */ }
+  try {
+    const ls = localStorage.getItem("wxwd.paths.v1");
+    if (ls) {
+      const p = JSON.parse(ls);
+      if (p.appRoot) state.appRoot = p.appRoot;
+      if (p.projectRoot) state.projectRoot = p.projectRoot;
+      if (p.packRoot) state.packRoot = p.packRoot;
+      if (p.backupRoot) state.backupRoot = p.backupRoot;
+      if (p.fwSource) state.fwSource = p.fwSource;
+    }
+  } catch { /* ignore */ }
 }
 
 async function loadDesktopBootstrap() {
@@ -1438,6 +1450,16 @@ async function saveSettingsPaths() {
       backupRoot: state.backupRoot,
       fwSource: state.fwSource
     });
+  } else {
+    try {
+      localStorage.setItem("wxwd.paths.v1", JSON.stringify({
+        appRoot: state.appRoot,
+        projectRoot: state.projectRoot,
+        packRoot: state.packRoot,
+        backupRoot: state.backupRoot,
+        fwSource: state.fwSource
+      }));
+    } catch { /* ignore */ }
   }
   refreshFamilyHeader();
   toast("Paths saved");
@@ -1557,6 +1579,12 @@ async function showLicenseStatus() {
 }
 
 function bindLicenseUi() {
+  $("#licenseGate")?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn?.dataset.action) return;
+    e.preventDefault();
+    onAction(btn.dataset.action);
+  });
   $("#licenseSerialInput")?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();

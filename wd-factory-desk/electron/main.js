@@ -14,23 +14,40 @@ function settingsPath() {
   return path.join(app.getPath("userData"), "settings.json");
 }
 
-function readSettings() {
+function bundledProjectPaths() {
+  const p = path.join(__dirname, "..", "project-path.json");
   try {
-    return JSON.parse(fs.readFileSync(settingsPath(), "utf8"));
+    return JSON.parse(fs.readFileSync(p, "utf8"));
   } catch {
-    return {
-      appRoot: APP_DEFAULT,
-      projectRoot: PROJECT_DEFAULT,
-      packRoot: path.join(PROJECT_DEFAULT, "FW"),
-      backupRoot: path.join(PROJECT_DEFAULT, "Backup"),
-      fwSource: "pack"
-    };
+    return {};
+  }
+}
+
+function defaultSettings() {
+  const bundled = bundledProjectPaths();
+  return {
+    appRoot: bundled.appRoot || APP_DEFAULT,
+    projectRoot: bundled.projectRoot || PROJECT_DEFAULT,
+    packRoot: bundled.packRoot || path.join(PROJECT_DEFAULT, "FW"),
+    backupRoot: bundled.backupRoot || path.join(PROJECT_DEFAULT, "Backup"),
+    fwSource: "pack"
+  };
+}
+
+function readSettings() {
+  const base = defaultSettings();
+  try {
+    return { ...base, ...JSON.parse(fs.readFileSync(settingsPath(), "utf8")) };
+  } catch {
+    return base;
   }
 }
 
 function writeSettings(data) {
+  const merged = { ...readSettings(), ...(data || {}) };
   fs.mkdirSync(app.getPath("userData"), { recursive: true });
-  fs.writeFileSync(settingsPath(), JSON.stringify(data, null, 2), "utf8");
+  fs.writeFileSync(settingsPath(), JSON.stringify(merged, null, 2), "utf8");
+  return merged;
 }
 
 function createWindow() {
@@ -93,11 +110,21 @@ function buildMenu() {
         },
         { type: "separator" },
         {
-          label: "Open Project Folder",
+          label: "Open App Folder",
+          click: () => {
+            const s = readSettings();
+            const root = s.appRoot || APP_DEFAULT;
+            fs.mkdirSync(root, { recursive: true });
+            shell.openPath(root);
+          }
+        },
+        {
+          label: "Open Data Folder (FW / Backup)",
           click: () => {
             const s = readSettings();
             const root = s.projectRoot || PROJECT_DEFAULT;
-            fs.mkdirSync(root, { recursive: true });
+            fs.mkdirSync(path.join(root, "FW"), { recursive: true });
+            fs.mkdirSync(path.join(root, "Backup"), { recursive: true });
             shell.openPath(root);
           }
         },
@@ -155,8 +182,9 @@ function buildMenu() {
                 "HamGap · Professional factory desk prototype\n" +
                 "Win7 / Win10 / Win11 x64\n\n" +
                 `Version ${app.getVersion()}\n` +
-                `License file: ${licensePath()}\n` +
-                `Project: ${(readSettings().projectRoot || PROJECT_DEFAULT)}`
+                `App: ${(readSettings().appRoot || APP_DEFAULT)}\n` +
+                `Data: ${(readSettings().projectRoot || PROJECT_DEFAULT)}\n` +
+                `License: ${licensePath()}`
             });
           }
         }
@@ -193,10 +221,7 @@ function registerIpc() {
   ipcMain.handle("license:path", () => licensePath());
 
   ipcMain.handle("settings:read", () => readSettings());
-  ipcMain.handle("settings:write", (_e, data) => {
-    writeSettings(data || {});
-    return readSettings();
-  });
+  ipcMain.handle("settings:write", (_e, data) => writeSettings(data || {}));
 
   ipcMain.handle("app:info", () => ({
     name: app.getName(),

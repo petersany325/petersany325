@@ -1,53 +1,37 @@
 # Windex WD — UI Prototype
 
+**App path (saved):** `D:\test windex\WindexWD-Prototype-Test`
 
-**اجرای آنلاین (آخرین آپدیت):**  
-https://raw.githack.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/app/index.html
+## Download & run (Windows)
 
-**نصب روی `D:\test windex`:**  
-https://github.com/petersany325/petersany325/raw/cursor/wd-factory-desk-ui-proto-a3a0/wd-factory-desk/dist/WindexWD-to-D-test-windex.zip
-
-جزئیات: [`ONLINE.md`](./ONLINE.md)
-
-
-**Windex WD** by HamGap — family-centric factory tooling prototype (Windex/SASDEX model) for Win7/10/11 x64.
-
-## Download — Windows desktop test pack
-
-**Zip:**  
 https://github.com/petersany325/petersany325/raw/cursor/wd-factory-desk-ui-proto-a3a0/wd-factory-desk/dist/WindexWD-Prototype-Test.zip
 
-1. Unzip (e.g. to `D:\test windex`)  
-2. Run **`START-WINDEX-WD.bat`** → opens as a Windows app window (Edge/Chrome app mode)  
-3. **Demo unlock** or **File → License Settings…**  
-4. Optional real EXE: run `BUILD-WINDOWS.bat` on a PC with Node.js  
+1. Unzip to `D:\test windex\`
+2. `SETUP-LAB.bat` → creates `FW` + `Backup`
+3. `CHECK.bat` → verify files
+4. **`RUN.bat`** → opens app (`http://127.0.0.1:8765`)
 
-See [`DESKTOP.md`](./DESKTOP.md) · project path [`PROJECT-PATH.txt`](./PROJECT-PATH.txt)
+## Online demo
+
+https://htmlpreview.github.io/?https://raw.githubusercontent.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/WindexWD-Prototype-Test/resources/app/index.html
+
+See [`ONLINE.md`](./ONLINE.md)
+
+## Config
+
+- [`project-path.json`](./project-path.json) — saved paths
+- [`PROJECT-PATH.txt`](./PROJECT-PATH.txt) — folder layout
 
 ## Flow
 
-1. Detect / lock port  
-2. Identify (Vendor / Family / Model / SN / ATA FW)  
-3. If WD + Family → Read ROM module `0x4F` → resolve ARCO/SF pack  
-4. **Full Backup first**: ROM · ROM modules · SA modules · tracks  
-5. Then repair tools (manual repair structure next)
+Detect → Identify → ROM 0x4F → Backup first → family tools
 
-## Two firmware roots
+## License
 
-1. **ARCO + SF package** — factory pack (`epath`)  
-2. **Backup original HDD FW** — `Backup\{Family}\{SN}\` dump from this drive  
+Demo unlock (14 days) or seller keygen (`license-keygen.html`). See [`LICENSE-SYSTEM.md`](./LICENSE-SYSTEM.md).
 
-## License (for sales)
+## Driver (real HDD I/O)
 
-App opens locked until a serial is activated. Test builds: **Demo unlock**. Sales: Machine ID → seller keygen (`license-keygen.html`).
+Legacy WdHd = Win7 32-bit only. Modern AHCI: [`driver/WxWdPass-v3/docs/WXWD-PASS-v3-SPEC.md`](../driver/WxWdPass-v3/docs/WXWD-PASS-v3-SPEC.md)
 
-See [`LICENSE-SYSTEM.md`](./LICENSE-SYSTEM.md).
-
-## Open (dev)
-
-```bash
-cd wd-factory-desk
-python3 -m http.server 8765
-```
-
-UI prototype only — no real drive I/O yet. Win10/11 x64 needs a new PassThrough driver (not this legacy WdHd pack).
+UI prototype — simulated I/O until WxWdPass v3 is built.
