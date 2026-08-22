@@ -2,6 +2,19 @@
 
 **Windex WD** by HamGap — family-centric factory tooling prototype (Windex/SASDEX model) for Win7/10/11 x64.
 
+## Download test pack (UI + driver installer)
+
+**Zip:**  
+https://github.com/petersany325/petersany325/raw/cursor/wd-factory-desk-ui-proto-a3a0/wd-factory-desk/dist/WindexWD-Prototype-Test.zip
+
+Contents: prototype UI, HamGap branding, license/demo unlock, and legacy `WdHdSetup` (Win7 **32-bit** lab only).
+
+1. Unzip → `START-WINDEX-WD.bat`  
+2. Click **Demo unlock (14 days)**  
+3. For driver (legacy 32-bit only): `INSTALL-DRIVER.bat` — never on the OS disk channel  
+
+Details: [`TEST-PACK.md`](./TEST-PACK.md)
+
 Brand assets: `assets/logo.png` (HamGap logo), favicon + app icons.
 
 ## Flow
@@ -17,28 +30,17 @@ Brand assets: `assets/logo.png` (HamGap logo), favicon + app icons.
 1. **ARCO + SF package** — factory pack (`epath`)  
 2. **Backup original HDD FW** — `Backup\{Family}\{SN}\` dump from this drive  
 
-Switch active source in Backup → Firmware Paths.
-
 ## License (for sales)
 
-App opens locked until a serial is activated. Preferred flow: customer sends **Machine ID** → seller issues a **machine-bound** key from `license-keygen.html`.
+App opens locked until a serial is activated. Test builds: **Demo unlock**. Sales: Machine ID → seller keygen (`license-keygen.html`).
 
 See [`LICENSE-SYSTEM.md`](./LICENSE-SYSTEM.md).
 
-## Open
+## Open (dev)
 
 ```bash
 cd wd-factory-desk
 python3 -m http.server 8765
 ```
 
-- App: http://localhost:8765/  
-- Seller keygen: http://localhost:8765/license-keygen.html  
-
-## Docs
-
-- [`FAMILY-FW-REFERENCE.md`](./FAMILY-FW-REFERENCE.md)
-- [`family-fw-reference.json`](./family-fw-reference.json)
-- [`LICENSE-SYSTEM.md`](./LICENSE-SYSTEM.md)
-
-UI prototype only — no real drive I/O.
+UI prototype only — no real drive I/O yet. Win10/11 x64 needs a new PassThrough driver (not this legacy WdHd pack).
