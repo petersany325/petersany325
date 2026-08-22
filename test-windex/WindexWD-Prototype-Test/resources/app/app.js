@@ -1210,7 +1210,7 @@ function onAction(action) {
     "chs-run": () => runProcess("chs-scan"),
     "chs-stop": () => { stopRun(); log("CHS scan stopped", "err"); },
     "chs-report": () => log("CHS scan report exported (prototype)", "ok"),
-    about: () => toast("Windex WD · HamGap · Win7/10/11 x64 factory desk"),
+    about: () => toast("Windex WD · Repair WD HDD · Win7/10/11 x64"),
     "license-status": showLicenseStatus,
     "open-settings": () => openSettingsModal(),
     "close-settings": closeSettingsModal,
