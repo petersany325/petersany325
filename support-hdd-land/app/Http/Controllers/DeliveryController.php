@@ -74,6 +74,7 @@ class DeliveryController extends Controller
                 'has_cost' => $r->hasCostDecision(),
                 'already_delivered' => $r->status === 'delivered',
                 'is_unrepairable' => $r->isUnrepairable(),
+                'is_no_charge_exit' => $r->isNoChargeExit(),
                 'custody_ok' => $block === null,
                 'custody_block' => $block,
                 'exit_otp_required' => (bool) $r->exit_otp_required,
@@ -181,7 +182,7 @@ class DeliveryController extends Controller
             }
         }
 
-        $unsettled = $receptions->filter(fn (Reception $r) => $r->status !== 'delivered' && $r->remainingAmount() > 0);
+        $unsettled = $receptions->filter(fn (Reception $r) => $r->status !== 'delivered' && $r->remainingAmount() > 0 && ! $r->isNoChargeExit());
         if ($unsettled->isNotEmpty()) {
             if (! in_array($mode, [ReceptionSettlementService::MODE_CREDIT, ReceptionSettlementService::MODE_WAIVE], true)) {
                 $list = $unsettled->map(fn (Reception $r) => $r->ticket_no.' (مانده '.number_format($r->remainingAmount()).')')->implode('، ');
@@ -224,10 +225,10 @@ class DeliveryController extends Controller
 
                 $ticketMode = $mode;
                 $ticketNote = trim((string) ($data['note'] ?? ''));
-                if ($r->isUnrepairable() && $r->remainingAmount() <= 0 && ! $r->hasCostSet()) {
+                if ($r->isNoChargeExit()) {
                     $ticketMode = ReceptionSettlementService::MODE_WAIVE;
                     if ($ticketNote === '') {
-                        $ticketNote = ReceptionSettlementService::unrepairableNoChargeNote();
+                        $ticketNote = ReceptionSettlementService::noChargeExitNote($r);
                     }
                 } elseif ($r->remainingAmount() <= 0 && $r->hasCostDecision()) {
                     $ticketMode = ReceptionSettlementService::MODE_PAID;

@@ -295,7 +295,7 @@ class HandoffController extends Controller
         if (! empty($data['result_status']) && $reception->status !== 'delivered') {
             $from = $reception->status;
             $reception->forceFill(['status' => $data['result_status']])->save();
-            if ($data['result_status'] === 'unrepairable' && ! $reception->hasCostSet()) {
+            if (in_array($data['result_status'], ['unrepairable', 'cancelled'], true) && ! $reception->hasCostSet()) {
                 $reception->confirmCost();
             }
             app(ReceptionLifecycleService::class)->log(

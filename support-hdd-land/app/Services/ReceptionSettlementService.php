@@ -44,13 +44,14 @@ class ReceptionSettlementService
             return $block;
         }
 
-        // غیرقابل تعمیر بدون هزینه است؛ نیازی به ثبت/تأیید مبلغ قبل از خروج نیست.
+        // غیرقابل تعمیر / انصراف از تعمیر: بدون هزینه؛ نیازی به ثبت/تأیید مبلغ قبل از خروج نیست.
         if (! $reception->hasCostDecision() && $mode !== self::MODE_WAIVE) {
             return 'قبل از تحویل، هزینه قبض را مشخص کنید یا بخشش/بدون هزینه را با دلیل انتخاب کنید.';
         }
 
         $remaining = $reception->remainingAmount();
-        if ($remaining <= 0) {
+        // برای انصراف/غیرقابل تعمیر مانده هم بدون دریافت قابل خروج است (با حالت بخشش).
+        if ($remaining <= 0 || $reception->isNoChargeExit()) {
             return null;
         }
 
@@ -69,6 +70,20 @@ class ReceptionSettlementService
     public static function unrepairableNoChargeNote(): string
     {
         return 'غیرقابل تعمیر — بدون هزینه';
+    }
+
+    public static function cancelledNoChargeNote(): string
+    {
+        return 'انصراف از تعمیر — بدون هزینه';
+    }
+
+    public static function noChargeExitNote(Reception $reception): string
+    {
+        if ($reception->isCancelledRepair()) {
+            return self::cancelledNoChargeNote();
+        }
+
+        return self::unrepairableNoChargeNote();
     }
 
     public function assertCanDeliver(Reception $reception, ?string $mode = null): void
@@ -121,13 +136,13 @@ class ReceptionSettlementService
             $reception = Reception::query()->lockForUpdate()->findOrFail($reception->id);
             $reception->loadMissing(['customer', 'custodyTechnician', 'parts.part']);
 
-            // غیرقابل تعمیر: بدون هزینه — اگر کاربر «دریافت کامل» زد ولی مبلغ صفر است، به بخشش بدون هزینه تبدیل شود.
-            if ($reception->isUnrepairable() && ! $reception->hasCostSet() && $reception->remainingAmount() <= 0) {
-                if ($mode === self::MODE_PAID) {
+            // غیرقابل تعمیر / انصراف از تعمیر: بدون دریافت مبلغ — حالت پرداخت را به بخشش بدون هزینه تبدیل کن.
+            if ($reception->isNoChargeExit()) {
+                if ($mode === self::MODE_PAID || $mode === '') {
                     $mode = self::MODE_WAIVE;
                 }
                 if ($note === '') {
-                    $note = self::unrepairableNoChargeNote();
+                    $note = self::noChargeExitNote($reception);
                 }
             }
 
@@ -158,8 +173,8 @@ class ReceptionSettlementService
                     $this->accounting->postPayment($payment->fresh(['reception', 'customer']));
                 }
             } elseif ($mode === self::MODE_WAIVE) {
-                if ($note === '' && $reception->isUnrepairable()) {
-                    $note = self::unrepairableNoChargeNote();
+                if ($note === '' && $reception->isNoChargeExit()) {
+                    $note = self::noChargeExitNote($reception);
                 }
                 if ($note === '') {
                     throw ValidationException::withMessages([

@@ -300,13 +300,27 @@ class Reception extends Model
         return $this->status === 'unrepairable';
     }
 
+    /** Customer withdrew / repair cancelled — returned without charge. */
+    public function isCancelledRepair(): bool
+    {
+        return $this->status === 'cancelled';
+    }
+
+    /**
+     * Exit/delivery without collecting payment: غیرقابل تعمیر یا انصراف از تعمیر.
+     */
+    public function isNoChargeExit(): bool
+    {
+        return $this->isUnrepairable() || $this->isCancelledRepair();
+    }
+
     /**
      * Whether staff already decided cost (amount set/confirmed) OR the ticket is
-     * exempt because it is non-repairable and needs no charge before exit.
+     * exempt (unrepairable / cancelled) and needs no charge before exit.
      */
     public function hasCostDecision(): bool
     {
-        if ($this->isUnrepairable()) {
+        if ($this->isNoChargeExit()) {
             return true;
         }
 
