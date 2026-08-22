@@ -301,6 +301,7 @@ function buildMenubar() {
     <div class="menu">
       <button type="button" class="menu-trigger">Help</button>
       <div class="menu-panel">
+        <button type="button" data-action="license-status">License…</button>
         <button type="button" data-action="about">About Factory Desk</button>
       </div>
     </div>
@@ -534,6 +535,7 @@ function selectFamily(form, name) {
 }
 
 function openTool(toolId, familyName = state.familyName) {
+  if (!guardLicensed()) return;
   if (!state.familyName && familyName) {
     // ensure family context
   }
@@ -804,6 +806,7 @@ function ensureBackupContext() {
 }
 
 function runBackupStep(kind) {
+  if (!guardLicensed()) return;
   if (!ensureBackupContext()) return;
   const dir = sessionBackupDir();
   openTool(kind === "all" ? "backup-all" : `backup-${kind === "rom-mod" ? "rom-mod" : kind}`);
@@ -1116,6 +1119,7 @@ function stopRun() {
 }
 
 function runProcess(kind) {
+  if (!guardLicensed()) return;
   if (!state.familyName) return toast("Load a family first");
   if (!state.ports.some((p) => p.locked)) return toast("Add/Lock a port first");
   if (state.running) return toast("Already running");
@@ -1196,6 +1200,15 @@ function onAction(action) {
     "chs-stop": () => { stopRun(); log("CHS scan stopped", "err"); },
     "chs-report": () => log("CHS scan report exported (prototype)", "ok"),
     about: () => toast("Family-centric Factory Desk prototype"),
+    "license-status": showLicenseStatus,
+    "activate-license": activateFromGate,
+    "copy-mid": copyMachineId,
+    "deactivate-license": async () => {
+      if (!window.confirm("Remove local license? App will lock until re-activated.")) return;
+      License.deactivate();
+      log("License deactivated", "warn");
+      await enforceLicenseGate();
+    },
     log: () => log("Command stub (prototype)", "warn")
   };
   (map[action] || map.log)();
@@ -1283,8 +1296,125 @@ function init() {
   renderPorts();
   refreshFamilyHeader();
   bindUi();
-  log("Family-centric menu prototype ready", "ok");
-  log("Family → 2.5/3.5 → [NAME] → Cut Head / Zone / P-List / G-List / …", "warn");
+  bindLicenseUi();
+  enforceLicenseGate().then((ok) => {
+    if (ok) {
+      log("License OK · Factory Desk ready", "ok");
+      log("Family → Backup first → repair tools", "warn");
+    } else {
+      log("Activation required — enter serial to unlock", "warn");
+    }
+  });
+}
+
+let _licenseOk = false;
+let _licenseInfo = null;
+
+async function enforceLicenseGate() {
+  const gate = $("#licenseGate");
+  const app = $("#app");
+  const status = await License.validateStored();
+  _licenseOk = !!status.ok;
+  _licenseInfo = status;
+  if (status.ok) {
+    gate.hidden = true;
+    app.classList.remove("locked");
+    $("#statusLeft").textContent = `Licensed · ${status.editionName} · ${status.daysLeft}d left`;
+    return true;
+  }
+  gate.hidden = false;
+  app.classList.add("locked");
+  const mid = await License.machineId();
+  $("#gateMachineId").textContent = mid;
+  const err = $("#licenseErr");
+  if (status.reason && status.reason !== "not_activated") {
+    err.hidden = false;
+    err.textContent = status.message || status.reason;
+  } else {
+    err.hidden = true;
+  }
+  return false;
+}
+
+function guardLicensed() {
+  if (_licenseOk) return true;
+  toast("Activate license first");
+  enforceLicenseGate();
+  return false;
+}
+
+async function activateFromGate() {
+  const input = $("#licenseSerialInput");
+  const err = $("#licenseErr");
+  const raw = input?.value || "";
+  err.hidden = true;
+  const res = await License.activate(raw);
+  if (!res.ok) {
+    err.hidden = false;
+    err.textContent = res.error || "Activation failed";
+    log(`Activation failed: ${res.error}`, "err");
+    return;
+  }
+  log(`Activated · ${res.editionName} · SN ${res.license.serialId}`, "ok");
+  toast(`Licensed · ${res.editionName}`);
+  input.value = "";
+  await enforceLicenseGate();
+}
+
+async function copyMachineId() {
+  const mid = $("#gateMachineId")?.textContent || (await License.machineId());
+  try {
+    await navigator.clipboard.writeText(mid);
+    toast("Machine ID copied");
+  } catch {
+    window.prompt("Copy Machine ID", mid);
+  }
+}
+
+async function showLicenseStatus() {
+  const status = await License.validateStored();
+  const mid = await License.machineId();
+  if (!status.ok) {
+    toast(status.message || "Not licensed");
+    await enforceLicenseGate();
+    return;
+  }
+  const lic = status.license;
+  setIdentifyTrace([
+    `License: ${status.editionName} (${lic.edition})`,
+    `Serial ID: ${lic.serialId}`,
+    `Machine: ${lic.machineId}`,
+    `Issued: ${lic.issuedAt}`,
+    `Expires: ${lic.expiresAt} (${status.daysLeft} days left)`,
+    `Seal: ${lic.seal.slice(0, 16)}…`,
+    "",
+    "Local Machine ID: " + mid,
+    "Seller keygen: license-keygen.html"
+  ]);
+  toast(`${status.editionName} · ${status.daysLeft}d left`);
+  log(`License status OK · ${status.editionName}`, "ok");
+}
+
+function bindLicenseUi() {
+  $("#licenseSerialInput")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      activateFromGate();
+    }
+  });
+  // Periodic re-validation (anti-tamper heartbeat for prototype)
+  setInterval(async () => {
+    if (!_licenseOk) return;
+    const status = await License.validateStored();
+    if (!status.ok) {
+      _licenseOk = false;
+      log(`License revoked: ${status.message}`, "err");
+      toast(status.message || "License invalid");
+      await enforceLicenseGate();
+    } else {
+      _licenseInfo = status;
+    }
+  }, 60_000);
 }
 
 init();

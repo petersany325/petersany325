@@ -393,6 +393,93 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
   box-shadow: 0 14px 36px rgba(0,0,0,0.45); font-size: 0.84rem;
 }
 
+/* —— License gate —— */
+.license-gate {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-items: center;
+  padding: 1.25rem;
+  background:
+    radial-gradient(900px 480px at 20% 0%, rgba(201, 162, 39, 0.12), transparent 55%),
+    rgba(4, 8, 14, 0.92);
+  backdrop-filter: blur(8px);
+}
+.license-gate[hidden] { display: none !important; }
+.license-card {
+  width: min(480px, 100%);
+  padding: 1.35rem 1.4rem 1.25rem;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #161e2a, #10161f);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+}
+.license-brand {
+  display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.85rem;
+}
+.license-brand strong { display: block; font-size: 1.1rem; }
+.license-brand span { color: var(--muted); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; }
+.license-lead { margin: 0 0 0.9rem; color: #c5d0dc; font-size: 0.9rem; line-height: 1.45; }
+.license-mid {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 0.5rem; align-items: center;
+  margin-bottom: 0.85rem; padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line-soft); background: #0a1017; font-size: 0.75rem; color: var(--muted);
+}
+.license-mid code {
+  font-family: var(--mono); color: var(--amber); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis;
+}
+.license-mid .mini, .license-actions .linkish {
+  padding: 0.3rem 0.55rem; border: 1px solid var(--line); font-size: 0.72rem; color: var(--muted);
+}
+.license-mid .mini:hover { color: var(--text); border-color: var(--amber); }
+.license-field { display: grid; gap: 0.35rem; margin-bottom: 0.65rem; }
+.license-field > span { font-size: 0.72rem; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+.license-field input {
+  width: 100%; padding: 0.65rem 0.7rem;
+  border: 1px solid var(--line); background: #0b1118; color: var(--text);
+  font-family: var(--mono); font-size: 0.9rem; letter-spacing: 0.04em;
+}
+.license-err { margin: 0 0 0.65rem; color: var(--danger); font-size: 0.82rem; }
+.license-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.license-actions .btn-primary, .license-actions .btn-ghost {
+  padding: 0.65rem 0.9rem; font-size: 0.84rem; font-weight: 600;
+}
+.license-actions a.btn-ghost {
+  display: inline-grid; place-items: center; text-decoration: none; border: 1px solid var(--line); color: var(--muted);
+}
+.license-actions a.btn-ghost:hover { color: var(--text); border-color: var(--amber); }
+.license-note { margin: 0; color: var(--muted); font-size: 0.75rem; line-height: 1.45; }
+.license-note em { color: #c9b57a; font-style: normal; }
+.app.locked {
+  filter: grayscale(0.35) brightness(0.55);
+  pointer-events: none; user-select: none;
+}
+
+/* —— Seller keygen page —— */
+.keygen-page {
+  min-height: 100%;
+  display: grid; place-items: center; padding: 2rem 1rem;
+}
+.keygen-wrap { width: min(560px, 100%); }
+.keygen-head {
+  display: flex; gap: 0.85rem; align-items: center; margin-bottom: 1rem;
+}
+.keygen-head h1 { margin: 0; font-size: 1.35rem; }
+.keygen-head p { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.85rem; }
+.keygen-panel {
+  display: grid; gap: 0.75rem; padding: 1.1rem;
+  border: 1px solid var(--line); background: #10161f;
+}
+.keygen-panel label {
+  display: grid; gap: 0.3rem; font-size: 0.72rem; color: var(--muted);
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+.keygen-panel input, .keygen-panel select, .keygen-panel textarea {
+  width: 100%; padding: 0.55rem 0.6rem;
+  border: 1px solid var(--line); background: #0b1118; color: var(--text);
+  font-family: var(--mono); font-size: 0.82rem; text-transform: none; letter-spacing: 0;
+}
+.keygen-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.keygen-warn { margin: 0.25rem 0 0; color: #c56757; font-size: 0.75rem; line-height: 1.4; }
+.keygen-panel a { color: var(--amber); font-size: 0.82rem; }
+
 @media (max-width: 1100px) {
   .workspace { grid-template-columns: 210px 1fr; }
   .process-pane { display: none; }

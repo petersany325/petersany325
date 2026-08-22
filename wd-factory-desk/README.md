@@ -29,6 +29,12 @@ Each **Family** has its own cascading tool menu:
 - Modules / DIR
 - ARCO / SF / DCM
 
+## License (for sales)
+
+App opens locked until a serial is activated. Preferred flow: customer sends **Machine ID** → seller issues a **machine-bound** key from `license-keygen.html`.
+
+See [`LICENSE-SYSTEM.md`](./LICENSE-SYSTEM.md) for the anti-crack design (Ed25519 + HW fingerprint + check inside driver path for the native build).
+
 ## Open
 
 ```bash
@@ -36,11 +42,15 @@ cd wd-factory-desk
 python3 -m http.server 8765
 ```
 
+- App: http://localhost:8765/  
+- Seller keygen: http://localhost:8765/license-keygen.html  
+
 Or open `index.html` directly.
 
 ## Docs
 
 - [`FAMILY-FW-REFERENCE.md`](./FAMILY-FW-REFERENCE.md)
 - [`family-fw-reference.json`](./family-fw-reference.json)
+- [`LICENSE-SYSTEM.md`](./LICENSE-SYSTEM.md)
 
-UI prototype only — no real drive I/O.
+UI prototype only — no real drive I/O. JS license is a UX/crypto prototype; production lock must be native.

@@ -10,6 +10,34 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div class="license-gate" id="licenseGate" hidden>
+    <div class="license-card">
+      <div class="license-brand">
+        <span class="brand-mark">WD</span>
+        <div>
+          <strong>Factory Desk</strong>
+          <span>License activation required</span>
+        </div>
+      </div>
+      <p class="license-lead">Enter your serial to unlock this PC. The license binds to this Machine ID after activation.</p>
+      <div class="license-mid">
+        <span>Machine ID</span>
+        <code id="gateMachineId">…</code>
+        <button type="button" class="mini" data-action="copy-mid" title="Copy">Copy</button>
+      </div>
+      <label class="license-field">
+        <span>Serial / License key</span>
+        <input type="text" id="licenseSerialInput" placeholder="WDFD-PRO-….…." spellcheck="false" autocomplete="off" />
+      </label>
+      <p class="license-err" id="licenseErr" hidden></p>
+      <div class="license-actions">
+        <button type="button" class="btn-primary" data-action="activate-license">Activate</button>
+        <a class="btn-ghost linkish" href="license-keygen.html" target="_blank" rel="noopener">Seller keygen</a>
+      </div>
+      <p class="license-note">Sales tip: send Machine ID to seller → receive a <em>machine-bound</em> key (harder to share). Open seat serials bind on first activate.</p>
+    </div>
+  </div>
+
   <div class="app" id="app">
     <header class="titlebar">
       <div class="titlebar-brand">
@@ -126,6 +154,7 @@
   </div>
 
   <div class="toast" id="toast" hidden></div>
+  <script src="license.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
