@@ -1,35 +1,47 @@
-# Windex WD — آنلاین
+# Windex WD — آنلاین + اجرا
 
-## اجرای آنلاین (همین الان — لایو)
+## آنلاین (تست UI)
 
-https://tired-garlics-find.loca.lt/
+**کار می‌کند (بعد از push):**
 
-اگر صفحهٔ هشدار localtunnel آمد، Continue را بزنید.
+https://htmlpreview.github.io/?https://raw.githubusercontent.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/WindexWD-Prototype-Test/resources/app/index.html
 
-## لینک پایدار روی گیت‌هاب
+**GitHub Pages** (اگر در تنظیمات repo فعال شود):
 
-https://raw.githack.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/app/index.html
+https://petersany325.github.io/petersany325/
 
-Keygen:  
-https://raw.githack.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/app/license-keygen.html
+**کار نمی‌کند برای نمایش UI:**
 
-روی صفحه قفل: **Demo unlock (14 days)** یا **License Settings**.
+- jsDelivr / raw.githubusercontent — `Content-Type: text/plain` → مرورگر سورس HTML نشان می‌دهد، نه اپ
 
-## نصب روی مسیر `D:\test windex`
+Demo unlock → License Settings
 
-دانلود:  
-https://github.com/petersany325/petersany325/raw/cursor/wd-factory-desk-ui-proto-a3a0/wd-factory-desk/dist/WindexWD-to-D-test-windex.zip
-
-1. آنزیپ → پوشه `test-windex` را به `D:\test windex` کپی/تغییر نام کنید  
-2. اجرا: `D:\test windex\START-WINDEX-WD.bat`
-
-ساختار:
+## مسیر ویندوز — اگر باز نمی‌شود
 
 ```
-D:\test windex\
-  app\
-  FW\
-  Backup\
-  driver\
-  START-WINDEX-WD.bat
+D:\test windex\WindexWD-Prototype-Test\
 ```
+
+### روش ۱ — فوری (توصیه)
+
+1. **CHECK.bat** — فایل‌ها را چک کنید  
+2. **RUN.bat** — سرور محلی `http://127.0.0.1:8765/` + Edge app mode  
+   - **index.html را مستقیم باز نکنید** (`file://` → لایسنس کار نمی‌کند)
+
+### روش ۲ — ساخت EXE
+
+1. **BUILD-EXE.bat** — یک‌بار (باگ قبلی رفع شد)  
+2. **WindexWD.exe** یا **RUN.bat**
+
+### دانلود آپدیت
+
+https://github.com/petersany325/petersany325/raw/cursor/wd-factory-desk-ui-proto-a3a0/wd-factory-desk/dist/WindexWD-Prototype-Test.zip
+
+آنزیپ در `D:\test windex\` → پوشه `WindexWD-Prototype-Test`
+
+### علت رایج «باز نمی‌شود»
+
+- پوشه را دوبار کلیک می‌کنید (باید **RUN.bat** بزنید)  
+- `index.html` مستقیم → Demo unlock جواب نمی‌دهد  
+- `BUILD-EXE.bat` قدیمی `resources\app` را پاک می‌کرد — zip جدید بگیرید  
+- `WindexWD.exe` ساخته نشده → **RUN.bat** کافی است
