@@ -1,0 +1,15 @@
+Windex WD — مسیر نصب ذخیره‌شده
+================================
+
+App install path (این پوشه):
+  D:\test windex\WindexWD-Prototype-Test
+
+Project data root:
+  D:\test windex
+
+  D:\test windex\FW       ← ARCO + SF packs
+  D:\test windex\Backup   ← HDD backup dumps
+
+اجرا: RUN.bat
+
+Config: resources\app\project-path.json

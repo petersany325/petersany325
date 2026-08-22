@@ -2,6 +2,7 @@ const { app, BrowserWindow, Menu, dialog, shell, ipcMain } = require("electron")
 const path = require("path");
 const fs = require("fs");
 
+const APP_DEFAULT = "D:\\test windex\\WindexWD-Prototype-Test";
 const PROJECT_DEFAULT = "D:\\test windex";
 let mainWindow = null;
 
@@ -18,6 +19,7 @@ function readSettings() {
     return JSON.parse(fs.readFileSync(settingsPath(), "utf8"));
   } catch {
     return {
+      appRoot: APP_DEFAULT,
       projectRoot: PROJECT_DEFAULT,
       packRoot: path.join(PROJECT_DEFAULT, "FW"),
       backupRoot: path.join(PROJECT_DEFAULT, "Backup"),

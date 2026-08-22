@@ -1,5 +1,6 @@
 {
   "source": "Windex F palmer",
+  "appRoot": "D:\\\\test windex\\\\WindexWD-Prototype-Test",
   "projectRoot": "D:\\\\test windex",
   "note": "Per-family ARCO/SF differs via epath + flags under D:\\test windex\\FW\\…",
   "families": {

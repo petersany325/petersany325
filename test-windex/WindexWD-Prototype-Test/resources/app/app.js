@@ -16,7 +16,9 @@ const FAM35 = [
   "MALIBU","REMBRNDT","TRAILXLB","TRESXLB2","APOLLO","REMBRNAE"
 ];
 
-/** Default Windows project folder (user lab path) */
+/** Saved app install path on this PC */
+const APP_ROOT = "D:\\\\test windex\\\\WindexWD-Prototype-Test";
+/** Lab data root — FW packs + HDD backups */
 const PROJECT_ROOT = "D:\\\\test windex";
 
 const FAMILY_FW = {
@@ -139,7 +141,9 @@ const state = {
   epath: null,
   /** Active FW source for write/repair: pack (ARCO+SF) or backup (original HDD dump) */
   fwSource: "pack",
-  /** Project root on this PC */
+  /** App install folder on this PC */
+  appRoot: APP_ROOT,
+  /** Project data root on this PC */
   projectRoot: PROJECT_ROOT,
   /** Root 1: factory ARCO+SF package tree */
   packRoot: `${PROJECT_ROOT}\\\\FW`,
@@ -490,7 +494,7 @@ function refreshFamilyHeader() {
     $("#familyRibbon").hidden = true;
     $("#telemFamily").textContent = "—";
     $("#telemFw").textContent = "—";
-    $("#statusLeft").textContent = `Project: ${state.projectRoot || PROJECT_ROOT}`;
+    $("#statusLeft").textContent = `App: ${state.appRoot || APP_ROOT}`;
     $("#statusRight").textContent = `Pack: ${state.packRoot}  |  Backup: ${state.backupRoot}`;
     return;
   }
@@ -1315,18 +1319,32 @@ function init() {
   }).then((ok) => {
     if (ok) {
       log("License OK · Windex WD desktop ready", "ok");
-      log(`Project: ${state.projectRoot || PROJECT_ROOT}`, "warn");
+      log(`App: ${state.appRoot || APP_ROOT} · Data: ${state.projectRoot || PROJECT_ROOT}`, "warn");
     } else {
       log("Activation required — enter serial or open License Settings", "warn");
     }
   });
 }
 
+async function loadProjectPaths() {
+  try {
+    const r = await fetch("project-path.json", { cache: "no-store" });
+    if (!r.ok) return;
+    const p = await r.json();
+    if (p.appRoot) state.appRoot = p.appRoot;
+    if (p.projectRoot) state.projectRoot = p.projectRoot;
+    if (p.packRoot) state.packRoot = p.packRoot;
+    if (p.backupRoot) state.backupRoot = p.backupRoot;
+  } catch { /* file:// or missing — use constants */ }
+}
+
 async function loadDesktopBootstrap() {
+  await loadProjectPaths();
   const desk = window.windexDesktop;
   if (!desk?.readSettings) return;
   try {
     const s = await desk.readSettings();
+    if (s.appRoot) state.appRoot = s.appRoot;
     if (s.projectRoot) state.projectRoot = s.projectRoot;
     if (s.packRoot) state.packRoot = s.packRoot;
     if (s.backupRoot) state.backupRoot = s.backupRoot;
@@ -1377,6 +1395,7 @@ async function fillSettingsModal() {
     try { licFile = await window.windexDesktop.licensePath(); } catch { /* ignore */ }
   }
   $("#setLicFile").textContent = licFile;
+  $("#setAppRoot").value = state.appRoot || APP_ROOT;
   $("#setProjectRoot").value = state.projectRoot || PROJECT_ROOT;
   $("#setPackRoot").value = state.packRoot;
   $("#setBackupRoot").value = state.backupRoot;
@@ -1405,6 +1424,7 @@ async function activateFromSettings() {
 }
 
 async function saveSettingsPaths() {
+  state.appRoot = $("#setAppRoot")?.value.trim() || APP_ROOT;
   state.projectRoot = $("#setProjectRoot")?.value.trim() || PROJECT_ROOT;
   state.packRoot = $("#setPackRoot")?.value.trim() || `${state.projectRoot}\\\\FW`;
   state.backupRoot = $("#setBackupRoot")?.value.trim() || `${state.projectRoot}\\\\Backup`;
@@ -1412,6 +1432,7 @@ async function saveSettingsPaths() {
   if (src) state.fwSource = src.value;
   if (window.windexDesktop?.writeSettings) {
     await window.windexDesktop.writeSettings({
+      appRoot: state.appRoot,
       projectRoot: state.projectRoot,
       packRoot: state.packRoot,
       backupRoot: state.backupRoot,
@@ -1420,7 +1441,7 @@ async function saveSettingsPaths() {
   }
   refreshFamilyHeader();
   toast("Paths saved");
-  log(`Paths saved · ${state.projectRoot}`, "ok");
+  log(`Paths saved · app ${state.appRoot} · data ${state.projectRoot}`, "ok");
 }
 
 async function enforceLicenseGate() {

@@ -1,4 +1,5 @@
-Windex WD — مسیر D:\test windex\WindexWD-Prototype-Test
+مسیر ذخیره‌شده:
+  D:\test windex\WindexWD-Prototype-Test
 ============================================================
 
 مهم: پوشه را دوبار کلیک نکنید. index.html را مستقیم باز نکنید.

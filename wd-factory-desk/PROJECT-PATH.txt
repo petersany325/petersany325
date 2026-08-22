@@ -1,29 +1,26 @@
-Windex WD — مسیر پروژه پیش‌فرض
-================================
+Windex WD — مسیرهای ذخیره‌شده
+==============================
 
-Project root:
+App install (برنامه):
+  D:\test windex\WindexWD-Prototype-Test
+
+Project data root (داده‌های لاب):
   D:\test windex
 
-ساختار پیشنهادی:
+ساختار:
 
   D:\test windex\
-    FW\                          ← پکیج ARCO + SF (Path 1)
-      2.5\
-        10\FIREBIRD packs…\
-        46\020PP\   0506B\ …
-      3.5\
-        1\701537\ …
-    Backup\                      ← بکاپ اورجینال هارد (Path 2)
-      PALMER\
-        WX21A84K3821\
-          ROM.BIN
-          ROM_MOD\
-          SA\
-          TRACK\
-    app\                         ← (اختیاری) کپی پروتوتایپ UI
+    WindexWD-Prototype-Test\     ← برنامه (RUN.bat, WindexWD.exe)
+      resources\app\             ← UI + project-path.json
+    FW\                          ← پکیج ARCO + SF
+      2.5\10\FIREBIRD …
+      3.5\1\701537 …
+    Backup\                      ← بکاپ اورجینال هارد
+      PALMER\WX21A84K3821\…
 
-در UI:
+در UI (Settings → Paths):
+  App path    = D:\test windex\WindexWD-Prototype-Test
   Pack root   = D:\test windex\FW
   Backup root = D:\test windex\Backup
 
-این مسیرها در Backup → Firmware Paths قابل تغییرند.
+فایل JSON: resources\app\project-path.json
