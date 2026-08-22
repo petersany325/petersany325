@@ -211,7 +211,7 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
 
 .family-ribbon {
   display: grid;
-  grid-template-columns: repeat(10, minmax(0, 1fr));
+  grid-template-columns: repeat(11, minmax(0, 1fr));
   gap: 0.4rem;
   margin: 1.1rem 0 1rem;
 }
@@ -277,6 +277,56 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
 }
 .tool-actions button.primary { background: var(--amber); color: #16110a; border-color: var(--amber); font-weight: 600; }
 .tool-actions button:hover { color: var(--text); border-color: var(--amber); }
+
+.paths-panel {
+  margin-bottom: 0.85rem; padding: 0.75rem 0.8rem;
+  border: 1px solid var(--line); background: #101722;
+}
+.paths-title {
+  margin: 0 0 0.65rem; font-size: 0.78rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--amber); font-weight: 600;
+}
+.paths-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem;
+}
+.path-field { display: grid; gap: 0.35rem; }
+.path-field > span {
+  font-size: 0.72rem; color: var(--muted); letter-spacing: 0.03em;
+}
+.path-row input {
+  width: 100%; font-family: var(--mono); font-size: 0.78rem; color: var(--text);
+  background: #0b1118; border: 1px solid var(--line); padding: 0.45rem 0.55rem;
+}
+.path-hint {
+  font-style: normal; font-family: var(--mono); font-size: 0.68rem; color: #7f8b9c;
+}
+.path-source-row {
+  display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: center;
+  margin-top: 0.7rem; padding-top: 0.65rem; border-top: 1px solid var(--line-soft);
+  font-size: 0.78rem; color: var(--muted);
+}
+.path-source-row button {
+  padding: 0.35rem 0.65rem; border: 1px solid var(--line); font-size: 0.75rem;
+}
+.path-source-row button:hover { border-color: var(--amber); color: var(--text); }
+.radio-inline {
+  display: inline-flex; gap: 0.35rem; align-items: center; color: var(--text); font-size: 0.78rem;
+}
+.radio-inline input { accent-color: var(--amber); }
+
+.backup-checklist {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.5rem;
+}
+.bk-item {
+  padding: 0.65rem 0.7rem; border: 1px solid var(--line); background: #0c1219;
+  display: grid; gap: 0.2rem;
+}
+.bk-item strong { font-size: 0.82rem; }
+.bk-item span { font-family: var(--mono); font-size: 0.68rem; color: var(--muted); }
+.bk-item em { font-style: normal; font-size: 0.7rem; color: var(--amber); letter-spacing: 0.04em; text-transform: uppercase; }
+.bk-item.done { border-color: color-mix(in srgb, var(--ok) 55%, var(--line)); }
+.bk-item.done em { color: var(--ok); }
+.bk-item.todo em { color: var(--muted); }
 
 .data-table {
   width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.78rem;
@@ -348,6 +398,9 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
   .process-pane { display: none; }
   .family-ribbon { grid-template-columns: repeat(5, 1fr); }
   .scan-params { grid-template-columns: repeat(2, 1fr); }
+  .id-grid { grid-template-columns: repeat(2, 1fr); }
+  .paths-grid { grid-template-columns: 1fr; }
+  .backup-checklist { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 760px) {
   .workspace { grid-template-columns: 1fr; }
@@ -356,4 +409,5 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
   .submenu-panel { left: 0; top: 100%; }
   .op-grid { grid-template-columns: 1fr; }
   .scan-params { grid-template-columns: 1fr; }
+  .backup-checklist { grid-template-columns: 1fr; }
 }

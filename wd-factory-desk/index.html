@@ -65,11 +65,13 @@
               <button type="button" data-action="identify-drive">2 · Identify</button>
               <button type="button" data-action="read-rom4f">3 · Read ROM 4F</button>
               <button type="button" data-action="resolve-fw">4 · Resolve FW Pack</button>
+              <button type="button" data-action="backup-all">5 · Full Backup First</button>
             </div>
             <pre class="mono-block compact" id="identifyTrace">Waiting for port detect…</pre>
           </div>
 
           <div class="family-ribbon" id="familyRibbon" hidden>
+            <button type="button" class="rib" data-tool="backup"><b>BK</b><span>Backup</span></button>
             <button type="button" class="rib" data-tool="cuthead"><b>✂</b><span>Cut Head</span></button>
             <button type="button" class="rib" data-tool="zone"><b>▣</b><span>Zone</span></button>
             <button type="button" class="rib" data-tool="atascan"><b>ATA</b><span>ATA Scan</span></button>
@@ -84,7 +86,8 @@
 
           <div class="tool-workspace" id="toolWorkspace">
             <div class="empty-hint">
-              Open <strong>Family → 2.5 / 3.5 → [Family Name]</strong> then pick an operation from the family submenu or ribbon.
+              Identify → Resolve FW Pack → <strong>Full Backup First</strong> (ROM / ROM modules / SA / tracks), then open family repair tools.
+              Set two roots under Backup → Firmware Paths: ARCO+SF pack and original HDD backup.
             </div>
           </div>
         </section>

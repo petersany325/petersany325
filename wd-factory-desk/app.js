@@ -45,6 +45,16 @@ const FAMILY_FW = {
 };
 
 const FAMILY_OPS = [
+  {
+    id: "backup", label: "Backup ▸", children: [
+      { id: "backup-all", label: "Full Backup (ROM+SA+Track)" },
+      { id: "backup-rom", label: "Backup ROM (SVROM)" },
+      { id: "backup-rom-mod", label: "Backup ROM Modules" },
+      { id: "backup-sa", label: "Backup SA Modules" },
+      { id: "backup-track", label: "Backup Tracks (svtrack)" },
+      { id: "backup-paths", label: "Firmware Paths…" }
+    ]
+  },
   { id: "cuthead", label: "Cut Head…", desc: "AC_HDDEPOPCTRL" },
   {
     id: "zone", label: "Zone Ops ▸", children: [
@@ -124,6 +134,13 @@ const state = {
   familyName: null,
   fwLabel: null,
   epath: null,
+  /** Active FW source for write/repair: pack (ARCO+SF) or backup (original HDD dump) */
+  fwSource: "pack",
+  /** Root 1: factory ARCO+SF package tree */
+  packRoot: "D:\\\\FW\\\\Family",
+  /** Root 2: backup of original HDD firmware (ROM/modules/SA/tracks) */
+  backupRoot: "D:\\\\Backup",
+  backupDone: { rom: false, romMod: false, sa: false, track: false },
   tool: null,
   running: false,
   runTimer: null,
@@ -135,6 +152,17 @@ const state = {
     { id: "com3", type: "terminal", label: "COM3", base: "SIO 115200", vendor: "WDC", model: "Terminal target", serial: "SIO-PENDING", ataFw: "—", form: "—", family: "—", familyId: "—", locked: false }
   ]
 };
+
+function sessionBackupDir() {
+  const fam = state.familyName || state.identity?.family || "UNKNOWN";
+  const sn = state.identity?.serial || currentPort()?.serial || "NOSN";
+  return `${state.backupRoot}\\\\${fam}\\\\${sn}\\\\`;
+}
+
+function activeFwPath() {
+  if (state.fwSource === "backup") return sessionBackupDir();
+  return state.epath || `${state.packRoot}\\\\${state.familyName || "?"}\\\\`;
+}
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -246,6 +274,9 @@ function buildMenubar() {
       <button type="button" class="menu-trigger">Tools</button>
       <div class="menu-panel">
         <div class="menu-label">Active family tools</div>
+        <button type="button" data-tool="backup">Backup (first)</button>
+        <button type="button" data-tool="backup-paths">Firmware Paths…</button>
+        <hr />
         <button type="button" data-tool="cuthead">Cut Head</button>
         <button type="button" data-tool="zone">Zone</button>
         <button type="button" data-tool="atascan">ATA Scan</button>
@@ -423,7 +454,7 @@ function resolveFwPack() {
   state.epath = choice?.epath || `D:\\\\${state.familyForm}\\\\??\\\\${state.fwLabel}\\\\`;
 
   refreshFamilyHeader();
-  openTool("arco");
+  openTool("backup");
   setIdentifyTrace([
     `Vendor=${id.vendor}  Family=${id.family} (${id.familyId})`,
     `Model=${id.model}`,
@@ -432,36 +463,50 @@ function resolveFwPack() {
     `ROM 4F FW=${id.rom4f}`,
     `Ctrl FW=${id.ctrlFw}`,
     "",
-    `Resolved ARCO/SF pack: ${state.fwLabel}`,
-    `epath = ${state.epath}`,
+    `Path 1 · Pack (ARCO+SF): ${state.epath}`,
+    `Path 2 · Backup original: ${sessionBackupDir()}`,
+    `Active source: ${state.fwSource}`,
     `arco_type=${ref?.flags?.arco_type ?? "?"}  tar_file=${ref?.flags?.tar_file ?? "?"}`,
     "",
-    "Ready for family tools / ARCO / SF"
+    "Next: Full Backup (ROM + ROM modules + SA + tracks) before repair"
   ]);
   log(`FW pack for ARCO/SF → ${state.fwLabel}`, "ok");
-  toast(`FW pack ${state.fwLabel}`);
+  toast(`FW pack ${state.fwLabel} · backup next`);
 }
 
 function refreshFamilyHeader() {
   $("#transportLabel").textContent = state.mode === "sata" ? "SATA · PassThrough exclusive" : "Terminal · SIO / COM";
   if (!state.familyName) {
     $("#familyTitle").textContent = "Select a Family";
-    $("#familyMeta").textContent = "Each family has its own tool menu: Cut Head, Zone, P-List, G-List, Modules, ARCO, SF…";
+    $("#familyMeta").textContent = "Each family: Backup first → Cut Head, Zone, P/G-List, Modules, ARCO, SF…";
     $("#familyRibbon").hidden = true;
     $("#telemFamily").textContent = "—";
     $("#telemFw").textContent = "—";
     $("#statusLeft").textContent = "No family loaded";
-    $("#statusRight").textContent = "RPM path: —";
+    $("#statusRight").textContent = `Pack: ${state.packRoot}  |  Backup: ${state.backupRoot}`;
     return;
   }
+  const bk = sessionBackupDir();
+  const src = state.fwSource === "backup" ? "BACKUP" : "PACK";
   $("#familyTitle").textContent = `${state.familyName} · ${state.familyForm}"`;
-  $("#familyMeta").textContent = `FW ${state.fwLabel || "—"}  ·  ${state.epath || "—"}  ·  tools extensible per family`;
+  $("#familyMeta").textContent = `FW ${state.fwLabel || "—"}  ·  src=${src}  ·  pack ${state.epath || "—"}  ·  backup ${bk}`;
   $("#familyRibbon").hidden = false;
   $("#telemFamily").textContent = state.familyName;
   $("#telemFw").textContent = state.fwLabel || "—";
-  $("#statusLeft").textContent = `Family ${state.familyName} loaded — tools ready`;
-  $("#statusRight").textContent = `RPM path: ${state.epath || "—"}`;
+  $("#statusLeft").textContent = `Family ${state.familyName} · backup ${backupSummary()} · active=${src}`;
+  $("#statusRight").textContent = `Pack: ${state.epath || state.packRoot}  |  Backup: ${bk}`;
   setQueue("family", "done");
+}
+
+function backupSummary() {
+  const d = state.backupDone;
+  const parts = [
+    d.rom ? "ROM✓" : "ROM·",
+    d.romMod ? "ROMmod✓" : "ROMmod·",
+    d.sa ? "SA✓" : "SA·",
+    d.track ? "TRK✓" : "TRK·"
+  ];
+  return parts.join(" ");
 }
 
 function selectFamily(form, name) {
@@ -482,9 +527,9 @@ function selectFamily(form, name) {
   state.fwLabel = fw;
   state.epath = path;
   refreshFamilyHeader();
-  openTool("plist");
-  log(`Family menu loaded: ${form}" / ${name} / FW ${fw}`, "warn");
-  toast(`${name} · ${fw}`);
+  openTool("backup");
+  log(`Family menu loaded: ${form}" / ${name} / FW ${fw} — backup first`, "warn");
+  toast(`${name} · ${fw} · backup first`);
   closeMenus();
 }
 
@@ -499,6 +544,7 @@ function openTool(toolId, familyName = state.familyName) {
   state.tool = toolId;
   $("#telemTool").textContent = toolId;
   $$(".rib").forEach((b) => b.classList.toggle("active", b.dataset.tool === toolId ||
+    (toolId.startsWith("backup") && b.dataset.tool === "backup") ||
     (toolId.startsWith("plist") && b.dataset.tool === "plist") ||
     (toolId.startsWith("glist") && b.dataset.tool === "glist") ||
     (toolId.startsWith("zone") && b.dataset.tool === "zone") ||
@@ -513,6 +559,13 @@ function openTool(toolId, familyName = state.familyName) {
   setQueue("tool", "running");
 
   const shells = {
+    backup: () => backupHtml(title, toolId),
+    "backup-all": () => backupHtml(title, toolId),
+    "backup-rom": () => backupHtml(title, toolId),
+    "backup-rom-mod": () => backupHtml(title, toolId),
+    "backup-sa": () => backupHtml(title, toolId),
+    "backup-track": () => backupHtml(title, toolId),
+    "backup-paths": () => backupHtml(title, "backup-paths"),
     cuthead: () => `
       <div class="tool-head"><div><h2>${title}</h2><p>kill → AC_HDDEPOPCTRL · per-family head map</p></div>
       <div class="tool-actions"><button class="primary" data-action="exec-cuthead">Depop Head</button></div></div>
@@ -588,6 +641,7 @@ function openTool(toolId, familyName = state.familyName) {
   };
 
   const key = toolId in shells ? toolId
+    : toolId.startsWith("backup") ? "backup"
     : toolId.startsWith("ata") ? "atascan"
     : toolId.startsWith("chs") ? "chsscan"
     : toolId.split("-")[0];
@@ -599,6 +653,9 @@ function openTool(toolId, familyName = state.familyName) {
 
 function toolLabel(id) {
   const map = {
+    backup: "Backup", "backup-all": "Full Backup", "backup-rom": "Backup ROM",
+    "backup-rom-mod": "Backup ROM Modules", "backup-sa": "Backup SA", "backup-track": "Backup Tracks",
+    "backup-paths": "Firmware Paths",
     cuthead: "Cut Head", zone: "Zone Ops", atascan: "ATA Scan", chsscan: "CHS Scan",
     plist: "P-List", glist: "G-List",
     modules: "Modules / DIR", arco: "ARCO", sf: "SF Chain", dcm: "DCM / Capacity"
@@ -606,6 +663,247 @@ function toolLabel(id) {
   if (id.startsWith("ata-")) return "ATA Scan";
   if (id.startsWith("chs-")) return "CHS Scan";
   return map[id] || map[id.split("-")[0]] || id;
+}
+
+function backupHtml(title, toolId = "backup") {
+  const dir = sessionBackupDir();
+  const d = state.backupDone;
+  const packPath = state.epath || `${state.packRoot}\\\\${state.familyName || "FAMILY"}\\\\`;
+  const mark = (ok) => ok ? "done" : "todo";
+  return `
+    <div class="tool-head">
+      <div>
+        <h2>${title}</h2>
+        <p>SVROM · ROM modules · rdflnom SA · svtrack · before any repair · focus: <b>${toolId}</b></p>
+      </div>
+      <div class="tool-actions">
+        <button class="primary" data-action="backup-all">Full Backup</button>
+        <button data-action="backup-rom">ROM</button>
+        <button data-action="backup-rom-mod">ROM Mod</button>
+        <button data-action="backup-sa">SA</button>
+        <button data-action="backup-track">Tracks</button>
+      </div>
+    </div>
+
+    <section class="paths-panel">
+      <h3 class="paths-title">Two firmware roots</h3>
+      <div class="paths-grid">
+        <label class="path-field">
+          <span>1 · ARCO + SF package (factory pack)</span>
+          <div class="path-row">
+            <input type="text" id="inputPackRoot" value="${escapeAttr(state.packRoot)}" spellcheck="false" />
+          </div>
+          <em class="path-hint">Resolved pack folder: ${escapeHtml(packPath)}</em>
+        </label>
+        <label class="path-field">
+          <span>2 · Backup original HDD firmware</span>
+          <div class="path-row">
+            <input type="text" id="inputBackupRoot" value="${escapeAttr(state.backupRoot)}" spellcheck="false" />
+          </div>
+          <em class="path-hint">Session dump: ${escapeHtml(dir)}</em>
+        </label>
+      </div>
+      <div class="path-source-row">
+        <span>Active FW source for write / repair:</span>
+        <label class="radio-inline"><input type="radio" name="fwSource" value="pack" ${state.fwSource === "pack" ? "checked" : ""} /> Pack (ARCO+SF)</label>
+        <label class="radio-inline"><input type="radio" name="fwSource" value="backup" ${state.fwSource === "backup" ? "checked" : ""} /> Original backup</label>
+        <button type="button" data-action="save-paths">Save Paths</button>
+      </div>
+    </section>
+
+    <div class="backup-checklist">
+      <div class="bk-item ${mark(d.rom)}"><strong>ROM</strong><span>SVROM → ROM.BIN</span><em>${d.rom ? "saved" : "pending"}</em></div>
+      <div class="bk-item ${mark(d.romMod)}"><strong>ROM Modules</strong><span>DIR 0x0B · dump mods (4F, 0D, …)</span><em>${d.romMod ? "saved" : "pending"}</em></div>
+      <div class="bk-item ${mark(d.sa)}"><strong>SA Modules</strong><span>rdflnom · 0x0B/33/34/47/…</span><em>${d.sa ? "saved" : "pending"}</em></div>
+      <div class="bk-item ${mark(d.track)}"><strong>Tracks</strong><span>svtrack → trkNNN.bin</span><em>${d.track ? "saved" : "pending"}</em></div>
+    </div>
+
+    <div class="op-grid" style="margin-top:0.75rem">
+      <button type="button" data-action="backup-all"><strong>Full Backup First</strong><span>ROM → ROM mod → SA → tracks</span></button>
+      <button type="button" data-action="backup-rom"><strong>Backup ROM</strong><span>SVROM / ROM.BIN</span></button>
+      <button type="button" data-action="backup-rom-mod"><strong>Backup ROM Modules</strong><span>overlay + ctrl modules</span></button>
+      <button type="button" data-action="backup-sa"><strong>Backup SA Modules</strong><span>resident files dump</span></button>
+      <button type="button" data-action="backup-track"><strong>Backup Tracks</strong><span>svtrack · SA cylinders</span></button>
+      <button type="button" data-action="use-backup-source"><strong>Use Backup as FW Source</strong><span>switch active path → original</span></button>
+    </div>
+
+    <pre class="mono-block compact" id="backupTrace" style="margin-top:0.85rem">Target: ${escapeHtml(dir)}
+Layout:
+  ROM.BIN
+  ROM_MOD\\mod_0x4F.bin  mod_0x0D.bin  …
+  SA\\sa_0x0B.bin  sa_0x33.bin  sa_0x34.bin  sa_0x47.bin  …
+  TRACK\\trk000.bin  trk001.bin  …
+
+Run Full Backup before manual repair.</pre>
+  `;
+}
+
+function escapeAttr(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+}
+
+function setBackupTrace(lines) {
+  const el = $("#backupTrace");
+  if (!el) return;
+  el.textContent = Array.isArray(lines) ? lines.join("\n") : String(lines);
+}
+
+function saveFwPaths() {
+  const packEl = $("#inputPackRoot");
+  const bakEl = $("#inputBackupRoot");
+  if (packEl) state.packRoot = packEl.value.trim() || state.packRoot;
+  if (bakEl) state.backupRoot = bakEl.value.trim() || state.backupRoot;
+  const src = document.querySelector('input[name="fwSource"]:checked');
+  if (src) state.fwSource = src.value;
+  if (state.familyName && state.fwSource === "pack" && state.fwLabel) {
+    const ref = FAMILY_FW[state.familyName];
+    const choice = ref?.choices?.find((c) => c.label === state.fwLabel);
+    if (choice) state.epath = choice.epath;
+    else state.epath = `${state.packRoot}\\\\${state.familyName}\\\\${state.fwLabel}\\\\`;
+  }
+  refreshFamilyHeader();
+  log(`Paths saved · pack=${state.packRoot} · backup=${state.backupRoot} · source=${state.fwSource}`, "ok");
+  toast("Firmware paths saved");
+  if (state.tool?.startsWith("backup")) openTool(state.tool);
+}
+
+function ensureBackupContext() {
+  if (!state.familyName) {
+    const id = state.identity;
+    const p = currentPort();
+    if (id?.family) {
+      state.familyName = id.family;
+      state.familyForm = id.form || (FAM25.includes(id.family) ? "2.5" : "3.5");
+      state.fwLabel = state.fwLabel || id.rom4f || id.ataFw;
+      refreshFamilyHeader();
+    } else if (p && !p.empty && p.family !== "—") {
+      state.familyName = p.family;
+      state.familyForm = p.form;
+      state.fwLabel = p.ataFw;
+      refreshFamilyHeader();
+    } else {
+      toast("Identify / load family first");
+      return false;
+    }
+  }
+  if (!state.ports.some((x) => x.locked)) {
+    const p = currentPort();
+    if (p && !p.empty) {
+      state.ports.forEach((x) => { x.locked = x.id === p.id; });
+      renderPorts();
+    } else {
+      toast("Lock a port first");
+      return false;
+    }
+  }
+  return true;
+}
+
+function runBackupStep(kind) {
+  if (!ensureBackupContext()) return;
+  const dir = sessionBackupDir();
+  openTool(kind === "all" ? "backup-all" : `backup-${kind === "rom-mod" ? "rom-mod" : kind}`);
+
+  const steps = {
+    rom: () => {
+      log(`SVROM → ${dir}ROM.BIN`, "warn");
+      setBackupTrace([
+        `[ROM] vscon`,
+        `[ROM] SVROM → ${dir}ROM.BIN`,
+        `[ROM] verify ROYL marker 0x4C594F52`,
+        "OK · ROM image saved"
+      ]);
+      state.backupDone.rom = true;
+      toast("ROM backed up");
+    },
+    "rom-mod": () => {
+      log(`ROM modules → ${dir}ROM_MOD\\`, "warn");
+      setBackupTrace([
+        "[ROMmod] DIR 0x0B / dirrom",
+        `[ROMmod] dump module 0x4F → ${dir}ROM_MOD\\mod_0x4F.bin`,
+        `[ROMmod] dump module 0x0D → ${dir}ROM_MOD\\mod_0x0D.bin`,
+        "[ROMmod] dump remaining ROM-resident entries",
+        "OK · ROM modules saved"
+      ]);
+      state.backupDone.romMod = true;
+      toast("ROM modules backed up");
+    },
+    sa: () => {
+      log(`SA modules rdflnom → ${dir}SA\\`, "warn");
+      setBackupTrace([
+        "[SA] rdflnom 0x0B  → SA\\sa_0x0B.bin  (DIR)",
+        "[SA] rdflnom 0x33  → SA\\sa_0x33.bin  (P-List)",
+        "[SA] rdflnom 0x34  → SA\\sa_0x34.bin  (G-List)",
+        "[SA] rdflnom 0x47  → SA\\sa_0x47.bin  (DCM)",
+        "[SA] rdflnom 0x28 / 0x02 / SF logs …",
+        "OK · SA modules saved"
+      ]);
+      state.backupDone.sa = true;
+      toast("SA modules backed up");
+    },
+    track: () => {
+      log(`svtrack → ${dir}TRACK\\`, "warn");
+      setBackupTrace([
+        "[TRK] enumerate SA / critical cylinders",
+        `[TRK] svtrack → ${dir}TRACK\\trk000.bin …`,
+        "[TRK] map written to TRACK\\trackmap.txt",
+        "OK · tracks saved"
+      ]);
+      state.backupDone.track = true;
+      toast("Tracks backed up");
+    }
+  };
+
+  if (kind === "all") {
+    state.running = true;
+    setQueue("run", "running");
+    log(`Full backup → ${dir}`, "warn");
+    const order = ["rom", "rom-mod", "sa", "track"];
+    let i = 0;
+    let prog = 0;
+    clearInterval(state.runTimer);
+    state.runTimer = setInterval(() => {
+      if (!state.running) return;
+      if (i < order.length) {
+        steps[order[i]]();
+        i += 1;
+        prog = (i / order.length) * 100;
+        $("#progressBar").style.width = `${prog}%`;
+        $("#telemProg").textContent = `${prog.toFixed(1)}%`;
+        $("#telemTool").textContent = `backup-${order[i - 1]}`;
+        refreshFamilyHeader();
+        openTool("backup-all");
+      } else {
+        clearInterval(state.runTimer);
+        state.running = false;
+        setQueue("run", "done");
+        log("Full backup complete · original HDD FW archived", "ok");
+        toast("Full backup done");
+        setBackupTrace([
+          `Full backup complete → ${dir}`,
+          "ROM.BIN ✓",
+          "ROM_MOD\\ ✓",
+          "SA\\ ✓",
+          "TRACK\\ ✓",
+          "",
+          "Safe to proceed with manual repair structure (next)."
+        ]);
+        refreshFamilyHeader();
+        openTool("backup-all");
+      }
+    }, 420);
+    return;
+  }
+
+  if (steps[kind]) {
+    steps[kind]();
+    refreshFamilyHeader();
+    openTool(kind === "rom-mod" ? "backup-rom-mod" : `backup-${kind}`);
+  }
 }
 
 function plistHtml(title) {
@@ -868,6 +1166,19 @@ function onAction(action) {
     "identify-drive": identifyDrive,
     "read-rom4f": readRom4f,
     "resolve-fw": resolveFwPack,
+    "backup-all": () => runBackupStep("all"),
+    "backup-rom": () => runBackupStep("rom"),
+    "backup-rom-mod": () => runBackupStep("rom-mod"),
+    "backup-sa": () => runBackupStep("sa"),
+    "backup-track": () => runBackupStep("track"),
+    "save-paths": saveFwPaths,
+    "use-backup-source": () => {
+      state.fwSource = "backup";
+      refreshFamilyHeader();
+      log(`Active FW source → backup ${sessionBackupDir()}`, "warn");
+      toast("Using original backup as FW source");
+      if (state.tool?.startsWith("backup")) openTool(state.tool);
+    },
     "arco-full": () => runProcess("arco-full"),
     "arco-hot": () => runProcess("arco-hot"),
     "arco-mini": () => runProcess("arco-mini"),
@@ -943,7 +1254,13 @@ function bindUi() {
         }
         refreshFamilyHeader();
       }
-      openTool(famOp.dataset.famOp);
+      const op = famOp.dataset.famOp;
+      if (op === "backup-all") runBackupStep("all");
+      else if (op === "backup-rom") runBackupStep("rom");
+      else if (op === "backup-rom-mod") runBackupStep("rom-mod");
+      else if (op === "backup-sa") runBackupStep("sa");
+      else if (op === "backup-track") runBackupStep("track");
+      else openTool(op);
       return;
     }
 

@@ -2,6 +2,48 @@
 
 Source: Windex `F palmer` script. Prototype reference for three families — pattern extends to the rest.
 
+## Boot / identify flow (first step)
+
+```
+1) Detect port + Add/Lock exclusive
+2) ATA Identify + vscon/vscid
+   → Vendor, Family ID, Model, SN, ATA FW, heads, …
+3) If Vendor = WD (WDC) AND Family known:
+   Read ROM image
+   Find marker ROYL (0x4C594F52)
+   DIR entry 0x0B
+   Module id 0x4F → Overlay FW Rev string (szOVLFWRev)
+   Module id 0x0D → Ctrl FW Rev (optional)
+4) Map ROM 4F FW string → epath FW pack folder
+5) **Full Backup first** (before repair):
+   - Backup ROM (`SVROM` → `ROM.BIN`)
+   - Backup ROM modules (DIR `0x0B` dumps, esp. `0x4F` / `0x0D`)
+   - Backup SA modules (`rdflnom` → `0x0B`/`0x33`/`0x34`/`0x47`/…)
+   - Backup tracks (`svtrack` → `trkNNN.bin`)
+6) Then ARCO / SF / family tools / manual repair
+```
+
+### Two firmware path roots
+
+| # | Root | Purpose |
+|---|------|---------|
+| 1 | **ARCO + SF package** | Factory pack folder (`epath`) with `.rpm` overlays |
+| 2 | **Backup original HDD FW** | Session dump of this drive: `Backup\{Family}\{SN}\` |
+
+Active source for write/repair can be switched: Pack **or** Original backup.
+
+Suggested backup layout:
+
+```
+D:\Backup\{Family}\{SN}\
+  ROM.BIN
+  ROM_MOD\mod_0x4F.bin  mod_0x0D.bin  …
+  SA\sa_0x0B.bin  sa_0x33.bin  sa_0x34.bin  sa_0x47.bin  …
+  TRACK\trk000.bin  …
+```
+
+Source logic in `F palmer` `headSelect`: scan ROM for `0x4F` entry and copy 8-char FW rev.
+
 ## How selection works
 
 ```
