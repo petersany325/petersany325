@@ -20,3 +20,11 @@ python3 -m http.server 8765
 Then visit `http://localhost:8765`.
 
 This is a UI prototype only — no real drive I/O.
+
+## Family / FW reference
+
+See [`FAMILY-FW-REFERENCE.md`](./FAMILY-FW-REFERENCE.md) and [`family-fw-reference.json`](./family-fw-reference.json) for PALMER / FIREBIRD / ATLANTIS:
+
+- FW / PCB choices → `epath`
+- ARCO/SF flags that differ per family
+- SA FileIDs (P/G list, DIR, ARCO overlays, head depop)

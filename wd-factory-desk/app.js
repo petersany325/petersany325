@@ -111,18 +111,69 @@ function renderFamilies() {
   fill($("#family35"), FAM35, "3.5");
 }
 
-function selectFamily(form, name) {
+const FAMILY_FW = {
+  ATLANTIS: {
+    form: "3.5",
+    choices: [
+      { label: "701537", epath: "D:\\\\3.5\\\\1\\\\701537\\\\" },
+      { label: "771668", epath: "D:\\\\3.5\\\\1\\\\771668\\\\" },
+      { label: "701590", epath: "D:\\\\3.5\\\\1\\\\701590\\\\" }
+    ],
+    flags: { arco_type: 0, tar_file: "0xC8", tpi_file: "0xC3" }
+  },
+  FIREBIRD: {
+    form: "2.5",
+    choices: [
+      { label: "0353B", epath: "D:\\\\2.5\\\\10\\\\0353B\\\\" },
+      { label: "0379C", epath: "D:\\\\2.5\\\\10\\\\0379C\\\\" }
+    ],
+    flags: { arco_type: 0, tar_file: "0x290B", Tscan_type: "0x34D1" }
+  },
+  PALMER: {
+    form: "2.5",
+    choices: [
+      { label: "020PP", epath: "D:\\\\2.5\\\\46\\\\020PP\\\\" },
+      { label: "0506B", epath: "D:\\\\2.5\\\\46\\\\0506B\\\\" }
+    ],
+    flags: { arco_type: 1, tar_file: "0x2420", Tscan_type: "0x34D1" }
+  }
+};
+
+function selectFamily(form, name, fwLabel) {
   state.familyForm = form;
   state.familyName = name;
   $("#specFamily").textContent = name;
   $("#specForm").textContent = `${form}"`;
-  const path = form === "2.5"
-    ? `D:\\\\2.5\\\\46\\\\${name === "PALMER" ? "020PP" : "xxxx"}\\\\`
-    : `D:\\\\3.5\\\\01\\\\${name}\\\\`;
+
+  const ref = FAMILY_FW[name];
+  let path = form === "2.5" ? `D:\\\\2.5\\\\??\\\\${name}\\\\` : `D:\\\\3.5\\\\??\\\\${name}\\\\`;
+  let fw = fwLabel || "—";
+
+  if (ref) {
+    let choice = ref.choices[0];
+    if (!fwLabel && ref.choices.length > 1) {
+      const opts = ref.choices.map((c, i) => `${i + 1}=${c.label}`).join("  ");
+      const pick = window.prompt(`Select FW / PCB for ${name}\n${opts}`, "1");
+      const idx = Math.max(0, (parseInt(pick, 10) || 1) - 1);
+      choice = ref.choices[Math.min(idx, ref.choices.length - 1)];
+    } else if (fwLabel) {
+      choice = ref.choices.find((c) => c.label === fwLabel) || choice;
+    }
+    fw = choice.label;
+    path = choice.epath;
+    state.fwLabel = fw;
+    state.epath = path;
+    $("#specFw").textContent = fw;
+    log(`Flags: arco_type=${ref.flags.arco_type} tar_file=${ref.flags.tar_file}`, "ok");
+  } else {
+    state.fwLabel = null;
+    state.epath = path;
+  }
+
   $("#statusRight").textContent = `RPM path: ${path}`;
   renderFamilies();
-  log(`Family selected: ${form}" / ${name}`, "warn");
-  toast(`Family ${name}`);
+  log(`Family selected: ${form}" / ${name} / FW ${fw}`, "warn");
+  toast(`${name} · ${fw}`);
   closeMenus();
 }
 
