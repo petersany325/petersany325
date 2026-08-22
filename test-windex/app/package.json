@@ -1,0 +1,18 @@
+{
+  "name": "windex-wd",
+  "productName": "Windex WD",
+  "version": "0.1.0",
+  "description": "Windex WD — HamGap factory desk for Win7/10/11 x64",
+  "author": "HamGap",
+  "license": "UNLICENSED",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack:win": "electron-packager . \"Windex WD\" --platform=win32 --arch=x64 --out=dist-win --overwrite --asar --prune --ignore=\"dist-win|dist/|family-menus-mockup.png|node_modules/electron\" --icon=assets/app-icon.png",
+    "pack:win:dir": "electron-packager . \"Windex WD\" --platform=win32 --arch=x64 --out=dist-win --overwrite --no-asar --prune --ignore=\"dist-win|dist/|family-menus-mockup.png\" --icon=assets/app-icon.png"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-packager": "^17.1.2"
+  }
+}

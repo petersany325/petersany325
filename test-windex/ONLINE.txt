@@ -1,0 +1,9 @@
+اجرای آنلاین Windex WD (آخرین آپدیت روی گیت‌هاب):
+
+https://raw.githack.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/app/index.html
+
+یا از jsDelivr:
+https://cdn.jsdelivr.net/gh/petersany325/petersany325@cursor/wd-factory-desk-ui-proto-a3a0/test-windex/app/index.html
+
+مسیر لوکال ویندوز:
+  D:\test windex\

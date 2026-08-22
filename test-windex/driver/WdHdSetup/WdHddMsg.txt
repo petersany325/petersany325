@@ -1,0 +1,48 @@
+//=============================================================================
+//
+// Copyright 2006-2009 Western Digital Corporation
+//
+// RESTRICTED RIGHTS LEGEND
+// ------------------------
+//
+// Use, duplication or disclosure by any commercial industry (public
+// or private), private individual or by any Government Agency without
+// an expressed written consent of release from Western Digital
+// Corporation is subject to restriction set forth in paragraph
+// (b)(3)(B) of the Rights in Technical Data and Computer Software
+// clause in DAR 7-104.9(a). 
+//
+// Manufacturer is:
+//
+// Western Digital Corporation
+//   20511 Lake Forest Dr.
+//   Lake Forest, CA 92630
+//   1-800-275-4932
+//=============================================================================
+
+
+WdHddMsg 1.3.2 for Windows XP
+
+
+
+DESCRIPTION
+
+This utility uses the library WinDriveRouter to disable or enable the debug
+messages output by the WdHd drivers (used by Windex.exe).
+
+Requires the kernel driver to have been already installed and running.
+
+
+
+FEATURES
+
+- Selection of the adapter that has the driver installed
+- Disable all debug messages
+- Enable one, a group, or all debug messages
+
+
+
+INSTALLATION
+
+- Copy WdHddMsg.exe to a local directory in the system's hard drive.
+- At least one WdHd driver (e.g., WdHdGen.sys, WdHdPro.sys) must have been installed

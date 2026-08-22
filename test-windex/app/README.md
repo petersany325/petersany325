@@ -1,15 +1,5 @@
 # Windex WD — UI Prototype
 
-
-**اجرای آنلاین (آخرین آپدیت):**  
-https://raw.githack.com/petersany325/petersany325/cursor/wd-factory-desk-ui-proto-a3a0/test-windex/app/index.html
-
-**نصب روی `D:\test windex`:**  
-https://github.com/petersany325/petersany325/raw/cursor/wd-factory-desk-ui-proto-a3a0/wd-factory-desk/dist/WindexWD-to-D-test-windex.zip
-
-جزئیات: [`ONLINE.md`](./ONLINE.md)
-
-
 **Windex WD** by HamGap — family-centric factory tooling prototype (Windex/SASDEX model) for Win7/10/11 x64.
 
 ## Download — Windows desktop test pack

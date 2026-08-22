@@ -1,0 +1,109 @@
+;/*++
+;
+; Copyright 2009 Western Digital Corporation
+;
+; RESTRICTED RIGHTS LEGEND
+; ------------------------
+;
+; Use, duplication or disclosure by any commercial industry (public
+; or private), private individual or by any Government Agency without
+; an expressed written consent of release from Western Digital
+; Corporation is subject to restriction set forth in paragraph
+; (b)(3)(B) of the Rights in Technical Data and Computer Software
+; clause in DAR 7-104.9(a). 
+;
+; Manufacturer is:
+;
+; Western Digital Corporation
+;   20511 Lake Forest Dr.
+;   Lake Forest, CA 92630
+;   1-800-275-4932
+;
+;Module Name:
+;
+;    WdHdSi.INF: last modified on Jun 09, 2010
+;
+;Abstract:
+;    INF file for a WDM Driver for WD Drive Passthrough supported by WdHdSi.sys
+;
+;--*/
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=WdcHdd
+ClassGuid={FF7E9C41-9555-4e2d-8E94-FCBF63CD0E23}
+Provider=%WDC%
+DriverVer=06/09/2010,2.0
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+; ================= Class section =====================
+
+[ClassInstall32]
+Addreg=WdcHddClassReg     
+
+[WdcHddClassReg]
+HKR,,,0,%ClassName%
+HKR,,Icon,,-5
+HKR,,DeviceCharacteristics,0x10001,0x100     ;Use same security checks on relative opens
+HKR,,Security,,"D:P(A;;GA;;;SY)(A;;GA;;;BA)" ;Allow generic all access to system and built-in Admin. 
+
+
+; ================= Device Install section =====================
+
+[ControlFlags]
+ExcludeFromSelect=*
+
+[Manufacturer]
+%WDC%=WDC
+
+[SourceDisksFiles]
+WdHdSi.sys=1
+
+[SourceDisksNames]
+1=%DISK_NAME%,
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WDC]
+; DisplayName            Section           DeviceId
+; -----------       	    -------           --------
+
+%WdHdSi.DRVDESC%=WdHdSi_Inst, PCI\VEN_1095&DEV_3124   ; Silicon Image 3124
+%WdHdSi.DRVDESC%=WdHdSi_Inst, PCI\VEN_1095&DEV_3132   ; Silicon Image 3132
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdSi_Inst.NT]
+CopyFiles=WdHdSi.CopyFiles
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdSi.CopyFiles]
+wdhdsi.sys
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdSi_Inst.NT.Services]
+AddService=WdHdSi,0x00000002,WdHdSi_Service 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdSi_Service]
+DisplayName    = %WdHdSi.SVCDESC%                            
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\WdHdSi.sys                            
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[Strings]
+WDC = "Western Digital"
+ClassName = "WD HDD Test Device"
+DISK_NAME = "WD Install Disk"
+
+WdHdSi.SVCDESC = "Service for WD Drive PassThrough - Silicon Image Memory Mapped ATA Controller"
+WdHdSi.DRVDESC = "WD Drive PassThrough - Silicon Image Memory Mapped ATA Controller"
+

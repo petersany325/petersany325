@@ -1,0 +1,123 @@
+;/*++
+;
+; Copyright 2005-2010 Western Digital Corporation
+;
+; RESTRICTED RIGHTS LEGEND
+; ------------------------
+;
+; Use, duplication or disclosure by any commercial industry (public
+; or private), private individual or by any Government Agency without
+; an expressed written consent of release from Western Digital
+; Corporation is subject to restriction set forth in paragraph
+; (b)(3)(B) of the Rights in Technical Data and Computer Software
+; clause in DAR 7-104.9(a). 
+;
+; Manufacturer is:
+;
+; Western Digital Corporation
+;   20511 Lake Forest Dr.
+;   Lake Forest, CA 92630
+;   1-800-275-4932
+;
+;Module Name:
+;
+;    WdHdPro.INF: last modified on Jun 09, 2010
+;
+;Abstract:
+;    INF file for a WDM Driver for WD Drive Passthrough supported by WdHdPro.sys
+;
+;--*/
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=WdcHdd
+ClassGuid={FF7E9C41-9555-4e2d-8E94-FCBF63CD0E23}
+Provider=%WDC%
+DriverVer=06/09/2010,2.0
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+; ================= Class section =====================
+
+[ClassInstall32]
+Addreg=WdcHddClassReg     
+
+[WdcHddClassReg]
+HKR,,,0,%ClassName%
+HKR,,Icon,,-5
+HKR,,DeviceCharacteristics,0x10001,0x100     ;Use same security checks on relative opens
+HKR,,Security,,"D:P(A;;GA;;;SY)(A;;GA;;;BA)" ;Allow generic all access to system and built-in Admin. 
+
+
+; ================= Device Install section =====================
+
+[ControlFlags]
+ExcludeFromSelect=*
+
+
+[Manufacturer]
+%WDC%=WDC
+
+[SourceDisksFiles]
+WdHdPro.sys=1
+
+[SourceDisksNames]
+1=%DISK_NAME%,
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WDC]
+; DisplayName            Section           DeviceId
+; -----------       	    -------           --------
+
+%WdHdPro.DRVDESC%=WdHdPro_Inst, PCI\VEN_105A&DEV_3574   ; 579
+%WdHdPro.DRVDESC%=WdHdPro_Inst, PCI\VEN_105A&DEV_3577   ; 779
+
+%WdHdPro.DRVDESC%=WdHdPro_Inst, PCI\VEN_105A&DEV_3D75   ; SATAII 150 TX2plus 575 (2 ports only)
+%WdHdPro.DRVDESC%=WdHdPro_Inst, PCI\VEN_105A&DEV_3D18   ; SATAII 150 TX4 518
+
+%WdHdPro.DRVDESC%=WdHdPro_Inst, PCI\VEN_105A&DEV_3D73   ; SATA300 TX2plus 775
+%WdHdPro.DRVDESC%=WdHdPro_Inst, PCI\VEN_105A&DEV_3D17   ; SATA300 TX4 718
+
+%WdHdPro.DRVDESC%=WdHdPro_Inst, PCI\VEN_105A&DEV_3571   ; FastTrak TX2200
+%WdHdPro.DRVDESC%=WdHdPro_Inst, PCI\VEN_105A&DEV_3570   ; FastTrak TX2300
+
+%WdHdPro.DRVDESC%=WdHdPro_Inst, PCI\VEN_105A&DEV_3515   ; FastTrak TX4300
+%WdHdPro.DRVDESC%=WdHdPro_Inst, PCI\VEN_105A&DEV_3519   ; FastTrak TX4200
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdPro_Inst.NT]
+CopyFiles=WdHdPro.CopyFiles
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdPro.CopyFiles]
+wdhdpro.sys
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdPro_Inst.NT.Services]
+AddService=WdHdPro,0x00000002,WdHdPro_Service 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdPro_Service]
+DisplayName    = %WdHdPro.SVCDESC%                            
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\WdHdPro.sys                            
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[Strings]
+WDC = "Western Digital"
+ClassName = "WD HDD Test Device"
+DISK_NAME = "WD Install Disk"
+
+WdHdPro.SVCDESC = "Service for WD Drive PassThrough - Promise Memory Mapped IDE Controller"
+WdHdPro.DRVDESC = "WD Drive PassThrough - Promise Memory Mapped IDE Controller"
+

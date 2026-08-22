@@ -1,0 +1,172 @@
+;/*++
+;
+; Copyright 2005-2009 Western Digital Corporation
+;
+; RESTRICTED RIGHTS LEGEND
+; ------------------------
+;
+; Use, duplication or disclosure by any commercial industry (public
+; or private), private individual or by any Government Agency without
+; an expressed written consent of release from Western Digital
+; Corporation is subject to restriction set forth in paragraph
+; (b)(3)(B) of the Rights in Technical Data and Computer Software
+; clause in DAR 7-104.9(a). 
+;
+; Manufacturer is:
+;
+; Western Digital Corporation
+;   20511 Lake Forest Dr.
+;   Lake Forest, CA 92630
+;   1-800-275-4932
+;
+;Module Name:
+;
+;    WdHdGen.INF: last modified on Jun 09, 2010
+;
+;Abstract:
+;    INF file for a WDM Driver for WD Drive Passthrough supported by WdHdGen.sys
+;
+;--*/
+
+[Version]
+Signature="$WINDOWS NT$"
+Class=WdcHdd
+ClassGuid={FF7E9C41-9555-4e2d-8E94-FCBF63CD0E23}
+Provider=%WDC%
+DriverVer=06/09/2009,2.00
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+; ================= Class section =====================
+
+[ClassInstall32]
+Addreg=WdcHddClassReg     
+
+[WdcHddClassReg]
+HKR,,,0,%ClassName%
+HKR,,Icon,,-5
+HKR,,DeviceCharacteristics,0x10001,0x100     ;Use same security checks on relative opens
+HKR,,Security,,"D:P(A;;GA;;;SY)(A;;GRGWGX;;;BA)(A;;GR;;;WD)(A;;GR;;;RC)" ;Allow generic all access to system, Admin, and built-in users. 
+
+
+; ================= Device Install section =====================
+
+[ControlFlags]
+ExcludeFromSelect=*
+
+
+[Manufacturer]
+%WDC%=WDC
+
+[SourceDisksFiles]
+wdhdgen.sys=1
+
+[SourceDisksNames]
+1=%DISK_NAME%,
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WDC]
+; DisplayName                 Section           DeviceId
+; -----------                 -------           --------
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_24C1        ; Intel ICH4
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_24CA        ; Intel ICH4
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_24CB        ; Intel ICH4
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_24D1        ; Intel ICH5
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_24DB        ; Intel ICH5
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_25A2        ; Intel ICH5
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_25A3        ; Intel ICH5
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_2651        ; Intel ICH6
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_2652        ; Intel ICH6
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_2653        ; Intel ICH6
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_266F        ; Intel ICH6
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_27C0        ; Intel ICH7
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_27DF        ; Intel ICH7
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_27c4        ; Intel ICH7
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_2820        ; Intel ICH8
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_2825        ; Intel ICH8
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_2920        ; Intel ICH9
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_2926        ; Intel ICH9
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_3A20        ; Intel ICH10
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_3A26        ; Intel ICH10
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_3B26        ; Intel 5/3400 Series 2 port SATA Controller
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_3B28        ; Intel 5/3400 Series 4 port SATA Controller
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_8C08        ; Intel 5/3400 Series 4 port SATA Controller
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_1E09        ; Intel 7/3400 Series 4 port SATA Controller
+%WdHdGen_Intel.DRVDESC%=      WdHdGen_Inst,     PCI\VEN_8086&DEV_1E01        ; Intel 7/3400 Series 4 port SATA Controller
+
+%WdHdGen_ITE.DRVDESC%=	      WdHdGen_Inst,     PCI\VEN_1283&DEV_8211        ; ITE ATA/ATAPI Controller
+%WdHdGen_ITE.DRVDESC%=	      WdHdGen_Inst,     PCI\VEN_1283&DEV_8213	     
+
+%WdHdGen_JMicron.DRVDESC%=    WdHdGen_Inst,     PCI\VEN_197B&DEV_2368        ; JMicron Standard Dual Channel PCI IDE Controller
+%WdHdGen_JMicron.DRVDESC%=    WdHdGen_Inst,     PCI\VEN_197B&DEV_2363
+%WdHdGen_JMicron.DRVDESC%=    WdHdGen_Inst,     PCI\VEN_197B&DEV_2360        
+
+%WdHdGen_Marvell.DRVDESC%=    WdHdGen_Inst,     PCI\VEN_11AB&DEV_6101        ; Marvell Standard Dual Channel PCI IDE Controller
+%WdHdGen_Marvell.DRVDESC%=    WdHdGen_Inst,     PCI\VEN_11AB&DEV_6121        ; 
+%WdHdGen_Marvell.DRVDESC%=    WdHdGen_Inst,     PCI\VEN_1B4B&DEV_91A3        ; Marvell 6G SATA controller
+%WdHdGen_Marvell.DRVDESC%=    WdHdGen_Inst,     PCI\VEN_1B4B&DEV_91A4        ; 
+
+%WdHdGen_Nvidia.DRVDESC%=     WdHdGen_Inst,     PCI\VEN_10DE&DEV_0266        ; NVIDIA Standard Dual Channel PCI IDE Controller
+%WdHdGen_Nvidia.DRVDESC%=     WdHdGen_Inst,     PCI\VEN_10DE&DEV_0267
+%WdHdGen_Nvidia.DRVDESC%=     WdHdGen_Inst,     PCI\VEN_10DE&DEV_0055
+
+%WdHdGen_Promise.DRVDESC%=    WdHdGen_Inst,     PCI\VEN_105A&DEV_4D68        ; Promise
+%WdHdGen_Promise.DRVDESC%=    WdHdGen_Inst,     PCI\VEN_105A&DEV_6268
+
+%WdHdGen_SI.DRVDESC%=         WdHdGen_Inst,     PCI\VEN_1095&DEV_3112        ; Silicon Image 3112
+%WdHdGen_SI.DRVDESC%=         WdHdGen_Inst,     PCI\VEN_1095&DEV_3512        ; Silicon Image 3512
+
+%WdHdGen_VIA.DRVDESC%=        WdHdGen_Inst,     PCI\VEN_1106&DEV_0415        ; VIA Technologies IDE Controller
+
+%WdHdGen_Primary.DRVDESC%=    WdHdGen_Inst,     Primary_IDE_Channel          ; Single Channel at 0x1F0 (XP)
+%WdHdGen_Secondary.DRVDESC%=  WdHdGen_Inst,     Secondary_IDE_Channel        ; Single Channel at 0x170 (XP)
+%WdHdGen_IdeChannel.DRVDESC%= WdHdGen_Inst,     Internal_IDE_Channel         ; Single Channel at 0x170, 0x1F0 (Vista)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdGen_Inst.NT]
+CopyFiles=WdHdGen.CopyFiles
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdGen.CopyFiles]
+wdhdgen.sys
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdGen_Inst.NT.Services]
+AddService=WdHdGen,0x00000002,WdHdGen_Service 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[WdHdGen_Service]
+DisplayName    = %WdHdGen.SVCDESC%                            
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\wdhdgen.sys                            
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+[Strings]
+WDC = "Western Digital"
+ClassName = "WD HDD Test Device"
+DISK_NAME = "WD Install Disk"
+
+WdHdGen.SVCDESC = "Service for WD Drive PassThrough - Generic IDE Controller"
+WdHdGen.DRVDESC = "WD Drive PassThrough - Generic IDE Controller"
+
+WdHdGen_Intel.DRVDESC = "WD Drive PassThrough - Intel Generic IDE Controller"
+WdHdGen_ITE.DRVDESC = "WD Drive PassThrough - ITE Generic IDE Controller"
+WdHdGen_JMicron.DRVDESC = "WD Drive PassThrough - JMicron Generic IDE Controller"
+WdHdGen_Marvell.DRVDESC = "WD Drive PassThrough - Marvell Generic IDE Controller"
+WdHdGen_Nvidia.DRVDESC = "WD Drive PassThrough - Nvidia Generic IDE Controller"
+WdHdGen_Promise.DRVDESC = "WD Drive PassThrough - Promise Generic IDE Controller"
+WdHdGen_SI.DRVDESC = "WD Drive PassThrough - Silicon Image Generic IDE Controller"
+WdHdGen_VIA.DRVDESC = "WD Drive PassThrough - VIA Technologies IDE Controller"
+
+WdHdGen_Primary.DRVDESC = "WD Drive PassThrough - Primary IDE Channel"
+WdHdGen_Secondary.DRVDESC = "WD Drive PassThrough - Secondary IDE Channel"
+WdHdGen_IdeChannel.DRVDESC = "WD Drive PassThrough - Internal IDE Channel"

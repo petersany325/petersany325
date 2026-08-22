@@ -1,0 +1,79 @@
+//=============================================================================
+//
+// Copyright 2006-2009 Western Digital Corporation
+//
+// RESTRICTED RIGHTS LEGEND
+// ------------------------
+//
+// Use, duplication or disclosure by any commercial industry (public
+// or private), private individual or by any Government Agency without
+// an expressed written consent of release from Western Digital
+// Corporation is subject to restriction set forth in paragraph
+// (b)(3)(B) of the Rights in Technical Data and Computer Software
+// clause in DAR 7-104.9(a). 
+//
+// Manufacturer is:
+//
+// Western Digital Corporation
+//   20511 Lake Forest Dr.
+//   Lake Forest, CA 92630
+//   1-800-275-4932
+//=============================================================================
+
+
+WdHdSetup.exe 1.13 for Windows XP/Vista/7 32-bit
+
+
+
+DESCRIPTION
+
+Installs drivers for any WdHd*.inf file in the same directory as this application.
+The driver is to be used with applications that need access to the hard drive 
+without Windows being able to access it.
+
+Features:
+- Lists all IDE controllers/channels found in the system with the connected devices.
+- Places a checkbox on the IDE controllers/channels that are supported by the
+  WdHd*.sys drivers.
+- Does not allow installing the driver on the controller/channel containing the
+  boot drive.
+
+WdHdGen.sys supports compatible and native mode IDE controllers.  
+WdHdProm.sys supports Promise TX IDE controllers.
+For a list of the device ids, see the respective WdHd*.inf file.
+
+Please see "WD Drive PassThrough Driver Installation.doc" for more information.
+Please see http://enginfo/wiki/Windex#Installation_.26_Hardware_Issues
+for help on common installation questions.
+
+Some of the DDT tools using this driver are:
+- Windex
+- WD_DriveLibrary
+- CVal
+- WDrvInfo
+- Turquoise
+
+
+SYNTAX
+
+WdHdSetup.exe [-NoAtapi]
+  [-NoAtapi]:  Allow installation without checking if Atapi.sys is installed
+
+One of the requirements for an HDC to be supported by WdHdGen.sys is that the generic
+Microsoft ATAPI.sys driver can also be installed on the HDC.  Some recent HDCs have
+a 3rd part driver installed instead of ATAPI.sys.  Using the command line argument
+"-NoAtapi" forces the HDC to qualify for installation even if ATAPI.sys is not the
+current IDE driver.
+
+
+WARNING
+
+Once installed, Windows will no longer display the hard drive(s) connected to the
+selected controller/channel as storage devices.  The contents of the drives will 
+no longer be available to the user.  Also, any non hard drive device (e.g., CDROM) 
+connected to the selected controller/channel will no longer be available to the user.  
+Only install on controllers with connected DUTs for testing and debugging.  Do not 
+install on drives that contain files needed by the OS or other applications.
+
+The WD tools using this driver may change the content and state of the DUT.
+This utility is intended to be used internally by WD employees only.
