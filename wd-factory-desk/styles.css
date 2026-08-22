@@ -283,8 +283,8 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
 .tool-actions button {
   padding: 0.4rem 0.65rem; border: 1px solid var(--line); font-size: 0.75rem; color: var(--muted);
 }
-.tool-actions button.primary { background: var(--amber); color: #16110a; border-color: var(--amber); font-weight: 600; }
-.tool-actions button:hover { color: var(--text); border-color: var(--amber); }
+.tool-actions button.primary { background: var(--teal); color: #f7f4eb; border-color: var(--teal); font-weight: 600; }
+.tool-actions button:hover { color: var(--text); border-color: var(--teal-bright); }
 
 .paths-panel {
   margin-bottom: 0.85rem; padding: 0.75rem 0.8rem;
@@ -373,12 +373,11 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
 .telem-row { display: flex; justify-content: space-between; margin-bottom: 0.32rem; font-size: 0.74rem; color: var(--muted); }
 .telem-row code { font-family: var(--mono); color: var(--text); font-size: 0.74rem; }
 .progress { margin-top: 0.5rem; height: 4px; background: #1b2430; }
-.progress i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #8f6f1f, var(--amber)); transition: width 0.2s; }
+.progress i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #1d4d4f, #c4a574); transition: width 0.2s; }
 
 .actions { display: grid; gap: 0.4rem; padding: 0.7rem; }
 .btn-primary, .btn-ghost { padding: 0.65rem 0.8rem; font-size: 0.82rem; font-weight: 600; }
 .btn-primary { background: linear-gradient(180deg, #2f7375, #1d4d4f); color: #f7f4eb; }
-.tool-actions button.primary { background: var(--teal); color: #f7f4eb; border-color: var(--teal); font-weight: 600; }
 .license-brand .brand-logo { width: 3rem; height: 3rem; border-radius: 0.65rem; }
 .btn-ghost { border: 1px solid var(--line); color: var(--muted); }
 .btn-ghost:hover { color: var(--text); border-color: var(--danger); }
