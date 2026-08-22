@@ -1,13 +1,15 @@
 :root {
-  --bg: #080c12;
-  --panel: #10161f;
-  --elev: #151c27;
-  --line: #2c3645;
-  --line-soft: #1c2430;
-  --text: #eef3f8;
-  --muted: #8e9aab;
-  --amber: #c9a227;
-  --amber-dim: rgba(201, 162, 39, 0.16);
+  --bg: #071012;
+  --panel: #0e1718;
+  --elev: #132022;
+  --line: #2a3d3f;
+  --line-soft: #1a282a;
+  --text: #eef3f0;
+  --muted: #8a9a96;
+  --amber: #c4a574;
+  --amber-dim: rgba(196, 165, 116, 0.16);
+  --teal: #1d4d4f;
+  --teal-bright: #2a6a6c;
   --ok: #3f9d78;
   --danger: #c56757;
   --sans: "Outfit", system-ui, sans-serif;
@@ -21,9 +23,9 @@ html, body {
   color: var(--text);
   font-family: var(--sans);
   background:
-    radial-gradient(1100px 520px at 8% -8%, #1a2535 0%, transparent 55%),
-    radial-gradient(900px 480px at 100% 0%, #162033 0%, transparent 50%),
-    linear-gradient(180deg, #0c121a, var(--bg));
+    radial-gradient(1100px 520px at 8% -8%, #1a3536 0%, transparent 55%),
+    radial-gradient(900px 480px at 100% 0%, #163033 0%, transparent 50%),
+    linear-gradient(180deg, #0c1617, var(--bg));
 }
 button { font: inherit; color: inherit; background: transparent; border: 0; cursor: pointer; }
 
@@ -45,19 +47,25 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
   align-items: center;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, #182231, #101821);
+  background: linear-gradient(180deg, #182828, #101a1b);
 }
 .titlebar-brand { display: flex; gap: 0.75rem; align-items: center; }
+.brand-logo {
+  width: 2.35rem; height: 2.35rem; border-radius: 0.55rem;
+  object-fit: cover; flex-shrink: 0;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--teal-bright) 40%, transparent);
+}
+.brand-logo.lg { width: 3.5rem; height: 3.5rem; border-radius: 0.75rem; }
 .brand-mark {
   width: 2.35rem; height: 2.35rem; display: grid; place-items: center;
-  background: linear-gradient(145deg, #e0c35a, #9a7420);
-  color: #14100a; font-weight: 700; letter-spacing: 0.04em;
+  background: linear-gradient(145deg, #2a6a6c, #1d4d4f);
+  color: #f7f4eb; font-weight: 700; letter-spacing: 0.04em; border-radius: 0.55rem;
 }
 .brand-text strong { display: block; font-size: 1.08rem; letter-spacing: 0.01em; }
 .brand-text span { color: var(--muted); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; }
 .titlebar-mode { display: flex; border: 1px solid var(--line); background: #0b1118; }
 .mode-btn { padding: 0.42rem 0.95rem; color: var(--muted); font-size: 0.8rem; letter-spacing: 0.06em; }
-.mode-btn.active { background: var(--amber); color: #16110a; font-weight: 600; }
+.mode-btn.active { background: var(--teal); color: #f7f4eb; font-weight: 600; }
 .window-controls { display: flex; gap: 0.4rem; }
 .window-controls span { width: 0.7rem; height: 0.7rem; border: 1px solid #556173; }
 
@@ -369,7 +377,9 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
 
 .actions { display: grid; gap: 0.4rem; padding: 0.7rem; }
 .btn-primary, .btn-ghost { padding: 0.65rem 0.8rem; font-size: 0.82rem; font-weight: 600; }
-.btn-primary { background: linear-gradient(180deg, #dbbf5a, #a88422); color: #16110a; }
+.btn-primary { background: linear-gradient(180deg, #2f7375, #1d4d4f); color: #f7f4eb; }
+.tool-actions button.primary { background: var(--teal); color: #f7f4eb; border-color: var(--teal); font-weight: 600; }
+.license-brand .brand-logo { width: 3rem; height: 3rem; border-radius: 0.65rem; }
 .btn-ghost { border: 1px solid var(--line); color: var(--muted); }
 .btn-ghost:hover { color: var(--text); border-color: var(--danger); }
 
@@ -423,7 +433,7 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
   border: 1px solid var(--line-soft); background: #0a1017; font-size: 0.75rem; color: var(--muted);
 }
 .license-mid code {
-  font-family: var(--mono); color: var(--amber); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis;
+  font-family: var(--mono); color: #d4b896; font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis;
 }
 .license-mid .mini, .license-actions .linkish {
   padding: 0.3rem 0.55rem; border: 1px solid var(--line); font-size: 0.72rem; color: var(--muted);

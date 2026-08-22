@@ -1,5 +1,5 @@
 /**
- * Factory Desk — License / Activation (prototype)
+ * Windex WD — License / Activation (prototype)
  *
  * Sales model:
  *   1) Customer installs → sees Machine ID
@@ -16,8 +16,8 @@
  */
 
 const License = (() => {
-  const STORE_KEY = "wdfd.license.v1";
-  const PRODUCT = "WDFD";
+  const STORE_KEY = "wxwd.license.v1";
+  const PRODUCT = "WXWD";
   const EDITIONS = {
     STD: { name: "Standard", seats: 1 },
     PRO: { name: "Professional", seats: 1 },
@@ -30,9 +30,9 @@ const License = (() => {
    * Still bypassable in JS; real security is native + offline private key.
    */
   const _p = [
-    0x57, 0x44, 0x46, 0x44, 0x2d, 0x50, 0x52, 0x4f, 0x54, 0x4f, 0x2d,
+    0x57, 0x58, 0x57, 0x44, 0x2d, 0x48, 0x41, 0x4d, 0x47, 0x41, 0x50, 0x2d,
     0x4b, 0x33, 0x79, 0x2d, 0x32, 0x30, 0x32, 0x36, 0x2d, 0x78, 0x39,
-    0x51, 0x6d, 0x4e, 0x37, 0x76, 0x4c, 0x70, 0x32, 0x21, 0x73
+    0x51, 0x6d, 0x4e, 0x37, 0x76, 0x4c, 0x70, 0x32, 0x21
   ];
   function vendorMaterial() {
     return new TextEncoder().encode(String.fromCharCode(..._p));
@@ -59,18 +59,18 @@ const License = (() => {
       String(screen.width) + "x" + String(screen.height) + "x" + String(screen.colorDepth),
       String(navigator.hardwareConcurrency || 0),
       Intl.DateTimeFormat().resolvedOptions().timeZone || "",
-      localStorage.getItem("wdfd.mid.seed") || seedMachine()
+      localStorage.getItem("wxwd.mid.seed") || seedMachine()
     ];
     const h = await sha256Hex(parts.join("|"));
-    // Format: WDFD-M-XXXX-XXXX-XXXX-XXXX
+    // Format: WXWD-M-XXXX-XXXX-XXXX-XXXX
     const body = h.slice(0, 16).toUpperCase();
-    return `WDFD-M-${body.slice(0, 4)}-${body.slice(4, 8)}-${body.slice(8, 12)}-${body.slice(12, 16)}`;
+    return `WXWD-M-${body.slice(0, 4)}-${body.slice(4, 8)}-${body.slice(8, 12)}-${body.slice(12, 16)}`;
   }
 
   function seedMachine() {
     const s = crypto.getRandomValues(new Uint8Array(16));
     const hex = [...s].map((b) => b.toString(16).padStart(2, "0")).join("");
-    localStorage.setItem("wdfd.mid.seed", hex);
+    localStorage.setItem("wxwd.mid.seed", hex);
     return hex;
   }
 

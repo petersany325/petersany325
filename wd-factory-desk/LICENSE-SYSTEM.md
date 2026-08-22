@@ -1,12 +1,12 @@
 # License / Activation System
 
-Commercial lock for **Factory Desk** sales: serial activation, machine binding, tamper-resistant license blob.
+Commercial lock for **Windex WD** (HamGap) sales: serial activation, machine binding, tamper-resistant license blob.
 
 ## Sales flow (recommended)
 
 ```
 1. Customer installs app
-2. Activation screen shows Machine ID  (WDFD-M-XXXX-…)
+2. Activation screen shows Machine ID  (WXWD-M-XXXX-…)
 3. Customer pays + sends Machine ID
 4. Seller runs keygen → issues machine-bound key
 5. Customer enters key → license sealed to that PC
@@ -89,7 +89,7 @@ Any pure JS lock can be patched in DevTools. The prototype is for **UX + crypto 
 
 ## Customer ops
 
-1. Launch Factory Desk → activation gate.  
+1. Launch Windex WD → activation gate.  
 2. Copy Machine ID → pay / WhatsApp seller.  
 3. Paste serial → Activate.  
 4. Help → License shows status / Deactivate (support only).

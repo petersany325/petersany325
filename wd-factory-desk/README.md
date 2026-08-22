@@ -1,6 +1,8 @@
-# WD Factory Desk — UI Prototype
+# Windex WD — UI Prototype
 
-Family-centric interactive prototype for Win7/10/11 x64 factory tooling (Windex/SASDEX model).
+**Windex WD** by HamGap — family-centric factory tooling prototype (Windex/SASDEX model) for Win7/10/11 x64.
+
+Brand assets: `assets/logo.png` (HamGap logo), favicon + app icons.
 
 ## Flow
 
@@ -17,23 +19,11 @@ Family-centric interactive prototype for Win7/10/11 x64 factory tooling (Windex/
 
 Switch active source in Backup → Firmware Paths.
 
-## Menu layout (target)
-
-Each **Family** has its own cascading tool menu:
-
-- **Backup** (Full / ROM / ROM modules / SA / tracks / Paths) — do first
-- Cut Head
-- Zone Ops (list / cut / del)
-- **ATA Scan** / **CHS Scan**
-- P-List / G-List
-- Modules / DIR
-- ARCO / SF / DCM
-
 ## License (for sales)
 
 App opens locked until a serial is activated. Preferred flow: customer sends **Machine ID** → seller issues a **machine-bound** key from `license-keygen.html`.
 
-See [`LICENSE-SYSTEM.md`](./LICENSE-SYSTEM.md) for the anti-crack design (Ed25519 + HW fingerprint + check inside driver path for the native build).
+See [`LICENSE-SYSTEM.md`](./LICENSE-SYSTEM.md).
 
 ## Open
 
@@ -45,12 +35,10 @@ python3 -m http.server 8765
 - App: http://localhost:8765/  
 - Seller keygen: http://localhost:8765/license-keygen.html  
 
-Or open `index.html` directly.
-
 ## Docs
 
 - [`FAMILY-FW-REFERENCE.md`](./FAMILY-FW-REFERENCE.md)
 - [`family-fw-reference.json`](./family-fw-reference.json)
 - [`LICENSE-SYSTEM.md`](./LICENSE-SYSTEM.md)
 
-UI prototype only — no real drive I/O. JS license is a UX/crypto prototype; production lock must be native.
+UI prototype only — no real drive I/O.

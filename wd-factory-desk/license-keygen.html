@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Factory Desk — Seller Keygen</title>
+  <title>Windex WD — Seller Keygen</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -12,10 +13,10 @@
 <body class="keygen-page">
   <main class="keygen-wrap">
     <header class="keygen-head">
-      <span class="brand-mark">WD</span>
+      <img class="brand-logo lg" src="assets/logo.png" width="56" height="56" alt="HamGap" />
       <div>
-        <h1>Seller Keygen</h1>
-        <p>Issue serials for Factory Desk sales. Keep this page private.</p>
+        <h1>Windex WD · Seller Keygen</h1>
+        <p>Issue serials for HamGap Windex WD sales. Keep this page private.</p>
       </div>
     </header>
 
@@ -38,7 +39,7 @@
         </select>
       </label>
       <label>Customer Machine ID (for bound license)
-        <input id="kgMid" type="text" placeholder="WDFD-M-XXXX-XXXX-XXXX-XXXX" spellcheck="false" />
+        <input id="kgMid" type="text" placeholder="WXWD-M-XXXX-XXXX-XXXX-XXXX" spellcheck="false" />
       </label>
       <div class="keygen-actions">
         <button type="button" class="btn-primary" id="btnBound">Issue machine-bound key</button>
@@ -49,7 +50,7 @@
       </label>
       <button type="button" class="btn-ghost" id="btnCopy">Copy key</button>
       <p class="keygen-warn">Prototype keygen shares the demo HMAC material with the app. Production: private Ed25519 key stays only on your signing PC / server — never ship it with the product.</p>
-      <p><a href="index.html">← Back to Factory Desk</a> · <a href="LICENSE-SYSTEM.md">Security model</a></p>
+      <p><a href="index.html">← Back to Windex WD</a> · <a href="LICENSE-SYSTEM.md">Security model</a></p>
     </section>
   </main>
   <script src="license.js"></script>
@@ -60,8 +61,8 @@
     }
     async function bound() {
       const mid = $("#kgMid").value.trim();
-      if (!mid.startsWith("WDFD-M-")) {
-        alert("Paste customer Machine ID (WDFD-M-…)");
+      if (!mid.startsWith("WXWD-M-")) {
+        alert("Paste customer Machine ID (WXWD-M-…)");
         return;
       }
       const key = await License.issueBoundLicense({

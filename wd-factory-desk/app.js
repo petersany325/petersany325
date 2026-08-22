@@ -302,7 +302,7 @@ function buildMenubar() {
       <button type="button" class="menu-trigger">Help</button>
       <div class="menu-panel">
         <button type="button" data-action="license-status">License…</button>
-        <button type="button" data-action="about">About Factory Desk</button>
+        <button type="button" data-action="about">About Windex WD</button>
       </div>
     </div>
   `;
@@ -1199,7 +1199,7 @@ function onAction(action) {
     "chs-run": () => runProcess("chs-scan"),
     "chs-stop": () => { stopRun(); log("CHS scan stopped", "err"); },
     "chs-report": () => log("CHS scan report exported (prototype)", "ok"),
-    about: () => toast("Family-centric Factory Desk prototype"),
+    about: () => toast("Windex WD · HamGap · Win7/10/11 x64 factory desk"),
     "license-status": showLicenseStatus,
     "activate-license": activateFromGate,
     "copy-mid": copyMachineId,
@@ -1299,10 +1299,10 @@ function init() {
   bindLicenseUi();
   enforceLicenseGate().then((ok) => {
     if (ok) {
-      log("License OK · Factory Desk ready", "ok");
+      log("License OK · Windex WD ready", "ok");
       log("Family → Backup first → repair tools", "warn");
     } else {
-      log("Activation required — enter serial to unlock", "warn");
+      log("Activation required — enter serial to unlock Windex WD", "warn");
     }
   });
 }
