@@ -24,6 +24,10 @@ const License = (() => {
     LAB: { name: "Lab / Multi-port", seats: 4 }
   };
 
+  function desktop() {
+    return (typeof window !== "undefined" && window.windexDesktop) || null;
+  }
+
   /**
    * Prototype HMAC secret — REPLACE in native build with Ed25519.
    * Obfuscated split so a casual string search is less trivial in the HTML demo.
@@ -169,6 +173,36 @@ const License = (() => {
     };
   }
 
+  async function persistLicense(record) {
+    const json = JSON.stringify(record);
+    const desk = desktop();
+    if (desk?.writeLicense) {
+      await desk.writeLicense(json);
+      return;
+    }
+    localStorage.setItem(STORE_KEY, json);
+  }
+
+  async function loadLicense() {
+    const desk = desktop();
+    if (desk?.readLicense) {
+      const raw = await desk.readLicense();
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
   async function activate(rawSerial) {
     const mid = await machineId();
     const parsed = await parseAndVerifySerial(rawSerial);
@@ -195,7 +229,7 @@ const License = (() => {
     const canon = canonicalize(payload);
     const seal = await hmacHex(vendorMaterial(), `LICENSE|${canon}`);
     const record = { ...payload, seal };
-    localStorage.setItem(STORE_KEY, JSON.stringify(record));
+    await persistLicense(record);
     return { ok: true, license: record, editionName: parsed.editionName };
   }
 
@@ -204,16 +238,6 @@ const License = (() => {
       p.v, p.product, p.edition, p.serialId, p.machineId,
       p.issuedAt, p.expiresAt, p.serialNorm
     ].join("|");
-  }
-
-  async function loadLicense() {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return null;
-    }
   }
 
   async function validateStored() {
@@ -255,7 +279,9 @@ const License = (() => {
     return Math.floor(Date.now() / 3600000);
   }
 
-  function deactivate() {
+  async function deactivate() {
+    const desk = desktop();
+    if (desk?.clearLicense) await desk.clearLicense();
     localStorage.removeItem(STORE_KEY);
   }
 

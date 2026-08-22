@@ -38,7 +38,7 @@
         <button type="button" class="btn-ghost" data-action="demo-unlock">Demo unlock (14 days)</button>
         <a class="btn-ghost linkish" href="license-keygen.html" target="_blank" rel="noopener">Seller keygen</a>
       </div>
-      <p class="license-note">Test build: use <em>Demo unlock</em> for UI testing, or send Machine ID to seller for a <em>machine-bound</em> key.</p>
+      <p class="license-note">Windows app: use <em>File → License Settings</em> after unlock. Test: <em>Demo unlock</em> or seller keygen.</p>
     </div>
   </div>
 
@@ -48,7 +48,7 @@
         <img class="brand-logo" src="assets/logo.png" width="40" height="40" alt="HamGap" />
         <div class="brand-text">
           <strong>Windex WD</strong>
-          <span>HamGap · Win7/10/11 x64</span>
+          <span>HamGap · Windows Desktop</span>
         </div>
       </div>
       <div class="titlebar-mode">
@@ -155,6 +155,61 @@
       <div id="statusRight">RPM path: —</div>
     </footer>
     <div class="console" id="console"></div>
+  </div>
+
+  <div class="settings-modal" id="settingsModal" hidden>
+    <div class="settings-card">
+      <div class="settings-head">
+        <h2>License &amp; Settings</h2>
+        <button type="button" class="mini" data-action="close-settings">Close</button>
+      </div>
+      <div class="settings-tabs">
+        <button type="button" class="stab active" data-stab="license">License</button>
+        <button type="button" class="stab" data-stab="paths">Project Paths</button>
+      </div>
+      <div class="settings-pane" id="pane-license">
+        <div class="kv settings-kv">
+          <span>Status</span><strong id="setLicStatus">—</strong>
+          <span>Edition</span><strong id="setLicEdition">—</strong>
+          <span>Serial ID</span><strong id="setLicSerial">—</strong>
+          <span>Days left</span><strong id="setLicDays">—</strong>
+          <span>Machine ID</span><strong id="setLicMid">—</strong>
+          <span>License file</span><strong id="setLicFile" class="path-strong">—</strong>
+        </div>
+        <label class="license-field">
+          <span>Enter / change serial</span>
+          <input type="text" id="setSerialInput" placeholder="WXWD-PRO-…" spellcheck="false" autocomplete="off" />
+        </label>
+        <p class="license-err" id="setLicErr" hidden></p>
+        <div class="license-actions">
+          <button type="button" class="btn-primary" data-action="settings-activate">Activate</button>
+          <button type="button" class="btn-ghost" data-action="demo-unlock">Demo unlock (14 days)</button>
+          <button type="button" class="btn-ghost" data-action="deactivate-license">Deactivate</button>
+        </div>
+      </div>
+      <div class="settings-pane" id="pane-paths" hidden>
+        <label class="license-field">
+          <span>Project root</span>
+          <input type="text" id="setProjectRoot" spellcheck="false" />
+        </label>
+        <label class="license-field">
+          <span>1 · ARCO + SF pack root</span>
+          <input type="text" id="setPackRoot" spellcheck="false" />
+        </label>
+        <label class="license-field">
+          <span>2 · Backup original FW root</span>
+          <input type="text" id="setBackupRoot" spellcheck="false" />
+        </label>
+        <div class="path-source-row">
+          <span>Active FW source:</span>
+          <label class="radio-inline"><input type="radio" name="setFwSource" value="pack" /> Pack</label>
+          <label class="radio-inline"><input type="radio" name="setFwSource" value="backup" /> Backup</label>
+        </div>
+        <div class="license-actions" style="margin-top:0.75rem">
+          <button type="button" class="btn-primary" data-action="settings-save-paths">Save Paths</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="toast" id="toast" hidden></div>

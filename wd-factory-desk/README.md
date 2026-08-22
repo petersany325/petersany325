@@ -2,20 +2,17 @@
 
 **Windex WD** by HamGap — family-centric factory tooling prototype (Windex/SASDEX model) for Win7/10/11 x64.
 
-## Download test pack (UI + driver installer)
+## Download — Windows desktop test pack
 
 **Zip:**  
 https://github.com/petersany325/petersany325/raw/cursor/wd-factory-desk-ui-proto-a3a0/wd-factory-desk/dist/WindexWD-Prototype-Test.zip
 
-Contents: prototype UI, HamGap branding, license/demo unlock, and legacy `WdHdSetup` (Win7 **32-bit** lab only).
+1. Unzip (e.g. to `D:\test windex`)  
+2. Run **`START-WINDEX-WD.bat`** → opens as a Windows app window (Edge/Chrome app mode)  
+3. **Demo unlock** or **File → License Settings…**  
+4. Optional real EXE: run `BUILD-WINDOWS.bat` on a PC with Node.js  
 
-1. Unzip → `START-WINDEX-WD.bat`  
-2. Click **Demo unlock (14 days)**  
-3. For driver (legacy 32-bit only): `INSTALL-DRIVER.bat` — never on the OS disk channel  
-
-Details: [`TEST-PACK.md`](./TEST-PACK.md) · project path: [`PROJECT-PATH.txt`](./PROJECT-PATH.txt) (`D:\test windex`)
-
-Brand assets: `assets/logo.png` (HamGap logo), favicon + app icons.
+See [`DESKTOP.md`](./DESKTOP.md) · project path [`PROJECT-PATH.txt`](./PROJECT-PATH.txt)
 
 ## Flow
 

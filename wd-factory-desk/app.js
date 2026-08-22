@@ -235,6 +235,7 @@ function buildMenubar() {
       <button type="button" class="menu-trigger">File</button>
       <div class="menu-panel">
         <button type="button" data-action="log">New Session</button>
+        <button type="button" data-action="open-settings">License Settings…</button>
         <button type="button" data-action="log">Open Log…</button>
         <button type="button" data-action="log">Save Report…</button>
         <hr /><button type="button" data-action="log">Exit</button>
@@ -307,6 +308,7 @@ function buildMenubar() {
       <button type="button" class="menu-trigger">Help</button>
       <div class="menu-panel">
         <button type="button" data-action="license-status">License…</button>
+        <button type="button" data-action="open-settings">License Settings…</button>
         <button type="button" data-action="about">About Windex WD</button>
       </div>
     </div>
@@ -1206,14 +1208,19 @@ function onAction(action) {
     "chs-report": () => log("CHS scan report exported (prototype)", "ok"),
     about: () => toast("Windex WD · HamGap · Win7/10/11 x64 factory desk"),
     "license-status": showLicenseStatus,
+    "open-settings": () => openSettingsModal(),
+    "close-settings": closeSettingsModal,
+    "settings-activate": activateFromSettings,
+    "settings-save-paths": saveSettingsPaths,
     "activate-license": activateFromGate,
     "demo-unlock": demoUnlock,
     "copy-mid": copyMachineId,
     "deactivate-license": async () => {
       if (!window.confirm("Remove local license? App will lock until re-activated.")) return;
-      License.deactivate();
+      await License.deactivate();
       log("License deactivated", "warn");
       await enforceLicenseGate();
+      if (!$("#settingsModal")?.hidden) await fillSettingsModal();
     },
     log: () => log("Command stub (prototype)", "warn")
   };
@@ -1300,21 +1307,121 @@ function bindUi() {
 function init() {
   buildMenubar();
   renderPorts();
-  refreshFamilyHeader();
   bindUi();
   bindLicenseUi();
-  enforceLicenseGate().then((ok) => {
+  loadDesktopBootstrap().then(() => {
+    refreshFamilyHeader();
+    return enforceLicenseGate();
+  }).then((ok) => {
     if (ok) {
-      log("License OK · Windex WD ready", "ok");
-      log("Family → Backup first → repair tools", "warn");
+      log("License OK · Windex WD desktop ready", "ok");
+      log(`Project: ${state.projectRoot || PROJECT_ROOT}`, "warn");
     } else {
-      log("Activation required — enter serial to unlock Windex WD", "warn");
+      log("Activation required — enter serial or open License Settings", "warn");
     }
   });
 }
 
+async function loadDesktopBootstrap() {
+  const desk = window.windexDesktop;
+  if (!desk?.readSettings) return;
+  try {
+    const s = await desk.readSettings();
+    if (s.projectRoot) state.projectRoot = s.projectRoot;
+    if (s.packRoot) state.packRoot = s.packRoot;
+    if (s.backupRoot) state.backupRoot = s.backupRoot;
+    if (s.fwSource) state.fwSource = s.fwSource;
+    const info = await desk.appInfo();
+    document.title = `Windex WD ${info.version || ""}`.trim();
+    log(`Desktop mode · license → ${info.licensePath}`, "ok");
+  } catch (e) {
+    log(`Desktop settings load failed: ${e.message || e}`, "err");
+  }
+}
+
 let _licenseOk = false;
 let _licenseInfo = null;
+
+async function openSettingsModal(opts = {}) {
+  const modal = $("#settingsModal");
+  if (!modal) return;
+  modal.hidden = false;
+  const tab = opts.tab === "paths" ? "paths" : "license";
+  switchSettingsTab(tab);
+  await fillSettingsModal();
+}
+
+function closeSettingsModal() {
+  const modal = $("#settingsModal");
+  if (modal) modal.hidden = true;
+}
+
+function switchSettingsTab(tab) {
+  $$(".stab").forEach((b) => b.classList.toggle("active", b.dataset.stab === tab));
+  const lic = $("#pane-license");
+  const paths = $("#pane-paths");
+  if (lic) lic.hidden = tab !== "license";
+  if (paths) paths.hidden = tab !== "paths";
+}
+
+async function fillSettingsModal() {
+  const status = await License.validateStored();
+  const mid = await License.machineId();
+  $("#setLicStatus").textContent = status.ok ? "Licensed" : (status.message || "Not activated");
+  $("#setLicEdition").textContent = status.ok ? status.editionName : "—";
+  $("#setLicSerial").textContent = status.ok ? status.license.serialId : "—";
+  $("#setLicDays").textContent = status.ok ? String(status.daysLeft) : "—";
+  $("#setLicMid").textContent = mid;
+  let licFile = "(browser localStorage)";
+  if (window.windexDesktop?.licensePath) {
+    try { licFile = await window.windexDesktop.licensePath(); } catch { /* ignore */ }
+  }
+  $("#setLicFile").textContent = licFile;
+  $("#setProjectRoot").value = state.projectRoot || PROJECT_ROOT;
+  $("#setPackRoot").value = state.packRoot;
+  $("#setBackupRoot").value = state.backupRoot;
+  $$('input[name="setFwSource"]').forEach((r) => {
+    r.checked = r.value === state.fwSource;
+  });
+  const err = $("#setLicErr");
+  if (err) err.hidden = true;
+}
+
+async function activateFromSettings() {
+  const input = $("#setSerialInput");
+  const err = $("#setLicErr");
+  err.hidden = true;
+  const res = await License.activate(input?.value || "");
+  if (!res.ok) {
+    err.hidden = false;
+    err.textContent = res.error || "Activation failed";
+    return;
+  }
+  toast(`Licensed · ${res.editionName}`);
+  log(`Activated via Settings · ${res.editionName}`, "ok");
+  input.value = "";
+  await enforceLicenseGate();
+  await fillSettingsModal();
+}
+
+async function saveSettingsPaths() {
+  state.projectRoot = $("#setProjectRoot")?.value.trim() || PROJECT_ROOT;
+  state.packRoot = $("#setPackRoot")?.value.trim() || `${state.projectRoot}\\\\FW`;
+  state.backupRoot = $("#setBackupRoot")?.value.trim() || `${state.projectRoot}\\\\Backup`;
+  const src = document.querySelector('input[name="setFwSource"]:checked');
+  if (src) state.fwSource = src.value;
+  if (window.windexDesktop?.writeSettings) {
+    await window.windexDesktop.writeSettings({
+      projectRoot: state.projectRoot,
+      packRoot: state.packRoot,
+      backupRoot: state.backupRoot,
+      fwSource: state.fwSource
+    });
+  }
+  refreshFamilyHeader();
+  toast("Paths saved");
+  log(`Paths saved · ${state.projectRoot}`, "ok");
+}
 
 async function enforceLicenseGate() {
   const gate = $("#licenseGate");
@@ -1387,6 +1494,7 @@ async function demoUnlock() {
     log("Demo unlock · Professional · 14 days (test build)", "warn");
     toast("Demo unlocked · 14 days");
     await enforceLicenseGate();
+    if ($("#settingsModal") && !$("#settingsModal").hidden) await fillSettingsModal();
   } catch (e) {
     err.hidden = false;
     err.textContent = String(e.message || e);
@@ -1434,6 +1542,17 @@ function bindLicenseUi() {
       activateFromGate();
     }
   });
+  document.addEventListener("click", (e) => {
+    const stab = e.target.closest(".stab");
+    if (stab?.dataset.stab) {
+      switchSettingsTab(stab.dataset.stab);
+      return;
+    }
+    if (e.target.id === "settingsModal") closeSettingsModal();
+  });
+  if (window.windexDesktop?.onOpenLicenseSettings) {
+    window.windexDesktop.onOpenLicenseSettings((payload) => openSettingsModal(payload));
+  }
   // Periodic re-validation (anti-tamper heartbeat for prototype)
   setInterval(async () => {
     if (!_licenseOk) return;

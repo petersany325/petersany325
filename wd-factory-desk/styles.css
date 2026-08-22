@@ -461,6 +461,38 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
   pointer-events: none; user-select: none;
 }
 
+.settings-modal {
+  position: fixed; inset: 0; z-index: 110;
+  display: grid; place-items: center;
+  padding: 1rem;
+  background: rgba(4, 8, 14, 0.72);
+  backdrop-filter: blur(6px);
+}
+.settings-modal[hidden] { display: none !important; }
+.settings-card {
+  width: min(560px, 100%);
+  padding: 1.1rem 1.2rem 1.15rem;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, #162226, #10191a);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+}
+.settings-head {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;
+}
+.settings-head h2 { margin: 0; font-size: 1.05rem; }
+.settings-tabs { display: flex; gap: 0.35rem; margin-bottom: 0.85rem; }
+.stab {
+  padding: 0.4rem 0.75rem; border: 1px solid var(--line); color: var(--muted); font-size: 0.78rem;
+}
+.stab.active { border-color: var(--teal-bright); color: var(--text); background: color-mix(in srgb, var(--teal) 35%, transparent); }
+.settings-kv {
+  display: grid; grid-template-columns: 7.5rem 1fr; gap: 0.35rem 0.75rem;
+  margin-bottom: 0.9rem; font-size: 0.8rem;
+}
+.settings-kv span { color: var(--muted); }
+.settings-kv strong { font-weight: 560; word-break: break-all; }
+.path-strong { font-family: var(--mono); font-size: 0.72rem; color: #c5d0c8; }
+
 /* —— Seller keygen page —— */
 .keygen-page {
   min-height: 100%;
