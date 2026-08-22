@@ -45,8 +45,28 @@
         <section class="family-stage" id="familyStage">
           <div class="family-hero">
             <p class="eyebrow" id="transportLabel">SATA · PassThrough exclusive</p>
-            <h1 id="familyTitle">Select a Family</h1>
-            <p class="drive-sub" id="familyMeta">Each family has its own tool menu: Cut Head, Zone, P-List, G-List, Modules, ARCO, SF…</p>
+            <h1 id="familyTitle">Detect drive first</h1>
+            <p class="drive-sub" id="familyMeta">Port detect → Identify (Vendor / Family / Model / SN / FW) → if WD + Family known → read ROM module 0x4F → resolve FW pack for ARCO/SF</p>
+          </div>
+
+          <div class="identify-board" id="identifyBoard">
+            <div class="id-grid">
+              <div><span>Vendor</span><strong id="idVendor">—</strong></div>
+              <div><span>Family</span><strong id="idFamily">—</strong></div>
+              <div><span>Model</span><strong id="idModel">—</strong></div>
+              <div><span>Serial</span><strong id="idSerial">—</strong></div>
+              <div><span>ATA FW</span><strong id="idAtaFw">—</strong></div>
+              <div><span>ROM 4F FW</span><strong id="idRom4f">—</strong></div>
+              <div><span>Ctrl FW (0x0D)</span><strong id="idCtrlFw">—</strong></div>
+              <div><span>Family ID</span><strong id="idFamHex">—</strong></div>
+            </div>
+            <div class="id-actions">
+              <button type="button" class="primary" data-action="detect">1 · Detect Port</button>
+              <button type="button" data-action="identify-drive">2 · Identify</button>
+              <button type="button" data-action="read-rom4f">3 · Read ROM 4F</button>
+              <button type="button" data-action="resolve-fw">4 · Resolve FW Pack</button>
+            </div>
+            <pre class="mono-block compact" id="identifyTrace">Waiting for port detect…</pre>
           </div>
 
           <div class="family-ribbon" id="familyRibbon" hidden>

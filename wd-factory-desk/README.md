@@ -8,6 +8,8 @@ Each **Family** has its own cascading tool menu:
 
 - Cut Head
 - Zone Ops (list / cut / del)
+- **ATA Scan** (full / quick / verify / write-verify / LBA range / pending / →G/P / stop / report)
+- **CHS Scan** (rdchs / wrchs / RVCHS / RAW / relo / ECC / Tone R-W / SA defect→RPList / per-head / cyl range)
 - P-List (view / add / clear)
 - G-List (view / G→P / clear)
 - Modules / DIR

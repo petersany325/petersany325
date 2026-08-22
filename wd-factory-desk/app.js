@@ -127,11 +127,12 @@ const state = {
   tool: null,
   running: false,
   runTimer: null,
+  identity: null,
   ports: [
-    { id: "sata0", type: "sata", label: "SATA:0", base: "01F0/03F6", model: "WDC WD10JPVX-22JC3T0", serial: "WX21A84K3821", fw: "020PP", form: "2.5", family: "PALMER", locked: false },
-    { id: "sata1", type: "sata", label: "SATA:1", base: "F070/F062", model: "WDC WD5000LPVX-08V0TT0", serial: "WX61E93P1102", fw: "01A01", form: "2.5", family: "FIREBIRD", locked: false },
-    { id: "sata2", type: "sata", label: "SATA:2", base: "8080/8002", model: "— empty —", locked: false, empty: true },
-    { id: "com3", type: "terminal", label: "COM3", base: "SIO 115200", model: "Terminal target", locked: false }
+    { id: "sata0", type: "sata", label: "SATA:0", base: "01F0/03F6", vendor: "WDC", model: "WDC WD10JPVX-22JC3T0", serial: "WX21A84K3821", ataFw: "01A01", form: "2.5", family: "PALMER", familyId: "0x29A", locked: false },
+    { id: "sata1", type: "sata", label: "SATA:1", base: "F070/F062", vendor: "WDC", model: "WDC WD5000LPVX-08V0TT0", serial: "WX61E93P1102", ataFw: "01A01", form: "2.5", family: "FIREBIRD", familyId: "0xE8", locked: false },
+    { id: "sata2", type: "sata", label: "SATA:2", base: "8080/8002", vendor: "—", model: "— empty —", serial: "—", ataFw: "—", form: "—", family: "—", familyId: "—", locked: false, empty: true },
+    { id: "com3", type: "terminal", label: "COM3", base: "SIO 115200", vendor: "WDC", model: "Terminal target", serial: "SIO-PENDING", ataFw: "—", form: "—", family: "—", familyId: "—", locked: false }
   ]
 };
 
@@ -211,6 +212,8 @@ function buildMenubar() {
       <div class="menu-panel">
         <button type="button" data-action="detect">Detect Controllers</button>
         <button type="button" data-action="add-port">Add Selected Port</button>
+        <button type="button" data-action="identify-drive">Identify Drive</button>
+        <button type="button" data-action="read-rom4f">Read ROM Module 4F</button>
         <button type="button" data-action="release">Release Port</button>
         <button type="button" data-action="reset-port">Reset Port</button>
         <hr />
@@ -302,6 +305,141 @@ function renderPorts() {
 
 function currentPort() {
   return state.ports.find((p) => p.id === state.selectedPort) || null;
+}
+
+function setIdentifyTrace(lines) {
+  const el = $("#identifyTrace");
+  if (!el) return;
+  el.textContent = Array.isArray(lines) ? lines.join("\n") : String(lines);
+}
+
+function paintIdentity() {
+  const id = state.identity;
+  $("#idVendor").textContent = id?.vendor || "—";
+  $("#idFamily").textContent = id?.family || "—";
+  $("#idModel").textContent = id?.model || "—";
+  $("#idSerial").textContent = id?.serial || "—";
+  $("#idAtaFw").textContent = id?.ataFw || "—";
+  $("#idRom4f").textContent = id?.rom4f || "—";
+  $("#idCtrlFw").textContent = id?.ctrlFw || "—";
+  $("#idFamHex").textContent = id?.familyId || "—";
+}
+
+function identifyDrive() {
+  const p = currentPort();
+  if (!p || p.empty) return toast("Select a populated port first");
+  if (!p.locked) {
+    state.ports.forEach((x) => { x.locked = x.id === p.id; });
+    renderPorts();
+  }
+
+  log(`Identify on ${p.label}: ATA ID + vscon/vscid`, "ok");
+  const vendor = p.vendor || ((p.model || "").includes("WDC") ? "WDC" : "UNKNOWN");
+  const identity = {
+    vendor,
+    family: p.family !== "—" ? p.family : null,
+    familyId: p.familyId !== "—" ? p.familyId : null,
+    model: p.model,
+    serial: p.serial,
+    ataFw: p.ataFw || "—",
+    rom4f: null,
+    ctrlFw: null,
+    rom4fPack: null,
+    form: p.form !== "—" ? p.form : null,
+    port: p.label
+  };
+  const isWd = vendor === "WDC" || vendor === "WD" || (p.model || "").includes("WDC");
+  identity.readyForRom4f = !!(isWd && identity.family && identity.familyId);
+  state.identity = identity;
+  paintIdentity();
+
+  setIdentifyTrace([
+    `[1] Port ${p.label} claimed exclusive`,
+    `[2] ATA Identify → Model=${identity.model}  SN=${identity.serial}  FW=${identity.ataFw}`,
+    `[3] vscon; vscid → Vendor=${identity.vendor}  Family=${identity.family || "UNKNOWN"}  ID=${identity.familyId || "—"}`,
+    isWd ? "[4] Vendor = Western Digital (WDC) ✓" : "[4] Vendor is NOT WD — ROM 4F skipped",
+    identity.family ? `[5] Family known (${identity.family}) ✓ → next: Read ROM module 0x4F` : "[5] Family unknown — need Auto/manual Family",
+    "",
+    "Session fields: Vendor, Family, Model, SN, ATA FW, FamilyID"
+  ]);
+
+  if (identity.readyForRom4f) {
+    $("#familyTitle").textContent = `${identity.family} · identified`;
+    $("#familyMeta").textContent = `${identity.model} · SN ${identity.serial} · next: Read ROM 4F for ARCO/SF FW pack`;
+    toast("WD + Family OK → Read ROM 4F");
+  } else if (isWd) {
+    toast("WD detected — resolve Family first");
+  } else {
+    toast("Non-WD vendor");
+  }
+}
+
+function readRom4f() {
+  const id = state.identity;
+  if (!id) return toast("Run Identify first");
+  const isWd = id.vendor === "WDC" || id.vendor === "WD";
+  if (!isWd) return toast("ROM 4F only for WD vendor");
+  if (!id.family || !id.familyId) return toast("Family must be known before ROM 4F");
+
+  log("ROM image: find ROYL (0x4C594F52) → DIR 0x0B → module 0x4F", "warn");
+  const map4f = {
+    PALMER: { rom4f: "020PP", ctrl: "01A01", pack: "020PP" },
+    FIREBIRD: { rom4f: "0353B", ctrl: "01A01", pack: "0353B" },
+    ATLANTIS: { rom4f: "701537", ctrl: "77FBP", pack: "701537" }
+  };
+  const hit = map4f[id.family] || { rom4f: "UNKNOWN", ctrl: id.ataFw, pack: null };
+  id.rom4f = hit.rom4f;
+  id.ctrlFw = hit.ctrl;
+  id.rom4fPack = hit.pack;
+  paintIdentity();
+  setIdentifyTrace([
+    "[ROM] load ROM.BIN / SA ROM",
+    "[ROM] marker ROYL @ directory",
+    "[ROM] DIR entry 0x0B",
+    `[ROM] module 0x4F → Overlay FW Rev = "${id.rom4f}"`,
+    `[ROM] module 0x0D → Ctrl FW Rev   = "${id.ctrlFw}"`,
+    `[ROM] Choice FW Rev = ${id.rom4f}`,
+    "",
+    "Next: Resolve FW Pack → epath for ARCO/SF RPM files"
+  ]);
+  log(`ROM 4F FW Rev = ${id.rom4f}`, "ok");
+  toast(`ROM 4F → ${id.rom4f}`);
+}
+
+function resolveFwPack() {
+  const id = state.identity;
+  if (!id?.rom4f) return toast("Read ROM 4F first");
+  if (!id.family) return toast("Family required");
+
+  const ref = FAMILY_FW[id.family];
+  let choice = null;
+  if (ref) {
+    choice = ref.choices.find((c) => id.rom4f.toUpperCase().includes(c.label.toUpperCase())) || ref.choices[0];
+  }
+  const p = currentPort();
+  state.familyForm = (p?.form && p.form !== "—") ? p.form : (ref?.form || (FAM25.includes(id.family) ? "2.5" : "3.5"));
+  state.familyName = id.family;
+  state.fwLabel = choice?.label || id.rom4fPack || id.rom4f;
+  state.epath = choice?.epath || `D:\\\\${state.familyForm}\\\\??\\\\${state.fwLabel}\\\\`;
+
+  refreshFamilyHeader();
+  openTool("arco");
+  setIdentifyTrace([
+    `Vendor=${id.vendor}  Family=${id.family} (${id.familyId})`,
+    `Model=${id.model}`,
+    `SN=${id.serial}`,
+    `ATA FW=${id.ataFw}`,
+    `ROM 4F FW=${id.rom4f}`,
+    `Ctrl FW=${id.ctrlFw}`,
+    "",
+    `Resolved ARCO/SF pack: ${state.fwLabel}`,
+    `epath = ${state.epath}`,
+    `arco_type=${ref?.flags?.arco_type ?? "?"}  tar_file=${ref?.flags?.tar_file ?? "?"}`,
+    "",
+    "Ready for family tools / ARCO / SF"
+  ]);
+  log(`FW pack for ARCO/SF → ${state.fwLabel}`, "ok");
+  toast(`FW pack ${state.fwLabel}`);
 }
 
 function refreshFamilyHeader() {
@@ -657,10 +795,10 @@ function addPort() {
   if (!p || p.empty) return toast("Select a populated port");
   state.ports.forEach((x) => { x.locked = false; });
   p.locked = true;
-  if (!state.familyName && p.family) selectFamily(p.form, p.family);
   renderPorts();
   log(`Port ${p.label} exclusive lock (driver passthrough)`, "ok");
   toast(`${p.label} locked`);
+  identifyDrive();
 }
 
 function releasePort() {
@@ -719,8 +857,17 @@ function onAction(action) {
     "family-auto": () => {
       const p = currentPort();
       if (!p || p.empty) return toast("Select a drive");
-      selectFamily(p.form, p.family);
+      identifyDrive();
+      if (state.identity?.readyForRom4f) {
+        readRom4f();
+        resolveFwPack();
+      } else if (p.family && p.family !== "—") {
+        selectFamily(p.form, p.family);
+      }
     },
+    "identify-drive": identifyDrive,
+    "read-rom4f": readRom4f,
+    "resolve-fw": resolveFwPack,
     "arco-full": () => runProcess("arco-full"),
     "arco-hot": () => runProcess("arco-hot"),
     "arco-mini": () => runProcess("arco-mini"),
