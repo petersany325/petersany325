@@ -1,0 +1,127 @@
+{
+  "source": "Windex F palmer",
+  "projectRoot": "D:\\\\test windex",
+  "note": "Per-family ARCO/SF differs via epath + flags under D:\\test windex\\FW\\…",
+  "families": {
+    "ATLANTIS": {
+      "form": "3.5",
+      "menuId": 1,
+      "familyIdsHex": ["0xAB", "0xB9", "0x9D"],
+      "fwChoices": [
+        { "label": "701537", "epath": "D:\\\\test windex\\\\FW\\\\3.5\\\\1\\\\701537\\\\" },
+        { "label": "771668", "epath": "D:\\\\test windex\\\\FW\\\\3.5\\\\1\\\\771668\\\\" },
+        { "label": "701590", "epath": "D:\\\\test windex\\\\FW\\\\3.5\\\\1\\\\701590\\\\" }
+      ],
+      "flags": {
+        "arco_type": 0,
+        "dcm_type": 0,
+        "tpi_type": 0,
+        "tpi_file": "0xC3",
+        "tar_file": "0xC8",
+        "type_1003": 0,
+        "type_3422": 0,
+        "type_6f": 0,
+        "norun_target": 1,
+        "b2type": 1,
+        "lba_servo": 0
+      }
+    },
+    "FIREBIRD": {
+      "form": "2.5",
+      "menuId": 10,
+      "familyIdsHex": ["0xE8"],
+      "fwChoices": [
+        { "label": "0353B", "epath": "D:\\\\test windex\\\\FW\\\\2.5\\\\10\\\\0353B\\\\", "type_3514": 0 },
+        { "label": "0379C", "epath": "D:\\\\test windex\\\\FW\\\\2.5\\\\10\\\\0379C\\\\", "type_3514": 1 }
+      ],
+      "flags": {
+        "arco_type": 0,
+        "dcm_type": 1,
+        "tpi_type": 1,
+        "tar_file": "0x290B",
+        "Tscan_type": "0x34D1",
+        "type_1003": 0,
+        "type_3422": 1,
+        "type_6f": 0,
+        "b2type": 1,
+        "lba_servo": 2,
+        "d2_type": 1
+      }
+    },
+    "PALMER": {
+      "form": "2.5",
+      "menuId": 46,
+      "familyIdsHex": ["0x29A"],
+      "fwChoices": [
+        { "label": "020PP", "epath": "D:\\\\test windex\\\\FW\\\\2.5\\\\46\\\\020PP\\\\" },
+        { "label": "0506B", "epath": "D:\\\\test windex\\\\FW\\\\2.5\\\\46\\\\0506B\\\\" }
+      ],
+      "flags": {
+        "arco_type": 1,
+        "dcm_type": 1,
+        "tpi_type": 1,
+        "tar_file": "0x2420",
+        "Tscan_type": "0x34D1",
+        "type_1003": 0,
+        "type_100b": 1,
+        "type_3514": 1,
+        "type_3422": 1,
+        "loadldr": 1,
+        "type_stag": 1,
+        "enabledSteps": [
+          "0x243B", "0x243A", "0x243D", "0x244A", "0x241E", "0x2451", "0x243E",
+          "0x2414", "0x240A", "0x240B", "0x2433", "0x241F", "0x2432", "0x242C",
+          "0x34D7", "0x34D9", "0x3703", "0x3706"
+        ],
+        "b2type": 1,
+        "lba_servo": 2,
+        "d2_type": 1
+      }
+    }
+  },
+  "commandPattern": {
+    "exec": ["vscon", "dlfile FileID", "XF FileID,TestID,parms", "msf"],
+    "arco": {
+      "full_legacy": "XF 0xC4, 0x46, HeadDCM, MediaDCM…",
+      "full_new": "XF 0x2407, 0x46, …",
+      "hot_legacy": "XF 0xC4, 0x4A, …",
+      "hot_new": "XF 0x2409, 0x4A, …",
+      "mini": "XF 0xC4|0x2401, 0x44, …"
+    }
+  },
+  "sa": {
+    "actionCodes": {
+      "8": "AC_RDWRResFile",
+      "25": "AC_EXECFILE",
+      "39": "AC_HDDEPOPCTRL",
+      "40": "AC_FileMgr",
+      "41": "AC_PSTTEST",
+      "48": "AC_FmtSelect",
+      "114": "AC_FMTSEL"
+    },
+    "fileIds": {
+      "0x0B": "Flash DIR (alt 0x20B)",
+      "0x28": "PST table",
+      "0x33": "P-List",
+      "0x34": "G-List",
+      "0x47": "DCM / config",
+      "0xC3": "TPI cal",
+      "0xC4": "ARCO overlay legacy",
+      "0x2407": "ARCO full new",
+      "0x2409": "ARCO hot new",
+      "0xC8": "Target capacity classic",
+      "0x2420": "Target/TPI-cap (PALMER-style)",
+      "0x290B": "Target/TPI-cap (FIREBIRD-style)"
+    },
+    "scriptCommands": {
+      "rdflnom": "read SA file",
+      "wrflnom": "write SA file",
+      "ClrRES / ClearFile": "clear resident file",
+      "dir / Map / dirrom": "module directory",
+      "plist / addp": "P-List view / add",
+      "VG / VGlist / gtop": "G-List view / G to P",
+      "kill": "head depop via AC_HDDEPOPCTRL"
+    }
+  },
+  "monitorFields": ["PTMId", "LastActCode", "ExtErr", "CurVirHd", "CurZOne", "CurVirCyl", "BGProgress", "timers"]
+}

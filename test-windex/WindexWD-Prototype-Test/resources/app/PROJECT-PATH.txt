@@ -1,0 +1,29 @@
+Windex WD — مسیر پروژه پیش‌فرض
+================================
+
+Project root:
+  D:\test windex
+
+ساختار پیشنهادی:
+
+  D:\test windex\
+    FW\                          ← پکیج ARCO + SF (Path 1)
+      2.5\
+        10\FIREBIRD packs…\
+        46\020PP\   0506B\ …
+      3.5\
+        1\701537\ …
+    Backup\                      ← بکاپ اورجینال هارد (Path 2)
+      PALMER\
+        WX21A84K3821\
+          ROM.BIN
+          ROM_MOD\
+          SA\
+          TRACK\
+    app\                         ← (اختیاری) کپی پروتوتایپ UI
+
+در UI:
+  Pack root   = D:\test windex\FW
+  Backup root = D:\test windex\Backup
+
+این مسیرها در Backup → Firmware Paths قابل تغییرند.

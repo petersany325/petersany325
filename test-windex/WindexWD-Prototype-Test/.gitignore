@@ -1,0 +1,15 @@
+WindexWD.exe
+*.dll
+*.pak
+locales/
+chrome_*
+icudtl.dat
+lib*.dll
+ffmpeg.dll
+d3dcompiler*
+vk_swiftshader*
+v8_context_snapshot.bin
+snapshot_blob.bin
+LICENSE*
+version
+resources/default_app.asar
