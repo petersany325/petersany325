@@ -148,10 +148,38 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
 
 .family-ribbon {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-  gap: 0.45rem;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 0.4rem;
   margin: 1.1rem 0 1rem;
 }
+.rib b { font-size: 0.62rem; letter-spacing: 0.02em; }
+.scan-params {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem 0.7rem;
+  padding: 0.75rem;
+  border: 1px solid var(--line-soft);
+  background: #0f1620;
+}
+.scan-params label {
+  display: grid;
+  gap: 0.28rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.scan-params input,
+.scan-params select {
+  width: 100%;
+  padding: 0.4rem 0.45rem;
+  border: 1px solid var(--line);
+  background: #0a1017;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+.tool-head p b { color: var(--amber); font-weight: 600; }
 .rib {
   display: grid; gap: 0.35rem; justify-items: center;
   padding: 0.7rem 0.35rem; border: 1px solid var(--line); background: #0d131b;
@@ -255,7 +283,8 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
 @media (max-width: 1100px) {
   .workspace { grid-template-columns: 210px 1fr; }
   .process-pane { display: none; }
-  .family-ribbon { grid-template-columns: repeat(4, 1fr); }
+  .family-ribbon { grid-template-columns: repeat(5, 1fr); }
+  .scan-params { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 760px) {
   .workspace { grid-template-columns: 1fr; }
@@ -263,4 +292,5 @@ button { font: inherit; color: inherit; background: transparent; border: 0; curs
   .family-ribbon { grid-template-columns: repeat(2, 1fr); }
   .submenu-panel { left: 0; top: 100%; }
   .op-grid { grid-template-columns: 1fr; }
+  .scan-params { grid-template-columns: 1fr; }
 }

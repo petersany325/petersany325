@@ -1,30 +1,34 @@
 # WD Factory Desk — UI Prototype
 
-Interactive HTML prototype for a Windows x64 factory tool concept:
+Family-centric interactive prototype for Win7/10/11 x64 factory tooling (Windex/SASDEX model).
 
-- Menu bar with cascading submenus (Port, Family, Process/ARCO/SF, …)
-- SATA / Terminal mode switch
-- Port detect → Add (exclusive lock) → Release
-- Family 2.5 (48) and 3.5 (66) browser
-- Simulated ARCO + SF run queue and telemetry
+## Menu layout (target)
+
+Each **Family** has its own cascading tool menu:
+
+- Cut Head
+- Zone Ops (list / cut / del)
+- P-List (view / add / clear)
+- G-List (view / G→P / clear)
+- Modules / DIR
+- ARCO (Full / Hot / Mini)
+- SF Chain
+- DCM / Capacity
+
+This lets every family add/extend tools independently.
 
 ## Open
-
-Open `index.html` in a browser, or:
 
 ```bash
 cd wd-factory-desk
 python3 -m http.server 8765
 ```
 
-Then visit `http://localhost:8765`.
+Or open `index.html` directly.
 
-This is a UI prototype only — no real drive I/O.
+## Docs
 
-## Family / FW reference
+- [`FAMILY-FW-REFERENCE.md`](./FAMILY-FW-REFERENCE.md)
+- [`family-fw-reference.json`](./family-fw-reference.json)
 
-See [`FAMILY-FW-REFERENCE.md`](./FAMILY-FW-REFERENCE.md) and [`family-fw-reference.json`](./family-fw-reference.json) for PALMER / FIREBIRD / ATLANTIS:
-
-- FW / PCB choices → `epath`
-- ARCO/SF flags that differ per family
-- SA FileIDs (P/G list, DIR, ARCO overlays, head depop)
+UI prototype only — no real drive I/O.

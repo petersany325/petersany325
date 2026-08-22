@@ -54,6 +54,38 @@ const FAMILY_OPS = [
     ]
   },
   {
+    id: "atascan", label: "ATA Scan ▸", children: [
+      { id: "ata-full", label: "Full Surface Scan" },
+      { id: "ata-quick", label: "Quick Scan" },
+      { id: "ata-verify", label: "Read Verify Scan" },
+      { id: "ata-write", label: "Write + Verify Scan" },
+      { id: "ata-range", label: "LBA Range Scan…" },
+      { id: "ata-pending", label: "Pending / Current Defects" },
+      { id: "ata-to-glist", label: "Add Errors → G-List" },
+      { id: "ata-to-plist", label: "Add Errors → P-List" },
+      { id: "ata-stop", label: "Stop Scan" },
+      { id: "ata-report", label: "Scan Report" }
+    ]
+  },
+  {
+    id: "chsscan", label: "CHS Scan ▸", children: [
+      { id: "chs-rd", label: "Read CHS Scan (rdchs)" },
+      { id: "chs-wr", label: "Write CHS Scan (wrchs)" },
+      { id: "chs-rv", label: "Verify CHS (RVCHS)" },
+      { id: "chs-raw", label: "RAW CHS Scan" },
+      { id: "chs-relo", label: "With Relocation" },
+      { id: "chs-norelo", label: "Skip Relocation" },
+      { id: "chs-ecc", label: "ECC Scan (eVCHS_ECCSCAN)" },
+      { id: "chs-tone-w", label: "Tone Scan Write" },
+      { id: "chs-tone-r", label: "Tone Scan Read" },
+      { id: "chs-sa-defect", label: "Scan SA Defect → RPList" },
+      { id: "chs-head", label: "Per-Head CHS Scan…" },
+      { id: "chs-cylrange", label: "Cylinder Range…" },
+      { id: "chs-stop", label: "Stop CHS Scan" },
+      { id: "chs-report", label: "CHS Report" }
+    ]
+  },
+  {
     id: "plist", label: "P-List ▸", children: [
       { id: "plist-view", label: "View P-List (0x33)" },
       { id: "plist-add", label: "Add Defect" },
@@ -213,6 +245,8 @@ function buildMenubar() {
         <div class="menu-label">Active family tools</div>
         <button type="button" data-tool="cuthead">Cut Head</button>
         <button type="button" data-tool="zone">Zone</button>
+        <button type="button" data-tool="atascan">ATA Scan</button>
+        <button type="button" data-tool="chsscan">CHS Scan</button>
         <button type="button" data-tool="plist">P-List</button>
         <button type="button" data-tool="glist">G-List</button>
         <button type="button" data-tool="modules">Modules / DIR</button>
@@ -330,6 +364,8 @@ function openTool(toolId, familyName = state.familyName) {
     (toolId.startsWith("plist") && b.dataset.tool === "plist") ||
     (toolId.startsWith("glist") && b.dataset.tool === "glist") ||
     (toolId.startsWith("zone") && b.dataset.tool === "zone") ||
+    (toolId.startsWith("ata") && b.dataset.tool === "atascan") ||
+    (toolId.startsWith("chs") && b.dataset.tool === "chsscan") ||
     (toolId.startsWith("arco") && b.dataset.tool === "arco") ||
     (toolId.startsWith("sf") && b.dataset.tool === "sf")));
 
@@ -352,6 +388,32 @@ function openTool(toolId, familyName = state.familyName) {
     "zone-list": () => zoneHtml(title),
     "zone-cut": () => zoneHtml(title),
     "zone-del": () => zoneHtml(title),
+    atascan: () => ataScanHtml(title, toolId),
+    "ata-full": () => ataScanHtml(title, toolId),
+    "ata-quick": () => ataScanHtml(title, toolId),
+    "ata-verify": () => ataScanHtml(title, toolId),
+    "ata-write": () => ataScanHtml(title, toolId),
+    "ata-range": () => ataScanHtml(title, toolId),
+    "ata-pending": () => ataScanHtml(title, toolId),
+    "ata-to-glist": () => ataScanHtml(title, toolId),
+    "ata-to-plist": () => ataScanHtml(title, toolId),
+    "ata-stop": () => ataScanHtml(title, toolId),
+    "ata-report": () => ataScanHtml(title, toolId),
+    chsscan: () => chsScanHtml(title, toolId),
+    "chs-rd": () => chsScanHtml(title, toolId),
+    "chs-wr": () => chsScanHtml(title, toolId),
+    "chs-rv": () => chsScanHtml(title, toolId),
+    "chs-raw": () => chsScanHtml(title, toolId),
+    "chs-relo": () => chsScanHtml(title, toolId),
+    "chs-norelo": () => chsScanHtml(title, toolId),
+    "chs-ecc": () => chsScanHtml(title, toolId),
+    "chs-tone-w": () => chsScanHtml(title, toolId),
+    "chs-tone-r": () => chsScanHtml(title, toolId),
+    "chs-sa-defect": () => chsScanHtml(title, toolId),
+    "chs-head": () => chsScanHtml(title, toolId),
+    "chs-cylrange": () => chsScanHtml(title, toolId),
+    "chs-stop": () => chsScanHtml(title, toolId),
+    "chs-report": () => chsScanHtml(title, toolId),
     plist: () => plistHtml(title),
     "plist-view": () => plistHtml(title),
     "plist-add": () => plistHtml(title),
@@ -387,7 +449,10 @@ function openTool(toolId, familyName = state.familyName) {
       </div>`
   };
 
-  const key = toolId in shells ? toolId : toolId.split("-")[0];
+  const key = toolId in shells ? toolId
+    : toolId.startsWith("ata") ? "atascan"
+    : toolId.startsWith("chs") ? "chsscan"
+    : toolId.split("-")[0];
   ws.innerHTML = (shells[toolId] || shells[key] || shells.plist)();
   log(`Opened ${fam} tool: ${toolId}`, "ok");
   setQueue("tool", "done");
@@ -396,9 +461,12 @@ function openTool(toolId, familyName = state.familyName) {
 
 function toolLabel(id) {
   const map = {
-    cuthead: "Cut Head", zone: "Zone Ops", plist: "P-List", glist: "G-List",
+    cuthead: "Cut Head", zone: "Zone Ops", atascan: "ATA Scan", chsscan: "CHS Scan",
+    plist: "P-List", glist: "G-List",
     modules: "Modules / DIR", arco: "ARCO", sf: "SF Chain", dcm: "DCM / Capacity"
   };
+  if (id.startsWith("ata-")) return "ATA Scan";
+  if (id.startsWith("chs-")) return "CHS Scan";
   return map[id] || map[id.split("-")[0]] || id;
 }
 
@@ -444,6 +512,101 @@ function zoneHtml(title) {
       <tr><td>00</td><td>0</td><td>2048</td><td>2048</td></tr>
       <tr><td>07</td><td>120000</td><td>134000</td><td>1800</td></tr>
       <tr><td>12</td><td>200000</td><td>220000</td><td>1600</td></tr>
+    </tbody></table>`;
+}
+
+function ataScanHtml(title, toolId = "atascan") {
+  return `<div class="tool-head"><div><h2>${title}</h2><p>ATA LBA surface path · verify / write-verify · map to G/P list · active: <b>${toolId}</b></p></div>
+    <div class="tool-actions">
+      <button class="primary" data-action="ata-run">Start</button>
+      <button data-action="ata-stop">Stop</button>
+      <button data-action="ata-report">Report</button>
+    </div></div>
+    <div class="scan-params">
+      <label>Mode
+        <select id="ataMode">
+          <option value="full" ${toolId === "ata-full" ? "selected" : ""}>Full Surface</option>
+          <option value="quick" ${toolId === "ata-quick" ? "selected" : ""}>Quick</option>
+          <option value="verify" ${toolId === "ata-verify" ? "selected" : ""}>Read Verify</option>
+          <option value="write" ${toolId === "ata-write" ? "selected" : ""}>Write + Verify</option>
+          <option value="range" ${toolId === "ata-range" ? "selected" : ""}>LBA Range</option>
+        </select>
+      </label>
+      <label>Start LBA <input id="ataStart" value="0" /></label>
+      <label>End LBA <input id="ataEnd" value="MAX" /></label>
+      <label>Block <input id="ataBlock" value="256" /></label>
+      <label>Timeout ms <input id="ataTo" value="3000" /></label>
+      <label>On error
+        <select id="ataErr">
+          <option>Log only</option>
+          <option ${toolId === "ata-to-glist" ? "selected" : ""}>Add → G-List</option>
+          <option ${toolId === "ata-to-plist" ? "selected" : ""}>Add → P-List</option>
+          <option>Retry then G-List</option>
+        </select>
+      </label>
+    </div>
+    <div class="op-grid" style="margin-top:0.75rem">
+      <button type="button" data-action="ata-run"><strong>Full Surface Scan</strong><span>entire user LBA space</span></button>
+      <button type="button" data-action="ata-run"><strong>Quick Scan</strong><span>sampled tracks / zones</span></button>
+      <button type="button" data-action="ata-run"><strong>Read Verify</strong><span>ATA verify, no data copy out</span></button>
+      <button type="button" data-action="ata-run"><strong>Write + Verify</strong><span>destructive pattern pass</span></button>
+      <button type="button" data-action="ata-pending"><strong>Pending Defects</strong><span>current / pending sector attrs</span></button>
+      <button type="button" data-action="ata-report"><strong>Scan Report</strong><span>errors / speed / map</span></button>
+    </div>
+    <table class="data-table" style="margin-top:0.85rem"><thead><tr><th>LBA</th><th>Len</th><th>Sense</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td>0x0012A400</td><td>8</td><td>UNC</td><td>→ G-List</td></tr>
+      <tr><td>0x00A81C00</td><td>1</td><td>UNC</td><td>retry ok</td></tr>
+      <tr><td>0x01F00E20</td><td>16</td><td>timeout</td><td>logged</td></tr>
+    </tbody></table>`;
+}
+
+function chsScanHtml(title, toolId = "chsscan") {
+  return `<div class="tool-head"><div><h2>${title}</h2><p>AC_RDWRCHS · rdchs/wrchs/RVCHS/RAW · ToneScan · SA defect · active: <b>${toolId}</b></p></div>
+    <div class="tool-actions">
+      <button class="primary" data-action="chs-run">Start</button>
+      <button data-action="chs-stop">Stop</button>
+      <button data-action="chs-report">Report</button>
+    </div></div>
+    <div class="scan-params">
+      <label>Mode
+        <select id="chsMode">
+          <option value="rd" ${toolId === "chs-rd" ? "selected" : ""}>Read CHS</option>
+          <option value="wr" ${toolId === "chs-wr" ? "selected" : ""}>Write CHS</option>
+          <option value="rv" ${toolId === "chs-rv" ? "selected" : ""}>Verify CHS</option>
+          <option value="raw" ${toolId === "chs-raw" ? "selected" : ""}>RAW CHS</option>
+          <option value="ecc" ${toolId === "chs-ecc" ? "selected" : ""}>ECC Scan</option>
+          <option value="tone-w" ${toolId === "chs-tone-w" ? "selected" : ""}>Tone Write</option>
+          <option value="tone-r" ${toolId === "chs-tone-r" ? "selected" : ""}>Tone Read</option>
+          <option value="sa" ${toolId === "chs-sa-defect" ? "selected" : ""}>SA Defect→RPList</option>
+        </select>
+      </label>
+      <label>Head <input id="chsHd" value="ALL" /></label>
+      <label>Start Cyl <input id="chsC0" value="0" /></label>
+      <label>End Cyl <input id="chsC1" value="MAX" /></label>
+      <label>Sector <input id="chsSec" value="1" /></label>
+      <label>Relocation
+        <select id="chsRelo">
+          <option ${toolId === "chs-relo" ? "selected" : ""}>With Relo</option>
+          <option ${toolId === "chs-norelo" ? "selected" : ""}>Skip Relo</option>
+        </select>
+      </label>
+    </div>
+    <div class="op-grid" style="margin-top:0.75rem">
+      <button type="button" data-action="chs-run"><strong>Read CHS Scan</strong><span>rdchs · AC_RDWRCHS</span></button>
+      <button type="button" data-action="chs-run"><strong>Write CHS Scan</strong><span>wrchs / RepWRCHS</span></button>
+      <button type="button" data-action="chs-run"><strong>Verify CHS</strong><span>RVCHS</span></button>
+      <button type="button" data-action="chs-run"><strong>RAW Path</strong><span>rdchsraw / wrchsraw</span></button>
+      <button type="button" data-action="chs-run"><strong>Tone Scan Write</strong><span>ToneScanWrite</span></button>
+      <button type="button" data-action="chs-run"><strong>Tone Scan Read</strong><span>ToneScanRead</span></button>
+      <button type="button" data-action="chs-run"><strong>ECC Scan</strong><span>eVCHS_ECCSCAN</span></button>
+      <button type="button" data-action="chs-run"><strong>SA Defect → RPList</strong><span>scan SA then plist</span></button>
+    </div>
+    <table class="data-table" style="margin-top:0.85rem"><thead><tr><th>Cyl</th><th>Hd</th><th>Sec</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>154220</td><td>0</td><td>12</td><td>UNC</td></tr>
+      <tr><td>88102</td><td>1</td><td>3</td><td>ECC corrected</td></tr>
+      <tr><td>-10</td><td>2</td><td>1</td><td>SA probe ok</td></tr>
     </tbody></table>`;
 }
 
@@ -567,6 +730,13 @@ function onAction(action) {
     "run-all": () => runProcess("run-all"),
     stop: stopRun,
     "exec-cuthead": () => log("kill head · AC_HDDEPOPCTRL", "warn"),
+    "ata-run": () => runProcess("ata-scan"),
+    "ata-stop": () => { stopRun(); log("ATA scan stopped", "err"); },
+    "ata-pending": () => log("ATA pending/current defect query", "warn"),
+    "ata-report": () => log("ATA scan report exported (prototype)", "ok"),
+    "chs-run": () => runProcess("chs-scan"),
+    "chs-stop": () => { stopRun(); log("CHS scan stopped", "err"); },
+    "chs-report": () => log("CHS scan report exported (prototype)", "ok"),
     about: () => toast("Family-centric Factory Desk prototype"),
     log: () => log("Command stub (prototype)", "warn")
   };
