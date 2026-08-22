@@ -10,6 +10,18 @@ After push, use one of:
 - **GitHub archive (whole branch):**  
   https://github.com/petersany325/petersany325/archive/refs/heads/cursor/wd-factory-desk-ui-proto-a3a0.zip
 
+## Project path (this PC)
+
+Default lab folder:
+
+```
+D:\test windex\
+  FW\          ← ARCO+SF packs
+  Backup\      ← original HDD dumps
+```
+
+See `PROJECT-PATH.txt`.
+
 ## What’s inside
 
 | Folder | Contents |

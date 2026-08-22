@@ -16,29 +16,32 @@ const FAM35 = [
   "MALIBU","REMBRNDT","TRAILXLB","TRESXLB2","APOLLO","REMBRNAE"
 ];
 
+/** Default Windows project folder (user lab path) */
+const PROJECT_ROOT = "D:\\\\test windex";
+
 const FAMILY_FW = {
   ATLANTIS: {
     form: "3.5",
     choices: [
-      { label: "701537", epath: "D:\\\\3.5\\\\1\\\\701537\\\\" },
-      { label: "771668", epath: "D:\\\\3.5\\\\1\\\\771668\\\\" },
-      { label: "701590", epath: "D:\\\\3.5\\\\1\\\\701590\\\\" }
+      { label: "701537", epath: `${PROJECT_ROOT}\\\\FW\\\\3.5\\\\1\\\\701537\\\\` },
+      { label: "771668", epath: `${PROJECT_ROOT}\\\\FW\\\\3.5\\\\1\\\\771668\\\\` },
+      { label: "701590", epath: `${PROJECT_ROOT}\\\\FW\\\\3.5\\\\1\\\\701590\\\\` }
     ],
     flags: { arco_type: 0, tar_file: "0xC8" }
   },
   FIREBIRD: {
     form: "2.5",
     choices: [
-      { label: "0353B", epath: "D:\\\\2.5\\\\10\\\\0353B\\\\" },
-      { label: "0379C", epath: "D:\\\\2.5\\\\10\\\\0379C\\\\" }
+      { label: "0353B", epath: `${PROJECT_ROOT}\\\\FW\\\\2.5\\\\10\\\\0353B\\\\` },
+      { label: "0379C", epath: `${PROJECT_ROOT}\\\\FW\\\\2.5\\\\10\\\\0379C\\\\` }
     ],
     flags: { arco_type: 0, tar_file: "0x290B" }
   },
   PALMER: {
     form: "2.5",
     choices: [
-      { label: "020PP", epath: "D:\\\\2.5\\\\46\\\\020PP\\\\" },
-      { label: "0506B", epath: "D:\\\\2.5\\\\46\\\\0506B\\\\" }
+      { label: "020PP", epath: `${PROJECT_ROOT}\\\\FW\\\\2.5\\\\46\\\\020PP\\\\` },
+      { label: "0506B", epath: `${PROJECT_ROOT}\\\\FW\\\\2.5\\\\46\\\\0506B\\\\` }
     ],
     flags: { arco_type: 1, tar_file: "0x2420" }
   }
@@ -136,10 +139,12 @@ const state = {
   epath: null,
   /** Active FW source for write/repair: pack (ARCO+SF) or backup (original HDD dump) */
   fwSource: "pack",
+  /** Project root on this PC */
+  projectRoot: PROJECT_ROOT,
   /** Root 1: factory ARCO+SF package tree */
-  packRoot: "D:\\\\FW\\\\Family",
+  packRoot: `${PROJECT_ROOT}\\\\FW`,
   /** Root 2: backup of original HDD firmware (ROM/modules/SA/tracks) */
-  backupRoot: "D:\\\\Backup",
+  backupRoot: `${PROJECT_ROOT}\\\\Backup`,
   backupDone: { rom: false, romMod: false, sa: false, track: false },
   tool: null,
   running: false,
@@ -452,7 +457,7 @@ function resolveFwPack() {
   state.familyForm = (p?.form && p.form !== "—") ? p.form : (ref?.form || (FAM25.includes(id.family) ? "2.5" : "3.5"));
   state.familyName = id.family;
   state.fwLabel = choice?.label || id.rom4fPack || id.rom4f;
-  state.epath = choice?.epath || `D:\\\\${state.familyForm}\\\\??\\\\${state.fwLabel}\\\\`;
+  state.epath = choice?.epath || `${PROJECT_ROOT}\\\\FW\\\\${state.familyForm}\\\\??\\\\${state.fwLabel}\\\\`;
 
   refreshFamilyHeader();
   openTool("backup");
@@ -483,7 +488,7 @@ function refreshFamilyHeader() {
     $("#familyRibbon").hidden = true;
     $("#telemFamily").textContent = "—";
     $("#telemFw").textContent = "—";
-    $("#statusLeft").textContent = "No family loaded";
+    $("#statusLeft").textContent = `Project: ${state.projectRoot || PROJECT_ROOT}`;
     $("#statusRight").textContent = `Pack: ${state.packRoot}  |  Backup: ${state.backupRoot}`;
     return;
   }
@@ -515,7 +520,7 @@ function selectFamily(form, name) {
   state.familyName = name;
   const ref = FAMILY_FW[name];
   let fw = "generic";
-  let path = form === "2.5" ? `D:\\\\2.5\\\\??\\\\${name}\\\\` : `D:\\\\3.5\\\\??\\\\${name}\\\\`;
+  let path = `${PROJECT_ROOT}\\\\FW\\\\${form}\\\\??\\\\${name}\\\\`;
   if (ref) {
     const opts = ref.choices.map((c, i) => `${i + 1}=${c.label}`).join("  ");
     const pick = window.prompt(`Select FW / PCB for ${name}\n${opts}`, "1");
@@ -695,14 +700,14 @@ function backupHtml(title, toolId = "backup") {
           <div class="path-row">
             <input type="text" id="inputPackRoot" value="${escapeAttr(state.packRoot)}" spellcheck="false" />
           </div>
-          <em class="path-hint">Resolved pack folder: ${escapeHtml(packPath)}</em>
+            <em class="path-hint">Resolved pack folder: ${escapeHtml(packPath)}</em>
         </label>
         <label class="path-field">
           <span>2 · Backup original HDD firmware</span>
           <div class="path-row">
             <input type="text" id="inputBackupRoot" value="${escapeAttr(state.backupRoot)}" spellcheck="false" />
           </div>
-          <em class="path-hint">Session dump: ${escapeHtml(dir)}</em>
+          <em class="path-hint">Session dump: ${escapeHtml(dir)} · project ${escapeHtml(state.projectRoot || PROJECT_ROOT)}</em>
         </label>
       </div>
       <div class="path-source-row">
@@ -1264,7 +1269,7 @@ function bindUi() {
           state.epath = ref.choices[0].epath;
         } else {
           state.fwLabel = "generic";
-          state.epath = `${form === "2.5" ? "D:\\\\2.5" : "D:\\\\3.5"}\\\\??\\\\${name}\\\\`;
+          state.epath = `${PROJECT_ROOT}\\\\FW\\\\${form}\\\\??\\\\${name}\\\\`;
         }
         refreshFamilyHeader();
       }

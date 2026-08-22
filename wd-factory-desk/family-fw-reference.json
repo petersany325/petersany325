@@ -1,15 +1,16 @@
 {
   "source": "Windex F palmer",
-  "note": "Per-family ARCO/SF differs via epath + flags. Commands share XF+msf / rdflnom pattern.",
+  "projectRoot": "D:\\\\test windex",
+  "note": "Per-family ARCO/SF differs via epath + flags under D:\\test windex\\FW\\…",
   "families": {
     "ATLANTIS": {
       "form": "3.5",
       "menuId": 1,
       "familyIdsHex": ["0xAB", "0xB9", "0x9D"],
       "fwChoices": [
-        { "label": "701537", "epath": "D:\\\\3.5\\\\1\\\\701537\\\\" },
-        { "label": "771668", "epath": "D:\\\\3.5\\\\1\\\\771668\\\\" },
-        { "label": "701590", "epath": "D:\\\\3.5\\\\1\\\\701590\\\\" }
+        { "label": "701537", "epath": "D:\\\\test windex\\\\FW\\\\3.5\\\\1\\\\701537\\\\" },
+        { "label": "771668", "epath": "D:\\\\test windex\\\\FW\\\\3.5\\\\1\\\\771668\\\\" },
+        { "label": "701590", "epath": "D:\\\\test windex\\\\FW\\\\3.5\\\\1\\\\701590\\\\" }
       ],
       "flags": {
         "arco_type": 0,
@@ -30,8 +31,8 @@
       "menuId": 10,
       "familyIdsHex": ["0xE8"],
       "fwChoices": [
-        { "label": "0353B", "epath": "D:\\\\2.5\\\\10\\\\0353B\\\\", "type_3514": 0 },
-        { "label": "0379C", "epath": "D:\\\\2.5\\\\10\\\\0379C\\\\", "type_3514": 1 }
+        { "label": "0353B", "epath": "D:\\\\test windex\\\\FW\\\\2.5\\\\10\\\\0353B\\\\", "type_3514": 0 },
+        { "label": "0379C", "epath": "D:\\\\test windex\\\\FW\\\\2.5\\\\10\\\\0379C\\\\", "type_3514": 1 }
       ],
       "flags": {
         "arco_type": 0,
@@ -52,8 +53,8 @@
       "menuId": 46,
       "familyIdsHex": ["0x29A"],
       "fwChoices": [
-        { "label": "020PP", "epath": "d:\\\\2.5\\\\46\\\\020PP\\\\" },
-        { "label": "0506B", "epath": "d:\\\\2.5\\\\46\\\\0506B\\\\" }
+        { "label": "020PP", "epath": "D:\\\\test windex\\\\FW\\\\2.5\\\\46\\\\020PP\\\\" },
+        { "label": "0506B", "epath": "D:\\\\test windex\\\\FW\\\\2.5\\\\46\\\\0506B\\\\" }
       ],
       "flags": {
         "arco_type": 1,

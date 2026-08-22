@@ -13,7 +13,7 @@ Contents: prototype UI, HamGap branding, license/demo unlock, and legacy `WdHdSe
 2. Click **Demo unlock (14 days)**  
 3. For driver (legacy 32-bit only): `INSTALL-DRIVER.bat` — never on the OS disk channel  
 
-Details: [`TEST-PACK.md`](./TEST-PACK.md)
+Details: [`TEST-PACK.md`](./TEST-PACK.md) · project path: [`PROJECT-PATH.txt`](./PROJECT-PATH.txt) (`D:\test windex`)
 
 Brand assets: `assets/logo.png` (HamGap logo), favicon + app icons.
 
