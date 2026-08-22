@@ -352,8 +352,14 @@
                     <div>
                         <label>اجرت تعمیر (تومان)</label>
                         <input type="number" name="labor_cost" min="0" value="{{ $reception->labor_cost }}">
-                        @if($reception->isUnrepairable())
-                            <div class="muted" style="color:#0f6a3f;font-size:11px;">غیرقابل تعمیر — بدون هزینه؛ برای خروج فقط از پنل «تسویه و تحویل» اقدام کنید.</div>
+                        @if($reception->isNoChargeExit())
+                            <div class="muted" style="color:#0f6a3f;font-size:11px;">
+                                @if($reception->isCancelledRepair())
+                                    انصراف از تعمیر — بدون هزینه؛ برای خروج فقط از پنل «تسویه و تحویل» اقدام کنید.
+                                @else
+                                    غیرقابل تعمیر — بدون هزینه؛ برای خروج فقط از پنل «تسویه و تحویل» اقدام کنید.
+                                @endif
+                            </div>
                         @elseif(!$reception->hasCostSet())
                             <div class="muted" style="color:#8a5a12;font-size:11px;">هزینه هنوز مشخص نشده — قبل از تحویل ثبت کنید.</div>
                         @else
@@ -767,9 +773,13 @@
         @if($canDeliverNow)
         <div class="panel" id="rx-settle" style="border-color:#9ec3e8;background:linear-gradient(180deg,#f4f9ff,#fff);">
             <h3 style="margin-top:0;">تسویه و تحویل / خروج کالا</h3>
-            @if($reception->isUnrepairable() && (int) $reception->remainingAmount() <= 0)
+            @if($reception->isNoChargeExit())
                 <p style="margin:0 0 10px;padding:8px 10px;border:1px solid #9dcfb0;border-radius:3px;background:#f3fbf6;color:#0f6a3f;font-size:12.5px;">
-                    این قبض <strong>غیرقابل تعمیر</strong> است و هزینه ندارد. تحویل/خروج بدون تأیید مبلغ انجام می‌شود (پیش‌فرض: بدون دریافت).
+                    @if($reception->isCancelledRepair())
+                        این قبض <strong>انصراف از تعمیر</strong> است و هزینه ندارد. تحویل/خروج بدون دریافت مبلغ انجام می‌شود.
+                    @else
+                        این قبض <strong>غیرقابل تعمیر</strong> است و هزینه ندارد. تحویل/خروج بدون تأیید مبلغ انجام می‌شود (پیش‌فرض: بدون دریافت).
+                    @endif
                 </p>
             @else
                 <p class="muted" style="margin:0 0 10px;">اینجا حساب‌کتاب، تأیید خروج دستگاه و قطعات، و تحویل نهایی با هم ثبت می‌شود.</p>
@@ -896,7 +906,7 @@
                         <label>نحوه تسویه</label>
                         <select name="settlement_mode" id="rx-settle-mode" required>
                             @php
-                                $defaultSettle = old('settlement_mode', ($reception->isUnrepairable() && (int) $reception->remainingAmount() <= 0) ? 'waive' : 'paid');
+                                $defaultSettle = old('settlement_mode', $reception->isNoChargeExit() ? 'waive' : 'paid');
                             @endphp
                             @foreach($settlementModes as $key => $label)
                                 <option value="{{ $key }}" @selected($defaultSettle === $key)>{{ $label }}</option>
@@ -929,7 +939,7 @@
                     </div>
                     <div>
                         <label>توضیح تسویه (برای نسیه یا بخشش مهم است)</label>
-                        <input type="text" name="note" id="rx-settle-note" value="{{ old('note', ($reception->isUnrepairable() && (int) $reception->remainingAmount() <= 0) ? \App\Services\ReceptionSettlementService::unrepairableNoChargeNote() : '') }}" placeholder="شماره پیگیری / دلیل نسیه یا بخشش">
+                        <input type="text" name="note" id="rx-settle-note" value="{{ old('note', $reception->isNoChargeExit() ? \App\Services\ReceptionSettlementService::noChargeExitNote($reception) : '') }}" placeholder="شماره پیگیری / دلیل نسیه یا بخشش">
                     </div>
                     <div>
                         @include('partials.toggle', [
