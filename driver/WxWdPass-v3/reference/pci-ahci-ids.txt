@@ -1,0 +1,42 @@
+# WxWdPass v3 — AHCI PCI IDs (phase 1 target list)
+# Format: VEN_DEV  Vendor  Description
+# Source: PCI ID repos + Intel/AMD public IDs — verify on target hardware
+
+# Intel client AHCI
+8086_9C03  Intel  8 Series SATA AHCI
+8086_9C02  Intel  8 Series SATA RAID (AHCI mode)
+8086_8C02  Intel  9 Series SATA AHCI
+8086_8C03  Intel  9 Series SATA RAID
+8086_9D03  Intel  100 Series SATA AHCI
+8086_A102  Intel  200 Series SATA AHCI
+8086_A182  Intel  300 Series SATA AHCI
+8086_43D2  Intel  400 Series SATA AHCI
+8086_7AE2  Intel  600 Series SATA AHCI
+8086_7A62  Intel  700 Series SATA AHCI
+8086_1E03  Intel  7 Series SATA AHCI
+8086_1C02  Intel  6 Series SATA AHCI
+8086_3B2C  Intel  5 Series SATA AHCI
+
+# AMD
+1022_7901  AMD    SB7xx/SB8xx/SB9xx SATA AHCI
+1022_7904  AMD    SB9xx SATA AHCI
+1022_43EB  AMD    FCH SATA AHCI (Zen)
+1022_43F6  AMD    FCH SATA AHCI (Zen2+)
+1022_7804  AMD    FCH SATA IDE/AHCI
+
+# ASMedia
+1B21_0612  ASMedia ASM1061/1062 SATA
+1B21_1166  ASMedia ASM1166 SATA
+
+# JMicron
+197B_0585  JMicron JMB58x AHCI
+197B_236F  JMicron JMB36x AHCI
+
+# Marvell
+1B4B_9215  Marvell 88SE9215 SATA
+1B4B_9172  Marvell 88SE9172 SATA
+
+# NOT in v3.0 scope (NVMe — phase 2)
+# 8086_* NVMe controllers
+# 144D_* Samsung NVMe
+# 15B7_* Sandisk NVMe

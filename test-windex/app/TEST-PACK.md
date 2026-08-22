@@ -69,8 +69,8 @@ WdHdSetup.exe -NoAtapi
 ## Next (real product)
 
 - Native Win7/10/11 **x64** app  
-- New exclusive PassThrough / SCSI Pass Through driver path  
-- Wire Backup / ARCO / SF to real VSC  
+- **WxWdPass v3** AHCI driver — see `driver/WxWdPass-v3/docs/WXWD-PASS-v3-SPEC.md`  
+- Wire Backup / ARCO / SF to real VSC via `IOCTL_WXWD_*` (`driver/WxWdPass-v3/include/wxwd_ioctl.h`)  
 
 ## Brand
 
