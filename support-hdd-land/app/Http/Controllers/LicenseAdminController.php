@@ -1,0 +1,399 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\ProductLicense;
+use App\Services\NiazpardazSmsService;
+use App\Support\LicensePlans;
+use Illuminate\Http\Request;
+
+/**
+ * Seller admin panel: issue / report / monitor customer install licenses.
+ */
+class LicenseAdminController extends Controller
+{
+    public function index(Request $request)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $q = ProductLicense::query()->latest('id');
+
+        $status = trim((string) $request->query('status', ''));
+        if ($status !== '' && in_array($status, ['unused', 'active', 'revoked', 'expired'], true)) {
+            $q->where('status', $status);
+        }
+
+        $online = $request->query('online');
+        if ($online === '1') {
+            $q->where('status', 'active')
+                ->where('last_check_at', '>=', now()->subDays(7));
+        } elseif ($online === '0') {
+            $q->where('status', 'active')
+                ->where(function ($w) {
+                    $w->whereNull('last_check_at')
+                        ->orWhere('last_check_at', '<', now()->subDays(7));
+                });
+        }
+
+        $search = trim((string) $request->query('q', ''));
+        if ($search !== '') {
+            $q->where(function ($w) use ($search) {
+                $w->where('license_key', 'like', '%'.$search.'%')
+                    ->orWhere('customer_name', 'like', '%'.$search.'%')
+                    ->orWhere('customer_phone', 'like', '%'.$search.'%')
+                    ->orWhere('customer_email', 'like', '%'.$search.'%')
+                    ->orWhere('domain', 'like', '%'.$search.'%');
+            });
+        }
+
+        $licenses = $q->paginate(40)->withQueryString();
+        $stats = $this->stats();
+        $plans = LicensePlans::all();
+
+        return view('licenses.index', compact('licenses', 'stats', 'status', 'online', 'search', 'plans'));
+    }
+
+    public function plans(Request $request)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $plans = array_values(LicensePlans::all());
+
+        return view('licenses.plans', compact('plans'));
+    }
+
+    public function savePlans(Request $request)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $data = $request->validate([
+            'plans' => ['required', 'array', 'min:1'],
+            'plans.*.code' => ['required', 'string', 'max:30'],
+            'plans.*.label' => ['required', 'string', 'max:80'],
+            'plans.*.months' => ['nullable', 'integer', 'min:0', 'max:1200'],
+            'plans.*.price' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        LicensePlans::save($data['plans']);
+
+        return redirect()->route('licenses.plans')->with('success', 'پلن‌ها و قیمت‌ها ذخیره شد.');
+    }
+
+    public function online(Request $request)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $onlineRows = ProductLicense::query()
+            ->where('status', 'active')
+            ->where('last_check_at', '>=', now()->subDays(7))
+            ->orderByDesc('last_check_at')
+            ->get();
+
+        $offlineRows = ProductLicense::query()
+            ->where('status', 'active')
+            ->where(function ($w) {
+                $w->whereNull('last_check_at')
+                    ->orWhere('last_check_at', '<', now()->subDays(7));
+            })
+            ->orderByDesc('activated_at')
+            ->get();
+
+        $stats = $this->stats();
+
+        return view('licenses.online', compact('onlineRows', 'offlineRows', 'stats'));
+    }
+
+    public function issue(Request $request)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $data = $request->validate([
+            'customer_name' => ['nullable', 'string', 'max:120'],
+            'customer_phone' => ['required', 'string', 'max:30', 'regex:/^09\d{9}$/'],
+            'customer_email' => ['nullable', 'email', 'max:160'],
+            'domain_hint' => ['nullable', 'string', 'max:190'],
+            'plan_code' => ['required', 'string', 'max:30'],
+            'expires_at' => ['nullable', 'date'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'send_sms' => ['nullable', 'boolean'],
+            'start_from' => ['nullable', 'in:issue,activate'],
+        ], [
+            'customer_phone.required' => 'موبایل صاحب لایسنس الزامی است؛ پیامک نصب فقط به همین خط می‌رود.',
+            'customer_phone.regex' => 'موبایل صاحب لایسنس را به‌صورت 09xxxxxxxxx وارد کنید.',
+        ]);
+        $data['customer_phone'] = preg_replace('/\D+/', '', (string) $data['customer_phone']) ?: '';
+
+        $plan = LicensePlans::find($data['plan_code']);
+        if (! $plan) {
+            return back()->with('error', 'پلن انتخاب‌شده معتبر نیست.')->withInput();
+        }
+
+        $key = ProductLicense::generateKey();
+        $domainHint = ! empty($data['domain_hint'])
+            ? ProductLicense::normalizeDomain($data['domain_hint'])
+            : null;
+
+        $startFrom = $data['start_from'] ?? 'activate';
+        $expiresAt = $data['expires_at'] ?? null;
+        if (! $expiresAt && $startFrom === 'issue' && ! empty($plan['months'])) {
+            $expiresAt = now()->addMonths((int) $plan['months'])->toDateString();
+        }
+
+        $row = ProductLicense::query()->create([
+            'license_key' => $key,
+            'customer_name' => $data['customer_name'] ?? null,
+            'customer_phone' => $data['customer_phone'] ?? null,
+            'customer_email' => $data['customer_email'] ?? null,
+            'product' => 'hddland-repair',
+            'plan_code' => $plan['code'],
+            'plan_label' => $plan['label'],
+            'plan_months' => $plan['months'],
+            'price_toman' => (int) $plan['price'],
+            'status' => 'unused',
+            'expires_at' => $expiresAt,
+            'notes' => $data['notes'] ?? null,
+            'meta' => array_filter([
+                'domain_hint' => $domainHint,
+                'issued_by' => $request->user()->id,
+                'issued_by_name' => $request->user()->name,
+                'start_from' => $startFrom,
+            ]),
+        ]);
+
+        $msg = 'سریال صادر شد: '.$row->license_key.' ('.$row->planSummary().')';
+
+        if ($request->boolean('send_sms') && ! empty($row->customer_phone)) {
+            $sms = $this->sendLicenseSms($row);
+            $msg .= $sms['ok']
+                ? ' — پیامک ارسال شد.'
+                : ' — پیامک ارسال نشد: '.($sms['message'] ?? '');
+        }
+
+        return redirect()->route('licenses.index')->with('success', $msg);
+    }
+
+    public function sendSms(Request $request, ProductLicense $license, NiazpardazSmsService $sms)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $result = $this->sendLicenseSms($license, $sms);
+        if (! ($result['ok'] ?? false)) {
+            return back()->with('error', $result['message'] ?? 'ارسال پیامک ناموفق بود.');
+        }
+
+        return back()->with('success', 'سریال برای '.$license->customer_phone.' پیامک شد.');
+    }
+
+    public function revoke(Request $request, ProductLicense $license)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $license->update([
+            'status' => 'revoked',
+            'token' => null,
+        ]);
+
+        return back()->with('success', 'لایسنس باطل شد: '.$license->license_key);
+    }
+
+    public function unbind(Request $request, ProductLicense $license)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $license->update([
+            'status' => 'unused',
+            'domain' => null,
+            'token' => null,
+            'activated_at' => null,
+            'last_check_at' => null,
+            'last_check_ip' => null,
+            'last_check_version' => null,
+            'check_count' => 0,
+        ]);
+
+        return back()->with('success', 'قفل دامنه برداشته شد. سریال دوباره قابل نصب است: '.$license->license_key);
+    }
+
+    public function edit(Request $request, ProductLicense $license)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $plans = LicensePlans::all();
+
+        return view('licenses.edit', compact('license', 'plans'));
+    }
+
+    public function update(Request $request, ProductLicense $license)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $data = $request->validate([
+            'customer_name' => ['nullable', 'string', 'max:120'],
+            'customer_phone' => ['required', 'string', 'max:30', 'regex:/^09\d{9}$/'],
+            'customer_email' => ['nullable', 'email', 'max:160'],
+            'domain' => ['nullable', 'string', 'max:190'],
+            'plan_code' => ['nullable', 'string', 'max:30'],
+            'status' => ['required', 'in:unused,active,revoked,expired'],
+            'starts_at' => ['nullable', 'string', 'max:20'],
+            'expires_at' => ['nullable', 'string', 'max:20'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'price_toman' => ['nullable', 'integer', 'min:0'],
+        ], [
+            'customer_phone.required' => 'موبایل صاحب لایسنس الزامی است؛ پیامک نصب فقط به همین خط می‌رود.',
+            'customer_phone.regex' => 'موبایل صاحب لایسنس را به‌صورت 09xxxxxxxxx وارد کنید.',
+        ]);
+        $data['customer_phone'] = preg_replace('/\D+/', '', (string) $data['customer_phone']) ?: '';
+
+        $starts = resolve_request_date($data['starts_at'] ?? null);
+        $ends = resolve_request_date($data['expires_at'] ?? null);
+
+        if (! empty($data['plan_code'])) {
+            $plan = LicensePlans::find($data['plan_code']);
+            if ($plan) {
+                $license->plan_code = $plan['code'];
+                $license->plan_label = $plan['label'];
+                $license->plan_months = $plan['months'];
+                if (! array_key_exists('price_toman', $data) || $data['price_toman'] === null) {
+                    $license->price_toman = (int) $plan['price'];
+                }
+            }
+        }
+        if (array_key_exists('price_toman', $data) && $data['price_toman'] !== null) {
+            $license->price_toman = (int) $data['price_toman'];
+        }
+
+        $domain = trim((string) ($data['domain'] ?? ''));
+        $license->fill([
+            'customer_name' => $data['customer_name'] ?? null,
+            'customer_phone' => $data['customer_phone'] ?? null,
+            'customer_email' => $data['customer_email'] ?? null,
+            'domain' => $domain !== '' ? ProductLicense::normalizeDomain($domain) : null,
+            'status' => $data['status'],
+            'notes' => $data['notes'] ?? null,
+            'activated_at' => $starts,
+            'expires_at' => $ends,
+        ]);
+
+        if ($license->status === 'revoked') {
+            $license->token = null;
+        }
+
+        $license->save();
+
+        return redirect()->route('licenses.index')->with('success', 'لایسنس ویرایش شد: '.$license->license_key);
+    }
+
+    public function renewForm(Request $request, ProductLicense $license)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $plans = LicensePlans::all();
+
+        return view('licenses.renew', compact('license', 'plans'));
+    }
+
+    public function extend(Request $request, ProductLicense $license)
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $data = $request->validate([
+            'expires_at' => ['nullable', 'string', 'max:20'],
+            'plan_code' => ['nullable', 'string', 'max:30'],
+            'add_plan' => ['nullable', 'boolean'],
+        ]);
+
+        if (! empty($data['plan_code']) && ($request->boolean('add_plan') || $request->has('plan_code'))) {
+            $plan = LicensePlans::find($data['plan_code']);
+            if (! $plan) {
+                return back()->with('error', 'پلن تمدید معتبر نیست.');
+            }
+            $base = $license->expires_at && $license->expires_at->isFuture()
+                ? $license->expires_at->copy()
+                : now();
+            if (! empty($plan['months'])) {
+                $license->expires_at = $base->addMonths((int) $plan['months']);
+            } else {
+                $license->expires_at = null;
+            }
+            $license->plan_code = $plan['code'];
+            $license->plan_label = $plan['label'];
+            $license->plan_months = $plan['months'];
+            $license->price_toman = (int) (($license->price_toman ?: 0) + (int) $plan['price']);
+            if (in_array($license->status, ['expired', 'unused'], true) || $license->domain) {
+                $license->status = 'active';
+            }
+            if (! $license->activated_at && $license->domain) {
+                $license->activated_at = now();
+            }
+            $license->save();
+
+            return redirect()->route('licenses.index')->with('success', 'تمدید شد با پلن '.$plan['label'].' — پایان: '.($license->expires_at ? jalali_date($license->expires_at) : 'مادام‌العمر'));
+        }
+
+        $ends = resolve_request_date($data['expires_at'] ?? null);
+        $license->update([
+            'expires_at' => $ends,
+            'status' => $license->status === 'expired' ? 'active' : $license->status,
+        ]);
+
+        return redirect()->route('licenses.index')->with('success', 'تاریخ انقضا به‌روز شد.');
+    }
+
+    /** @return array<string, int> */
+    private function stats(): array
+    {
+        $onlineSince = now()->subDays(7);
+
+        return [
+            'total' => ProductLicense::query()->count(),
+            'unused' => ProductLicense::query()->where('status', 'unused')->count(),
+            'active' => ProductLicense::query()->where('status', 'active')->count(),
+            'online' => ProductLicense::query()
+                ->where('status', 'active')
+                ->where('last_check_at', '>=', $onlineSince)
+                ->count(),
+            'offline' => ProductLicense::query()
+                ->where('status', 'active')
+                ->where(function ($w) use ($onlineSince) {
+                    $w->whereNull('last_check_at')->orWhere('last_check_at', '<', $onlineSince);
+                })
+                ->count(),
+            'revoked' => ProductLicense::query()->where('status', 'revoked')->count(),
+            'expired' => ProductLicense::query()->where('status', 'expired')->count(),
+            'issued_30d' => ProductLicense::query()->where('created_at', '>=', now()->subDays(30))->count(),
+            'activated_30d' => ProductLicense::query()->where('activated_at', '>=', now()->subDays(30))->count(),
+        ];
+    }
+
+    /** @return array{ok:bool,message?:string} */
+    private function sendLicenseSms(ProductLicense $license, ?NiazpardazSmsService $sms = null): array
+    {
+        $phone = preg_replace('/\D+/', '', (string) $license->customer_phone) ?: '';
+        if ($phone === '') {
+            return ['ok' => false, 'message' => 'موبایل مشتری ثبت نشده.'];
+        }
+
+        $shop = shop_name();
+        $lines = [
+            $shop,
+            'سریال نصب نرم‌افزار تعمیرگاه:',
+            $license->license_key,
+            'در ویزارد نصب وارد کنید.',
+        ];
+        if ($license->plan_label) {
+            $lines[] = 'پلن: '.$license->plan_label;
+        }
+        if ($license->price_toman) {
+            $lines[] = 'مبلغ: '.number_format((int) $license->price_toman).' تومان';
+        }
+        if ($license->expires_at) {
+            $lines[] = 'انقضا: '.jalali_date($license->expires_at);
+        } elseif (! empty($license->plan_months)) {
+            $lines[] = 'مدت: '.$license->plan_months.' ماه از زمان نصب';
+        }
+
+        $sms = $sms ?: app(NiazpardazSmsService::class);
+
+        return $sms->send($phone, implode("\n", $lines));
+    }
+}
