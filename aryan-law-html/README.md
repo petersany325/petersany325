@@ -1,13 +1,15 @@
-# طرح نمونه سایت وکالت — مؤسسه حقوقی آریان
+# aryan-law-html — طرح HTML مؤسسه حقوقی آریان
 
 نسخهٔ HTML/CSS نمونه (RTL فارسی) برای بررسی ظاهر قبل از توسعهٔ بک‌اند.
 
+> این پوشه مربوط به سایت وکالت آریان است — نه Windex، نه WinFOF.
+
 ## اجرا
 
-فایل `sample-site/index.html` را در مرورگر باز کنید، یا:
+فایل `aryan-law-html/index.html` را در مرورگر باز کنید، یا:
 
 ```bash
-cd sample-site && python3 -m http.server 8080
+cd aryan-law-html && python3 -m http.server 8080
 ```
 
 سپس به `http://localhost:8080` بروید.
