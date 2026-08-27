@@ -1,0 +1,10 @@
+# Deny access to sensitive files
+<Files "config.local.php">
+  Require all denied
+</Files>
+<Files "error.log">
+  Require all denied
+</Files>
+<Files "setup_admin.php">
+  # Optionally lock after first use by renaming/deleting the file
+</Files>
