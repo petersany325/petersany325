@@ -341,7 +341,7 @@ class ReceptionController extends Controller
             ]);
         });
 
-        $smsQueued = $this->queueReceptionCreatedSms($reception, $request->boolean('send_sms', true));
+        $smsQueued = $this->queueReceptionCreatedSms($reception, $request->boolean('send_sms'));
 
         $action = $data['action'] ?? 'save_close';
         $flash = $smsQueued
@@ -447,7 +447,7 @@ class ReceptionController extends Controller
 
         $smsQueued = false;
         foreach ($receptions as $item) {
-            if ($this->queueReceptionCreatedSms($item, $request->boolean('send_sms', true))) {
+            if ($this->queueReceptionCreatedSms($item, $request->boolean('send_sms'))) {
                 $smsQueued = true;
             }
         }
@@ -1882,6 +1882,8 @@ class ReceptionController extends Controller
     /**
      * Send create-SMS after the HTTP response so FPM workers are not blocked
      * by the SMS panel (up to ~20s) during peak reception traffic.
+     *
+     * Employee opt-out always wins — even when the status rule is «ارسال شود».
      */
     private function queueReceptionCreatedSms(Reception $reception, bool $employeeSaidSend = true): bool
     {
@@ -1894,7 +1896,9 @@ class ReceptionController extends Controller
         if ($mode === SmsStatusRule::SEND_NEVER) {
             return false;
         }
-        if ($mode === SmsStatusRule::SEND_ASK && ! $employeeSaidSend) {
+
+        // کارمند سوییچ را خاموش کرده → هرگز ارسال نشود
+        if (! $employeeSaidSend) {
             return false;
         }
 
