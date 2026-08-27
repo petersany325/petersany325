@@ -1,0 +1,32 @@
+# Shared hosting: project root as Document Root → front controller
+# Does NOT hard-code any domain (safe for customer installs).
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block sensitive paths
+    RewriteRule ^(\.env|\.env\..*|composer\.(json|lock)|artisan|phpunit\.xml)(/|$) - [F,L,NC]
+    RewriteRule ^(storage|vendor|bootstrap|config|database|resources|routes|app|tests|install)/ - [F,L,NC]
+
+    # Direct PHP helpers in /public
+    RewriteRule ^install\.php$ public/install.php [L]
+    RewriteRule ^fix-install\.php$ public/fix-install.php [L]
+    RewriteRule ^repair-domain\.php$ public/repair-domain.php [L]
+    RewriteRule ^debug-500\.php$ public/debug-500.php [L]
+
+    # Real files/dirs at project root
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Prefer physical files inside /public (assets)
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Everything else → Laravel via root index.php (fixes /login 404)
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+DirectoryIndex index.php
+Options -Indexes
