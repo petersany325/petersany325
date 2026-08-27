@@ -84,7 +84,15 @@
     <input type="hidden" name="customer_phone" value="{{ old('customer_phone') }}">
     <input type="hidden" name="intake_mode" id="intake-mode" value="{{ $oldMode }}">
     <input type="hidden" name="action" id="form-action" value="save_close">
-    <input type="hidden" name="send_sms" id="create-send-sms" value="1">
+    @php
+        $createSmsMode = $createSmsMode ?? 'always';
+        $createSmsDefaultOn = $createSmsMode === 'always';
+    @endphp
+    @if($createSmsMode === 'never')
+        <input type="hidden" name="send_sms" id="create-send-sms" value="0">
+    @else
+        <input type="hidden" name="send_sms" id="create-send-sms" value="{{ $createSmsDefaultOn ? '1' : '0' }}">
+    @endif
     {{-- Fallback submit target for non-barcode Enter (barcode Enter is handled in app.js and does not submit). --}}
     <button type="submit" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;">ثبت</button>
 
@@ -384,6 +392,19 @@
                 </div>
             </div>
             <div class="accept-actions">
+                @if(($createSmsMode ?? 'always') !== 'never')
+                    <div id="create-sms-toggle-wrap" class="create-sms-toggle-wrap" style="flex:1 1 220px;min-width:200px;">
+                        @include('partials.toggle', [
+                            'name' => 'send_sms_ui',
+                            'label' => 'پیامک پذیرش به مشتری',
+                            'checked' => ($createSmsMode ?? 'always') === 'always',
+                            'on' => 'برود',
+                            'off' => 'نرود',
+                            'id' => 'create_sms_toggle',
+                        ])
+                        <p class="muted" style="margin:4px 0 0;font-size:11px;">اگر خاموش باشد پیامک ارسال نمی‌شود.</p>
+                    </div>
+                @endif
                 <button class="btn btn-primary" type="submit" data-set-action="save_close">ثبت و بستن</button>
                 <button class="btn btn-secondary" type="submit" data-set-action="save_continue">ثبت و ادامه</button>
                 <button class="btn btn-secondary" type="button" data-set-action="save_print">ثبت و چاپ</button>
@@ -455,6 +476,18 @@
             </div>
 
             <div class="accept-actions compact-actions">
+                @if(($createSmsMode ?? 'always') !== 'never')
+                    <div class="create-sms-toggle-wrap" style="flex:1 1 220px;min-width:200px;">
+                        @include('partials.toggle', [
+                            'name' => 'send_sms_ui_group',
+                            'label' => 'پیامک پذیرش به مشتری',
+                            'checked' => ($createSmsMode ?? 'always') === 'always',
+                            'on' => 'برود',
+                            'off' => 'نرود',
+                            'id' => 'create_sms_toggle_group',
+                        ])
+                    </div>
+                @endif
                 <button class="btn btn-primary" type="submit" data-set-action="save_close">ثبت همه قبض‌ها</button>
                 <button class="btn btn-secondary" type="button" data-set-action="save_print">ثبت و چاپ اولی</button>
                 <a class="btn btn-ghost" href="{{ route('receptions.index') }}">انصراف</a>

@@ -1726,11 +1726,33 @@
             if (sendSmsInput) {
                 if (createSmsMode === 'never') {
                     sendSmsInput.value = '0';
-                } else if (createSmsMode === 'ask') {
-                    var goSms = window.confirm('پیامک پذیرش به مشتری ارسال شود؟\n\nتأیید = برود\nانصراف = نرود');
-                    sendSmsInput.value = goSms ? '1' : '0';
                 } else {
-                    sendSmsInput.value = '1';
+                    var modeRoot = document.getElementById('mode-' + (mode || 'single')) || form;
+                    var toggleInput = modeRoot.querySelector('.create-sms-toggle-wrap [data-toggle-input]')
+                        || form.querySelector('.create-sms-toggle-wrap [data-toggle-input]');
+                    var wantSms = toggleInput ? !!toggleInput.checked : sendSmsInput.value === '1';
+                    if (createSmsMode === 'ask') {
+                        var goSms = window.confirm('پیامک پذیرش به مشتری ارسال شود؟\n\nتأیید = برود\nانصراف = نرود');
+                        wantSms = !!goSms;
+                        if (toggleInput) {
+                            toggleInput.checked = wantSms;
+                            var wrap = toggleInput.closest('[data-toggle-field]');
+                            if (wrap && typeof syncToggleUI === 'function') {
+                                // syncToggleUI is local — mirror disable logic here
+                            }
+                            var off = toggleInput.closest('[data-toggle-field]') && toggleInput.closest('[data-toggle-field]').querySelector('[data-toggle-off]');
+                            if (off) off.disabled = wantSms;
+                            var btn = toggleInput.closest('[data-toggle-field]') && toggleInput.closest('[data-toggle-field]').querySelector('[data-toggle-btn]');
+                            if (btn) {
+                                btn.classList.toggle('is-on', wantSms);
+                                btn.classList.toggle('is-off', !wantSms);
+                                btn.setAttribute('aria-pressed', wantSms ? 'true' : 'false');
+                                var state = btn.querySelector('.toggle-state');
+                                if (state) state.textContent = wantSms ? (btn.getAttribute('data-on-text') || 'برود') : (btn.getAttribute('data-off-text') || 'نرود');
+                            }
+                        }
+                    }
+                    sendSmsInput.value = wantSms ? '1' : '0';
                 }
             }
         });

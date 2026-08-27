@@ -1239,8 +1239,10 @@
         if (!toggleField) return;
         var input = toggleField.querySelector('[data-toggle-input]');
         var btn = toggleField.querySelector('[data-toggle-btn]');
+        var offInput = toggleField.querySelector('[data-toggle-off]');
         if (!input || !btn) return;
         input.checked = !!on;
+        if (offInput) offInput.disabled = !!on;
         btn.classList.toggle('is-on', !!on);
         btn.classList.toggle('is-off', !on);
         btn.setAttribute('aria-pressed', on ? 'true' : 'false');
@@ -1321,7 +1323,9 @@
         }
         var input = wrap.querySelector('[data-toggle-input]');
         var btn = wrap.querySelector('[data-toggle-btn]');
+        var offInput = wrap.querySelector('[data-toggle-off]');
         if (input) input.checked = !!on;
+        if (offInput) offInput.disabled = !!on;
         if (btn) {
             btn.classList.toggle('is-on', !!on);
             btn.classList.toggle('is-off', !on);
