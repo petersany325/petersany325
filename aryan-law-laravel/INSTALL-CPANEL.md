@@ -1,4 +1,6 @@
-# نصب روی هاست cPanel — سایت کامل لاراول + Filament
+# aryan-law-laravel — نصب روی هاست cPanel (لاراول + Filament)
+
+> سایت مؤسسه حقوقی آریان — نه Windex، نه WinFOF.
 
 پکیج ZIP شامل `vendor` است. پنل ادمین حرفه‌ای با **Filament** روی مسیر `/admin` فعال است.
 
