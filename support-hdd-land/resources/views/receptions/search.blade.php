@@ -1,0 +1,87 @@
+@extends('layouts.app')
+
+@section('title', 'جستجوی قبض | '.shop_name())
+@section('page_title', 'جستجوی قبض')
+@section('window_title', 'جستجوی قبض')
+
+@section('content')
+<form method="GET" action="{{ route('receptions.search') }}" class="ticket-search-bar" id="ticket-search-form">
+    <div class="field">
+        <label>شماره قبض</label>
+        @include('partials.receipt-search-input', [
+            'name' => 'q',
+            'value' => $q,
+            'autofocus' => true,
+            'required' => true,
+            'placeholder' => '1000',
+            'hint' => 'پیش‌فرض T-20N است — فقط ادامه کد را بزنید. برای نام/موبایل/سریال همان کادر را پاک و عبارت را بنویسید.',
+            'allowFree' => true,
+        ])
+    </div>
+    <div class="field-sm">
+        <label>وضعیت</label>
+        <select name="status">
+            <option value="">همه</option>
+            @foreach($statuses as $key => $label)
+                <option value="{{ $key }}" @selected($status === $key)>{{ $label }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div class="actions" style="margin:0;">
+        <button class="btn btn-primary" type="submit">جستجو</button>
+        <a class="btn btn-ghost" href="{{ route('receptions.search') }}">پاک</a>
+    </div>
+</form>
+
+@if($searched)
+    <div style="margin:8px 0 4px;font-size:11.5px;">
+        <strong>{{ $receptions->count() }}</strong>
+        <span class="muted">نتیجه برای «{{ $q }}»</span>
+        @if($receptions->count() >= 40)
+            <span class="muted">— حداکثر ۴۰ مورد</span>
+        @endif
+    </div>
+
+    <div class="search-hit-list">
+        @forelse($receptions as $reception)
+            <button type="button"
+                    class="search-hit"
+                    data-open-modal="#report-modal-{{ $reception->id }}"
+                    data-report-url="{{ route('receptions.report-partial', $reception) }}">
+                <span class="search-hit-main">
+                    <strong>{{ $reception->customer?->name ?: 'بدون نام' }}</strong>
+                    <span class="meta">
+                        قبض {{ $reception->receipt_no ?: '—' }}
+                        · {{ $reception->ticket_no }}
+                        · {{ $reception->product_name ?: 'دستگاه' }}
+                        @if($reception->serial_number) · <span dir="ltr">{{ $reception->serial_number }}</span>@endif
+                    </span>
+                </span>
+                <span class="search-hit-side">
+                    <span class="badge badge-{{ $reception->status }}">{{ $reception->statusLabel() }}</span>
+                    <span class="muted">جزئیات ←</span>
+                </span>
+            </button>
+        @empty
+            <div class="panel">
+                <p class="muted" style="margin:0;">قبضی پیدا نشد.</p>
+            </div>
+        @endforelse
+    </div>
+
+    @foreach($receptions as $reception)
+        <div class="app-modal" id="report-modal-{{ $reception->id }}" hidden
+             data-report-url="{{ route('receptions.report-partial', $reception) }}">
+            <div class="app-modal-dialog" role="dialog" aria-modal="true">
+                <div class="app-modal-head">
+                    <strong>{{ $reception->customer?->name ?: 'قبض' }} — {{ $reception->ticket_no }}</strong>
+                    <button type="button" class="app-modal-close" data-close-modal aria-label="بستن">×</button>
+                </div>
+                <div class="app-modal-body" data-report-body>
+                    <p class="muted" style="margin:0;">برای مشاهده جزئیات کلیک کنید…</p>
+                </div>
+            </div>
+        </div>
+    @endforeach
+@endif
+@endsection
