@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- NetBeans-compatible build implementation for AutismSupportApp -->
+<project name="AutismSupportApp-impl" basedir="..">
+
+    <target name="-pre-init"/>
+
+    <target name="-init-private">
+        <property file="nbproject/private/private.properties"/>
+    </target>
+
+    <target name="-init-user">
+        <property file="${user.properties.file}"/>
+    </target>
+
+    <target name="-init-project">
+        <property file="nbproject/project.properties"/>
+    </target>
+
+    <target name="-do-init">
+        <!-- Defaults if properties are missing -->
+        <property name="build.dir" value="build"/>
+        <property name="build.classes.dir" value="${build.dir}/classes"/>
+        <property name="build.test.classes.dir" value="${build.dir}/test/classes"/>
+        <property name="build.test.results.dir" value="${build.dir}/test/results"/>
+        <property name="dist.dir" value="dist"/>
+        <property name="dist.jar" value="${dist.dir}/AutismSupportApp.jar"/>
+        <property name="dist.javadoc.dir" value="${dist.dir}/javadoc"/>
+        <property name="src.dir" value="src"/>
+        <property name="test.src.dir" value="test"/>
+        <property name="main.class" value="autismapp.AutismSupportApp"/>
+        <property name="javac.source" value="1.8"/>
+        <property name="javac.target" value="1.8"/>
+        <property name="source.encoding" value="UTF-8"/>
+        <property name="jar.compress" value="false"/>
+        <property name="javac.classpath" value=""/>
+        <property name="javac.compilerargs" value=""/>
+        <property name="run.jvmargs" value=""/>
+        <property name="run.classpath" value="${build.classes.dir}"/>
+        <property name="debug.classpath" value="${run.classpath}"/>
+        <property name="javac.test.classpath" value="${build.classes.dir}"/>
+        <property name="run.test.classpath" value="${javac.test.classpath}"/>
+
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build.classes.dir}"/>
+        <mkdir dir="${dist.dir}"/>
+        <mkdir dir="${dist.javadoc.dir}"/>
+    </target>
+
+    <target name="-post-init"/>
+    <target name="init" depends="-pre-init,-init-private,-init-project,-do-init,-post-init"/>
+
+    <target name="deps-jar" depends="init"/>
+    <target name="deps-clean" depends="init"/>
+
+    <target name="-pre-compile"/>
+    <target name="-do-compile" depends="init,deps-jar">
+        <mkdir dir="${build.classes.dir}"/>
+        <javac srcdir="${src.dir}"
+               destdir="${build.classes.dir}"
+               debug="true"
+               includeantruntime="false"
+               source="${javac.source}"
+               target="${javac.target}"
+               encoding="${source.encoding}"
+               classpath="${javac.classpath}">
+            <compilerarg line="${javac.compilerargs}"/>
+        </javac>
+        <copy todir="${build.classes.dir}">
+            <fileset dir="${src.dir}" excludes="**/*.java,**/*.form"/>
+        </copy>
+    </target>
+    <target name="-post-compile"/>
+    <target name="compile" depends="init,deps-jar,-pre-compile,-do-compile,-post-compile"
+            description="Compile project"/>
+
+    <target name="-pre-compile-single"/>
+    <target name="-do-compile-single" depends="init,deps-jar">
+        <fail unless="javac.includes">Must select some files in the IDE or set javac.includes</fail>
+        <javac srcdir="${src.dir}"
+               destdir="${build.classes.dir}"
+               debug="true"
+               includeantruntime="false"
+               source="${javac.source}"
+               target="${javac.target}"
+               encoding="${source.encoding}"
+               classpath="${javac.classpath}"
+               includes="${javac.includes}"/>
+    </target>
+    <target name="-post-compile-single"/>
+    <target name="compile-single" depends="init,deps-jar,-pre-compile-single,-do-compile-single,-post-compile-single"/>
+
+    <target name="-pre-jar"/>
+    <target name="-do-jar-jar" depends="compile">
+        <dirname property="dist.jar.dir" file="${dist.jar}"/>
+        <mkdir dir="${dist.jar.dir}"/>
+        <jar jarfile="${dist.jar}" compress="${jar.compress}">
+            <fileset dir="${build.classes.dir}"/>
+            <manifest>
+                <attribute name="Main-Class" value="${main.class}"/>
+            </manifest>
+        </jar>
+    </target>
+    <target name="-post-jar"/>
+    <target name="-do-jar" depends="-do-jar-jar"/>
+    <target name="jar" depends="init,compile,-pre-jar,-do-jar,-post-jar"
+            description="Build JAR"/>
+
+    <target name="default" depends="jar"/>
+
+    <target name="-pre-run"/>
+    <target name="-do-run" depends="compile">
+        <java classname="${main.class}" fork="true" failonerror="true">
+            <classpath>
+                <path path="${build.classes.dir}"/>
+                <path path="${javac.classpath}"/>
+            </classpath>
+            <jvmarg line="${run.jvmargs}"/>
+        </java>
+    </target>
+    <target name="-post-run"/>
+    <target name="run" depends="init,compile,-pre-run,-do-run,-post-run"
+            description="Run project"/>
+
+    <target name="-do-run-single" depends="compile">
+        <fail unless="run.class">Must select one file in the IDE that defines a class with a main method</fail>
+        <java classname="${run.class}" fork="true" failonerror="true">
+            <classpath>
+                <path path="${build.classes.dir}"/>
+                <path path="${javac.classpath}"/>
+            </classpath>
+            <jvmarg line="${run.jvmargs}"/>
+        </java>
+    </target>
+    <target name="run-single" depends="init,compile,-do-run-single"/>
+
+    <target name="debug-test-single" depends="init"/>
+    <target name="debug" depends="init,compile">
+        <java classname="${main.class}" fork="true" failonerror="true">
+            <classpath>
+                <path path="${build.classes.dir}"/>
+            </classpath>
+            <jvmarg line="${run.jvmargs}"/>
+        </java>
+    </target>
+    <target name="debug-single" depends="debug"/>
+    <target name="debug-stepinto" depends="debug"/>
+
+    <target name="javadoc" depends="init" description="Build Javadoc">
+        <mkdir dir="${dist.javadoc.dir}"/>
+        <javadoc destdir="${dist.javadoc.dir}"
+                 source="${javac.source}"
+                 encoding="${source.encoding}"
+                 classpath="${javac.classpath}"
+                 use="true"
+                 windowtitle="AutismSupportApp">
+            <fileset dir="${src.dir}" includes="**/*.java"/>
+        </javadoc>
+    </target>
+
+    <target name="clean" depends="init" description="Clean build products">
+        <delete dir="${build.dir}"/>
+        <delete dir="${dist.dir}"/>
+    </target>
+
+    <target name="test" depends="init"/>
+    <target name="test-single" depends="init"/>
+    <target name="compile-test" depends="init"/>
+    <target name="compile-test-single" depends="init"/>
+    <target name="run-test" depends="init"/>
+    <target name="run-test-single" depends="init"/>
+
+    <target name="profile" depends="run"/>
+    <target name="profile-single" depends="run-single"/>
+    <target name="-check-automatic-build"/>
+    <target name="-clean-after-automatic-build"/>
+    <target name="-scan-for-changes"/>
+
+</project>

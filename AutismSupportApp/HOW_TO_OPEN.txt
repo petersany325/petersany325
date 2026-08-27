@@ -1,0 +1,42 @@
+Autism Support Learning App
+===========================
+
+How to open and run
+-------------------
+1. Delete any old AutismSupportApp folder first.
+2. Extract this zip.
+3. Open Apache NetBeans.
+4. File -> Open Project...
+5. Select the AutismSupportApp folder (the one that contains src and nbproject).
+6. Right-click the project -> Clean and Build.
+7. Press F6 or click Run.
+
+Main class:
+autismapp.AutismSupportApp
+
+If Run still fails
+------------------
+Method A:
+- Right-click project -> Properties -> Run
+- Main Class = autismapp.AutismSupportApp
+- Click OK, then Clean and Build, then Run
+
+Method B (create a new NetBeans project):
+1. File -> New Project -> Java with Ant -> Java Application
+2. Project name: AutismSupportApp
+3. Uncheck "Create Main Class"
+4. Finish
+5. Copy the autismapp folder from this zip's src/ into the new project's src/
+6. Right-click project -> Properties -> Run
+7. Main Class: autismapp.AutismSupportApp
+8. Clean and Build, then Run
+
+Requirements
+------------
+- JDK 8 or newer
+- Apache NetBeans with Java support
+
+Pictures
+--------
+Picture files are stored in:
+src/autismapp/images/
