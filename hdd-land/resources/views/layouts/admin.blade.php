@@ -122,13 +122,14 @@
     'theme' => [
       'title' => 'تنظیمات قالب',
       'icon' => '🎨',
-      'open' => $is('theme-builder', 'theme-templates', 'page-builder', 'mega-menu'),
+      'open' => $is('theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'corporate-home', 'footer-settings'),
       'items' => [
         ['label' => 'استودیو قالب صفحه اول', 'href' => $u('theme-builder'), 'active' => $is('theme-builder') && ! $is('theme-templates')],
         ['label' => 'بنرساز Revolution', 'href' => $u('theme-builder').'#pane-banner', 'active' => false],
         ['label' => 'نصب / آپدیت قالب', 'href' => $u('theme-templates'), 'active' => $is('theme-templates')],
         ['label' => 'صفحه‌ساز Elementor', 'href' => $u('page-builder'), 'active' => $is('page-builder')],
         ['label' => 'مگامنو', 'href' => $u('mega-menu'), 'active' => $is('mega-menu')],
+        ['label' => 'بنر / صفحه اول / فوتر شرکتی', 'href' => $u('corporate-home'), 'active' => $is('corporate-home')],
         ['label' => 'فوتر مدرن', 'href' => $u('footer-settings'), 'active' => $is('footer-settings')],
       ],
     ],
@@ -198,8 +199,22 @@
 
   // کارمند: منوی ادمین را محدود کن و لینک بازگشت به پنل کارمند بگذار
   $isStaffOnly = auth()->check() && method_exists(auth()->user(), 'isStaff') && auth()->user()->isStaff() && ! auth()->user()->isAdmin();
+  $staffCanSystemTools = $isStaffOnly && auth()->user()->hasStaffPermission('system_tools');
   if ($isStaffOnly) {
-    unset($groups['users'], $groups['theme'], $groups['payment'], $groups['system'], $groups['accounting'], $groups['webapp']);
+    unset($groups['users'], $groups['theme'], $groups['payment'], $groups['accounting'], $groups['webapp']);
+    if ($staffCanSystemTools) {
+      $groups['system'] = [
+        'title' => 'سیستم',
+        'icon' => '⚙️',
+        'open' => $is('system-tools'),
+        'items' => [
+          ['label' => 'تعمیر و نگهداری', 'href' => $u('system-tools'), 'active' => $is('system-tools')],
+          ['label' => 'سلامت و بهینه‌سازی سرعت', 'href' => $u('system-tools').'#performance', 'active' => false],
+        ],
+      ];
+    } else {
+      unset($groups['system']);
+    }
     if (isset($groups['ops']['items'])) {
       $groups['ops']['items'] = array_values(array_filter($groups['ops']['items'], function ($it) {
         return ! str_contains($it['href'] ?? '', '/admin/staff');
