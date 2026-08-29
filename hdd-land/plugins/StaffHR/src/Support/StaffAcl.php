@@ -3,9 +3,13 @@
 namespace Plugins\StaffHR\src\Support;
 
 /**
- * Staff ACL — kept as a dedicated file so Composer/PSR-4 autoload always resolves it.
- * Logic mirrors the class embedded in plugins/StaffHR/Plugin.php.
+ * Staff ACL — dedicated file for Composer/PSR-4.
+ * Guarded so it never clashes with the legacy inlined class in Plugin.php.
  */
+if (class_exists(StaffAcl::class, false)) {
+    return;
+}
+
 class StaffAcl
 {
     /** @return array<string,string> */
