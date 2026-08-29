@@ -94,27 +94,42 @@ class StaffAdminController extends Controller
         $s = StaffPlugin::settings();
         $data = $this->validated($request, true);
         $data['role'] = $data['role'] ?: 'custom';
-        $user = $this->upsertUser($data, null);
-        $perms = $this->resolvePermissions($request, (string) $data['role']);
+        $data['is_active'] = $request->boolean('is_active');
+        $data['can_see_profit'] = $request->boolean('can_see_profit');
 
-        $id = DB::table('staff_members')->insertGetId([
-            'user_id' => $user->id,
-            'name' => $data['name'],
-            'email' => $data['email'] ?? $user->email,
-            'phone' => $user->phone ?: ($data['phone'] ?? null),
-            'role' => $data['role'],
-            'department' => $data['department'] ?? null,
-            'base_salary' => (int) ($data['base_salary'] ?? 0),
-            'commission_rate' => (float) ($data['commission_rate'] ?? $s['default_commission_rate'] ?? 0),
-            'permissions' => json_encode($perms, JSON_UNESCAPED_UNICODE),
-            'can_see_profit' => ! empty($data['can_see_profit']),
-            'hired_at' => $data['hired_at'] ?? now()->toDateString(),
-            'notes' => $data['notes'] ?? null,
-            'is_active' => ! empty($data['is_active']),
-            'referral_code' => \Plugins\AdminCore\src\Support\StaffReferral::generateUniqueCode($data['name']),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        try {
+            $user = $this->upsertUser($data, null);
+            $perms = $this->resolvePermissions($request, (string) $data['role']);
+
+            $row = [
+                'user_id' => $user->id,
+                'name' => $data['name'],
+                'email' => $data['email'] ?? $user->email,
+                'phone' => $user->phone ?: ($data['phone'] ?? null),
+                'role' => $data['role'],
+                'department' => $data['department'] ?? null,
+                'base_salary' => (int) ($data['base_salary'] ?? 0),
+                'commission_rate' => (float) ($data['commission_rate'] ?? $s['default_commission_rate'] ?? 0),
+                'permissions' => json_encode($perms, JSON_UNESCAPED_UNICODE),
+                'can_see_profit' => ! empty($data['can_see_profit']),
+                'hired_at' => $data['hired_at'] ?? now()->toDateString(),
+                'notes' => $data['notes'] ?? null,
+                'is_active' => ! empty($data['is_active']),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+            if (Schema::hasColumn('staff_members', 'referral_code')) {
+                $row['referral_code'] = \Plugins\AdminCore\src\Support\StaffReferral::generateUniqueCode($data['name']);
+            }
+
+            $id = DB::table('staff_members')->insertGetId($row);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withInput()->with('error', 'ذخیره کارمند ناموفق بود: '.$e->getMessage());
+        }
 
         StaffActivity::log('staff_create', auth()->id(), [
             'staff_id' => $id,
@@ -135,34 +150,50 @@ class StaffAdminController extends Controller
         }
         $data = $this->validated($request, false);
         $data['role'] = $data['role'] ?: 'custom';
-        $user = $this->upsertUser($data, $member->user_id ? (int) $member->user_id : null);
-        $perms = $this->resolvePermissions($request, (string) $data['role']);
+        $data['is_active'] = $request->boolean('is_active');
+        $data['can_see_profit'] = $request->boolean('can_see_profit');
 
-        DB::table('staff_members')->where('id', $id)->update([
-            'user_id' => $user->id,
-            'name' => $data['name'],
-            'email' => $data['email'] ?? $user->email,
-            'phone' => $user->phone ?: ($data['phone'] ?? null),
-            'role' => $data['role'],
-            'department' => $data['department'] ?? null,
-            'base_salary' => (int) ($data['base_salary'] ?? 0),
-            'commission_rate' => (float) ($data['commission_rate'] ?? 0),
-            'permissions' => json_encode($perms, JSON_UNESCAPED_UNICODE),
-            'can_see_profit' => ! empty($data['can_see_profit']),
-            'notes' => $data['notes'] ?? null,
-            'is_active' => ! empty($data['is_active']),
-            'updated_at' => now(),
-        ]);
+        try {
+            $user = $this->upsertUser($data, $member->user_id ? (int) $member->user_id : null);
+            $perms = $this->resolvePermissions($request, (string) $data['role']);
 
-        // اگر کد معرف خالی است، بساز
-        if (Schema::hasColumn('staff_members', 'referral_code')) {
-            $code = DB::table('staff_members')->where('id', $id)->value('referral_code');
-            if (! $code) {
-                DB::table('staff_members')->where('id', $id)->update([
-                    'referral_code' => \Plugins\AdminCore\src\Support\StaffReferral::generateUniqueCode($data['name']),
-                    'updated_at' => now(),
-                ]);
+            $payload = [
+                'user_id' => $user->id,
+                'name' => $data['name'],
+                'email' => $data['email'] ?? $user->email,
+                'phone' => $user->phone ?: ($data['phone'] ?? null),
+                'role' => $data['role'],
+                'department' => $data['department'] ?? null,
+                'base_salary' => (int) ($data['base_salary'] ?? 0),
+                'commission_rate' => (float) ($data['commission_rate'] ?? 0),
+                'permissions' => json_encode($perms, JSON_UNESCAPED_UNICODE),
+                'can_see_profit' => ! empty($data['can_see_profit']),
+                'notes' => $data['notes'] ?? null,
+                'is_active' => ! empty($data['is_active']),
+                'updated_at' => now(),
+            ];
+            if (Schema::hasColumn('staff_members', 'hired_at') && ! empty($data['hired_at'])) {
+                $payload['hired_at'] = $data['hired_at'];
             }
+
+            DB::table('staff_members')->where('id', $id)->update($payload);
+
+            // اگر کد معرف خالی است، بساز
+            if (Schema::hasColumn('staff_members', 'referral_code')) {
+                $code = DB::table('staff_members')->where('id', $id)->value('referral_code');
+                if (! $code) {
+                    DB::table('staff_members')->where('id', $id)->update([
+                        'referral_code' => \Plugins\AdminCore\src\Support\StaffReferral::generateUniqueCode($data['name']),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return back()->withInput()->with('error', 'به‌روزرسانی کارمند ناموفق بود: '.$e->getMessage());
         }
 
         StaffActivity::log('staff_update', auth()->id(), ['staff_id' => $id, 'name' => $data['name']]);
@@ -328,6 +359,13 @@ class StaffAdminController extends Controller
     {
         $email = strtolower(trim((string) ($data['email'] ?? '')));
         $phone = trim((string) ($data['phone'] ?? ''));
+        try {
+            if ($phone !== '' && class_exists(\Plugins\AuthCustomers\src\Services\SmsGateway::class)) {
+                $phone = \Plugins\AuthCustomers\src\Services\SmsGateway::normalizePhone($phone);
+            }
+        } catch (\Throwable) {
+            // keep raw phone
+        }
 
         $user = $userId ? User::query()->find($userId) : null;
         if (! $user && $email !== '') {
@@ -346,16 +384,30 @@ class StaffAdminController extends Controller
             ]);
         }
 
+        // جلوگیری از برخورد یکتا روی users وقتی ایمیل/موبایل متعلق به کاربر دیگری است
+        if ($email !== '') {
+            $taken = User::query()->where('email', $email)->when($user->id, fn ($q) => $q->where('id', '!=', $user->id))->exists();
+            if ($taken) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'email' => 'این ایمیل قبلاً برای کاربر دیگری ثبت شده است.',
+                ]);
+            }
+        }
+        if ($phone !== '') {
+            $taken = User::query()->where('phone', $phone)->when($user->id, fn ($q) => $q->where('id', '!=', $user->id))->exists();
+            if ($taken) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'phone' => 'این موبایل قبلاً برای کاربر دیگری ثبت شده است.',
+                ]);
+            }
+        }
+
         $user->name = $data['name'];
         if ($email !== '') {
             $user->email = $email;
         }
         if ($phone !== '') {
-            try {
-                $user->phone = \Plugins\AuthCustomers\src\Services\SmsGateway::normalizePhone($phone);
-            } catch (\Throwable) {
-                $user->phone = $phone;
-            }
+            $user->phone = $phone;
         }
         $user->role = 'staff';
         $user->is_admin = false;

@@ -16,7 +16,21 @@
     <p>موبایل برای SMS ورود اجباری است · دسترسی‌ها با سوئیچ روشن/خاموش · لینک امن: <code dir="ltr">{{ $loginUrl ?? '' }}</code></p>
   </div>
 
-  <form method="post" action="{{ $m ? url('/admin/staff/'.$m->id) : url('/admin/staff') }}" class="panel" style="padding:1.2rem">
+  @if($errors->any())
+    <div class="panel" style="padding:1rem;margin-bottom:1rem;border:1px solid #fecaca;background:#fef2f2;color:#991b1b">
+      <strong>ذخیره انجام نشد:</strong>
+      <ul style="margin:.4rem 0 0;padding-right:1.2rem">
+        @foreach($errors->all() as $err)
+          <li>{{ $err }}</li>
+        @endforeach
+      </ul>
+    </div>
+  @endif
+  @if(session('error'))
+    <div class="panel" style="padding:1rem;margin-bottom:1rem;border:1px solid #fecaca;background:#fef2f2;color:#991b1b">{{ session('error') }}</div>
+  @endif
+
+  <form method="post" action="{{ $m ? url('/admin/staff/'.$m->id) : url('/admin/staff') }}" class="panel" style="padding:1.2rem" id="staff-save-form">
     @csrf
     @if($m) @method('PUT') @endif
 
@@ -64,10 +78,7 @@
           <button type="button" class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(@json(url('/?ref='.$m->referral_code)))">کپی لینک</button>
         </div>
         <p class="muted" style="margin:.5rem 0 0;font-size:.8rem" dir="ltr">{{ url('/?ref='.$m->referral_code) }}</p>
-        <form method="post" action="{{ url('/admin/staff/'.$m->id.'/regenerate-code') }}" style="margin-top:.75rem" onsubmit="return confirm('کد قبلی باطل می‌شود. ادامه؟')">
-          @csrf
-          <button class="btn btn-outline btn-sm" type="submit">تولید مجدد کد</button>
-        </form>
+        {{-- regenerate form must stay outside this form (HTML forbids nested forms) --}}
       </div>
     @endif
 
@@ -116,7 +127,13 @@
   </form>
 
   @if($m)
-    <div class="row" style="gap:.5rem;margin-top:.8rem">
+    <div class="row" style="gap:.5rem;margin-top:.8rem;flex-wrap:wrap">
+      @if(!empty($m->referral_code))
+        <form method="post" action="{{ url('/admin/staff/'.$m->id.'/regenerate-code') }}" onsubmit="return confirm('کد قبلی باطل می‌شود. ادامه؟')">
+          @csrf
+          <button class="btn btn-outline" type="submit">تولید مجدد کد معرف</button>
+        </form>
+      @endif
       <form method="post" action="{{ url('/admin/staff/'.$m->id.'/toggle') }}" onsubmit="return confirm('تغییر وضعیت فعال؟')">@csrf
         <button class="btn btn-outline" type="submit">{{ !empty($m->is_active) ? 'غیرفعال کردن' : 'فعال کردن' }}</button>
       </form>
