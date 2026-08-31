@@ -119,13 +119,26 @@
                   @include('mega-menu::storefront.partials.item-block', ['child' => $child, 'nested' => false, 'showIcons' => $showIcons])
                 @endforeach
               </div>
-              @if($forceMega && !$hasPromoChild)
-                <a class="mega-promo mega-promo--designed" href="{{ url('/products') }}">
-                  <img src="{{ asset('images/home/mega-promo.jpg') }}" alt="" width="720" height="480" loading="lazy">
+              @if($forceMega && !$hasPromoChild && !empty($mm['org_promo_enabled']))
+                @php
+                  $orgPromoImg = trim((string) ($mm['org_promo_image'] ?? ''));
+                  if ($orgPromoImg === '') { $orgPromoImg = asset('images/home/mega-promo.jpg'); }
+                  elseif (! str_starts_with($orgPromoImg, 'http') && ! str_starts_with($orgPromoImg, '//')) {
+                    $orgPromoImg = asset(ltrim($orgPromoImg, '/'));
+                  }
+                  $orgPromoHref = trim((string) ($mm['org_promo_url'] ?? '/products')) ?: '/products';
+                  if (! str_starts_with($orgPromoHref, 'http') && ! str_starts_with($orgPromoHref, '//') && ! str_starts_with($orgPromoHref, '#')) {
+                    $orgPromoHref = url($orgPromoHref);
+                  }
+                @endphp
+                <a class="mega-promo mega-promo--designed" href="{{ $orgPromoHref }}">
+                  <img src="{{ $orgPromoImg }}" alt="" width="720" height="480" loading="lazy">
                   <div class="mega-promo-body">
-                    <strong>پیشنهاد سازمانی</strong>
-                    <p>تأمین هارد و SSD برای کسب‌وکارها با گارانتی شفاف</p>
-                    <span>مشاهده</span>
+                    <strong>{{ $mm['org_promo_title'] ?? 'پیشنهاد سازمانی' }}</strong>
+                    @if(!empty($mm['org_promo_desc']))
+                      <p>{{ $mm['org_promo_desc'] }}</p>
+                    @endif
+                    <span>{{ $mm['org_promo_button'] ?? 'مشاهده' }}</span>
                   </div>
                 </a>
               @endif

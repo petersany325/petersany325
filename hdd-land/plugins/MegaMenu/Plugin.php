@@ -73,6 +73,12 @@ class Plugin extends BasePlugin
             'header_blur' => true,
             'panel_fx' => 'soft',
             'panel_bg' => 'white',
+            'org_promo_enabled' => true,
+            'org_promo_title' => 'پیشنهاد سازمانی',
+            'org_promo_desc' => 'تأمین هارد و SSD برای کسب‌وکارها با گارانتی شفاف',
+            'org_promo_button' => 'مشاهده',
+            'org_promo_url' => '/products',
+            'org_promo_image' => '/images/home/mega-promo.jpg',
         ], is_array($decoded) ? $decoded : []);
     }
 
@@ -80,6 +86,15 @@ class Plugin extends BasePlugin
     public static function saveSettings(array $data): void
     {
         $current = static::settings();
+        $promoImage = trim((string) ($data['org_promo_image'] ?? $current['org_promo_image'] ?? ''));
+        if ($promoImage === '') {
+            $promoImage = '/images/home/mega-promo.jpg';
+        }
+        $promoUrl = trim((string) ($data['org_promo_url'] ?? '/products'));
+        if ($promoUrl === '') {
+            $promoUrl = '/products';
+        }
+
         $merged = array_merge($current, [
             'nav_align' => in_array(($data['nav_align'] ?? ''), ['right', 'center', 'left'], true) ? $data['nav_align'] : 'right',
             'nav_style' => in_array(($data['nav_style'] ?? ''), ['minimal', 'pills', 'underline', 'boxed'], true) ? $data['nav_style'] : 'pills',
@@ -95,6 +110,17 @@ class Plugin extends BasePlugin
             'panel_fx' => in_array(($data['panel_fx'] ?? ''), ['soft', 'glass', 'shadow', 'glow', 'lift', 'none'], true) ? $data['panel_fx'] : 'soft',
             'panel_bg' => in_array(($data['panel_bg'] ?? ''), ['white', 'soft', 'glass', 'transparent'], true) ? $data['panel_bg'] : 'white',
         ]);
+
+        // فقط وقتی فرم پیشنهاد سازمانی intentionally ارسال شده، این فیلدها را به‌روز کن
+        if (array_key_exists('org_promo_title', $data) || array_key_exists('org_promo_enabled', $data) || array_key_exists('org_promo_image', $data)) {
+            $merged['org_promo_enabled'] = ! empty($data['org_promo_enabled']);
+            $merged['org_promo_title'] = mb_substr(trim((string) ($data['org_promo_title'] ?? 'پیشنهاد سازمانی')), 0, 120) ?: 'پیشنهاد سازمانی';
+            $merged['org_promo_desc'] = mb_substr(trim((string) ($data['org_promo_desc'] ?? '')), 0, 255);
+            $merged['org_promo_button'] = mb_substr(trim((string) ($data['org_promo_button'] ?? 'مشاهده')), 0, 60) ?: 'مشاهده';
+            $merged['org_promo_url'] = mb_substr($promoUrl, 0, 500);
+            $merged['org_promo_image'] = mb_substr($promoImage, 0, 500);
+        }
+
         \App\Models\Setting::setValue(self::SETTINGS_KEY, $merged);
     }
 

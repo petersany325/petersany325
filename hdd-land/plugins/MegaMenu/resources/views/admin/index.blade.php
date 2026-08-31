@@ -234,6 +234,69 @@
   </form>
 </details>
 
+<details class="mm-panel mm-set" open>
+  <summary>
+    <span>پیشنهاد سازمانی (بنر مگامنو محصولات)</span>
+    <small>تصویر، عنوان، لینک و دکمه بنر سمت چپ پنل</small>
+  </summary>
+  <form method="post" action="{{ route('admin.mega-menu.settings') }}" id="mm-org-promo-form">
+    @csrf
+    {{-- نگه داشتن سایر تنظیمات هنگام ذخیره جداگانه این بخش --}}
+    <input type="hidden" name="nav_align" value="{{ $s['nav_align'] ?? 'right' }}">
+    <input type="hidden" name="nav_style" value="{{ $s['nav_style'] ?? 'pills' }}">
+    <input type="hidden" name="header_bg" value="{{ $s['header_bg'] ?? 'white' }}">
+    <input type="hidden" name="header_bg_color" value="{{ $s['header_bg_color'] ?? '#ffffff' }}">
+    <input type="hidden" name="header_opacity" value="{{ $s['header_opacity'] ?? 100 }}">
+    <input type="hidden" name="panel_bg" value="{{ $s['panel_bg'] ?? 'white' }}">
+    <input type="hidden" name="panel_fx" value="{{ $s['panel_fx'] ?? 'soft' }}">
+    <input type="hidden" name="dropdown_size" value="{{ $s['dropdown_size'] ?? 'auto' }}">
+    <input type="hidden" name="open_mode" value="{{ $s['open_mode'] ?? 'hover' }}">
+    <input type="hidden" name="accent" value="{{ $s['accent'] ?? '#e23d12' }}">
+    <input type="hidden" name="gap_brand" value="{{ $s['gap_brand'] ?? 18 }}">
+    @if(!empty($s['show_icons']))<input type="hidden" name="show_icons" value="1">@endif
+    @if(!array_key_exists('header_blur',$s) || !empty($s['header_blur']))<input type="hidden" name="header_blur" value="1">@endif
+
+    <div class="mm-inline" style="margin-top:0;margin-bottom:.55rem">
+      <label>
+        <input type="checkbox" name="org_promo_enabled" value="1" @checked(!array_key_exists('org_promo_enabled',$s) || !empty($s['org_promo_enabled']))>
+        <span>نمایش بنر پیشنهاد سازمانی در مگامنو محصولات</span>
+      </label>
+    </div>
+    <div class="mm-grid4">
+      <div class="mm-field">
+        <span>عنوان بنر</span>
+        <input type="text" name="org_promo_title" value="{{ $s['org_promo_title'] ?? 'پیشنهاد سازمانی' }}" maxlength="120" placeholder="پیشنهاد سازمانی">
+      </div>
+      <div class="mm-field">
+        <span>متن دکمه</span>
+        <input type="text" name="org_promo_button" value="{{ $s['org_promo_button'] ?? 'مشاهده' }}" maxlength="60" placeholder="مشاهده">
+      </div>
+      <div class="mm-field">
+        <span>لینک بنر / دکمه</span>
+        <input type="text" name="org_promo_url" value="{{ $s['org_promo_url'] ?? '/products' }}" maxlength="500" placeholder="/products یا /services">
+      </div>
+      <div class="mm-field" style="grid-column:1/-1">
+        <span>توضیح کوتاه</span>
+        <input type="text" name="org_promo_desc" value="{{ $s['org_promo_desc'] ?? 'تأمین هارد و SSD برای کسب‌وکارها با گارانتی شفاف' }}" maxlength="255" placeholder="متن زیر عنوان">
+      </div>
+      <div class="mm-field" style="grid-column:1/-1">
+        <span>آدرس تصویر بنر</span>
+        <input type="text" name="org_promo_image" id="org_promo_image" value="{{ $s['org_promo_image'] ?? '/images/home/mega-promo.jpg' }}" maxlength="500" placeholder="/images/home/mega-promo.jpg یا /uploads/menu/...">
+      </div>
+    </div>
+    <div class="mm-upload-row" style="margin-top:.35rem">
+      <img class="mm-preview" id="org_promo_preview" src="{{ $s['org_promo_image'] ?? asset('images/home/mega-promo.jpg') }}" alt="" onerror="this.style.opacity=.3">
+      <input type="file" id="up_org_promo" accept="image/*">
+      <button type="button" class="btn btn-outline btn-sm" id="btn-up-org-promo">آپلود تصویر</button>
+      <button type="button" class="btn btn-outline btn-sm" data-media-pick data-field="org_promo_image" data-as="url" data-title="تصویر پیشنهاد سازمانی">فایل‌منیجر</button>
+    </div>
+    <p class="mm-hint" style="margin:.45rem 0 .55rem">این بنر در پنل مگای آیتم‌هایی مثل «محصولات» نمایش داده می‌شود (اگر زیرمنوی نوع پرومو جداگانه نداشته باشند).</p>
+    <div class="mm-inline">
+      <button class="btn btn-primary" type="submit">ذخیره پیشنهاد سازمانی</button>
+    </div>
+  </form>
+</details>
+
 <div class="mm-studio">
   {{-- درخت منو --}}
   <div class="mm-panel">
@@ -990,6 +1053,47 @@
       }
     });
   });
+
+  const orgPromoInput = document.getElementById('org_promo_image');
+  const orgPromoPreview = document.getElementById('org_promo_preview');
+  function syncOrgPromoPreview(){
+    if (!orgPromoInput || !orgPromoPreview) return;
+    const v = (orgPromoInput.value || '').trim();
+    orgPromoPreview.src = v || @json(asset('images/home/mega-promo.jpg'));
+    orgPromoPreview.style.opacity = '1';
+  }
+  if (orgPromoInput) {
+    orgPromoInput.addEventListener('input', syncOrgPromoPreview);
+    orgPromoInput.addEventListener('change', syncOrgPromoPreview);
+  }
+  const btnUpOrg = document.getElementById('btn-up-org-promo');
+  if (btnUpOrg) {
+    btnUpOrg.addEventListener('click', async () => {
+      try {
+        const fileEl = document.getElementById('up_org_promo');
+        if (!fileEl || !fileEl.files || !fileEl.files[0]) {
+          toast('ابتدا یک تصویر انتخاب کنید', true);
+          return;
+        }
+        const fd = new FormData();
+        fd.append('file', fileEl.files[0]);
+        const res = await fetch(ROUTES.upload, {
+          method: 'POST',
+          headers: { 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin',
+          body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.message || 'آپلود ناموفق');
+        if (orgPromoInput) orgPromoInput.value = data.url || data.path || '';
+        syncOrgPromoPreview();
+        toast('تصویر پیشنهاد سازمانی آپلود شد');
+      } catch (e) {
+        toast(e.message || 'آپلود ناموفق', true);
+      }
+    });
+  }
+
   document.querySelectorAll('.mm-media').forEach(box => {
     box.querySelectorAll('button[data-url]').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1008,6 +1112,7 @@
     const first = items[0];
     if (el) el.value = first.url || first.value || '';
     updatePreviews();
+    if (field === 'org_promo_image') syncOrgPromoPreview();
     toast('از فایل‌منیجر انتخاب شد');
   };
 
