@@ -199,22 +199,78 @@
 
   // کارمند: منوی ادمین را محدود کن و لینک بازگشت به پنل کارمند بگذار
   $isStaffOnly = auth()->check() && method_exists(auth()->user(), 'isStaff') && auth()->user()->isStaff() && ! auth()->user()->isAdmin();
+  $staffCan = fn (string $perm): bool => ! $isStaffOnly || auth()->user()->hasStaffPermission($perm);
   $staffCanSystemTools = $isStaffOnly && auth()->user()->hasStaffPermission('system_tools');
   if ($isStaffOnly) {
-    unset($groups['users'], $groups['theme'], $groups['payment'], $groups['accounting'], $groups['webapp']);
+    unset($groups['users'], $groups['payment'], $groups['accounting']);
+
+    // تنظیمات قالب — هر آیتم با سوئیچ جدا
+    $themeItems = [];
+    if ($staffCan('site.theme_builder')) {
+      $themeItems[] = ['label' => 'استودیو قالب صفحه اول', 'href' => $u('theme-builder'), 'active' => $is('theme-builder') && ! $is('theme-templates')];
+      $themeItems[] = ['label' => 'بنرساز Revolution', 'href' => $u('theme-builder').'#pane-banner', 'active' => false];
+    }
+    if ($staffCan('site.theme_templates')) {
+      $themeItems[] = ['label' => 'نصب / آپدیت قالب', 'href' => $u('theme-templates'), 'active' => $is('theme-templates')];
+    }
+    if ($staffCan('site.page_builder')) {
+      $themeItems[] = ['label' => 'صفحه‌ساز Elementor', 'href' => $u('page-builder'), 'active' => $is('page-builder')];
+    }
+    if ($staffCan('site.mega_menu')) {
+      $themeItems[] = ['label' => 'مگامenu', 'href' => $u('mega-menu'), 'active' => $is('mega-menu')];
+    }
+    if ($staffCan('site.homepage')) {
+      $themeItems[] = ['label' => 'بنر / صفحه اول / فوتر شرکتی', 'href' => $u('corporate-home'), 'active' => $is('corporate-home')];
+    }
+    if ($staffCan('site.footer')) {
+      $themeItems[] = ['label' => 'فوتر مدرن', 'href' => $u('footer-settings'), 'active' => $is('footer-settings')];
+    }
+    if ($themeItems) {
+      $groups['theme'] = [
+        'title' => 'تنظیمات قالب',
+        'icon' => '🎨',
+        'open' => $is('theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'corporate-home', 'footer-settings'),
+        'items' => $themeItems,
+      ];
+    } else {
+      unset($groups['theme']);
+    }
+
+    if ($staffCan('site.webapp')) {
+      $groups['webapp'] = [
+        'title' => 'وب‌سرویس',
+        'icon' => '📱',
+        'open' => $is('web-app'),
+        'items' => [
+          ['label' => 'تنظیمات وب‌اپ / PWA', 'href' => $u('web-app'), 'active' => $is('web-app')],
+          ['label' => 'پیش‌نمایش وب‌اپ', 'href' => url('/app'), 'active' => false, 'ext' => true],
+          ['label' => 'فایل Manifest', 'href' => url('/manifest.webmanifest'), 'active' => false, 'ext' => true],
+        ],
+      ];
+    } else {
+      unset($groups['webapp']);
+    }
+
+    $systemItems = [];
+    if ($staffCan('site.shop_settings')) {
+      $systemItems[] = ['label' => 'تنظیمات فروشگاه', 'href' => $u('settings'), 'active' => $is('settings') && ! $is('auth-settings')];
+    }
     if ($staffCanSystemTools) {
+      $systemItems[] = ['label' => 'تعمیر و نگهداری', 'href' => $u('system-tools'), 'active' => $is('system-tools')];
+      $systemItems[] = ['label' => 'سلامت و بهینه‌سازی سرعت', 'href' => $u('system-tools').'#performance', 'active' => false];
+    }
+    $systemItems[] = ['label' => 'مشاهده فروشگاه', 'href' => url('/'), 'active' => false, 'ext' => true];
+    if ($systemItems) {
       $groups['system'] = [
         'title' => 'سیستم',
         'icon' => '⚙️',
-        'open' => $is('system-tools'),
-        'items' => [
-          ['label' => 'تعمیر و نگهداری', 'href' => $u('system-tools'), 'active' => $is('system-tools')],
-          ['label' => 'سلامت و بهینه‌سازی سرعت', 'href' => $u('system-tools').'#performance', 'active' => false],
-        ],
+        'open' => $is('system-tools') || ($is('settings') && ! $is('auth-settings') && ! $is('payment')),
+        'items' => $systemItems,
       ];
     } else {
       unset($groups['system']);
     }
+
     if (isset($groups['ops']['items'])) {
       $groups['ops']['items'] = array_values(array_filter($groups['ops']['items'], function ($it) {
         return ! str_contains($it['href'] ?? '', '/admin/staff');

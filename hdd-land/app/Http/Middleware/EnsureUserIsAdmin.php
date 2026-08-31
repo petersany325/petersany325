@@ -53,12 +53,37 @@ class EnsureUserIsAdmin
             return 'system_tools';
         }
 
+        // ظاهر سایت — هر بخش با سوئیچ جدا در تنظیمات کارمند
+        if ($path === 'admin/mega-menu' || str_starts_with($path, 'admin/mega-menu/')) {
+            return 'site.mega_menu';
+        }
+        if ($path === 'admin/theme-builder' || str_starts_with($path, 'admin/theme-builder/')) {
+            return 'site.theme_builder';
+        }
+        if ($path === 'admin/theme-templates' || str_starts_with($path, 'admin/theme-templates/')) {
+            return 'site.theme_templates';
+        }
+        if ($path === 'admin/page-builder' || str_starts_with($path, 'admin/page-builder/')) {
+            return 'site.page_builder';
+        }
+        if ($path === 'admin/corporate-home' || str_starts_with($path, 'admin/corporate-home/')) {
+            return 'site.homepage';
+        }
+        if ($path === 'admin/footer-settings' || str_starts_with($path, 'admin/footer-settings/')) {
+            return 'site.footer';
+        }
+        if ($path === 'admin/web-app' || str_starts_with($path, 'admin/web-app/')) {
+            return 'site.webapp';
+        }
+        if ($path === 'admin/settings' || str_starts_with($path, 'admin/settings/')) {
+            return 'site.shop_settings';
+        }
+
         // مسیرهای حساس — فقط ادمین
         $adminOnly = [
-            'admin/staff', 'admin/settings', 'admin/plugins',
+            'admin/staff', 'admin/plugins',
             'admin/customers', 'admin/auth-settings', 'admin/wallet-settings',
-            'admin/theme-builder', 'admin/theme-templates', 'admin/page-builder',
-            'admin/mega-menu', 'admin/payment', 'admin/tickets/settings',
+            'admin/payment', 'admin/tickets/settings',
             'admin/developer-studio',
         ];
         foreach ($adminOnly as $prefix) {
