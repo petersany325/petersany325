@@ -111,9 +111,14 @@ class Plugin extends BasePlugin
             'panel_bg' => in_array(($data['panel_bg'] ?? ''), ['white', 'soft', 'glass', 'transparent'], true) ? $data['panel_bg'] : 'white',
         ]);
 
-        // فقط وقتی فرم پیشنهاد سازمانی intentionally ارسال شده، این فیلدها را به‌روز کن
-        if (array_key_exists('org_promo_title', $data) || array_key_exists('org_promo_enabled', $data) || array_key_exists('org_promo_image', $data)) {
-            $merged['org_promo_enabled'] = ! empty($data['org_promo_enabled']);
+        // پیشنهاد سازمانی: اگر فیلدها در درخواست باشند (فرم تنظیمات یکپارچه) ذخیره کن
+        // checkbox با hidden=0 ارسال می‌شود؛ مقدار نهایی آخرین مقدار آرایه/اسکالر است
+        if (array_key_exists('org_promo_title', $data) || array_key_exists('org_promo_image', $data) || array_key_exists('org_promo_enabled', $data)) {
+            $enabledRaw = $data['org_promo_enabled'] ?? 0;
+            if (is_array($enabledRaw)) {
+                $enabledRaw = end($enabledRaw);
+            }
+            $merged['org_promo_enabled'] = in_array((string) $enabledRaw, ['1', 'true', 'on', 'yes'], true);
             $merged['org_promo_title'] = mb_substr(trim((string) ($data['org_promo_title'] ?? 'پیشنهاد سازمانی')), 0, 120) ?: 'پیشنهاد سازمانی';
             $merged['org_promo_desc'] = mb_substr(trim((string) ($data['org_promo_desc'] ?? '')), 0, 255);
             $merged['org_promo_button'] = mb_substr(trim((string) ($data['org_promo_button'] ?? 'مشاهده')), 0, 60) ?: 'مشاهده';
@@ -121,7 +126,17 @@ class Plugin extends BasePlugin
             $merged['org_promo_image'] = mb_substr($promoImage, 0, 500);
         }
 
-        \App\Models\Setting::setValue(self::SETTINGS_KEY, $merged);
+        $payload = json_encode($merged, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($payload === false) {
+            throw new \RuntimeException('رمزگذاری تنظیمات مگامنو ناموفق بود.');
+        }
+        \App\Models\Setting::setValue(self::SETTINGS_KEY, $payload);
+        // اگر setValue آرایه هم قبول می‌کند، برای سازگاری دوباره با آرایه هم ذخیره کن
+        try {
+            \App\Models\Setting::setValue(self::SETTINGS_KEY, $merged);
+        } catch (\Throwable) {
+            //
+        }
     }
 
     /**
