@@ -414,6 +414,7 @@
 @media (min-width: 961px){
   .mobile-nav-head{display:none !important}
   .header-nav-slot{
-    flex:1 1 auto;min-width:0;display:flex;align-items:center;
+    flex:1 1 auto;min-width:0;display:flex;align-items:center;width:100%;
   }
+  .hl-header .mega-nav-pro{flex-wrap:nowrap!important}
 }

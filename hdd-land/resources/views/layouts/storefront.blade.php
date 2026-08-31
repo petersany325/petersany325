@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
     <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=64">
     <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=45">
-    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=4">
+    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=5">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=4">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
