@@ -40,7 +40,7 @@
 @if($menuTree->count())
 <nav class="nav mega-nav mega-nav-pro nav-align-{{ $navAlign }} style-{{ $navStyle }} dd-{{ $ddSize }} panel-fx-{{ $panelFx }} panel-bg-{{ $panelBg }} layout-{{ $panelLayout }}"
      data-mega-nav dir="rtl"
-     style="--mega-accent:{{ $accent }};--mega-gap-brand:{{ $gapBrand }}px;--mega-nav-gap:{{ $navItemGap }}px;--mega-cols:{{ $panelCols }};--mega-col-gap:{{ $panelColGap }}px;--mega-row-gap:{{ $panelRowGap }}px;--mega-panel-pad:{{ $panelPadding }}px">
+     style="--mega-accent:{{ $accent }};--mega-gap-brand:{{ $gapBrand }}px;--mega-nav-gap:{{ $navItemGap }}px;--mega-layout-cols:{{ $panelCols }};--mega-cols:{{ $panelCols }};--mega-col-gap:{{ $panelColGap }}px;--mega-row-gap:{{ $panelRowGap }}px;--mega-panel-pad:{{ $panelPadding }}px">
   @foreach($menuTree as $item)
     @php
       $hasPanel = $item->is_mega || $item->activeChildren->count() || ($item->form_type ?? 'none') !== 'none' || $item->show_search;
