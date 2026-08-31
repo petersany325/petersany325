@@ -43,7 +43,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '3.4.1';
+        return '3.5.0';
     }
 
     public const SETTINGS_KEY = 'mega_menu_settings';
@@ -73,6 +73,12 @@ class Plugin extends BasePlugin
             'header_blur' => true,
             'panel_fx' => 'soft',
             'panel_bg' => 'white',
+            'panel_layout' => 'columns',
+            'panel_cols' => 4,
+            'nav_item_gap' => 4,
+            'panel_col_gap' => 16,
+            'panel_row_gap' => 12,
+            'panel_padding' => 16,
             'org_promo_enabled' => true,
             'org_promo_title' => 'پیشنهاد سازمانی',
             'org_promo_desc' => 'تأمین هارد و SSD برای کسب‌وکارها با گارانتی شفاف',
@@ -80,6 +86,17 @@ class Plugin extends BasePlugin
             'org_promo_url' => '/products',
             'org_promo_image' => '/images/home/mega-promo.jpg',
         ], is_array($decoded) ? $decoded : []);
+    }
+
+    /** @return array<string, string> */
+    public static function panelLayouts(): array
+    {
+        return [
+            'columns' => 'ستونی (مگا منو)',
+            'cascade' => 'آبشاری (کشویی)',
+            'list' => 'لیستی تک‌ستونه',
+            'dense' => 'فشرده چندستونه',
+        ];
     }
 
     /** @param  array<string, mixed>  $data
@@ -111,6 +128,12 @@ class Plugin extends BasePlugin
             'header_blur' => ! empty($data['header_blur']),
             'panel_fx' => in_array(($data['panel_fx'] ?? ''), ['soft', 'glass', 'shadow', 'glow', 'lift', 'none'], true) ? $data['panel_fx'] : 'soft',
             'panel_bg' => in_array(($data['panel_bg'] ?? ''), ['white', 'soft', 'glass', 'transparent'], true) ? $data['panel_bg'] : 'white',
+            'panel_layout' => in_array(($data['panel_layout'] ?? ''), ['columns', 'cascade', 'list', 'dense'], true) ? $data['panel_layout'] : 'columns',
+            'panel_cols' => max(2, min(6, (int) ($data['panel_cols'] ?? 4))),
+            'nav_item_gap' => max(0, min(32, (int) ($data['nav_item_gap'] ?? 4))),
+            'panel_col_gap' => max(4, min(48, (int) ($data['panel_col_gap'] ?? 16))),
+            'panel_row_gap' => max(4, min(48, (int) ($data['panel_row_gap'] ?? 12))),
+            'panel_padding' => max(8, min(48, (int) ($data['panel_padding'] ?? 16))),
         ]);
 
         // همیشه فیلدهای پیشنهاد سازمانی را از درخواست ذخیره کن (فرم یکپارچه / AJAX)

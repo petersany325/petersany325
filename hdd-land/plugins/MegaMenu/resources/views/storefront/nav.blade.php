@@ -22,19 +22,25 @@
     $googleFontsUrl = 'https://fonts.googleapis.com/css2?'.implode('&', $parts).'&display=swap';
   }
   $navAlign = $mm['nav_align'] ?? 'right';
-  $navStyle = 'underline';
+  $navStyle = $mm['nav_style'] ?? 'underline';
   $ddSize = $mm['dropdown_size'] ?? 'auto';
   $showIcons = !empty($mm['show_icons']);
   $accent = $mm['accent'] ?? '#e23d12';
   $defaultOpen = $mm['open_mode'] ?? 'hover';
   $gapBrand = (int) ($mm['gap_brand'] ?? 18);
-  $panelFx = 'soft';
-  $panelBg = 'white';
+  $panelFx = $mm['panel_fx'] ?? 'soft';
+  $panelBg = $mm['panel_bg'] ?? 'white';
+  $panelLayout = $mm['panel_layout'] ?? 'columns';
+  $panelCols = max(2, min(6, (int) ($mm['panel_cols'] ?? 4)));
+  $navItemGap = max(0, min(32, (int) ($mm['nav_item_gap'] ?? 4)));
+  $panelColGap = max(4, min(48, (int) ($mm['panel_col_gap'] ?? 16)));
+  $panelRowGap = max(4, min(48, (int) ($mm['panel_row_gap'] ?? 12)));
+  $panelPadding = max(8, min(48, (int) ($mm['panel_padding'] ?? 16)));
 @endphp
 @if($menuTree->count())
-<nav class="nav mega-nav mega-nav-pro nav-align-{{ $navAlign }} style-{{ $navStyle }} dd-{{ $ddSize }} panel-fx-{{ $panelFx }} panel-bg-{{ $panelBg }}"
+<nav class="nav mega-nav mega-nav-pro nav-align-{{ $navAlign }} style-{{ $navStyle }} dd-{{ $ddSize }} panel-fx-{{ $panelFx }} panel-bg-{{ $panelBg }} layout-{{ $panelLayout }}"
      data-mega-nav dir="rtl"
-     style="--mega-accent:{{ $accent }};--mega-gap-brand:{{ $gapBrand }}px">
+     style="--mega-accent:{{ $accent }};--mega-gap-brand:{{ $gapBrand }}px;--mega-nav-gap:{{ $navItemGap }}px;--mega-cols:{{ $panelCols }};--mega-col-gap:{{ $panelColGap }}px;--mega-row-gap:{{ $panelRowGap }}px;--mega-panel-pad:{{ $panelPadding }}px">
   @foreach($menuTree as $item)
     @php
       $hasPanel = $item->is_mega || $item->activeChildren->count() || ($item->form_type ?? 'none') !== 'none' || $item->show_search;
@@ -45,7 +51,11 @@
       $forceMega = (bool) $item->is_mega || ($shopish && $item->activeChildren->count() > 0);
       $panelClass = $item->panelClasses();
       if ($forceMega) {
-        $panelClass = trim(str_replace('is-dropdown', 'is-mega-panel w-wide', $panelClass).' is-mega-panel w-wide');
+        if (in_array($panelLayout, ['cascade', 'list'], true)) {
+          $panelClass = trim(str_replace(['is-mega-panel', 'w-wide', 'w-full', 'w-normal'], '', $panelClass).' is-mega-panel w-normal');
+        } else {
+          $panelClass = trim(str_replace('is-dropdown', 'is-mega-panel w-wide', $panelClass).' is-mega-panel w-wide');
+        }
       }
     @endphp
     <div class="mega-item {{ $hasPanel ? 'has-mega' : '' }} {{ ($item->is_mega || $forceMega) ? 'is-mega-root' : '' }} {{ $item->css_class }}"

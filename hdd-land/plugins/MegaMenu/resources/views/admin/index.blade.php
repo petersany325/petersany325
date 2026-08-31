@@ -93,6 +93,36 @@
 .mm-upload-row input[type=file]{font-size:.75rem;max-width:100%}
 .mm-preview{width:48px;height:48px;border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,.12);background:#0d1017}
 .mm-sec-title{margin:.2rem 0 .45rem;font-size:.8rem;color:#9aa3b5;font-weight:700}
+.mm-live-preview{margin-top:.75rem;border:1px solid rgba(255,255,255,.1);border-radius:12px;overflow:hidden;background:#0b0f16}
+.mm-live-preview__bar{display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;align-items:center;padding:.55rem .75rem;background:#121722;border-bottom:1px solid rgba(255,255,255,.08)}
+.mm-live-preview__bar strong{color:#fff;font-size:.86rem}
+.mm-live-preview__bar span{color:#9aa3b5;font-size:.75rem}
+.mm-live-preview__frame{padding:.75rem;background:linear-gradient(180deg,#f8fafc,#eef2f7);min-height:210px}
+.mm-live-top{display:flex;align-items:center;gap:.75rem;background:#fff;border:1px solid #e5e9f0;border-radius:10px;padding:.45rem .65rem;margin-bottom:.45rem}
+.mm-live-brand{font-weight:800;color:#0b1220;font-size:.85rem;white-space:nowrap}
+.mm-live-nav{display:flex;align-items:center;flex-wrap:nowrap;gap:var(--mm-live-nav-gap,4px);overflow:auto;color:#0f172a;font-size:.78rem;font-weight:700}
+.mm-live-nav span{padding:.28rem .4rem;white-space:nowrap;border-radius:6px}
+.mm-live-nav .is-active{color:#e23d12;border-bottom:2px solid #e23d12;border-radius:0}
+.mm-live-panel{display:none;background:#fff;border:1px solid #e5e9f0;border-radius:12px;padding:var(--mm-live-pad,16px);box-shadow:0 10px 28px rgba(15,23,42,.08)}
+.mm-live-preview__frame.is-open .mm-live-panel{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:.75rem}
+.mm-live-grid{display:grid;grid-template-columns:repeat(var(--mm-live-cols,4),minmax(0,1fr));gap:var(--mm-live-row-gap,12px) var(--mm-live-col-gap,16px)}
+.mm-live-panel.layout-list .mm-live-grid,
+.mm-live-panel.layout-cascade .mm-live-grid{grid-template-columns:1fr}
+.mm-live-panel.layout-list,
+.mm-live-panel.layout-cascade{grid-template-columns:minmax(0,1fr) !important;max-width:320px}
+.mm-live-panel.layout-cascade .mm-live-col{border-bottom:1px solid #eef2f7;padding-bottom:.35rem}
+.mm-live-panel.layout-dense .mm-live-grid{grid-template-columns:repeat(var(--mm-live-cols,5),minmax(0,1fr))}
+.mm-live-col{min-width:0}
+.mm-live-col b{display:block;font-size:.78rem;color:#0f172a;margin-bottom:.25rem}
+.mm-live-col a{display:block;color:#475569;font-size:.74rem;padding:.15rem 0;text-decoration:none}
+.mm-live-promo{background:#0b1220;color:#fff;border-radius:10px;padding:.65rem;font-size:.72rem}
+.mm-live-promo small{display:block;margin-top:.25rem;color:#94a3b8}
+.mm-live-panel.layout-list .mm-live-promo,
+.mm-live-panel.layout-cascade .mm-live-promo{display:none}
+@media(max-width:700px){
+  .mm-live-preview__frame.is-open .mm-live-panel{grid-template-columns:1fr}
+  .mm-live-promo{display:none}
+}
 </style>
 
 <div class="mm-head">
@@ -226,6 +256,78 @@
         <input type="number" name="gap_brand" min="8" max="48" value="{{ $s['gap_brand'] ?? 18 }}">
       </div>
     </div>
+
+    <div style="margin-top:.85rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.08)">
+      <div class="mm-sec-title" style="color:#fff;font-size:.92rem;margin-bottom:.45rem">نوع نمایش پنل + فاصله‌ها</div>
+      <p class="mm-hint" style="margin:0 0 .55rem">قبل از ذخیره، پیش‌نمایش زنده پایین همین بخش را ببینید.</p>
+      <div class="mm-grid4">
+        <div class="mm-field">
+          <span>نوع نمایش زیرمنو / مگا</span>
+          <select name="panel_layout" id="mm_panel_layout">
+            @foreach(\Plugins\MegaMenu\Plugin::panelLayouts() as $k=>$lab)
+              <option value="{{ $k }}" @selected(($s['panel_layout']??'columns')===$k)>{{ $lab }}</option>
+            @endforeach
+          </select>
+        </div>
+        <div class="mm-field">
+          <span>تعداد ستون (ستونی/فشرده)</span>
+          <input type="number" name="panel_cols" id="mm_panel_cols" min="2" max="6" value="{{ $s['panel_cols'] ?? 4 }}">
+        </div>
+        <div class="mm-field">
+          <span id="mm-nav-gap-lab">فاصله آیتم‌های نوار: {{ $s['nav_item_gap'] ?? 4 }}px</span>
+          <input type="range" name="nav_item_gap" id="mm_nav_item_gap" min="0" max="32" value="{{ $s['nav_item_gap'] ?? 4 }}"
+                 oninput="document.getElementById('mm-nav-gap-lab').textContent='فاصله آیتم‌های نوار: '+this.value+'px'">
+        </div>
+        <div class="mm-field">
+          <span id="mm-pad-lab">پدینگ پنل: {{ $s['panel_padding'] ?? 16 }}px</span>
+          <input type="range" name="panel_padding" id="mm_panel_padding" min="8" max="48" value="{{ $s['panel_padding'] ?? 16 }}"
+                 oninput="document.getElementById('mm-pad-lab').textContent='پدینگ پنل: '+this.value+'px'">
+        </div>
+        <div class="mm-field">
+          <span id="mm-col-gap-lab">فاصله افقی ستون‌ها: {{ $s['panel_col_gap'] ?? 16 }}px</span>
+          <input type="range" name="panel_col_gap" id="mm_panel_col_gap" min="4" max="48" value="{{ $s['panel_col_gap'] ?? 16 }}"
+                 oninput="document.getElementById('mm-col-gap-lab').textContent='فاصله افقی ستون‌ها: '+this.value+'px'">
+        </div>
+        <div class="mm-field">
+          <span id="mm-row-gap-lab">فاصله عمودی ردیف‌ها: {{ $s['panel_row_gap'] ?? 12 }}px</span>
+          <input type="range" name="panel_row_gap" id="mm_panel_row_gap" min="4" max="48" value="{{ $s['panel_row_gap'] ?? 12 }}"
+                 oninput="document.getElementById('mm-row-gap-lab').textContent='فاصله عمودی ردیف‌ها: '+this.value+'px'">
+        </div>
+      </div>
+
+      <div class="mm-live-preview" id="mm-live-preview" dir="rtl">
+        <div class="mm-live-preview__bar">
+          <strong>پیش‌نمایش زنده</strong>
+          <span>تغییرات را قبل از ذخیره ببینید · روی «محصولات» هاور کنید</span>
+        </div>
+        <div class="mm-live-preview__frame">
+          <div class="mm-live-top">
+            <span class="mm-live-brand">HDD LAND</span>
+            <div class="mm-live-nav" id="mm-live-nav">
+              <span>خانه</span>
+              <span class="is-active" id="mm-live-trigger">محصولات ▾</span>
+              <span>پیگیری سفارش</span>
+              <span>گارانتی</span>
+              <span>تماس با ما</span>
+            </div>
+          </div>
+          <div class="mm-live-panel layout-columns" id="mm-live-panel">
+            <div class="mm-live-grid" id="mm-live-grid">
+              <div class="mm-live-col"><b>همه محصولات</b><a>رم</a><a>لوازم جانبی</a></div>
+              <div class="mm-live-col"><b>SSD</b><a>وسترن</a><a>سامسونگ</a></div>
+              <div class="mm-live-col"><b>NVMe</b><a>نسل ۴</a><a>نسل ۵</a></div>
+              <div class="mm-live-col"><b>هارد HDD</b><a>بنفش</a><a>قرمز</a></div>
+              <div class="mm-live-col"><b>سایر</b><a>باکس</a><a>کابل</a></div>
+            </div>
+            <div class="mm-live-promo">
+              <strong>پیشنهاد سازمانی</strong>
+              <small>نمونه بنر</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="mm-inline">
       <label><input type="checkbox" name="show_icons" value="1" @checked(!empty($s['show_icons']))><span>نمایش آیکون‌ها در سایت</span></label>
       <label><input type="checkbox" name="header_blur" value="1" @checked(!array_key_exists('header_blur',$s) || !empty($s['header_blur']))><span>بلور پس‌زمینه هدر</span></label>
@@ -1115,6 +1217,49 @@
       }
     });
   }
+
+  // ---- Live preview for layout / spacing ----
+  const liveFrame = document.querySelector('.mm-live-preview__frame');
+  const liveNav = document.getElementById('mm-live-nav');
+  const livePanel = document.getElementById('mm-live-panel');
+  const liveTrigger = document.getElementById('mm-live-trigger');
+  function readLiveVal(id, fallback){
+    const el = document.getElementById(id);
+    if (!el) return fallback;
+    const n = parseInt(el.value, 10);
+    return Number.isFinite(n) ? n : fallback;
+  }
+  function updateLivePreview(){
+    if (!liveFrame || !livePanel || !liveNav) return;
+    const layout = (document.getElementById('mm_panel_layout') || {}).value || 'columns';
+    const cols = Math.max(2, Math.min(6, readLiveVal('mm_panel_cols', 4)));
+    const navGap = Math.max(0, Math.min(32, readLiveVal('mm_nav_item_gap', 4)));
+    const colGap = Math.max(4, Math.min(48, readLiveVal('mm_panel_col_gap', 16)));
+    const rowGap = Math.max(4, Math.min(48, readLiveVal('mm_panel_row_gap', 12)));
+    const pad = Math.max(8, Math.min(48, readLiveVal('mm_panel_padding', 16)));
+    liveNav.style.setProperty('--mm-live-nav-gap', navGap + 'px');
+    livePanel.style.setProperty('--mm-live-cols', String(layout === 'dense' ? Math.max(cols, 5) : cols));
+    livePanel.style.setProperty('--mm-live-col-gap', colGap + 'px');
+    livePanel.style.setProperty('--mm-live-row-gap', rowGap + 'px');
+    livePanel.style.setProperty('--mm-live-pad', pad + 'px');
+    livePanel.className = 'mm-live-panel layout-' + layout;
+  }
+  ['mm_panel_layout','mm_panel_cols','mm_nav_item_gap','mm_panel_col_gap','mm_panel_row_gap','mm_panel_padding'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', updateLivePreview);
+    el.addEventListener('change', updateLivePreview);
+  });
+  if (liveTrigger && liveFrame) {
+    liveTrigger.addEventListener('mouseenter', () => liveFrame.classList.add('is-open'));
+    liveFrame.addEventListener('mouseleave', () => liveFrame.classList.remove('is-open'));
+    liveTrigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      liveFrame.classList.toggle('is-open');
+    });
+  }
+  updateLivePreview();
+  if (liveFrame) liveFrame.classList.add('is-open');
 
   if (orgPromoInput) {
     orgPromoInput.addEventListener('input', syncOrgPromoPreview);
