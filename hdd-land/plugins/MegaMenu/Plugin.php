@@ -82,15 +82,17 @@ class Plugin extends BasePlugin
         ], is_array($decoded) ? $decoded : []);
     }
 
-    /** @param  array<string, mixed>  $data */
-    public static function saveSettings(array $data): void
+    /** @param  array<string, mixed>  $data
+     *  @return array<string, mixed>
+     */
+    public static function saveSettings(array $data): array
     {
         $current = static::settings();
         $promoImage = trim((string) ($data['org_promo_image'] ?? $current['org_promo_image'] ?? ''));
         if ($promoImage === '') {
             $promoImage = '/images/home/mega-promo.jpg';
         }
-        $promoUrl = trim((string) ($data['org_promo_url'] ?? '/products'));
+        $promoUrl = trim((string) ($data['org_promo_url'] ?? $current['org_promo_url'] ?? '/products'));
         if ($promoUrl === '') {
             $promoUrl = '/products';
         }
@@ -111,9 +113,8 @@ class Plugin extends BasePlugin
             'panel_bg' => in_array(($data['panel_bg'] ?? ''), ['white', 'soft', 'glass', 'transparent'], true) ? $data['panel_bg'] : 'white',
         ]);
 
-        // پیشنهاد سازمانی: اگر فیلدها در درخواست باشند (فرم تنظیمات یکپارچه) ذخیره کن
-        // checkbox با hidden=0 ارسال می‌شود؛ مقدار نهایی آخرین مقدار آرایه/اسکالر است
-        if (array_key_exists('org_promo_title', $data) || array_key_exists('org_promo_image', $data) || array_key_exists('org_promo_enabled', $data)) {
+        // همیشه فیلدهای پیشنهاد سازمانی را از درخواست ذخیره کن (فرم یکپارچه / AJAX)
+        if (array_key_exists('org_promo_title', $data) || array_key_exists('org_promo_image', $data) || array_key_exists('org_promo_enabled', $data) || array_key_exists('org_promo_button', $data) || array_key_exists('org_promo_desc', $data) || array_key_exists('org_promo_url', $data)) {
             $enabledRaw = $data['org_promo_enabled'] ?? 0;
             if (is_array($enabledRaw)) {
                 $enabledRaw = end($enabledRaw);
@@ -130,13 +131,10 @@ class Plugin extends BasePlugin
         if ($payload === false) {
             throw new \RuntimeException('رمزگذاری تنظیمات مگامنو ناموفق بود.');
         }
+        // ستون value از نوع text است؛ JSON رشته‌ای پایدارتر از پاس‌دادن آرایه است
         \App\Models\Setting::setValue(self::SETTINGS_KEY, $payload);
-        // اگر setValue آرایه هم قبول می‌کند، برای سازگاری دوباره با آرایه هم ذخیره کن
-        try {
-            \App\Models\Setting::setValue(self::SETTINGS_KEY, $merged);
-        } catch (\Throwable) {
-            //
-        }
+
+        return $merged;
     }
 
     /**

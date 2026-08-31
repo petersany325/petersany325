@@ -119,7 +119,7 @@
                   @include('mega-menu::storefront.partials.item-block', ['child' => $child, 'nested' => false, 'showIcons' => $showIcons])
                 @endforeach
               </div>
-              @if($forceMega && !$hasPromoChild && !empty($mm['org_promo_enabled']))
+              @if($forceMega && !empty($mm['org_promo_enabled']))
                 @php
                   $orgPromoImg = trim((string) ($mm['org_promo_image'] ?? ''));
                   if ($orgPromoImg === '') { $orgPromoImg = asset('images/home/mega-promo.jpg'); }

@@ -60,15 +60,41 @@ class MegaMenuController extends Controller
     {
         try {
             MegaMenuPlugin::ensureSchema();
-            MegaMenuPlugin::saveSettings($request->all());
-            if ($request->expectsJson() || $request->ajax()) {
-                return response()->json(['ok' => true, 'message' => 'تنظیمات اصلی مگامنو ذخیره شد.']);
+            $saved = MegaMenuPlugin::saveSettings($request->all());
+
+            // پاک کردن ویو کامپایل‌شده تا تغییرات بنر فوراً در سایت دیده شود
+            try {
+                foreach (glob(storage_path('framework/views/*.php')) ?: [] as $f) {
+                    @unlink($f);
+                }
+                if (function_exists('opcache_reset')) {
+                    @opcache_reset();
+                }
+            } catch (\Throwable) {
+                //
             }
 
-            return back()->with('success', 'تنظیمات اصلی مگامنو ذخیره شد.');
+            $org = [
+                'org_promo_enabled' => ! empty($saved['org_promo_enabled']),
+                'org_promo_title' => (string) ($saved['org_promo_title'] ?? ''),
+                'org_promo_desc' => (string) ($saved['org_promo_desc'] ?? ''),
+                'org_promo_button' => (string) ($saved['org_promo_button'] ?? ''),
+                'org_promo_url' => (string) ($saved['org_promo_url'] ?? ''),
+                'org_promo_image' => (string) ($saved['org_promo_image'] ?? ''),
+            ];
+
+            if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'ok' => true,
+                    'message' => 'تنظیمات مگامنو و پیشنهاد سازمانی ذخیره شد.',
+                    'org_promo' => $org,
+                ]);
+            }
+
+            return back()->with('success', 'تنظیمات مگامنو و پیشنهاد سازمانی ذخیره شد.');
         } catch (\Throwable $e) {
             report($e);
-            if ($request->expectsJson() || $request->ajax()) {
+            if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
                 return response()->json(['ok' => false, 'message' => 'ذخیره تنظیمات ناموفق: '.$e->getMessage()], 500);
             }
 

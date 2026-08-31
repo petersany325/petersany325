@@ -143,7 +143,7 @@
     <span>تنظیمات اصلی مگامنو</span>
     <small>هر گزینه نام دارد</small>
   </summary>
-  <form method="post" action="{{ route('admin.mega-menu.settings') }}">
+  <form method="post" action="{{ route('admin.mega-menu.settings') }}" id="mm-settings-form">
     @csrf
     <div class="mm-grid4">
       <div class="mm-field">
@@ -233,7 +233,8 @@
 
     <div style="margin-top:.85rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.08)">
       <div class="mm-sec-title" style="color:#fff;font-size:.92rem;margin-bottom:.55rem">پیشنهاد سازمانی (بنر مگامنو محصولات)</div>
-      <p class="mm-hint" style="margin:0 0 .55rem">بنر سمت چپ پنل «محصولات» — عنوان، تصویر، لینک و دکمه</p>
+      <p class="mm-hint" style="margin:0 0 .55rem">بنر سمت چپ پنل «محصولات» — بعد از تغییر حتماً دکمه ذخیره همین بخش را بزنید (دکمه ذخیره آیتم منو در پنل کناری این بخش را ذخیره نمی‌کند).</p>
+      <div id="mm-org-save-status" style="display:none;margin:0 0 .55rem;padding:.45rem .65rem;border-radius:8px;font-size:.82rem;font-weight:650"></div>
       <input type="hidden" name="org_promo_enabled" value="0">
       <div class="mm-inline" style="margin-top:0;margin-bottom:.55rem">
         <label>
@@ -244,19 +245,19 @@
       <div class="mm-grid4">
         <div class="mm-field">
           <span>عنوان بنر</span>
-          <input type="text" name="org_promo_title" value="{{ $s['org_promo_title'] ?? 'پیشنهاد سازمانی' }}" maxlength="120" placeholder="پیشنهاد سازمانی">
+          <input type="text" name="org_promo_title" id="org_promo_title" value="{{ $s['org_promo_title'] ?? 'پیشنهاد سازمانی' }}" maxlength="120" placeholder="پیشنهاد سازمانی">
         </div>
         <div class="mm-field">
           <span>متن دکمه</span>
-          <input type="text" name="org_promo_button" value="{{ $s['org_promo_button'] ?? 'مشاهده' }}" maxlength="60" placeholder="مشاهده">
+          <input type="text" name="org_promo_button" id="org_promo_button" value="{{ $s['org_promo_button'] ?? 'مشاهده' }}" maxlength="60" placeholder="مشاهده">
         </div>
         <div class="mm-field">
           <span>لینک بنر / دکمه</span>
-          <input type="text" name="org_promo_url" value="{{ $s['org_promo_url'] ?? '/products' }}" maxlength="500" placeholder="/products یا /services">
+          <input type="text" name="org_promo_url" id="org_promo_url" value="{{ $s['org_promo_url'] ?? '/products' }}" maxlength="500" placeholder="/products یا /services">
         </div>
         <div class="mm-field" style="grid-column:1/-1">
           <span>توضیح کوتاه</span>
-          <input type="text" name="org_promo_desc" value="{{ $s['org_promo_desc'] ?? 'تأمین هارد و SSD برای کسب‌وکارها با گارانتی شفاف' }}" maxlength="255" placeholder="متن زیر عنوان">
+          <input type="text" name="org_promo_desc" id="org_promo_desc" value="{{ $s['org_promo_desc'] ?? 'تأمین هارد و SSD برای کسب‌وکارها با گارانتی شفاف' }}" maxlength="255" placeholder="متن زیر عنوان">
         </div>
         <div class="mm-field" style="grid-column:1/-1">
           <span>آدرس تصویر بنر</span>
@@ -272,7 +273,8 @@
     </div>
 
     <div class="mm-inline" style="margin-top:.75rem">
-      <button class="btn btn-primary" type="submit" id="mm-settings-save">ذخیره تنظیمات مگامنو</button>
+      <button class="btn btn-primary" type="submit" id="mm-settings-save">ذخیره تنظیمات + پیشنهاد سازمانی</button>
+      <a class="btn btn-outline" href="{{ url('/') }}" target="_blank" rel="noopener">پیش‌نمایش سایت</a>
     </div>
   </form>
 </details>
@@ -1036,12 +1038,84 @@
 
   const orgPromoInput = document.getElementById('org_promo_image');
   const orgPromoPreview = document.getElementById('org_promo_preview');
+  const settingsForm = document.getElementById('mm-settings-form');
+  const orgSaveStatus = document.getElementById('mm-org-save-status');
+
+  function showOrgStatus(msg, err){
+    if (!orgSaveStatus) return;
+    orgSaveStatus.style.display = 'block';
+    orgSaveStatus.textContent = msg;
+    orgSaveStatus.style.background = err ? 'rgba(239,68,68,.15)' : 'rgba(34,197,94,.15)';
+    orgSaveStatus.style.border = err ? '1px solid rgba(239,68,68,.4)' : '1px solid rgba(34,197,94,.35)';
+    orgSaveStatus.style.color = err ? '#fecaca' : '#bbf7d0';
+  }
+
   function syncOrgPromoPreview(){
     if (!orgPromoInput || !orgPromoPreview) return;
     const v = (orgPromoInput.value || '').trim();
     orgPromoPreview.src = v || @json(asset('images/home/mega-promo.jpg'));
     orgPromoPreview.style.opacity = '1';
   }
+
+  async function saveSettingsAjax(){
+    if (!settingsForm) throw new Error('فرم تنظیمات پیدا نشد');
+    const btn = document.getElementById('mm-settings-save');
+    if (btn) { btn.disabled = true; btn.textContent = 'در حال ذخیره...'; }
+    try {
+      const fd = new FormData(settingsForm);
+      const res = await fetch(ROUTES.settings, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': CSRF,
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        credentials: 'same-origin',
+        body: fd,
+      });
+      let data = {};
+      try { data = await res.json(); } catch (_) {}
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.message || ('خطای ذخیره: HTTP '+res.status));
+      }
+      if (data.org_promo) {
+        const o = data.org_promo;
+        const map = {
+          org_promo_title: o.org_promo_title,
+          org_promo_desc: o.org_promo_desc,
+          org_promo_button: o.org_promo_button,
+          org_promo_url: o.org_promo_url,
+          org_promo_image: o.org_promo_image,
+        };
+        Object.keys(map).forEach(id => {
+          const el = document.getElementById(id);
+          if (el && map[id] != null) el.value = map[id];
+        });
+        const en = settingsForm.querySelector('input[type=checkbox][name=org_promo_enabled]');
+        if (en) en.checked = !!o.org_promo_enabled;
+        syncOrgPromoPreview();
+      }
+      const msg = data.message || 'تنظیمات و پیشنهاد سازمانی ذخیره شد.';
+      showOrgStatus(msg, false);
+      toast(msg);
+      return data;
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'ذخیره تنظیمات + پیشنهاد سازمانی'; }
+    }
+  }
+
+  if (settingsForm) {
+    settingsForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await saveSettingsAjax();
+      } catch (err) {
+        showOrgStatus(err.message || 'ذخیره ناموفق', true);
+        toast(err.message || 'ذخیره ناموفق', true);
+      }
+    });
+  }
+
   if (orgPromoInput) {
     orgPromoInput.addEventListener('input', syncOrgPromoPreview);
     orgPromoInput.addEventListener('change', syncOrgPromoPreview);
@@ -1067,8 +1141,10 @@
         if (!res.ok || !data.ok) throw new Error(data.message || 'آپلود ناموفق');
         if (orgPromoInput) orgPromoInput.value = data.url || data.path || '';
         syncOrgPromoPreview();
-        toast('تصویر پیشنهاد سازمانی آپلود شد');
+        toast('تصویر آپلود شد — در حال ذخیره تنظیمات...');
+        await saveSettingsAjax();
       } catch (e) {
+        showOrgStatus(e.message || 'آپلود/ذخیره ناموفق', true);
         toast(e.message || 'آپلود ناموفق', true);
       }
     });
@@ -1092,7 +1168,13 @@
     const first = items[0];
     if (el) el.value = first.url || first.value || '';
     updatePreviews();
-    if (field === 'org_promo_image') syncOrgPromoPreview();
+    if (field === 'org_promo_image') {
+      syncOrgPromoPreview();
+      saveSettingsAjax().catch(err => {
+        showOrgStatus(err.message || 'ذخیره بعد از انتخاب تصویر ناموفق', true);
+        toast(err.message || 'ذخیره ناموفق', true);
+      });
+    }
     toast('از فایل‌منیجر انتخاب شد');
   };
 
