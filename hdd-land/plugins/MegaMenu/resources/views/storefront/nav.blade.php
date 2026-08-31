@@ -108,11 +108,6 @@
               </div>
             </div>
           @else
-            @php
-              $hasPromoChild = $item->activeChildren->contains(function ($c) {
-                return ($c->type ?? '') === 'promo' || ($c->item_type ?? '') === 'promo';
-              });
-            @endphp
             <div class="{{ $forceMega ? 'mega-shell-pro' : '' }}">
               <div class="mega-grid">
                 @foreach($item->activeChildren as $child)
