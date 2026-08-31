@@ -37,6 +37,20 @@
   <a class="btn btn-outline" href="{{ route('admin.products.index') }}">بازگشت به لیست</a>
 </div>
 
+@if($errors->any())
+  <div class="panel" style="padding:1rem;margin-bottom:1rem;border:1px solid #fecaca;background:#fef2f2;color:#991b1b">
+    <strong>ذخیره انجام نشد:</strong>
+    <ul style="margin:.4rem 0 0;padding-right:1.2rem">
+      @foreach($errors->all() as $err)
+        <li>{{ $err }}</li>
+      @endforeach
+    </ul>
+  </div>
+@endif
+@if(session('error'))
+  <div class="panel" style="padding:1rem;margin-bottom:1rem;border:1px solid #fecaca;background:#fef2f2;color:#991b1b">{{ session('error') }}</div>
+@endif
+
 <form method="post" enctype="multipart/form-data" action="{{ $product->exists ? route('admin.products.update',$product) : route('admin.products.store') }}" id="productForm">
 @csrf
 @if($product->exists) @method('PUT') @endif

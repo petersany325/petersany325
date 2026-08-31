@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Plugins\Catalog\src\Support\ProductSlug;
 
 class Product extends Model
 {
@@ -110,7 +111,7 @@ class Product extends Model
     {
         static::saving(function (Product $product) {
             if (blank($product->slug)) {
-                $product->slug = Str::slug($product->name) ?: 'product-'.Str::random(6);
+                $product->slug = ProductSlug::unique((string) $product->name, $product->exists ? (int) $product->id : null);
             }
 
             if (Schema::hasColumn('products', 'status')) {
