@@ -1,0 +1,8 @@
+/* HDD LAND Text widget: keep Enter, blank lines, and pasted line breaks on public pages. */
+.vb-inspector textarea[data-data="text"]{min-height:150px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;resize:vertical;tab-size:4}
+.vb-widget>p,.vb-widget .demo-text{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;line-height:inherit}
+.pb-text{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;line-height:1.75}
+.pb-text:empty{min-height:1em}
+.pb-html p{margin:0 0 0.9em}
+.pb-html p:last-child{margin-bottom:0}
+@media(max-width:640px){.pb-text{overflow-wrap:anywhere}}
