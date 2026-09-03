@@ -7,22 +7,94 @@ let selected=null,history=[],future=[],isDirty=false,inlineEditing=false,lastSav
 const uid=p=>p+'-'+Math.random().toString(36).slice(2,9),clone=v=>JSON.parse(JSON.stringify(v));
 const esc=v=>{const e=document.createElement('div');e.textContent=v??'';return e.innerHTML};
 const checked=v=>v?'checked':'';
-const nl2br=v=>esc(v).replace(/\r\n|\r|\n/g,'<br>');
-function clipboardToMultiline(event){
+
+const ALLOWED_RICH=/^(H[1-6]|P|BR|STRONG|B|EM|I|U|INS|UL|OL|LI|HR|DIV|SPAN|A|BLOCKQUOTE)$/;
+function isRichWidget(w){
+  if(!w)return false;
+  if(w.type==='text')return true;
+  if(w.type==='html'&&w.data&&w.data.richText)return true;
+  return false;
+}
+function htmlToPlain(html){
+  const box=document.createElement('div');
+  box.innerHTML=String(html||'').replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|h[1-6]|li|blockquote)>/gi,'\n');
+  return box.innerText.replace(/\u00a0/g,' ').replace(/\n{3,}/g,'\n\n');
+}
+function preserveSpaces(text){
+  return String(text||'').replace(/ {2,}/g,m=>'\u00a0'.repeat(m.length));
+}
+function plainTextToHtml(text){
+  const raw=String(text??'').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  if(!raw.trim())return '<p></p>';
+  return raw.split(/\n{2,}/).map(block=>{
+    const lines=block.split('\n').map(line=>esc(preserveSpaces(line)).replace(/\n/g,'')||'<br>');
+    return '<p>'+lines.join('<br>')+'</p>';
+  }).join('');
+}
+function sanitizeRichHtml(html){
+  const wrap=document.createElement('div');
+  wrap.innerHTML=String(html||'').replace(/<!--[\s\S]*?-->/g,'').replace(/<\/?o:[^>]*>/gi,'').replace(/<\/?w:[^>]*>/gi,'');
+  function walk(node){
+    const kids=[...node.childNodes];
+    kids.forEach(child=>{
+      if(child.nodeType===3){
+        child.textContent=child.textContent.replace(/\u00a0/g,'\u00a0');
+        return;
+      }
+      if(child.nodeType!==1){child.remove();return;}
+      const tag=child.tagName;
+      if(tag==='SCRIPT'||tag==='STYLE'||tag==='META'||tag==='LINK'||tag==='XML'){child.remove();return;}
+      const deco=String(child.style&&child.style.textDecoration||'').toLowerCase();
+      const underline=tag==='U'||tag==='INS'||deco.includes('underline');
+      const bold=tag==='STRONG'||tag==='B'||(child.style&&(child.style.fontWeight==='700'||child.style.fontWeight==='bold'));
+      const italic=tag==='EM'||tag==='I'||(child.style&&child.style.fontStyle==='italic');
+      walk(child);
+      if(tag==='BR'){return;}
+      if(tag==='SPAN'||tag==='FONT'){
+        let inner=child.innerHTML;
+        if(underline)inner='<u>'+inner+'</u>';
+        if(italic)inner='<em>'+inner+'</em>';
+        if(bold)inner='<strong>'+inner+'</strong>';
+        child.replaceWith(...htmlToNodes(inner));
+        return;
+      }
+      if(!ALLOWED_RICH.test(tag)){
+        child.replaceWith(...[...child.childNodes]);
+        return;
+      }
+      [...child.attributes].forEach(attr=>{
+        if(tag==='A'&&(attr.name==='href'||attr.name==='target'||attr.name==='rel'))return;
+        child.removeAttribute(attr.name);
+      });
+      if(tag==='A'){
+        const href=child.getAttribute('href')||'';
+        if(!/^(https?:|\/|#|mailto:)/i.test(href))child.removeAttribute('href');
+        child.setAttribute('rel','noopener noreferrer');
+      }
+      if(tag==='B'){const s=document.createElement('strong');s.innerHTML=child.innerHTML;child.replaceWith(s);return;}
+      if(tag==='I'){const s=document.createElement('em');s.innerHTML=child.innerHTML;child.replaceWith(s);return;}
+      if(tag==='INS'){const s=document.createElement('u');s.innerHTML=child.innerHTML;child.replaceWith(s);}
+    });
+  }
+  function htmlToNodes(htmlStr){
+    const d=document.createElement('div');d.innerHTML=htmlStr;return [...d.childNodes];
+  }
+  walk(wrap);
+  let out=wrap.innerHTML.replace(/\r\n/g,'\n');
+  if(!/<(p|h[1-6]|ul|ol|hr|div)\b/i.test(out))out=plainTextToHtml(htmlToPlain(out||wrap.textContent));
+  return out;
+}
+function clipboardToFormattedHtml(event){
   const cd=event.clipboardData;if(!cd)return null;
   const html=cd.getData('text/html')||'';
   const plain=cd.getData('text/plain')||'';
-  if(html && /<(p|div|br|li|tr|h[1-6]|blockquote)\b/i.test(html)){
-    const normalized=html
-      .replace(/\r\n|\r/g,'\n')
-      .replace(/<br\s*\/?>/gi,'\n')
-      .replace(/<\/(p|div|h[1-6]|li|blockquote|tr)>/gi,'\n');
-    const box=document.createElement('div');
-    box.innerHTML=normalized;
-    return box.innerText.replace(/\u00a0/g,' ').replace(/\n{3,}/g,'\n\n');
-  }
-  if(!plain)return null;
-  return plain.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  if(html&&/<(p|div|br|li|tr|span|h[1-6]|blockquote|u|strong|b|em|i|ul|ol)\b/i.test(html))return sanitizeRichHtml(html);
+  if(plain==='')return null;
+  return plainTextToHtml(plain.replace(/\r\n/g,'\n').replace(/\r/g,'\n'));
+}
+function clipboardToMultiline(event){
+  const html=clipboardToFormattedHtml(event);if(html==null)return null;
+  return htmlToPlain(html);
 }
 function insertAtCursor(el,text){
   const start=el.selectionStart??el.value.length,end=el.selectionEnd??start;
@@ -31,8 +103,71 @@ function insertAtCursor(el,text){
   el.selectionStart=el.selectionEnd=pos;
   el.dispatchEvent(new Event('input',{bubbles:true}));
 }
+function richHtmlOf(w){
+  const d=w.data||{};
+  if(d.html)return sanitizeRichHtml(d.html);
+  return plainTextToHtml(d.text||'');
+}
+function migrateRichWidgets(source){
+  const next=clone(source);
+  (next.sections||[]).forEach(s=>(s.columns||[]).forEach(c=>(c.widgets||[]).forEach(w=>{
+    if(w.type==='text'){
+      w.type='html';
+      w.data=w.data||{};
+      w.data.richText=true;
+      if(!w.data.html)w.data.html=plainTextToHtml(w.data.text||'');
+      w.data.text=htmlToPlain(w.data.html);
+    }else if(w.type==='html'&&w.data&&w.data.richText){
+      w.data.html=sanitizeRichHtml(w.data.html||plainTextToHtml(w.data.text||''));
+      w.data.text=htmlToPlain(w.data.html);
+    }
+  })));
+  return next;
+}
+function mountRichEditor(item){
+  if(!isRichWidget(item))return;
+  const textarea=inspector.querySelector('textarea[data-data="html"],textarea[data-data="text"]');
+  if(!textarea)return;
+  const label=textarea.closest('label')||textarea.parentElement;
+  const editor=document.createElement('div');
+  editor.className='vb-richtext';
+  editor.contentEditable='true';
+  editor.spellcheck=true;
+  editor.setAttribute('data-richtext','1');
+  editor.innerHTML=richHtmlOf(item)||'<p></p>';
+  const hint=document.createElement('small');
+  hint.className='inline-hint';
+  hint.textContent='Paste keeps Enter, spaces, hyphens, underlines, bold and lists. Ctrl+S saves.';
+  textarea.hidden=true;
+  label.append(editor,hint);
+  const sync=()=>{
+    const html=sanitizeRichHtml(editor.innerHTML);
+    item.data.html=html;
+    item.data.text=htmlToPlain(html);
+    item.data.richText=true;
+    if(item.type==='text')item.type='html';
+    const hidden=inspector.querySelector('textarea[data-data="html"]');
+    if(hidden)hidden.value=html;
+    dirty();
+    render(true);
+  };
+  editor.addEventListener('focus',()=>{history.push(clone(doc));if(history.length>60)history.shift();future=[]});
+  editor.addEventListener('input',()=>{
+    item.data.html=editor.innerHTML;
+    item.data.text=htmlToPlain(editor.innerHTML);
+    item.data.richText=true;
+    if(item.type==='text')item.type='html';
+    dirty();
+  });
+  editor.addEventListener('paste',e=>{
+    const html=clipboardToFormattedHtml(e);if(html==null)return;
+    e.preventDefault();
+    document.execCommand('insertHTML',false,html);
+  });
+  editor.addEventListener('blur',sync);
+}
 
-const INLINE_TYPES=new Set(['heading','text','button','quote']);
+const INLINE_TYPES=new Set(['heading','text','button','quote','html']);
 
 function setStatus(text,cls){
   const status=document.getElementById('save-status');
@@ -56,7 +191,7 @@ function snapshot(){history.push(clone(doc));if(history.length>60)history.shift(
 
 function widget(type){
   const base={id:uid('widget'),type,data:{visible:true,animation:'none',animationDelay:0,hoverEffect:'none',hideDesktop:false,hideTablet:false,hideMobile:false},style:{}};
-  const values={heading:{text:'New heading',level:2},text:{text:'Write your content here.'},image:{url:'',alt:''},button:{text:'Get started',url:'#',icon:'fa-solid fa-arrow-right',variant:'primary',size:'medium',targetBlank:false},cards:{items:'fa-solid fa-star|Feature one|Description|#\nfa-solid fa-star|Feature two|Description|#\nfa-solid fa-star|Feature three|Description|#'},icon:{icon:'fa-solid fa-star'},iconbox:{icon:'fa-solid fa-star',title:'Feature title',text:'Feature description'},iconlist:{icon:'fa-solid fa-check',items:'First item\nSecond item\nThird item'},code:{language:'html',code:'<section>\n  Your code here\n</section>'},html:{html:'<h3>Custom HTML</h3>\n<p>Add safe HTML content here.</p>'},dragbox:{icon:'fa-solid fa-up-down-left-right',title:'Draggable content box',text:'Drag this widget anywhere in the canvas.'},slider:{items:'https://picsum.photos/1200/600?1|First slide|Slide description|#\nhttps://picsum.photos/1200/600?2|Second slide|Slide description|#'},tabs:{items:'Overview|Add overview content here.\nFeatures|Add feature content here.\nSupport|Add support content here.'},textpath:{text:'PROFESSIONAL DATA RECOVERY • HDD LAND •',speed:'normal'},video:{url:''},videoplaylist:{items:'Introduction|https://www.youtube.com/watch?v=dQw4w9WgXcQ\nProduct Demo|https://www.youtube.com/watch?v=dQw4w9WgXcQ'},social:{whatsapp:'',facebook:'',instagram:'',telegram:'',teams:''},pricing:{items:'Starter|$29|Per month|Feature one;Feature two|Choose Plan|#\nProfessional|$79|Per month|Everything in Starter;Priority support|Get Professional|#'},counter:{number:'100+',label:'Successful projects'},quote:{text:'Customer testimonial',author:'Customer name'}};
+  const values={heading:{text:'New heading',level:2},text:{text:'Write your content here.',html:'<p>Write your content here.</p>',richText:true},image:{url:'',alt:''},button:{text:'Get started',url:'#',icon:'fa-solid fa-arrow-right',variant:'primary',size:'medium',targetBlank:false},cards:{items:'fa-solid fa-star|Feature one|Description|#\nfa-solid fa-star|Feature two|Description|#\nfa-solid fa-star|Feature three|Description|#'},icon:{icon:'fa-solid fa-star'},iconbox:{icon:'fa-solid fa-star',title:'Feature title',text:'Feature description'},iconlist:{icon:'fa-solid fa-check',items:'First item\nSecond item\nThird item'},code:{language:'html',code:'<section>\n  Your code here\n</section>'},html:{html:'<h3>Custom HTML</h3>\n<p>Add safe HTML content here.</p>'},dragbox:{icon:'fa-solid fa-up-down-left-right',title:'Draggable content box',text:'Drag this widget anywhere in the canvas.'},slider:{items:'https://picsum.photos/1200/600?1|First slide|Slide description|#\nhttps://picsum.photos/1200/600?2|Second slide|Slide description|#'},tabs:{items:'Overview|Add overview content here.\nFeatures|Add feature content here.\nSupport|Add support content here.'},textpath:{text:'PROFESSIONAL DATA RECOVERY • HDD LAND •',speed:'normal'},video:{url:''},videoplaylist:{items:'Introduction|https://www.youtube.com/watch?v=dQw4w9WgXcQ\nProduct Demo|https://www.youtube.com/watch?v=dQw4w9WgXcQ'},social:{whatsapp:'',facebook:'',instagram:'',telegram:'',teams:''},pricing:{items:'Starter|$29|Per month|Feature one;Feature two|Choose Plan|#\nProfessional|$79|Per month|Everything in Starter;Priority support|Get Professional|#'},counter:{number:'100+',label:'Successful projects'},quote:{text:'Customer testimonial',author:'Customer name'}};
   Object.assign(base.data,values[type]||{});if(type==='spacer')base.style.minHeight='40px';return base;
 }
 function section(){return{id:uid('section'),data:{visible:true,animation:'none',animationDelay:0,hoverEffect:'none',hideDesktop:false,hideTablet:false,hideMobile:false},style:{padding:'70px',backgroundColor:'#ffffff',backgroundSize:'cover',backgroundPosition:'center'},columns:[{id:uid('column'),widgets:[]}]}}
@@ -68,7 +203,7 @@ function stateClasses(item){const d=item.data||{},out=[];if(d.visible===false)ou
 function preview(w){
   const d=w.data||{},style=css(w),cl=stateClasses(w);
   if(w.type==='heading'){const n=Math.max(1,Math.min(6,Number(d.level)||2));return`<h${n} class="${cl}" style="${style}"><span data-inline="text">${esc(d.text||'Heading')}</span></h${n}>`}
-  if(w.type==='text')return`<p class="${cl}" style="${style};white-space:pre-wrap"><span data-inline="text">${nl2br(d.text||'Text')}</span></p>`;
+  if(w.type==='text'||(w.type==='html'&&d.richText))return`<div class="demo-text ${cl}" style="${style}" data-inline="html">${richHtmlOf(w)||esc(d.text||'Text')}</div>`;
   if(w.type==='image')return d.url?`<img class="${cl}" style="${style}" src="${esc(d.url)}" alt="${esc(d.alt||'')}">`:'<div class="widget-placeholder">Enter an image URL</div>';
   if(w.type==='button')return`<span class="demo-button ${cl}" style="${style}">${d.icon?`<i class="${esc(d.icon)}"></i> `:''}<span data-inline="text">${esc(d.text||'Button')}</span></span>`;
   if(w.type==='cards')return`<div class="demo-cards ${cl}" style="${style}"><span>Feature one</span><span>Feature two</span><span>Feature three</span></div>`;
@@ -76,13 +211,13 @@ function preview(w){
   if(w.type==='iconbox')return`<div class="demo-iconbox ${cl}" style="${style}"><i class="${esc(d.icon)}"></i><h3>${esc(d.title)}</h3><p>${esc(d.text)}</p></div>`;
   if(w.type==='iconlist')return`<ul class="demo-list ${cl}" style="${style}">${String(d.items||'').split(/\n/).filter(Boolean).map(x=>`<li><i class="${esc(d.icon)}"></i>${esc(x)}</li>`).join('')}</ul>`;
   if(w.type==='code')return`<pre class="demo-code ${cl}" style="${style}"><code>${esc(d.code)}</code></pre>`;
-  if(w.type==='html')return`<div class="widget-placeholder ${cl}" style="${style}"><i class="fa-solid fa-file-code"></i> Custom HTML block</div>`;
+  if(w.type==='html')return d.richText?`<div class="demo-text ${cl}" style="${style}" data-inline="html">${richHtmlOf(w)}</div>`:`<div class="demo-html ${cl}" style="${style}">${sanitizeRichHtml(d.html||'')||'<div class="widget-placeholder"><i class="fa-solid fa-file-code"></i> Custom HTML block</div>'}</div>`;
   if(w.type==='dragbox')return`<div class="demo-iconbox ${cl}" style="${style}"><i class="${esc(d.icon)}"></i><h3>${esc(d.title)}</h3><p>${esc(d.text)}</p></div>`;
   if(w.type==='slider')return`<div class="demo-slider ${cl}" style="${style}"><i class="fa-solid fa-images"></i><strong>Professional Slider</strong><span>${String(d.items||'').split(/\n/).filter(Boolean).length} slides</span></div>`;
   if(w.type==='tabs')return`<div class="demo-tabs ${cl}" style="${style}">${String(d.items||'').split(/\n/).filter(Boolean).map((x,i)=>`<span class="${i?'':'active'}">${esc(x.split('|')[0])}</span>`).join('')}</div>`;
   if(w.type==='textpath')return`<div class="demo-textpath ${cl}" style="${style}">${esc(d.text)}</div>`;
   if(w.type==='counter')return`<div class="demo-counter ${cl}" style="${style}"><strong>${esc(d.number)}</strong><span>${esc(d.label)}</span></div>`;
-  if(w.type==='quote')return`<blockquote class="${cl}" style="${style};white-space:pre-wrap"><span data-inline="text">${nl2br(d.text)}</span><cite data-inline="author">${esc(d.author)}</cite></blockquote>`;
+  if(w.type==='quote')return`<blockquote class="${cl}" style="${style};white-space:pre-wrap"><span data-inline="text">${esc(d.text).replace(/\r\n|\r|\n/g,'<br>')}</span><cite data-inline="author">${esc(d.author)}</cite></blockquote>`;
   if(w.type==='video'||w.type==='videoplaylist')return`<div class="widget-placeholder ${cl}" style="${style}"><i class="fa-solid fa-play"></i> ${w.type==='videoplaylist'?'Video Playlist':(d.url?'Video is ready to preview':'Enter a video URL')}</div>`;
   if(w.type==='social')return`<div class="demo-social ${cl}" style="${style}">${['whatsapp','facebook','instagram','telegram','teams'].map(x=>`<i class="fa-brands fa-${x==='teams'?'microsoft':x}"></i>`).join('')}</div>`;
   if(w.type==='pricing')return`<div class="demo-pricing ${cl}" style="${style}"><strong>Pricing Tables</strong><span>${String(d.items||'').split(/\n/).filter(Boolean).length} plans</span></div>`;
@@ -127,7 +262,7 @@ function contentFields(i,kind){
   if(kind==='section')return`<label>Columns<select data-section-columns>${[1,2,3,4].map(n=>`<option value="${n}" ${i.columns.length===n?'selected':''}>${n}</option>`).join('')}</select></label>`;
   const fields={
     heading:`<label>Heading text<textarea data-data="text">${esc(d.text)}</textarea></label><label>HTML level<select data-data="level">${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${Number(d.level)===n?'selected':''}>H${n}</option>`).join('')}</select></label><small class="inline-hint">Double-click heading on canvas to edit inline.</small>`,
-    text:`<label>Text<textarea rows="7" data-data="text">${esc(d.text)}</textarea></label><small class="inline-hint">Double-click text on canvas to edit inline.</small>`,
+    text:`<label>Text<textarea rows="7" data-data="html">${esc(d.html||plainTextToHtml(d.text||''))}</textarea></label>`,
     image:`<label>Image URL<input data-data="url" value="${esc(d.url)}"></label><label>Alt text<input data-data="alt" value="${esc(d.alt)}"></label>`,
     button:`<label>Button text<input data-data="text" value="${esc(d.text)}"></label><label>Link URL<input data-data="url" value="${esc(d.url)}"></label><label>Icon class<input data-data="icon" value="${esc(d.icon)}"></label><div class="two-cols"><label>Style<select data-data="variant">${['primary','secondary','outline','dark','light'].map(v=>`<option ${d.variant===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Size<select data-data="size">${['small','medium','large'].map(v=>`<option ${d.size===v?'selected':''}>${v}</option>`).join('')}</select></label></div><label class="switch-row"><input type="checkbox" data-bool="targetBlank" ${checked(d.targetBlank)}> Open in new tab</label>`,
     cards:`<label>Icon | Title | Description | URL<textarea rows="9" data-data="items">${esc(d.items)}</textarea></label>`,
@@ -135,7 +270,7 @@ function contentFields(i,kind){
     iconbox:`<label>Icon class<input data-data="icon" value="${esc(d.icon)}"></label><label>Title<input data-data="title" value="${esc(d.title)}"></label><label>Description<textarea data-data="text">${esc(d.text)}</textarea></label>`,
     iconlist:`<label>Icon class<input data-data="icon" value="${esc(d.icon)}"></label><label>Items (one per line)<textarea rows="7" data-data="items">${esc(d.items)}</textarea></label>`,
     code:`<label>Language<input data-data="language" value="${esc(d.language)}" placeholder="html"></label><label>Code<textarea rows="12" data-data="code">${esc(d.code)}</textarea></label>`,
-    html:`<label>Safe HTML<textarea rows="12" data-data="html">${esc(d.html)}</textarea></label><small>Scripts, event handlers and unsafe tags are removed on the public page.</small>`,
+    html:d.richText?`<label>Text<textarea rows="7" data-data="html">${esc(d.html||plainTextToHtml(d.text||''))}</textarea></label>`:`<label>Safe HTML<textarea rows="12" data-data="html">${esc(d.html)}</textarea></label><small>Scripts, event handlers and unsafe tags are removed on the public page.</small>`,
     dragbox:`<label>Icon class<input data-data="icon" value="${esc(d.icon)}"></label><label>Title<input data-data="title" value="${esc(d.title)}"></label><label>Text<textarea data-data="text">${esc(d.text)}</textarea></label>`,
     slider:`<label>Image URL | Title | Description | Link<textarea rows="11" data-data="items">${esc(d.items)}</textarea></label>`,
     tabs:`<label>Tab title | Content<textarea rows="10" data-data="items">${esc(d.items)}</textarea></label>`,
@@ -172,12 +307,13 @@ function renderInspector(){
   inspector.hidden=!f;
   if(!f)return;
   const i=f.item,d=i.data||(i.data={}),s=i.style||(i.style={});
-  const title=f.kind==='section'?'Section':({heading:'Heading',text:'Text',image:'Image',button:'Professional Button',cards:'Cards',icon:'Icon',iconbox:'Icon Box',iconlist:'Icon List',code:'Code',html:'HTML',dragbox:'Drag Widget',slider:'Professional Slider',tabs:'Tabs',textpath:'Text Path',counter:'Counter',quote:'Testimonial',video:'Video',videoplaylist:'Video Playlist',social:'Social Links',pricing:'Price Table',spacer:'Spacer',divider:'Divider'}[i.type]||i.type);
+  const title=f.kind==='section'?'Section':(isRichWidget(i)?'Text':({heading:'Heading',text:'Text',image:'Image',button:'Professional Button',cards:'Cards',icon:'Icon',iconbox:'Icon Box',iconlist:'Icon List',code:'Code',html:'HTML',dragbox:'Drag Widget',slider:'Professional Slider',tabs:'Tabs',textpath:'Text Path',counter:'Counter',quote:'Testimonial',video:'Video',videoplaylist:'Video Playlist',social:'Social Links',pricing:'Price Table',spacer:'Spacer',divider:'Divider'}[i.type]||i.type));
   inspector.innerHTML=`<h2>${title}</h2><details open><summary>Content</summary>${contentFields(i,f.kind)}<label class="switch-row"><input type="checkbox" data-bool="visible" ${checked(d.visible!==false)}> ${i.type==='heading'?'Show heading':'Show element'}</label></details>
   <details open><summary>Typography & Alignment</summary>${alignButtons(s.textAlign||'')}<label>Font family<select data-style="fontFamily"><option value="">Theme font</option>${['Tahoma, Arial, sans-serif','Arial, sans-serif','Inter, Arial, sans-serif','Verdana, sans-serif','Georgia, serif','Times New Roman, serif'].map(v=>`<option value="${v}" ${s.fontFamily===v?'selected':''}>${v.split(',')[0]}</option>`).join('')}</select></label><div class="two-cols"><label>Font size<input data-style="fontSize" value="${esc(s.fontSize||'')}" placeholder="18px"></label><label>Font weight<select data-style="fontWeight"><option value="">Default</option>${[300,400,500,600,700,800,900].map(v=>`<option ${String(s.fontWeight)===String(v)?'selected':''}>${v}</option>`).join('')}</select></label><label>Line height<input data-style="lineHeight" value="${esc(s.lineHeight||'')}" placeholder="1.8"></label><label>Letter spacing<input data-style="letterSpacing" value="${esc(s.letterSpacing||'')}" placeholder="0px"></label></div><div class="two-cols"><label>Font style<select data-style="fontStyle"><option value="">Default</option><option value="normal" ${s.fontStyle==='normal'?'selected':''}>Normal</option><option value="italic" ${s.fontStyle==='italic'?'selected':''}>Italic</option></select></label><label>Text transform<select data-style="textTransform"><option value="">None</option><option value="uppercase" ${s.textTransform==='uppercase'?'selected':''}>Uppercase</option><option value="lowercase" ${s.textTransform==='lowercase'?'selected':''}>Lowercase</option><option value="capitalize" ${s.textTransform==='capitalize'?'selected':''}>Capitalize</option></select></label></div></details>
   <details><summary>Color, Background & Spacing</summary><div class="two-cols"><label>Text color<input type="color" data-style="color" value="${s.color||'#08142d'}"></label><label>Background color<input type="color" data-style="backgroundColor" value="${s.backgroundColor||'#ffffff'}"></label></div><label>Background image URL<input data-style="backgroundImage" value="${esc(s.backgroundImage||'')}"></label><div class="two-cols"><label>Background size<select data-style="backgroundSize"><option value="cover" ${s.backgroundSize==='cover'?'selected':''}>Cover</option><option value="contain" ${s.backgroundSize==='contain'?'selected':''}>Contain</option><option value="auto" ${s.backgroundSize==='auto'?'selected':''}>Auto</option></select></label><label>Position<select data-style="backgroundPosition">${['center','top','bottom','right','left'].map(v=>`<option ${s.backgroundPosition===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Padding<input data-style="padding" value="${esc(s.padding||'')}" placeholder="30px"></label><label>Margin<input data-style="margin" value="${esc(s.margin||'')}" placeholder="0px"></label><label>Minimum height<input data-style="minHeight" value="${esc(s.minHeight||'')}" placeholder="200px"></label><label>Maximum width<input data-style="maxWidth" value="${esc(s.maxWidth||'')}" placeholder="1200px"></label></div></details>
   <details><summary>Border & Shadow</summary><div class="two-cols"><label>Border width<input data-style="borderWidth" value="${esc(s.borderWidth||'')}" placeholder="1px"></label><label>Border style<select data-style="borderStyle"><option value="">None</option>${['solid','dashed','dotted','double','none'].map(v=>`<option ${s.borderStyle===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Border color<input type="color" data-style="borderColor" value="${s.borderColor||'#cbd5e1'}"></label><label>Border radius<input data-style="borderRadius" value="${esc(s.borderRadius||'')}" placeholder="12px"></label></div><label>Box shadow<input data-style="boxShadow" value="${esc(s.boxShadow||'')}" placeholder="0 12px 30px rgba(0,0,0,.15)"></label><label>Opacity<input type="range" min="0" max="1" step="0.05" data-style="opacity" value="${s.opacity||1}"></label></details>
   <details open><summary>Effects & Responsive</summary><label>Entrance animation<select data-data="animation"><option value="none">None</option>${[['fade-in','Fade In'],['fade-up','Fade Up'],['slide-right','Slide Right'],['slide-left','Slide Left'],['zoom-in','Zoom In']].map(([v,t])=>`<option value="${v}" ${d.animation===v?'selected':''}>${t}</option>`).join('')}</select></label><label>Animation delay (ms)<input type="number" min="0" max="3000" step="100" data-data="animationDelay" value="${Number(d.animationDelay)||0}"></label><label>Hover effect<select data-data="hoverEffect"><option value="none">None</option>${[['lift','Lift'],['grow','Grow'],['glow','Glow'],['fade','Fade']].map(([v,t])=>`<option value="${v}" ${d.hoverEffect===v?'selected':''}>${t}</option>`).join('')}</select></label><div class="visibility-grid"><label><input type="checkbox" data-bool="hideDesktop" ${checked(d.hideDesktop)}> Hide on desktop</label><label><input type="checkbox" data-bool="hideTablet" ${checked(d.hideTablet)}> Hide on tablet</label><label><input type="checkbox" data-bool="hideMobile" ${checked(d.hideMobile)}> Hide on mobile</label></div></details><div class="inspector-actions"><button data-inspector="duplicate">Duplicate</button><button class="delete" data-inspector="delete">Delete</button></div>`;
+  mountRichEditor(i);
   inspector.querySelectorAll('input[data-data="icon"]').forEach(input=>{const button=document.createElement('button');button.type='button';button.className='builder-icon-browse';button.innerHTML='<i class="'+esc(input.value||'fa-solid fa-icons')+'"></i> Browse visual icons';button.onclick=()=>openIconPicker(input);input.insertAdjacentElement('afterend',button)});
   enhanceTypographyControls(s);
 }
@@ -196,7 +332,25 @@ function startInlineEdit(node,widgetEl){
     const input=inspector.querySelector(`[data-data="${field}"]`);
     if(input)input.value=node.innerText;
   };
-  const onInput=()=>{f.item.data[field]=node.innerText;dirty();syncInspector()};
+  const rich=isRichWidget(f.item);
+  const onInput=()=>{
+    if(rich){
+      f.item.data.html=sanitizeRichHtml(node.innerHTML);
+      f.item.data.text=htmlToPlain(f.item.data.html);
+      f.item.data.richText=true;
+      if(f.item.type==='text')f.item.type='html';
+    }else f.item.data[field]=node.innerText;
+    dirty();syncInspector();
+  };
+  const onPaste=e=>{
+    if(!rich&&f.item.type!=='quote')return;
+    if(rich){
+      const html=clipboardToFormattedHtml(e);if(html==null)return;
+      e.preventDefault();document.execCommand('insertHTML',false,html);return;
+    }
+    const text=clipboardToMultiline(e);if(text==null)return;
+    e.preventDefault();document.execCommand('insertText',false,text);
+  };
   const finish=(commit)=>{
     node.removeEventListener('input',onInput);
     node.removeEventListener('keydown',onKey);
@@ -206,19 +360,16 @@ function startInlineEdit(node,widgetEl){
     node.classList.remove('is-editing');
     widgetEl.classList.remove('is-inline-editing');
     inlineEditing=false;
-    if(!commit){f.item.data[field]=original;node.textContent=original}
-    else if(String(f.item.data[field]??'')!==original){history.push(before);if(history.length>60)history.shift();future=[];dirty()}
+    if(!commit){
+      if(rich){f.item.data.html=original;node.innerHTML=original}
+      else{f.item.data[field]=original;node.textContent=original}
+    }
+    else if(String((rich?f.item.data.html:f.item.data[field])??'')!==original){history.push(before);if(history.length>60)history.shift();future=[];dirty()}
     render();
   };
   const onKey=e=>{
     if(e.key==='Escape'){e.preventDefault();finish(false);return}
     if(e.key==='Enter'&&(f.item.type==='heading'||f.item.type==='button'||field==='author')){e.preventDefault();finish(true)}
-  };
-  const onPaste=e=>{
-    if(f.item.type!=='text'&&f.item.type!=='quote')return;
-    const text=clipboardToMultiline(e);if(text==null)return;
-    e.preventDefault();
-    document.execCommand('insertText',false,text);
   };
   const onBlur=()=>setTimeout(()=>{if(inlineEditing)finish(true)},80);
   node.addEventListener('input',onInput);
@@ -247,8 +398,8 @@ canvas.addEventListener('dblclick',e=>{
 
 function duplicate(id){const f=find(id);if(!f)return;snapshot();if(f.kind==='section'){const cp=clone(f.item);cp.id=uid('section');(cp.columns||[]).forEach(c=>{c.id=uid('column');(c.widgets||[]).forEach(w=>w.id=uid('widget'))});doc.sections.splice(doc.sections.indexOf(f.item)+1,0,cp)}else{const cp=clone(f.item);cp.id=uid('widget');f.column.widgets.splice(f.column.widgets.indexOf(f.item)+1,0,cp)}render()}
 inspector.addEventListener('focusin',e=>{if(e.target.matches('input,textarea,select')){history.push(clone(doc));if(history.length>60)history.shift();future=[]}});
-inspector.addEventListener('input',e=>{const f=find(selected);if(!f)return;const el=e.target;if(el.dataset.data)f.item.data[el.dataset.data]=el.type==='number'?Number(el.value):el.value;else if(el.dataset.style)f.item.style[el.dataset.style]=el.value;else if(el.dataset.bool)f.item.data[el.dataset.bool]=el.checked;else if(el.hasAttribute('data-section-columns')){const n=Number(el.value);while(f.item.columns.length<n)f.item.columns.push({id:uid('column'),widgets:[]});f.item.columns=f.item.columns.slice(0,n)}dirty();render(true)});
-inspector.addEventListener('paste',e=>{const el=e.target;if(!el.matches('textarea[data-data="text"],textarea[data-data="html"]'))return;const text=clipboardToMultiline(e);if(text==null)return;e.preventDefault();insertAtCursor(el,text);});
+inspector.addEventListener('paste',e=>{const el=e.target;if(!el.matches('textarea[data-data="text"],textarea[data-data="html"],textarea[data-data="items"]'))return;if(el.matches('textarea[data-data="html"]')){const html=clipboardToFormattedHtml(e);if(html==null)return;e.preventDefault();insertAtCursor(el,html);return;}const text=clipboardToMultiline(e);if(text==null)return;e.preventDefault();insertAtCursor(el,text);});
+inspector.addEventListener('input',e=>{const f=find(selected);if(!f)return;const el=e.target;if(el.dataset.data){f.item.data[el.dataset.data]=el.type==='number'?Number(el.value):el.value;if(el.dataset.data==='html'&&isRichWidget(f.item)){f.item.data.text=htmlToPlain(el.value);f.item.data.richText=true;if(f.item.type==='text')f.item.type='html';}}else if(el.dataset.style)f.item.style[el.dataset.style]=el.value;else if(el.dataset.bool)f.item.data[el.dataset.bool]=el.checked;else if(el.hasAttribute('data-section-columns')){const n=Number(el.value);while(f.item.columns.length<n)f.item.columns.push({id:uid('column'),widgets:[]});f.item.columns=f.item.columns.slice(0,n)}dirty();render(true)});
 inspector.addEventListener('click',e=>{const styleButton=e.target.closest('[data-style-button]');if(styleButton){const f=find(selected);snapshot();f.item.style[styleButton.dataset.styleButton]=styleButton.dataset.value;dirty();render();return}const cmd=e.target.closest('[data-inspector]')?.dataset.inspector;if(!cmd)return;if(cmd==='delete'){snapshot();remove(selected);selected=null;render()}else duplicate(selected)});
 document.querySelectorAll('[data-widget]').forEach(b=>{b.addEventListener('click',()=>add(b.dataset.widget));b.addEventListener('dragstart',e=>e.dataTransfer.setData('widget',b.dataset.widget))});
 function add(type){snapshot();if(type==='section')doc.sections.push(section());else{if(!doc.sections.length)doc.sections.push(section());doc.sections.at(-1).columns[0].widgets.push(widget(type))}selected=doc.sections.at(-1).columns[0].widgets.at(-1)?.id||selected;render()}
@@ -290,7 +441,7 @@ async function save(options={}){
       status:document.getElementById('page-status').value,
       seo_title:document.getElementById('seo-title').value,
       seo_description:document.getElementById('seo-description').value,
-      document:doc,
+      document:migrateRichWidgets(doc),
       autosave
     };
     const r=await fetch(app.dataset.api+(autosave?'?action=autosave':''),{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload)});
@@ -330,6 +481,11 @@ window.addEventListener('keydown',e=>{
 const robotsSelect=document.getElementById('seo-robots');
 robotsSelect?.addEventListener('change',()=>{syncPageMetaFromForm();dirty()});
 if(doc.meta.seoRobots&&robotsSelect)robotsSelect.value=doc.meta.seoRobots;
+if(!document.getElementById('hdl-richtext-css')){
+  const s=document.createElement('style');s.id='hdl-richtext-css';
+  s.textContent='.vb-richtext{min-height:180px;margin-top:8px;padding:10px 12px;border:1px solid #d5dfeb;border-radius:8px;background:#fff;line-height:1.65;overflow-wrap:anywhere}.vb-richtext:focus{outline:2px solid #006cff33;border-color:#006cff}.vb-richtext p,.vb-widget .demo-text p,.vb-widget .demo-html p{margin:0 0 .75em}.vb-richtext p:last-child,.vb-widget .demo-text p:last-child{margin-bottom:0}.vb-richtext ul,.vb-widget .demo-text ul{margin:0 0 .75em;padding-left:1.3em}.vb-richtext u,.pb-html u{text-decoration:underline}.vb-widget .demo-text,.vb-widget .demo-html{line-height:1.65}';
+  document.head.appendChild(s);
+}
 render();updateUrl();
 markSaved('Saved','is-saved');
 })();
