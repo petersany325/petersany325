@@ -1,0 +1,29 @@
+/* HDD LAND Text widget: keep Enter, spaces, underlines, lists and pasted formatting. */
+.vb-inspector textarea[data-data="text"],
+.vb-inspector textarea[data-data="html"]{min-height:150px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;resize:vertical;tab-size:4}
+.vb-richtext{min-height:180px;margin-top:8px;padding:10px 12px;border:1px solid #d5dfeb;border-radius:8px;background:#fff;line-height:1.65;overflow-wrap:anywhere;word-break:break-word}
+.vb-richtext:focus{outline:2px solid #006cff33;border-color:#006cff}
+.vb-richtext p{margin:0 0 .75em}
+.vb-richtext p:last-child{margin-bottom:0}
+.vb-richtext ul,.vb-richtext ol{margin:0 0 .75em;padding-left:1.3em}
+.vb-richtext li{margin:.15em 0}
+.vb-richtext hr{border:0;border-top:1px solid #d5dfeb;margin:1em 0}
+.vb-richtext u,.vb-richtext ins{text-decoration:underline}
+.vb-richtext h2,.vb-richtext h3,.vb-richtext h4{margin:1em 0 .4em;line-height:1.3}
+.vb-widget>p,.vb-widget .demo-text,.vb-widget .demo-html{margin:0;overflow-wrap:anywhere;word-break:break-word;line-height:inherit}
+.vb-widget .demo-text p,.vb-widget .demo-html p{margin:0 0 .75em}
+.vb-widget .demo-text p:last-child,.vb-widget .demo-html p:last-child{margin-bottom:0}
+.vb-widget .demo-text ul,.vb-widget .demo-html ul,
+.vb-widget .demo-text ol,.vb-widget .demo-html ol{margin:0 0 .75em;padding-left:1.3em}
+.vb-widget .demo-text hr,.vb-widget .demo-html hr{border:0;border-top:1px solid #d5dfeb;margin:1em 0}
+.pb-text{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;line-height:1.75}
+.pb-text:empty{min-height:1em}
+.pb-html{overflow-wrap:anywhere;word-break:break-word;line-height:1.75}
+.pb-html p{margin:0 0 .9em}
+.pb-html p:last-child{margin-bottom:0}
+.pb-html ul,.pb-html ol{margin:0 0 .9em;padding-left:1.35em}
+.pb-html li{margin:.2em 0}
+.pb-html hr{border:0;border-top:1px solid #d5dfeb;margin:1.2em 0}
+.pb-html u,.pb-html ins{text-decoration:underline}
+.pb-html h2,.pb-html h3,.pb-html h4{margin:1.15em 0 .45em;line-height:1.35}
+@media(max-width:640px){.pb-text,.pb-html{overflow-wrap:anywhere}}
