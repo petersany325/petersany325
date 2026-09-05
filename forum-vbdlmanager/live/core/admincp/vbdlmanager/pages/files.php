@@ -180,27 +180,57 @@ if ($action === 'edit' || $action === 'add')
 }
 
 $q = isset($_GET['q']) ? $_GET['q'] : '';
-$files = $repo->listFiles(array('q' => $q, 'limit' => 200));
+$filterCategoryId = isset($_GET['categoryid']) ? (int)$_GET['categoryid'] : 0;
+$categories = $repo->listCategories(false);
+$countsByCat = $repo->countFilesByCategory(false);
+$listFilters = array('q' => $q, 'limit' => 200);
+if ($filterCategoryId > 0)
+{
+	$listFilters['categoryid'] = $filterCategoryId;
+}
+$files = $repo->listFiles($listFilters);
 vbdl_admin_header('Files', 'files');
-echo '<div class="vbdl-panel"><div class="vbdl-panel-h">Library</div><div class="vbdl-panel-b">';
-echo '<div class="vbdl-actions" style="margin-top:0"><a class="vbdl-btn" href="' . vbdl_h(vbdl_admin_url('files', 'action=add')) . '">Add file</a>';
-echo '<form method="get" action="admincp/vbdlmanager.php" style="display:inline-flex;gap:8px;align-items:center"><input type="hidden" name="do" value="files" /><input class="vbdl-input" style="max-width:240px" type="text" name="q" value="' . vbdl_h($q) . '" placeholder="Search..." /><button class="vbdl-btn secondary" type="submit">Search</button></form></div>';
-echo '<table class="vbdl-table" style="margin-top:14px"><tr><th>ID</th><th>Title</th><th>Access</th><th>Category</th><th>Storage</th><th>Size</th><th>Downloads</th><th>Active</th><th></th></tr>';
+echo '<div class="vbdl-panel"><div class="vbdl-panel-h">Library by category</div><div class="vbdl-panel-b">';
+echo '<div class="vbdl-actions" style="margin-top:0;flex-wrap:wrap"><a class="vbdl-btn" href="' . vbdl_h(vbdl_admin_url('files', 'action=add')) . '">Add file</a>';
+echo '<form method="get" action="admincp/vbdlmanager.php" style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap"><input type="hidden" name="do" value="files" />';
+echo '<select class="vbdl-select" name="categoryid"><option value="0">All categories</option>';
+foreach ($categories as $c)
+{
+	$cid = (int)$c['categoryid'];
+	$cnt = isset($countsByCat[$cid]) ? (int)$countsByCat[$cid] : 0;
+	$sel = ($filterCategoryId === $cid) ? ' selected' : '';
+	echo '<option value="' . $cid . '"' . $sel . '>' . vbdl_h($c['title']) . ' (' . $cnt . ')</option>';
+}
+echo '</select>';
+echo '<input class="vbdl-input" style="max-width:240px" type="text" name="q" value="' . vbdl_h($q) . '" placeholder="Search..." /><button class="vbdl-btn secondary" type="submit">Filter</button></form></div>';
+if ($filterCategoryId > 0)
+{
+	$ctitle = '';
+	foreach ($categories as $c)
+	{
+		if ((int)$c['categoryid'] === $filterCategoryId) { $ctitle = $c['title']; break; }
+	}
+	echo '<p class="vbdl-muted">Showing files in category: <strong>' . vbdl_h($ctitle) . '</strong></p>';
+}
+echo '<table class="vbdl-table" style="margin-top:14px"><tr><th>ID</th><th>Title</th><th>Access</th><th>Category</th><th>Storage</th><th>Size</th><th>Downloads</th><th>Download URL</th><th>Active</th><th></th></tr>';
 if (empty($files))
 {
-	echo '<tr><td colspan="9" class="vbdl-muted">No files found.</td></tr>';
+	echo '<tr><td colspan="10" class="vbdl-muted">No files found.</td></tr>';
 }
 foreach ($files as $f)
 {
 	$isPaid = (!empty($f['access_type']) && $f['access_type'] === 'paid');
+	$dlUrl = method_exists($service, 'downloadUrl') ? $service->downloadUrl((int)$f['fileid'], true) : ('https://forum.hdd-land.com/vbdlmanager/download.php?fileid=' . (int)$f['fileid']);
+	$dlCount = isset($f['downloads_count']) ? (int)$f['downloads_count'] : 0;
 	echo '<tr>';
 	echo '<td>' . (int)$f['fileid'] . '</td>';
 	echo '<td>' . vbdl_h($f['title']) . '</td>';
 	echo '<td>' . ($isPaid ? '<span class="vbdl-chip no">Paid / VIP</span>' : '<span class="vbdl-chip ok">Free</span>') . '</td>';
-	echo '<td>' . vbdl_h($f['category_title']) . '</td>';
-	echo '<td>' . vbdl_h($f['storage_title']) . ' <span class="vbdl-chip">' . vbdl_h($f['storage_type']) . '</span></td>';
+	echo '<td>' . vbdl_h(isset($f['category_title']) ? $f['category_title'] : '') . '</td>';
+	echo '<td>' . vbdl_h(isset($f['storage_title']) ? $f['storage_title'] : '') . ' <span class="vbdl-chip">' . vbdl_h(isset($f['storage_type']) ? $f['storage_type'] : '') . '</span></td>';
 	echo '<td>' . vbdl_h($service->formatBytes($f['filesize'])) . '</td>';
-	echo '<td>' . (int)$f['downloads_count'] . '</td>';
+	echo '<td>' . $dlCount . '</td>';
+	echo '<td style="max-width:240px;word-break:break-all"><code>' . vbdl_h($dlUrl) . '</code></td>';
 	echo '<td>' . (!empty($f['active']) ? '<span class="vbdl-chip ok">Yes</span>' : '<span class="vbdl-chip no">No</span>') . '</td>';
 	echo '<td><a href="' . vbdl_h(vbdl_admin_url('files', 'action=edit&fileid=' . (int)$f['fileid'])) . '">Edit</a></td>';
 	echo '</tr>';

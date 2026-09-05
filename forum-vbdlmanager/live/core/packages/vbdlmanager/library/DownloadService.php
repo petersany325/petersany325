@@ -126,6 +126,32 @@ class vbdl_DownloadService
 		return $digits !== '' ? ('https://wa.me/' . $digits) : '';
 	}
 
+	public function limitedAccessMessageHtml()
+	{
+		$html = '<div class="panel" style="background:#fff8e8;border-color:#f0c36d">';
+		$html .= '<p class="sub" style="margin:0">Limited library access. Free category files may still be available below. Contact an administrator for VIP / grant-required categories.</p>';
+		$html .= '</div>';
+		return $html;
+	}
+
+	/**
+	 * Public download URL for a file (site-relative or absolute).
+	 */
+	public function downloadUrl($fileid, $absolute = true)
+	{
+		$fileid = (int)$fileid;
+		$rel = 'vbdlmanager/download.php?fileid=' . $fileid;
+		if (!$absolute)
+		{
+			return $rel;
+		}
+		$https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+			|| (isset($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443)
+			|| (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+		$host = !empty($_SERVER['HTTP_HOST']) ? $_SERVER['HTTP_HOST'] : 'forum.hdd-land.com';
+		return ($https ? 'https://' : 'http://') . $host . '/' . $rel;
+	}
+
 	public function deniedDownloadMessage(array $file, array $userinfo)
 	{
 		if ($this->acl->needsVipPurchase($file, $userinfo))

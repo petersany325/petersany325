@@ -52,10 +52,9 @@ function vbdl_register_url()
  */
 function vbdl_signin_panel_html()
 {
-	$reg = vbdl_fe_h(vbdl_register_url());
 	$html = '<div class="panel signin-panel" id="vbdl-signin-panel">';
-	$html .= '<h1>Sign in</h1>';
-	$html .= '<p class="sub">Use your forum username and password. After login you return to Downloads.</p>';
+	$html .= '<h1>Forum sign in</h1>';
+	$html .= '<p class="sub">Downloads uses your vBulletin forum account automatically. Sign in once with your forum username and password — no separate Downloads registration.</p>';
 	$html .= '<div class="signin-error" id="vbdl-signin-error" hidden></div>';
 	$html .= '<form id="vbdl-signin-form" class="signin-form" method="post" action="/auth/ajax-login" autocomplete="on">';
 	$html .= '<input type="hidden" name="logintype" value="" />';
@@ -66,10 +65,9 @@ function vbdl_signin_panel_html()
 	$html .= '<input id="vbdl-password" class="signin-input" type="password" name="password" required autocomplete="current-password" placeholder="Password" /></div>';
 	$html .= '<div class="signin-row signin-row-inline"><label><input type="checkbox" name="rememberme" value="1" /> Remember me</label></div>';
 	$html .= '<div class="signin-actions">';
-	$html .= '<button class="btn" type="submit" id="vbdl-signin-btn">Sign in</button>';
-	$html .= '<a class="btn secondary" href="' . $reg . '">Register</a>';
+	$html .= '<button class="btn" type="submit" id="vbdl-signin-btn">Sign in with forum account</button>';
 	$html .= '</div>';
-	$html .= '<p class="meta" style="margin-top:10px">New here? <a href="' . $reg . '">Create an account</a> and return to Downloads.</p>';
+	$html .= '<p class="meta" style="margin-top:10px">Need an account? Register on the <a href="../register">forum</a>. Access levels are controlled by the administrator.</p>';
 	$html .= '</form></div>';
 	$html .= vbdl_signin_script();
 	return $html;
@@ -145,6 +143,8 @@ $userid = !empty($userinfo['userid']) ? (int)$userinfo['userid'] : 0;
 $username = !empty($userinfo['username']) ? $userinfo['username'] : 'Guest';
 $isVip = $acl->isVip($userinfo);
 $canView = $acl->canViewSection($userinfo) || !empty($acl->globalPerms($userinfo)['admin_bypass']);
+$canBrowse = method_exists($acl, 'canBrowseLibrary') ? $acl->canBrowseLibrary($userinfo) : $canView;
+$limitedAccess = !$canView; // guests / members without full section rights — free library only
 
 echo '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1" />';
 echo '<title>HDD LAND Downloads</title>';
@@ -191,6 +191,18 @@ h1{margin:0 0 6px;font-size:1.45rem}
 .grid-cats{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 0}
 .chip{display:inline-block;padding:6px 10px;border:1px solid var(--win-border);border-radius:999px;background:#fff;text-decoration:none;color:#1f1f1f;font-size:.85rem}
 .chip.active{border-color:var(--win-accent);background:#e8f3ff;color:var(--win-accent);font-weight:700}
+.cat-board{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:14px}
+.cat-card{display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid var(--win-border);border-radius:10px;background:linear-gradient(180deg,#fff,#f7fafc);text-decoration:none;color:#1f1f1f;box-shadow:0 2px 8px rgba(0,0,0,.04);transition:border-color .15s,transform .15s}
+.cat-card:hover{border-color:var(--win-accent);transform:translateY(-1px)}
+.cat-card .ico{font-size:1.6rem}
+.cat-card .name{font-weight:700;font-size:1.02rem}
+.cat-card .count{color:var(--win-muted);font-size:.86rem}
+.cat-card .mode{display:inline-flex;align-self:flex-start;padding:2px 8px;border-radius:999px;background:#eef6ff;color:var(--win-accent);font-size:.72rem;font-weight:700}
+.link-box{display:flex;flex-direction:column;gap:4px;max-width:280px}
+.link-box code{display:block;padding:6px 8px;border:1px solid #e1e1e1;border-radius:6px;background:#fafafa;font-size:.72rem;word-break:break-all;color:#333}
+.link-box .copy{font-size:.75rem;color:var(--win-accent);cursor:pointer;background:none;border:0;padding:0;text-align:left}
+.crumb{margin:0 0 10px;font-size:.9rem;color:var(--win-muted)}
+.crumb a{color:var(--win-accent);text-decoration:none;font-weight:600}
 .signin-panel{max-width:420px;background:linear-gradient(180deg,#fafafa,#fff);border-color:#c9d6e5}
 .signin-form .signin-row{margin:0 0 12px}
 .signin-form label{display:block;font-size:.85rem;font-weight:600;margin:0 0 4px;color:#323130}
@@ -199,13 +211,17 @@ h1{margin:0 0 6px;font-size:1.45rem}
 .signin-input:focus{outline:2px solid #0f6cbd55;border-color:var(--win-accent)}
 .signin-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 .signin-error{margin:0 0 12px;padding:8px 10px;border-radius:6px;background:#fde7e9;color:#c50f1f;border:1px solid #f1aeb5;font-size:.9rem}
+.vbdl-vip-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.vbdl-vip-btn{display:inline-flex;align-items:center;padding:8px 12px;border-radius:6px;background:var(--win-accent);color:#fff!important;text-decoration:none;font-weight:700;font-size:.88rem}
+.vbdl-vip-telegram{background:#229ED9}.vbdl-vip-whatsapp{background:#128C7E}
+.vbdl-limited-box{margin-bottom:14px}
 @media (max-width:720px){.table .hide-sm{display:none}.btn{width:100%}.signin-actions .btn{width:auto;flex:1}}
 </style></head><body><div class="app"><div class="window">';
 
 echo '<div class="titlebar"><div class="left"><span>💾</span><span>HDD LAND · Downloads Manager</span></div><div class="dots"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span></div></div>';
 
 echo '<div class="menubar">';
-echo '<a class="' . ($view === 'list' && !$fileid ? 'active' : '') . '" href="index.php">All Files</a>';
+echo '<a class="' . ($view === 'list' && !$fileid ? 'active' : '') . '" href="index.php">Categories</a>';
 echo '<a class="' . ($view === 'account' ? 'active' : '') . '" href="index.php?view=account">My Account</a>';
 echo '<a href="../index.php">Forum Home</a>';
 if (!empty($userinfo['permissions']['adminpermissions']))
@@ -222,9 +238,8 @@ if ($userid > 0)
 }
 else
 {
-	echo '<span class="badge badge-user">Guest</span>';
-	echo '<a class="btn secondary" href="#vbdl-signin-panel">Sign in</a>';
-	echo '<a class="btn secondary" href="' . vbdl_fe_h(vbdl_register_url()) . '">Register</a>';
+	echo '<span class="badge badge-user">Guest · forum session</span>';
+	echo '<a class="btn secondary" href="#vbdl-signin-panel">Forum sign in</a>';
 }
 echo '<a class="btn secondary" href="index.php">Refresh list</a>';
 echo '</div><div class="content">';
@@ -256,15 +271,26 @@ if ($view === 'account')
 	exit;
 }
 
-if (!$canView)
+if (!$canBrowse)
 {
-	echo '<div class="panel"><h1>Downloads</h1><p class="denied">You do not have permission to view the Downloads section.</p></div>';
+	echo '<div class="panel"><h1>Downloads</h1>';
+	echo $service->limitedAccessMessageHtml();
+	echo '<p class="denied" style="margin-top:12px">Your access is limited. Please contact the administrator.</p></div>';
 	if ($userid < 1)
 	{
 		echo vbdl_signin_panel_html();
 	}
-	echo '</div><div class="status"><span>Access denied</span><span>HDD LAND Downloads</span></div></div></div></body></html>';
+	echo '</div><div class="status"><span>Limited access</span><span>HDD LAND Downloads</span></div></div></div></body></html>';
 	exit;
+}
+
+if ($limitedAccess)
+{
+	echo $service->limitedAccessMessageHtml();
+	if ($userid < 1)
+	{
+		echo '<p class="meta" style="margin:8px 0 14px">Already a forum member? <a href="#vbdl-signin-panel">Sign in with your forum account</a> — Downloads will recognize you automatically.</p>';
+	}
 }
 
 if ($fileid > 0)
@@ -287,16 +313,24 @@ if ($fileid > 0)
 		{
 			echo '<p>' . nl2br(vbdl_fe_h($file['description'])) . '</p>';
 		}
+		$dlUrl = $service->downloadUrl((int)$file['fileid'], true);
+		$bb = '[download=' . (int)$file['fileid'] . ']' . $file['title'] . '[/download]';
 		if ($canDl)
 		{
 			echo '<p><a class="btn" href="download.php?fileid=' . (int)$file['fileid'] . '">⬇ Download File</a></p>';
-			echo '<p class="meta">Direct link: <code>download.php?fileid=' . (int)$file['fileid'] . '</code></p>';
+			echo '<div class="link-box" style="margin:10px 0;max-width:100%"><strong>Download address</strong>';
+			echo '<code id="vbdl-file-url">' . vbdl_fe_h($dlUrl) . '</code>';
+			echo '<button type="button" class="copy" onclick="navigator.clipboard.writeText(document.getElementById(\'vbdl-file-url\').textContent)">Copy download link</button></div>';
 		}
 		else
 		{
 			echo $service->deniedDownloadMessage($file, $userinfo);
 		}
-		echo '<p class="meta">BBCode: [download=' . (int)$file['fileid'] . ']' . vbdl_fe_h($file['title']) . '[/download]</p>';
+		echo '<p class="meta">BBCode: <code>' . vbdl_fe_h($bb) . '</code></p>';
+		if (!empty($file['categoryid']))
+		{
+			echo '<p class="meta"><a href="index.php?categoryid=' . (int)$file['categoryid'] . '">⟵ Back to category files</a></p>';
+		}
 	}
 	echo '<p><a class="btn secondary" href="index.php">⟵ Back to library</a></p></div>';
 	echo '</div><div class="status"><span>File details</span><span>HDD LAND Downloads</span></div></div></div></body></html>';
@@ -304,21 +338,65 @@ if ($fileid > 0)
 }
 
 $categories = $repo->listCategories(true);
+$countsByCat = $repo->countFilesByCategory(true);
+
+if ($categoryid < 1)
+{
+	echo '<h1>Download Categories</h1>';
+	if ($limitedAccess)
+	{
+		echo '<p class="sub">Open a category to see only its files. Free categories are available below. VIP categories may need a grant.</p>';
+	}
+	else
+	{
+		echo '<p class="sub">Each category is its own library. Open a folder to browse only files uploaded into that category.</p>';
+	}
+
+	echo '<div class="cat-board">';
+	foreach ($categories as $c)
+	{
+		$cid = (int)$c['categoryid'];
+		$cnt = isset($countsByCat[$cid]) ? (int)$countsByCat[$cid] : 0;
+		$mode = !empty($c['access_mode']) ? $c['access_mode'] : 'free_open';
+		$modeLabel = ($mode === 'grant_required') ? 'Grant required' : 'Open';
+		echo '<a class="cat-card" href="index.php?categoryid=' . $cid . '">';
+		echo '<span class="ico">📁</span>';
+		echo '<span class="name">' . vbdl_fe_h($c['title']) . '</span>';
+		echo '<span class="count">' . $cnt . ' file' . ($cnt === 1 ? '' : 's') . '</span>';
+		echo '<span class="mode">' . vbdl_fe_h($modeLabel) . '</span>';
+		echo '</a>';
+	}
+	echo '</div>';
+
+	if ($userid < 1)
+	{
+		echo vbdl_signin_panel_html();
+	}
+
+	$totalCats = count($categories);
+	echo '</div><div class="status"><span>' . (int)$totalCats . ' categor' . ($totalCats === 1 ? 'y' : 'ies') . '</span><span>' . ($limitedAccess ? 'Limited · Free files' : 'Full library') . ' · HDD LAND</span></div>';
+	echo '</div></div></body></html>';
+	exit;
+}
+
+$currentCat = $repo->getCategory($categoryid);
 $total = $repo->countFiles(array('active_only' => true, 'categoryid' => $categoryid));
 $offset = ($page - 1) * $perPage;
 $files = $repo->listFiles(array('active_only' => true, 'categoryid' => $categoryid, 'limit' => $perPage, 'offset' => $offset));
 
-echo '<h1>Downloads</h1>';
-echo '<p class="sub">Browse free and VIP files available to your account. Use the blue <strong>Download</strong> button to get a file.</p>';
+echo '<p class="crumb"><a href="index.php">Categories</a> / <strong>' . vbdl_fe_h($currentCat ? $currentCat['title'] : ('Category #' . $categoryid)) . '</strong></p>';
+echo '<h1>' . vbdl_fe_h($currentCat ? $currentCat['title'] : 'Category') . '</h1>';
+echo '<p class="sub">' . (int)$total . ' file' . ($total === 1 ? '' : 's') . ' in this category only. Download address is shown for each file.</p>';
 
 if ($categories)
 {
 	echo '<div class="grid-cats">';
-	echo '<a class="chip' . (!$categoryid ? ' active' : '') . '" href="index.php">All</a>';
 	foreach ($categories as $c)
 	{
-		$active = ((int)$categoryid === (int)$c['categoryid']) ? ' active' : '';
-		echo '<a class="chip' . $active . '" href="index.php?categoryid=' . (int)$c['categoryid'] . '">' . vbdl_fe_h($c['title']) . '</a>';
+		$cid = (int)$c['categoryid'];
+		$cnt = isset($countsByCat[$cid]) ? (int)$countsByCat[$cid] : 0;
+		$active = ($cid === (int)$categoryid) ? ' active' : '';
+		echo '<a class="chip' . $active . '" href="index.php?categoryid=' . $cid . '">' . vbdl_fe_h($c['title']) . ' (' . $cnt . ')</a>';
 	}
 	echo '</div>';
 }
@@ -326,11 +404,11 @@ if ($categories)
 echo '<div class="panel" style="padding:0;overflow:auto;margin-top:14px">';
 if (empty($files))
 {
-	echo '<p style="padding:16px">No downloads found.</p>';
+	echo '<p style="padding:16px">No files in this category yet.</p>';
 }
 else
 {
-	echo '<table class="table"><thead><tr><th>Title</th><th>Access</th><th class="hide-sm">Category</th><th class="hide-sm">Size</th><th class="hide-sm">Downloads</th><th>Action</th></tr></thead><tbody>';
+	echo '<table class="table"><thead><tr><th>Title</th><th>Access</th><th class="hide-sm">Size</th><th class="hide-sm">Downloads</th><th>Download address</th><th>Action</th></tr></thead><tbody>';
 	$shown = 0;
 	foreach ($files as $f)
 	{
@@ -341,12 +419,16 @@ else
 		$shown++;
 		$canDl = $acl->canAccessFile($f, $userinfo, 'download');
 		$isPaid = $acl->isPaidFile($f);
+		$dlUrl = $service->downloadUrl((int)$f['fileid'], true);
+		$uid = 'vbdl-url-' . (int)$f['fileid'];
 		echo '<tr>';
-		echo '<td><a class="file-title" href="index.php?fileid=' . (int)$f['fileid'] . '">' . vbdl_fe_h($f['title']) . '</a></td>';
+		echo '<td><a class="file-title" href="index.php?fileid=' . (int)$f['fileid'] . '&categoryid=' . (int)$categoryid . '">' . vbdl_fe_h($f['title']) . '</a></td>';
 		echo '<td>' . ($isPaid ? '<span class="badge badge-paid">' . vbdl_fe_h($vipBadge) . '</span>' : '<span class="badge badge-free">Free</span>') . '</td>';
-		echo '<td class="hide-sm">' . vbdl_fe_h($f['category_title']) . '</td>';
 		echo '<td class="hide-sm">' . vbdl_fe_h($service->formatBytes($f['filesize'])) . '</td>';
-		echo '<td class="hide-sm">' . (int)$f['downloads_count'] . '</td>';
+		$dlCount = isset($f['downloads_count']) ? (int)$f['downloads_count'] : (isset($f['download_count']) ? (int)$f['download_count'] : 0);
+		echo '<td class="hide-sm">' . $dlCount . '</td>';
+		echo '<td><div class="link-box"><code id="' . $uid . '">' . vbdl_fe_h($dlUrl) . '</code>';
+		echo '<button type="button" class="copy" onclick="navigator.clipboard.writeText(document.getElementById(\'' . $uid . '\').textContent)">Copy link</button></div></td>';
 		if ($canDl)
 		{
 			echo '<td><a class="btn" href="download.php?fileid=' . (int)$f['fileid'] . '" title="Download this file">⬇ Download</a></td>';
@@ -363,7 +445,7 @@ else
 	}
 	if ($shown < 1)
 	{
-		echo '<tr><td colspan="6" style="padding:16px">No files visible for your account.</td></tr>';
+		echo '<tr><td colspan="6" style="padding:16px">No files visible for your account in this category.</td></tr>';
 	}
 	echo '</tbody></table>';
 }
@@ -375,11 +457,16 @@ if ($pages > 1)
 	echo '<p class="meta" style="margin-top:12px">Page: ';
 	for ($p = 1; $p <= $pages; $p++)
 	{
-		$url = 'index.php?page=' . $p . ($categoryid ? '&categoryid=' . $categoryid : '');
+		$url = 'index.php?categoryid=' . (int)$categoryid . '&page=' . $p;
 		echo ($p === $page) ? '<strong>' . $p . '</strong> ' : '<a href="' . $url . '">' . $p . '</a> ';
 	}
 	echo '</p>';
 }
 
-echo '</div><div class="status"><span>' . (int)$total . ' file(s) in library</span><span>Windows-style Downloads · HDD LAND</span></div>';
+if ($userid < 1)
+{
+	echo vbdl_signin_panel_html();
+}
+
+echo '</div><div class="status"><span>' . (int)$total . ' file(s) in this category</span><span>' . ($limitedAccess ? 'Limited · Free files' : 'Full library') . ' · HDD LAND</span></div>';
 echo '</div></div></body></html>';

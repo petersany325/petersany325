@@ -212,7 +212,7 @@ class vbdl_Repository
 		{
 			$where[] = 'f.active = 1';
 		}
-		if (isset($filters['categoryid']) && (int)$filters['categoryid'] > 0)
+		if (array_key_exists('categoryid', $filters) && $filters['categoryid'] !== '' && $filters['categoryid'] !== null)
 		{
 			$where[] = 'f.categoryid = ' . (int)$filters['categoryid'];
 		}
@@ -248,12 +248,32 @@ class vbdl_Repository
 		{
 			$where[] = 'active = 1';
 		}
-		if (isset($filters['categoryid']) && (int)$filters['categoryid'] > 0)
+		if (array_key_exists('categoryid', $filters) && $filters['categoryid'] !== '' && $filters['categoryid'] !== null)
 		{
 			$where[] = 'categoryid = ' . (int)$filters['categoryid'];
 		}
 		$row = $this->db->query_first("SELECT COUNT(*) AS c FROM " . $this->t('vbdl_file') . " WHERE " . implode(' AND ', $where));
 		return $row ? (int)$row['c'] : 0;
+	}
+
+	/**
+	 * @param bool $activeOnly
+	 * @return array categoryid => count
+	 */
+	public function countFilesByCategory($activeOnly = true)
+	{
+		$where = $activeOnly ? ' WHERE active = 1' : '';
+		$out = array();
+		$res = $this->db->query_read("
+			SELECT categoryid, COUNT(*) AS c
+			FROM " . $this->t('vbdl_file') . $where . "
+			GROUP BY categoryid
+		");
+		while ($row = $this->db->fetch_array($res))
+		{
+			$out[(int)$row['categoryid']] = (int)$row['c'];
+		}
+		return $out;
 	}
 
 	public function saveFile(array $data, $fileid = 0)
