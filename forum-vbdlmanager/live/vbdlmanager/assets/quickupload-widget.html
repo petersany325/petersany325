@@ -1,0 +1,94 @@
+<div class="vbdl-quickupload" data-vbdl-qu="1" style="margin:6px 0 10px;padding:8px 10px;border:1px solid #d1d1d1;border-radius:6px;background:#fafafa;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px">
+	<label style="display:inline-flex;align-items:center;gap:6px;margin:0;color:#333;font-weight:600">Category
+		<select class="vbdl-qu-category" style="padding:5px 8px;border-radius:5px;border:1px solid #ccc;min-width:180px;font-weight:400">
+			<option value="">Loading...</option>
+		</select>
+	</label>
+	<label class="vbdl-qu-label" style="display:inline-flex;align-items:center;gap:6px;background:#0f6cbd;color:#fff;padding:6px 12px;border-radius:5px;cursor:pointer;font-weight:600;margin:0">
+		? Upload via Download Manager
+		<input type="file" class="vbdl-qu-file" style="display:none">
+	</label>
+	<span class="vbdl-qu-status" style="color:#666">Loading categories...</span>
+</div>
+<script>
+(function(){
+	function initHost(host) {
+		if (!host || host.getAttribute('data-vbdl-inited') === '1') { return; }
+		host.setAttribute('data-vbdl-inited', '1');
+		var fileInput = host.querySelector('.vbdl-qu-file');
+		var status = host.querySelector('.vbdl-qu-status');
+		var select = host.querySelector('.vbdl-qu-category');
+		var label = host.querySelector('.vbdl-qu-label');
+		var panel = host.closest('.b-editor') || host.parentElement;
+		var textarea = panel ? panel.querySelector('textarea.js-editor, textarea[name="text"]') : document.querySelector('textarea.js-editor, textarea[name="text"]');
+		function insertBBCode(bbcode) {
+			if (!bbcode) { return false; }
+			try { if (textarea && textarea.name && window.CKEDITOR && CKEDITOR.instances[textarea.name]) { CKEDITOR.instances[textarea.name].insertText(bbcode); return true; } } catch (e) {}
+			try { if (window.CKEDITOR) { for (var id in CKEDITOR.instances) { if (CKEDITOR.instances.hasOwnProperty(id)) { CKEDITOR.instances[id].insertText(bbcode); return true; } } } } catch (e2) {}
+			if (textarea) { var sep = (textarea.value && !/\n$/.test(textarea.value)) ? '\n' : ''; textarea.value += sep + bbcode; try { textarea.dispatchEvent(new Event('input', { bubbles: true })); } catch (e3) {} return true; }
+			return false;
+		}
+		status.textContent = 'Loading categories...';
+		fetch('/vbdlmanager/quickupload.php?action=categories', { credentials: 'same-origin' })
+			.then(function (r) { return r.json(); })
+			.then(function (data) {
+				var cats = (data && data.ok && data.categories) ? data.categories : [];
+				select.innerHTML = '';
+				if (!cats.length) {
+					select.innerHTML = '<option value="">No category available</option>';
+					status.textContent = 'No uploadable category for your account.';
+					label.style.opacity = '0.5';
+					fileInput.disabled = true;
+					return;
+				}
+				cats.forEach(function (c) {
+					var opt = document.createElement('option');
+					opt.value = String(c.categoryid);
+					opt.textContent = c.title + (c.access_mode === 'grant_required' ? ' [grant]' : '');
+					select.appendChild(opt);
+				});
+				status.textContent = 'Choose file to upload';
+			})
+			.catch(function () {
+				select.innerHTML = '<option value="">Could not load</option>';
+				status.textContent = 'Could not load categories.';
+			});
+		fileInput.addEventListener('change', function () {
+			var file = fileInput.files && fileInput.files[0];
+			if (!file) { return; }
+			if (!select.value) { status.textContent = 'Please choose a category first.'; return; }
+			status.textContent = 'Uploading ' + file.name + '...';
+			var fd = new FormData();
+			fd.append('file', file); fd.append('title', file.name); fd.append('categoryid', select.value);
+			fd.append('securitytoken', (typeof SECURITYTOKEN !== 'undefined' ? SECURITYTOKEN : ''));
+			fetch('/vbdlmanager/quickupload.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+				.then(function (r) { return r.json(); })
+				.then(function (data) {
+					if (data && data.ok) {
+						var bb = data.bbcode || '';
+						var ok = insertBBCode(bb);
+						status.textContent = ok ? ('Uploaded: ' + data.title) : ('Uploaded, but could not insert BBCode. Copy: ' + bb);
+					} else {
+						status.textContent = 'Error: ' + (data && (data.message || data.error) ? (data.message || data.error) : 'upload failed');
+					}
+				})
+				.catch(function () { status.textContent = 'Network error during upload.'; });
+			fileInput.value = '';
+		});
+	}
+	function boot() {
+		var nodes = document.querySelectorAll('.vbdl-quickupload[data-vbdl-qu="1"]');
+		for (var i = 0; i < nodes.length; i++) { initHost(nodes[i]); }
+	}
+	if (document.readyState === 'loading') {
+		document.addEventListener('DOMContentLoaded', boot);
+	} else {
+		boot();
+	}
+	// Also init immediately for the nearest host (template parse-time)
+	var cur = document.currentScript;
+	if (cur && cur.previousElementSibling && cur.previousElementSibling.classList && cur.previousElementSibling.classList.contains('vbdl-quickupload')) {
+		initHost(cur.previousElementSibling);
+	}
+})();
+</script>
