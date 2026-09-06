@@ -2,31 +2,67 @@
 @section('title','مگامنو ساز حرفه‌ای')
 @section('content')
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="{{ asset('vendor/sortablejs/Sortable.min.js') }}"></script>
+<script>
+window.__mmLoadSortable = function(cb){
+  if (window.Sortable) { cb(true); return; }
+  var urls = [
+    'https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js',
+    'https://unpkg.com/sortablejs@1.15.2/Sortable.min.js',
+    'https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js'
+  ];
+  var i = 0;
+  function next(){
+    if (window.Sortable) { cb(true); return; }
+    if (i >= urls.length) { cb(false); return; }
+    var s = document.createElement('script');
+    s.src = urls[i++];
+    s.onload = function(){ cb(!!window.Sortable); };
+    s.onerror = next;
+    document.head.appendChild(s);
+  }
+  next();
+};
+</script>
 <style>
 .mm-studio{display:grid;grid-template-columns:minmax(320px,1.05fr) minmax(340px,1fr);gap:1rem;align-items:start}
 @media(max-width:1100px){.mm-studio{grid-template-columns:1fr}}
 .mm-head{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:1rem;flex-wrap:wrap}
 .mm-head h1{margin:0;font-size:1.45rem}
 .mm-head p{margin:.35rem 0 0;color:var(--muted,#8b93a7)}
-.mm-panel{background:var(--panel,#151922);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:1rem}
+.mm-panel{background:var(--panel,#151922);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:1rem;overflow:visible}
 .mm-toolbar{display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:.85rem}
 .mm-hint{font-size:.82rem;color:var(--muted,#8b93a7);line-height:1.6;margin:0 0 .85rem}
-.mm-nest{list-style:none;margin:0;padding:0;min-height:36px;border-radius:10px;transition:background .15s,border-color .15s}
-.mm-nest .mm-nest{margin:.4rem 0 .4rem 1.1rem;padding:.35rem .55rem .35rem 0;border-right:2px dashed rgba(255,255,255,.1);min-height:40px}
-.mm-nest.is-empty-drop{border:1px dashed rgba(255,255,255,.16);background:rgba(255,255,255,.025);padding:.45rem}
-.mm-nest.mm-drop-target{border-color:rgba(226,61,18,.45)!important;background:rgba(226,61,18,.08)!important}
-.mm-item{margin:0 0 .4rem}
+.mm-nest{list-style:none;margin:0;padding:2px 0;min-height:48px;border-radius:10px;transition:background .15s,border-color .15s,box-shadow .15s}
+.mm-nest .mm-nest{margin:.45rem 0 .45rem 1.15rem;padding:.45rem .6rem .45rem 0;border-right:2px dashed rgba(255,255,255,.14);min-height:52px}
+.mm-nest.is-collapsed{display:none}
+body.mm-dragging .mm-nest.is-collapsed{display:block}
+.mm-nest.is-empty-drop{
+  border:1px dashed rgba(255,255,255,.22);background:rgba(255,255,255,.03);padding:.65rem .55rem;
+  position:relative;
+}
+.mm-nest.is-empty-drop:not(:has(> .mm-item))::after{
+  content:"اینجا رها کنید تا زیرمنو شود";
+  display:block;text-align:center;color:#6b7280;font-size:.75rem;pointer-events:none;padding:.15rem 0;
+}
+.mm-nest.mm-drop-target{border-color:rgba(226,61,18,.55)!important;background:rgba(226,61,18,.1)!important;box-shadow:inset 0 0 0 1px rgba(226,61,18,.25)}
+.mm-item{margin:0 0 .45rem;position:relative}
+.mm-item.mm-nest-hover > .mm-row{border-color:#e23d12;box-shadow:0 0 0 1px rgba(226,61,18,.35)}
+.mm-item.mm-nest-hover > .mm-nest{border-color:rgba(226,61,18,.55)!important;background:rgba(226,61,18,.1)!important}
 .mm-row{
   display:flex;align-items:center;gap:.55rem;padding:.55rem .7rem;
   background:#0d1017;border:1px solid rgba(255,255,255,.08);border-radius:10px;
-  cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s
+  cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;
+  touch-action:none
 }
 .mm-row:hover{border-color:rgba(226,61,18,.35)}
 .mm-row.is-active{border-color:#e23d12;box-shadow:0 0 0 1px rgba(226,61,18,.25);background:#141018}
 .mm-row.is-off{opacity:.55}
-.mm-handle{cursor:grab;color:#6b7280;font-size:1rem;user-select:none;padding:.1rem .2rem;line-height:1}
+.mm-handle{cursor:grab;color:#9ca3af;font-size:1.15rem;user-select:none;padding:.25rem .35rem;line-height:1;border-radius:6px;flex:0 0 auto}
+.mm-handle:hover{color:#fff;background:rgba(255,255,255,.06)}
 .mm-handle:active{cursor:grabbing}
+.sortable-fallback{opacity:.95;box-shadow:0 12px 28px rgba(0,0,0,.45);border:1px solid rgba(226,61,18,.5)!important}
+.sortable-drag{opacity:.2}
 .mm-icon{width:1.4rem;text-align:center;flex-shrink:0}
 .mm-title{font-weight:650;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mm-meta{display:flex;flex-wrap:wrap;gap:.3rem;align-items:center}
@@ -392,7 +428,7 @@
       <button type="button" class="btn btn-outline btn-sm" id="mm-expand-all">باز کردن همه</button>
       <button type="button" class="btn btn-outline btn-sm" id="mm-collapse-all">جمع کردن</button>
     </div>
-    <p class="mm-hint">آیتم‌ها را بکشید تا ترتیب یا سطح (منوی اصلی ↔ زیرمنو) عوض شود. روی هر ردیف کلیک کنید تا تنظیماتش در پنل کناری باز شود.</p>
+    <p class="mm-hint">آیتم را از دسته ⠿ بگیرید. برای زیرمنو کردن، روی یک آیتم نگه دارید تا قرمز شود و رها کنید (یا داخل خط‌چین زیر همان آیتم رها کنید).</p>
     <div id="mm-empty" class="mm-empty" style="display:none">هنوز آیتمی نیست. «منوی اصلی» را بزنید.</div>
     <ul id="mm-tree" class="mm-nest" data-parent=""></ul>
   </div>
@@ -885,6 +921,9 @@
     return li;
   }
 
+  let dragLockUntil = 0;
+  let nestHoverLi = null;
+
   function destroySortables(){
     sortables.forEach(s => { try{ s.destroy(); }catch(e){} });
     sortables = [];
@@ -897,7 +936,12 @@
       if (el.classList && el.classList.contains('mm-nest')) depth += 1;
       el = el.parentElement;
     }
-    return depth; // ریشه = 0
+    return depth; // root list = 0
+  }
+
+  function childNestOf(li){
+    if (!li) return null;
+    return Array.from(li.children).find(c => c.classList && c.classList.contains('mm-nest')) || null;
   }
 
   function markEmptyNests(root){
@@ -907,35 +951,105 @@
     });
   }
 
+  function clearNestHover(){
+    if (nestHoverLi) {
+      nestHoverLi.classList.remove('mm-nest-hover');
+      nestHoverLi = null;
+    }
+    document.querySelectorAll('.mm-drop-target').forEach(n => n.classList.remove('mm-drop-target'));
+  }
+
+  function expandAllNests(){
+    document.querySelectorAll('#mm-tree .mm-nest').forEach(ul => {
+      ul.classList.remove('is-collapsed');
+      ul.style.display = '';
+    });
+  }
+
   function bindSortables(root){
+    if (!window.Sortable) {
+      toast('کتابخانه درگ‌اند‌دراپ لود نشد. صفحه را سخت‌رفرش کنید (Ctrl+F5).', true);
+      return;
+    }
     const lists = [root, ...root.querySelectorAll('.mm-nest')];
     lists.forEach(el => {
       const s = Sortable.create(el, {
-        group: 'mega-menu',
-        animation: 160,
+        group: { name: 'mega-menu', pull: true, put: true },
+        animation: 150,
         handle: '.mm-handle',
         draggable: '.mm-item',
+        forceFallback: true,
         fallbackOnBody: true,
+        fallbackTolerance: 4,
+        fallbackClass: 'sortable-fallback',
         swapThreshold: 0.65,
         invertSwap: true,
-        emptyInsertThreshold: 48,
+        emptyInsertThreshold: 64,
+        bubbleScroll: true,
+        scroll: true,
+        scrollSensitivity: 60,
+        scrollSpeed: 12,
         direction: 'vertical',
         ghostClass: 'mm-ghost',
         chosenClass: 'mm-chosen',
         dragClass: 'mm-drag',
-        onMove(evt){
-          // حداکثر ۵ سطح (ریشه + ۴ زیر‌سطح) — هم‌تراز با بک‌اند
+        delay: 0,
+        delayOnTouchOnly: true,
+        touchStartThreshold: 3,
+        onStart(){
+          expandAllNests();
+          markEmptyNests(root);
+          document.body.classList.add('mm-dragging');
+        },
+        onMove(evt, originalEvent){
           if (nestDepth(evt.to) > 4) return false;
+          clearNestHover();
+          // اگر موس روی ردیف یک آیتم است، هایلایت «زیرمجموعه شو»
+          const clientX = originalEvent && (originalEvent.clientX ?? (originalEvent.touches && originalEvent.touches[0]?.clientX));
+          const clientY = originalEvent && (originalEvent.clientY ?? (originalEvent.touches && originalEvent.touches[0]?.clientY));
+          if (clientX != null && clientY != null) {
+            const fallback = document.querySelector('.sortable-fallback');
+            if (fallback) fallback.style.display = 'none';
+            const under = document.elementFromPoint(clientX, clientY);
+            if (fallback) fallback.style.display = '';
+            const li = under && under.closest ? under.closest('#mm-tree .mm-item') : null;
+            if (li && li !== evt.dragged && !evt.dragged.contains(li)) {
+              const row = li.querySelector(':scope > .mm-row') || li.firstElementChild;
+              if (row) {
+                const rect = row.getBoundingClientRect();
+                // نیمه چپ ردیف (RTL: نزدیک‌تر به تورفتگی) = نود کودک
+                const midX = rect.left + rect.width * 0.45;
+                if (clientX <= midX || (clientY >= rect.top && clientY <= rect.bottom && clientX >= rect.left && clientX <= rect.right && (clientY - rect.top) > rect.height * 0.55)) {
+                  li.classList.add('mm-nest-hover');
+                  nestHoverLi = li;
+                  const nest = childNestOf(li);
+                  if (nest) nest.classList.add('mm-drop-target');
+                }
+              }
+            }
+          }
+          if (evt.to) evt.to.classList.add('mm-drop-target');
           return true;
         },
-        onAdd(evt){ markEmptyNests(root); if (evt.to) evt.to.classList.remove('mm-drop-target'); },
+        onAdd(){ markEmptyNests(root); },
         onUpdate(){ markEmptyNests(root); },
         onRemove(){ markEmptyNests(root); },
-        onChoose(evt){ if (evt.from) evt.from.classList.add('mm-drop-target'); },
-        onUnchoose(evt){
-          document.querySelectorAll('.mm-drop-target').forEach(n => n.classList.remove('mm-drop-target'));
+        onEnd(evt){
+          document.body.classList.remove('mm-dragging');
+          dragLockUntil = Date.now() + 400;
+          // اگر روی یک آیتم hover کرده بودیم، به عنوان فرزند همان آیتم منتقل کن
+          try {
+            if (nestHoverLi && evt && evt.item && nestHoverLi !== evt.item && !evt.item.contains(nestHoverLi)) {
+              const targetNest = childNestOf(nestHoverLi);
+              if (targetNest && nestDepth(targetNest) <= 4) {
+                targetNest.appendChild(evt.item);
+              }
+            }
+          } catch (err) {}
+          clearNestHover();
+          markEmptyNests(root);
+          queuePersistOrder();
         },
-        onEnd(){ markEmptyNests(root); queuePersistOrder(); },
       });
       sortables.push(s);
     });
@@ -944,7 +1058,7 @@
 
   function serializeDom(ul){
     return [...ul.children].filter(li => li.classList.contains('mm-item')).map(li => {
-      const childUl = li.querySelector(':scope > .mm-nest');
+      const childUl = childNestOf(li);
       return {
         id: +li.dataset.id,
         children: childUl ? serializeDom(childUl) : [],
@@ -958,7 +1072,7 @@
 
   function queuePersistOrder(){
     clearTimeout(persistTimer);
-    persistTimer = setTimeout(() => { persistOrder(); }, 200);
+    persistTimer = setTimeout(() => { persistOrder(); }, 180);
   }
 
   async function persistOrder(){
@@ -975,7 +1089,7 @@
         });
       }
       tree = hydrate(payload.tree);
-      toast('ترتیب ذخیره شد');
+      toast('ترتیب/زیرمنو ذخیره شد');
     } catch (e) {
       toast(e.message || 'خطا در ذخیره ترتیب', true);
       render();
@@ -1003,10 +1117,19 @@
   }
 
   function selectItem(id){
+    if (Date.now() < dragLockUntil) return;
     selectedId = id;
+    document.querySelectorAll('#mm-tree .mm-row.is-active').forEach(r => r.classList.remove('is-active'));
+    const li = els.tree.querySelector('.mm-item[data-id="'+id+'"]');
+    if (li) {
+      const row = Array.from(li.children).find(c => c.classList && c.classList.contains('mm-row'));
+      if (row) row.classList.add('is-active');
+    }
     const n = findNode(tree, id);
     fillForm(n);
-    render();
+    if (els.addChild) els.addChild.disabled = !id;
+    if (els.del) els.del.disabled = !id;
+    if (els.dup) els.dup.disabled = !id;
   }
 
   async function addRoot(){
@@ -1165,11 +1288,15 @@
   els.form.addEventListener('submit', saveForm);
 
   document.getElementById('mm-expand-all')?.addEventListener('click', () => {
-    document.querySelectorAll('#mm-tree .mm-nest').forEach(ul => { ul.style.display = ''; });
+    document.querySelectorAll('#mm-tree .mm-nest').forEach(ul => {
+      ul.classList.remove('is-collapsed');
+      ul.style.display = '';
+    });
   });
   document.getElementById('mm-collapse-all')?.addEventListener('click', () => {
     document.querySelectorAll('#mm-tree .mm-item > .mm-nest').forEach(ul => {
-      if (ul.children.length) ul.style.display = 'none';
+      const hasItems = [...ul.children].some(li => li.classList.contains('mm-item'));
+      if (hasItems) ul.classList.add('is-collapsed');
     });
   });
 
@@ -1376,7 +1503,23 @@
 
   if (selectedId) fillForm(findNode(tree, selectedId));
   else fillForm(null);
-  render();
+
+  function bootTree(){
+    if (!window.Sortable) {
+      toast('درگ‌اند‌دراپ لود نشد. اگر در ایران هستید، کش مرورگر را پاک کنید یا از VPN سبک استفاده کنید.', true);
+      // هنوز درخت را بدون DnD نشان بده
+      destroySortables();
+      els.tree.innerHTML = '';
+      (tree || []).forEach(item => els.tree.appendChild(renderNode(item)));
+      return;
+    }
+    render();
+  }
+  if (typeof window.__mmLoadSortable === 'function') {
+    window.__mmLoadSortable(function(ok){ bootTree(); });
+  } else {
+    bootTree();
+  }
 })();
 </script>
 @endsection

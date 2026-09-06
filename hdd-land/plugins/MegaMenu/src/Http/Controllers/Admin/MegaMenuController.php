@@ -237,13 +237,32 @@ class MegaMenuController extends Controller
     {
         MegaMenuPlugin::ensureSchema();
 
-        $data = $request->validate([
-            'tree' => ['required', 'array'],
-            'tree.*.id' => ['required', 'integer'],
-            'tree.*.children' => ['nullable', 'array'],
-        ]);
+        $tree = $request->input('tree');
+        if (! is_array($tree) || $tree === []) {
+            return response()->json(['ok' => false, 'message' => 'درخت منو خالی یا نامعتبر است.'], 422);
+        }
 
-        $this->applyTreeOrder($data['tree'], null);
+        // اعتبارسنجی سبک و بازگشتی (نودهای تو در تو)
+        $walk = function ($nodes) use (&$walk) {
+            if (! is_array($nodes)) {
+                return false;
+            }
+            foreach ($nodes as $node) {
+                if (! is_array($node) || ! isset($node['id']) || (int) $node['id'] <= 0) {
+                    return false;
+                }
+                if (array_key_exists('children', $node) && $node['children'] !== null && ! $walk($node['children'])) {
+                    return false;
+                }
+            }
+
+            return true;
+        };
+        if (! $walk($tree)) {
+            return response()->json(['ok' => false, 'message' => 'ساختار درخت درگ‌اند‌دراپ نامعتبر است.'], 422);
+        }
+
+        $this->applyTreeOrder($tree, null);
 
         return response()->json(['ok' => true, 'message' => 'ترتیب منو ذخیره شد.']);
     }
