@@ -1,8 +1,19 @@
 @php
   $themeClass = \Plugins\ThemeBuilder\src\ThemeConfig::class;
-  $theme = class_exists($themeClass) ? $themeClass::get() : [];
-  $banner = is_array($theme['banner'] ?? null) ? $theme['banner'] : [];
-  $useRevolution = class_exists($themeClass) && $themeClass::bannerIsLive($banner);
+  $theme = [];
+  $banner = [];
+  $useRevolution = false;
+  if (class_exists($themeClass) && method_exists($themeClass, 'get')) {
+    try {
+      $theme = $themeClass::get();
+      $banner = is_array($theme['banner'] ?? null) ? $theme['banner'] : [];
+      if (method_exists($themeClass, 'bannerIsLive')) {
+        $useRevolution = (bool) $themeClass::bannerIsLive($banner);
+      }
+    } catch (\Throwable) {
+      $useRevolution = false;
+    }
+  }
   // top_menu (چیپ‌های قرمز زیر بنر) عمداً از پیش‌فرض حذف شده — تکراری با منوی هدر و دسته‌هاست.
   // banner/hero از حلقه خارج می‌شوند تا دوبار رندر نشوند؛ بنر Revolution جداگانه بالا می‌آید.
   $order = $theme['layout_order'] ?? ['banner','online','categories','featured','features','cta'];
@@ -16,8 +27,11 @@
   @include('theme-builder::storefront.partials.banner', ['b' => $banner])
 @endif
 
-{{-- home-hero: اگر Revolution زنده باشد فقط نوار اعتماد و بقیه را نگه می‌دارد --}}
-@include('storefront.partials.home-hero', ['skipHero' => $useRevolution])
+{{-- home-hero مسیر اصلی صفحه اول است؛ اگر Revolution این‌جا رندر شد، داخل partial دوباره نکش --}}
+@include('storefront.partials.home-hero', [
+  'skipHero' => $useRevolution,
+  'revolutionAlreadyRendered' => $useRevolution,
+])
 
 @foreach($order as $section)
   @if(is_string($section) && str_starts_with($section, 'block:'))

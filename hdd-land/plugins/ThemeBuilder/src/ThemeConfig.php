@@ -3,15 +3,15 @@
 namespace Plugins\ThemeBuilder\src;
 
 use App\Models\Setting;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Minimal ThemeConfig so Revolution banner settings (theme.banner)
- * can be read on the storefront even when the full ThemeBuilder
- * package class is not shipped in this tree.
+ * ThemeConfig reader for Revolution / ThemeBuilder banner on the storefront.
  *
- * Production may already provide a richer ThemeConfig; class_exists
- * checks elsewhere prefer that implementation when present.
+ * Production may already ship a richer ThemeConfig. This class is used when
+ * that file is missing from the sparse tree, and is defensive about Setting
+ * API shape and storage key names observed on live HDD Land.
  */
 class ThemeConfig
 {
@@ -21,25 +21,17 @@ class ThemeConfig
         'theme_config',
         'site_theme',
         'theme',
+        'theme.banner',
+        'theme_banner',
+        'revolution_banner',
+        'revolution_slider',
+        'homepage_banner',
     ];
 
     /** @return array<string, mixed> */
     public static function get(): array
     {
-        $raw = null;
-        foreach (self::SETTING_KEYS as $key) {
-            try {
-                if (class_exists(Setting::class)) {
-                    $candidate = Setting::getValue($key, null);
-                    if ($candidate !== null && $candidate !== '' && $candidate !== []) {
-                        $raw = $candidate;
-                        break;
-                    }
-                }
-            } catch (\Throwable) {
-                //
-            }
-        }
+        $raw = self::readRawSetting();
 
         $theme = [];
         if (is_string($raw) && $raw !== '') {
@@ -47,6 +39,13 @@ class ThemeConfig
             $theme = is_array($decoded) ? $decoded : [];
         } elseif (is_array($raw)) {
             $theme = $raw;
+        }
+
+        // Some installs store only the banner object under theme_banner / theme.banner.
+        if (! isset($theme['banner']) || ! is_array($theme['banner'])) {
+            if (isset($theme['image_url']) || isset($theme['layers']) || isset($theme['image'])) {
+                $theme = ['banner' => $theme];
+            }
         }
 
         if (! isset($theme['banner']) || ! is_array($theme['banner'])) {
@@ -62,17 +61,93 @@ class ThemeConfig
         return $theme;
     }
 
+    /** @return mixed */
+    protected static function readRawSetting(): mixed
+    {
+        foreach (self::SETTING_KEYS as $key) {
+            $candidate = self::settingGet($key);
+            if ($candidate !== null && $candidate !== '' && $candidate !== []) {
+                return $candidate;
+            }
+        }
+
+        // Last-resort direct DB read when Setting helpers differ on production.
+        try {
+            if (class_exists(Schema::class) && Schema::hasTable('settings')) {
+                foreach (self::SETTING_KEYS as $key) {
+                    $row = DB::table('settings')->where('key', $key)->value('value');
+                    if ($row !== null && $row !== '') {
+                        return $row;
+                    }
+                }
+            }
+        } catch (\Throwable) {
+            //
+        }
+
+        return null;
+    }
+
+    /** @return mixed */
+    protected static function settingGet(string $key): mixed
+    {
+        if (! class_exists(Setting::class)) {
+            return null;
+        }
+
+        try {
+            if (method_exists(Setting::class, 'getValue')) {
+                return Setting::getValue($key, null);
+            }
+            if (method_exists(Setting::class, 'get')) {
+                return Setting::get($key, null);
+            }
+            if (method_exists(Setting::class, 'value')) {
+                return Setting::value($key, null);
+            }
+        } catch (\Throwable) {
+            //
+        }
+
+        return null;
+    }
+
     /** @param  array<string, mixed>  $b
      *  @return array<string, mixed>
      */
     public static function normalizeBanner(array $b): array
     {
         $defaults = self::defaultBanner();
+        // Accept both image_url / image and image2_url / image2 from admin payloads.
+        if (! isset($b['image_url']) && isset($b['image'])) {
+            $b['image_url'] = $b['image'];
+        }
+        if (! isset($b['image2_url']) && isset($b['image2'])) {
+            $b['image2_url'] = $b['image2'];
+        }
+        if (! isset($b['image_url']) && isset($b['src'])) {
+            $b['image_url'] = $b['src'];
+        }
+        if (! isset($b['slider_enabled']) && isset($b['carousel'])) {
+            $b['slider_enabled'] = (bool) $b['carousel'];
+        }
+
         $out = array_merge($defaults, $b);
 
         $out['enabled'] = array_key_exists('enabled', $b) ? (bool) $b['enabled'] : true;
-        $out['layout'] = in_array((string) ($out['layout'] ?? ''), ['full', 'card', 'split', 'slider-duo', 'overlay-box'], true)
-            ? $out['layout'] : 'full';
+        $layout = (string) ($out['layout'] ?? 'full');
+        // Map admin labels / legacy values onto storefront CSS classes.
+        $layoutMap = [
+            'full' => 'full',
+            'wide' => 'full',
+            'کامل' => 'full',
+            'عریض' => 'full',
+            'card' => 'card',
+            'split' => 'split',
+            'slider-duo' => 'slider-duo',
+            'overlay-box' => 'overlay-box',
+        ];
+        $out['layout'] = $layoutMap[$layout] ?? (in_array($layout, ['full', 'card', 'split', 'slider-duo', 'overlay-box'], true) ? $layout : 'full');
         $out['align'] = in_array((string) ($out['align'] ?? ''), ['right', 'left', 'center'], true) ? $out['align'] : 'right';
         $out['valign'] = in_array((string) ($out['valign'] ?? ''), ['top', 'center', 'bottom', 'middle'], true)
             ? str_replace('middle', 'center', (string) $out['valign']) : 'center';
@@ -86,7 +161,6 @@ class ThemeConfig
         $out['overlay_opacity'] = max(0, min(90, (int) ($out['overlay_opacity'] ?? 18)));
         $out['text_display'] = in_array((string) ($out['text_display'] ?? ''), ['stacked', 'boxed', 'glass', 'simple'], true)
             ? $out['text_display'] : 'stacked';
-        // Map UI label "نمایش متن ساده" → simple/stacked
         if (($out['text_display'] ?? '') === 'simple') {
             $out['text_display'] = 'stacked';
         }
