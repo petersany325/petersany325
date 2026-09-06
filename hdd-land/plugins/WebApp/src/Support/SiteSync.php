@@ -4,6 +4,7 @@ namespace Plugins\WebApp\src\Support;
 
 use App\Models\Setting;
 use App\Support\FooterConfig;
+use App\Support\HomePageConfig;
 use App\Support\PortalNav;
 
 /**
@@ -13,27 +14,40 @@ use App\Support\PortalNav;
 class SiteSync
 {
     /**
-     * Designed homepage hero, then ThemeBuilder banner as fallback.
+     * Homepage online settings first, then designed image / ThemeBuilder banner.
      *
      * @param  array<string,mixed>|null  $s  WebApp settings
-     * @return array{image:string,title:string,text:string,cta_label:string,cta_url:string}|null
+     * @return array{image:string,title:string,text:string,cta_label:string,cta_url:string,kicker:string,cta2_label:string,cta2_url:string}|null
      */
     public static function heroBanner(?array $s = null): ?array
     {
         $s = is_array($s) ? $s : [];
+        $home = class_exists(HomePageConfig::class) ? HomePageConfig::get() : [];
+        if (isset($home['hero_enabled']) && empty($home['hero_enabled']) && empty($s['hero_enabled'])) {
+            return null;
+        }
+
         $designedRel = 'images/home/hero.jpg';
         $designedFile = public_path($designedRel);
         $designedCopy = [
-            'title' => 'مرکز تخصصی هارد، SSD و تأمین سازمانی',
-            'text' => 'تأمین تجهیزات ذخیره‌سازی برندهای معتبر با گارانتی شفاف — برای فروشگاه و سازمان.',
-            'cta_label' => 'ورود به فروشگاه',
-            'cta_url' => '/app/shop',
+            'title' => (string) ($home['hero_title'] ?? 'مرکز تخصصی هارد، SSD و تأمین سازمانی'),
+            'text' => (string) ($home['hero_text'] ?? 'تأمین تجهیزات ذخیره‌سازی برندهای معتبر با گارانتی شفاف — برای فروشگاه و سازمان.'),
+            'cta_label' => (string) ($home['hero_cta1_label'] ?? 'ورود به فروشگاه'),
+            'cta_url' => (string) ($home['hero_webapp_cta1_url'] ?? ($home['hero_cta1_url'] ?? '/app/shop')),
+            'kicker' => (string) ($home['hero_kicker'] ?? 'شرکت تخصصی ذخیره‌سازی'),
+            'cta2_label' => (string) ($home['hero_cta2_label'] ?? 'درخواست سازمانی'),
+            'cta2_url' => (string) ($home['hero_cta2_url'] ?? '/contact'),
         ];
+
         $legacyTitles = ['', 'سرزمین هارد', 'سخت‌افزار مطمئن برای حرفه‌ای‌ها'];
-        $title = trim((string) ($s['hero_title'] ?? ''));
-        $text = trim((string) ($s['hero_text'] ?? ''));
-        $ctaLabel = trim((string) ($s['hero_cta_label'] ?? ''));
-        $ctaUrl = trim((string) ($s['hero_cta_url'] ?? '')) ?: $designedCopy['cta_url'];
+        $title = trim((string) ($s['hero_title'] ?? $home['hero_title'] ?? ''));
+        $text = trim((string) ($s['hero_text'] ?? $home['hero_text'] ?? ''));
+        $ctaLabel = trim((string) ($s['hero_cta_label'] ?? $home['hero_cta1_label'] ?? ''));
+        $ctaUrl = trim((string) ($s['hero_cta_url'] ?? $home['hero_webapp_cta1_url'] ?? $home['hero_cta1_url'] ?? '')) ?: $designedCopy['cta_url'];
+        $kicker = trim((string) ($home['hero_kicker'] ?? $designedCopy['kicker']));
+        $cta2Label = trim((string) ($home['hero_cta2_label'] ?? $designedCopy['cta2_label']));
+        $cta2Url = trim((string) ($home['hero_cta2_url'] ?? $designedCopy['cta2_url']));
+
         if (in_array($title, $legacyTitles, true)) {
             $title = $designedCopy['title'];
         }
@@ -44,62 +58,58 @@ class SiteSync
             $ctaLabel = $designedCopy['cta_label'];
         }
 
-        if (is_file($designedFile) && filesize($designedFile) > 0) {
-            return [
-                'image' => asset($designedRel),
-                'title' => $title,
-                'text' => $text,
-                'cta_label' => $ctaLabel,
-                'cta_url' => PortalNav::mapUrlForWebApp($ctaUrl),
-            ];
+        $customImage = trim((string) ($home['hero_image'] ?? ''));
+        $image = '';
+        if ($customImage !== '') {
+            $image = HomePageConfig::imageUrl($customImage);
+        } elseif (is_file($designedFile) && filesize($designedFile) > 0) {
+            $image = asset($designedRel);
+        } else {
+            try {
+                if (class_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class)) {
+                    $theme = \Plugins\ThemeBuilder\src\ThemeConfig::get();
+                    $banner = $theme['banner'] ?? [];
+                    if (! empty($banner['enabled'])) {
+                        $image = (string) \Plugins\ThemeBuilder\src\ThemeConfig::bannerUrl($banner, 1);
+                        $layers = collect($banner['layers'] ?? [])->keyBy('id');
+                        $read = static function ($layer, string $fallback = ''): string {
+                            return $layer && ! empty($layer['enabled']) && empty($layer['deleted'])
+                                ? trim((string) ($layer['content'] ?? $fallback)) : $fallback;
+                        };
+                        if ($title === $designedCopy['title']) {
+                            $bannerTitle = $read($layers->get('title'), (string) ($banner['overlay_title'] ?? ''));
+                            if ($bannerTitle !== '') {
+                                $title = $bannerTitle;
+                            }
+                        }
+                        if ($text === $designedCopy['text']) {
+                            $bannerText = $read($layers->get('text'), (string) ($banner['overlay_text'] ?? ''));
+                            if ($bannerText !== '') {
+                                $text = $bannerText;
+                            }
+                        }
+                        $cta = $layers->get('cta1');
+                        if ($cta) {
+                            $ctaLabel = $read($cta, $ctaLabel) ?: $ctaLabel;
+                            $ctaUrl = trim((string) ($cta['url'] ?? $banner['cta_url'] ?? $ctaUrl)) ?: $ctaUrl;
+                        }
+                    }
+                }
+            } catch (\Throwable) {
+                //
+            }
         }
 
-        try {
-            if (! class_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class)) {
-                return [
-                    'image' => '',
-                    'title' => $title,
-                    'text' => $text,
-                    'cta_label' => $ctaLabel,
-                    'cta_url' => PortalNav::mapUrlForWebApp($ctaUrl),
-                ];
-            }
-            $theme = \Plugins\ThemeBuilder\src\ThemeConfig::get();
-            $banner = $theme['banner'] ?? [];
-            if (empty($banner['enabled'])) {
-                return [
-                    'image' => '',
-                    'title' => $title,
-                    'text' => $text,
-                    'cta_label' => $ctaLabel,
-                    'cta_url' => PortalNav::mapUrlForWebApp($ctaUrl),
-                ];
-            }
-            $layers = collect($banner['layers'] ?? [])->keyBy('id');
-            $read = static function ($layer, string $fallback = ''): string {
-                return $layer && ! empty($layer['enabled']) && empty($layer['deleted'])
-                    ? trim((string) ($layer['content'] ?? $fallback)) : $fallback;
-            };
-            $bannerTitle = $read($layers->get('title'), (string) ($banner['overlay_title'] ?? ''));
-            $bannerText = $read($layers->get('text'), (string) ($banner['overlay_text'] ?? ''));
-            $cta = $layers->get('cta1');
-
-            return [
-                'image' => \Plugins\ThemeBuilder\src\ThemeConfig::bannerUrl($banner, 1),
-                'title' => $title !== $designedCopy['title'] ? $title : ($bannerTitle !== '' ? $bannerTitle : $title),
-                'text' => $text !== $designedCopy['text'] ? $text : ($bannerText !== '' ? $bannerText : $text),
-                'cta_label' => $read($cta, (string) ($banner['cta_text'] ?? $ctaLabel)),
-                'cta_url' => PortalNav::mapUrlForWebApp(trim((string) ($cta['url'] ?? $banner['cta_url'] ?? $ctaUrl)) ?: $ctaUrl),
-            ];
-        } catch (\Throwable) {
-            return [
-                'image' => '',
-                'title' => $title,
-                'text' => $text,
-                'cta_label' => $ctaLabel,
-                'cta_url' => PortalNav::mapUrlForWebApp($ctaUrl),
-            ];
-        }
+        return [
+            'image' => $image,
+            'title' => $title,
+            'text' => $text,
+            'cta_label' => $ctaLabel,
+            'cta_url' => PortalNav::mapUrlForWebApp($ctaUrl),
+            'kicker' => $kicker,
+            'cta2_label' => $cta2Label,
+            'cta2_url' => $cta2Url,
+        ];
     }
 
     /** @return list<array{label:string,url:string,children:list<array{label:string,url:string}>}> */
