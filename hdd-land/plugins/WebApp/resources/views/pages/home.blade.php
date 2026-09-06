@@ -15,7 +15,10 @@
     $heroImage = \App\Support\HomePageConfig::imageUrl((string) $home['hero_image']);
   }
 @endphp
-<section class="wa-hero {{ $heroImage ? 'wa-hero-image' : '' }}" @if($heroImage) style="background-image:url('{{ $heroImage }}')" @endif>
+<section
+  class="wa-hero {{ $heroImage ? 'wa-hero-image' : '' }}"
+  style="{{ \App\Support\HomePageConfig::heroStyleAttr($home) }}@if($heroImage);background-image:url('{{ $heroImage }}')@endif"
+>
   @if($heroImage)<div class="wa-hero-overlay"></div>@endif
   <div class="wa-hero-glow"></div>
   <p class="wa-hero-kicker">{{ $mh['kicker'] ?? $home['hero_kicker'] ?? 'شرکت تخصصی ذخیره‌سازی' }}</p>
@@ -25,6 +28,9 @@
     <a class="wa-cta" href="{{ url($mh['cta_url'] ?? $s['hero_cta_url'] ?? $home['hero_webapp_cta1_url'] ?? '/app/shop') }}">{{ $mh['cta_label'] ?? $s['hero_cta_label'] ?? $home['hero_cta1_label'] ?? 'ورود به فروشگاه' }}</a>
     <a class="wa-cta wa-cta-ghost" href="{{ url($mh['cta2_url'] ?? $home['hero_cta2_url'] ?? '/contact') }}">{{ $mh['cta2_label'] ?? $home['hero_cta2_label'] ?? 'درخواست سازمانی' }}</a>
   </div>
+  @if(!empty($home['hero_merge_enabled']) && !empty($home['hero_merge_image']))
+    <img class="wa-hero-merge" src="{{ \App\Support\HomePageConfig::imageUrl((string) $home['hero_merge_image']) }}" alt="" loading="lazy">
+  @endif
 </section>
 @endif
 

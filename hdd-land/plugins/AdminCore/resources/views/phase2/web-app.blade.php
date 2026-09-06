@@ -64,12 +64,12 @@
     <div class="vb-block">
       <div class="vb-block-head"><span>صفحه خانه</span><span class="tag">Home</span></div>
       <div class="vb-block-body">
-        <div class="vb-opt"><div><span class="vb-title">هیرو</span><span class="vb-desc">متن/تصویر کامل بنر صفحه اول را از «تنظیمات آنلاین صفحه اول / بنر» ویرایش کنید</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="hero_enabled" value="1" @checked($on('hero_enabled'))><span class="vb-slider"></span></label></div></div>
+        <div class="vb-opt"><div><span class="vb-title">هیرو</span><span class="vb-desc">متن، سایز، فونت، رنگ، درگ و ادغام تصویر بنر را از «طراحی بنر و تنظیمات آنلاین صفحه اول» ویرایش کنید</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="hero_enabled" value="1" @checked($on('hero_enabled'))><span class="vb-slider"></span></label></div></div>
         <div class="vb-opt"><div><span class="vb-title">عنوان هیرو</span></div><div class="vb-ctrl"><input type="text" name="hero_title" value="{{ $f('hero_title') }}"></div></div>
         <div class="vb-opt vb-opt-stack"><div><span class="vb-title">متن هیرو</span></div><div class="vb-ctrl"><textarea name="hero_text" rows="2">{{ $f('hero_text') }}</textarea></div></div>
         <div class="vb-opt"><div><span class="vb-title">دکمه هیرو</span></div><div class="vb-ctrl"><input type="text" name="hero_cta_label" value="{{ $f('hero_cta_label') }}"></div></div>
         <div class="vb-opt"><div><span class="vb-title">لینک دکمه</span></div><div class="vb-ctrl"><input type="text" name="hero_cta_url" value="{{ $f('hero_cta_url','/app/shop') }}" dir="ltr"></div></div>
-        <p class="vb-desc" style="margin:.35rem 0 .75rem"><a href="{{ url('/admin/homepage-settings') }}">باز کردن تنظیمات آنلاین کامل صفحه اول (بنر، اعتماد، آموزش، سازمانی، پیش‌نمایش زنده)</a></p>
+        <p class="vb-desc" style="margin:.35rem 0 .75rem"><a href="{{ url('/admin/homepage-settings') }}">باز کردن طراحی بنر و تنظیمات آنلاین صفحه اول (سایز، فونت، رنگ، درگ، ادغام تصویر، پیش‌نمایش زنده)</a></p>
         <div class="vb-opt"><div><span class="vb-title">جستجو</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="show_search" value="1" @checked($on('show_search'))><span class="vb-slider"></span></label></div></div>
         <div class="vb-opt"><div><span class="vb-title">دسته‌ها</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="show_categories" value="1" @checked($on('show_categories'))><span class="vb-slider"></span></label></div></div>
         <div class="vb-opt"><div><span class="vb-title">محصولات ویژه</span></div><div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="show_featured" value="1" @checked($on('show_featured'))><span class="vb-slider"></span></label></div></div>

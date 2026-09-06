@@ -124,7 +124,7 @@
       'icon' => '🎨',
       'open' => $is('theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'homepage-settings', 'online-home', 'banner-settings'),
       'items' => [
-        ['label' => 'تنظیمات آنلاین صفحه اول / بنر', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home', 'banner-settings')],
+        ['label' => 'طراحی بنر و تنظیمات آنلاین صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home', 'banner-settings')],
         ['label' => 'استودیو قالب صفحه اول', 'href' => $u('theme-builder'), 'active' => $is('theme-builder') && ! $is('theme-templates')],
         ['label' => 'نصب / آپدیت قالب', 'href' => $u('theme-templates'), 'active' => $is('theme-templates')],
         ['label' => 'صفحه‌ساز Elementor', 'href' => $u('page-builder'), 'active' => $is('page-builder')],
@@ -137,7 +137,7 @@
       'icon' => '📱',
       'open' => $is('web-app', 'homepage-settings'),
       'items' => [
-        ['label' => 'تنظیمات آنلاین صفحه اول / بنر', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home', 'banner-settings')],
+        ['label' => 'طراحی بنر و تنظیمات آنلاین صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home', 'banner-settings')],
         ['label' => 'تنظیمات وب‌اپ / PWA', 'href' => $u('web-app'), 'active' => $is('web-app')],
         ['label' => 'پیش‌نمایش وب‌اپ', 'href' => url('/app'), 'active' => false, 'ext' => true],
         ['label' => 'فایل Manifest', 'href' => url('/manifest.webmanifest'), 'active' => false, 'ext' => true],

@@ -6,7 +6,7 @@ use App\Models\Setting;
 
 /**
  * Shared homepage / first-screen settings for storefront + WebApp.
- * Replaces hard-coded hero/trust/edu/corp copy that ThemeBuilder banner never controlled.
+ * Includes visual banner design: size, fonts, colors, drag layout, overlay merge.
  */
 class HomePageConfig
 {
@@ -26,6 +26,47 @@ class HomePageConfig
             'hero_cta2_label' => 'درخواست سازمانی',
             'hero_cta2_url' => '/contact',
             'hero_webapp_cta1_url' => '/app/shop',
+
+            // Visual design
+            'hero_layout' => 'split-rtl', // split-rtl | split-ltr | overlay | stacked | free
+            'hero_height' => 420,
+            'hero_radius' => 22,
+            'hero_pad_y' => 24,
+            'hero_pad_x' => 8,
+            'hero_font' => 'Vazirmatn',
+            'hero_kicker_size' => 14,
+            'hero_title_size' => 34,
+            'hero_text_size' => 15,
+            'hero_cta_size' => 14,
+            'hero_bg' => '#ffffff',
+            'hero_kicker_color' => '#e23d12',
+            'hero_title_color' => '#0b1220',
+            'hero_em_color' => '#e23d12',
+            'hero_text_color' => '#475569',
+            'hero_cta1_bg' => '#e23d12',
+            'hero_cta1_color' => '#ffffff',
+            'hero_cta2_bg' => '#ffffff',
+            'hero_cta2_color' => '#e23d12',
+            'hero_cta2_border' => '#e23d12',
+            'hero_overlay_color' => '#0a0f19',
+            'hero_overlay_opacity' => 55,
+            'hero_image_fit' => 'cover',
+            'hero_image_pos' => 'center',
+            'hero_media_w' => 48, // % of banner width in split/overlay
+            'hero_media_h' => 100,
+            'hero_media_x' => 52,
+            'hero_media_y' => 0,
+            'hero_copy_x' => 4,
+            'hero_copy_y' => 18,
+            'hero_copy_w' => 46,
+            'hero_merge_enabled' => false,
+            'hero_merge_image' => '',
+            'hero_merge_opacity' => 70,
+            'hero_merge_blend' => 'overlay',
+            'hero_merge_x' => 58,
+            'hero_merge_y' => 12,
+            'hero_merge_w' => 36,
+            'hero_merge_h' => 70,
 
             'trust_enabled' => true,
             'trust_1_title' => 'گارانتی شفاف',
@@ -116,7 +157,7 @@ class HomePageConfig
         $s = self::get();
         foreach ([
             'hero_enabled', 'trust_enabled', 'edu_enabled', 'about_enabled',
-            'corp_enabled', 'brands_enabled', 'sync_webapp',
+            'corp_enabled', 'brands_enabled', 'sync_webapp', 'hero_merge_enabled',
         ] as $k) {
             $s[$k] = ! empty($d[$k]);
         }
@@ -132,6 +173,12 @@ class HomePageConfig
             'hero_cta2_label' => 60,
             'hero_cta2_url' => 300,
             'hero_webapp_cta1_url' => 300,
+            'hero_layout' => 40,
+            'hero_font' => 60,
+            'hero_image_fit' => 20,
+            'hero_image_pos' => 20,
+            'hero_merge_image' => 500,
+            'hero_merge_blend' => 30,
             'trust_1_title' => 80, 'trust_1_text' => 120,
             'trust_2_title' => 80, 'trust_2_text' => 120,
             'trust_3_title' => 80, 'trust_3_text' => 120,
@@ -159,6 +206,59 @@ class HomePageConfig
             $s[$k] = mb_substr(trim((string) ($d[$k] ?? $s[$k] ?? '')), 0, $max);
         }
 
+        $layouts = ['split-rtl', 'split-ltr', 'overlay', 'stacked', 'free'];
+        if (! in_array($s['hero_layout'], $layouts, true)) {
+            $s['hero_layout'] = 'split-rtl';
+        }
+        $fonts = ['Vazirmatn', 'Estedad', 'IRANSansX', 'Dana', 'system-ui'];
+        if (! in_array($s['hero_font'], $fonts, true)) {
+            $s['hero_font'] = 'Vazirmatn';
+        }
+        if (! in_array($s['hero_image_fit'], ['cover', 'contain'], true)) {
+            $s['hero_image_fit'] = 'cover';
+        }
+        if (! in_array($s['hero_image_pos'], ['center', 'top', 'bottom', 'left', 'right'], true)) {
+            $s['hero_image_pos'] = 'center';
+        }
+        if (! in_array($s['hero_merge_blend'], ['normal', 'multiply', 'overlay', 'soft-light', 'screen'], true)) {
+            $s['hero_merge_blend'] = 'overlay';
+        }
+
+        foreach ([
+            'hero_height' => [220, 720, 420],
+            'hero_radius' => [0, 40, 22],
+            'hero_pad_y' => [0, 80, 24],
+            'hero_pad_x' => [0, 80, 8],
+            'hero_kicker_size' => [10, 28, 14],
+            'hero_title_size' => [18, 64, 34],
+            'hero_text_size' => [11, 28, 15],
+            'hero_cta_size' => [11, 24, 14],
+            'hero_overlay_opacity' => [0, 90, 55],
+            'hero_media_w' => [20, 80, 48],
+            'hero_media_h' => [30, 100, 100],
+            'hero_media_x' => [0, 80, 52],
+            'hero_media_y' => [0, 70, 0],
+            'hero_copy_x' => [0, 80, 4],
+            'hero_copy_y' => [0, 70, 18],
+            'hero_copy_w' => [20, 80, 46],
+            'hero_merge_opacity' => [0, 100, 70],
+            'hero_merge_x' => [0, 90, 58],
+            'hero_merge_y' => [0, 90, 12],
+            'hero_merge_w' => [10, 90, 36],
+            'hero_merge_h' => [10, 100, 70],
+        ] as $k => [$min, $max, $fallback]) {
+            $n = (int) ($d[$k] ?? $s[$k] ?? $fallback);
+            $s[$k] = max($min, min($max, $n));
+        }
+
+        foreach ([
+            'hero_bg', 'hero_kicker_color', 'hero_title_color', 'hero_em_color', 'hero_text_color',
+            'hero_cta1_bg', 'hero_cta1_color', 'hero_cta2_bg', 'hero_cta2_color', 'hero_cta2_border',
+            'hero_overlay_color',
+        ] as $k) {
+            $s[$k] = self::color((string) ($d[$k] ?? $s[$k] ?? ''), (string) (self::defaults()[$k] ?? '#000000'));
+        }
+
         Setting::setValue(self::KEY, $s);
 
         if (! empty($s['sync_webapp'])) {
@@ -168,6 +268,13 @@ class HomePageConfig
         return $s;
     }
 
+    protected static function color(string $v, string $fallback): string
+    {
+        $v = trim($v);
+
+        return preg_match('/^#[0-9a-fA-F]{6}$/', $v) ? $v : $fallback;
+    }
+
     /** @param  array<string,mixed>  $s */
     public static function syncToWebApp(array $s): void
     {
@@ -175,7 +282,6 @@ class HomePageConfig
             if (! class_exists(\Plugins\WebApp\Plugin::class)) {
                 return;
             }
-            // Merge into current settings so unrelated toggles are not wiped.
             \Plugins\WebApp\Plugin::saveSettings(array_merge(\Plugins\WebApp\Plugin::settings(), [
                 'hero_enabled' => ! empty($s['hero_enabled']),
                 'hero_title' => $s['hero_title'] ?? '',
@@ -184,7 +290,7 @@ class HomePageConfig
                 'hero_cta_url' => $s['hero_webapp_cta1_url'] ?? ($s['hero_cta1_url'] ?? '/app/shop'),
             ]));
         } catch (\Throwable) {
-            // WebApp may be unavailable in sparse/dev contexts.
+            //
         }
     }
 
@@ -235,9 +341,6 @@ class HomePageConfig
         return $out;
     }
 
-    /**
-     * Title with optional <em> emphasis for storefront hero.
-     */
     public static function heroTitleHtml(?array $s = null): string
     {
         $s = $s ?? self::get();
@@ -251,5 +354,70 @@ class HomePageConfig
         }
 
         return e($title);
+    }
+
+    /**
+     * Inline CSS custom properties for live banner styling.
+     *
+     * @param  array<string,mixed>|null  $s
+     */
+    public static function heroStyleAttr(?array $s = null): string
+    {
+        $s = $s ?? self::get();
+        $font = (string) ($s['hero_font'] ?? 'Vazirmatn');
+        $fontStack = $font === 'system-ui'
+            ? 'system-ui,-apple-system,Segoe UI,Tahoma,sans-serif'
+            : "'{$font}', Vazirmatn, Tahoma, sans-serif";
+        $overlay = (string) ($s['hero_overlay_color'] ?? '#0a0f19');
+        $op = max(0, min(90, (int) ($s['hero_overlay_opacity'] ?? 55))) / 100;
+        $hex = ltrim($overlay, '#');
+        $r = hexdec(substr($hex, 0, 2));
+        $g = hexdec(substr($hex, 2, 2));
+        $b = hexdec(substr($hex, 4, 2));
+
+        $vars = [
+            '--hl-hero-h' => ((int) ($s['hero_height'] ?? 420)).'px',
+            '--hl-hero-radius' => ((int) ($s['hero_radius'] ?? 22)).'px',
+            '--hl-hero-pad-y' => ((int) ($s['hero_pad_y'] ?? 24)).'px',
+            '--hl-hero-pad-x' => ((int) ($s['hero_pad_x'] ?? 8)).'px',
+            '--hl-hero-font' => $fontStack,
+            '--hl-hero-kicker-size' => ((int) ($s['hero_kicker_size'] ?? 14)).'px',
+            '--hl-hero-title-size' => ((int) ($s['hero_title_size'] ?? 34)).'px',
+            '--hl-hero-text-size' => ((int) ($s['hero_text_size'] ?? 15)).'px',
+            '--hl-hero-cta-size' => ((int) ($s['hero_cta_size'] ?? 14)).'px',
+            '--hl-hero-bg' => (string) ($s['hero_bg'] ?? '#ffffff'),
+            '--hl-hero-kicker' => (string) ($s['hero_kicker_color'] ?? '#e23d12'),
+            '--hl-hero-title' => (string) ($s['hero_title_color'] ?? '#0b1220'),
+            '--hl-hero-em' => (string) ($s['hero_em_color'] ?? '#e23d12'),
+            '--hl-hero-text' => (string) ($s['hero_text_color'] ?? '#475569'),
+            '--hl-hero-cta1-bg' => (string) ($s['hero_cta1_bg'] ?? '#e23d12'),
+            '--hl-hero-cta1-color' => (string) ($s['hero_cta1_color'] ?? '#ffffff'),
+            '--hl-hero-cta2-bg' => (string) ($s['hero_cta2_bg'] ?? '#ffffff'),
+            '--hl-hero-cta2-color' => (string) ($s['hero_cta2_color'] ?? '#e23d12'),
+            '--hl-hero-cta2-border' => (string) ($s['hero_cta2_border'] ?? '#e23d12'),
+            '--hl-hero-scrim' => "rgba({$r},{$g},{$b},{$op})",
+            '--hl-hero-media-w' => ((int) ($s['hero_media_w'] ?? 48)).'%',
+            '--hl-hero-media-h' => ((int) ($s['hero_media_h'] ?? 100)).'%',
+            '--hl-hero-media-x' => ((int) ($s['hero_media_x'] ?? 52)).'%',
+            '--hl-hero-media-y' => ((int) ($s['hero_media_y'] ?? 0)).'%',
+            '--hl-hero-copy-x' => ((int) ($s['hero_copy_x'] ?? 4)).'%',
+            '--hl-hero-copy-y' => ((int) ($s['hero_copy_y'] ?? 18)).'%',
+            '--hl-hero-copy-w' => ((int) ($s['hero_copy_w'] ?? 46)).'%',
+            '--hl-hero-img-fit' => (string) ($s['hero_image_fit'] ?? 'cover'),
+            '--hl-hero-img-pos' => (string) ($s['hero_image_pos'] ?? 'center'),
+            '--hl-hero-merge-op' => (max(0, min(100, (int) ($s['hero_merge_opacity'] ?? 70))) / 100),
+            '--hl-hero-merge-blend' => (string) ($s['hero_merge_blend'] ?? 'overlay'),
+            '--hl-hero-merge-x' => ((int) ($s['hero_merge_x'] ?? 58)).'%',
+            '--hl-hero-merge-y' => ((int) ($s['hero_merge_y'] ?? 12)).'%',
+            '--hl-hero-merge-w' => ((int) ($s['hero_merge_w'] ?? 36)).'%',
+            '--hl-hero-merge-h' => ((int) ($s['hero_merge_h'] ?? 70)).'%',
+        ];
+
+        $out = [];
+        foreach ($vars as $k => $v) {
+            $out[] = $k.':'.$v;
+        }
+
+        return implode(';', $out);
     }
 }

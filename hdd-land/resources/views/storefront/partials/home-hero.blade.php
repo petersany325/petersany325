@@ -2,20 +2,31 @@
   $home = \App\Support\HomePageConfig::get();
   $trust = \App\Support\HomePageConfig::trustItems($home);
   $heroImage = \App\Support\HomePageConfig::imageUrl((string) ($home['hero_image'] ?? 'images/home/hero.jpg'));
+  $mergeImage = \App\Support\HomePageConfig::imageUrl((string) ($home['hero_merge_image'] ?? ''));
+  $layout = (string) ($home['hero_layout'] ?? 'split-rtl');
 @endphp
 @if(!empty($home['hero_enabled']))
-<section class="hl-hero" aria-label="بنر فروشگاه و تأمین سازمانی">
-  <div class="hl-hero__copy">
-    <div class="hl-kicker"><i></i> {{ $home['hero_kicker'] }}</div>
-    <h1>{!! \App\Support\HomePageConfig::heroTitleHtml($home) !!}</h1>
-    <p class="hl-hero__lead">{{ $home['hero_text'] }}</p>
-    <div class="hl-hero__actions">
-      <a class="btn-hl btn-hl-primary" href="{{ url($home['hero_cta1_url'] ?: '/products') }}">{{ $home['hero_cta1_label'] }}</a>
-      <a class="btn-hl btn-hl-ghost" href="{{ url($home['hero_cta2_url'] ?: '/contact') }}">{{ $home['hero_cta2_label'] }}</a>
+<section
+  class="hl-hero hl-hero--{{ $layout }}"
+  aria-label="بنر فروشگاه و تأمین سازمانی"
+  style="{{ \App\Support\HomePageConfig::heroStyleAttr($home) }}"
+>
+  <div class="hl-hero__stage">
+    <div class="hl-hero__copy" data-hl-layer="copy">
+      <div class="hl-kicker"><i></i> {{ $home['hero_kicker'] }}</div>
+      <h1>{!! \App\Support\HomePageConfig::heroTitleHtml($home) !!}</h1>
+      <p class="hl-hero__lead">{{ $home['hero_text'] }}</p>
+      <div class="hl-hero__actions">
+        <a class="btn-hl btn-hl-primary" href="{{ url($home['hero_cta1_url'] ?: '/products') }}">{{ $home['hero_cta1_label'] }}</a>
+        <a class="btn-hl btn-hl-ghost" href="{{ url($home['hero_cta2_url'] ?: '/contact') }}">{{ $home['hero_cta2_label'] }}</a>
+      </div>
     </div>
-  </div>
-  <div class="hl-hero__media">
-    <img src="{{ $heroImage }}" width="1350" height="900" alt="{{ $home['hero_title'] }}" fetchpriority="high" decoding="async">
+    <div class="hl-hero__media" data-hl-layer="media">
+      <img src="{{ $heroImage }}" width="1350" height="900" alt="{{ $home['hero_title'] }}" fetchpriority="high" decoding="async">
+      @if(!empty($home['hero_merge_enabled']) && $mergeImage !== '')
+        <img class="hl-hero__merge" src="{{ $mergeImage }}" alt="" loading="lazy" decoding="async">
+      @endif
+    </div>
   </div>
 </section>
 @endif
