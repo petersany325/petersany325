@@ -118,6 +118,15 @@ function styleMap(st){
   });
   return out;
 }
+function normalizeHexColor(value){
+  const raw=String(value||'').trim();
+  if(!raw)return'';
+  if(/^#[0-9a-f]{6}$/i.test(raw))return raw.toLowerCase();
+  if(/^#[0-9a-f]{3}$/i.test(raw))return'#'+[raw[1],raw[1],raw[2],raw[2],raw[3],raw[3]].join('').toLowerCase();
+  const rgb=raw.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if(rgb)return'#'+[rgb[1],rgb[2],rgb[3]].map(n=>Number(n).toString(16).padStart(2,'0')).join('');
+  return raw;
+}
 function ensureStyle(item){
   if(!item||typeof item!=='object')return{};
   item.style=styleMap(item.style);
@@ -320,22 +329,31 @@ function enhanceTypographyControls(style){
   const oldColor=inspector.querySelector('details:nth-of-type(3) [data-style="color"]');if(oldColor?.parentElement)oldColor.parentElement.hidden=true;
   const sizes=['','12px','14px','16px','18px','20px','24px','28px','32px','36px','42px','48px','56px','64px','72px'];
   const rows=[['fontSize','Desktop','fa-desktop'],['fontSizeTablet','Tablet','fa-tablet-screen-button'],['fontSizeMobile','Mobile','fa-mobile-screen-button']].map(([key,label,icon])=>{const value=String(style[key]||'');return`<div class="typography-size-row"><span><i class="fa-solid ${icon}"></i>${label}</span><select data-font-preset="${key}">${sizes.map(v=>`<option value="${v}" ${v===value?'selected':''}>${v||'Theme default'}</option>`).join('')}<option value="custom" ${value&&!sizes.includes(value)?'selected':''}>Custom</option></select><input data-style="${key}" value="${esc(value)}" placeholder="e.g. 18px"></div>`}).join('');
-  const color=String(style.color||'#08142d');const palette=['#08142d','#ffffff','#d40012','#006cff','#1a8b55','#6b7280','#f59e0b','#7c3aed'];
-  const panel=document.createElement('div');panel.className='typography-pro';panel.innerHTML=`<div class="typography-pro-title"><strong>Selected element typography</strong><small>Responsive font sizes and text color</small></div><div class="typography-device-sizes">${rows}</div><label class="typography-color-label">Selected element text color</label><div class="typography-color-control"><input type="color" data-style="color" value="${/^#[0-9a-f]{6}$/i.test(color)?color:'#08142d'}"><input data-style="color" value="${esc(color)}" placeholder="#08142d"></div><div class="typography-palette">${palette.map(v=>`<button type="button" data-text-color="${v}" style="--swatch:${v}" title="${v}" class="${v.toLowerCase()===color.toLowerCase()?'active':''}"></button>`).join('')}</div>`;
+  const savedColor=normalizeHexColor(style.color||'');
+  const pickerColor=/^#[0-9a-f]{6}$/i.test(savedColor)?savedColor:'#08142d';
+  const palette=['#08142d','#ffffff','#d40012','#006cff','#1a8b55','#6b7280','#f59e0b','#7c3aed'];
+  const panel=document.createElement('div');panel.className='typography-pro';panel.innerHTML=`<div class="typography-pro-title"><strong>Selected element typography</strong><small>Responsive font sizes and text color</small></div><div class="typography-device-sizes">${rows}</div><label class="typography-color-label">Selected element text color</label><div class="typography-color-control"><input type="color" data-style="color" value="${pickerColor}"><input data-style="color" value="${esc(savedColor)}" placeholder="Theme default"></div><div class="typography-palette">${palette.map(v=>`<button type="button" data-text-color="${v}" style="--swatch:${v}" title="${v}" class="${savedColor&&v.toLowerCase()===savedColor.toLowerCase()?'active':''}"></button>`).join('')}</div>`;
   const family=details.querySelector('[data-style="fontFamily"]')?.closest('label');(family||details.querySelector('summary')).insertAdjacentElement('afterend',panel);
   panel.querySelectorAll('[data-font-preset]').forEach(select=>select.addEventListener('change',()=>{const input=panel.querySelector(`[data-style="${select.dataset.fontPreset}"]`);if(select.value!=='custom'){input.value=select.value;input.dispatchEvent(new Event('input',{bubbles:true}))}else input.focus()}));
   const colorInputs=[...panel.querySelectorAll('[data-style="color"]')];
   function applyColor(value){
-    const hex=String(value||'').trim();
+    const hex=normalizeHexColor(value);
     if(!hex)return;
     colorInputs.forEach(other=>{if(other.type!=='color'||/^#[0-9a-f]{6}$/i.test(hex))other.value=hex});
     panel.querySelectorAll('[data-text-color]').forEach(button=>button.classList.toggle('active',button.dataset.textColor.toLowerCase()===hex.toLowerCase()));
     const f=find(selected);if(!f)return;
     ensureStyle(f.item).color=hex;
+    const wrap=canvas.querySelector(`.vb-widget[data-id="${selected}"]`);
+    const paint=wrap&&(wrap.querySelector('.demo-text, .demo-html, [data-inline], p, h1, h2, h3, h4, h5, h6')||wrap);
+    if(paint){paint.style.color=hex;paint.style.setProperty('--pb-text-color',hex)}
+    if(wrap)wrap.style.setProperty('--pb-text-color',hex);
     dirty();
     render(true);
   }
-  colorInputs.forEach(input=>input.addEventListener('input',()=>applyColor(input.value)));
+  colorInputs.forEach(input=>{
+    input.addEventListener('input',()=>applyColor(input.value));
+    input.addEventListener('change',()=>applyColor(input.value));
+  });
   panel.querySelectorAll('[data-text-color]').forEach(button=>button.addEventListener('click',()=>{
     colorInputs.forEach(input=>input.value=button.dataset.textColor);
     applyColor(button.dataset.textColor);
@@ -440,7 +458,17 @@ canvas.addEventListener('dblclick',e=>{
 function duplicate(id){const f=find(id);if(!f)return;snapshot();if(f.kind==='section'){const cp=clone(f.item);cp.id=uid('section');(cp.columns||[]).forEach(c=>{c.id=uid('column');(c.widgets||[]).forEach(w=>w.id=uid('widget'))});doc.sections.splice(doc.sections.indexOf(f.item)+1,0,cp)}else{const cp=clone(f.item);cp.id=uid('widget');f.column.widgets.splice(f.column.widgets.indexOf(f.item)+1,0,cp)}render()}
 inspector.addEventListener('focusin',e=>{if(e.target.matches('input,textarea,select')){history.push(clone(doc));if(history.length>60)history.shift();future=[]}});
 inspector.addEventListener('paste',e=>{const el=e.target;if(!el.matches('textarea[data-data="text"],textarea[data-data="html"],textarea[data-data="items"]'))return;if(el.matches('textarea[data-data="html"]')){const html=clipboardToFormattedHtml(e);if(html==null)return;e.preventDefault();insertAtCursor(el,html);return;}const text=clipboardToMultiline(e);if(text==null)return;e.preventDefault();insertAtCursor(el,text);});
-inspector.addEventListener('input',e=>{const f=find(selected);if(!f)return;const el=e.target;if(el.dataset.data){f.item.data[el.dataset.data]=el.type==='number'?Number(el.value):el.value;if(el.dataset.data==='html'&&isRichWidget(f.item)){f.item.data.text=htmlToPlain(el.value);f.item.data.richText=true;if(f.item.type==='text')f.item.type='html';}}else if(el.dataset.style)ensureStyle(f.item)[el.dataset.style]=el.value;else if(el.dataset.bool)f.item.data[el.dataset.bool]=el.checked;else if(el.hasAttribute('data-section-columns')){const n=Number(el.value);while(f.item.columns.length<n)f.item.columns.push({id:uid('column'),widgets:[]});f.item.columns=f.item.columns.slice(0,n)}dirty();render(true)});
+function applyInspectorField(el){
+  const f=find(selected);if(!f||!el)return false;
+  if(el.dataset.data){f.item.data[el.dataset.data]=el.type==='number'?Number(el.value):el.value;if(el.dataset.data==='html'&&isRichWidget(f.item)){f.item.data.text=htmlToPlain(el.value);f.item.data.richText=true;if(f.item.type==='text')f.item.type='html';}}
+  else if(el.dataset.style){const style=ensureStyle(f.item);style[el.dataset.style]=el.dataset.style==='color'?normalizeHexColor(el.value)||el.value:el.value;}
+  else if(el.dataset.bool)f.item.data[el.dataset.bool]=el.checked;
+  else if(el.hasAttribute('data-section-columns')){const n=Number(el.value);while(f.item.columns.length<n)f.item.columns.push({id:uid('column'),widgets:[]});f.item.columns=f.item.columns.slice(0,n)}
+  else return false;
+  dirty();render(true);return true;
+}
+inspector.addEventListener('input',e=>applyInspectorField(e.target));
+inspector.addEventListener('change',e=>{if(e.target&&(e.target.type==='color'||e.target.dataset.style==='color'))applyInspectorField(e.target)});
 inspector.addEventListener('click',e=>{const styleButton=e.target.closest('[data-style-button]');if(styleButton){const f=find(selected);snapshot();ensureStyle(f.item)[styleButton.dataset.styleButton]=styleButton.dataset.value;dirty();render();return}const cmd=e.target.closest('[data-inspector]')?.dataset.inspector;if(!cmd)return;if(cmd==='delete'){snapshot();remove(selected);selected=null;render()}else duplicate(selected)});
 document.querySelectorAll('[data-widget]').forEach(b=>{b.addEventListener('click',()=>add(b.dataset.widget));b.addEventListener('dragstart',e=>e.dataTransfer.setData('widget',b.dataset.widget))});
 function add(type){snapshot();if(type==='section')doc.sections.push(section());else{if(!doc.sections.length)doc.sections.push(section());doc.sections.at(-1).columns[0].widgets.push(widget(type))}selected=doc.sections.at(-1).columns[0].widgets.at(-1)?.id||selected;render()}
@@ -525,7 +553,7 @@ if(doc.meta.seoRobots&&robotsSelect)robotsSelect.value=doc.meta.seoRobots;
 normalizeDocumentStyles(doc);
 if(!document.getElementById('hdl-richtext-css')){
   const s=document.createElement('style');s.id='hdl-richtext-css';
-  s.textContent='.vb-richtext{min-height:180px;margin-top:8px;padding:10px 12px;border:1px solid #d5dfeb;border-radius:8px;background:#fff;line-height:1.65;overflow-wrap:anywhere}.vb-richtext:focus{outline:2px solid #006cff33;border-color:#006cff}.vb-richtext p,.vb-widget .demo-text p,.vb-widget .demo-html p{margin:0 0 .75em}.vb-richtext p:last-child,.vb-widget .demo-text p:last-child{margin-bottom:0}.vb-richtext ul,.vb-widget .demo-text ul{margin:0 0 .75em;padding-left:1.3em}.vb-richtext u,.pb-html u{text-decoration:underline}.vb-widget .demo-text,.vb-widget .demo-html{line-height:1.65}.vb-widget .demo-text,.vb-widget .demo-text :where(p,h1,h2,h3,h4,h5,h6,li,div,span,strong,em), .pb-html,:where(.pb-html,.pb-text) :where(p,h1,h2,h3,h4,h5,h6,li,div){color:var(--pb-text-color,inherit)}';
+  s.textContent='.vb-richtext{min-height:180px;margin-top:8px;padding:10px 12px;border:1px solid #d5dfeb;border-radius:8px;background:#fff;line-height:1.65;overflow-wrap:anywhere}.vb-richtext:focus{outline:2px solid #006cff33;border-color:#006cff}.vb-richtext p,.vb-widget .demo-text p,.vb-widget .demo-html p{margin:0 0 .75em}.vb-richtext p:last-child,.vb-widget .demo-text p:last-child{margin-bottom:0}.vb-richtext ul,.vb-widget .demo-text ul{margin:0 0 .75em;padding-left:1.3em}.vb-richtext u,.pb-html u{text-decoration:underline}.vb-widget .demo-text,.vb-widget .demo-html{line-height:1.65}.vb-widget .demo-text,.vb-widget .demo-html,.vb-widget .demo-text :where(p,h1,h2,h3,h4,h5,h6,li,div,span,strong,em),.vb-widget .demo-html :where(p,h1,h2,h3,h4,h5,h6,li,div,span,strong,em),.pb-html,.pb-text,:where(.pb-html,.pb-text) :where(p,h1,h2,h3,h4,h5,h6,li,div,span){color:var(--pb-text-color,inherit)}';
   document.head.appendChild(s);
 }
 render();updateUrl();
