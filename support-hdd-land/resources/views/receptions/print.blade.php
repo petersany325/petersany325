@@ -114,6 +114,9 @@
         <div class="field"><label>کالا / مدل</label><div>{{ $reception->product_name }} {{ $reception->brand }} {{ $reception->model }}</div></div>
         @if($invoice['show_serial'])
             <div class="field"><label>سریال</label><div dir="ltr">{{ $reception->serial_number ?: '—' }}</div></div>
+            @if($reception->lock_code)
+                <div class="field"><label>کد قفل / پترن</label><div dir="ltr">{{ $reception->lock_code }}</div></div>
+            @endif
         @endif
         <div class="field"><label>نوع خدمات</label><div>{{ $reception->service_type ?: '—' }} / {{ $reception->repair_type ?: '—' }}</div></div>
         <div class="field"><label>ظرفیت هارد</label><div>{{ $reception->capacityLabel() }}</div></div>

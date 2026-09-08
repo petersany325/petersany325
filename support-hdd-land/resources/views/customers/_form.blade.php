@@ -5,6 +5,19 @@
         @error('name')<div class="hint" style="color:#9f1239;">{{ $message }}</div>@enderror
     </div>
     <div>
+        <label>اسم مستعار</label>
+        <input type="text" name="alias" value="{{ old('alias', $customer->alias ?? '') }}" maxlength="120" placeholder="اختیاری">
+    </div>
+    <div>
+        <label>جنسیت</label>
+        <select name="gender">
+            <option value="">—</option>
+            @foreach(\App\Models\Customer::GENDERS as $val => $label)
+                <option value="{{ $val }}" @selected(old('gender', $customer->gender ?? '') === $val)>{{ $label }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div>
         <label>موبایل (یکتا)</label>
         <input type="text" name="phone" value="{{ old('phone', $customer->phone ?? '') }}" required maxlength="20" placeholder="09xxxxxxxxx" dir="ltr" style="text-align:left;" data-ascii-en>
         @error('phone')<div class="hint" style="color:#9f1239;">{{ $message }}</div>@enderror

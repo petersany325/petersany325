@@ -13,13 +13,22 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         $q = trim((string) $request->get('q'));
+        $filter = (string) $request->get('filter', '');
 
         $customers = Customer::with('referralSource')
             ->withCount('receptions')
+            ->when($filter === 'blacklist', fn ($query) => $query->where('is_blacklisted', true))
+            ->when($filter === 'debt', function ($query) {
+                $query->whereHas('receptions', function ($r) {
+                    $r->where('status', '!=', 'cancelled')
+                        ->whereRaw('COALESCE(total_amount,0) > COALESCE(paid_amount,0)');
+                });
+            })
             ->when($q !== '', function ($query) use ($q) {
                 $phone = User::normalizePhone($q) ?: $q;
                 $query->where(function ($inner) use ($q, $phone) {
                     $inner->where('name', 'like', "%{$q}%")
+                        ->orWhere('alias', 'like', "%{$q}%")
                         ->orWhere('phone', 'like', "%{$q}%")
                         ->orWhere('national_code', 'like', "%{$q}%");
                     if ($phone !== $q) {
@@ -31,7 +40,7 @@ class CustomerController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return view('customers.index', compact('customers', 'q'));
+        return view('customers.index', compact('customers', 'q', 'filter'));
     }
 
     public function create()
@@ -69,6 +78,31 @@ class CustomerController extends Controller
         $customer->load(['referralSource', 'receptions.technician']);
 
         return view('customers.show', compact('customer'));
+    }
+
+    public function toggleBlacklist(Request $request, Customer $customer)
+    {
+        $data = $request->validate([
+            'blacklist_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($customer->is_blacklisted) {
+            $customer->update([
+                'is_blacklisted' => false,
+                'blacklist_reason' => null,
+                'blacklisted_at' => null,
+            ]);
+
+            return back()->with('success', 'مشتری از لیست سیاه خارج شد.');
+        }
+
+        $customer->update([
+            'is_blacklisted' => true,
+            'blacklist_reason' => $data['blacklist_reason'] ?: 'بدحساب / مسدود توسط پذیرش',
+            'blacklisted_at' => now(),
+        ]);
+
+        return back()->with('success', 'مشتری به لیست سیاه اضافه شد. پذیرش جدید برای این موبایل مسدود است.');
     }
 
     public function destroy(Customer $customer)
@@ -110,6 +144,8 @@ class CustomerController extends Controller
                 'max:120',
                 Rule::unique('customers', 'name')->whereNull('deleted_at')->ignore($customer?->id),
             ],
+            'alias' => ['nullable', 'string', 'max:120'],
+            'gender' => ['nullable', 'in:male,female,other'],
             'phone' => [
                 'required',
                 'string',

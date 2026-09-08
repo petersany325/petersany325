@@ -98,7 +98,7 @@
                                 @if($i > 0 && (($child['sep'] ?? false) || ($group['children'][$i-1]['sep_after'] ?? false)))
                                     <div class="win-popup-sep"></div>
                                 @endif
-                                <a href="{{ route($child['route']) }}"
+                                <a href="{{ route($child['route'], $child['params'] ?? []) }}"
                                    class="win-popup-item {{ \App\Support\NavMenu::isActive($child['match']) ? 'is-active' : '' }}"
                                    role="menuitem"
                                    data-menu-label="{{ $child['label'] }} {{ $group['label'] }}">
@@ -206,7 +206,7 @@
                         @if(count($group['children']) > 0)
                             <div class="staff-drawer-group-title">{{ $group['label'] }}</div>
                             @foreach($group['children'] as $child)
-                                <a href="{{ route($child['route']) }}"
+                                <a href="{{ route($child['route'], $child['params'] ?? []) }}"
                                    class="staff-drawer-item {{ \App\Support\NavMenu::isActive($child['match']) ? 'is-on' : '' }}"
                                    data-menu-label="{{ $child['label'] }} {{ $group['label'] }}">
                                     <span class="staff-drawer-ico">{{ $child['mark'] ?? '•' }}</span>

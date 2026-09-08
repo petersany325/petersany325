@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\DeviceBlacklist;
 use App\Models\FaultType;
 use App\Models\LookupOption;
 use App\Models\Part;
@@ -114,7 +115,93 @@ class ReceptionController extends Controller
         return response()->json([
             'found' => true,
             'phone' => $phone,
+            'blocked' => (bool) $customer->is_blacklisted,
+            'block_reason' => $customer->is_blacklisted ? ($customer->blacklist_reason ?: 'مشتری در لیست سیاه است') : null,
             'customer' => $this->customerPayload($customer),
+        ]);
+    }
+
+    public function lookupSerial(Request $request)
+    {
+        $serial = $this->normalizeSerialNumber((string) $request->query('serial', ''));
+        $ignoreId = (int) $request->query('ignore_id', 0);
+
+        if ($serial === null) {
+            return response()->json([
+                'serial' => null,
+                'found' => false,
+                'blocked' => false,
+                'warning' => false,
+            ]);
+        }
+
+        $deviceBlock = DeviceBlacklist::matchActive($serial);
+        if ($deviceBlock) {
+            return response()->json([
+                'serial' => $serial,
+                'found' => true,
+                'blocked' => true,
+                'warning' => true,
+                'block_reason' => $deviceBlock->reason ?: 'این دستگاه در لیست سیاه است',
+                'matches' => [],
+                'suggest' => null,
+            ]);
+        }
+
+        $query = Reception::query()
+            ->with(['customer:id,name,phone,alias'])
+            ->where('status', '!=', 'cancelled')
+            ->whereRaw('UPPER(TRIM(serial_number)) = ?', [$serial])
+            ->orderByDesc('id');
+
+        if ($ignoreId > 0) {
+            $query->where('id', '!=', $ignoreId);
+        }
+
+        $matches = $query->limit(5)->get([
+            'id', 'ticket_no', 'receipt_no', 'status', 'brand', 'model', 'product_name',
+            'serial_number', 'lock_code', 'hdd_capacity', 'customer_id', 'received_at',
+        ]);
+
+        $open = $matches->first(fn (Reception $r) => ! in_array($r->status, ['delivered', 'cancelled'], true));
+        $latest = $matches->first();
+
+        $suggest = null;
+        if ($latest) {
+            $suggest = [
+                'brand' => $latest->brand,
+                'model' => $latest->model,
+                'brand_model' => trim(($latest->brand ?? '').' '.($latest->model ?? '')),
+                'product_name' => $latest->product_name,
+                'hdd_capacity' => $latest->hdd_capacity,
+                'lock_code' => $latest->lock_code,
+                'ticket_no' => $latest->ticket_no,
+                'status' => $latest->status,
+                'status_label' => $latest->statusLabel(),
+                'customer_name' => $latest->customer?->displayName(),
+            ];
+        }
+
+        return response()->json([
+            'serial' => $serial,
+            'found' => $matches->isNotEmpty(),
+            'blocked' => (bool) $open,
+            'warning' => $matches->isNotEmpty(),
+            'block_reason' => $open
+                ? ('سریال روی قبض باز '.$open->ticket_no.' ('.$open->statusLabel().') ثبت است')
+                : null,
+            'matches' => $matches->map(fn (Reception $r) => [
+                'id' => $r->id,
+                'ticket_no' => $r->ticket_no,
+                'status' => $r->status,
+                'status_label' => $r->statusLabel(),
+                'brand' => $r->brand,
+                'model' => $r->model,
+                'customer_name' => $r->customer?->displayName(),
+                'url' => route('receptions.show', $r),
+            ])->values(),
+            'suggest' => $suggest,
+            'can_reuse' => $matches->isNotEmpty() && ! $open,
         ]);
     }
 
@@ -124,6 +211,8 @@ class ReceptionController extends Controller
             'customer_id' => ['nullable', 'exists:customers,id'],
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['required', 'string', 'max:20'],
+            'alias' => ['nullable', 'string', 'max:120'],
+            'gender' => ['nullable', 'in:male,female,other'],
             'national_code' => ['nullable', 'string', 'max:20'],
             'job' => ['nullable', 'string', 'max:120'],
             'address' => ['nullable', 'string', 'max:500'],
@@ -145,9 +234,17 @@ class ReceptionController extends Controller
             $customer = $this->findCustomerByPhone($data['customer_phone']);
         }
 
+        if ($customer && $customer->is_blacklisted) {
+            throw ValidationException::withMessages([
+                'customer_phone' => 'این مشتری در لیست سیاه است'.($customer->blacklist_reason ? ': '.$customer->blacklist_reason : '.'),
+            ]);
+        }
+
         $payload = [
             'name' => $data['customer_name'],
             'phone' => $data['customer_phone'],
+            'alias' => $data['alias'] ?? null,
+            'gender' => $data['gender'] ?? null,
             'national_code' => $data['national_code'] ?? null,
             'job' => $data['job'] ?? null,
             'address' => $data['address'] ?? null,
@@ -185,6 +282,8 @@ class ReceptionController extends Controller
         ]));
 
         $data['customer_phone'] = $this->normalizePhone((string) ($data['customer_phone'] ?? ''));
+        $this->assertCustomerNotBlacklisted($data);
+        $this->assertDeviceNotBlacklisted($data['serial_number'] ?? null, $data['brand'] ?? null, $data['model'] ?? null);
         $this->assertSerialAvailable($data['serial_number'] ?? null);
 
         $reception = DB::transaction(function () use ($data, $request) {
@@ -232,6 +331,7 @@ class ReceptionController extends Controller
             'action' => ['nullable', 'in:save_close,save_continue,save_print'],
             'items' => ['required', 'array', 'min:2'],
             'items.*.serial_number' => ['nullable', 'string', 'max:120'],
+            'items.*.lock_code' => ['nullable', 'string', 'max:120'],
             'items.*.brand_model' => ['nullable', 'string', 'max:160'],
             'items.*.brand' => ['nullable', 'string', 'max:80'],
             'items.*.model' => ['nullable', 'string', 'max:120'],
@@ -256,6 +356,7 @@ class ReceptionController extends Controller
         ]));
 
         $data['customer_phone'] = $this->normalizePhone((string) ($data['customer_phone'] ?? ''));
+        $this->assertCustomerNotBlacklisted($data);
         $this->assertBatchSerialsUnique($data['items'] ?? []);
         $batchCode = 'BATCH-'.now()->format('ymdHis').'-'.random_int(100, 999);
 
@@ -396,6 +497,8 @@ class ReceptionController extends Controller
             }
         }
 
+        $this->assertCustomerNotBlacklisted($data);
+        $this->assertDeviceNotBlacklisted($data['serial_number'] ?? null, $data['brand'] ?? null, $data['model'] ?? null);
         $this->assertSerialAvailable($data['serial_number'] ?? null, (int) $reception->id);
 
         $brandModel = trim((string) ($data['brand_model'] ?? trim(($data['brand'] ?? '').' '.($data['model'] ?? ''))));
@@ -426,6 +529,7 @@ class ReceptionController extends Controller
             'brand' => $data['brand'] ?? null,
             'model' => $data['model'] ?? null,
             'serial_number' => $data['serial_number'] ?? null,
+            'lock_code' => $data['lock_code'] ?? null,
             'delivered_by' => $data['delivered_by'] ?? $customer->name,
             'referrer' => $data['referrer'] ?? null,
             'commission' => (int) ($data['commission'] ?? 0),
@@ -1339,6 +1443,8 @@ class ReceptionController extends Controller
             'customer_id' => ['nullable', 'exists:customers,id'],
             'customer_name' => ['required_without:customer_id', 'nullable', 'string', 'max:120'],
             'customer_phone' => ['required', 'string', 'max:20'],
+            'alias' => ['nullable', 'string', 'max:120'],
+            'gender' => ['nullable', 'in:male,female,other'],
             'national_code' => ['nullable', 'string', 'max:20'],
             'job' => ['nullable', 'string', 'max:120'],
             'address' => ['nullable', 'string', 'max:500'],
@@ -1360,6 +1466,7 @@ class ReceptionController extends Controller
             'model' => ['nullable', 'string', 'max:120'],
             'brand_model' => ['nullable', 'string', 'max:160'],
             'serial_number' => ['nullable', 'string', 'max:120'],
+            'lock_code' => ['nullable', 'string', 'max:120'],
             'delivered_by' => ['nullable', 'string', 'max:120'],
             'referrer' => ['nullable', 'string', 'max:120'],
             'commission' => ['nullable', 'integer', 'min:0'],
@@ -1391,6 +1498,8 @@ class ReceptionController extends Controller
         $payload = [
             'name' => $data['customer_name'] ?? null,
             'phone' => $phone,
+            'alias' => $data['alias'] ?? null,
+            'gender' => $data['gender'] ?? null,
             'national_code' => $data['national_code'] ?? null,
             'job' => $data['job'] ?? null,
             'address' => $data['address'] ?? null,
@@ -1399,6 +1508,7 @@ class ReceptionController extends Controller
 
         if ($customerId) {
             $customer = Customer::findOrFail($customerId);
+            $this->assertCustomerModelNotBlacklisted($customer);
             $updates = array_filter($payload, fn ($v) => $v !== null && $v !== '');
             if ($updates) {
                 $customer->update($updates);
@@ -1409,6 +1519,7 @@ class ReceptionController extends Controller
 
         $existing = $this->findCustomerByPhone($phone);
         if ($existing) {
+            $this->assertCustomerModelNotBlacklisted($existing);
             $updates = array_filter($payload, fn ($v) => $v !== null && $v !== '');
             if ($updates) {
                 $existing->update($updates);
@@ -1420,6 +1531,8 @@ class ReceptionController extends Controller
         return Customer::create([
             'name' => $data['customer_name'],
             'phone' => $phone,
+            'alias' => $data['alias'] ?? null,
+            'gender' => $data['gender'] ?? null,
             'national_code' => $data['national_code'] ?? null,
             'job' => $data['job'] ?? null,
             'address' => $data['address'] ?? null,
@@ -1453,11 +1566,16 @@ class ReceptionController extends Controller
         return [
             'id' => $customer->id,
             'name' => $customer->name,
+            'alias' => $customer->alias,
+            'gender' => $customer->gender,
+            'display_name' => $customer->displayName(),
             'phone' => $customer->phone,
             'national_code' => $customer->national_code,
             'job' => $customer->job,
             'address' => $customer->address,
             'referral_source_id' => $customer->referral_source_id,
+            'is_blacklisted' => (bool) $customer->is_blacklisted,
+            'blacklist_reason' => $customer->blacklist_reason,
             'visits' => $customer->receptions()->count(),
         ];
     }
@@ -1509,6 +1627,7 @@ class ReceptionController extends Controller
             'brand' => $data['brand'] ?? null,
             'model' => (($m = $this->toAsciiEnglish((string) ($data['model'] ?? ($brandModel ?: '')))) !== null ? strtoupper($m) : null),
             'serial_number' => (($s = $this->toAsciiEnglish((string) ($data['serial_number'] ?? ''))) !== null ? strtoupper($s) : null),
+            'lock_code' => $data['lock_code'] ?? null,
             'delivered_by' => $data['delivered_by'] ?? $customer->name,
             'referrer' => $data['referrer'] ?? null,
             'commission' => (int) ($data['commission'] ?? 0),
@@ -1611,7 +1730,8 @@ class ReceptionController extends Controller
     }
 
     /**
-     * One active ticket per device serial. Soft-deleted/cancelled tickets do not block reuse.
+     * Block only when an open (non-delivered) ticket already uses this serial.
+     * Delivered history is allowed with a soft UI warning + previous-spec suggest.
      */
     private function assertSerialAvailable(?string $serial, ?int $ignoreReceptionId = null, string $field = 'serial_number'): void
     {
@@ -1620,8 +1740,10 @@ class ReceptionController extends Controller
             return;
         }
 
+        $this->assertDeviceNotBlacklisted($serial, null, null, $field);
+
         $query = Reception::query()
-            ->where('status', '!=', 'cancelled')
+            ->whereNotIn('status', ['cancelled', 'delivered'])
             ->whereRaw('UPPER(TRIM(serial_number)) = ?', [$serial]);
 
         if ($ignoreReceptionId) {
@@ -1634,7 +1756,49 @@ class ReceptionController extends Controller
         }
 
         throw ValidationException::withMessages([
-            $field => 'این سریال قبلاً ثبت شده است (قبض '.$existing->ticket_no.'). هر سریال فقط یک قبض می‌تواند داشته باشد.',
+            $field => 'این سریال روی قبض باز '.$existing->ticket_no.' ('.$existing->statusLabel().') ثبت است. تا تحویل/لغو آن قبض، پذیرش جدید ممکن نیست.',
+        ]);
+    }
+
+    private function assertCustomerNotBlacklisted(array $data): void
+    {
+        $customer = null;
+        if (! empty($data['customer_id'])) {
+            $customer = Customer::find($data['customer_id']);
+        }
+        if (! $customer && ! empty($data['customer_phone'])) {
+            $customer = $this->findCustomerByPhone((string) $data['customer_phone']);
+        }
+        if ($customer) {
+            $this->assertCustomerModelNotBlacklisted($customer);
+        }
+    }
+
+    private function assertCustomerModelNotBlacklisted(Customer $customer): void
+    {
+        if (! $customer->is_blacklisted) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'customer_phone' => 'این مشتری در لیست سیاه است'.($customer->blacklist_reason ? ': '.$customer->blacklist_reason : '.'),
+        ]);
+    }
+
+    private function assertDeviceNotBlacklisted(?string $serial, ?string $brand = null, ?string $model = null, string $field = 'serial_number'): void
+    {
+        $hit = DeviceBlacklist::matchActive(
+            $this->normalizeSerialNumber($serial),
+            $brand,
+            $model !== null ? $this->normalizeSerialNumber($model) : null
+        );
+
+        if (! $hit) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            $field => 'این دستگاه در لیست سیاه است'.($hit->reason ? ': '.$hit->reason : '.'),
         ]);
     }
 
@@ -1644,10 +1808,13 @@ class ReceptionController extends Controller
         $seen = [];
         foreach ($items as $index => $item) {
             $serial = $this->normalizeSerialNumber(isset($item['serial_number']) ? (string) $item['serial_number'] : null);
+            $brand = isset($item['brand']) ? (string) $item['brand'] : null;
+            $model = isset($item['model']) ? (string) $item['model'] : null;
+            $field = 'items.'.$index.'.serial_number';
+            $this->assertDeviceNotBlacklisted($serial, $brand, $model, $field);
             if ($serial === null) {
                 continue;
             }
-            $field = 'items.'.$index.'.serial_number';
             if (isset($seen[$serial])) {
                 throw ValidationException::withMessages([
                     $field => 'سریال تکراری در همین پذیرش گروهی است. هر سریال فقط یک قبض می‌تواند داشته باشد.',

@@ -35,6 +35,7 @@
       class="accept-form"
       id="reception-wizard"
       data-lookup-url="{{ route('receptions.lookup-phone') }}"
+      data-lookup-serial-url="{{ route('receptions.lookup-serial') }}"
       data-ensure-customer-url="{{ route('receptions.ensure-customer') }}"
       data-skip-phone="{{ $skipPhone ? '1' : '0' }}"
       data-old-mode="{{ $oldMode }}">
@@ -106,6 +107,19 @@
                     <input type="text" name="customer_name" value="{{ old('customer_name') }}" placeholder="نام کامل">
                 </div>
                 <div>
+                    <label>اسم مستعار</label>
+                    <input type="text" name="alias" value="{{ old('alias') }}" placeholder="اختیاری">
+                </div>
+                <div>
+                    <label>جنسیت</label>
+                    <select name="gender">
+                        <option value="">—</option>
+                        @foreach(\App\Models\Customer::GENDERS as $val => $label)
+                            <option value="{{ $val }}" @selected(old('gender') === $val)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
                     <label>کد ملی</label>
                     <input type="text" name="national_code" value="{{ old('national_code') }}">
                 </div>
@@ -148,8 +162,10 @@
             </div>
             <div class="ws-panes">
                 <div class="ws-pane active" data-ws-pane="device">
+                    <div id="serial-lookup-banner" class="alert alert-error hidden" style="margin-bottom:8px;"></div>
                     <div class="accept-row accept-row-5">
-                        <div><label>سریال دستگاه</label><input type="text" name="serial_number" value="{{ old('serial_number') }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></div>
+                        <div><label>سریال دستگاه</label><input type="text" name="serial_number" value="{{ old('serial_number') }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;" id="serial-lookup-input"></div>
+                        <div><label>کد قفل / پترن</label><input type="text" name="lock_code" value="{{ old('lock_code') }}" placeholder="پین یا پترن" autocomplete="off"></div>
                         <div>
                             <label>نوع خدمات</label>
                             <select name="service_type">
@@ -195,6 +211,9 @@
                             </select>
                         </div>
                         <div class="photo-box"><label>عکس دستگاه</label><input type="file" name="photo" accept="image/*"></div>
+                    </div>
+                    <div id="serial-suggest-actions" class="actions hidden" style="margin-top:6px;">
+                        <button type="button" class="btn btn-secondary" id="serial-fill-prev-btn">پر کردن مشخصات قبلی</button>
                     </div>
                 </div>
                 <div class="ws-pane" data-ws-pane="fault">
@@ -363,6 +382,7 @@
         <div class="device-card-body">
             <div class="dense-grid">
                 <label>سریال<input type="text" data-name="serial_number" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
+                <label>کد قفل / پترن<input type="text" data-name="lock_code" autocomplete="off"></label>
                 <label>خدمات
                     <select data-name="service_type">
                         <option value="">—</option>

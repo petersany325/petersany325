@@ -23,6 +23,9 @@
                     <a class="btn btn-primary" href="{{ route('receptions.edit', $reception) }}">ویرایش قبض</a>
                     <a class="btn btn-secondary" href="{{ route('receptions.history', $reception) }}" target="_blank" rel="noopener">تاریخچه / گزارش</a>
                     <a class="btn btn-secondary" href="{{ route('receptions.print', $reception) }}" target="_blank">چاپ قبض</a>
+                    <button type="button" class="btn btn-ghost" id="copy-ticket-btn" data-copy="{{ $reception->ticket_no }}">کپی شماره قبض</button>
+                    <button type="button" class="btn btn-ghost" id="copy-serial-btn" data-copy="{{ $reception->serial_number }}">کپی سریال</button>
+                    <a class="btn btn-ghost" href="{{ route('reports.sms', ['reception_id' => $reception->id]) }}">پیامک‌ها</a>
                     <form method="POST" action="{{ route('receptions.destroy', $reception) }}" style="display:inline;" data-confirm="این قبض به سطل زباله برود؟ بعداً قابل بازیابی است.">
                         @csrf
                         @method('DELETE')
@@ -40,11 +43,12 @@
                 </div>
             </div>
             <div class="detail-kv">
-                <div><span class="muted">مشتری</span><div>{{ $reception->customer->name }}</div></div>
+                <div><span class="muted">مشتری</span><div>{{ $reception->customer->displayName() }}</div></div>
                 <div><span class="muted">تلفن</span><div dir="ltr">{{ $reception->customer->phone }}</div></div>
                 <div><span class="muted">شماره قبض</span><div>{{ $reception->receipt_no ?: '—' }}</div></div>
                 <div><span class="muted">نوع پذیرش</span><div>{{ $reception->admission_type ?: '—' }}</div></div>
                 <div><span class="muted">سریال</span><div dir="ltr">{{ $reception->serial_number ?: '—' }}</div></div>
+                <div><span class="muted">کد قفل / پترن</span><div dir="ltr">{{ $reception->lock_code ?: '—' }}</div></div>
                 <div><span class="muted">مدل</span><div>{{ $reception->brand }} {{ $reception->model }}</div></div>
                 <div><span class="muted">خدمات / تعمیر</span><div>{{ $reception->service_type ?: '—' }} / {{ $reception->repair_type ?: '—' }}</div></div>
                 <div><span class="muted">ظرفیت</span><div>{{ $reception->capacityLabel() }}</div></div>
@@ -1248,6 +1252,32 @@
     });
 
     applyStatus(panel.getAttribute('data-current') || selected.value);
+})();
+</script>
+<script>
+(function () {
+    function copyText(btn) {
+        var text = (btn.getAttribute('data-copy') || '').trim();
+        if (!text) return;
+        var done = function () {
+            var old = btn.textContent;
+            btn.textContent = 'کپی شد';
+            setTimeout(function () { btn.textContent = old; }, 1200);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(function () {});
+            return;
+        }
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) {}
+        document.body.removeChild(ta);
+    }
+    document.querySelectorAll('#copy-ticket-btn, #copy-serial-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () { copyText(btn); });
+    });
 })();
 </script>
 @endpush

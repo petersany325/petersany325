@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'ویرایش '.$\2.' | '.shop_name())
+@section('title', 'ویرایش '.$reception->ticket_no.' | '.shop_name())
 @section('page_title', 'ویرایش قبض '.$reception->ticket_no)
 @section('window_title', 'ویرایش قبض — اصلاح مشخصات')
 
@@ -23,6 +23,19 @@
             <div>
                 <label>نام</label>
                 <input type="text" name="customer_name" value="{{ old('customer_name', $c->name) }}" required>
+            </div>
+            <div>
+                <label>اسم مستعار</label>
+                <input type="text" name="alias" value="{{ old('alias', $c->alias) }}">
+            </div>
+            <div>
+                <label>جنسیت</label>
+                <select name="gender">
+                    <option value="">—</option>
+                    @foreach(\App\Models\Customer::GENDERS as $val => $label)
+                        <option value="{{ $val }}" @selected(old('gender', $c->gender) === $val)>{{ $label }}</option>
+                    @endforeach
+                </select>
             </div>
             <div>
                 <label>موبایل</label>
@@ -70,6 +83,10 @@
             <div>
                 <label>سریال</label>
                 <input type="text" name="serial_number" value="{{ old('serial_number', $r->serial_number) }}" dir="ltr" style="text-align:left;" data-barcode>
+            </div>
+            <div>
+                <label>کد قفل / پترن</label>
+                <input type="text" name="lock_code" value="{{ old('lock_code', $r->lock_code) }}" autocomplete="off">
             </div>
             <div>
                 <label>ظرفیت هارد</label>
