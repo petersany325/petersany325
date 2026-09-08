@@ -1,5 +1,5 @@
 @extends('layouts.app')
-@section('title', 'کارتکس '.$\2.' | '.shop_name())
+@section('title', 'کارتکس '.$part->name.' | '.shop_name())
 @section('page_title', 'کارتکس کالا')
 @section('window_title', 'کارت حساب انبار — '.$part->name)
 
@@ -7,7 +7,7 @@
 @include('parts._nav', [
     'whTitle' => 'کارتکس: '.$part->name,
     'whSub' => 'موجودی، بهای تمام‌شده و گردش این کالا',
-    'whActions' => '<a class="btn btn-ghost" href="'.route('parts.edit', $part).'">ویرایش کارت</a>',
+    'whActions' => '<a class="btn btn-secondary" href="'.route('labels.part', $part).'" target="_blank" rel="noopener">چاپ برچسب</a> <a class="btn btn-secondary" href="'.route('labels.part', ['part' => $part, 'stock' => 1, 'qty' => max(1, (int) $part->stock)]).'" target="_blank" rel="noopener">چاپ به تعداد موجودی</a> <a class="btn btn-ghost" href="'.route('parts.edit', $part).'">ویرایش کارت</a>',
 ])
 
 <div class="wh-desk">

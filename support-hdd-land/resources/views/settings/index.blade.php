@@ -9,6 +9,7 @@
         <button type="button" class="{{ $activeTab === 'faults' ? 'active' : '' }}" data-ws-tab="faults">انواع ایراد</button>
         <button type="button" class="{{ $activeTab === 'referrals' ? 'active' : '' }}" data-ws-tab="referrals">نحوه آشنایی</button>
         <button type="button" class="{{ $activeTab === 'invoice' ? 'active' : '' }}" data-ws-tab="invoice">فاکتور / چاپ</button>
+        <button type="button" class="{{ $activeTab === 'labels' ? 'active' : '' }}" data-ws-tab="labels">برچسب / بارکد</button>
         <button type="button" class="{{ $activeTab === 'payments' ? 'active' : '' }}" data-ws-tab="payments">پرداخت / زرین‌پال</button>
         <button type="button" class="{{ $activeTab === 'sms' ? 'active' : '' }}" data-ws-tab="sms">پیامک نیازپرداز</button>
         <button type="button" class="{{ $activeTab === 'backup' ? 'active' : '' }}" data-ws-tab="backup">بکاپ دیتابیس</button>
@@ -279,6 +280,107 @@
 
                 <div class="actions">
                     <button class="btn btn-primary" type="submit">ذخیره تنظیمات فاکتور</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="ws-pane {{ $activeTab === 'labels' ? 'active' : '' }}" data-ws-pane="labels">
+            <h2>برچسب و بارکد</h2>
+            <p class="lead">سایز رول، نوع بارکد، جای‌گذاری، حالت‌های چاپ و پرینتر مخصوص — برای قطعات انبار و دستگاه مشتری بعد از پذیرش.</p>
+
+            <form method="POST" action="{{ route('settings.labels') }}" class="panel">
+                @csrf
+                <input type="hidden" name="settings_tab" value="labels">
+
+                <h3 style="margin-top:0;">حالت چاپ پیش‌فرض (۳۵ حالت استاندارد)</h3>
+                <div class="accept-row accept-row-2">
+                    <div style="grid-column:1/-1">
+                        <label>حالت چاپ</label>
+                        <select name="label_print_mode">
+                            @foreach($labelModes as $key => $mode)
+                                <option value="{{ $key }}" @selected(old('label_print_mode', $labels['mode']) === $key)>{{ $mode['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <h3 style="margin-top:12px;">سایز رول / برگه</h3>
+                <div class="accept-row accept-row-4">
+                    <div>
+                        <label>سایز برچسب</label>
+                        <select name="label_size">
+                            @foreach($labelSizes as $key => $size)
+                                <option value="{{ $key }}" @selected(old('label_size', $labels['size_key']) === $key)>{{ $size['label'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>عرض سفارشی (mm)</label>
+                        <input type="number" name="label_custom_w" min="20" max="300" value="{{ old('label_custom_w', $labels['custom_w']) }}">
+                    </div>
+                    <div>
+                        <label>ارتفاع سفارشی (mm)</label>
+                        <input type="number" name="label_custom_h" min="15" max="300" value="{{ old('label_custom_h', $labels['custom_h']) }}">
+                    </div>
+                    <div>
+                        <label>فاصله بین برچسب (mm)</label>
+                        <input type="number" name="label_gap_mm" min="0" max="20" value="{{ old('label_gap_mm', $labels['gap_mm']) }}">
+                    </div>
+                    <div>
+                        <label>حاشیه داخلی (mm)</label>
+                        <input type="number" name="label_margin_mm" min="0" max="15" value="{{ old('label_margin_mm', $labels['margin_mm']) }}">
+                    </div>
+                    <div>
+                        <label>اندازه فونت</label>
+                        <input type="number" name="label_font_size" min="7" max="16" value="{{ old('label_font_size', $labels['font_size']) }}">
+                    </div>
+                    <div>
+                        <label>تعداد پیش‌فرض چاپ</label>
+                        <input type="number" name="label_copies_default" min="1" max="50" value="{{ old('label_copies_default', $labels['copies_default']) }}">
+                    </div>
+                </div>
+
+                <h3 style="margin-top:12px;">نوع بارکد و چیدمان</h3>
+                <div class="accept-row accept-row-4">
+                    <div>
+                        <label>نوع بارکد (سازگاری بارکدخوان)</label>
+                        <select name="label_symbology">
+                            @foreach($labelSymbologies as $key => $lab)
+                                <option value="{{ $key }}" @selected(old('label_symbology', $labels['symbology']) === $key)>{{ $lab }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>قالب محتوا</label>
+                        <select name="label_layout">
+                            @foreach($labelLayouts as $key => $lab)
+                                <option value="{{ $key }}" @selected(old('label_layout', $labels['layout']) === $key)>{{ $lab }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>مکان بارکد روی برچسب</label>
+                        <select name="label_barcode_position">
+                            @foreach($labelPositions as $key => $lab)
+                                <option value="{{ $key }}" @selected(old('label_barcode_position', $labels['barcode_position']) === $key)>{{ $lab }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label>نام پرینتر مخصوص بارکد</label>
+                        <input type="text" name="label_printer_name" value="{{ old('label_printer_name', $labels['printer_name']) }}" placeholder="مثلاً Xprinter XP-365B">
+                    </div>
+                </div>
+
+                <div class="accept-row accept-row-3" style="margin-top:8px;">
+                    @include('partials.toggle', ['name' => 'label_show_shop', 'label' => 'نمایش نام فروشگاه', 'checked' => (bool) old('label_show_shop', $labels['show_shop'])])
+                    @include('partials.toggle', ['name' => 'label_show_text', 'label' => 'نمایش متن کنار بارکد', 'checked' => (bool) old('label_show_text', $labels['show_text'])])
+                    @include('partials.toggle', ['name' => 'label_auto_print', 'label' => 'چاپ خودکار هنگام باز شدن برچسب', 'checked' => (bool) old('label_auto_print', $labels['auto_print'])])
+                </div>
+
+                <div class="actions" style="margin-top:10px;">
+                    <button class="btn btn-primary" type="submit">ذخیره تنظیمات برچسب</button>
+                    <a class="btn btn-secondary" href="{{ route('labels.preview') }}" target="_blank" rel="noopener">پیش‌نمایش / تست چاپ</a>
                 </div>
             </form>
         </div>

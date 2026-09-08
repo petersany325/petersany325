@@ -23,6 +23,7 @@
                     <a class="btn btn-primary" href="{{ route('receptions.edit', $reception) }}">ویرایش قبض</a>
                     <a class="btn btn-secondary" href="{{ route('receptions.history', $reception) }}" target="_blank" rel="noopener">تاریخچه / گزارش</a>
                     <a class="btn btn-secondary" href="{{ route('receptions.print', $reception) }}" target="_blank">چاپ قبض</a>
+                    <a class="btn btn-secondary" href="{{ route('labels.reception', $reception) }}" target="_blank" rel="noopener">چاپ برچسب / بارکد</a>
                     <button type="button" class="btn btn-ghost" id="copy-ticket-btn" data-copy="{{ $reception->ticket_no }}">کپی شماره قبض</button>
                     <button type="button" class="btn btn-ghost" id="copy-serial-btn" data-copy="{{ $reception->serial_number }}">کپی سریال</button>
                     <a class="btn btn-ghost" href="{{ route('reports.sms', ['reception_id' => $reception->id]) }}">پیامک‌ها</a>

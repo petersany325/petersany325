@@ -26,6 +26,7 @@ use App\Http\Controllers\Portal\PaymentReceiptController as PortalPaymentReceipt
 use App\Http\Controllers\HandoffController;
 use App\Http\Controllers\InternController;
 use App\Http\Controllers\InternPortalController;
+use App\Http\Controllers\LabelPrintController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\StaffSmsTemplateController;
 use App\Http\Controllers\Portal\AuthController as PortalAuthController;
@@ -159,6 +160,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('receptions/{reception}/cost-stages/{stage}', [ReceptionController::class, 'destroyCostStage'])->name('receptions.cost-stages.destroy');
         Route::post('receptions/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('receptions.zarinpal');
         Route::get('receptions/{reception}/print', [ReceptionController::class, 'print'])->name('receptions.print');
+        Route::get('labels/receptions/{reception}', [LabelPrintController::class, 'reception'])->name('labels.reception');
         Route::post('receptions/{reception}/handoffs', [HandoffController::class, 'store'])->name('receptions.handoffs.store');
         Route::post('receptions/{reception}/cost-approval', [ReceptionController::class, 'requestCostApproval'])->name('receptions.cost-approval');
         Route::get('cost-approvals', [\App\Http\Controllers\CostApprovalsManageController::class, 'index'])->name('cost-approvals.index');
@@ -212,6 +214,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouses.destroy');
         Route::resource('parts', PartController::class)->except(['destroy']);
         Route::post('parts/{part}/stock', [PartController::class, 'adjustStock'])->name('parts.stock');
+        Route::get('labels/parts/{part}', [LabelPrintController::class, 'part'])->name('labels.part');
     });
 
     Route::middleware(EnsurePermission::class.':technicians')->group(function () {
@@ -297,6 +300,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware(EnsurePermission::class.':settings')->group(function () {
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::get('labels/preview', [LabelPrintController::class, 'preview'])->name('labels.preview');
         Route::post('settings/fault-types', [SettingController::class, 'storeFaultType'])->name('settings.fault-types');
         Route::put('settings/fault-types/{faultType}', [SettingController::class, 'updateFaultType'])->name('settings.fault-types.update');
         Route::delete('settings/fault-types/{faultType}', [SettingController::class, 'destroyFaultType'])->name('settings.fault-types.destroy');
@@ -307,6 +311,7 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/sms', [SettingController::class, 'updateSms'])->name('settings.sms');
         Route::post('settings/sms/test', [SettingController::class, 'testSms'])->name('settings.sms.test');
         Route::post('settings/invoice', [SettingController::class, 'updateInvoice'])->name('settings.invoice');
+        Route::post('settings/labels', [SettingController::class, 'updateLabels'])->name('settings.labels');
         Route::post('settings/payments', [SettingController::class, 'updatePayments'])->name('settings.payments');
         Route::post('settings/backup', [SettingController::class, 'updateBackup'])->name('settings.backup');
         Route::post('settings/backup/run-now', [SettingController::class, 'runBackupNow'])->name('settings.backup.run-now');

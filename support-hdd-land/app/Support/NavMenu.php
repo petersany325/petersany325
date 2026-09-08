@@ -125,6 +125,7 @@ class NavMenu
                     ['label' => 'کارتکس / گردش', 'route' => 'parts.movements', 'match' => 'parts.movements', 'hint' => 'دفتر انبار', 'mark' => 'ک'],
                     ['label' => 'ارزش موجودی', 'route' => 'parts.valuation', 'match' => 'parts.valuation', 'hint' => 'تراز ریالی', 'mark' => 'ا'],
                     ['label' => 'کالای جدید', 'route' => 'parts.create', 'match' => 'parts.create', 'hint' => 'تعریف کارت کالا', 'mark' => '+'],
+                    ['label' => 'تنظیم برچسب/بارکد', 'route' => 'settings.index', 'params' => ['tab' => 'labels'], 'match' => 'settings.*|labels.*', 'hint' => 'سایز رول و حالت چاپ', 'mark' => 'ب', 'permission' => 'settings'],
                 ],
             ],
             [
@@ -246,7 +247,9 @@ class NavMenu
                 'hint' => 'سیستم و منوها',
                 'any_of' => ['settings', 'profile', 'daily_logs.manage'],
                 'children' => [
-                    ['label' => 'تنظیمات سیستم', 'route' => 'settings.index', 'match' => 'settings.*', 'hint' => 'منو، فاکتور، SMS، بکاپ', 'mark' => 'ظ', 'permission' => 'settings'],
+                    ['label' => 'تنظیمات سیستم', 'route' => 'settings.index', 'match' => 'settings.*', 'hint' => 'منو، فاکتور، برچسب، SMS، بکاپ', 'mark' => 'ظ', 'permission' => 'settings'],
+                    ['label' => 'برچسب / بارکد', 'route' => 'settings.index', 'params' => ['tab' => 'labels'], 'match' => 'labels.*', 'hint' => 'رول، حالت چاپ، پرینتر', 'mark' => 'ب', 'permission' => 'settings'],
+                    ['label' => 'پیش‌نمایش برچسب', 'route' => 'labels.preview', 'match' => 'labels.preview', 'hint' => 'تست چاپ بارکد', 'mark' => 'پ', 'permission' => 'settings'],
                     ['label' => 'تنظیمات دفتر روز', 'route' => 'daily-logs.settings', 'match' => 'daily-logs.settings', 'hint' => 'دسته و قوانین — فقط ادمین', 'mark' => 'ر', 'permission' => 'daily_logs.manage'],
                     ['label' => 'پروفایل من', 'route' => 'profile.edit', 'match' => 'profile.*', 'hint' => 'نام و رمز', 'mark' => 'پ', 'permission' => 'profile'],
                 ],
