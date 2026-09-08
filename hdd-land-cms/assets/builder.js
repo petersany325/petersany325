@@ -234,6 +234,15 @@ function section(){return{id:uid('section'),data:{visible:true,animation:'none',
 function find(id){for(const s of doc.sections){if(s.id===id)return{kind:'section',item:s};for(const c of s.columns||[])for(const w of c.widgets||[])if(w.id===id)return{kind:'widget',item:w,section:s,column:c}}return null}
 function remove(id){for(let si=0;si<doc.sections.length;si++){if(doc.sections[si].id===id){doc.sections.splice(si,1);return}for(const c of doc.sections[si].columns){const i=c.widgets.findIndex(w=>w.id===id);if(i>=0){c.widgets.splice(i,1);return}}}}
 function css(item){const st=styleMap(item&&item.style);return Object.entries(st).filter(([,v])=>v!==''&&v!=null).map(([k,v])=>{if(k==='fontSize')return`--pb-font-size-desktop:${v};font-size:${v}`;if(k==='fontSizeTablet')return`--pb-font-size-tablet:${v}`;if(k==='fontSizeMobile')return`--pb-font-size-mobile:${v}`;if(k==='color')return`--pb-text-color:${v};color:${v}`;let name=k.replace(/[A-Z]/g,m=>'-'+m.toLowerCase());if(k==='backgroundImage')v=`url("${String(v).replace(/["()]/g,'')}")`;return name+':'+v}).join(';')}
+function paintWidgetColor(id,hex){
+  const wrap=canvas.querySelector(`.vb-widget[data-id="${id}"]`);
+  if(!wrap||!hex)return;
+  wrap.style.setProperty('--pb-text-color',hex);
+  wrap.querySelectorAll('.demo-text, .demo-html, [data-inline], p, h1, h2, h3, h4, h5, h6, span, li').forEach(node=>{
+    node.style.setProperty('--pb-text-color',hex);
+    node.style.setProperty('color',hex,'important');
+  });
+}
 function stateClasses(item){const d=item.data||{},out=[];if(d.visible===false)out.push('is-hidden');['Desktop','Tablet','Mobile'].forEach(x=>{if(d['hide'+x])out.push('hide-'+x.toLowerCase())});if(d.animation&&d.animation!=='none')out.push('fx-'+d.animation);if(d.hoverEffect&&d.hoverEffect!=='none')out.push('hover-'+d.hoverEffect);return out.join(' ')}
 
 function preview(w){
@@ -343,12 +352,9 @@ function enhanceTypographyControls(style){
     panel.querySelectorAll('[data-text-color]').forEach(button=>button.classList.toggle('active',button.dataset.textColor.toLowerCase()===hex.toLowerCase()));
     const f=find(selected);if(!f)return;
     ensureStyle(f.item).color=hex;
-    const wrap=canvas.querySelector(`.vb-widget[data-id="${selected}"]`);
-    const paint=wrap&&(wrap.querySelector('.demo-text, .demo-html, [data-inline], p, h1, h2, h3, h4, h5, h6')||wrap);
-    if(paint){paint.style.color=hex;paint.style.setProperty('--pb-text-color',hex)}
-    if(wrap)wrap.style.setProperty('--pb-text-color',hex);
     dirty();
     render(true);
+    paintWidgetColor(selected,hex);
   }
   colorInputs.forEach(input=>{
     input.addEventListener('input',()=>applyColor(input.value));

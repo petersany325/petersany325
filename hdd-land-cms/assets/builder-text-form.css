@@ -27,6 +27,10 @@
 .pb-page .pb-html :where(p,h1,h2,h3,h4,h5,h6,li,div,span),
 .vb-widget .demo-text :where(p,h1,h2,h3,h4,h5,h6,li,div,span,strong,em),
 .vb-widget .demo-html :where(p,h1,h2,h3,h4,h5,h6,li,div,span,strong,em){color:var(--pb-text-color,inherit)}
+.vb-widget .demo-text[style*="--pb-text-color"],
+.vb-widget .demo-html[style*="--pb-text-color"],
+.vb-widget .demo-text[style*="--pb-text-color"] :where(p,h1,h2,h3,h4,h5,h6,li,div,span,strong,em),
+.vb-widget .demo-html[style*="--pb-text-color"] :where(p,h1,h2,h3,h4,h5,h6,li,div,span,strong,em){color:var(--pb-text-color)!important}
 .pb-html p{margin:0 0 .9em}
 .pb-html p:last-child{margin-bottom:0}
 .pb-html ul,.pb-html ol{margin:0 0 .9em;padding-left:1.35em}
