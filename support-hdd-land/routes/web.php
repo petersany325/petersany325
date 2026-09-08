@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DeviceBlacklistController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
@@ -124,10 +125,16 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware(EnsurePermission::class.':customers')->group(function () {
         Route::resource('customers', CustomerController::class);
+        Route::post('customers/{customer}/blacklist', [CustomerController::class, 'toggleBlacklist'])->name('customers.blacklist');
+        Route::get('device-blacklists', [DeviceBlacklistController::class, 'index'])->name('device-blacklists.index');
+        Route::post('device-blacklists', [DeviceBlacklistController::class, 'store'])->name('device-blacklists.store');
+        Route::post('device-blacklists/{deviceBlacklist}/toggle', [DeviceBlacklistController::class, 'toggle'])->name('device-blacklists.toggle');
+        Route::delete('device-blacklists/{deviceBlacklist}', [DeviceBlacklistController::class, 'destroy'])->name('device-blacklists.destroy');
     });
 
     Route::middleware(EnsurePermission::class.':receptions')->group(function () {
         Route::get('receptions/lookup-phone', [ReceptionController::class, 'lookupPhone'])->name('receptions.lookup-phone');
+        Route::get('receptions/lookup-serial', [ReceptionController::class, 'lookupSerial'])->name('receptions.lookup-serial');
         Route::post('receptions/ensure-customer', [ReceptionController::class, 'ensureCustomer'])->name('receptions.ensure-customer');
         Route::get('receptions/search', [ReceptionController::class, 'search'])->name('receptions.search');
         Route::get('deliveries/group', [DeliveryController::class, 'create'])->name('deliveries.group');

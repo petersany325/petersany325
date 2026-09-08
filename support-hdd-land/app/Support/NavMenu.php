@@ -105,6 +105,8 @@ class NavMenu
                 'children' => [
                     ['label' => 'فهرست مشتریان', 'route' => 'customers.index', 'match' => 'customers.index|customers.show|customers.edit', 'hint' => 'جستجو، ویرایش، حذف', 'mark' => 'ف'],
                     ['label' => 'مشتری جدید', 'route' => 'customers.create', 'match' => 'customers.create', 'hint' => 'نام و موبایل یکتا', 'mark' => '+'],
+                    ['label' => 'لیست سیاه مشتریان', 'route' => 'customers.index', 'params' => ['filter' => 'blacklist'], 'match' => 'customers.index', 'hint' => 'مشتریان مسدود', 'mark' => 'س'],
+                    ['label' => 'لیست سیاه دستگاه', 'route' => 'device-blacklists.index', 'match' => 'device-blacklists.*', 'hint' => 'سریال/مدل ممنوع', 'mark' => 'د'],
                 ],
             ],
             [

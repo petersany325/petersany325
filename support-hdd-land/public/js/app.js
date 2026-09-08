@@ -425,6 +425,7 @@
         if (!form) return;
 
         var lookupUrl = form.getAttribute('data-lookup-url') || '';
+        var lookupSerialUrl = form.getAttribute('data-lookup-serial-url') || '';
         var ensureCustomerUrl = form.getAttribute('data-ensure-customer-url') || '';
         var skipPhone = form.getAttribute('data-skip-phone') === '1';
         var oldMode = form.getAttribute('data-old-mode') || 'single';
@@ -434,6 +435,11 @@
         var lookupPhoneInput = document.getElementById('lookup-phone');
         var lookupPhoneBtn = document.getElementById('lookup-phone-btn');
         var lookupStatus = document.getElementById('lookup-status');
+        var serialLookupInput = document.getElementById('serial-lookup-input');
+        var serialLookupBanner = document.getElementById('serial-lookup-banner');
+        var serialSuggestActions = document.getElementById('serial-suggest-actions');
+        var serialFillPrevBtn = document.getElementById('serial-fill-prev-btn');
+        var lastSerialSuggest = null;
 
         var modeModal = document.getElementById('mode-modal');
         var chooseModeBtns = form.querySelectorAll('[data-choose-mode]');
@@ -516,16 +522,83 @@
         function showExistingCustomer(customer) {
             if (!existingCard) return;
             existingCard.classList.remove('hidden');
-            if (existingName) existingName.textContent = (customer && customer.name) || 'بدون نام';
+            if (existingName) existingName.textContent = (customer && (customer.display_name || customer.name)) || 'بدون نام';
 
             var metaParts = [];
             if (customer && customer.phone) metaParts.push('موبایل: ' + customer.phone);
+            if (customer && customer.alias) metaParts.push('مستعار: ' + customer.alias);
+            if (customer && customer.gender) metaParts.push('جنسیت: ' + customer.gender);
             if (customer && customer.job) metaParts.push('شغل: ' + customer.job);
             if (customer && customer.address) metaParts.push('آدرس: ' + customer.address);
+            if (customer && customer.is_blacklisted) metaParts.push('لیست سیاه');
             if (customer && typeof customer.visits !== 'undefined' && customer.visits !== null) {
                 metaParts.push('مراجعات قبلی: ' + toPersianDigits(customer.visits) + ' بار');
             }
             if (existingMeta) existingMeta.textContent = metaParts.join(' · ');
+        }
+
+        function clearSerialBanner() {
+            lastSerialSuggest = null;
+            if (serialLookupBanner) {
+                serialLookupBanner.classList.add('hidden');
+                serialLookupBanner.textContent = '';
+            }
+            if (serialSuggestActions) serialSuggestActions.classList.add('hidden');
+        }
+
+        function applySerialSuggest(suggest) {
+            if (!suggest) return;
+            var brandModel = form.querySelector('[name="brand_model"]');
+            var brand = form.querySelector('[name="brand"]');
+            var model = form.querySelector('[name="model"]');
+            var lockCode = form.querySelector('[name="lock_code"]');
+            var hdd = form.querySelector('[name="hdd_capacity"]');
+            if (brandModel && suggest.brand_model) brandModel.value = suggest.brand_model;
+            if (brand && suggest.brand) brand.value = suggest.brand;
+            if (model && suggest.model) model.value = suggest.model;
+            if (lockCode && suggest.lock_code) lockCode.value = suggest.lock_code;
+            if (hdd && suggest.hdd_capacity) hdd.value = suggest.hdd_capacity;
+        }
+
+        function doSerialLookup() {
+            if (!serialLookupInput || !lookupSerialUrl) return;
+            var serial = (serialLookupInput.value || '').trim();
+            if (serial.length < 3) {
+                clearSerialBanner();
+                return;
+            }
+            fetch(lookupSerialUrl + '?serial=' + encodeURIComponent(serial), {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data || !data.found) {
+                        clearSerialBanner();
+                        return;
+                    }
+                    lastSerialSuggest = data.suggest || null;
+                    var msg = data.block_reason || 'سریال قبلاً ثبت شده است.';
+                    if (data.suggest && data.suggest.ticket_no) {
+                        msg += ' قبض قبلی: ' + data.suggest.ticket_no;
+                        if (data.suggest.status_label) msg += ' (' + data.suggest.status_label + ')';
+                        if (data.suggest.customer_name) msg += ' — ' + data.suggest.customer_name;
+                    }
+                    if (data.can_reuse) {
+                        msg += ' — می‌توانید مشخصات قبلی را پر کنید و پذیرش جدید ثبت کنید.';
+                    }
+                    if (serialLookupBanner) {
+                        serialLookupBanner.textContent = msg;
+                        serialLookupBanner.classList.remove('hidden');
+                        serialLookupBanner.className = 'alert ' + (data.blocked ? 'alert-error' : 'alert-success');
+                        serialLookupBanner.style.marginBottom = '8px';
+                    }
+                    if (serialSuggestActions) {
+                        serialSuggestActions.classList.toggle('hidden', !(data.can_reuse && data.suggest));
+                    }
+                })
+                .catch(function () {});
         }
 
         function doLookup() {
@@ -567,11 +640,20 @@
             var phone = (data && data.phone) || fallbackPhone;
             if (customerPhoneInput) customerPhoneInput.value = phone;
 
+            if (data && data.blocked) {
+                if (customerIdInput) customerIdInput.value = '';
+                if (existingCard) existingCard.classList.add('hidden');
+                if (newCustomerFields) newCustomerFields.classList.add('hidden');
+                setLookupStatus((data.block_reason || 'این مشتری در لیست سیاه است') + ' — پذیرش مسدود است.', 'error');
+                showPhoneStep();
+                return;
+            }
+
             if (data && data.found && data.customer) {
                 if (customerIdInput) customerIdInput.value = data.customer.id;
                 showExistingCustomer(data.customer);
                 if (newCustomerFields) newCustomerFields.classList.add('hidden');
-                setLookupStatus('مشتری پیدا شد: ' + (data.customer.name || '—'), 'ok');
+                setLookupStatus('مشتری پیدا شد: ' + (data.customer.display_name || data.customer.name || '—'), 'ok');
             } else {
                 if (customerIdInput) customerIdInput.value = '';
                 if (existingCard) existingCard.classList.add('hidden');
@@ -640,6 +722,8 @@
             if (!saveCustomerBtn) return;
             var scope = newCustomerFields || form;
             var nameInput = scope.querySelector('[name="customer_name"]');
+            var aliasInput = scope.querySelector('[name="alias"]');
+            var genderInput = scope.querySelector('[name="gender"]');
             var nationalInput = scope.querySelector('[name="national_code"]');
             var jobInput = scope.querySelector('[name="job"]');
             var addressInput = scope.querySelector('[name="address"]');
@@ -663,6 +747,8 @@
                 customer_id: (customerIdInput && customerIdInput.value) || null,
                 customer_name: name,
                 customer_phone: phone,
+                alias: aliasInput ? aliasInput.value : '',
+                gender: genderInput ? genderInput.value : '',
                 national_code: nationalInput ? nationalInput.value : '',
                 job: jobInput ? jobInput.value : '',
                 address: addressInput ? addressInput.value : '',
@@ -951,6 +1037,20 @@
             saveCustomerBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 saveCustomer();
+            });
+        }
+
+        if (serialLookupInput) {
+            var serialTimer = null;
+            serialLookupInput.addEventListener('blur', doSerialLookup);
+            serialLookupInput.addEventListener('input', function () {
+                clearTimeout(serialTimer);
+                serialTimer = setTimeout(doSerialLookup, 450);
+            });
+        }
+        if (serialFillPrevBtn) {
+            serialFillPrevBtn.addEventListener('click', function () {
+                applySerialSuggest(lastSerialSuggest);
             });
         }
 

@@ -10,6 +10,16 @@
         </div>
         <div class="report-head-actions">
             <a class="btn btn-secondary" href="{{ route('customers.edit', $customer) }}">ویرایش</a>
+            <form method="POST" action="{{ route('customers.blacklist', $customer) }}" style="display:inline;"
+                  @if(!$customer->is_blacklisted) data-confirm="این مشتری به لیست سیاه برود و پذیرش جدید مسدود شود؟" @endif>
+                @csrf
+                @if(!$customer->is_blacklisted)
+                    <input type="hidden" name="blacklist_reason" value="بدحساب / مسدود از پرونده مشتری">
+                @endif
+                <button class="btn {{ $customer->is_blacklisted ? 'btn-primary' : 'btn-danger' }}" type="submit">
+                    {{ $customer->is_blacklisted ? 'خروج از لیست سیاه' : 'افزودن به لیست سیاه' }}
+                </button>
+            </form>
             @php
                 $rc = $customer->receptions->count();
                 $confirm = $rc > 0
@@ -25,8 +35,19 @@
         </div>
     </div>
 
+    @if(session('success'))
+        <div class="alert alert-success">{{ session('success') }}</div>
+    @endif
     @if($errors->any())
         <div class="alert alert-error">{{ $errors->first() }}</div>
+    @endif
+
+    @if($customer->is_blacklisted)
+        <div class="alert alert-error" style="margin-bottom:10px;">
+            این مشتری در لیست سیاه است
+            @if($customer->blacklist_reason) — {{ $customer->blacklist_reason }} @endif
+            @if($customer->blacklisted_at) ({{ jalali_like($customer->blacklisted_at) }}) @endif
+        </div>
     @endif
 
     @php
@@ -44,6 +65,8 @@
     @endif
 
     <div class="detail-kv">
+        <div><span class="muted">اسم مستعار</span><div>{{ $customer->alias ?: '—' }}</div></div>
+        <div><span class="muted">جنسیت</span><div>{{ $customer->genderLabel() }}</div></div>
         <div><span class="muted">کد ملی</span><div>{{ $customer->national_code ?: '—' }}</div></div>
         <div><span class="muted">نحوه آشنایی</span><div>{{ $customer->referralSource?->name ?: '—' }}</div></div>
         <div><span class="muted">بدهی باز</span><div style="{{ $debtSummary['has_debt'] ? 'color:#b42318;font-weight:800;' : '' }}">{{ number_format($debtSummary['total']) }} تومان</div></div>

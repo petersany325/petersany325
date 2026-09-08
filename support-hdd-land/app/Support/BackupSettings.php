@@ -267,6 +267,7 @@ class BackupSettings
             'parts',
             'warehouses',
             'customers',
+            'device_blacklists',
             'technicians',
             'fault_types',
             'referral_sources',

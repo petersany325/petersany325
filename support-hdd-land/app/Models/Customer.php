@@ -12,10 +12,40 @@ class Customer extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = [
-        'name', 'phone', 'national_code', 'job', 'address',
-        'referral_source_id', 'notes',
+    public const GENDERS = [
+        'male' => 'آقا',
+        'female' => 'خانم',
+        'other' => 'سایر',
     ];
+
+    protected $fillable = [
+        'name', 'alias', 'gender', 'phone', 'national_code', 'job', 'address',
+        'referral_source_id', 'notes',
+        'is_blacklisted', 'blacklist_reason', 'blacklisted_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_blacklisted' => 'boolean',
+            'blacklisted_at' => 'datetime',
+        ];
+    }
+
+    public function displayName(): string
+    {
+        $alias = trim((string) $this->alias);
+        if ($alias !== '') {
+            return $this->name.' ('.$alias.')';
+        }
+
+        return (string) $this->name;
+    }
+
+    public function genderLabel(): string
+    {
+        return self::GENDERS[$this->gender] ?? '—';
+    }
 
     public function referralSource(): BelongsTo
     {

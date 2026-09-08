@@ -15,7 +15,7 @@ class Reception extends Model
         'ticket_no', 'receipt_no', 'batch_code', 'delivery_batch_id', 'account_code', 'admission_type', 'service_type', 'repair_type',
         'customer_id', 'technician_id', 'custody_technician_id', 'fault_type_id', 'created_by',
         'custody',
-        'product_name', 'brand', 'model', 'serial_number', 'accessories', 'appearance_notes',
+        'product_name', 'brand', 'model', 'serial_number', 'lock_code', 'accessories', 'appearance_notes',
         'delivered_by', 'pickup_name', 'pickup_phone', 'referrer', 'commission', 'photo_path',
         'hdd_capacity', 'capacity_changed', 'hdd_capacity_after',
         'warranty_return', 'warranty_type', 'card_number', 'warranty_end_date',
