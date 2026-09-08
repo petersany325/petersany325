@@ -11,7 +11,7 @@
 <div class="panel" style="max-width:860px;">
     <form method="POST" action="{{ route('parts.store') }}">
         @csrf
-        @include('parts._form', ['withStock' => true])
+        @include('parts._form', ['withStock' => true, 'categories' => $categories ?? [], 'itemTypes' => $itemTypes ?? \App\Models\Part::ITEM_TYPES])
         <p class="muted" style="font-size:11.5px;">اگر موجودی اولیه وارد کنید، سند ورود انبار با بهای خرید زده می‌شود.</p>
         <div class="actions">
             <button class="btn btn-primary" type="submit">ثبت در انبار</button>

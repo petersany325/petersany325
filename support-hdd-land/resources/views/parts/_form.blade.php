@@ -9,7 +9,26 @@
             @endforeach
         </select>
     </div>
+    <div>
+        <label>گروه (درختی)</label>
+        <select name="category_id">
+            <option value="">—</option>
+            @foreach(($categories ?? []) as $id => $lab)
+                <option value="{{ $id }}" @selected((string) old('category_id', $part->category_id ?? '') === (string) $id)>{{ $lab }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div>
+        <label>نوع کالا</label>
+        <select name="item_type">
+            @foreach(($itemTypes ?? \App\Models\Part::ITEM_TYPES) as $k => $lab)
+                <option value="{{ $k }}" @selected(old('item_type', $part->item_type ?? 'repair') === $k)>{{ $lab }}</option>
+            @endforeach
+        </select>
+    </div>
     <div><label>کد کالا</label><input type="text" name="code" value="{{ old('code', $part->code ?? '') }}" data-ascii-en placeholder="مثلاً HDD-PCB-01"></div>
+    <div><label>کد فنی</label><input type="text" name="tech_code" value="{{ old('tech_code', $part->tech_code ?? '') }}" data-ascii-en></div>
+    <div><label>بارکد</label><input type="text" name="barcode" value="{{ old('barcode', $part->barcode ?? '') }}" data-ascii-en placeholder="خالی = خودکار"></div>
     <div><label>نام کالا</label><input type="text" name="name" value="{{ old('name', $part->name ?? '') }}" required></div>
     <div><label>برند</label><input type="text" name="brand" value="{{ old('brand', $part->brand ?? '') }}"></div>
     <div><label>مدل / سازگاری</label><input type="text" name="model" value="{{ old('model', $part->model ?? '') }}"></div>
@@ -19,6 +38,11 @@
     <div><label>نقطه سفارش (حداقل)</label><input type="number" name="min_stock" min="0" value="{{ old('min_stock', $part->min_stock ?? 0) }}"></div>
     <div><label>بهای خرید (تومان)</label><input type="number" name="purchase_price" min="0" value="{{ old('purchase_price', $part->purchase_price ?? 0) }}"></div>
     <div><label>فی فروش به مشتری</label><input type="number" name="sale_price" min="0" value="{{ old('sale_price', $part->sale_price ?? 0) }}"></div>
+    <div><label>تخفیف ویژه (%)</label><input type="number" name="discount_percent" min="0" max="100" value="{{ old('discount_percent', $part->discount_percent ?? 0) }}"></div>
+    <div><label>٪ کمیسیون فروش</label><input type="number" name="sale_commission_percent" min="0" max="100" value="{{ old('sale_commission_percent', $part->sale_commission_percent ?? 0) }}"></div>
+    <div><label>٪ کمیسیون تعمیر</label><input type="number" name="repair_commission_percent" min="0" max="100" value="{{ old('repair_commission_percent', $part->repair_commission_percent ?? 0) }}"></div>
+    <div class="full"><label>کلیدواژه‌های جستجو</label><input type="text" name="keywords" value="{{ old('keywords', $part->keywords ?? '') }}" placeholder="با فاصله یا ویرگول"></div>
+    <div class="full"><label>توضیحات</label><textarea name="description" rows="3">{{ old('description', $part->description ?? '') }}</textarea></div>
     <div>
         @include('partials.toggle', [
             'name' => 'is_active',

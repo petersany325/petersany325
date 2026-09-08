@@ -840,7 +840,22 @@ class ReceptionController extends Controller
                 }
 
                 $part->stock -= $data['quantity'];
+                $part->usage_count = (int) $part->usage_count + (int) $data['quantity'];
                 $part->save();
+
+                if ($part->isOutOfStock() || $part->isLowStock()) {
+                    try {
+                        app(\App\Services\StaffNotifier::class)->notifyMany(
+                            \App\Models\User::query()->where('is_active', true)->pluck('id')->all(),
+                            'stock_alert',
+                            $part->isOutOfStock() ? 'کسری موجودی قطعه' : 'نقطه سفارش قطعه',
+                            $part->name.' — موجودی '.$part->stock.( $part->isOutOfStock() ? ' (صفر)' : ' ≤ حداقل '.$part->min_stock),
+                            route('parts.show', $part),
+                            ['part_id' => $part->id]
+                        );
+                    } catch (\Throwable $e) {
+                    }
+                }
 
                 StockMovement::create([
                     'doc_no' => StockMovement::nextDocNo('OUT'),

@@ -48,7 +48,7 @@ class LabelPrintController extends Controller
         }
         $copies = max(1, min(500, (int) $request->query('qty', $request->boolean('stock') ? max(1, (int) $part->stock) : $settings['copies_default'])));
 
-        $rawCode = (string) ($part->code ?: ('P'.$part->id));
+        $rawCode = $part->barcodeValue();
         $code = $this->barcodeValue($settings['symbology'], $rawCode);
 
         $payload = [

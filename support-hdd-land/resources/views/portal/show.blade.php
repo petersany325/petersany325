@@ -69,6 +69,24 @@
     <a class="p-btn ghost" style="margin-top:10px;width:100%;" href="{{ route('portal.messages', ['reception_id' => $reception->id]) }}">پیام به تعمیرگاه درباره این قبض</a>
 </section>
 
+@if($reception->workReports->count())
+<section class="p-section">
+    <h2>گزارش کار (مشتری)</h2>
+    @foreach($reception->workReports as $wr)
+        <div class="p-timeline-item">
+            <div class="p-timeline-dot"></div>
+            <div>
+                <strong>{{ $wr->summary }}</strong>
+                <small>{{ jalali_like($wr->created_at) }}</small>
+                @if($wr->details)
+                    <small style="display:block;margin-top:2px;">{{ $wr->details }}</small>
+                @endif
+            </div>
+        </div>
+    @endforeach
+</section>
+@endif
+
 <section class="p-section">
     <h2>تاریخچه وضعیت</h2>
     @forelse($reception->statusLogs as $log)

@@ -114,12 +114,17 @@ class NavMenu
                 'label' => 'انبار',
                 'permission' => 'parts',
                 'route' => 'parts.index',
-                'match' => 'parts.*|warehouses.*',
+                'match' => 'parts.*|warehouses.*|part-categories.*|warehouse-transfers.*|stocktakes.*|price-tiers.*',
                 'mark' => 'ق',
                 'hint' => 'انبار حسابداری قطعات',
                 'children' => [
                     ['label' => 'میز انبار', 'route' => 'parts.index', 'match' => 'parts.index|parts.show|parts.edit', 'hint' => 'موجودی و ارزش', 'mark' => 'م'],
                     ['label' => 'انبارهای چندگانه', 'route' => 'warehouses.index', 'match' => 'warehouses.*', 'hint' => 'تعریف انبار ۱ و ۲…', 'mark' => 'چ'],
+                    ['label' => 'گروه‌بندی درختی', 'route' => 'part-categories.index', 'match' => 'part-categories.*', 'hint' => 'فروشگاه/قطعه/اجرت', 'mark' => 'گ'],
+                    ['label' => 'انتقال بین انبار', 'route' => 'warehouse-transfers.index', 'match' => 'warehouse-transfers.*', 'hint' => 'جابجایی کالا', 'mark' => 'ت'],
+                    ['label' => 'انبارگردانی', 'route' => 'stocktakes.index', 'match' => 'stocktakes.*', 'hint' => 'شمارش موجودی', 'mark' => 'ا'],
+                    ['label' => 'ورود از اکسل', 'route' => 'parts.import', 'match' => 'parts.import*', 'hint' => 'قیمت و موجودی', 'mark' => 'ف'],
+                    ['label' => 'تیپ قیمتی', 'route' => 'price-tiers.index', 'match' => 'price-tiers.*', 'hint' => 'همکار/خاص/عمومی', 'mark' => 'ق'],
                     ['label' => 'رسید ورود', 'route' => 'parts.receipt', 'match' => 'parts.receipt*', 'hint' => 'خرید / ورود', 'mark' => 'ر'],
                     ['label' => 'حواله خروج', 'route' => 'parts.issue', 'match' => 'parts.issue*', 'hint' => 'خروج غیرقبض', 'mark' => 'ح'],
                     ['label' => 'کارتکس / گردش', 'route' => 'parts.movements', 'match' => 'parts.movements', 'hint' => 'دفتر انبار', 'mark' => 'ک'],
@@ -160,6 +165,19 @@ class NavMenu
                 'children' => [
                     ['label' => 'گزارش پیامک قبض‌ها', 'route' => 'reports.sms', 'match' => 'reports.sms', 'hint' => 'همه پیامک‌های ارسال‌شده', 'mark' => 'گ', 'permission' => 'reports.sms'],
                     ['label' => 'تعریف وضعیت / قالب', 'route' => 'sms-statuses.index', 'match' => 'sms-statuses.*', 'hint' => 'وضعیت دستگاه و متن SMS', 'mark' => 'و', 'permission' => 'sms.statuses'],
+                ],
+            ],
+            [
+                'key' => 'work',
+                'label' => 'شرح کار',
+                'permission' => 'receptions',
+                'route' => 'work-reports.index',
+                'match' => 'work-reports.*',
+                'mark' => 'ش',
+                'hint' => 'جستجو و تجربیات مشابه',
+                'children' => [
+                    ['label' => 'جستجوی شرح کارها', 'route' => 'work-reports.index', 'match' => 'work-reports.index', 'hint' => 'خصوصی/داخلی/عمومی', 'mark' => 'ج'],
+                    ['label' => 'چاپ گزارش شرح کار', 'route' => 'work-reports.print', 'match' => 'work-reports.print', 'hint' => 'خروجی چاپی', 'mark' => 'چ'],
                 ],
             ],
             [

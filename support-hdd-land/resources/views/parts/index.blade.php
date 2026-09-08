@@ -45,6 +45,10 @@
             <select name="filter">
                 <option value="all" @selected($filter === 'all')>همه</option>
                 <option value="low" @selected($filter === 'low')>فقط کم‌موجود</option>
+                <option value="out" @selected($filter === 'out')>صفر موجودی</option>
+                <option value="shop" @selected($filter === 'shop')>اجناس فروشگاه</option>
+                <option value="repair" @selected($filter === 'repair')>قطعات تعمیرگاه</option>
+                <option value="labor" @selected($filter === 'labor')>اجرت / خدمات</option>
                 <option value="active" @selected($filter === 'active')>فعال</option>
                 <option value="inactive" @selected($filter === 'inactive')>غیرفعال</option>
             </select>
@@ -84,6 +88,7 @@
                             <td dir="ltr">{{ $part->code ?: '—' }}</td>
                             <td>
                                 <a href="{{ route('parts.show', $part) }}">{{ $part->name }}</a>
+                                @if($part->item_type)<span class="muted" style="font-size:10px;"> · {{ $part->itemTypeLabel() }}</span>@endif
                                 @if($part->isLowStock())<span class="badge badge-cancelled">کم</span>@endif
                                 @unless($part->is_active)<span class="badge">غیرفعال</span>@endunless
                             </td>

@@ -36,6 +36,12 @@ class StockMovement extends Model
         'consumption' => 'مصرف روی قبض',
         'adjust' => 'تعدیل موجودی',
         'return' => 'برگشت به انبار',
+        'transfer_out' => 'انتقال خروجی',
+        'transfer_in' => 'انتقال ورودی',
+        'stocktake' => 'انبارگردانی',
+        'sale' => 'فروش',
+        'sale_return' => 'برگشت از فروش',
+        'purchase_return' => 'برگشت از خرید',
     ];
 
     public function part(): BelongsTo

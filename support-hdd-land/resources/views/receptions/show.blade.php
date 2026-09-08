@@ -85,6 +85,14 @@
                             <textarea name="details" rows="2" placeholder="اختیاری"></textarea>
                         </div>
                         <div>
+                            <label>سطح دسترسی</label>
+                            <select name="visibility">
+                                @foreach(\App\Models\ReceptionWorkReport::VISIBILITIES as $k => $lab)
+                                    <option value="{{ $k }}" @selected($k==='internal')>{{ $lab }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
                             <label>وضعیت بعد از کار</label>
                             <select name="result_status">
                                 <option value="repairing">در حال تعمیر</option>
@@ -100,6 +108,7 @@
                     <div class="actions" style="margin-top:8px;">
                         <button class="btn btn-primary" type="submit">ثبت گزارش و ادامه</button>
                         <a class="btn btn-ghost" href="{{ route('receptions.history', $reception) }}" target="_blank" rel="noopener">مشاهده تاریخچه</a>
+                        <a class="btn btn-ghost" href="{{ route('work-reports.similar', $reception) }}">شرح‌کارهای مشابه</a>
                     </div>
                 </form>
                 @endunless
@@ -179,11 +188,20 @@
                                 </select>
                             </div>
                             <div>
+                                <label>سطح دسترسی</label>
+                                <select name="visibility">
+                                    @foreach(\App\Models\ReceptionWorkReport::VISIBILITIES as $k => $lab)
+                                        <option value="{{ $k }}" @selected($k==='internal')>{{ $lab }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
                                 @include('partials.toggle', ['name' => 'needs_part', 'label' => 'نیاز به قطعه دارد', 'checked' => false])
                             </div>
                         </div>
                         <div class="actions" style="margin-top:8px;">
                             <button class="btn btn-primary" type="submit">ثبت گزارش کار</button>
+                            <a class="btn btn-ghost" href="{{ route('work-reports.similar', $reception) }}">شرح‌کارهای مشابه</a>
                         </div>
                     </form>
                 </div>
@@ -210,7 +228,24 @@
 
             <div class="actions" style="margin-top:10px;">
                 <a class="btn btn-ghost" href="{{ route('receptions.history', $reception) }}" target="_blank" rel="noopener">تاریخچه کامل در پنجره جدا</a>
+                <a class="btn btn-ghost" href="{{ route('work-reports.similar', $reception) }}">شرح‌کارهای مشابه</a>
             </div>
+
+            @php
+                $visibleReports = collect($workReports ?? [])->filter(fn ($wr) => $wr->isVisibleTo(auth()->user()));
+            @endphp
+            @if($visibleReports->count())
+                <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e5e9ef;">
+                    <h4 style="margin:0 0 6px;">آخرین شرح کارها</h4>
+                    @foreach($visibleReports as $wr)
+                        <div style="padding:6px 0;border-bottom:1px dashed #eef1f5;font-size:13px;">
+                            <strong>{{ $wr->summary }}</strong>
+                            <span class="muted" style="font-size:11px;"> · {{ $wr->visibilityLabel() }} · {{ jalali_like($wr->created_at) }}</span>
+                            @if($wr->details)<div class="muted" style="margin-top:2px;">{{ $wr->details }}</div>@endif
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </div>
         @endif
 

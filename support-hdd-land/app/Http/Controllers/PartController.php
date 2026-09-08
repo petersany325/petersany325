@@ -20,19 +20,28 @@ class PartController extends Controller
         $warehouseId = $request->integer('warehouse_id') ?: null;
 
         $parts = Part::query()
-            ->with('warehouse')
+            ->with(['warehouse', 'category'])
             ->when($warehouseId, fn ($query) => $query->where('warehouse_id', $warehouseId))
             ->when($q !== '', function ($query) use ($q) {
                 $query->where(function ($inner) use ($q) {
                     $inner->where('name', 'like', "%{$q}%")
                         ->orWhere('code', 'like', "%{$q}%")
+                        ->orWhere('tech_code', 'like', "%{$q}%")
+                        ->orWhere('barcode', 'like', "%{$q}%")
+                        ->orWhere('keywords', 'like', "%{$q}%")
+                        ->orWhere('description', 'like', "%{$q}%")
                         ->orWhere('brand', 'like', "%{$q}%")
                         ->orWhere('model', 'like', "%{$q}%");
                 });
             })
             ->when($filter === 'low', fn ($query) => $query->whereColumn('stock', '<=', 'min_stock'))
+            ->when($filter === 'out', fn ($query) => $query->where('stock', '<=', 0))
             ->when($filter === 'active', fn ($query) => $query->where('is_active', true))
             ->when($filter === 'inactive', fn ($query) => $query->where('is_active', false))
+            ->when($filter === 'shop', fn ($query) => $query->where('item_type', 'shop'))
+            ->when($filter === 'repair', fn ($query) => $query->where('item_type', 'repair'))
+            ->when($filter === 'labor', fn ($query) => $query->where('item_type', 'labor'))
+            ->orderByDesc('usage_count')
             ->orderBy('name')
             ->paginate(25)
             ->withQueryString();
@@ -45,6 +54,7 @@ class PartController extends Controller
             'value_cost' => (int) (clone $all)->selectRaw('COALESCE(SUM(stock * purchase_price),0) as v')->value('v'),
             'value_sale' => (int) (clone $all)->selectRaw('COALESCE(SUM(stock * sale_price),0) as v')->value('v'),
             'low' => (clone $all)->whereColumn('stock', '<=', 'min_stock')->count(),
+            'out' => (clone $all)->where('stock', '<=', 0)->count(),
         ];
 
         $recent = StockMovement::query()
@@ -63,6 +73,8 @@ class PartController extends Controller
     {
         return view('parts.create', [
             'warehouses' => Warehouse::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get(),
+            'categories' => \App\Models\PartCategory::optionsTree(),
+            'itemTypes' => Part::ITEM_TYPES,
         ]);
     }
 
@@ -76,7 +88,16 @@ class PartController extends Controller
             if (empty($data['warehouse_id'])) {
                 $data['warehouse_id'] = Warehouse::defaultId();
             }
+            if (empty($data['barcode']) && ! empty($data['code'])) {
+                $data['barcode'] = $data['code'];
+            }
+            if (empty($data['barcode']) && ($requestAuto = true)) {
+                // auto barcode placeholder filled after create with P{id}
+            }
             $part = Part::create($data);
+            if (empty($part->barcode)) {
+                $part->forceFill(['barcode' => 'P'.$part->id])->save();
+            }
 
             if ($stock > 0) {
                 $this->applyMovement($part, $stock, 'in', 'opening', (int) $part->purchase_price, 'موجودی اول دوره هنگام تعریف قطعه');
@@ -88,9 +109,14 @@ class PartController extends Controller
 
     public function edit(Part $part)
     {
+        \App\Models\PriceTier::ensureDefaults();
+
         return view('parts.edit', [
-            'part' => $part->load('warehouse'),
+            'part' => $part->load(['warehouse', 'category', 'tierPrices']),
             'warehouses' => Warehouse::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('name')->get(),
+            'categories' => \App\Models\PartCategory::optionsTree(),
+            'itemTypes' => Part::ITEM_TYPES,
+            'tiers' => \App\Models\PriceTier::orderBy('sort_order')->get(),
         ]);
     }
 
@@ -356,14 +382,24 @@ class PartController extends Controller
     {
         $rules = [
             'warehouse_id' => ['nullable', 'exists:warehouses,id'],
+            'category_id' => ['nullable', 'exists:part_categories,id'],
+            'item_type' => ['nullable', 'in:shop,repair,labor'],
             'code' => ['nullable', 'string', 'max:50'],
+            'tech_code' => ['nullable', 'string', 'max:80'],
+            'barcode' => ['nullable', 'string', 'max:80'],
             'name' => ['required', 'string', 'max:120'],
             'brand' => ['nullable', 'string', 'max:80'],
             'model' => ['nullable', 'string', 'max:80'],
+            'keywords' => ['nullable', 'string', 'max:500'],
+            'description' => ['nullable', 'string', 'max:5000'],
             'purchase_price' => ['nullable', 'integer', 'min:0'],
             'sale_price' => ['nullable', 'integer', 'min:0'],
+            'discount_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'sale_commission_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'repair_commission_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'min_stock' => ['nullable', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
+            'auto_barcode' => ['nullable', 'boolean'],
         ];
 
         if ($withStock) {
@@ -375,9 +411,15 @@ class PartController extends Controller
         $data['purchase_price'] = (int) ($data['purchase_price'] ?? 0);
         $data['sale_price'] = (int) ($data['sale_price'] ?? 0);
         $data['min_stock'] = (int) ($data['min_stock'] ?? 0);
+        $data['discount_percent'] = (int) ($data['discount_percent'] ?? 0);
+        $data['sale_commission_percent'] = (int) ($data['sale_commission_percent'] ?? 0);
+        $data['repair_commission_percent'] = (int) ($data['repair_commission_percent'] ?? 0);
+        $data['item_type'] = $data['item_type'] ?? 'repair';
         $data['warehouse_id'] = ! empty($data['warehouse_id'])
             ? (int) $data['warehouse_id']
             : Warehouse::defaultId();
+        $data['category_id'] = ! empty($data['category_id']) ? (int) $data['category_id'] : null;
+        unset($data['auto_barcode']);
 
         if ($withStock) {
             $data['stock'] = (int) ($data['stock'] ?? 0);

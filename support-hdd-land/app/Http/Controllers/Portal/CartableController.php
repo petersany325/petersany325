@@ -112,6 +112,7 @@ class CartableController extends Controller
             'costStages',
             'statusLogs' => fn ($q) => $q->with('actor')->latest('id')->limit(40),
             'handoffs' => fn ($q) => $q->with('toTechnician')->where('status', 'accepted')->latest('id')->limit(12),
+            'workReports' => fn ($q) => $q->where('visibility', 'public')->latest('id')->limit(20),
         ]);
         $canPay = $reception->status !== 'cancelled' && $reception->remainingAmount() > 0;
         $payLinks = $canPay ? PaymentGateways::active() : [];
