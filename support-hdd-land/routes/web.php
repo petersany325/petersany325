@@ -28,6 +28,10 @@ use App\Http\Controllers\InternController;
 use App\Http\Controllers\InternPortalController;
 use App\Http\Controllers\LabelPrintController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PartCategoryController;
+use App\Http\Controllers\PartImportController;
+use App\Http\Controllers\WarehouseOpsController;
+use App\Http\Controllers\WorkReportController;
 use App\Http\Controllers\StaffSmsTemplateController;
 use App\Http\Controllers\Portal\AuthController as PortalAuthController;
 use App\Http\Controllers\Portal\CartableController as PortalCartableController;
@@ -161,6 +165,9 @@ Route::middleware('auth')->group(function () {
         Route::post('receptions/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('receptions.zarinpal');
         Route::get('receptions/{reception}/print', [ReceptionController::class, 'print'])->name('receptions.print');
         Route::get('labels/receptions/{reception}', [LabelPrintController::class, 'reception'])->name('labels.reception');
+        Route::get('work-reports', [WorkReportController::class, 'index'])->name('work-reports.index');
+        Route::get('work-reports/print', [WorkReportController::class, 'print'])->name('work-reports.print');
+        Route::get('receptions/{reception}/similar-work', [WorkReportController::class, 'similar'])->name('work-reports.similar');
         Route::post('receptions/{reception}/handoffs', [HandoffController::class, 'store'])->name('receptions.handoffs.store');
         Route::post('receptions/{reception}/cost-approval', [ReceptionController::class, 'requestCostApproval'])->name('receptions.cost-approval');
         Route::get('cost-approvals', [\App\Http\Controllers\CostApprovalsManageController::class, 'index'])->name('cost-approvals.index');
@@ -215,6 +222,23 @@ Route::middleware('auth')->group(function () {
         Route::resource('parts', PartController::class)->except(['destroy']);
         Route::post('parts/{part}/stock', [PartController::class, 'adjustStock'])->name('parts.stock');
         Route::get('labels/parts/{part}', [LabelPrintController::class, 'part'])->name('labels.part');
+        Route::get('part-categories', [PartCategoryController::class, 'index'])->name('part-categories.index');
+        Route::post('part-categories', [PartCategoryController::class, 'store'])->name('part-categories.store');
+        Route::put('part-categories/{partCategory}', [PartCategoryController::class, 'update'])->name('part-categories.update');
+        Route::delete('part-categories/{partCategory}', [PartCategoryController::class, 'destroy'])->name('part-categories.destroy');
+        Route::get('warehouse-transfers', [WarehouseOpsController::class, 'transfers'])->name('warehouse-transfers.index');
+        Route::post('warehouse-transfers', [WarehouseOpsController::class, 'storeTransfer'])->name('warehouse-transfers.store');
+        Route::get('stocktakes', [WarehouseOpsController::class, 'stocktakes'])->name('stocktakes.index');
+        Route::post('stocktakes', [WarehouseOpsController::class, 'createStocktake'])->name('stocktakes.store');
+        Route::get('stocktakes/{stocktake}', [WarehouseOpsController::class, 'showStocktake'])->name('stocktakes.show');
+        Route::put('stocktakes/{stocktake}', [WarehouseOpsController::class, 'updateStocktake'])->name('stocktakes.update');
+        Route::post('stocktakes/{stocktake}/post', [WarehouseOpsController::class, 'postStocktake'])->name('stocktakes.post');
+        Route::get('parts-import', [PartImportController::class, 'form'])->name('parts.import');
+        Route::post('parts-import', [PartImportController::class, 'store'])->name('parts.import.store');
+        Route::post('parts-bulk-prices', [PartImportController::class, 'bulkPrices'])->name('parts.bulk-prices');
+        Route::get('price-tiers', [PartImportController::class, 'tiers'])->name('price-tiers.index');
+        Route::post('price-tiers', [PartImportController::class, 'storeTier'])->name('price-tiers.store');
+        Route::post('parts/{part}/tier-prices', [PartImportController::class, 'savePartTierPrices'])->name('parts.tier-prices');
     });
 
     Route::middleware(EnsurePermission::class.':technicians')->group(function () {

@@ -15,6 +15,13 @@ class ReceptionWorkReport extends Model
         'details',
         'needs_part',
         'result_status',
+        'visibility',
+    ];
+
+    public const VISIBILITIES = [
+        'private' => 'خصوصی (فقط نویسنده)',
+        'internal' => 'داخلی (کارکنان)',
+        'public' => 'عمومی (مشتری هم می‌بیند)',
     ];
 
     protected function casts(): array
@@ -22,6 +29,27 @@ class ReceptionWorkReport extends Model
         return [
             'needs_part' => 'boolean',
         ];
+    }
+
+    public function visibilityLabel(): string
+    {
+        return self::VISIBILITIES[$this->visibility] ?? $this->visibility;
+    }
+
+    public function isVisibleTo(?User $user, bool $isCustomer = false): bool
+    {
+        $vis = $this->visibility ?: 'internal';
+        if ($vis === 'public') {
+            return true;
+        }
+        if ($isCustomer) {
+            return false;
+        }
+        if ($vis === 'private') {
+            return $user && (int) $user->id === (int) $this->user_id;
+        }
+
+        return (bool) $user;
     }
 
     public function reception(): BelongsTo

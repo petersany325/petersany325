@@ -4,9 +4,14 @@
     $whNav = [
         ['route' => 'parts.index', 'label' => 'میز انبار', 'mark' => 'م', 'tone' => 'teal'],
         ['route' => 'warehouses.index', 'label' => 'انبارها', 'mark' => 'چ', 'tone' => 'violet'],
+        ['route' => 'part-categories.index', 'label' => 'گروه‌بندی', 'mark' => 'گ', 'tone' => 'slate'],
+        ['route' => 'warehouse-transfers.index', 'label' => 'انتقال', 'mark' => 'ت', 'tone' => 'blue'],
+        ['route' => 'stocktakes.index', 'label' => 'انبارگردانی', 'mark' => 'ا', 'tone' => 'amber'],
         ['route' => 'parts.receipt', 'label' => 'رسید ورود', 'mark' => 'ر', 'tone' => 'blue'],
         ['route' => 'parts.issue', 'label' => 'حواله خروج', 'mark' => 'ح', 'tone' => 'rose'],
         ['route' => 'parts.movements', 'label' => 'کارتکس / گردش', 'mark' => 'ک', 'tone' => 'amber'],
+        ['route' => 'parts.import', 'label' => 'ورود اکسل', 'mark' => 'ف', 'tone' => 'green'],
+        ['route' => 'price-tiers.index', 'label' => 'تیپ قیمت', 'mark' => 'ق', 'tone' => 'violet'],
         ['route' => 'parts.valuation', 'label' => 'ارزش موجودی', 'mark' => 'ا', 'tone' => 'green'],
         ['route' => 'parts.create', 'label' => 'کالای جدید', 'mark' => '+', 'tone' => 'slate'],
     ];

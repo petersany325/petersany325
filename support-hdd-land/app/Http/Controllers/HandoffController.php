@@ -272,6 +272,7 @@ class HandoffController extends Controller
             'details' => ['nullable', 'string', 'max:5000'],
             'needs_part' => ['nullable', 'boolean'],
             'result_status' => ['nullable', 'in:repairing,waiting_part,ready,unrepairable'],
+            'visibility' => ['nullable', 'in:private,internal,public'],
         ]);
 
         $report = ReceptionWorkReport::query()->create([
@@ -282,6 +283,7 @@ class HandoffController extends Controller
             'details' => $data['details'] ?? null,
             'needs_part' => $request->boolean('needs_part'),
             'result_status' => $data['result_status'] ?? null,
+            'visibility' => $data['visibility'] ?? 'internal',
         ]);
 
         if (! empty($data['result_status']) && $reception->status !== 'delivered') {

@@ -135,6 +135,12 @@
                                 <form method="POST" action="{{ route('receptions.work-report', $row) }}" style="margin-bottom:8px;">
                                     @csrf
                                     <input type="text" name="summary" required maxlength="500" placeholder="گزارش کار این قبض…" style="min-width:200px;width:100%;margin-bottom:4px;">
+                                    <select name="visibility" style="width:100%;margin-bottom:4px;">
+                                        @foreach(\App\Models\ReceptionWorkReport::VISIBILITIES as $k => $lab)
+                                            <option value="{{ $k }}" @selected($k==='internal')>{{ $lab }}</option>
+                                        @endforeach
+                                    </select>
+                                    <textarea name="details" rows="2" placeholder="جزئیات اختیاری" style="width:100%;margin-bottom:4px;"></textarea>
                                     <div class="actions" style="margin:0;">
                                         <button class="btn btn-primary" type="submit">ثبت گزارش کار</button>
                                     </div>

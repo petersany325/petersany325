@@ -81,11 +81,15 @@
 
     <div class="panel">
         <h3 style="margin-top:0;">گزارش‌های کار</h3>
-        @forelse(($workReports ?? collect()) as $wr)
+        @php
+            $visibleReports = collect($workReports ?? [])->filter(fn ($wr) => $wr->isVisibleTo(auth()->user()));
+        @endphp
+        @forelse($visibleReports as $wr)
             <div style="padding:8px 0;border-bottom:1px dashed #e5e9ef;">
                 <strong>{{ $wr->summary }}</strong>
                 <div class="muted" style="font-size:11px;">
                     {{ jalali_like($wr->created_at) }} · {{ $wr->technician?->name ?: $wr->user?->name }}
+                    · {{ $wr->visibilityLabel() }}
                     @if($wr->needs_part) · نیاز به قطعه @endif
                 </div>
                 @if($wr->details)
