@@ -230,7 +230,16 @@
                         <label>متن زیر عنوان / فوتر کوتاه</label>
                         <input type="text" name="invoice_footer" value="{{ old('invoice_footer', $invoice['footer']) }}">
                     </div>
+                    <div>
+                        <label>پیشوند شماره قبض</label>
+                        <input type="text" name="receipt_prefix" value="{{ old('receipt_prefix', $invoice['receipt_prefix']) }}" dir="ltr" style="text-align:left;" placeholder="H-10M">
+                    </div>
+                    <div>
+                        <label>شروع شمارنده قبض</label>
+                        <input type="number" name="receipt_seq_start" min="1" value="{{ old('receipt_seq_start', $invoice['receipt_seq_start'] ?? 1000) }}" dir="ltr" style="text-align:left;">
+                    </div>
                 </div>
+                <p class="hint" style="margin-top:6px;">برای این مشتری سرزمین هارد پیش‌فرض <b dir="ltr">H-10M</b> است؛ قبض اول می‌شود <span dir="ltr">H-10M1000</span>.</p>
 
                 <h3 style="margin-top:12px;">تنظیمات صفحه چاپ</h3>
                 <div class="accept-row accept-row-4">

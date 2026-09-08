@@ -67,6 +67,8 @@ class SettingController extends Controller
                 'show_payments' => AppSetting::getValue('invoice_show_payments', '1') !== '0',
                 'show_fault' => AppSetting::getValue('invoice_show_fault', '1') !== '0',
                 'show_serial' => AppSetting::getValue('invoice_show_serial', '1') !== '0',
+                'receipt_prefix' => \App\Models\Reception::receiptPrefix(),
+                'receipt_seq_start' => (int) AppSetting::getValue('receipt_seq_start', '1000') ?: 1000,
             ],
             'paymentGateways' => PaymentGateways::all(),
             'paymentLinksShow' => [
@@ -314,6 +316,8 @@ class SettingController extends Controller
             'invoice_show_payments' => ['nullable', 'boolean'],
             'invoice_show_fault' => ['nullable', 'boolean'],
             'invoice_show_serial' => ['nullable', 'boolean'],
+            'receipt_prefix' => ['nullable', 'string', 'max:32'],
+            'receipt_seq_start' => ['nullable', 'integer', 'min:1', 'max:9999999'],
         ]);
 
         $textKeys = [
@@ -348,6 +352,11 @@ class SettingController extends Controller
         foreach ($boolKeys as $key) {
             AppSetting::setValue($key, $request->boolean($key) ? '1' : '0');
         }
+
+        $prefix = strtoupper(trim((string) ($data['receipt_prefix'] ?? '')));
+        $prefix = preg_replace('/[^A-Z0-9\-]/', '', $prefix) ?? '';
+        AppSetting::setValue('receipt_prefix', $prefix);
+        AppSetting::setValue('receipt_seq_start', (string) max(1, (int) ($data['receipt_seq_start'] ?? 1000)));
 
         return $this->settingsRedirect($request, 'invoice', 'success', 'تنظیمات فاکتور و چاپ ذخیره شد.');
     }

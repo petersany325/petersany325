@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\LicenseStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -335,10 +336,32 @@ class Reception extends Model
         return $prefix.'-'.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
     }
 
+    /** HDD Land customer shops start at H-10M; seller demo keeps T-20N unless overridden. */
+    public static function receiptPrefix(): string
+    {
+        try {
+            $custom = trim((string) AppSetting::getValue('receipt_prefix', ''));
+            if ($custom !== '') {
+                return $custom;
+            }
+        } catch (\Throwable) {
+        }
+
+        return LicenseStatus::isCustomerInstall() ? 'H-10M' : 'T-20N';
+    }
+
     public static function nextReceiptNo(): string
     {
-        $prefix = 'T-20N';
-        $max = 999; // next => T-20N1000
+        $prefix = self::receiptPrefix();
+        $start = 1000;
+        try {
+            $start = (int) AppSetting::getValue('receipt_seq_start', '1000');
+        } catch (\Throwable) {
+        }
+        if ($start < 1) {
+            $start = 1000;
+        }
+        $floor = $start - 1;
 
         // Numeric MAX via SQL — never load every receipt_no into PHP.
         $dbMax = (int) (static::query()
@@ -346,6 +369,6 @@ class Reception extends Model
             ->selectRaw('MAX(CAST(SUBSTRING(receipt_no, ?) AS UNSIGNED)) as m', [strlen($prefix) + 1])
             ->value('m') ?? 0);
 
-        return $prefix.(max($max, $dbMax) + 1);
+        return $prefix.(max($floor, $dbMax) + 1);
     }
 }
