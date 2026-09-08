@@ -722,6 +722,8 @@ class WebInstaller
         \App\Models\AppSetting::setValue('invoice_terms', $terms);
         \App\Models\AppSetting::setValue('invoice_show_logo', '1');
         \App\Models\AppSetting::setValue('brand_logo_version', (string) time());
+        \App\Models\AppSetting::setValue('receipt_prefix', 'H-10M');
+        \App\Models\AppSetting::setValue('receipt_seq_start', '1000');
 
         if (is_array($logo) && ! empty($logo['tmp']) && is_file((string) $logo['tmp'])) {
             $this->installBrandLogo((string) $logo['tmp']);
