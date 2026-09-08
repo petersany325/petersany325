@@ -114,6 +114,9 @@
         .gate-card.intern .gate-ico {
             background: #6d28d9;
         }
+        .gate-card.contact .gate-ico {
+            background: #0f766e;
+        }
         .gate-text { min-width: 0; flex: 1; }
         .gate-text strong {
             display: block;
@@ -141,6 +144,17 @@
             font-size: 11px;
             animation: rise .5s ease-out .1s both;
         }
+        .gate-foot .vendor-credit {
+            margin-top: 8px;
+            justify-content: center;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 10px;
+            line-height: 1.6;
+        }
+        .gate-foot .vendor-credit a { color: #1e3a8a; font-weight: 800; text-decoration: none; }
+        .gate-foot .vendor-credit-tagline { font-weight: 700; color: #334155; }
         @keyframes rise {
             from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
@@ -185,9 +199,21 @@
             </span>
             <span class="gate-go">←</span>
         </a>
+
+        <a class="gate-card contact" href="{{ route('contact') }}">
+            <span class="gate-ico">ه</span>
+            <span class="gate-text">
+                <strong>تماس با ما</strong>
+                <span>پشتیبانی {{ vendor_name() }} — تلفن، موبایل و وب‌سایت شرکت</span>
+            </span>
+            <span class="gate-go">←</span>
+        </a>
     </div>
 
-    <div class="gate-foot">{{ request()->getHost() }} · تشخیص خودکار موبایل / کامپیوتر</div>
+    <div class="gate-foot">
+        <div>{{ request()->getHost() }} · تشخیص خودکار موبایل / کامپیوتر</div>
+        @include('partials.vendor-credit')
+    </div>
 </div>
 <script>
 (function () {

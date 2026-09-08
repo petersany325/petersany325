@@ -305,13 +305,21 @@ a.win-menu-btn.link { text-decoration: none; }
 .app-statusbar {
     display: flex;
     justify-content: space-between;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 6px 10px;
     padding: 2px 8px;
     background: linear-gradient(180deg, #eceff3, #dfe4ea);
     border-top: 1px solid #b7c0cd;
     color: #4b5563;
     font-size: 10.5px;
     min-height: 20px;
+}
+.app-statusbar .vendor-credit {
+    flex: 1 0 100%;
+    justify-content: flex-start;
+    border-top: 1px dashed #c5ccd6;
+    padding-top: 2px;
+    margin-top: 1px;
 }
 
 /* ===== Dashboard shortcuts (smaller) ===== */
@@ -1022,7 +1030,7 @@ html[data-ui-mode="mobile"] .caption-full{display:none}
 html[data-ui-mode="mobile"] .caption-short{display:inline}
 html[data-ui-mode="mobile"] .caption-user-name{display:none}
 html[data-ui-mode="mobile"] body{background:#eef1f5}
-html[data-ui-mode="mobile"] .app-shell{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+html[data-ui-mode="mobile"] .app-shell{padding-bottom:calc(108px + env(safe-area-inset-bottom,0px))}
 html[data-ui-mode="mobile"] .app-toolbar{position:sticky;top:0;z-index:20;border-bottom:1px solid #9aa5b5}
 html[data-ui-mode="mobile"] .app-workspace{padding:8px}
 html[data-ui-mode="mobile"] .win-frame{border:0;box-shadow:none;background:transparent}
@@ -1054,6 +1062,12 @@ html[data-ui-mode="mobile"] .login-page{padding:12px;padding-bottom:24px}
 }
 .staff-tabbar a.is-on .staff-tab-mark{background:#2f6fed}
 .staff-tabbar small{font-size:11px;font-weight:700;line-height:1.1;white-space:nowrap}
+.app-vendor-bar{
+  position:fixed;left:0;right:0;bottom:calc(62px + env(safe-area-inset-bottom,0px));z-index:39;
+  padding:4px 10px;background:#eef1f5;border-top:1px solid #c5ccd6;
+  color:#4b5563;font-size:10px;text-align:center;
+}
+.staff-drawer-vendor{padding:8px 12px 12px;border-top:1px solid #d9dee6;background:#fff}
 .staff-drawer[hidden]{display:none!important}
 .staff-drawer{position:fixed;inset:0;z-index:60}
 .staff-drawer-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(2px)}
@@ -1240,4 +1254,48 @@ input[data-barcode][name="brand_model"],
 input[data-barcode][data-name="brand_model"]{
   text-transform:uppercase;
   letter-spacing:.02em;
+}
+
+.vendor-credit{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;
+  color:#5f6b7a;font-size:10.5px;line-height:1.5;
+}
+.vendor-credit a{color:#1e3a8a;font-weight:800;text-decoration:none}
+.vendor-credit a:hover{text-decoration:underline}
+.vendor-credit-tagline{font-weight:700;color:#334155}
+.guest-body{
+  margin:0;min-height:100dvh;font-family:Vazirmatn,Tahoma,sans-serif;
+  background:#e8eaee;color:#1f2933;
+}
+.guest-shell{
+  min-height:100dvh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:24px 16px 20px;gap:14px;
+}
+.guest-shell .vendor-credit{max-width:520px}
+.contact-page{
+  max-width:720px;margin:0 auto;padding:14px;
+  border:1px solid #9aa5b5;border-radius:4px;
+  background:linear-gradient(180deg,#fff,#f7f8fa);
+}
+.contact-hero{
+  display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;
+  margin-bottom:12px;
+}
+.contact-title{margin:4px 0 0;font-size:26px;font-weight:800}
+.contact-tagline{margin:6px 0 0;color:#5f6b7a;font-size:13px;line-height:1.7}
+.contact-lead{margin:0 0 14px;color:#5f6b7a;line-height:1.7;font-size:13px}
+.contact-lead a{color:#1e3a8a;font-weight:800}
+.contact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.contact-card{
+  display:grid;gap:4px;padding:12px;border:1px solid #9aa5b5;border-radius:3px;
+  background:linear-gradient(180deg,#fff,#eef1f5);text-decoration:none;color:inherit;
+}
+.contact-card:hover{border-color:#2f6fed;background:#f3f7ff}
+.contact-k{font-size:11px;color:#5f6b7a;font-weight:800}
+.contact-card strong{font-size:16px}
+.contact-site-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:8px 12px;border-radius:3px;font-weight:800;font-size:12.5px;
+  color:#fff;background:linear-gradient(180deg,#4b8dff,#2f6fed);border:1px solid #2a62d4;
+  text-decoration:none;
 }

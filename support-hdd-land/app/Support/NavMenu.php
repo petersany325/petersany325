@@ -235,6 +235,16 @@ class NavMenu
                     ['label' => 'پروفایل من', 'route' => 'profile.edit', 'match' => 'profile.*', 'hint' => 'نام و رمز', 'mark' => 'پ', 'permission' => 'profile'],
                 ],
             ],
+            [
+                'key' => 'contact',
+                'label' => 'تماس با ما',
+                'permission' => null,
+                'route' => 'contact',
+                'match' => 'contact',
+                'mark' => 'ه',
+                'hint' => 'پشتیبانی سرزمین هارد',
+                'children' => [],
+            ],
         ];
 
         $out = [];
@@ -323,6 +333,7 @@ class NavMenu
             'system_tools' => 'teal',
             'licenses' => 'violet',
             'settings' => 'slate',
+            'contact' => 'teal',
             default => 'slate',
         };
     }
@@ -346,6 +357,7 @@ class NavMenu
             'system_tools' => 'ابزار',
             'licenses' => 'لایسنس',
             'settings' => 'تنظیم',
+            'contact' => 'تماس',
             default => $fallback !== '' ? mb_substr($fallback, 0, 8) : 'منو',
         };
     }

@@ -16,7 +16,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp15">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp16">
     <script>
     (function () {
         try {
@@ -162,6 +162,11 @@
                 <span style="margin-right:10px;opacity:.9;">· لایسنس: {{ $licBar['plan_text'] }}@if(!empty($licBar['expires_jalali'])) تا {{ $licBar['expires_jalali'] }}@elseif(!empty($licBar['lifetime'])) (مادام‌العمر)@endif</span>
             @endif
         </div>
+        @include('partials.vendor-credit', ['compact' => true, 'hideContact' => request()->routeIs('contact')])
+    </div>
+
+    <div class="app-vendor-bar mobile-only">
+        @include('partials.vendor-credit', ['compact' => true, 'hideContact' => request()->routeIs('contact')])
     </div>
 
     {{-- تب‌بار موبایل --}}
@@ -234,11 +239,17 @@
                     </div>
                 @endforeach
             </div>
+            <div class="staff-drawer-vendor">
+                @include('partials.vendor-credit', ['compact' => true, 'hideContact' => request()->routeIs('contact')])
+            </div>
         </aside>
     </div>
 </div>
 @else
-    @yield('content')
+    <div class="guest-shell">
+        @yield('content')
+        @include('partials.vendor-credit', ['hideContact' => request()->routeIs('contact')])
+    </div>
 @endauth
 <script src="{{ asset('js/app.js') }}?v=erp15"></script>
 <script>

@@ -373,3 +373,59 @@ if (! function_exists('shop_logo_url')) {
         return asset($rel).'?v='.rawurlencode($ver);
     }
 }
+
+if (! function_exists('vendor_name')) {
+    function vendor_name(): string
+    {
+        $name = trim((string) config('vendor.name', 'سرزمین هارد'));
+
+        return $name !== '' ? $name : 'سرزمین هارد';
+    }
+}
+
+if (! function_exists('vendor_url')) {
+    function vendor_url(): string
+    {
+        $url = trim((string) config('vendor.url', 'https://www.hdd-land.ir'));
+        if ($url === '') {
+            $url = 'https://www.hdd-land.ir';
+        }
+        if (! preg_match('#^https?://#i', $url)) {
+            $url = 'https://'.$url;
+        }
+
+        return rtrim($url, '/');
+    }
+}
+
+if (! function_exists('vendor_host')) {
+    function vendor_host(): string
+    {
+        $host = parse_url(vendor_url(), PHP_URL_HOST);
+
+        return is_string($host) && $host !== '' ? $host : 'www.hdd-land.ir';
+    }
+}
+
+if (! function_exists('vendor_phone')) {
+    function vendor_phone(): string
+    {
+        return trim((string) config('vendor.phone', '01144447220')) ?: '01144447220';
+    }
+}
+
+if (! function_exists('vendor_mobile')) {
+    function vendor_mobile(): string
+    {
+        return trim((string) config('vendor.mobile', '09123486391')) ?: '09123486391';
+    }
+}
+
+if (! function_exists('vendor_tagline')) {
+    function vendor_tagline(): string
+    {
+        $tagline = trim((string) config('vendor.tagline', 'نرم افزار تخصصی تعمیرکاران نسخه پیشرفته کامپیوتر و موبایل'));
+
+        return $tagline !== '' ? $tagline : 'نرم افزار تخصصی تعمیرکاران نسخه پیشرفته کامپیوتر و موبایل';
+    }
+}

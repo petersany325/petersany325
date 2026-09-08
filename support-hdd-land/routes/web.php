@@ -31,6 +31,7 @@ use App\Http\Controllers\Portal\AuthController as PortalAuthController;
 use App\Http\Controllers\Portal\CartableController as PortalCartableController;
 use App\Http\Controllers\Portal\MessageController as PortalMessageController;
 use App\Http\Controllers\LicenseApiController;
+use App\Http\Controllers\ContactController;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsurePortalCustomer;
 use Illuminate\Support\Facades\Auth;
@@ -59,6 +60,8 @@ Route::get('/', function () {
 
 Route::redirect('/gate', '/');
 Route::redirect('/portal', '/cartable');
+
+Route::get('/contact', ContactController::class)->name('contact');
 
 Route::get('/a/{token}', [\App\Http\Controllers\CostApprovalController::class, 'show'])
     ->where('token', '[A-Za-z0-9]{20,80}')
