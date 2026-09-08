@@ -207,21 +207,7 @@ class NavMenu
                     ['label' => 'گزارش پیامک', 'route' => 'reports.sms', 'match' => 'reports.sms', 'permission' => 'reports.sms', 'hint' => 'از منوی پیامک‌ها هم هست', 'mark' => 'پ'],
                 ],
             ],
-            [
-                'key' => 'licenses',
-                'label' => 'لایسنس‌ها',
-                'permission' => 'system.tools',
-                'route' => 'licenses.index',
-                'match' => 'licenses.*',
-                'mark' => 'ل',
-                'hint' => 'ساخت سریال و گزارش آنلاین نصب مشتریان',
-                'admin_only' => true,
-                'children' => [
-                    ['label' => 'مرکز لایسنس', 'route' => 'licenses.index', 'match' => 'licenses.index|licenses.issue|licenses.sms|licenses.revoke|licenses.unbind|licenses.extend', 'hint' => 'ساخت، ارسال SMS، باطل‌سازی', 'mark' => 'ل'],
-                    ['label' => 'پلن و قیمت', 'route' => 'licenses.plans', 'match' => 'licenses.plans*', 'hint' => '۶ ماهه / یک‌ساله و قیمت‌ها', 'mark' => 'ق'],
-                    ['label' => 'گزارش آنلاین', 'route' => 'licenses.online', 'match' => 'licenses.online', 'hint' => 'نصب‌های آنلاین / آفلاین', 'mark' => 'آ'],
-                ],
-            ],
+            self::licenseNavGroup(),
             [
                 'key' => 'system_tools',
                 'label' => 'ابزارهای سیستم',
@@ -358,6 +344,7 @@ class NavMenu
             'accounting' => 'حساب',
             'reports' => 'گزارش',
             'system_tools' => 'ابزار',
+            'licenses' => 'لایسنس',
             'settings' => 'تنظیم',
             default => $fallback !== '' ? mb_substr($fallback, 0, 8) : 'منو',
         };
@@ -403,6 +390,47 @@ class NavMenu
         }
 
         return $tabs;
+    }
+
+    /**
+     * Seller site: issue/report licenses. Customer install: own activation + renew only.
+     *
+     * @return array{key:string,label:string,permission:?string,route:?string,match:string,mark:string,hint:string,admin_only?:bool,children:list<array>}
+     */
+    private static function licenseNavGroup(): array
+    {
+        if (LicenseStatus::isCustomerInstall()) {
+            return [
+                'key' => 'licenses',
+                'label' => 'لایسنس',
+                'permission' => 'system.tools',
+                'route' => 'licenses.status',
+                'match' => 'licenses.status|licenses.renewal',
+                'mark' => 'ل',
+                'hint' => 'اطلاعات فعال‌سازی و تمدید',
+                'admin_only' => true,
+                'children' => [
+                    ['label' => 'اطلاعات فعال‌سازی', 'route' => 'licenses.status', 'match' => 'licenses.status', 'hint' => 'پلن، مبلغ و مدت خرید', 'mark' => 'ا'],
+                    ['label' => 'تمدید مجدد', 'route' => 'licenses.renewal', 'match' => 'licenses.renewal', 'hint' => 'تمدید اشتراک لایسنس', 'mark' => 'ت'],
+                ],
+            ];
+        }
+
+        return [
+            'key' => 'licenses',
+            'label' => 'لایسنس‌ها',
+            'permission' => 'system.tools',
+            'route' => 'licenses.index',
+            'match' => 'licenses.*',
+            'mark' => 'ل',
+            'hint' => 'ساخت سریال و گزارش آنلاین نصب مشتریان',
+            'admin_only' => true,
+            'children' => [
+                ['label' => 'مرکز لایسنس', 'route' => 'licenses.index', 'match' => 'licenses.index|licenses.issue|licenses.sms|licenses.revoke|licenses.unbind|licenses.extend', 'hint' => 'ساخت، ارسال SMS، باطل‌سازی', 'mark' => 'ل'],
+                ['label' => 'پلن و قیمت', 'route' => 'licenses.plans', 'match' => 'licenses.plans*', 'hint' => '۶ ماهه / یک‌ساله و قیمت‌ها', 'mark' => 'ق'],
+                ['label' => 'گزارش آنلاین', 'route' => 'licenses.online', 'match' => 'licenses.online', 'hint' => 'نصب‌های آنلاین / آفلاین', 'mark' => 'آ'],
+            ],
+        ];
     }
 
     public static function isActive(string $match): bool

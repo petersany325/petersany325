@@ -329,18 +329,23 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware(EnsurePermission::class.':system.tools')->prefix('licenses')->name('licenses.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');
-        Route::get('/online', [\App\Http\Controllers\LicenseAdminController::class, 'online'])->name('online');
-        Route::get('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'plans'])->name('plans');
-        Route::post('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'savePlans'])->name('plans.save');
-        Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
-        Route::get('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'edit'])->name('edit');
-        Route::post('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'update'])->name('update');
-        Route::get('/{license}/renew', [\App\Http\Controllers\LicenseAdminController::class, 'renewForm'])->name('renew');
-        Route::post('/{license}/sms', [\App\Http\Controllers\LicenseAdminController::class, 'sendSms'])->name('sms');
-        Route::post('/{license}/revoke', [\App\Http\Controllers\LicenseAdminController::class, 'revoke'])->name('revoke');
-        Route::post('/{license}/unbind', [\App\Http\Controllers\LicenseAdminController::class, 'unbind'])->name('unbind');
-        Route::post('/{license}/extend', [\App\Http\Controllers\LicenseAdminController::class, 'extend'])->name('extend');
+        Route::get('/status', [\App\Http\Controllers\LicenseCustomerController::class, 'status'])->name('status');
+        Route::get('/renewal', [\App\Http\Controllers\LicenseCustomerController::class, 'renewal'])->name('renewal');
+
+        Route::middleware(\App\Http\Middleware\EnsureSellerLicenseAdmin::class)->group(function () {
+            Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');
+            Route::get('/online', [\App\Http\Controllers\LicenseAdminController::class, 'online'])->name('online');
+            Route::get('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'plans'])->name('plans');
+            Route::post('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'savePlans'])->name('plans.save');
+            Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
+            Route::get('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'edit'])->name('edit');
+            Route::post('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'update'])->name('update');
+            Route::get('/{license}/renew', [\App\Http\Controllers\LicenseAdminController::class, 'renewForm'])->name('renew');
+            Route::post('/{license}/sms', [\App\Http\Controllers\LicenseAdminController::class, 'sendSms'])->name('sms');
+            Route::post('/{license}/revoke', [\App\Http\Controllers\LicenseAdminController::class, 'revoke'])->name('revoke');
+            Route::post('/{license}/unbind', [\App\Http\Controllers\LicenseAdminController::class, 'unbind'])->name('unbind');
+            Route::post('/{license}/extend', [\App\Http\Controllers\LicenseAdminController::class, 'extend'])->name('extend');
+        });
     });
 
     Route::middleware(EnsurePermission::class.':receptions')->prefix('trash')->name('trash.')->group(function () {
