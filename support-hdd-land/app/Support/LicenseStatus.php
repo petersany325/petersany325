@@ -14,6 +14,39 @@ class LicenseStatus
         return storage_path('app/'.self::FILE);
     }
 
+    /** Customer shop install has LICENSE_KEY; seller site (HDD Land) does not. */
+    public static function isCustomerInstall(): bool
+    {
+        return trim((string) config('license.key')) !== '';
+    }
+
+    public static function purchaseUrl(): string
+    {
+        $url = rtrim((string) config('license.purchase_url', 'https://hdd-land.ir'), '/');
+
+        return $url !== '' ? $url : 'https://hdd-land.ir';
+    }
+
+    public static function maskedKey(string $key): string
+    {
+        $key = strtoupper(trim($key));
+        if ($key === '') {
+            return '—';
+        }
+        $parts = preg_split('/-/', $key) ?: [];
+        if (count($parts) >= 4) {
+            $parts[1] = '****';
+            $parts[2] = '****';
+
+            return implode('-', $parts);
+        }
+        if (strlen($key) <= 8) {
+            return $key;
+        }
+
+        return substr($key, 0, 4).str_repeat('*', max(0, strlen($key) - 8)).substr($key, -4);
+    }
+
     /** @param  array<string, mixed>  $data */
     public static function store(array $data): void
     {
@@ -69,19 +102,35 @@ class LicenseStatus
             $planText = $plan.' ('.$months.' ماه)';
         }
 
+        $lifetime = $expires === '' && ($months === null || $months === 0);
+        $remainingDays = null;
+        $expired = false;
+        if ($expires !== '') {
+            $endTs = strtotime($expires);
+            if ($endTs !== false) {
+                $remainingDays = (int) floor(($endTs - strtotime('today')) / 86400);
+                $expired = $remainingDays < 0;
+            }
+        }
+
         return [
             'enabled' => true,
             'key' => $key,
+            'masked_key' => self::maskedKey($key),
             'domain' => (string) config('license.domain'),
             'plan' => $plan,
             'plan_months' => $months,
             'plan_text' => $planText,
             'price_toman' => $price,
+            'price_label' => $price > 0 ? number_format($price).' تومان' : '—',
             'activated_at' => $activated,
             'expires_at' => $expires,
             'activated_jalali' => $activated !== '' ? jalali_date($activated) : null,
             'expires_jalali' => $expires !== '' ? jalali_date($expires) : null,
-            'lifetime' => $expires === '' && ($months === null || $months === 0),
+            'lifetime' => $lifetime,
+            'remaining_days' => $remainingDays,
+            'expired' => $expired,
+            'purchase_url' => self::purchaseUrl(),
             'summary' => self::summaryLine($planText, $months, $activated, $expires),
             'checked_at' => $fromFile['checked_at'] ?? null,
         ];

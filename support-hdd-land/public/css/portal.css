@@ -7,8 +7,9 @@
 html,body{margin:0;min-height:100%}
 body.portal-body{
   font-family:Vazirmatn,Tahoma,sans-serif;color:var(--ink);
-  background:var(--bg); font-size:12.5px; padding-bottom:76px;
+  background:var(--bg); font-size:12.5px; padding-bottom:108px;
 }
+body.portal-body.portal-auth{padding-bottom:28px}
 a{color:var(--accent);text-decoration:none}
 .p-top{
   display:flex;justify-content:space-between;align-items:center;gap:10px;
@@ -157,3 +158,38 @@ a{color:var(--accent);text-decoration:none}
 .p-ticket.is-debt{border-color:#f1a8a8;background:linear-gradient(180deg,#fff,#fff5f5)}
 .p-ticket-pay.is-debt{color:#9f1239;background:#fde8e8;border-color:#fecaca}
 .p-ticket-pay.is-debt em{color:#9f1239}
+.p-vendor{
+  text-align:center;padding:10px 12px 12px;
+}
+body.portal-body:not(.portal-auth) .p-vendor{
+  position:fixed;left:0;right:0;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:49;
+  padding:6px 10px;background:#eef1f5;border-top:1px solid #c5ccd6;
+}
+.vendor-credit{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 10px;
+  color:#5f6b7a;font-size:10.5px;line-height:1.5;
+}
+.vendor-credit a{color:#1e3a8a;font-weight:800;text-decoration:none}
+.vendor-credit-tagline{font-weight:700;color:#334155}
+.contact-page{
+  margin:12px;padding:14px;border:1px solid #9aa5b5;border-radius:4px;
+  background:linear-gradient(180deg,#fff,#f7f8fa);
+}
+.contact-hero{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.contact-title{margin:4px 0 0;font-size:22px;font-weight:800}
+.contact-tagline{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.7}
+.contact-lead{margin:0 0 14px;color:var(--muted);line-height:1.7;font-size:13px}
+.contact-lead a{color:#1e3a8a;font-weight:800}
+.contact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.contact-card{
+  display:grid;gap:4px;padding:12px;border:1px solid #9aa5b5;border-radius:3px;
+  background:linear-gradient(180deg,#fff,#eef1f5);text-decoration:none;color:inherit;
+}
+.contact-k{font-size:11px;color:var(--muted);font-weight:800}
+.contact-card strong{font-size:15px}
+.contact-site-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:8px 12px;border-radius:3px;font-weight:800;font-size:12.5px;
+  color:#fff;background:linear-gradient(180deg,#4b8dff,#2f6fed);border:1px solid #2a62d4;
+  text-decoration:none;
+}
