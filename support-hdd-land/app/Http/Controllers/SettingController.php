@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\NiazpardazSmsService;
 use App\Support\BackupSettings;
 use App\Support\BankTransferSettings;
+use App\Support\LabelPrintSettings;
 use App\Support\PaymentGateways;
 use App\Support\Permissions;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ use Illuminate\Validation\Rule;
 
 class SettingController extends Controller
 {
-    private const TABS = ['lookups', 'faults', 'referrals', 'invoice', 'payments', 'sms', 'backup', 'users'];
+    private const TABS = ['lookups', 'faults', 'referrals', 'invoice', 'labels', 'payments', 'sms', 'backup', 'users'];
 
     public function index(Request $request)
     {
@@ -68,6 +69,12 @@ class SettingController extends Controller
                 'show_fault' => AppSetting::getValue('invoice_show_fault', '1') !== '0',
                 'show_serial' => AppSetting::getValue('invoice_show_serial', '1') !== '0',
             ],
+            'labels' => LabelPrintSettings::all(),
+            'labelSizes' => LabelPrintSettings::SIZES,
+            'labelSymbologies' => LabelPrintSettings::SYMBOLOGIES,
+            'labelLayouts' => LabelPrintSettings::LAYOUTS,
+            'labelPositions' => LabelPrintSettings::POSITIONS,
+            'labelModes' => LabelPrintSettings::printModes(),
             'paymentGateways' => PaymentGateways::all(),
             'paymentLinksShow' => [
                 'reception' => PaymentGateways::showOnReception(),
@@ -350,6 +357,51 @@ class SettingController extends Controller
         }
 
         return $this->settingsRedirect($request, 'invoice', 'success', 'تنظیمات فاکتور و چاپ ذخیره شد.');
+    }
+
+    public function updateLabels(Request $request)
+    {
+        $sizeKeys = implode(',', array_keys(LabelPrintSettings::SIZES));
+        $symKeys = implode(',', array_keys(LabelPrintSettings::SYMBOLOGIES));
+        $layoutKeys = implode(',', array_keys(LabelPrintSettings::LAYOUTS));
+        $posKeys = implode(',', array_keys(LabelPrintSettings::POSITIONS));
+        $modeKeys = implode(',', array_keys(LabelPrintSettings::printModes()));
+
+        $data = $request->validate([
+            'label_size' => ['required', 'in:'.$sizeKeys],
+            'label_custom_w' => ['nullable', 'integer', 'min:20', 'max:300'],
+            'label_custom_h' => ['nullable', 'integer', 'min:15', 'max:300'],
+            'label_symbology' => ['required', 'in:'.$symKeys],
+            'label_layout' => ['required', 'in:'.$layoutKeys],
+            'label_print_mode' => ['required', 'in:'.$modeKeys],
+            'label_barcode_position' => ['required', 'in:'.$posKeys],
+            'label_printer_name' => ['nullable', 'string', 'max:160'],
+            'label_gap_mm' => ['nullable', 'integer', 'min:0', 'max:20'],
+            'label_margin_mm' => ['nullable', 'integer', 'min:0', 'max:15'],
+            'label_font_size' => ['nullable', 'integer', 'min:7', 'max:16'],
+            'label_copies_default' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'label_show_shop' => ['nullable', 'boolean'],
+            'label_show_text' => ['nullable', 'boolean'],
+            'label_auto_print' => ['nullable', 'boolean'],
+        ]);
+
+        AppSetting::setValue('label_size', (string) $data['label_size']);
+        AppSetting::setValue('label_custom_w', (string) ((int) ($data['label_custom_w'] ?? 50)));
+        AppSetting::setValue('label_custom_h', (string) ((int) ($data['label_custom_h'] ?? 30)));
+        AppSetting::setValue('label_symbology', (string) $data['label_symbology']);
+        AppSetting::setValue('label_layout', (string) $data['label_layout']);
+        AppSetting::setValue('label_print_mode', (string) $data['label_print_mode']);
+        AppSetting::setValue('label_barcode_position', (string) $data['label_barcode_position']);
+        AppSetting::setValue('label_printer_name', (string) ($data['label_printer_name'] ?? ''));
+        AppSetting::setValue('label_gap_mm', (string) ((int) ($data['label_gap_mm'] ?? 2)));
+        AppSetting::setValue('label_margin_mm', (string) ((int) ($data['label_margin_mm'] ?? 2)));
+        AppSetting::setValue('label_font_size', (string) ((int) ($data['label_font_size'] ?? 9)));
+        AppSetting::setValue('label_copies_default', (string) ((int) ($data['label_copies_default'] ?? 1)));
+        AppSetting::setValue('label_show_shop', $request->boolean('label_show_shop') ? '1' : '0');
+        AppSetting::setValue('label_show_text', $request->boolean('label_show_text') ? '1' : '0');
+        AppSetting::setValue('label_auto_print', $request->boolean('label_auto_print') ? '1' : '0');
+
+        return $this->settingsRedirect($request, 'labels', 'success', 'تنظیمات برچسب و بارکد ذخیره شد.');
     }
 
     public function updatePayments(Request $request)

@@ -95,6 +95,7 @@
                             <td>{{ toman((int)$part->stock * (int)$part->purchase_price) }}</td>
                             <td class="wh-row-actions">
                                 <a class="btn btn-ghost" href="{{ route('parts.show', $part) }}">کارتکس</a>
+                                <a class="btn btn-ghost" href="{{ route('labels.part', $part) }}" target="_blank" rel="noopener">برچسب</a>
                                 <a class="btn btn-ghost" href="{{ route('parts.edit', $part) }}">ویرایش</a>
                             </td>
                         </tr>
