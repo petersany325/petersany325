@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>سرزمین هارد | HDD Software</title>
+    <meta name="description" content="نرم افزار تخصصی تعمیرکاران نسخه پیشرفته کامپیوتر و موبایل — سرزمین هارد">
+    <meta name="theme-color" content="#2b3340">
+    <link rel="icon" href="https://support.hddsoftware.ir/favicon.ico" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #1f2933;
+            --muted: #5f6b7a;
+            --line: #9aa5b5;
+            --caption: #2b3340;
+            --accent: #2f6fed;
+            --accent-2: #1e3a8a;
+            --bg: #e8eaee;
+            --panel: #fff;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; min-height: 100%; }
+        body {
+            font-family: Vazirmatn, Tahoma, sans-serif;
+            color: var(--ink);
+            background: var(--bg);
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+        a { color: var(--accent-2); }
+        .top {
+            background: linear-gradient(180deg, #3a4454, var(--caption));
+            color: #f2f4f7;
+            border-bottom: 1px solid #1c222c;
+        }
+        .top-inner {
+            width: min(1080px, calc(100% - 24px));
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px 20px;
+            padding: 10px 0 12px;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: inherit;
+        }
+        .brand img {
+            width: 44px; height: 44px;
+            object-fit: contain;
+            background: #fff;
+            border-radius: 6px;
+            padding: 4px;
+            border: 1px solid #c5ccd6;
+        }
+        .brand strong { display: block; font-size: 16px; font-weight: 800; }
+        .brand span { display: block; font-size: 11px; opacity: .82; }
+        nav[aria-label="منوی اصلی"] { flex: 1 1 280px; }
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        nav a {
+            display: inline-flex;
+            align-items: center;
+            min-height: 40px;
+            padding: 8px 14px;
+            border-radius: 3px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 800;
+            font-size: 13px;
+            background: linear-gradient(180deg, #4b8dff, var(--accent));
+            border: 1px solid #2458c4;
+            box-shadow: 0 4px 12px rgba(0,0,0,.18);
+        }
+        nav a:hover { filter: brightness(1.06); }
+        .wrap {
+            width: min(1080px, calc(100% - 24px));
+            margin: 0 auto;
+            padding: 28px 0 40px;
+            flex: 1;
+        }
+        .hero {
+            background: linear-gradient(180deg, #fff, #eef1f5);
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            padding: 28px 22px;
+            box-shadow: 0 10px 28px rgba(0,0,0,.08);
+        }
+        .kicker {
+            margin: 0 0 8px;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--muted);
+        }
+        h1 {
+            margin: 0;
+            font-size: clamp(22px, 4vw, 32px);
+            font-weight: 800;
+        }
+        .lead {
+            margin: 10px 0 0;
+            color: var(--muted);
+            line-height: 1.8;
+            font-size: 14px;
+            max-width: 46rem;
+        }
+        .actions { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px; }
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 10px 16px;
+            border-radius: 3px;
+            text-decoration: none;
+            font-weight: 800;
+            color: #fff;
+            background: linear-gradient(180deg, #4b8dff, var(--accent));
+            border: 1px solid #2458c4;
+        }
+        .note {
+            margin-top: 14px;
+            padding: 12px 14px;
+            background: #f3f7ff;
+            border: 1px dashed #93c5fd;
+            border-radius: 3px;
+            color: #1e3a8a;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+        footer {
+            border-top: 1px solid var(--line);
+            background: #fff;
+            padding: 16px 0 22px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+        .foot-inner {
+            width: min(1080px, calc(100% - 24px));
+            margin: 0 auto;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+            justify-content: space-between;
+        }
+        footer a { font-weight: 800; text-decoration: none; }
+        @media (max-width: 720px) {
+            nav ul { justify-content: stretch; }
+            nav a { width: 100%; justify-content: center; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <header class="top">
+        <div class="top-inner">
+            <a class="brand" href="/">
+                <img src="https://support.hddsoftware.ir/images/logo.png" alt="سرزمین هارد">
+                <span>
+                    <strong>سرزمین هارد</strong>
+                    <span>نرم افزار تخصصی تعمیرکاران</span>
+                </span>
+            </a>
+            <nav aria-label="منوی اصلی">
+                <ul>
+                    <li>
+                        <a href="https://support.hddsoftware.ir/" id="menu-tickets">
+                            ورود به سیستم قبض کانون بازیابی اطلاعات
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="wrap">
+        <section class="hero">
+            <p class="kicker">سایت اصلی در حال طراحی است</p>
+            <h1>نرم افزار تخصصی تعمیرکاران نسخه پیشرفته کامپیوتر و موبایل</h1>
+            <p class="lead">
+                صفحهٔ اصلی شرکت به‌زودی تکمیل می‌شود. تا آن زمان از منوی بالا وارد سامانهٔ قبض
+                <strong>کانون بازیابی اطلاعات دکتر هارد</strong> شوید. بعد از طراحی سایت، همین منو سر جایش می‌ماند و بخش‌های جدید به آن اضافه می‌شود.
+            </p>
+            <div class="actions">
+                <a class="btn-primary" href="https://support.hddsoftware.ir/">ورود به سیستم قبض کانون بازیابی اطلاعات</a>
+            </div>
+            <p class="note">لینک فعلی: support.hddsoftware.ir — سامانه پذیرش، کارتابل مشتری و پنل کارمندان.</p>
+        </section>
+    </main>
+
+    <footer>
+        <div class="foot-inner">
+            <div>محصول <a href="https://www.hdd-land.ir" target="_blank" rel="noopener">سرزمین هارد</a> · <span dir="ltr">www.hdd-land.ir</span></div>
+            <div>پشتیبانی <a href="tel:01144447220" dir="ltr">01144447220</a> · موبایل <a href="tel:09123486391" dir="ltr">09123486391</a></div>
+        </div>
+    </footer>
+</body>
+</html>
