@@ -18,7 +18,8 @@
 .vb-widget .demo-text hr,.vb-widget .demo-html hr{border:0;border-top:1px solid #d5dfeb;margin:1em 0}
 .pb-text{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;line-height:1.75}
 .pb-text:empty{min-height:1em}
-.pb-html{overflow-wrap:anywhere;word-break:break-word;line-height:1.75}
+.pb-html{overflow-wrap:anywhere;word-break:break-word;line-height:1.75;color:var(--pb-text-color,inherit)}
+.pb-text,.pb-html :where(p,h1,h2,h3,h4,h5,h6,li,div){color:var(--pb-text-color,inherit)}
 .pb-html p{margin:0 0 .9em}
 .pb-html p:last-child{margin-bottom:0}
 .pb-html ul,.pb-html ol{margin:0 0 .9em;padding-left:1.35em}
