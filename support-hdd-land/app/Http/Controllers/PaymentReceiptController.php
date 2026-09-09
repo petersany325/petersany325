@@ -17,6 +17,17 @@ class PaymentReceiptController extends Controller
 {
     public function index(Request $request)
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('payment_receipts')) {
+            return view('payment-receipts.index', [
+                'receipts' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 20),
+                'stats' => ['pending' => 0, 'approved' => 0, 'rejected' => 0, 'total' => 0],
+                'status' => 'pending',
+                'q' => '',
+                'statusLabels' => PaymentReceipt::STATUSES,
+                'setupHint' => 'جدول فیش‌های بانکی هنوز ساخته نشده. روی سرور دستور php artisan migrate را اجرا کنید.',
+            ]);
+        }
+
         $status = trim((string) $request->get('status', 'pending'));
         $q = trim((string) $request->get('q', ''));
 
