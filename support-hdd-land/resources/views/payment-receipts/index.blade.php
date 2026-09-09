@@ -15,6 +15,10 @@
         @endif
     </div>
 
+    @if(!empty($setupHint))
+        <div class="alert alert-error" style="margin-top:10px;">{{ $setupHint }}</div>
+    @endif
+
     <div class="emp-stat-row" style="margin-top:10px;">
         <div class="emp-stat tone-sms"><span>در انتظار</span><strong>{{ $stats['pending'] }}</strong></div>
         <div class="emp-stat tone-ok"><span>تأییدشده</span><strong>{{ $stats['approved'] }}</strong></div>
@@ -79,6 +83,6 @@
         </table>
     </div>
 
-    <div style="margin-top:10px;">{{ $receipts->links() }}</div>
+    <div style="margin-top:10px;">{{ $receipts->links('partials.pagination') }}</div>
 </div>
 @endsection

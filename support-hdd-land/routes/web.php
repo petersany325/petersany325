@@ -270,11 +270,11 @@ Route::middleware('auth')->group(function () {
         ->name('reports.payments');
 
     Route::middleware(EnsurePermission::class.':reports.payments')->prefix('payment-receipts')->name('payment-receipts.')->group(function () {
-        Route::get('/', [PaymentReceiptController::class, 'index'])->name('index');
-        Route::get('{receipt}', [PaymentReceiptController::class, 'show'])->name('show');
-        Route::get('{receipt}/image', [PaymentReceiptController::class, 'image'])->name('image');
-        Route::post('{receipt}/approve', [PaymentReceiptController::class, 'approve'])->name('approve');
-        Route::post('{receipt}/reject', [PaymentReceiptController::class, 'reject'])->name('reject');
+        Route::get('/', [\App\Http\Controllers\PaymentReceiptController::class, 'index'])->name('index');
+        Route::get('{receipt}', [\App\Http\Controllers\PaymentReceiptController::class, 'show'])->name('show');
+        Route::get('{receipt}/image', [\App\Http\Controllers\PaymentReceiptController::class, 'image'])->name('image');
+        Route::post('{receipt}/approve', [\App\Http\Controllers\PaymentReceiptController::class, 'approve'])->name('approve');
+        Route::post('{receipt}/reject', [\App\Http\Controllers\PaymentReceiptController::class, 'reject'])->name('reject');
     });
     Route::get('reports/technicians', [ReportController::class, 'technicians'])
         ->middleware(EnsurePermission::class.':reports.technicians')
