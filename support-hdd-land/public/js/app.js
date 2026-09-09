@@ -425,6 +425,7 @@
         if (!form) return;
 
         var lookupUrl = form.getAttribute('data-lookup-url') || '';
+        var lookupCustomersUrl = form.getAttribute('data-lookup-customers-url') || '';
         var lookupSerialUrl = form.getAttribute('data-lookup-serial-url') || '';
         var ensureCustomerUrl = form.getAttribute('data-ensure-customer-url') || '';
         var skipPhone = form.getAttribute('data-skip-phone') === '1';
@@ -434,7 +435,13 @@
         var stepPhone = document.getElementById('step-phone');
         var lookupPhoneInput = document.getElementById('lookup-phone');
         var lookupPhoneBtn = document.getElementById('lookup-phone-btn');
+        var lookupNameInput = document.getElementById('lookup-name');
+        var lookupNameBtn = document.getElementById('lookup-name-btn');
+        var customerPickList = document.getElementById('customer-pick-list');
         var lookupStatus = document.getElementById('lookup-status');
+        var startTabs = form.querySelectorAll('[data-start-tab]');
+        var nameSearchTimer = null;
+        var nameSearchSeq = 0;
         var serialLookupInput = document.getElementById('serial-lookup-input');
         var serialLookupBanner = document.getElementById('serial-lookup-banner');
         var serialSuggestActions = document.getElementById('serial-suggest-actions');
@@ -481,6 +488,112 @@
 
         var state = { modeChosen: false };
 
+        function applyNoteMenuValue(field, value) {
+            if (!field || !value) return;
+            value = String(value).trim();
+            if (!value) return;
+            var current = (field.value || '').trim();
+            if (!current || current === 'ندارد') {
+                field.value = value;
+            } else if (current.indexOf(value) === -1) {
+                field.value = current + '، ' + value;
+            }
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        function applyNoteMenu(select) {
+            if (!select) return;
+            var value = (select.value || '').trim();
+            if (!value) return;
+            var targetName = select.getAttribute('data-note-target');
+            if (!targetName) return;
+            var scope = select.closest('[data-device-card]')
+                || select.closest('#mode-single')
+                || select.closest('form')
+                || document;
+            var field = scope.querySelector('[data-name="' + targetName + '"]')
+                || scope.querySelector('[name="' + targetName + '"]')
+                || scope.querySelector('[data-note-ctx="' + targetName + '"]');
+            if (!field) return;
+            applyNoteMenuValue(field, value);
+            select.value = '';
+        }
+
+        function noteMenuOptions(select) {
+            if (!select) return [];
+            return Array.prototype.slice.call(select.options || [])
+                .map(function (opt) { return (opt.value || '').trim(); })
+                .filter(Boolean);
+        }
+
+        function closeNoteContextMenu() {
+            var existing = document.getElementById('note-ctx-menu');
+            if (existing) existing.remove();
+        }
+
+        function openNoteContextMenu(e, field, options) {
+            closeNoteContextMenu();
+            var menu = document.createElement('div');
+            menu.id = 'note-ctx-menu';
+            menu.className = 'note-ctx-menu';
+            menu.setAttribute('role', 'menu');
+            if (!options.length) {
+                var empty = document.createElement('div');
+                empty.className = 'note-ctx-empty';
+                empty.textContent = 'تعریفی در تنظیمات lookups ثبت نشده است.';
+                menu.appendChild(empty);
+            } else {
+                options.forEach(function (opt) {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'note-ctx-item';
+                    btn.textContent = opt;
+                    btn.addEventListener('click', function () {
+                        applyNoteMenuValue(field, opt);
+                        closeNoteContextMenu();
+                    });
+                    menu.appendChild(btn);
+                });
+            }
+            document.body.appendChild(menu);
+            var x = e.clientX;
+            var y = e.clientY;
+            var rect = menu.getBoundingClientRect();
+            if (x + rect.width > window.innerWidth - 8) x = Math.max(8, window.innerWidth - rect.width - 8);
+            if (y + rect.height > window.innerHeight - 8) y = Math.max(8, window.innerHeight - rect.height - 8);
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+        }
+
+        function wireNoteMenus(root) {
+            if (!root) return;
+            root.querySelectorAll('.note-menu[data-note-target]').forEach(function (select) {
+                if (select.getAttribute('data-note-wired') === '1') return;
+                select.setAttribute('data-note-wired', '1');
+                select.addEventListener('change', function () {
+                    applyNoteMenu(select);
+                });
+
+                var targetName = select.getAttribute('data-note-target');
+                var scope = select.closest('[data-device-card]')
+                    || select.closest('#mode-single')
+                    || select.closest('form')
+                    || root;
+                var field = scope.querySelector('[data-note-ctx="' + targetName + '"]')
+                    || scope.querySelector('[data-name="' + targetName + '"]')
+                    || scope.querySelector('[name="' + targetName + '"]');
+                if (!field || field.getAttribute('data-note-ctx-wired') === '1') return;
+                field.setAttribute('data-note-ctx-wired', '1');
+                field.addEventListener('contextmenu', function (e) {
+                    var options = noteMenuOptions(select);
+                    if (!options.length) return;
+                    e.preventDefault();
+                    openNoteContextMenu(e, field, options);
+                });
+            });
+        }
+
         /* ---------- status helpers ---------- */
 
         function setLookupStatus(text, type) {
@@ -507,6 +620,27 @@
             if (stepBody) stepBody.classList.remove('hidden');
         }
 
+        function setStartTab(tab) {
+            tab = tab === 'name' ? 'name' : 'phone';
+            startTabs.forEach(function (btn) {
+                btn.classList.toggle('is-active', btn.getAttribute('data-start-tab') === tab);
+            });
+            form.querySelectorAll('[data-start-pane]').forEach(function (pane) {
+                pane.classList.toggle('is-active', pane.getAttribute('data-start-pane') === tab);
+            });
+            if (tab === 'name') {
+                if (lookupNameInput) lookupNameInput.focus();
+            } else if (lookupPhoneInput) {
+                lookupPhoneInput.focus();
+            }
+        }
+
+        function clearCustomerPickList() {
+            if (!customerPickList) return;
+            customerPickList.innerHTML = '';
+            customerPickList.hidden = true;
+        }
+
         function goBackToPhone(resetCustomer) {
             closeModeModal();
             showPhoneStep();
@@ -515,8 +649,11 @@
                 if (customerPhoneInput) customerPhoneInput.value = '';
                 if (existingCard) existingCard.classList.add('hidden');
                 if (lookupPhoneInput) lookupPhoneInput.value = '';
+                if (lookupNameInput) lookupNameInput.value = '';
+                clearCustomerPickList();
             }
-            if (lookupPhoneInput) lookupPhoneInput.focus();
+            var activeTab = form.querySelector('.start-tab.is-active');
+            setStartTab(activeTab ? activeTab.getAttribute('data-start-tab') : 'phone');
         }
 
         function showExistingCustomer(customer) {
@@ -636,6 +773,122 @@
                 });
         }
 
+        function selectExistingCustomer(customer, statusText) {
+            if (!customer) return;
+            if (customer.is_blacklisted) {
+                if (customerIdInput) customerIdInput.value = '';
+                if (existingCard) existingCard.classList.add('hidden');
+                if (newCustomerFields) newCustomerFields.classList.add('hidden');
+                setLookupStatus((customer.blacklist_reason || 'این مشتری در لیست سیاه است') + ' — پذیرش مسدود است.', 'error');
+                showPhoneStep();
+                return;
+            }
+            if (customerIdInput) customerIdInput.value = customer.id || '';
+            if (customerPhoneInput) customerPhoneInput.value = customer.phone || '';
+            if (lookupPhoneInput && customer.phone) lookupPhoneInput.value = customer.phone;
+            showExistingCustomer(customer);
+            if (newCustomerFields) newCustomerFields.classList.add('hidden');
+            setLookupStatus(statusText || ('مشتری انتخاب شد: ' + (customer.display_name || customer.name || '—')), 'ok');
+            clearCustomerPickList();
+            showBodyStep();
+            if (!state.modeChosen) {
+                openModeModal();
+            }
+        }
+
+        function renderCustomerPickList(customers, query) {
+            if (!customerPickList) return;
+            customerPickList.innerHTML = '';
+            if (!customers || !customers.length) {
+                customerPickList.hidden = false;
+                var empty = document.createElement('div');
+                empty.className = 'customer-pick-empty';
+                empty.textContent = query
+                    ? 'مشتری با این نام پیدا نشد. با موبایل ادامه دهید یا مشتری جدید ثبت کنید.'
+                    : 'حداقل ۲ حرف از نام را بنویسید.';
+                customerPickList.appendChild(empty);
+                return;
+            }
+
+            customers.forEach(function (customer) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'customer-pick-item';
+                var name = document.createElement('span');
+                name.className = 'customer-pick-name';
+                name.textContent = customer.display_name || customer.name || 'بدون نام';
+                var meta = document.createElement('span');
+                meta.className = 'customer-pick-meta';
+                var bits = [];
+                if (customer.phone) bits.push(customer.phone);
+                if (customer.job) bits.push(customer.job);
+                if (typeof customer.visits !== 'undefined' && customer.visits !== null) {
+                    bits.push(toPersianDigits(customer.visits) + ' مراجعه');
+                }
+                if (customer.is_blacklisted) bits.push('لیست سیاه');
+                meta.textContent = bits.join(' · ') || '—';
+                btn.appendChild(name);
+                btn.appendChild(meta);
+                btn.addEventListener('click', function () {
+                    selectExistingCustomer(customer, 'مشتری انتخاب شد: ' + (customer.display_name || customer.name || '—'));
+                });
+                customerPickList.appendChild(btn);
+            });
+            customerPickList.hidden = false;
+        }
+
+        function doNameLookup(immediate) {
+            if (!lookupNameInput) return;
+            var q = (lookupNameInput.value || '').trim();
+            if (nameSearchTimer) {
+                clearTimeout(nameSearchTimer);
+                nameSearchTimer = null;
+            }
+
+            var run = function () {
+                q = (lookupNameInput.value || '').trim();
+                if (q.length < 2) {
+                    clearCustomerPickList();
+                    setLookupStatus('حداقل ۲ حرف از نام را بنویسید.', 'info');
+                    return;
+                }
+                if (!lookupCustomersUrl) {
+                    setLookupStatus('آدرس جستجوی مشتری تنظیم نشده است.', 'error');
+                    return;
+                }
+
+                var seq = ++nameSearchSeq;
+                setLookupStatus('در حال جستجوی نام...', 'info');
+                if (lookupNameBtn) lookupNameBtn.disabled = true;
+
+                fetch(lookupCustomersUrl + '?q=' + encodeURIComponent(q), {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'same-origin'
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (seq !== nameSearchSeq) return;
+                        if (lookupNameBtn) lookupNameBtn.disabled = false;
+                        var list = (data && data.customers) || [];
+                        renderCustomerPickList(list, q);
+                        if (list.length) {
+                            setLookupStatus(toPersianDigits(list.length) + ' مشتری پیدا شد — یکی را انتخاب کنید.', 'ok');
+                        } else {
+                            setLookupStatus('مشتری پیدا نشد. با موبایل ادامه دهید یا مشتری جدید ثبت کنید.', 'info');
+                        }
+                    })
+                    .catch(function () {
+                        if (seq !== nameSearchSeq) return;
+                        if (lookupNameBtn) lookupNameBtn.disabled = false;
+                        setLookupStatus('خطا در ارتباط با سرور. دوباره تلاش کنید.', 'error');
+                    });
+            };
+
+            if (immediate) run();
+            else nameSearchTimer = setTimeout(run, 280);
+        }
+
         function handleLookupResult(data, fallbackPhone) {
             var phone = (data && data.phone) || fallbackPhone;
             if (customerPhoneInput) customerPhoneInput.value = phone;
@@ -650,16 +903,14 @@
             }
 
             if (data && data.found && data.customer) {
-                if (customerIdInput) customerIdInput.value = data.customer.id;
-                showExistingCustomer(data.customer);
-                if (newCustomerFields) newCustomerFields.classList.add('hidden');
-                setLookupStatus('مشتری پیدا شد: ' + (data.customer.display_name || data.customer.name || '—'), 'ok');
-            } else {
-                if (customerIdInput) customerIdInput.value = '';
-                if (existingCard) existingCard.classList.add('hidden');
-                if (newCustomerFields) newCustomerFields.classList.remove('hidden');
-                setLookupStatus('مشتری جدید است؛ اطلاعات را کامل و ثبت کنید.', 'info');
+                selectExistingCustomer(data.customer, 'مشتری پیدا شد: ' + (data.customer.display_name || data.customer.name || '—'));
+                return;
             }
+
+            if (customerIdInput) customerIdInput.value = '';
+            if (existingCard) existingCard.classList.add('hidden');
+            if (newCustomerFields) newCustomerFields.classList.remove('hidden');
+            setLookupStatus('مشتری جدید است؛ اطلاعات را کامل و ثبت کنید.', 'info');
 
             showBodyStep();
 
@@ -936,6 +1187,7 @@
             }
 
             updateDevicePreview(card);
+            wireNoteMenus(card);
         }
 
         function addDeviceCard(options) {
@@ -994,6 +1246,32 @@
             lookupPhoneBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 doLookup();
+            });
+        }
+
+        startTabs.forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                setStartTab(btn.getAttribute('data-start-tab'));
+                setLookupStatus('', '');
+            });
+        });
+
+        if (lookupNameInput) {
+            lookupNameInput.addEventListener('input', function () {
+                doNameLookup(false);
+            });
+            lookupNameInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    doNameLookup(true);
+                }
+            });
+        }
+
+        if (lookupNameBtn) {
+            lookupNameBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                doNameLookup(true);
             });
         }
 
@@ -1121,12 +1399,95 @@
 
         /* ---------- initial state ---------- */
 
+        wireNoteMenus(form);
+        document.addEventListener('click', function (e) {
+            var menu = document.getElementById('note-ctx-menu');
+            if (menu && !menu.contains(e.target)) closeNoteContextMenu();
+        });
+
         if (skipPhone) {
             showBodyStep();
             chooseMode(oldMode);
         } else {
             showPhoneStep();
             if (lookupPhoneInput) lookupPhoneInput.focus();
+        }
+    }
+
+    /** Note menus + right-click pick on edit/show pages (outside reception wizard). */
+    function initNoteMenus(root) {
+        root = root || document;
+        function applyValue(field, value) {
+            if (!field || !value) return;
+            value = String(value).trim();
+            if (!value) return;
+            var current = (field.value || '').trim();
+            if (!current || current === 'ندارد') field.value = value;
+            else if (current.indexOf(value) === -1) field.value = current + '، ' + value;
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        function closeMenu() {
+            var existing = document.getElementById('note-ctx-menu');
+            if (existing) existing.remove();
+        }
+        root.querySelectorAll('.note-menu[data-note-target]').forEach(function (select) {
+            if (select.getAttribute('data-note-wired') === '1') return;
+            select.setAttribute('data-note-wired', '1');
+            select.addEventListener('change', function () {
+                var value = (select.value || '').trim();
+                if (!value) return;
+                var targetName = select.getAttribute('data-note-target');
+                var scope = select.closest('form') || document;
+                var field = scope.querySelector('[data-note-ctx="' + targetName + '"]')
+                    || scope.querySelector('[name="' + targetName + '"]');
+                if (!field) return;
+                applyValue(field, value);
+                select.value = '';
+            });
+            var targetName = select.getAttribute('data-note-target');
+            var scope = select.closest('form') || document;
+            var field = scope.querySelector('[data-note-ctx="' + targetName + '"]')
+                || scope.querySelector('[name="' + targetName + '"]');
+            if (!field || field.getAttribute('data-note-ctx-wired') === '1') return;
+            field.setAttribute('data-note-ctx-wired', '1');
+            field.addEventListener('contextmenu', function (e) {
+                var options = Array.prototype.slice.call(select.options || [])
+                    .map(function (opt) { return (opt.value || '').trim(); })
+                    .filter(Boolean);
+                if (!options.length) return;
+                e.preventDefault();
+                closeMenu();
+                var menu = document.createElement('div');
+                menu.id = 'note-ctx-menu';
+                menu.className = 'note-ctx-menu';
+                options.forEach(function (opt) {
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'note-ctx-item';
+                    btn.textContent = opt;
+                    btn.addEventListener('click', function () {
+                        applyValue(field, opt);
+                        closeMenu();
+                    });
+                    menu.appendChild(btn);
+                });
+                document.body.appendChild(menu);
+                var x = e.clientX;
+                var y = e.clientY;
+                var rect = menu.getBoundingClientRect();
+                if (x + rect.width > window.innerWidth - 8) x = Math.max(8, window.innerWidth - rect.width - 8);
+                if (y + rect.height > window.innerHeight - 8) y = Math.max(8, window.innerHeight - rect.height - 8);
+                menu.style.left = x + 'px';
+                menu.style.top = y + 'px';
+            });
+        });
+        if (!document.documentElement.getAttribute('data-note-ctx-close')) {
+            document.documentElement.setAttribute('data-note-ctx-close', '1');
+            document.addEventListener('click', function (e) {
+                var menu = document.getElementById('note-ctx-menu');
+                if (menu && !menu.contains(e.target)) closeMenu();
+            });
         }
     }
 
@@ -1460,6 +1821,7 @@
         initAsciiFields();
         initAppModals();
         initReceptionWizard();
+        initNoteMenus(document);
         initStaffShell();
         initStaffLoginDeviceHint();
         initLookupEditors();

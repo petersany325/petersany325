@@ -35,6 +35,7 @@
       class="accept-form"
       id="reception-wizard"
       data-lookup-url="{{ route('receptions.lookup-phone') }}"
+      data-lookup-customers-url="{{ route('receptions.lookup-customers') }}"
       data-lookup-serial-url="{{ route('receptions.lookup-serial') }}"
       data-ensure-customer-url="{{ route('receptions.ensure-customer') }}"
       data-skip-phone="{{ $skipPhone ? '1' : '0' }}"
@@ -49,21 +50,46 @@
 
     <div id="step-phone" class="phone-step {{ $skipPhone ? 'hidden' : '' }}">
         <div class="phone-box">
-            <h2>شروع پذیرش با موبایل</h2>
-            <p class="hint">شماره موبایل را وارد کنید و Enter بزنید. سپس نوع پذیرش (تکی یا گروهی) را انتخاب کنید.</p>
-            <div class="phone-row">
-                <div>
-                    <label>شماره موبایل</label>
-                    <input type="text"
-                           id="lookup-phone"
-                           value="{{ old('customer_phone') }}"
-                           inputmode="tel"
-                           autocomplete="tel"
-                           placeholder="09xxxxxxxxx"
-                           maxlength="15">
-                </div>
-                <button type="button" class="btn btn-primary" id="lookup-phone-btn">تایید</button>
+            <h2>شروع پذیرش</h2>
+            <p class="hint">مشتری را با موبایل یا نام پیدا کنید. مشتری‌های قبلی دوباره ثبت نمی‌شوند. بعد نوع پذیرش (تکی / گروهی) را انتخاب کنید.</p>
+
+            <div class="start-tabs" role="tablist" aria-label="روش پیدا کردن مشتری">
+                <button type="button" class="start-tab is-active" data-start-tab="phone" id="start-tab-phone">با موبایل</button>
+                <button type="button" class="start-tab" data-start-tab="name" id="start-tab-name">با نام</button>
             </div>
+
+            <div class="start-pane is-active" data-start-pane="phone" id="start-pane-phone">
+                <div class="phone-row">
+                    <div>
+                        <label>شماره موبایل</label>
+                        <input type="text"
+                               id="lookup-phone"
+                               value="{{ old('customer_phone') }}"
+                               inputmode="tel"
+                               autocomplete="tel"
+                               placeholder="09xxxxxxxxx"
+                               maxlength="15">
+                    </div>
+                    <button type="button" class="btn btn-primary" id="lookup-phone-btn">تایید</button>
+                </div>
+            </div>
+
+            <div class="start-pane" data-start-pane="name" id="start-pane-name">
+                <div class="phone-row">
+                    <div>
+                        <label>نام مشتری</label>
+                        <input type="text"
+                               id="lookup-name"
+                               value=""
+                               autocomplete="off"
+                               placeholder="مثلاً رضا محمدی"
+                               maxlength="120">
+                    </div>
+                    <button type="button" class="btn btn-primary" id="lookup-name-btn">جستجو</button>
+                </div>
+                <div class="customer-pick-list" id="customer-pick-list" hidden></div>
+            </div>
+
             <div class="lookup-status" id="lookup-status"></div>
         </div>
     </div>
@@ -82,7 +108,7 @@
                     <span>چند دستگاه برای یک مشتری — هر کدام مشخصات جدا</span>
                 </button>
             </div>
-            <button type="button" class="btn btn-ghost" id="mode-modal-cancel">بازگشت به موبایل</button>
+            <button type="button" class="btn btn-ghost" id="mode-modal-cancel">بازگشت به جستجوی مشتری</button>
         </div>
     </div>
 
@@ -94,7 +120,7 @@
             </div>
             <div class="actions" style="margin:0;">
                 <button type="button" class="btn" id="change-mode-btn">تغییر نوع پذیرش</button>
-                <button type="button" class="btn" id="change-phone-btn">تغییر موبایل</button>
+                <button type="button" class="btn" id="change-phone-btn">تغییر مشتری</button>
             </div>
         </div>
 
@@ -145,7 +171,7 @@
                 <button type="button" class="btn btn-primary" id="save-customer-btn">ثبت در لیست مشتریان</button>
                 <span class="lookup-status" id="customer-save-status"></span>
                 <button type="button" class="btn" id="change-mode-btn-2">تغییر نوع پذیرش</button>
-                <button type="button" class="btn" id="back-to-phone-btn">بازگشت به موبایل</button>
+                <button type="button" class="btn" id="back-to-phone-btn">بازگشت به جستجوی مشتری</button>
             </div>
         </div>
 
@@ -218,9 +244,36 @@
                 </div>
                 <div class="ws-pane" data-ws-pane="fault">
                     <div class="accept-texts">
-                        <div><label>عیب به اظهار مشتری</label><textarea name="reported_fault" rows="5">{{ old('reported_fault') }}</textarea></div>
-                        <div><label>لوازم همراه</label><textarea name="accessories" rows="5">{{ old('accessories', 'ندارد') }}</textarea></div>
-                        <div><label>وضعیت ظاهری و توضیحات</label><textarea name="appearance_notes" rows="5">{{ old('appearance_notes') }}</textarea></div>
+                        <div class="note-field">
+                            <label>عیب به اظهار مشتری</label>
+                            <select class="note-menu" data-note-target="reported_fault" aria-label="منوی عیب اظهار مشتری">
+                                <option value="">انتخاب از منو / راست‌کلیک روی کادر…</option>
+                                @foreach(($reportedFaultOptions ?? []) as $name)
+                                    <option value="{{ $name }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            <textarea name="reported_fault" rows="5" data-note-ctx="reported_fault">{{ old('reported_fault') }}</textarea>
+                        </div>
+                        <div class="note-field">
+                            <label>لوازم همراه</label>
+                            <select class="note-menu" data-note-target="accessories" aria-label="منوی لوازم همراه">
+                                <option value="">انتخاب از منو / راست‌کلیک روی کادر…</option>
+                                @foreach(($accessoriesOptions ?? []) as $name)
+                                    <option value="{{ $name }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            <textarea name="accessories" rows="5" data-note-ctx="accessories">{{ old('accessories', 'ندارد') }}</textarea>
+                        </div>
+                        <div class="note-field">
+                            <label>وضعیت ظاهری و توضیحات</label>
+                            <select class="note-menu" data-note-target="appearance_notes" aria-label="منوی وضعیت ظاهری">
+                                <option value="">انتخاب از منو / راست‌کلیک روی کادر…</option>
+                                @foreach(($appearanceOptions ?? []) as $name)
+                                    <option value="{{ $name }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            <textarea name="appearance_notes" rows="5" data-note-ctx="appearance_notes">{{ old('appearance_notes') }}</textarea>
+                        </div>
                     </div>
                     <div class="accept-row accept-row-3" style="margin-top:8px">
                         <div>
@@ -431,9 +484,30 @@
                 <label>کارت گارانتی<input type="text" data-name="card_number"></label>
             </div>
             <div class="dense-notes">
-                <label>عیب اظهار مشتری<textarea data-name="reported_fault" rows="2"></textarea></label>
-                <label>لوازم همراه<textarea data-name="accessories" rows="2">ندارد</textarea></label>
-                <label>وضعیت ظاهری<textarea data-name="appearance_notes" rows="2"></textarea></label>
+                <div class="note-field">
+                    <label>عیب اظهار مشتری</label>
+                    <select class="note-menu" data-note-target="reported_fault" aria-label="منوی عیب اظهار مشتری">
+                        <option value="">انتخاب از منو…</option>
+                        @foreach(($reportedFaultOptions ?? []) as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
+                    </select>
+                    <textarea data-name="reported_fault" rows="2" data-note-ctx="reported_fault"></textarea>
+                </div>
+                <div class="note-field">
+                    <label>لوازم همراه</label>
+                    <select class="note-menu" data-note-target="accessories" aria-label="منوی لوازم همراه">
+                        <option value="">انتخاب از منو…</option>
+                        @foreach(($accessoriesOptions ?? []) as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
+                    </select>
+                    <textarea data-name="accessories" rows="2" data-note-ctx="accessories">ندارد</textarea>
+                </div>
+                <div class="note-field">
+                    <label>وضعیت ظاهری</label>
+                    <select class="note-menu" data-note-target="appearance_notes" aria-label="منوی وضعیت ظاهری">
+                        <option value="">انتخاب از منو…</option>
+                        @foreach(($appearanceOptions ?? []) as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
+                    </select>
+                    <textarea data-name="appearance_notes" rows="2" data-note-ctx="appearance_notes"></textarea>
+                </div>
             </div>
             <div class="device-card-footer">
                 <button type="button" class="btn btn-secondary" data-device-done>تأیید این قبض و ادامه</button>

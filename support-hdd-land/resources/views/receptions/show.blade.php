@@ -386,7 +386,9 @@
                     <div>
                         <label>اجرت تعمیر (تومان)</label>
                         <input type="number" name="labor_cost" min="0" value="{{ $reception->labor_cost }}">
-                        @if(!$reception->hasCostSet())
+                        @if($reception->isNoChargeExit())
+                            <div class="muted" style="color:#0f6a3f;font-size:11px;">{{ $reception->isUnrepairable() ? 'غیرقابل تعمیر' : 'انصراف از تعمیر' }} — بدون هزینه؛ برای خروج فقط از پنل «تسویه و تحویل» اقدام کنید.</div>
+                        @elseif(!$reception->hasCostSet())
                             <div class="muted" style="color:#8a5a12;font-size:11px;">هزینه هنوز مشخص نشده — قبل از تحویل ثبت کنید.</div>
                         @else
                             <div class="muted" style="font-size:11px;">مبلغ کل: {{ number_format($reception->total_amount) }} تومان</div>
@@ -799,7 +801,13 @@
         @if($canDeliverNow)
         <div class="panel" id="rx-settle" style="border-color:#9ec3e8;background:linear-gradient(180deg,#f4f9ff,#fff);">
             <h3 style="margin-top:0;">تسویه و تحویل / خروج کالا</h3>
-            <p class="muted" style="margin:0 0 10px;">اینجا حساب‌کتاب، تأیید خروج دستگاه و قطعات، و تحویل نهایی با هم ثبت می‌شود.</p>
+            @if($reception->isNoChargeExit())
+                <p style="margin:0 0 10px;padding:8px 10px;border:1px solid #9dcfb0;border-radius:3px;background:#f3fbf6;color:#0f6a3f;font-size:12.5px;">
+                    این قبض <strong>{{ $reception->isUnrepairable() ? 'غیرقابل تعمیر' : 'انصراف از تعمیر' }}</strong> است و هزینه ندارد. تحویل/خروج بدون تأیید مبلغ انجام می‌شود (پیش‌فرض: بدون دریافت).
+                </p>
+            @else
+                <p class="muted" style="margin:0 0 10px;">اینجا حساب‌کتاب، تأیید خروج دستگاه و قطعات، و تحویل نهایی با هم ثبت می‌شود.</p>
+            @endif
             <div class="rx-pay-due">
                 <span>مانده قابل تسویه</span>
                 <strong>{{ number_format($remain) }} تومان</strong>
@@ -921,8 +929,11 @@
                     <div>
                         <label>نحوه تسویه</label>
                         <select name="settlement_mode" id="rx-settle-mode" required>
+                            @php
+                                $defaultSettle = old('settlement_mode', $reception->isNoChargeExit() ? 'waive' : 'paid');
+                            @endphp
                             @foreach($settlementModes as $key => $label)
-                                <option value="{{ $key }}" @selected(old('settlement_mode', 'paid') === $key)>{{ $label }}</option>
+                                <option value="{{ $key }}" @selected($defaultSettle === $key)>{{ $label }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -952,7 +963,7 @@
                     </div>
                     <div>
                         <label>توضیح تسویه (برای نسیه یا بخشش مهم است)</label>
-                        <input type="text" name="note" id="rx-settle-note" value="{{ old('note') }}" placeholder="شماره پیگیری / دلیل نسیه یا بخشش">
+                        <input type="text" name="note" id="rx-settle-note" value="{{ old('note', $reception->isNoChargeExit() ? \App\Services\ReceptionSettlementService::noChargeExitNote($reception) : '') }}" placeholder="شماره پیگیری / دلیل نسیه یا بخشش">
                     </div>
                     <div>
                         @include('partials.toggle', [

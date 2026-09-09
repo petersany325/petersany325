@@ -294,6 +294,39 @@ class Reception extends Model
             || ((int) $this->stages_cost) > 0;
     }
 
+    /** Non-repairable devices are returned without a service charge. */
+    public function isUnrepairable(): bool
+    {
+        return $this->status === 'unrepairable';
+    }
+
+    /** Customer withdrew / repair cancelled — returned without charge. */
+    public function isCancelledRepair(): bool
+    {
+        return $this->status === 'cancelled';
+    }
+
+    /**
+     * Exit/delivery without collecting payment: غیرقابل تعمیر یا انصراف از تعمیر.
+     */
+    public function isNoChargeExit(): bool
+    {
+        return $this->isUnrepairable() || $this->isCancelledRepair();
+    }
+
+    /**
+     * Whether staff already decided cost (amount set/confirmed) OR the ticket is
+     * exempt (unrepairable / cancelled) and needs no charge before exit.
+     */
+    public function hasCostDecision(): bool
+    {
+        if ($this->isNoChargeExit()) {
+            return true;
+        }
+
+        return $this->hasCostSet();
+    }
+
     public function confirmCost(): void
     {
         $this->forceFill(['cost_confirmed_at' => now()])->save();
