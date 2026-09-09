@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/portal.css') }}?v=p11">
+    <link rel="stylesheet" href="{{ asset('css/portal.css') }}?v=p12">
 </head>
 <body class="@yield('body_class', 'portal-body')">
 @if(session('success') || session('error') || $errors->any())
@@ -38,6 +38,9 @@
 <nav class="p-tabbar" aria-label="منوی مشتری">
     <a href="{{ route('portal.home') }}" class="{{ request()->routeIs('portal.home') ? 'is-on' : '' }}">
         <span>⌂</span><small>میز کار</small>
+    </a>
+    <a href="{{ route('portal.installments.index') }}" class="{{ request()->routeIs('portal.installments*') ? 'is-on' : '' }}">
+        <span>◑</span><small>اقساط</small>
     </a>
     <a href="{{ route('portal.preorders.index') }}" class="{{ request()->routeIs('portal.preorders*') ? 'is-on' : '' }}">
         <span>⇪</span><small>قطعه</small>

@@ -39,6 +39,7 @@ use App\Http\Controllers\StaffSmsTemplateController;
 use App\Http\Controllers\Portal\AuthController as PortalAuthController;
 use App\Http\Controllers\Portal\CartableController as PortalCartableController;
 use App\Http\Controllers\Portal\MessageController as PortalMessageController;
+use App\Http\Controllers\Portal\InstallmentController as PortalInstallmentController;
 use App\Http\Controllers\InstallmentPlanController;
 use App\Http\Controllers\InstallmentReportController;
 use App\Http\Controllers\InstallmentSettingController;
@@ -115,6 +116,9 @@ Route::prefix('cartable')->name('portal.')->group(function () {
         Route::get('/receipts/{receipt}/image', [PortalPaymentReceiptController::class, 'image'])->name('receipts.image');
         Route::get('/messages', [PortalMessageController::class, 'index'])->name('messages');
         Route::post('/messages', [PortalMessageController::class, 'store'])->name('messages.store');
+        Route::get('/installments', [PortalInstallmentController::class, 'index'])->name('installments.index');
+        Route::get('/installments/{plan}', [PortalInstallmentController::class, 'show'])->name('installments.show');
+        Route::post('/installments/items/{item}/pay', [PortalInstallmentController::class, 'pay'])->name('installments.pay');
         Route::get('/preorders', [PortalRemotePartPreorderController::class, 'index'])->name('preorders.index');
         Route::get('/preorders/create', [PortalRemotePartPreorderController::class, 'create'])->name('preorders.create');
         Route::post('/preorders', [PortalRemotePartPreorderController::class, 'store'])->name('preorders.store');
