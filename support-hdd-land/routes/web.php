@@ -45,6 +45,9 @@ use App\Http\Controllers\InstallmentReportController;
 use App\Http\Controllers\InstallmentSettingController;
 use App\Http\Controllers\InstallmentCronController;
 use App\Http\Controllers\LicenseApiController;
+use App\Http\Controllers\AppUpdateApiController;
+use App\Http\Controllers\AppUpdateController;
+use App\Http\Controllers\AppReleaseAdminController;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsurePortalCustomer;
 use Illuminate\Support\Facades\Auth;
@@ -56,6 +59,12 @@ Route::post('/license/activate', [LicenseApiController::class, 'activate'])
 Route::post('/license/verify', [LicenseApiController::class, 'verify'])
     ->middleware('throttle:60,1')
     ->name('license.verify');
+Route::post('/license/updates/latest', [AppUpdateApiController::class, 'latest'])
+    ->middleware('throttle:60,1')
+    ->name('license.updates.latest');
+Route::post('/license/updates/download', [AppUpdateApiController::class, 'download'])
+    ->middleware('throttle:20,1')
+    ->name('license.updates.download');
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -420,6 +429,9 @@ Route::middleware('auth')->group(function () {
         Route::get('system-tools/backups/{file}', [SystemToolsController::class, 'downloadBackup'])
             ->where('file', '[A-Za-z0-9._-]+')
             ->name('system-tools.backups.download');
+        Route::get('system-tools/updates', [AppUpdateController::class, 'index'])->name('system-tools.updates');
+        Route::get('system-tools/updates/check', [AppUpdateController::class, 'check'])->name('system-tools.updates.check');
+        Route::post('system-tools/updates/apply', [AppUpdateController::class, 'apply'])->name('system-tools.updates.apply');
     });
 
     Route::middleware(EnsurePermission::class.':system.tools')->prefix('licenses')->name('licenses.')->group(function () {
@@ -427,6 +439,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/online', [\App\Http\Controllers\LicenseAdminController::class, 'online'])->name('online');
         Route::get('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'plans'])->name('plans');
         Route::post('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'savePlans'])->name('plans.save');
+        Route::get('/releases', [AppReleaseAdminController::class, 'index'])->name('releases');
+        Route::post('/releases', [AppReleaseAdminController::class, 'store'])->name('releases.store');
         Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
         Route::get('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'edit'])->name('edit');
         Route::post('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'update'])->name('update');
