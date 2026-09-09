@@ -2,8 +2,6 @@
 
 namespace App\Support;
 
-use App\Models\Setting;
-
 class FooterConfig
 {
     public const KEY = 'modern_footer_settings';
@@ -38,7 +36,7 @@ class FooterConfig
 
     public static function get(): array
     {
-        $raw = Setting::getValue(self::KEY, []);
+        $raw = SettingsStore::get(self::KEY, []);
         if (is_string($raw)) {
             $raw = json_decode($raw, true) ?: [];
         }
@@ -73,7 +71,7 @@ class FooterConfig
         foreach (['bg' => '#0b1220', 'accent' => '#e23d12', 'text' => '#f8fafc', 'muted' => '#94a3b8'] as $k => $fallback) {
             $s[$k] = preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($d[$k] ?? '')) ? $d[$k] : $fallback;
         }
-        Setting::setValue(self::KEY, $s);
+        SettingsStore::set(self::KEY, $s);
     }
 
     public static function links(string $raw): array

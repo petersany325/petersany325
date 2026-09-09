@@ -66,7 +66,12 @@ class EnsureUserIsAdmin
         if ($path === 'admin/page-builder' || str_starts_with($path, 'admin/page-builder/')) {
             return 'site.page_builder';
         }
-        if ($path === 'admin/corporate-home' || str_starts_with($path, 'admin/corporate-home/')) {
+        if (
+            $path === 'admin/corporate-home' || str_starts_with($path, 'admin/corporate-home/')
+            || $path === 'admin/homepage-settings' || str_starts_with($path, 'admin/homepage-settings/')
+            || $path === 'admin/online-home' || str_starts_with($path, 'admin/online-home/')
+            || $path === 'admin/banner-settings' || str_starts_with($path, 'admin/banner-settings/')
+        ) {
             return 'site.homepage';
         }
         if ($path === 'admin/footer-settings' || str_starts_with($path, 'admin/footer-settings/')) {

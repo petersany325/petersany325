@@ -14,10 +14,9 @@
       $useRevolution = false;
     }
   }
-  // top_menu (چیپ‌های قرمز زیر بنر) عمداً از پیش‌فرض حذف شده — تکراری با منوی هدر و دسته‌هاست.
-  // banner/hero از حلقه خارج می‌شوند تا دوبار رندر نشوند؛ بنر Revolution جداگانه بالا می‌آید.
+  // top_menu تکراری با هدر است؛ banner/hero جداگانه (Revolution یا home-hero) رندر می‌شوند.
   $order = $theme['layout_order'] ?? ['banner','online','categories','featured','features','cta'];
-  $order = array_values(array_filter($order, fn ($s) => !in_array($s, ['top_menu','banner','hero','features','online','cta'], true)));
+  $order = array_values(array_filter($order, fn ($s) => !in_array($s, ['top_menu','banner','hero'], true)));
   $featured = $featured ?? collect();
   $latest = $latest ?? collect();
   $categories = $categories ?? collect();

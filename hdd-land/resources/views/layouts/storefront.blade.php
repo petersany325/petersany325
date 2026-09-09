@@ -19,11 +19,11 @@
     <title>@yield('title', \App\Models\Setting::getValue('shop_name', config('app.name', 'فروشگاه'))) </title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=66">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=48">
-    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=6">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=67">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=49">
+    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=7">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=4">
-    <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=22">
+    <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=23">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
     @endif
@@ -62,7 +62,7 @@
         }
     } catch (\Throwable $e) {}
 @endphp
-<body class="{{ request()->boolean('theme_preview') ? 'theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}">
+<body id="top" class="{{ request()->boolean('theme_preview') ? 'theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}">
 <div class="topbar">
     <div class="container">
         <div class="topbar-start">
@@ -192,7 +192,7 @@
     }
 @endphp
 @include('storefront.footer-modern')
-<script src="{{ asset('js/mega-menu.js') }}?v=42" defer></script>
+<script src="{{ asset('js/mega-menu.js') }}?v=43" defer></script>
 @php
   try {
     $scBase = base_path('plugins/SmartChat');

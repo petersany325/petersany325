@@ -51,7 +51,7 @@ class Plugin extends BasePlugin
     /** @return array<string, mixed> */
     public static function settings(): array
     {
-        $raw = \App\Models\Setting::getValue(self::SETTINGS_KEY, null);
+        $raw = \App\Support\SettingsStore::get(self::SETTINGS_KEY, null);
         $decoded = [];
         if (is_string($raw) && $raw !== '') {
             $decoded = json_decode($raw, true) ?: [];
@@ -155,7 +155,7 @@ class Plugin extends BasePlugin
             throw new \RuntimeException('رمزگذاری تنظیمات مگامنو ناموفق بود.');
         }
         // ستون value از نوع text است؛ JSON رشته‌ای پایدارتر از پاس‌دادن آرایه است
-        \App\Models\Setting::setValue(self::SETTINGS_KEY, $payload);
+        \App\Support\SettingsStore::set(self::SETTINGS_KEY, $payload);
 
         return $merged;
     }
@@ -241,10 +241,10 @@ class Plugin extends BasePlugin
 
     public function boot(): void
     {
-        if (! Cache::get('mega_menu_schema_341')) {
+        if (! Cache::get('mega_menu_schema_342')) {
             static::ensureSchema();
             static::fixLegacyTrackUrls();
-            Cache::put('mega_menu_schema_341', true, now()->addDay());
+            Cache::put('mega_menu_schema_342', true, now()->addDay());
         }
         parent::boot();
     }
@@ -260,7 +260,11 @@ class Plugin extends BasePlugin
             \Illuminate\Support\Facades\DB::table('mega_menu_items')
                 ->where('title', 'like', '%پیگیری%')
                 ->where(function ($q) {
-                    $q->whereNull('url')->orWhere('url', '')->orWhere('url', '/order/track');
+                    $q->whereNull('url')
+                        ->orWhere('url', '')
+                        ->orWhere('url', '/order/track')
+                        ->orWhere('url', '/track-order')
+                        ->orWhere('url', 'track-order');
                 })
                 ->update(['url' => '/orders/track', 'updated_at' => now()]);
         } catch (\Throwable) {
@@ -394,7 +398,7 @@ class Plugin extends BasePlugin
         ]);
 
         MegaMenuItem::query()->create([
-            'title' => 'پیگیری سفارش', 'type' => 'link', 'url' => '/track-order', 'icon' => '📦', 'sort_order' => 4, 'is_active' => true,
+            'title' => 'پیگیری سفارش', 'type' => 'link', 'url' => '/orders/track', 'icon' => '📦', 'sort_order' => 4, 'is_active' => true,
         ]);
         MegaMenuItem::query()->create([
             'title' => 'تماس', 'type' => 'link', 'url' => '/contact', 'icon' => '☎', 'sort_order' => 5, 'is_active' => true,

@@ -78,7 +78,7 @@ class StaffAcl
                 'label' => 'مدیر ظاهر سایت',
                 'permissions' => [
                     'site.mega_menu', 'site.theme_builder', 'site.theme_templates', 'site.page_builder',
-                    'site.homepage', 'site.footer', 'site.webapp',
+                    'site.homepage', 'site.footer', 'site.webapp', 'site.shop_settings',
                 ],
             ],
             'full_access' => [

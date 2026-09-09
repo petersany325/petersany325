@@ -2,14 +2,12 @@
 
 namespace App\Support;
 
-use App\Models\Setting;
-
 class JsonSettings
 {
     /** @param  array<string,mixed>  $defaults */
     public static function get(string $key, array $defaults): array
     {
-        $raw = Setting::getValue($key, null);
+        $raw = SettingsStore::get($key, null);
         $decoded = [];
         if (is_string($raw) && $raw !== '') {
             $decoded = json_decode($raw, true) ?: [];
@@ -40,7 +38,7 @@ class JsonSettings
             }
         }
         $merged = array_merge($cur, $patch);
-        Setting::setValue($key, $merged);
+        SettingsStore::set($key, $merged);
 
         return $merged;
     }

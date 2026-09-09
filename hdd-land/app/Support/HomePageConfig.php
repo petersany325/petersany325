@@ -2,8 +2,6 @@
 
 namespace App\Support;
 
-use App\Models\Setting;
-
 /**
  * Shared homepage / first-screen settings for storefront + WebApp.
  * Includes visual banner design: size, fonts, colors, drag layout, overlay merge.
@@ -144,7 +142,7 @@ class HomePageConfig
 
     public static function get(): array
     {
-        $raw = Setting::getValue(self::KEY, []);
+        $raw = SettingsStore::get(self::KEY, []);
         if (is_string($raw)) {
             $raw = json_decode($raw, true) ?: [];
         }
@@ -259,7 +257,7 @@ class HomePageConfig
             $s[$k] = self::color((string) ($d[$k] ?? $s[$k] ?? ''), (string) (self::defaults()[$k] ?? '#000000'));
         }
 
-        Setting::setValue(self::KEY, $s);
+        SettingsStore::set(self::KEY, $s);
 
         if (! empty($s['sync_webapp'])) {
             self::syncToWebApp($s);

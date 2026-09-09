@@ -15,6 +15,10 @@
 @endphp
 
 @if($isGroup)
+  {{-- ستون/سرفصل/تب خالی بدون فرزند شل خالی نسازد --}}
+  @if(! $hasKids && in_array($type, ['column', 'heading', 'tab'], true))
+    {{-- skip --}}
+  @else
   <div class="mega-col {{ $child->css_class }} {{ $hasKids ? 'has-kids' : '' }}" style="{{ $child->inlineStyle() }}">
     @if(! $skipHeading && ($type === 'heading' || $type === 'column' || $type === 'tab' || $hasKids))
       @if($href && $href !== '#' && $href !== url('#'))
@@ -51,6 +55,7 @@
       </div>
     @endif
   </div>
+  @endif
 @elseif($type === 'promo')
   <a class="mega-promo {{ $child->css_class }}" href="{{ $href }}" @if($openNew) target="_blank" rel="noopener" @endif style="{{ $child->inlineStyle() }}">
     @if($child->image_url)

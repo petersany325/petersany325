@@ -168,7 +168,7 @@ class PortalNav
 
         return match ($for) {
             'staff' => array_values(array_filter($all, fn ($i) => ! in_array($i['url'], ['/staff'], true))),
-            'customer' => array_values(array_filter($all, fn ($i) => in_array($i['url'], ['/', '/app', '/app/account'], true) || $i['url'] === '/app')),
+            'customer' => array_values(array_filter($all, fn ($i) => in_array($i['url'], ['/', '/app', '/account'], true))),
             default => $all,
         };
     }

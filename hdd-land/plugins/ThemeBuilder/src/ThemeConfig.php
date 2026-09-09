@@ -2,7 +2,6 @@
 
 namespace Plugins\ThemeBuilder\src;
 
-use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -93,25 +92,7 @@ class ThemeConfig
     /** @return mixed */
     protected static function settingGet(string $key): mixed
     {
-        if (! class_exists(Setting::class)) {
-            return null;
-        }
-
-        try {
-            if (method_exists(Setting::class, 'getValue')) {
-                return Setting::getValue($key, null);
-            }
-            if (method_exists(Setting::class, 'get')) {
-                return Setting::get($key, null);
-            }
-            if (method_exists(Setting::class, 'value')) {
-                return Setting::value($key, null);
-            }
-        } catch (\Throwable) {
-            //
-        }
-
-        return null;
+        return \App\Support\SettingsStore::get($key, null);
     }
 
     /** @param  array<string, mixed>  $b
@@ -136,7 +117,10 @@ class ThemeConfig
 
         $out = array_merge($defaults, $b);
 
-        $out['enabled'] = array_key_exists('enabled', $b) ? (bool) $b['enabled'] : true;
+        // "0"/"false" must stay disabled — bare (bool)"0" is true in PHP.
+        $out['enabled'] = array_key_exists('enabled', $b)
+            ? \App\Support\SettingsStore::toBool($b['enabled'], false)
+            : true;
         $layout = (string) ($out['layout'] ?? 'full');
         // Map admin labels / legacy values onto storefront CSS classes.
         $layoutMap = [
@@ -242,7 +226,7 @@ class ThemeConfig
     public static function bannerIsLive(?array $banner = null): bool
     {
         $b = self::normalizeBanner($banner ?? (self::get()['banner'] ?? []));
-        if (array_key_exists('enabled', $b) && empty($b['enabled'])) {
+        if (! \App\Support\SettingsStore::toBool($b['enabled'] ?? true, true)) {
             return false;
         }
         $hasImage = self::bannerUrl($b, 1) !== '' || self::bannerUrl($b, 2) !== '';
