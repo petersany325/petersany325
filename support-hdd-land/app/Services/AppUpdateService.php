@@ -345,21 +345,39 @@ class AppUpdateService
         }
 
         $photoRoot = storage_path('app/remote-part-preorders');
-        if (is_dir($photoRoot)) {
-            $n = 0;
-            try {
-                $it = new \FilesystemIterator($photoRoot, \FilesystemIterator::SKIP_DOTS);
-                foreach ($it as $_) {
-                    $n++;
-                }
-            } catch (Throwable $e) {
-                $n = -1;
+        $photoRootPrivate = storage_path('app/private/remote-part-preorders');
+        $n = 0;
+        try {
+            if (class_exists(\Illuminate\Support\Facades\Storage::class)) {
+                $n = count(\Illuminate\Support\Facades\Storage::disk('local')->allFiles('remote-part-preorders'));
             }
-            $details[] = $n >= 0
-                ? ('✓ پوشه عکس پیش‌سفارش قطعه: '.$n.' مورد')
-                : '⚠ پوشه عکس پیش‌سفارش قابل شمارش نبود';
+        } catch (Throwable $e) {
+            $n = -1;
+        }
+        if ($n < 0) {
+            // fallback filesystem count for both common roots
+            $n = 0;
+            foreach ([$photoRoot, $photoRootPrivate] as $dir) {
+                if (! is_dir($dir)) {
+                    continue;
+                }
+                try {
+                    $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
+                    foreach ($it as $f) {
+                        if ($f->isFile()) {
+                            $n++;
+                        }
+                    }
+                } catch (Throwable $e) {
+                }
+            }
+        }
+        if ($n > 0) {
+            $details[] = '✓ فایل‌های عکس پیش‌سفارش قطعه: '.$n.' عدد';
+        } elseif (is_dir($photoRoot) || is_dir($photoRootPrivate)) {
+            $details[] = '· پوشه عکس پیش‌سفارش خالی است';
         } else {
-            $details[] = '· هنوز عکس پیش‌سفارش روی دیسک نیست (اگر قبلاً ثبت شده باید بررسی شود)';
+            $details[] = '· هنوز پوشه عکس پیش‌سفارش ساخته نشده (اگر قبلاً ثبت شده باید بررسی شود)';
         }
 
         try {
