@@ -99,7 +99,7 @@
     @if($src)
       <img class="banner-img banner-img-1 img-anim-{{ $effect }} speed-{{ $speed }}"
            src="{{ $src }}" width="{{ $designW }}" height="{{ $h }}" alt="{{ $imageAlt }}"
-           @if(in_array($placement,['homepage','under_header'],true)) fetchpriority="high" loading="eager" @else loading="lazy" @endif decoding="async">
+           @if(in_array($placement,['homepage','home','home_hero','main_hero','under_header','header','صفحه اول'],true) || str_contains((string)($b['placement_label'] ?? ''), 'صفحه اول')) fetchpriority="high" loading="eager" @else loading="lazy" @endif decoding="async">
     @else
       <div class="banner-img banner-img-1 img-anim-{{ $effect }} speed-{{ $speed }}"></div>
     @endif

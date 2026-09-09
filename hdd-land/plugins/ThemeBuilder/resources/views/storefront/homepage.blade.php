@@ -1,25 +1,38 @@
 @php
-  // پل پایدار بنرساز → صفحه اول (حتی اگر ThemeConfig پروداکشن bannerIsLive نداشته باشد)
-  $resolved = class_exists(\Plugins\ThemeBuilder\src\HomepageBanner::class)
-    ? \Plugins\ThemeBuilder\src\HomepageBanner::resolve()
-    : ['live' => false, 'banner' => []];
-  $useRevolution = ! empty($resolved['live']);
-  $banner = is_array($resolved['banner'] ?? null) ? $resolved['banner'] : [];
+  // اگر home.blade بنر را بالاتر رندر کرده، اینجا دوباره تشخیص/رندر نکن.
+  $alreadyFromHome = ! empty($revolutionAlreadyRendered) || ! empty($skipHero);
 
+  $resolved = ['live' => false, 'banner' => []];
   $theme = [];
-  $themeClass = \Plugins\ThemeBuilder\src\ThemeConfig::class;
-  if (class_exists($themeClass) && method_exists($themeClass, 'get')) {
-    try {
-      $theme = $themeClass::get();
-      if ($banner === [] && is_array($theme['banner'] ?? null)) {
-        $banner = $theme['banner'];
+  if (! $alreadyFromHome && class_exists(\Plugins\ThemeBuilder\src\HomepageBanner::class)) {
+    $resolved = \Plugins\ThemeBuilder\src\HomepageBanner::resolve();
+  } elseif (! $alreadyFromHome) {
+    $themeClass = \Plugins\ThemeBuilder\src\ThemeConfig::class;
+    if (class_exists($themeClass) && method_exists($themeClass, 'get')) {
+      try {
+        $theme = $themeClass::get();
+        $banner = is_array($theme['banner'] ?? null) ? $theme['banner'] : [];
+        if (method_exists($themeClass, 'bannerIsLive')) {
+          $resolved = ['live' => (bool) $themeClass::bannerIsLive($banner), 'banner' => $banner];
+        }
+      } catch (\Throwable) {
+        $resolved = ['live' => false, 'banner' => []];
       }
-    } catch (\Throwable) {
-      $theme = [];
     }
   }
 
-  // top_menu تکراری با هدر است؛ banner/hero جداگانه (Revolution یا home-hero) رندر می‌شوند.
+  if (class_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class) && method_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class, 'get')) {
+    try {
+      $theme = \Plugins\ThemeBuilder\src\ThemeConfig::get();
+    } catch (\Throwable) {
+      $theme = $theme ?? [];
+    }
+  }
+
+  $useRevolution = $alreadyFromHome ? false : ! empty($resolved['live']);
+  $banner = is_array($resolved['banner'] ?? null) ? $resolved['banner'] : [];
+
+  // top_menu تکراری با هدر است؛ banner/hero جداگانه رندر می‌شوند.
   $order = $theme['layout_order'] ?? $theme['layout_order'] ?? ['banner','online','categories','featured','features','cta'];
   $order = array_values(array_filter($order, fn ($s) => !in_array($s, ['top_menu','banner','hero'], true)));
   $featured = $featured ?? collect();
@@ -31,10 +44,10 @@
   @include('theme-builder::storefront.partials.banner', ['b' => $banner])
 @endif
 
-{{-- home-hero مسیر اصلی صفحه اول است؛ اگر Revolution این‌جا رندر شد، داخل partial دوباره نکش --}}
+{{-- home-hero فقط وقتی بنرساز زنده نیست (یا بالاتر رندر نشده) --}}
 @include('storefront.partials.home-hero', [
-  'skipHero' => $useRevolution,
-  'revolutionAlreadyRendered' => $useRevolution,
+  'skipHero' => $useRevolution || $alreadyFromHome || ! empty($skipHero),
+  'revolutionAlreadyRendered' => $useRevolution || $alreadyFromHome || ! empty($revolutionAlreadyRendered),
 ])
 
 @foreach($order as $section)
