@@ -398,6 +398,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware(EnsurePermission::class.':settings')->group(function () {
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::post('settings/general', [SettingController::class, 'updateGeneral'])->name('settings.general');
         Route::get('labels/preview', [LabelPrintController::class, 'preview'])->name('labels.preview');
         Route::post('settings/fault-types', [SettingController::class, 'storeFaultType'])->name('settings.fault-types');
         Route::put('settings/fault-types/{faultType}', [SettingController::class, 'updateFaultType'])->name('settings.fault-types.update');

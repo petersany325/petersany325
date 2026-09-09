@@ -79,7 +79,7 @@
                                     <span class="muted">(آخرین)</span>
                                 @endif
                             </td>
-                            <td style="padding:8px;border-bottom:1px solid #f1f5f9;">{{ $row['released_at'] ?? '—' }}</td>
+                            <td style="padding:8px;border-bottom:1px solid #f1f5f9;">{{ !empty($row['released_at']) ? jalali_date($row['released_at']) : '—' }}</td>
                             <td style="padding:8px;border-bottom:1px solid #f1f5f9;font-size:12px;direction:ltr;">{{ $row['file'] ?? '—' }}</td>
                             <td style="padding:8px;border-bottom:1px solid #f1f5f9;font-size:13px;">
                                 @foreach(($row['changelog'] ?? []) as $c)

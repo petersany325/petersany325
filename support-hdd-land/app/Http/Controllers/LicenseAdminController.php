@@ -107,6 +107,8 @@ class LicenseAdminController extends Controller
     {
         abort_unless($request->user()?->isAdmin(), 403);
 
+        merge_jalali_dates($request, ['expires_at']);
+
         $data = $request->validate([
             'customer_name' => ['nullable', 'string', 'max:120'],
             'customer_phone' => ['nullable', 'string', 'max:30'],

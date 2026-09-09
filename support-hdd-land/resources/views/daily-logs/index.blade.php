@@ -126,7 +126,7 @@
                         {{ $entry->category_name ?: 'آزاد' }}
                         @if($entry->quantity) · تعداد {{ $entry->quantity }} @endif
                         @if($entry->minutes) · {{ $entry->minutes }} دقیقه @endif
-                        · {{ $entry->created_at?->timezone('Asia/Tehran')->format('H:i') }}
+                        · {{ format_app_time($entry->created_at) }}
                         @if($canManage && $entry->created_by && (int)$entry->created_by !== (int)$entry->user_id)
                             · ثبت توسط {{ $entry->creator?->name }}
                         @endif

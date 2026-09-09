@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\NiazpardazSmsService;
 use App\Support\BackupSettings;
 use App\Support\BankTransferSettings;
+use App\Support\CalendarSettings;
 use App\Support\LabelPrintSettings;
 use App\Support\PaymentGateways;
 use App\Support\Permissions;
@@ -18,7 +19,7 @@ use Illuminate\Validation\Rule;
 
 class SettingController extends Controller
 {
-    private const TABS = ['lookups', 'faults', 'referrals', 'invoice', 'labels', 'payments', 'sms', 'backup', 'users'];
+    private const TABS = ['general', 'lookups', 'faults', 'referrals', 'invoice', 'labels', 'payments', 'sms', 'backup', 'users'];
 
     public function index(Request $request)
     {
@@ -30,13 +31,14 @@ class SettingController extends Controller
             ];
         }
 
-        $tab = (string) $request->query('tab', session('settings_tab', 'lookups'));
+        $tab = (string) $request->query('tab', session('settings_tab', 'general'));
         if (! in_array($tab, self::TABS, true)) {
-            $tab = 'lookups';
+            $tab = 'general';
         }
 
         return view('settings.index', [
             'activeTab' => $tab,
+            'calendar' => CalendarSettings::all(),
             'faultTypes' => FaultType::orderBy('name')->get(),
             'referralSources' => ReferralSource::orderBy('name')->get(),
             'users' => User::orderBy('name')->get(),
@@ -97,14 +99,14 @@ class SettingController extends Controller
         ]);
     }
 
-    private function resolveTab(Request $request, string $fallback = 'lookups'): string
+    private function resolveTab(Request $request, string $fallback = 'general'): string
     {
         $tab = (string) $request->input('settings_tab', $fallback);
         if (! in_array($tab, self::TABS, true)) {
             $tab = $fallback;
         }
 
-        return in_array($tab, self::TABS, true) ? $tab : 'lookups';
+        return in_array($tab, self::TABS, true) ? $tab : 'general';
     }
 
     private function settingsRedirect(Request $request, string $fallbackTab, string $flash, string $message)
@@ -116,6 +118,21 @@ class SettingController extends Controller
             ->withFragment($tab)
             ->with($flash, $message)
             ->with('settings_tab', $tab);
+    }
+
+    public function updateGeneral(Request $request)
+    {
+        $data = $request->validate([
+            'calendar_type' => ['required', Rule::in(['jalali'])],
+            'calendar_digits' => ['required', Rule::in(['fa', 'en'])],
+        ]);
+
+        CalendarSettings::save(
+            (string) $data['calendar_type'],
+            (string) $data['calendar_digits']
+        );
+
+        return $this->settingsRedirect($request, 'general', 'success', 'تنظیمات تقویم ذخیره شد.');
     }
 
     public function storeFaultType(Request $request)

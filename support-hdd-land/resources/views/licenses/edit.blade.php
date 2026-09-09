@@ -61,11 +61,11 @@
             </div>
             <div>
                 <label>تاریخ شروع (شمسی)</label>
-                <input type="text" name="starts_at" value="{{ old('starts_at', $license->startsAt() ? jalali_date($license->startsAt()) : '') }}" placeholder="1404/01/01" dir="ltr" style="text-align:left;">
+                @include('partials.jalali-date', ['name' => 'starts_at', 'value' => old('starts_at', $license->startsAt() ? jalali_input($license->startsAt()) : ''), 'placeholder' => '1404/01/01'])
             </div>
             <div>
                 <label>تاریخ پایان (شمسی)</label>
-                <input type="text" name="expires_at" value="{{ old('expires_at', $license->expires_at ? jalali_date($license->expires_at) : '') }}" placeholder="1405/01/01 یا خالی=مادام‌العمر" dir="ltr" style="text-align:left;">
+                @include('partials.jalali-date', ['name' => 'expires_at', 'value' => old('expires_at', $license->expires_at ? jalali_input($license->expires_at) : ''), 'placeholder' => '1405/01/01'])
             </div>
             <div style="grid-column:1/-1;">
                 <label>یادداشت</label>
