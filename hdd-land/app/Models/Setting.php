@@ -46,6 +46,12 @@ class Setting extends Model
         }
     }
 
+    /** Alias used by some plugins / production helpers. */
+    public static function get(string $key, mixed $default = null): mixed
+    {
+        return static::getValue($key, $default);
+    }
+
     public static function setValue(string $key, mixed $value): void
     {
         try {
@@ -64,5 +70,11 @@ class Setting extends Model
         } catch (\Throwable) {
             //
         }
+    }
+
+    /** Alias used by some plugins / production helpers. */
+    public static function set(string $key, mixed $value): void
+    {
+        static::setValue($key, $value);
     }
 }

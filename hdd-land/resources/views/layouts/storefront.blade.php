@@ -19,10 +19,11 @@
     <title>@yield('title', \App\Models\Setting::getValue('shop_name', config('app.name', 'فروشگاه'))) </title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=64">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=45">
-    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=4">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=66">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=48">
+    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=6">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=4">
+    <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=22">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
     @endif
@@ -81,7 +82,7 @@
         </div>
     </div>
 </div>
-<header class="site-header hl-header">
+<header class="{{ $headerClass }} hl-header nav-align-{{ $mmNavAlign }}" @if($headerStyle !== '') style="{{ $headerStyle }}" @endif>
     <div class="container hl-headbar" dir="rtl">
         <button type="button" class="nav-toggle" id="navToggle" aria-label="منو" aria-expanded="false">☰</button>
         <a class="brand" href="{{ route('home') }}">
@@ -191,7 +192,7 @@
     }
 @endphp
 @include('storefront.footer-modern')
-<script src="{{ asset('js/mega-menu.js') }}?v=40" defer></script>
+<script src="{{ asset('js/mega-menu.js') }}?v=42" defer></script>
 @php
   try {
     $scBase = base_path('plugins/SmartChat');

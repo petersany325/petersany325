@@ -67,21 +67,28 @@ body{
     grid-template-columns:auto minmax(0,1fr) auto;
   }
   .hl-headbar .brand{grid-column:1;grid-row:1}
-  .header-nav-slot{grid-column:2;grid-row:1}
+  .header-nav-slot{grid-column:2;grid-row:1;align-self:center}
   .hl-headbar__utils{grid-column:3;grid-row:1}
   .hl-header .nav-toggle{display:none}
+  .hl-header.nav-align-right .header-nav-wrap,
+  .hl-header.nav-align-right .mega-nav-pro{justify-content:flex-start}
+  .hl-header.nav-align-center .header-nav-wrap,
+  .hl-header.nav-align-center .mega-nav-pro{justify-content:center}
+  .hl-header.nav-align-left .header-nav-wrap,
+  .hl-header.nav-align-left .mega-nav-pro{justify-content:flex-end}
   .hl-header .header-nav-wrap,
   .hl-header .mega-nav-pro{
     display:flex!important;
     flex-direction:row!important;
     align-items:center;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
     gap:.1rem .15rem;
     background:transparent!important;
     border:0!important;
     box-shadow:none!important;
     padding:0!important;
     border-radius:0!important;
+    overflow:visible;
   }
   .hl-header .mega-nav-pro.style-pills,
   .hl-header .mega-nav-pro.style-underline{

@@ -54,9 +54,11 @@ class ThemeConfig
             $theme['banner'] = self::normalizeBanner($theme['banner']);
         }
 
-        if (! isset($theme['layout_order']) || ! is_array($theme['layout_order'])) {
-            $theme['layout_order'] = ['banner', 'categories', 'featured'];
+        $order = $theme['layout_order'] ?? $theme['sections_order'] ?? null;
+        if (! is_array($order)) {
+            $order = ['banner', 'categories', 'featured'];
         }
+        $theme['layout_order'] = array_values($order);
 
         return $theme;
     }
@@ -253,6 +255,12 @@ class ThemeConfig
         }
 
         return $hasImage || $hasLayer;
+    }
+
+    /** Alias for older ThemeBuilder call sites. */
+    public static function isBannerLive(?array $banner = null): bool
+    {
+        return self::bannerIsLive($banner);
     }
 
     /** @return array<string, mixed> */
