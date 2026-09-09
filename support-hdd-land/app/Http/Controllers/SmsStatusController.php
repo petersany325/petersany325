@@ -23,6 +23,7 @@ class SmsStatusController extends Controller
             'colors' => SmsStatusRule::COLORS,
             'stageTypes' => SmsStatusRule::STAGE_TYPES,
             'resultTypes' => SmsStatusRule::RESULT_TYPES,
+            'sendModes' => SmsStatusRule::SEND_MODES,
             'baseStatuses' => Reception::STATUSES,
             'sms' => [
                 'username' => AppSetting::getValue('niazpardaz_username', env('NIAZPARDAZ_USERNAME')),
@@ -167,7 +168,9 @@ class SmsStatusController extends Controller
             'color' => $data['color'] ?? 'blue',
             'description' => $data['description'] ?? null,
             'message_template' => $data['message_template'] ?? '',
-            'auto_send' => $request->boolean('auto_send'),
+            'send_mode' => $data['send_mode'],
+            // Keep auto_send for older UI/logic: always=true, never/ask=false.
+            'auto_send' => $data['send_mode'] === SmsStatusRule::SEND_ALWAYS,
             'coworker_message_template' => $data['coworker_message_template'] ?? null,
             'send_coworker' => $request->boolean('send_coworker'),
             'is_active' => $request->boolean('is_active', true),
@@ -186,7 +189,7 @@ class SmsStatusController extends Controller
 
     private function validated(Request $request): array
     {
-        return $request->validate([
+        $data = $request->validate([
             'title' => ['required', 'string', 'max:120'],
             'summary' => ['nullable', 'string', 'max:80'],
             'status_key' => ['nullable', 'string', 'max:60', 'regex:/^[a-z0-9_\-]+$/i'],
@@ -197,6 +200,7 @@ class SmsStatusController extends Controller
             'message_template' => ['nullable', 'string', 'max:1000'],
             'coworker_message_template' => ['nullable', 'string', 'max:1000'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
+            'send_mode' => ['nullable', Rule::in(array_keys(SmsStatusRule::SEND_MODES))],
             'auto_send' => ['nullable', 'boolean'],
             'send_coworker' => ['nullable', 'boolean'],
             'is_active' => ['nullable', 'boolean'],
@@ -204,5 +208,12 @@ class SmsStatusController extends Controller
             'on_create' => ['nullable', 'boolean'],
             'on_price' => ['nullable', 'boolean'],
         ]);
+
+        $data['send_mode'] = SmsStatusRule::normalizeSendMode(
+            $data['send_mode'] ?? $request->input('auto_send'),
+            $request->has('auto_send') ? $request->boolean('auto_send') : true
+        );
+
+        return $data;
     }
 }

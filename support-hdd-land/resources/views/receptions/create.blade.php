@@ -11,7 +11,18 @@
 @endphp
 
 @if($errors->any())
-    <div class="alert alert-error" style="margin-bottom:10px;">{{ $errors->first() }}</div>
+    <div class="alert alert-error" style="margin-bottom:10px;">
+        <div>{{ $errors->first() }}</div>
+        @if($errors->count() > 1)
+            <ul style="margin:6px 0 0;padding-right:18px;">
+                @foreach($errors->all() as $msg)
+                    @if($msg !== $errors->first())
+                        <li>{{ $msg }}</li>
+                    @endif
+                @endforeach
+            </ul>
+        @endif
+    </div>
 @endif
 
 <div class="receipt-seq-bar" aria-label="شماره قبض">

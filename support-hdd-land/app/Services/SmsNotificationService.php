@@ -77,8 +77,13 @@ class SmsNotificationService
             return ['ok' => false, 'skipped' => true, 'message' => 'ارسال پیامک در سطح سیستم خاموش است.'];
         }
 
-        if (! $force && ! $rule->auto_send) {
-            return ['ok' => false, 'skipped' => true, 'message' => 'ارسال خودکار این وضعیت خاموش است.'];
+        $mode = $rule->sendMode();
+        if (! $force && $mode !== SmsStatusRule::SEND_ALWAYS) {
+            $msg = $mode === SmsStatusRule::SEND_ASK
+                ? 'ارسال این وضعیت نیاز به تأیید کارمند دارد.'
+                : 'ارسال خودکار این وضعیت خاموش است.';
+
+            return ['ok' => false, 'skipped' => true, 'message' => $msg];
         }
 
         if (! $rule->is_active) {
@@ -93,7 +98,7 @@ class SmsNotificationService
         $notes = [];
         $customerOk = null;
 
-        if ($force || $rule->auto_send) {
+        if ($force || $mode === SmsStatusRule::SEND_ALWAYS) {
             $customerOk = $this->dispatch($reception, $rule, 'customer', (string) $rule->message_template);
             $notes[] = ($customerOk['ok'] ?? false)
                 ? 'پیامک مشتری ارسال شد'
@@ -158,14 +163,22 @@ class SmsNotificationService
         ];
     }
 
-    public function sendOnCreate(Reception $reception): ?array
+    public function sendOnCreate(Reception $reception, bool $force = false): ?array
     {
         $rule = SmsStatusRule::findOnCreate() ?: SmsStatusRule::findForStatus('received');
         if (! $rule) {
             return null;
         }
 
-        return $this->sendForReception($reception, $rule);
+        if ($rule->sendMode() === SmsStatusRule::SEND_NEVER && ! $force) {
+            return ['ok' => false, 'skipped' => true, 'message' => 'ارسال پیامک ثبت قبض خاموش است.'];
+        }
+
+        if ($rule->sendMode() === SmsStatusRule::SEND_ASK && ! $force) {
+            return ['ok' => false, 'skipped' => true, 'message' => 'ارسال پیامک ثبت قبض نیاز به تأیید کارمند دارد.'];
+        }
+
+        return $this->sendForReception($reception, $rule, force: $force || $rule->shouldAutoSend());
     }
 
     /**
@@ -255,8 +268,11 @@ class SmsNotificationService
             if (! $rule) {
                 return null;
             }
-            if (! $rule->auto_send && ! $rule->on_price) {
+            if ($rule->sendMode() === SmsStatusRule::SEND_NEVER && ! $rule->on_price) {
                 return null;
+            }
+            if ($rule->sendMode() === SmsStatusRule::SEND_ASK && ! $force) {
+                return ['ok' => false, 'skipped' => true, 'message' => 'ارسال پیامک مبلغ نیاز به تأیید کارمند دارد.'];
             }
 
             return $this->sendForReception($reception, $rule, force: true);
@@ -291,8 +307,11 @@ class SmsNotificationService
             return null;
         }
 
-        if (! $force && ! $rule->auto_send && ! $rule->on_price) {
+        if (! $force && $rule->sendMode() === SmsStatusRule::SEND_NEVER && ! $rule->on_price) {
             return null;
+        }
+        if (! $force && $rule->sendMode() === SmsStatusRule::SEND_ASK) {
+            return ['ok' => false, 'skipped' => true, 'message' => 'ارسال پیامک مبلغ نیاز به تأیید کارمند دارد.'];
         }
 
         return $this->sendForReception($reception, $rule, force: true);

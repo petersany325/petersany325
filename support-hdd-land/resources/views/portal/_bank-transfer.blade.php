@@ -30,7 +30,7 @@
     @if($hasPending)
         <div class="p-empty soft">یک فیش در انتظار تأیید حسابداری دارید. تا بررسی، فیش جدید ارسال نکنید.</div>
     @else
-        <form method="POST" action="{{ route('portal.receipts.store', $reception) }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ route('portal.receipts.store', $reception) }}" enctype="multipart/form-data" id="portal-bank-receipt-form">
             @csrf
             <div style="display:grid;gap:8px;">
                 <label>
@@ -41,10 +41,31 @@
                     تاریخ واریز
                     @include('partials.jalali-date', ['name' => 'transfer_date', 'value' => old('transfer_date', jalali_input(now())), 'required' => true])
                 </label>
-                <label>
-                    تصویر فیش بانکی
-                    <input type="file" name="receipt_image" accept="image/jpeg,image/png,image/webp,application/pdf" required>
-                </label>
+                <div>
+                    <label style="display:block;margin-bottom:6px;">تصویر فیش بانکی</label>
+                    <div style="display:grid;gap:8px;">
+                        <input type="file"
+                               id="receipt-image-input"
+                               name="receipt_image"
+                               accept="image/*,image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif,application/pdf"
+                               required>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <button type="button" class="p-btn" id="receipt-camera-btn">عکس با دوربین</button>
+                            <button type="button" class="p-btn" id="receipt-gallery-btn">انتخاب از گالری</button>
+                        </div>
+                        <input type="file"
+                               id="receipt-camera-input"
+                               accept="image/*"
+                               capture="environment"
+                               style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"
+                               tabindex="-1"
+                               aria-hidden="true">
+                        <p class="p-empty soft" id="receipt-file-name" style="margin:0;">هنوز فایلی انتخاب نشده. JPG / PNG / WEBP / PDF (و HEIC در صورت پشتیبانی گوشی).</p>
+                    </div>
+                    @error('receipt_image')
+                        <p class="p-empty soft" style="color:#9f1239;margin:6px 0 0;">{{ $message }}</p>
+                    @enderror
+                </div>
                 <label>
                     توضیح (اختیاری)
                     <input type="text" name="note" value="{{ old('note') }}" maxlength="500" placeholder="مثلاً ۴ رقم آخر کارت مبدأ">
@@ -53,6 +74,43 @@
             </div>
             <p class="p-empty soft" style="margin-top:8px;">تا تأیید مدیر/حسابدار، این واریز در گزارش مالی قطعی نیست.</p>
         </form>
+        <script>
+        (function () {
+            var form = document.getElementById('portal-bank-receipt-form');
+            if (!form) return;
+            var main = document.getElementById('receipt-image-input');
+            var cam = document.getElementById('receipt-camera-input');
+            var nameEl = document.getElementById('receipt-file-name');
+            var camBtn = document.getElementById('receipt-camera-btn');
+            var galBtn = document.getElementById('receipt-gallery-btn');
+            function showName(file) {
+                if (!nameEl) return;
+                nameEl.textContent = file ? ('انتخاب شد: ' + file.name) : 'هنوز فایلی انتخاب نشده.';
+            }
+            function syncFrom(input) {
+                if (!input || !input.files || !input.files[0] || !main) return;
+                try {
+                    var dt = new DataTransfer();
+                    dt.items.add(input.files[0]);
+                    main.files = dt.files;
+                    showName(input.files[0]);
+                } catch (e) {
+                    // Fallback: some browsers block DataTransfer — keep camera input name.
+                    if (input !== main) {
+                        input.setAttribute('name', 'receipt_image');
+                        main.removeAttribute('name');
+                        main.removeAttribute('required');
+                        input.required = true;
+                    }
+                    showName(input.files[0]);
+                }
+            }
+            if (camBtn && cam) camBtn.addEventListener('click', function () { cam.click(); });
+            if (galBtn && main) galBtn.addEventListener('click', function () { main.click(); });
+            if (cam) cam.addEventListener('change', function () { syncFrom(cam); });
+            if (main) main.addEventListener('change', function () { showName(main.files && main.files[0]); });
+        })();
+        </script>
     @endif
 </section>
 @endif

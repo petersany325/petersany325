@@ -42,15 +42,57 @@ class PaymentReceiptController extends Controller
             'amount' => ['required', 'integer', 'min:1000', 'max:'.$remaining],
             'transfer_date' => ['nullable', 'date', 'before_or_equal:today'],
             'note' => ['nullable', 'string', 'max:500'],
-            'receipt_image' => ['required', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:8192'],
+            'receipt_image' => ['required', 'file', 'max:12288'],
         ], [
             'receipt_image.required' => 'تصویر فیش بانکی الزامی است.',
-            'receipt_image.mimes' => 'فرمت مجاز: JPG، PNG، WEBP یا PDF.',
+            'receipt_image.max' => 'حجم فایل حداکثر ۱۲ مگابایت باشد.',
             'amount.max' => 'مبلغ نمی‌تواند بیشتر از مانده قبض باشد.',
         ]);
 
         $file = $request->file('receipt_image');
-        $path = $file->store('payment-receipts/'.$reception->id, 'local');
+        $ext = strtolower((string) ($file->getClientOriginalExtension() ?: ''));
+        $mime = strtolower((string) ($file->getMimeType() ?: ''));
+        $allowedExt = ['jpg', 'jpeg', 'png', 'webp', 'pdf', 'heic', 'heif'];
+        $allowedMimePrefix = ['image/', 'application/pdf'];
+        $okMime = $mime === '' || collect($allowedMimePrefix)->contains(fn ($p) => str_starts_with($mime, $p)) || in_array($mime, [
+            'image/heic', 'image/heif', 'image/heic-sequence', 'image/heif-sequence', 'application/octet-stream',
+        ], true);
+        if (($ext !== '' && ! in_array($ext, $allowedExt, true)) || ! $okMime) {
+            return back()->withInput()->withErrors([
+                'receipt_image' => 'فرمت مجاز: JPG، PNG، WEBP، HEIC یا PDF. از دوربین گوشی یا گالری عکس بگیرید.',
+            ]);
+        }
+
+        // Convert HEIC/HEIF to JPEG when Imagick is available (common iPhone gallery picks).
+        if (in_array($ext, ['heic', 'heif'], true) || str_contains($mime, 'heic') || str_contains($mime, 'heif')) {
+            if (class_exists(\Imagick::class)) {
+                try {
+                    $imagick = new \Imagick($file->getRealPath());
+                    $imagick->setImageFormat('jpeg');
+                    $imagick->setImageCompressionQuality(85);
+                    $tmp = tempnam(sys_get_temp_dir(), 'heic').'.jpg';
+                    $imagick->writeImage($tmp);
+                    $imagick->clear();
+                    $imagick->destroy();
+                    $storedName = 'payment-receipts/'.$reception->id.'/'.uniqid('rcpt_', true).'.jpg';
+                    Storage::disk('local')->put($storedName, file_get_contents($tmp));
+                    @unlink($tmp);
+                    $path = $storedName;
+                    $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.jpg';
+                } catch (\Throwable $e) {
+                    return back()->withInput()->withErrors([
+                        'receipt_image' => 'تبدیل عکس HEIC ناموفق بود. لطفاً از دوربین با فرمت JPG بگیرید یا در گالری به JPG ذخیره کنید.',
+                    ]);
+                }
+            } else {
+                return back()->withInput()->withErrors([
+                    'receipt_image' => 'این گوشی عکس HEIC فرستاد. لطفاً از دکمه «عکس با دوربین» استفاده کنید یا فایل را به JPG تبدیل کنید.',
+                ]);
+            }
+        } else {
+            $path = $file->store('payment-receipts/'.$reception->id, 'local');
+            $originalName = $file->getClientOriginalName();
+        }
 
         PaymentReceipt::create([
             'reception_id' => $reception->id,
@@ -59,7 +101,7 @@ class PaymentReceiptController extends Controller
             'transfer_date' => $data['transfer_date'] ?? now()->toDateString(),
             'note' => $data['note'] ?? null,
             'image_path' => $path,
-            'original_name' => $file->getClientOriginalName(),
+            'original_name' => $originalName,
             'status' => PaymentReceipt::STATUS_PENDING,
         ]);
 

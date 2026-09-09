@@ -162,24 +162,27 @@ Route::middleware('auth')->group(function () {
     Route::middleware(EnsurePermission::class.':customers')->group(function () {
         Route::resource('customers', CustomerController::class);
         Route::post('customers/{customer}/blacklist', [CustomerController::class, 'toggleBlacklist'])->name('customers.blacklist');
+    });
+
+    Route::middleware(EnsurePermission::class.':device.blacklists')->group(function () {
         Route::get('device-blacklists', [DeviceBlacklistController::class, 'index'])->name('device-blacklists.index');
         Route::post('device-blacklists', [DeviceBlacklistController::class, 'store'])->name('device-blacklists.store');
         Route::post('device-blacklists/{deviceBlacklist}/toggle', [DeviceBlacklistController::class, 'toggle'])->name('device-blacklists.toggle');
         Route::delete('device-blacklists/{deviceBlacklist}', [DeviceBlacklistController::class, 'destroy'])->name('device-blacklists.destroy');
-
-        Route::prefix('portal-invites')->name('portal-invites.')->group(function () {
-            Route::get('/', [PortalInviteController::class, 'index'])->name('index');
-            Route::post('/template', [PortalInviteController::class, 'saveTemplate'])->name('template');
-            Route::post('/start', [PortalInviteController::class, 'start'])->name('start');
-            Route::post('/single', [PortalInviteController::class, 'sendSingle'])->name('single');
-            Route::match(['get', 'post'], '/run/{batch}', [PortalInviteController::class, 'run'])->name('run');
-            Route::get('/report', [PortalInviteController::class, 'report'])->name('report');
-            Route::post('/resend-failed', [PortalInviteController::class, 'resendFailed'])->name('resend-failed');
-            Route::post('/resend/{customer}', [PortalInviteController::class, 'resend'])->name('resend');
-        });
     });
 
-    Route::middleware(EnsurePermission::class.':receptions')->prefix('remote-preorders')->name('remote-preorders.')->group(function () {
+    Route::middleware(EnsurePermission::class.':portal.invites')->prefix('portal-invites')->name('portal-invites.')->group(function () {
+        Route::get('/', [PortalInviteController::class, 'index'])->name('index');
+        Route::post('/template', [PortalInviteController::class, 'saveTemplate'])->name('template');
+        Route::post('/start', [PortalInviteController::class, 'start'])->name('start');
+        Route::post('/single', [PortalInviteController::class, 'sendSingle'])->name('single');
+        Route::match(['get', 'post'], '/run/{batch}', [PortalInviteController::class, 'run'])->name('run');
+        Route::get('/report', [PortalInviteController::class, 'report'])->name('report');
+        Route::post('/resend-failed', [PortalInviteController::class, 'resendFailed'])->name('resend-failed');
+        Route::post('/resend/{customer}', [PortalInviteController::class, 'resend'])->name('resend');
+    });
+
+    Route::middleware(EnsurePermission::class.':remote.preorders')->prefix('remote-preorders')->name('remote-preorders.')->group(function () {
         Route::get('/', [RemotePartPreorderController::class, 'index'])->name('index');
         Route::get('/settings', [RemotePartPreorderController::class, 'settings'])->name('settings');
         Route::post('/settings', [RemotePartPreorderController::class, 'saveSettings'])->name('settings.save');
@@ -323,7 +326,7 @@ Route::middleware('auth')->group(function () {
         ->middleware(EnsurePermission::class.':reports.payments')
         ->name('reports.payments');
 
-    Route::middleware(EnsurePermission::class.':reports.payments')->prefix('payment-receipts')->name('payment-receipts.')->group(function () {
+    Route::middleware(EnsurePermission::class.':payment.receipts')->prefix('payment-receipts')->name('payment-receipts.')->group(function () {
         Route::get('/', [\App\Http\Controllers\PaymentReceiptController::class, 'index'])->name('index');
         Route::get('{receipt}', [\App\Http\Controllers\PaymentReceiptController::class, 'show'])->name('show');
         Route::get('{receipt}/image', [\App\Http\Controllers\PaymentReceiptController::class, 'image'])->name('image');
@@ -365,7 +368,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/rebuild', [AccountingController::class, 'rebuild'])->name('rebuild');
     });
 
-    Route::middleware(EnsurePermission::class.':reports.accounting')->prefix('installments')->name('installments.')->group(function () {
+    Route::middleware(EnsurePermission::class.':installments')->prefix('installments')->name('installments.')->group(function () {
         Route::get('/', [InstallmentPlanController::class, 'index'])->name('index');
         Route::get('/create', [InstallmentPlanController::class, 'create'])->name('create');
         Route::post('/', [InstallmentPlanController::class, 'store'])->name('store');
@@ -438,7 +441,7 @@ Route::middleware('auth')->group(function () {
         Route::post('system-tools/updates/apply', [AppUpdateController::class, 'apply'])->name('system-tools.updates.apply');
     });
 
-    Route::middleware(EnsurePermission::class.':system.tools')->prefix('licenses')->name('licenses.')->group(function () {
+    Route::middleware(EnsurePermission::class.':licenses')->prefix('licenses')->name('licenses.')->group(function () {
         Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');
         Route::get('/online', [\App\Http\Controllers\LicenseAdminController::class, 'online'])->name('online');
         Route::get('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'plans'])->name('plans');
@@ -455,7 +458,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/{license}/extend', [\App\Http\Controllers\LicenseAdminController::class, 'extend'])->name('extend');
     });
 
-    Route::middleware(EnsurePermission::class.':receptions')->prefix('trash')->name('trash.')->group(function () {
+    Route::middleware(EnsurePermission::class.':trash')->prefix('trash')->name('trash.')->group(function () {
         Route::get('/', [TrashController::class, 'index'])->name('index');
         Route::post('/restore', [TrashController::class, 'restore'])->name('restore');
         Route::post('/force', [TrashController::class, 'forceDestroy'])->name('force');

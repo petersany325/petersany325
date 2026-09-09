@@ -85,7 +85,23 @@ class User extends Authenticatable
             return true;
         }
 
-        return in_array($permission, $this->permissionList(), true);
+        $list = $this->permissionList();
+        if (in_array($permission, $list, true)) {
+            return true;
+        }
+
+        // دسترسی‌های جدید که قبلاً زیر والد بودند — کارمندان قدیمی قطع نشوند
+        $legacyParents = [
+            'portal.invites' => 'customers',
+            'device.blacklists' => 'customers',
+            'remote.preorders' => 'receptions',
+            'installments' => 'reports.accounting',
+            'payment.receipts' => 'reports.payments',
+            'licenses' => 'system.tools',
+        ];
+        $parent = $legacyParents[$permission] ?? null;
+
+        return $parent !== null && in_array($parent, $list, true);
     }
 
     /**
