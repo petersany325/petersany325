@@ -1,6 +1,6 @@
 <?php
 /**
- * One-shot live deploy for menus stack (installments branch).
+ * One-shot live deploy for menus + remote preorder + portal cartable options.
  * Upload to public_html/tmr/_menus_deploy.php then open in browser.
  * Deletes itself after success when ?cleanup=1
  */
@@ -22,7 +22,7 @@ function out(string $m): void { echo $m."\n"; @ob_flush(); @flush(); }
 out('ROOT='.$root);
 out('PHP='.PHP_VERSION);
 
-$zipUrl = 'https://codeload.github.com/petersany325/petersany325/zip/refs/heads/cursor/installments-module-cb9c';
+$zipUrl = 'https://codeload.github.com/petersany325/petersany325/zip/refs/heads/cursor/restore-remote-portal-cb9c';
 $tmpDir = $root.'/_deploy_tmp_'.bin2hex(random_bytes(4));
 $zipFile = $tmpDir.'.zip';
 @mkdir($tmpDir, 0755, true);
@@ -147,7 +147,7 @@ if (is_file($artisan)) {
 
 // verify NavMenu markers
 $nav = @file_get_contents($root.'/app/Support/NavMenu.php') ?: '';
-foreach (['اقساط','انبارگردانی','شرح کار','payment-receipts','installments','device-blacklist','labels.preview'] as $w) {
+foreach (['اقساط','انبارگردانی','شرح کار','payment-receipts','installments','device-blacklist','labels.preview','remote-preorders','portal-invites','ورود قطعه از راه دور','ارسال لینک کارتابل'] as $w) {
     out((str_contains($nav, $w) ? 'NAV_OK ' : 'NAV_MISS ').$w);
 }
 

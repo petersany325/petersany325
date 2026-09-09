@@ -22,14 +22,17 @@ class CartableController extends Controller
 
         $menus = [
             ['route' => 'portal.tickets', 'params' => [], 'label' => 'همه قبض‌ها', 'hint' => 'لیست کامل دستگاه‌ها', 'icon' => '▤', 'tone' => 'teal'],
+            ['route' => 'portal.preorders.index', 'params' => [], 'label' => 'ارسال قطعه', 'hint' => 'از شهر دیگر · پیش‌سفارش', 'icon' => '⇪', 'tone' => 'blue'],
             ['route' => 'portal.search', 'params' => [], 'label' => 'جستجوی قبض', 'hint' => 'شماره / سریال', 'icon' => '⌕', 'tone' => 'blue'],
             ['route' => 'portal.tickets', 'params' => ['status' => 'repairing'], 'label' => 'در حال تعمیر', 'hint' => $stats['repairing'].' دستگاه', 'icon' => '⚙', 'tone' => 'amber'],
             ['route' => 'portal.tickets', 'params' => ['status' => 'ready'], 'label' => 'آماده تحویل', 'hint' => 'هزینه و لینک پرداخت', 'icon' => '✓', 'tone' => 'green'],
             ['route' => 'portal.tickets', 'params' => ['status' => 'waiting_part'], 'label' => 'منتظر قطعه', 'hint' => $stats['waiting_part'].' مورد', 'icon' => '◈', 'tone' => 'rose'],
             ['route' => 'portal.report', 'params' => [], 'label' => 'گزارش وضعیت', 'hint' => 'خلاصه تعمیرات', 'icon' => '▦', 'tone' => 'violet'],
             ['route' => 'portal.approvals', 'params' => [], 'label' => 'تأیید هزینه‌ها', 'hint' => 'لینک جراحی / بازیابی', 'icon' => '✔', 'tone' => 'amber'],
+            ['route' => 'portal.messages', 'params' => [], 'label' => 'پیام به تعمیرگاه', 'hint' => 'گفتگو و پیگیری', 'icon' => '✉', 'tone' => 'violet'],
             ['route' => 'portal.tickets', 'params' => ['status' => 'delivered'], 'label' => 'تحویل‌شده‌ها', 'hint' => $stats['delivered'].' قبض', 'icon' => '↩', 'tone' => 'slate'],
             ['route' => 'portal.pay', 'params' => [], 'label' => 'پرداخت آنلاین', 'hint' => $debtSummary['has_debt'] ? ('بدهی '.number_format($debtSummary['total']).' ت') : 'درگاه‌های بانکی', 'icon' => '₿', 'tone' => 'gold'],
+            ['route' => 'portal.pay', 'params' => [], 'label' => 'آپلود فیش بانکی', 'hint' => 'کارت‌به‌کارت + پیگیری تأیید', 'icon' => '☰', 'tone' => 'slate'],
         ];
 
         $ready = $customer->receptions()

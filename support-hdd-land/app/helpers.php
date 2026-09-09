@@ -373,3 +373,18 @@ if (! function_exists('shop_logo_url')) {
         return asset($rel).'?v='.rawurlencode($ver);
     }
 }
+
+if (! function_exists('shop_office_phone')) {
+    /** Main office contact phone shown to customers. */
+    function shop_office_phone(): string
+    {
+        try {
+            if (class_exists(\App\Support\RemotePartPreorderSettings::class)) {
+                return \App\Support\RemotePartPreorderSettings::officePhone();
+            }
+        } catch (\Throwable) {
+        }
+
+        return '01144447220';
+    }
+}

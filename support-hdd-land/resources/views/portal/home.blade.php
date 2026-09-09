@@ -20,6 +20,7 @@
     <div class="p-hero-text">
         <h1>کارتابل تعمیرات</h1>
         <p>{{ $stats['open'] }} دستگاه باز · {{ $stats['ready'] }} آماده تحویل</p>
+        <p class="p-office-phone">تلفن دفتر: <a href="tel:{{ shop_office_phone() }}" dir="ltr">{{ shop_office_phone() }}</a></p>
     </div>
     <div class="p-hero-stat">
         <strong>{{ $stats['total'] }}</strong>

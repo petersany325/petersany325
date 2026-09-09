@@ -28,6 +28,8 @@ a{color:var(--accent);text-decoration:none}
 }
 .p-hero h1{margin:0;font-size:15px}
 .p-hero p{margin:4px 0 0;color:var(--muted);font-size:11px}
+.p-office-phone{font-size:12px !important;font-weight:800;color:#0f766e !important}
+.p-office-phone a{color:#0f766e;font-weight:800;letter-spacing:.02em}
 .p-hero-stat{text-align:center;min-width:64px}
 .p-hero-stat strong{display:block;font-size:18px}
 .p-hero-stat span{font-size:10px;color:var(--muted)}
