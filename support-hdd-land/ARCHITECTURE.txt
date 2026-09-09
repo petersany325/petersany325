@@ -1,0 +1,103 @@
+================================================================================
+سرزمین هارد (support.hdd-land.ir) — معماری کامل برای آپدیت
+Snapshot از /public_html/tmr | Laravel 13.8 | PHP 8.3 | MySQL *_Ghabz
+================================================================================
+
+۱) چیست؟
+  وب‌سرویس مدیریت تعمیرگاه: ورود قبض مشتری → تعمیر → خروج/تحویل + کارتابل مشتری + SMS + پرداخت.
+
+۲) استقرار
+  هاست: ParsVDS box107 | حساب cPanel
+  App root:  /home/<user>/public_html/tmr
+  DocRoot:   /home/<user>/public_html/tmr/public   (ساب‌دامین support.hdd-land.ir)
+  کپی قدیمی: /home/<user>/saramin-hard  (duplicate)
+  Session:   saramin_v3_session | Locale fa | Timezone Asia/Tehran
+
+۳) لایه‌های اپ
+  routes/web.php          ← همه مسیرها (API جدا نیست؛ فقط web + /up)
+  Controllers             ← Staff + Portal + Payment
+  Models (20)             ← Reception محور اصلی
+  Services                ← SMS نیازپرداز، اعلان وضعیت، زرین‌پال، حسابداری
+  Support                 ← NavMenu / Permissions / PaymentGateways
+  Middleware              ← EnsurePermission, EnsurePortalCustomer, ForceCanonicalUrl
+  Views Blade RTL         ← layouts.app (منوی ویندوزی) + layouts.portal (PWA مشتری)
+
+۴) دو درگاه ورود
+  /                 gate: انتخاب مشتری یا کارمند
+  /login            کارمند: رمز یا OTP SMS  → /dashboard
+  /cartable         مشتری: OTP SMS          → /cartable/home
+  نشست منقضی (419)  → برگشت به login مربوطه
+
+۵) نقش‌ها و دسترسی (Permissions)
+  admin         همه
+  receptionist  dashboard, receptions, customers, parts, sms.statuses, profile
+  technician    dashboard, receptions, parts, profile
+  accountant    dashboard, reports.accounting, reports.parts, customers, profile
+  employee      dashboard, profile
+  منو با NavMenu::forUser فیلتر می‌شود.
+
+۶) جریان قبض (Reception) — هسته سیستم
+  شماره تیکت: SH-YYMMDD-NNNN | شماره قبض عددی از 10001
+  وضعیت‌ها:
+    received      پذیرش‌شده
+    repairing     در حال تعمیر
+    waiting_part  منتظر قطعه
+    ready         آماده تحویل
+    unrepairable  غیرقابل تعمیر
+    delivered     تحویل‌شده
+    cancelled     لغو شده
+
+  مسیر کارمند:
+    GET/POST  /receptions/create|store     پذیرش تکی/گروهی
+    GET       /receptions/{id}             جزئیات
+    POST      /receptions/{id}/status      تغییر وضعیت + SMS
+    POST      /receptions/{id}/parts       قطعه + کسر انبار
+    POST      /receptions/{id}/payments    پرداخت نقدی/کارت/...
+    POST      /receptions/{id}/zarinpal    شروع درگاه
+    GET       /receptions/{id}/print       چاپ
+    GET/POST  /deliveries/group|lookup|store   خروج گروهی
+
+  مسیر مشتری (بعد از OTP):
+    /cartable/home|tickets|search|tickets/{id}|report|pay
+    POST /cartable/pay/{reception}/zarinpal
+
+۷) ماژول‌ها (منو ↔ کنترلر)
+  میز کار          DashboardController
+  پذیرش/خروج      ReceptionController + DeliveryController
+  مشتریان          CustomerController
+  انبار            PartController (+ stock adjust)
+  تعمیرکاران       TechnicianController
+  کارمندان         EmployeeController (نقش، OTP/رمز، permissions[])
+  وضعیت/پیامک      SmsStatusController + SmsNotificationService + NiazpardazSmsService
+  حسابداری         AccountingController + AccountingService
+  گزارش‌ها         ReportController (technicians/customers/parts-used)
+  تنظیمات          SettingController (lookups، فاکتور، زرین‌پال، SMS)
+  پروفایل          ProfileController
+  پرداخت           ZarinPalController + ZarinPalService + GatewayTransaction
+
+۸) جداول دیتابیس (migrations)
+  users (+role, permissions, can_login_otp/password)
+  customers, technicians, parts, receptions, reception_parts, payments, stock_movements
+  referral_sources, fault_types, lookup_options, app_settings, login_otps
+  sms_status_rules, sms_logs, delivery_batches
+  accounts, journal_entries, journal_lines, gateway_transactions
+
+۹) سرویس‌های بیرونی
+  SMS:     نیازپرداز (Niazpardaz) — OTP + قالب وضعیت
+  پرداخت:  زرین‌پال (+ لینک موقت بانک‌ها)
+  ایمیل:   MAIL_MAILER=log
+
+۱۰) فرانت
+  Staff:  public/css/app.css + منوی win-* در layouts/app.blade.php
+  Portal: public/css/portal.css + tabbar + PWA
+  JS منو inline در layout؛ public/js/app.js فعلاً stub
+
+۱۱) اولویت آپدیت
+  A. همگام‌سازی Git ↔ سرور
+  B. حذف/ادغام کپی saramin-hard
+  C. تکمیل PWA/app.js
+  D. تست رمز کارمند غیرمدیر
+  E. ReceptionController و settings نقطه تمرکز فیچر
+  F. چک تنظیمات SMS/زرین‌پال قبل از تغییر env
+
+۱۲) مسیرهای لایو تأییدشده با ادمین: همه ماژول‌های بالا HTTP 200
