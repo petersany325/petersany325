@@ -93,8 +93,8 @@ class Permissions
                 'reports.operations', 'reports.custody', 'reports.sms', 'reports.messages', 'trash', 'profile',
             ],
             'technician' => [
-                'dashboard', 'receptions', 'handoffs', 'notifications', 'daily_logs', 'parts',
-                'reports.custody', 'reports.technicians', 'profile',
+                'dashboard', 'receptions', 'handoffs', 'notifications', 'daily_logs', 'parts', 'sms.statuses',
+                'reports.custody', 'reports.technicians', 'reports.sms', 'profile',
             ],
             'accountant' => [
                 'dashboard', 'receptions', 'handoffs', 'notifications',

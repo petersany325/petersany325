@@ -148,10 +148,15 @@
                                         @endforeach
                                     </select>
                                     <textarea name="details" rows="2" placeholder="جزئیات اختیاری" style="width:100%;margin-bottom:4px;"></textarea>
-                                    <label class="chk" style="display:flex;gap:6px;align-items:center;margin:0 0 6px;font-size:12px;">
-                                        <input type="checkbox" name="send_sms" value="1" checked>
-                                        پیامک وضعیت برای مشتری
-                                    </label>
+                                    <div style="margin:0 0 6px;">
+                                        @include('partials.toggle', [
+                                            'name' => 'send_sms',
+                                            'label' => 'پیامک وضعیت برای مشتری',
+                                            'checked' => true,
+                                            'on' => 'برود',
+                                            'off' => 'نرود',
+                                        ])
+                                    </div>
                                     <div class="actions" style="margin:0;">
                                         <button class="btn btn-primary" type="submit">ثبت گزارش کار</button>
                                     </div>

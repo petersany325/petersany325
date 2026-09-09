@@ -104,6 +104,15 @@
                         <div>
                             @include('partials.toggle', ['name' => 'needs_part', 'label' => 'نیاز به قطعه دارد', 'checked' => false])
                         </div>
+                        <div>
+                            @include('partials.toggle', [
+                                'name' => 'send_sms',
+                                'label' => 'پیامک وضعیت برای مشتری',
+                                'checked' => true,
+                                'on' => 'برود',
+                                'off' => 'نرود',
+                            ])
+                        </div>
                     </div>
                     <div class="actions" style="margin-top:8px;">
                         <button class="btn btn-primary" type="submit">ثبت گزارش و ادامه</button>
@@ -197,6 +206,15 @@
                             </div>
                             <div>
                                 @include('partials.toggle', ['name' => 'needs_part', 'label' => 'نیاز به قطعه دارد', 'checked' => false])
+                            </div>
+                            <div>
+                                @include('partials.toggle', [
+                                    'name' => 'send_sms',
+                                    'label' => 'پیامک وضعیت برای مشتری',
+                                    'checked' => true,
+                                    'on' => 'برود',
+                                    'off' => 'نرود',
+                                ])
                             </div>
                         </div>
                         <div class="actions" style="margin-top:8px;">
@@ -949,13 +967,14 @@
                         <label>مبلغ دریافتی (برای دریافت کامل = مانده)</label>
                         <input type="number" name="amount" min="0" value="{{ old('amount', $remain) }}" @if($remain > 0) required @endif>
                     </div>
-                    <div>
+                    <div style="position:relative;" data-pickup-suggest data-suggest-url="{{ route('customers.suggest') }}">
                         <label>نام تحویل‌گیرنده</label>
-                        <input type="text" name="pickup_name" value="{{ old('pickup_name', $reception->customer->name) }}" placeholder="نام شخص">
+                        <input type="text" name="pickup_name" id="rx-pickup-name" value="{{ old('pickup_name', $reception->customer->name) }}" placeholder="نام را بنویسید — پیشنهاد از بانک…" autocomplete="off">
+                        <div class="customer-pick-list" id="rx-pickup-pick" hidden></div>
                     </div>
                     <div>
                         <label>موبایل تحویل‌گیرنده</label>
-                        <input type="text" name="pickup_phone" value="{{ old('pickup_phone', $reception->pickup_phone ?: $reception->customer->phone) }}" dir="ltr" style="text-align:left;">
+                        <input type="text" name="pickup_phone" id="rx-pickup-phone" value="{{ old('pickup_phone', $reception->pickup_phone ?: $reception->customer->phone) }}" dir="ltr" style="text-align:left;" data-ascii-en>
                     </div>
                     <div>
                         <label>یادداشت خروج / لوازم همراه</label>
@@ -1324,6 +1343,74 @@
     }
     document.querySelectorAll('#copy-ticket-btn, #copy-serial-btn').forEach(function (btn) {
         btn.addEventListener('click', function () { copyText(btn); });
+    });
+})();
+</script>
+<script>
+(function () {
+    var wrap = document.querySelector('[data-pickup-suggest]');
+    if (!wrap) return;
+    var url = wrap.getAttribute('data-suggest-url') || '';
+    var nameInput = document.getElementById('rx-pickup-name');
+    var phoneInput = document.getElementById('rx-pickup-phone');
+    var pick = document.getElementById('rx-pickup-pick');
+    var timer = null;
+    var seq = 0;
+    function clearPick() { if (!pick) return; pick.innerHTML = ''; pick.hidden = true; }
+    function selectCustomer(c) {
+        if (!c) return;
+        if (nameInput) nameInput.value = c.display_name || c.name || '';
+        if (phoneInput && c.phone) phoneInput.value = c.phone;
+        clearPick();
+    }
+    function render(list) {
+        if (!pick) return;
+        pick.innerHTML = '';
+        if (!list.length) {
+            pick.hidden = false;
+            var e = document.createElement('div');
+            e.className = 'customer-pick-empty';
+            e.textContent = 'نتیجه‌ای نیست.';
+            pick.appendChild(e);
+            return;
+        }
+        list.forEach(function (c) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'customer-pick-item';
+            var name = document.createElement('span');
+            name.className = 'customer-pick-name';
+            name.textContent = c.display_name || c.name || '—';
+            var meta = document.createElement('span');
+            meta.className = 'customer-pick-meta';
+            meta.textContent = [c.phone, c.visits != null ? (c.visits + ' قبض') : ''].filter(Boolean).join(' · ');
+            btn.appendChild(name);
+            btn.appendChild(meta);
+            btn.addEventListener('click', function () { selectCustomer(c); });
+            pick.appendChild(btn);
+        });
+        pick.hidden = false;
+    }
+    function run() {
+        var q = (nameInput.value || '').trim();
+        if (q.length < 1) { clearPick(); return; }
+        var s = ++seq;
+        fetch(url + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (s !== seq) return;
+                render((data && data.customers) || []);
+            })
+            .catch(function () {});
+    }
+    if (nameInput) {
+        nameInput.addEventListener('input', function () {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(run, 220);
+        });
+    }
+    document.addEventListener('click', function (e) {
+        if (pick && !pick.contains(e.target) && e.target !== nameInput) clearPick();
     });
 })();
 </script>

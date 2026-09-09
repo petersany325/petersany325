@@ -17,12 +17,14 @@
     @method('PUT')
     <input type="hidden" name="customer_id" value="{{ old('customer_id', $c->id) }}">
 
-    <div class="panel" style="margin-bottom:10px;">
+    <div class="panel" style="margin-bottom:10px;" id="edit-customer-panel"
+         data-suggest-url="{{ route('customers.suggest') }}">
         <h3 style="margin:0 0 8px;">مشتری</h3>
         <div class="accept-row accept-row-3">
-            <div>
+            <div style="position:relative;">
                 <label>نام</label>
-                <input type="text" name="customer_name" value="{{ old('customer_name', $c->name) }}" required>
+                <input type="text" name="customer_name" id="edit-customer-name" value="{{ old('customer_name', $c->name) }}" required autocomplete="off" placeholder="نام را بنویسید — پیشنهاد از بانک…">
+                <div class="customer-pick-list" id="edit-customer-pick" hidden></div>
             </div>
             <div>
                 <label>اسم مستعار</label>
@@ -39,7 +41,7 @@
             </div>
             <div>
                 <label>موبایل</label>
-                <input type="text" name="customer_phone" value="{{ old('customer_phone', $c->phone) }}" dir="ltr" style="text-align:left;" required>
+                <input type="text" name="customer_phone" id="edit-customer-phone" value="{{ old('customer_phone', $c->phone) }}" dir="ltr" style="text-align:left;" required data-ascii-en>
             </div>
             <div>
                 <label>کد ملی</label>
@@ -253,3 +255,76 @@
     </div>
 </form>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    var panel = document.getElementById('edit-customer-panel');
+    if (!panel) return;
+    var url = panel.getAttribute('data-suggest-url') || '';
+    var nameInput = document.getElementById('edit-customer-name');
+    var phoneInput = document.getElementById('edit-customer-phone');
+    var idInput = panel.closest('form') && panel.closest('form').querySelector('input[name="customer_id"]');
+    var pick = document.getElementById('edit-customer-pick');
+    var timer = null;
+    var seq = 0;
+    function clearPick() { if (!pick) return; pick.innerHTML = ''; pick.hidden = true; }
+    function selectCustomer(c) {
+        if (!c) return;
+        if (idInput) idInput.value = c.id || '';
+        if (nameInput) nameInput.value = c.display_name || c.name || '';
+        if (phoneInput && c.phone) phoneInput.value = c.phone;
+        clearPick();
+    }
+    function render(list) {
+        if (!pick) return;
+        pick.innerHTML = '';
+        if (!list.length) {
+            pick.hidden = false;
+            var e = document.createElement('div');
+            e.className = 'customer-pick-empty';
+            e.textContent = 'نتیجه‌ای نیست.';
+            pick.appendChild(e);
+            return;
+        }
+        list.forEach(function (c) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'customer-pick-item';
+            var name = document.createElement('span');
+            name.className = 'customer-pick-name';
+            name.textContent = c.display_name || c.name || '—';
+            var meta = document.createElement('span');
+            meta.className = 'customer-pick-meta';
+            meta.textContent = [c.phone, c.visits != null ? (c.visits + ' قبض') : '', c.is_blacklisted ? 'لیست سیاه' : ''].filter(Boolean).join(' · ');
+            btn.appendChild(name);
+            btn.appendChild(meta);
+            btn.addEventListener('click', function () { selectCustomer(c); });
+            pick.appendChild(btn);
+        });
+        pick.hidden = false;
+    }
+    function run() {
+        var q = (nameInput.value || '').trim();
+        if (q.length < 1) { clearPick(); return; }
+        var s = ++seq;
+        fetch(url + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (s !== seq) return;
+                render((data && data.customers) || []);
+            })
+            .catch(function () {});
+    }
+    if (nameInput) {
+        nameInput.addEventListener('input', function () {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(run, 220);
+        });
+    }
+    document.addEventListener('click', function (e) {
+        if (pick && !pick.contains(e.target) && e.target !== nameInput) clearPick();
+    });
+})();
+</script>
+@endpush

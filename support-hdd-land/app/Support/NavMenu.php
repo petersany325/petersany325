@@ -378,6 +378,7 @@ class NavMenu
             'home' => 'میز',
             'reception' => 'پذیرش',
             'handoffs' => 'ارجاع',
+            'work' => 'شرح‌کار',
             'notifications' => 'اعلان',
             'daily_logs' => 'دفتر',
             'cost_approvals' => 'تأیید',
