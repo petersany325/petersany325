@@ -133,17 +133,35 @@
                     @endforeach
                 </select>
             </div>
-            <div style="grid-column:1/-1;">
+            <div style="grid-column:1/-1;" class="note-field">
                 <label>ایراد اعلامی مشتری</label>
-                <textarea name="reported_fault" rows="3">{{ old('reported_fault', $r->reported_fault) }}</textarea>
+                <select class="note-menu" data-note-target="reported_fault" aria-label="منوی عیب اظهار مشتری">
+                    <option value="">انتخاب از منو / راست‌کلیک روی کادر…</option>
+                    @foreach(($reportedFaultOptions ?? []) as $name)
+                        <option value="{{ $name }}">{{ $name }}</option>
+                    @endforeach
+                </select>
+                <textarea name="reported_fault" rows="3" data-note-ctx="reported_fault">{{ old('reported_fault', $r->reported_fault) }}</textarea>
             </div>
-            <div style="grid-column:1/-1;">
+            <div style="grid-column:1/-1;" class="note-field">
                 <label>لوازم همراه</label>
-                <input type="text" name="accessories" value="{{ old('accessories', $r->accessories) }}">
+                <select class="note-menu" data-note-target="accessories" aria-label="منوی لوازم همراه">
+                    <option value="">انتخاب از منو / راست‌کلیک روی کادر…</option>
+                    @foreach(($accessoriesOptions ?? []) as $name)
+                        <option value="{{ $name }}">{{ $name }}</option>
+                    @endforeach
+                </select>
+                <textarea name="accessories" rows="2" data-note-ctx="accessories">{{ old('accessories', $r->accessories) }}</textarea>
             </div>
-            <div style="grid-column:1/-1;">
+            <div style="grid-column:1/-1;" class="note-field">
                 <label>وضعیت ظاهری</label>
-                <textarea name="appearance_notes" rows="2">{{ old('appearance_notes', $r->appearance_notes) }}</textarea>
+                <select class="note-menu" data-note-target="appearance_notes" aria-label="منوی وضعیت ظاهری">
+                    <option value="">انتخاب از منو / راست‌کلیک روی کادر…</option>
+                    @foreach(($appearanceOptions ?? []) as $name)
+                        <option value="{{ $name }}">{{ $name }}</option>
+                    @endforeach
+                </select>
+                <textarea name="appearance_notes" rows="2" data-note-ctx="appearance_notes">{{ old('appearance_notes', $r->appearance_notes) }}</textarea>
             </div>
             <div style="grid-column:1/-1;">
                 <label>ایراد نهایی / یادداشت تعمیرکار</label>

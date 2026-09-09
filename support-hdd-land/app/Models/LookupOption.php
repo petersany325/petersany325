@@ -21,6 +21,9 @@ class LookupOption extends Model
         'warranty_type' => 'گارانتی',
         'hdd_capacity' => 'ظرفیت هارد',
         'brand_model' => 'برند و مدل',
+        'reported_fault' => 'عیب اظهار مشتری',
+        'accessories' => 'لوازم همراه',
+        'appearance' => 'وضعیت ظاهری',
     ];
 
     public static function options(string $groupKey)
