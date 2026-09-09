@@ -445,7 +445,11 @@
         </div>
         <div class="device-card-body">
             <div class="dense-grid">
-                <label>سریال<input type="text" data-name="serial_number" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
+                <label style="grid-column:1/-1;">
+                    سریال
+                    <input type="text" data-name="serial_number" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;">
+                    <div class="alert alert-error hidden" data-serial-banner style="margin-top:6px;margin-bottom:0;"></div>
+                </label>
                 <label>کد قفل / پترن<input type="text" data-name="lock_code" autocomplete="off"></label>
                 <label>خدمات
                     <select data-name="service_type">
