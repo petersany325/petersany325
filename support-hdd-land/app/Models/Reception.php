@@ -357,15 +357,24 @@ class Reception extends Model
     public static function nextTicketNo(): string
     {
         $prefix = 'SH-'.now()->format('ymd');
-        // Padded 4-digit suffix → lexical MAX matches numeric MAX.
-        $last = static::query()
+        // Include soft-deleted rows: unique index still holds their ticket_no.
+        $last = static::withTrashed()
             ->where('ticket_no', 'like', $prefix.'-%')
             ->orderByDesc('ticket_no')
             ->value('ticket_no');
 
         $seq = $last ? ((int) substr((string) $last, -4)) + 1 : 1;
 
-        return $prefix.'-'.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+        // Skip any rare collisions (race / odd legacy formats).
+        for ($i = 0; $i < 50; $i++) {
+            $candidate = $prefix.'-'.str_pad((string) ($seq + $i), 4, '0', STR_PAD_LEFT);
+            $exists = static::withTrashed()->where('ticket_no', $candidate)->exists();
+            if (! $exists) {
+                return $candidate;
+            }
+        }
+
+        return $prefix.'-'.str_pad((string) (time() % 10000), 4, '0', STR_PAD_LEFT).'-'.random_int(10, 99);
     }
 
     public static function nextReceiptNo(): string
@@ -373,12 +382,20 @@ class Reception extends Model
         $prefix = 'T-20N';
         $max = 999; // next => T-20N1000
 
-        // Numeric MAX via SQL — never load every receipt_no into PHP.
-        $dbMax = (int) (static::query()
+        // Include soft-deleted rows so we never reuse a unique receipt_no.
+        $dbMax = (int) (static::withTrashed()
             ->where('receipt_no', 'like', $prefix.'%')
             ->selectRaw('MAX(CAST(SUBSTRING(receipt_no, ?) AS UNSIGNED)) as m', [strlen($prefix) + 1])
             ->value('m') ?? 0);
 
-        return $prefix.(max($max, $dbMax) + 1);
+        $seq = max($max, $dbMax) + 1;
+        for ($i = 0; $i < 50; $i++) {
+            $candidate = $prefix.($seq + $i);
+            if (! static::withTrashed()->where('receipt_no', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        return $prefix.$seq.'R'.random_int(10, 99);
     }
 }

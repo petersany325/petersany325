@@ -35,11 +35,15 @@ class DeviceBlacklist extends Model
 
     public static function matchActive(?string $serial, ?string $brand = null, ?string $model = null): ?self
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('device_blacklists')) {
+            return null;
+        }
+
         $serial = $serial !== null ? strtoupper(trim($serial)) : null;
         $brand = $brand !== null ? trim($brand) : null;
         $model = $model !== null ? strtoupper(trim($model)) : null;
 
-        if ($serial === '' && $brand === '' && $model === '') {
+        if (($serial === null || $serial === '') && ($brand === null || $brand === '') && ($model === null || $model === '')) {
             return null;
         }
 

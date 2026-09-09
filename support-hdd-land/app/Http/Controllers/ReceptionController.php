@@ -434,6 +434,7 @@ class ReceptionController extends Controller
                 $created[] = $this->createReceptionRecord($customer, $row, $fakeRequest, [
                     'photo_path' => null,
                     'batch_code' => $batchCode,
+                    'serial_field' => 'items.'.$index.'.serial_number',
                 ]);
             }
 
@@ -1655,6 +1656,8 @@ class ReceptionController extends Controller
 
     private function createReceptionRecord(Customer $customer, array $data, Request $request, array $extra = []): Reception
     {
+        $serialField = (string) ($extra['serial_field'] ?? 'serial_number');
+
         if (! empty($data['brand_model'])) {
             $converted = $this->toAsciiEnglish((string) $data['brand_model']);
             $data['brand_model'] = $converted !== null ? strtoupper($converted) : null;
@@ -1671,7 +1674,7 @@ class ReceptionController extends Controller
             $data['serial_number'] = $converted !== null ? strtoupper($converted) : null;
         }
 
-        $this->assertSerialAvailable($data['serial_number'] ?? null);
+        $this->assertSerialAvailable($data['serial_number'] ?? null, null, $serialField);
 
         $brandModel = trim((string) ($data['brand_model'] ?? trim(($data['brand'] ?? '').' '.($data['model'] ?? ''))));
         $productName = trim((string) ($data['product_name'] ?? '')) ?: ($brandModel !== '' ? $brandModel : 'دستگاه تعمیری');
@@ -1890,10 +1893,12 @@ class ReceptionController extends Controller
             }
             if (isset($seen[$serial])) {
                 throw ValidationException::withMessages([
-                    $field => 'سریال تکراری در همین پذیرش گروهی است. هر سریال فقط یک قبض می‌تواند داشته باشد.',
+                    $field => 'سریال تکراری در همین پذیرش گروهی است (ردیف '.($seen[$serial] + 1).'). هر سریال فقط یک قبض می‌تواند داشته باشد.',
+                    'items.'.$seen[$serial].'.serial_number' => 'این سریال در ردیف '.($index + 1).' هم تکرار شده است.',
                 ]);
             }
             $seen[$serial] = $index;
+            // همان پیام قبض تکی برای سریال باز در دیتابیس
             $this->assertSerialAvailable($serial, null, $field);
         }
     }

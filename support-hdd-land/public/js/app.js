@@ -1145,6 +1145,8 @@
                 });
             });
 
+            wireGroupSerialLookup(card);
+
             var toggleBtn = card.querySelector('[data-device-toggle]');
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', function () { toggleCollapse(card); });
@@ -1169,6 +1171,10 @@
                     card.remove();
                     reindexDeviceCards();
                     updateGroupSummary();
+                    // Re-check remaining cards for intra-batch serial clashes.
+                    groupDeviceList.querySelectorAll('[data-device-card]').forEach(function (other) {
+                        doGroupSerialLookup(other);
+                    });
                 });
             }
 
@@ -1185,6 +1191,121 @@
 
             updateDevicePreview(card);
             wireNoteMenus(card);
+        }
+
+        function clearGroupSerialBanner(card) {
+            var banner = card.querySelector('[data-serial-banner]');
+            if (!banner) return;
+            banner.classList.add('hidden');
+            banner.textContent = '';
+            banner.className = 'alert alert-error hidden';
+            card.removeAttribute('data-serial-blocked');
+        }
+
+        function setGroupSerialBanner(card, msg, blocked) {
+            var banner = card.querySelector('[data-serial-banner]');
+            if (!banner) return;
+            banner.textContent = msg || '';
+            banner.classList.toggle('hidden', !msg);
+            banner.className = 'alert ' + (blocked ? 'alert-error' : 'alert-success');
+            banner.style.marginTop = '6px';
+            banner.style.marginBottom = '0';
+            if (blocked) card.setAttribute('data-serial-blocked', '1');
+            else card.removeAttribute('data-serial-blocked');
+        }
+
+        function findIntraBatchSerialClash(card, serial) {
+            if (!serial) return null;
+            var clash = null;
+            var cards = groupDeviceList.querySelectorAll('[data-device-card]');
+            cards.forEach(function (other, index) {
+                if (other === card || clash) return;
+                var otherSerial = (fieldValue(other, 'serial_number') || '').trim().toUpperCase();
+                if (otherSerial && otherSerial === serial.toUpperCase()) {
+                    clash = index + 1;
+                }
+            });
+            return clash;
+        }
+
+        function doGroupSerialLookup(card) {
+            if (!card) return Promise.resolve(false);
+            var input = card.querySelector('[data-name="serial_number"]');
+            if (!input) return Promise.resolve(false);
+            var serial = (input.value || '').trim();
+            if (serial.length < 3) {
+                clearGroupSerialBanner(card);
+                return Promise.resolve(false);
+            }
+
+            var clash = findIntraBatchSerialClash(card, serial);
+            if (clash) {
+                setGroupSerialBanner(
+                    card,
+                    'سریال تکراری در همین پذیرش گروهی است (قبض ' + toPersianDigits(clash) + '). هر سریال فقط یک قبض می‌تواند داشته باشد.',
+                    true
+                );
+                return Promise.resolve(true);
+            }
+
+            if (!lookupSerialUrl) {
+                clearGroupSerialBanner(card);
+                return Promise.resolve(false);
+            }
+
+            var seq = (parseInt(card.getAttribute('data-serial-seq') || '0', 10) || 0) + 1;
+            card.setAttribute('data-serial-seq', String(seq));
+
+            return fetch(lookupSerialUrl + '?serial=' + encodeURIComponent(serial), {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (String(seq) !== card.getAttribute('data-serial-seq')) return card.getAttribute('data-serial-blocked') === '1';
+                    var liveClash = findIntraBatchSerialClash(card, (input.value || '').trim());
+                    if (liveClash) {
+                        setGroupSerialBanner(
+                            card,
+                            'سریال تکراری در همین پذیرش گروهی است (قبض ' + toPersianDigits(liveClash) + '). هر سریال فقط یک قبض می‌تواند داشته باشد.',
+                            true
+                        );
+                        return true;
+                    }
+                    if (!data || !data.found) {
+                        clearGroupSerialBanner(card);
+                        return false;
+                    }
+                    var msg = data.block_reason || 'سریال قبلاً ثبت شده است.';
+                    if (data.suggest && data.suggest.ticket_no) {
+                        msg += ' قبض قبلی: ' + data.suggest.ticket_no;
+                        if (data.suggest.status_label) msg += ' (' + data.suggest.status_label + ')';
+                        if (data.suggest.customer_name) msg += ' — ' + data.suggest.customer_name;
+                    }
+                    if (data.can_reuse) {
+                        msg += ' — می‌توانید پذیرش جدید ثبت کنید (قبض قبلی تحویل شده).';
+                    }
+                    setGroupSerialBanner(card, msg, !!data.blocked);
+                    return !!data.blocked;
+                })
+                .catch(function () {
+                    return card.getAttribute('data-serial-blocked') === '1';
+                });
+        }
+
+        function wireGroupSerialLookup(card) {
+            var input = card.querySelector('[data-name="serial_number"]');
+            if (!input) return;
+            var timer = null;
+            input.addEventListener('input', function () {
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(function () { doGroupSerialLookup(card); }, 450);
+            });
+            input.addEventListener('blur', function () {
+                if (timer) clearTimeout(timer);
+                doGroupSerialLookup(card);
+            });
         }
 
         function addDeviceCard(options) {
@@ -1383,7 +1504,40 @@
                     if (groupHint) groupHint.classList.add('is-error');
                     return;
                 }
-                updateGroupSummary();
+
+                // Wait for live serial checks (same API as single) before allowing submit.
+                if (form.getAttribute('data-serial-checked') === '1') {
+                    form.removeAttribute('data-serial-checked');
+                    updateGroupSummary();
+                    return;
+                }
+                e.preventDefault();
+                Promise.all(Array.prototype.map.call(cards, function (card) {
+                    return doGroupSerialLookup(card);
+                })).then(function (flags) {
+                    var blockedIdx = -1;
+                    for (var i = 0; i < flags.length; i++) {
+                        if (flags[i] || cards[i].getAttribute('data-serial-blocked') === '1') {
+                            blockedIdx = i;
+                            break;
+                        }
+                    }
+                    if (blockedIdx >= 0) {
+                        var blockedCard = cards[blockedIdx];
+                        collapseAllExcept(blockedCard);
+                        scrollCardIntoView(blockedCard);
+                        var banner = blockedCard.querySelector('[data-serial-banner]');
+                        window.alert((banner && banner.textContent) || 'سریال تکراری در قبض گروهی وجود دارد.');
+                        var serialInput = blockedCard.querySelector('[data-name="serial_number"]');
+                        if (serialInput) {
+                            try { serialInput.focus(); serialInput.select(); } catch (err) {}
+                        }
+                        return;
+                    }
+                    form.setAttribute('data-serial-checked', '1');
+                    triggerFormSubmit(form);
+                });
+                return;
             }
         });
 
