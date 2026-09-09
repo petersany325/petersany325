@@ -26,3 +26,16 @@ Artisan::command('backup:run {--force : Ignore schedule window}', function () {
 })->purpose('Create database backup and optionally upload to remote host');
 
 Schedule::command('backup:run')->hourly();
+
+Artisan::command('installments:remind {--force : Run even if SMS disabled flags}', function () {
+    $service = app(\App\Services\InstallmentService::class);
+    $reminders = app(\App\Services\InstallmentReminderService::class);
+    $overdue = $service->refreshOverdueStatuses();
+    $stats = $reminders->runDueReminders();
+    $this->info('Overdue updated: '.$overdue);
+    $this->info('Reminders sent: '.($stats['sent'] ?? 0).' errors: '.($stats['errors'] ?? 0));
+
+    return 0;
+})->purpose('Send installment due reminders (before / on / after)');
+
+Schedule::command('installments:remind')->dailyAt('09:00');

@@ -272,9 +272,9 @@ class AccountingService
     /**
      * @param  list<array{0:string,1:int,2:int,3?:string}>  $lines  [code, debit, credit, memo]
      */
-    public function createManual(string $description, array $lines, ?string $date = null): JournalEntry
+    public function createManual(string $description, array $lines, ?string $date = null, ?int $customerId = null): JournalEntry
     {
-        return $this->writeEntry(null, 'manual', null, $description, null, $lines, null, $date);
+        return $this->writeEntry(null, 'manual', null, $description, null, $lines, $customerId, $date);
     }
 
     /**

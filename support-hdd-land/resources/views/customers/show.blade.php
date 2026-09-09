@@ -10,6 +10,9 @@
         </div>
         <div class="report-head-actions">
             <a class="btn btn-secondary" href="{{ route('customers.edit', $customer) }}">ویرایش</a>
+            @if(auth()->user()?->canAccess('reports.accounting'))
+                <a class="btn btn-ghost" href="{{ route('installments.create', ['customer_id' => $customer->id]) }}">اقساط</a>
+            @endif
             <form method="POST" action="{{ route('customers.blacklist', $customer) }}" style="display:inline;"
                   @if(!$customer->is_blacklisted) data-confirm="این مشتری به لیست سیاه برود و پذیرش جدید مسدود شود؟" @endif>
                 @csrf
@@ -61,6 +64,8 @@
                 — از این مبلغ {{ number_format($debtSummary['credit_total']) }} تومان نسیه پس از تحویل است.
             @endif
             <a href="{{ route('accounting.receivables') }}" style="margin-right:8px;">بدهکاران حسابداری</a>
+            <a href="{{ route('installments.create', ['customer_id' => $customer->id]) }}" style="margin-right:8px;">طرح اقساط</a>
+            <a href="{{ route('installments.index', ['customer_id' => $customer->id]) }}" style="margin-right:8px;">اقساط این مشتری</a>
         </div>
     @endif
 

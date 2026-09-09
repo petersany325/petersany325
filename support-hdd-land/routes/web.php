@@ -36,6 +36,10 @@ use App\Http\Controllers\StaffSmsTemplateController;
 use App\Http\Controllers\Portal\AuthController as PortalAuthController;
 use App\Http\Controllers\Portal\CartableController as PortalCartableController;
 use App\Http\Controllers\Portal\MessageController as PortalMessageController;
+use App\Http\Controllers\InstallmentPlanController;
+use App\Http\Controllers\InstallmentReportController;
+use App\Http\Controllers\InstallmentSettingController;
+use App\Http\Controllers\InstallmentCronController;
 use App\Http\Controllers\LicenseApiController;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsurePortalCustomer;
@@ -84,6 +88,9 @@ Route::get('/payments/zarinpal/callback/{trx}', [ZarinPalController::class, 'cal
 Route::get('/cron/backup', BackupCronController::class)
     ->middleware('throttle:30,1')
     ->name('cron.backup');
+Route::get('/cron/installments', InstallmentCronController::class)
+    ->middleware('throttle:60,1')
+    ->name('cron.installments');
 
 Route::prefix('cartable')->name('portal.')->group(function () {
     Route::get('/', [PortalAuthController::class, 'showLogin'])->name('login');
@@ -309,6 +316,23 @@ Route::middleware('auth')->group(function () {
         Route::get('/manual', [AccountingController::class, 'manualForm'])->name('manual');
         Route::post('/manual', [AccountingController::class, 'storeManual'])->name('manual.store');
         Route::post('/rebuild', [AccountingController::class, 'rebuild'])->name('rebuild');
+    });
+
+    Route::middleware(EnsurePermission::class.':reports.accounting')->prefix('installments')->name('installments.')->group(function () {
+        Route::get('/', [InstallmentPlanController::class, 'index'])->name('index');
+        Route::get('/create', [InstallmentPlanController::class, 'create'])->name('create');
+        Route::post('/', [InstallmentPlanController::class, 'store'])->name('store');
+        Route::get('/report', [InstallmentReportController::class, 'index'])->name('report');
+        Route::get('/settings', [InstallmentSettingController::class, 'edit'])->name('settings');
+        Route::post('/settings', [InstallmentSettingController::class, 'update'])->name('settings.update');
+        Route::post('/reminders/run', [InstallmentSettingController::class, 'runReminders'])->name('reminders.run');
+        Route::get('/{installment}', [InstallmentPlanController::class, 'show'])->name('show');
+        Route::put('/{installment}', [InstallmentPlanController::class, 'updatePlanNotes'])->name('update');
+        Route::post('/{installment}/cancel', [InstallmentPlanController::class, 'cancel'])->name('cancel');
+        Route::post('/{installment}/checks', [InstallmentPlanController::class, 'storeCheck'])->name('checks.store');
+        Route::put('/checks/{check}', [InstallmentPlanController::class, 'updateCheck'])->name('checks.update');
+        Route::post('/items/{item}/collect', [InstallmentPlanController::class, 'collect'])->name('items.collect');
+        Route::post('/items/{item}/notes', [InstallmentPlanController::class, 'updateItemNotes'])->name('items.notes');
     });
 
     Route::middleware(EnsurePermission::class.':sms.statuses')->group(function () {
