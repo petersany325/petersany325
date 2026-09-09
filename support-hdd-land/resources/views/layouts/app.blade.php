@@ -148,6 +148,7 @@
             </div>
             <div class="win-body">
                 @include('partials.flash')
+                @include('partials.update-banner')
                 @yield('content')
             </div>
         </div>

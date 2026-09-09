@@ -104,15 +104,30 @@ class LicenseApiController extends Controller
         $license = ProductLicense::query()->where('license_key', $key)->first();
 
         if (! $license || $license->status !== 'active') {
-            return response()->json(['ok' => false, 'message' => 'لایسنس فعال نیست.'], 403);
+            $reason = ($license && $license->status === 'revoked') ? 'revoked' : 'invalid';
+
+            return response()->json([
+                'ok' => false,
+                'reason' => $reason,
+                'message' => $reason === 'revoked' ? 'لایسنس باطل شده است.' : 'لایسنس فعال نیست.',
+            ], 403);
         }
         if ($license->domain !== $domain || ! hash_equals((string) $license->token, $data['token'])) {
-            return response()->json(['ok' => false, 'message' => 'توکن یا دامنه لایسنس نامعتبر است.'], 403);
+            return response()->json([
+                'ok' => false,
+                'reason' => 'domain_mismatch',
+                'message' => 'توکن یا دامنه لایسنس نامعتبر است.',
+            ], 403);
         }
         if ($license->expires_at && $license->expires_at->isPast()) {
             $license->update(['status' => 'expired']);
 
-            return response()->json(['ok' => false, 'message' => 'اعتبار لایسنس گذشته است.'], 423);
+            return response()->json([
+                'ok' => false,
+                'reason' => 'expired',
+                'message' => 'اعتبار لایسنس گذشته است.',
+                'expires_at' => optional($license->expires_at)?->toDateString(),
+            ], 423);
         }
 
         $license->forceFill([
@@ -124,6 +139,7 @@ class LicenseApiController extends Controller
 
         return response()->json([
             'ok' => true,
+            'reason' => 'valid',
             'message' => 'معتبر',
             'plan' => $license->plan_label,
             'plan_code' => $license->plan_code,

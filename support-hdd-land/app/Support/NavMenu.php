@@ -238,9 +238,10 @@ class NavMenu
                 'hint' => 'ساخت سریال و گزارش آنلاین نصب مشتریان',
                 'admin_only' => true,
                 'children' => [
-                    ['label' => 'مرکز لایسنس', 'route' => 'licenses.index', 'match' => 'licenses.index|licenses.issue|licenses.sms|licenses.revoke|licenses.unbind|licenses.extend', 'hint' => 'ساخت، ارسال SMS، باطل‌سازی', 'mark' => 'ل'],
+                    ['label' => 'مرکز لایسنس', 'route' => 'licenses.index', 'match' => 'licenses.index|licenses.issue|licenses.sms|licenses.revoke|licenses.unbind|licenses.extend|licenses.edit|licenses.update|licenses.renew', 'hint' => 'ساخت، ارسال SMS، باطل‌سازی', 'mark' => 'ل'],
                     ['label' => 'پلن و قیمت', 'route' => 'licenses.plans', 'match' => 'licenses.plans*', 'hint' => '۶ ماهه / یک‌ساله و قیمت‌ها', 'mark' => 'ق'],
                     ['label' => 'گزارش آنلاین', 'route' => 'licenses.online', 'match' => 'licenses.online', 'hint' => 'نصب‌های آنلاین / آفلاین', 'mark' => 'آ'],
+                    ['label' => 'انتشار آپدیت', 'route' => 'licenses.releases', 'match' => 'licenses.releases*', 'hint' => 'ZIP و مانیفست برای مشتریان', 'mark' => 'ن'],
                 ],
             ],
             [
@@ -252,7 +253,8 @@ class NavMenu
                 'mark' => 'س',
                 'hint' => 'کش، تعمیر و بازسازی دیتابیس',
                 'children' => [
-                    ['label' => 'نگهداری و بکاپ', 'route' => 'system-tools.index', 'match' => 'system-tools.*', 'hint' => 'کش، تعمیر، بکاپ و ریستور', 'mark' => 'ن'],
+                    ['label' => 'نگهداری و بکاپ', 'route' => 'system-tools.index', 'match' => 'system-tools.index|system-tools.run|system-tools.backups.*', 'hint' => 'کش، تعمیر، بکاپ و ریستور', 'mark' => 'ن'],
+                    ['label' => 'آپدیت نرم‌افزار', 'route' => 'system-tools.updates', 'match' => 'system-tools.updates*', 'hint' => 'بررسی لایسنس و نصب نسخه جدید', 'mark' => 'آ'],
                 ],
             ],
             [

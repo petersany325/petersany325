@@ -1,4 +1,22 @@
 <?php
+/**
+ * One-shot unlock for customer hosts locked by missing seller /license/verify.
+ * Upload ONLY this file into the site document root (public/), open it once, then DELETE it.
+ *
+ * Example: https://support.hddsoftware.ir/_license_unlock.php
+ */
+header('Content-Type: text/plain; charset=utf-8');
+
+$public = __DIR__;
+$root = is_file($public.'/../artisan') ? dirname($public) : (is_file($public.'/artisan') ? $public : null);
+if ($root === null) {
+    echo "ERROR: cannot find Laravel root (artisan). Put this file in public/\n";
+    exit(1);
+}
+echo "root={$root}\n";
+
+$mw = <<<'MW'
+<?php
 
 namespace App\Http\Middleware;
 
@@ -229,3 +247,101 @@ class EnsureLicensed
         return ['block' => false, 'message' => 'offline-soft'];
     }
 }
+
+MW;
+$view = <<<'VIEW'
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>فعال‌سازی لایسنس</title>
+    <style>
+        body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:Tahoma,sans-serif;background:#eef1f5;color:#1f2933}
+        .box{background:#fff;border:1px solid #c9d0da;border-radius:10px;padding:28px;max-width:440px;text-align:center;box-shadow:0 10px 30px rgba(15,23,42,.06)}
+        h1{margin:0 0 8px;font-size:20px}
+        p{color:#667788;line-height:1.7;margin:0 0 12px}
+        a.btn{display:inline-block;margin-top:6px;padding:.65rem 1rem;border-radius:10px;background:#1d4f91;color:#fff;text-decoration:none}
+        a.link{color:#1d4f91}
+        .reason{font-size:12px;color:#94a3b8;margin-top:10px}
+    </style>
+</head>
+<body>
+<div class="box">
+    <h1>فعال‌سازی لازم است</h1>
+    <p>{{ $message ?? 'لایسنس این نصب معتبر نیست یا منقضی شده است.' }}</p>
+    @if(!empty($purchase_url))
+        <p><a class="btn" href="{{ $purchase_url }}" rel="noopener">خرید / تمدید لایسنس</a></p>
+    @endif
+    <p><a class="link" href="{{ url('/') }}">بازگشت به صفحه اصلی</a></p>
+    @if(!empty($reason))
+        <div class="reason">کد: {{ $reason }}</div>
+    @endif
+</div>
+</body>
+</html>
+
+VIEW;
+$install = <<<'INST'
+<?php
+header('Location: /', true, 302);
+exit;
+
+INST;
+
+$mwDst = $root.'/app/Http/Middleware/EnsureLicensed.php';
+$viewDst = $root.'/resources/views/errors/license.blade.php';
+$installDst = is_dir($root.'/public') ? $root.'/public/install.php' : $public.'/install.php';
+
+$ok = true;
+if (! is_dir(dirname($mwDst))) {
+    echo "ERROR: missing app/Http/Middleware\n";
+    $ok = false;
+} else {
+    // backup once
+    if (is_file($mwDst) && ! is_file($mwDst.'.bak-license-unlock')) {
+        @copy($mwDst, $mwDst.'.bak-license-unlock');
+    }
+    if (@file_put_contents($mwDst, $mw) !== false) {
+        echo "middleware_patched=1\n";
+    } else {
+        echo "middleware_patch_failed\n";
+        $ok = false;
+    }
+}
+
+if (is_dir(dirname($viewDst))) {
+    if (is_file($viewDst) && ! is_file($viewDst.'.bak-license-unlock')) {
+        @copy($viewDst, $viewDst.'.bak-license-unlock');
+    }
+    @file_put_contents($viewDst, $view);
+    echo "license_view_patched=1\n";
+}
+
+@file_put_contents($installDst, $install);
+echo "install_stub=1 path={$installDst}\n";
+
+if (is_file($root.'/vendor/autoload.php') && is_file($root.'/bootstrap/app.php')) {
+    try {
+        require $root.'/vendor/autoload.php';
+        $app = require $root.'/bootstrap/app.php';
+        $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+        $kernel->bootstrap();
+        Illuminate\Support\Facades\Artisan::call('optimize:clear');
+        echo "optimize_clear_ok\n";
+        try {
+            Illuminate\Support\Facades\Cache::flush();
+            echo "cache_flush_ok\n";
+        } catch (Throwable $e) {
+            echo "cache_flush_skip=".$e->getMessage()."\n";
+        }
+    } catch (Throwable $e) {
+        echo "bootstrap_fail=".$e->getMessage()."\n";
+        $ok = false;
+    }
+} else {
+    echo "laravel_bootstrap_missing (files patched; clear cache manually)\n";
+}
+
+echo $ok ? "DONE_UNLOCK_OK\n" : "DONE_WITH_ERRORS\n";
+echo "DELETE this file now.\n";
