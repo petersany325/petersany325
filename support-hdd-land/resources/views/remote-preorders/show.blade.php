@@ -25,13 +25,26 @@
 <div style="display:grid;grid-template-columns:minmax(0,1.05fr) minmax(300px,.95fr);gap:10px;align-items:start;">
     <section class="panel">
         <h3 style="margin-top:0;">عکس و توضیح مشتری</h3>
+        @if(!empty($missingPhotos))
+            <div class="alert error" style="margin-bottom:10px;">
+                {{ count($missingPhotos) }} فایل عکس در دیسک پیدا نشد.
+                پوشه <code>storage/app/remote-part-preorders</code> باید در آپدیت‌ها حفظ شود — داده را از بکاپ برگردانید.
+            </div>
+        @endif
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">
             @forelse($preorder->photoList() as $photo)
-                <a href="{{ route('remote-preorders.photo', ['preorder' => $preorder, 'path' => $photo['path']]) }}" target="_blank" rel="noopener">
-                    <img src="{{ route('remote-preorders.photo', ['preorder' => $preorder, 'path' => $photo['path']]) }}"
-                         alt="عکس"
-                         style="width:100%;aspect-ratio:1.15;object-fit:cover;border:1px solid #c5ccd6;border-radius:3px;background:#f1f5f9;">
-                </a>
+                @php $exists = \Illuminate\Support\Facades\Storage::disk('local')->exists($photo['path'] ?? ''); @endphp
+                @if($exists)
+                    <a href="{{ route('remote-preorders.photo', ['preorder' => $preorder, 'path' => $photo['path']]) }}" target="_blank" rel="noopener">
+                        <img src="{{ route('remote-preorders.photo', ['preorder' => $preorder, 'path' => $photo['path']]) }}"
+                             alt="عکس"
+                             style="width:100%;aspect-ratio:1.15;object-fit:cover;border:1px solid #c5ccd6;border-radius:3px;background:#f1f5f9;">
+                    </a>
+                @else
+                    <div style="padding:12px;border:1px dashed #f87171;border-radius:3px;color:#b91c1c;font-size:12px;">
+                        عکس روی دیسک نیست<br><span dir="ltr">{{ $photo['original_name'] ?? $photo['path'] ?? '' }}</span>
+                    </div>
+                @endif
             @empty
                 <p class="muted">عکسی نیست.</p>
             @endforelse

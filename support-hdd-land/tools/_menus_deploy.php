@@ -81,6 +81,8 @@ out('SRC='.$src);
 
 $skipNames = ['.env', '.env.backup', '.env.bak', 'storage', 'vendor', 'node_modules', '.git', '_menus_deploy.php', '_pr_fix.php', '_deploy_probe.php'];
 $skipPrefixes = ['storage/', 'vendor/', 'bootstrap/cache/', 'node_modules/'];
+// DATA SAFETY: never touch storage/ (customer photos, uploads) or .env / DB dumps.
+out('DATA_SAFETY=preserve .env storage/ vendor/ database/*.sqlite');
 
 $copied = 0; $failed = 0;
 $iterator = new RecursiveIteratorIterator(
@@ -102,6 +104,8 @@ foreach ($iterator as $item) {
     if ($skip || $base === '.env') continue;
     // never overwrite live env
     if ($rel === '.env' || str_starts_with($rel, '.env.')) continue;
+    // never overwrite local DB dumps
+    if (str_starts_with($rel, 'database/') && preg_match('/\.(sqlite|sql|sql\.gz)$/i', $base)) continue;
 
     $dest = $root.'/'.$rel;
     if ($item->isDir()) {

@@ -10,7 +10,10 @@ use ZipArchive;
 
 /**
  * Customer-side live update: check seller license server, download ZIP, overlay files, migrate.
- * Never touches .env, storage/, vendor/, or node_modules/.
+ *
+ * DATA SAFETY (hard rule): never overwrite or delete user/business data.
+ * Protected forever: .env*, storage/ (photos, uploads, sessions, logs), vendor/,
+ * node_modules/, and local sqlite dumps. Code under database/migrations MAY update.
  */
 class AppUpdateService
 {
@@ -266,6 +269,17 @@ class AppUpdateService
             $cache = $this->maintenance->clearCaches();
             $details = array_merge($details, ['— پاک‌سازی کش —'], $cache['details'] ?? []);
 
+            $safety = $this->assertUserDataIntact();
+            $details = array_merge($details, ['— سلامت داده کاربری —'], $safety['details'] ?? []);
+            if (! ($safety['ok'] ?? false)) {
+                return [
+                    'ok' => false,
+                    'message' => 'آپدیت فایل‌ها انجام شد ولی بررسی سلامت داده ناموفق بود — داده را دستی چک کنید.',
+                    'details' => $details,
+                    'version' => $targetVersion,
+                ];
+            }
+
             $this->writeInstalledVersion($targetVersion, [
                 'previous' => $check['current'],
                 'changelog' => $check['changelog'] ?? [],
@@ -302,6 +316,69 @@ class AppUpdateService
                 @unlink($zipPath);
             }
         }
+    }
+
+    /**
+     * Post-update guard: confirm protected paths and DB still reachable.
+     *
+     * @return array{ok:bool,details:array<int,string>}
+     */
+    public function assertUserDataIntact(): array
+    {
+        $details = [];
+        $ok = true;
+
+        $env = base_path('.env');
+        if (! is_file($env)) {
+            $ok = false;
+            $details[] = '✗ فایل .env پیدا نشد';
+        } else {
+            $details[] = '✓ .env محفوظ است';
+        }
+
+        $storage = storage_path('app');
+        if (! is_dir($storage)) {
+            $ok = false;
+            $details[] = '✗ پوشه storage/app موجود نیست';
+        } else {
+            $details[] = '✓ storage/app موجود است (عکس و آپلودها)';
+        }
+
+        $photoRoot = storage_path('app/remote-part-preorders');
+        if (is_dir($photoRoot)) {
+            $n = 0;
+            try {
+                $it = new \FilesystemIterator($photoRoot, \FilesystemIterator::SKIP_DOTS);
+                foreach ($it as $_) {
+                    $n++;
+                }
+            } catch (Throwable $e) {
+                $n = -1;
+            }
+            $details[] = $n >= 0
+                ? ('✓ پوشه عکس پیش‌سفارش قطعه: '.$n.' مورد')
+                : '⚠ پوشه عکس پیش‌سفارش قابل شمارش نبود';
+        } else {
+            $details[] = '· هنوز عکس پیش‌سفارش روی دیسک نیست (اگر قبلاً ثبت شده باید بررسی شود)';
+        }
+
+        try {
+            \Illuminate\Support\Facades\DB::connection()->getPdo();
+            $details[] = '✓ اتصال دیتابیس برقرار است';
+            if (\Illuminate\Support\Facades\Schema::hasTable('remote_part_preorders')) {
+                $count = (int) \Illuminate\Support\Facades\DB::table('remote_part_preorders')->count();
+                $details[] = '✓ جدول پیش‌سفارش قطعه: '.$count.' رکورد';
+            }
+            if (\Illuminate\Support\Facades\Schema::hasTable('customers')) {
+                $count = (int) \Illuminate\Support\Facades\DB::table('customers')->count();
+                $details[] = '✓ جدول مشتریان: '.$count.' رکورد';
+            }
+        } catch (Throwable $e) {
+            $ok = false;
+            $details[] = '✗ دیتابیس: '.$e->getMessage();
+        }
+
+        return ['ok' => $ok, 'details' => $details];
     }
 
     /**
@@ -603,6 +680,10 @@ class AppUpdateService
             }
             // Never overwrite env-like files anywhere at project root patterns
             if (preg_match('/^\.env(\.|$)/', $baseName)) {
+                continue;
+            }
+            // Never overwrite local DB dumps / demo sqlite under database/
+            if (str_starts_with($rel, 'database/') && preg_match('/\.(sqlite|sql|sql\.gz)$/i', $baseName)) {
                 continue;
             }
 
