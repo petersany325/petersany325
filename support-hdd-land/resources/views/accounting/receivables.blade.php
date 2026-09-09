@@ -60,6 +60,7 @@
                             <td>
                                 @if($row['customer'])
                                     <a class="btn btn-ghost btn-sm" href="{{ route('accounting.ledger', ['account' => '1210', 'q' => $row['customer']->id]) }}">دفتر</a>
+                                    <a class="btn btn-ghost btn-sm" href="{{ route('installments.create', ['customer_id' => $row['customer']->id]) }}">اقساط</a>
                                 @endif
                             </td>
                         </tr>

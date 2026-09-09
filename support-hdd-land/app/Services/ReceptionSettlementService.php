@@ -353,7 +353,7 @@ class ReceptionSettlementService
                 ? 'بدهی قبض کامل تسویه شد. مبلغ '.number_format($amount).' تومان به صندوق نشست (بستانکار ۱۲۱۰).'
                 : 'مبلغ '.number_format($amount).' تومان دریافت شد. مانده بدهی: '.number_format($left).' تومان.';
 
-            return ['ok' => true, 'message' => $msg];
+            return ['ok' => true, 'message' => $msg, 'payment_id' => $payment->id];
         });
     }
 }

@@ -3,13 +3,14 @@
     $accSub = $accSub ?? 'سیستم مالی دوطرفه تعمیرگاه';
     $accShowPeriod = $accShowPeriod ?? false;
     $accNav = [
-        ['route' => 'accounting.index', 'label' => 'میز کار', 'icon' => '⌂', 'tone' => 'teal'],
-        ['route' => 'accounting.journals', 'label' => 'اسناد', 'icon' => '☰', 'tone' => 'blue'],
-        ['route' => 'accounting.accounts', 'label' => 'سرفصل‌ها', 'icon' => '▤', 'tone' => 'slate'],
-        ['route' => 'accounting.ledger', 'label' => 'دفتر معین', 'icon' => '▦', 'tone' => 'amber'],
-        ['route' => 'accounting.trial', 'label' => 'تراز', 'icon' => '⚖', 'tone' => 'green'],
-        ['route' => 'accounting.receivables', 'label' => 'بدهکاران', 'icon' => '◎', 'tone' => 'rose'],
-        ['route' => 'accounting.manual', 'label' => 'سند دستی', 'icon' => '+', 'tone' => 'violet'],
+        ['route' => 'accounting.index', 'label' => 'میز کار', 'icon' => '⌂', 'tone' => 'teal', 'match' => 'accounting.index'],
+        ['route' => 'accounting.journals', 'label' => 'اسناد', 'icon' => '☰', 'tone' => 'blue', 'match' => 'accounting.journals|accounting.show'],
+        ['route' => 'accounting.accounts', 'label' => 'سرفصل‌ها', 'icon' => '▤', 'tone' => 'slate', 'match' => 'accounting.accounts'],
+        ['route' => 'accounting.ledger', 'label' => 'دفتر معین', 'icon' => '▦', 'tone' => 'amber', 'match' => 'accounting.ledger'],
+        ['route' => 'accounting.trial', 'label' => 'تراز', 'icon' => '⚖', 'tone' => 'green', 'match' => 'accounting.trial'],
+        ['route' => 'accounting.receivables', 'label' => 'بدهکاران', 'icon' => '◎', 'tone' => 'rose', 'match' => 'accounting.receivables'],
+        ['route' => 'installments.index', 'label' => 'اقساط', 'icon' => '◑', 'tone' => 'violet', 'match' => 'installments.*'],
+        ['route' => 'accounting.manual', 'label' => 'سند دستی', 'icon' => '+', 'tone' => 'violet', 'match' => 'accounting.manual*'],
     ];
 @endphp
 <div class="acc-shell">
@@ -40,8 +41,12 @@
     </div>
     <nav class="acc-nav">
         @foreach($accNav as $item)
+            @php
+                $match = $item['match'] ?? $item['route'];
+                $on = request()->routeIs(...explode('|', $match));
+            @endphp
             <a href="{{ route($item['route']) }}"
-               class="acc-nav-item tone-{{ $item['tone'] }} {{ request()->routeIs($item['route']) ? 'is-on' : '' }}">
+               class="acc-nav-item tone-{{ $item['tone'] }} {{ $on ? 'is-on' : '' }}">
                 <span class="acc-nav-ico">{{ $item['icon'] }}</span>
                 <span>{{ $item['label'] }}</span>
             </a>
