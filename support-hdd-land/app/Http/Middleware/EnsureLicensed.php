@@ -80,7 +80,7 @@ class EnsureLicensed
                     'license_key' => $key,
                     'domain' => $domain,
                     'token' => $token,
-                    'version' => '1.0.0',
+                    'version' => app(\App\Services\AppUpdateService::class)->installedVersion(),
                 ]);
 
             $json = $response->json();
