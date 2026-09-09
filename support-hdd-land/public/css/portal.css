@@ -117,11 +117,13 @@ a{color:var(--accent);text-decoration:none}
 .p-alert.dbg{background:#fff6e5;color:#92400e;border-color:#f5d59a}
 .p-hint{text-align:center;color:var(--muted);font-size:11px}
 .p-tabbar{
-  position:fixed;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(5,1fr);
+  position:fixed;bottom:0;left:0;right:0;display:flex;align-items:stretch;justify-content:space-between;
+  gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
   background:linear-gradient(180deg,#fff,#eef1f5);border-top:1px solid #b7c0cd;
   padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:50
 }
-.p-tabbar a{display:grid;justify-items:center;gap:1px;color:var(--muted);font-size:10px;padding:4px 2px;border-radius:2px}
+.p-tabbar::-webkit-scrollbar{display:none}
+.p-tabbar a{flex:1 1 0;min-width:48px;display:grid;justify-items:center;gap:1px;color:var(--muted);font-size:10px;padding:4px 2px;border-radius:2px;text-decoration:none}
 .p-tabbar a span{font-size:14px;line-height:1}
 .p-tabbar a.is-on{color:#1e3a8a;background:#e7f0ff;font-weight:800}
 .p-search-bar{display:flex;gap:6px;align-items:end;margin-bottom:8px}

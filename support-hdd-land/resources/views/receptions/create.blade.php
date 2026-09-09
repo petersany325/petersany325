@@ -223,8 +223,8 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div><label>برند</label><input type="text" name="brand" value="{{ old('brand') }}" data-ascii-en dir="ltr" style="text-align:left;"></div>
-                        <div><label>مدل</label><input type="text" name="model" value="{{ old('model') }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></div>
+                        <div><label>برند</label><input type="text" name="brand" value="{{ old('brand') }}" data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;" lang="en" spellcheck="false"></div>
+                        <div><label>مدل</label><input type="text" name="model" value="{{ old('model') }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;" lang="en" spellcheck="false"></div>
                         <div><label>تحویل‌دهنده</label><input type="text" name="delivered_by" value="{{ old('delivered_by') }}"></div>
                         <div><label>معرف</label><input type="text" name="referrer" value="{{ old('referrer') }}"></div>
                         <div>
@@ -455,8 +455,8 @@
                         @foreach($hddCapacities as $name)<option value="{{ $name }}">{{ $name }}</option>@endforeach
                     </select>
                 </label>
-                <label>برند<input type="text" data-name="brand" data-ascii-en dir="ltr" style="text-align:left;"></label>
-                <label>مدل<input type="text" data-name="model" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;"></label>
+                <label>برند<input type="text" data-name="brand" data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;" lang="en" spellcheck="false"></label>
+                <label>مدل<input type="text" data-name="model" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;" lang="en" spellcheck="false"></label>
                 <label>تعمیرکار
                     <select data-name="technician_id">
                         <option value="">—</option>

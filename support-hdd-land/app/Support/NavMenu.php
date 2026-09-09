@@ -401,9 +401,10 @@ class NavMenu
     public static function mobilePrimary(User $user, ?array $groups = null): array
     {
         $groups = collect($groups ?? self::forUser($user))->keyBy('key');
+        // کارتابل تعمیرکار (handoffs) و شرح کار باید روی موبایل در دسترس باشند.
         $order = [
-            'home', 'daily_logs', 'reception', 'handoffs', 'notifications',
-            'customers', 'parts', 'cost_approvals', 'accounting', 'reports',
+            'home', 'handoffs', 'reception', 'work', 'daily_logs', 'notifications',
+            'customers', 'sms', 'parts', 'cost_approvals', 'accounting', 'reports',
         ];
 
         $tabs = [];
@@ -427,7 +428,7 @@ class NavMenu
                 'match' => $g['match'],
                 'tone' => self::tone($key),
             ];
-            if (count($tabs) >= 3) {
+            if (count($tabs) >= 4) {
                 break;
             }
         }

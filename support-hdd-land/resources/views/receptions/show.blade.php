@@ -347,7 +347,7 @@
                         @include('partials.toggle', [
                             'name' => 'send_sms',
                             'label' => 'ارسال پیامک به مشتری پس از تایید',
-                            'checked' => false,
+                            'checked' => true,
                             'on' => 'برود',
                             'off' => 'نرود',
                             'id' => 'send_sms_toggle',

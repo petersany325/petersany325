@@ -74,15 +74,15 @@
             </div>
             <div>
                 <label>برند</label>
-                <input type="text" name="brand" value="{{ old('brand', $r->brand) }}" data-barcode>
+                <input type="text" name="brand" value="{{ old('brand', $r->brand) }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;" lang="en" spellcheck="false">
             </div>
             <div>
                 <label>مدل</label>
-                <input type="text" name="model" value="{{ old('model', $r->model) }}" data-barcode>
+                <input type="text" name="model" value="{{ old('model', $r->model) }}" data-barcode data-ascii-en data-fa-en autocomplete="off" dir="ltr" style="text-align:left;" lang="en" spellcheck="false">
             </div>
             <div>
                 <label>سریال</label>
-                <input type="text" name="serial_number" value="{{ old('serial_number', $r->serial_number) }}" dir="ltr" style="text-align:left;" data-barcode>
+                <input type="text" name="serial_number" value="{{ old('serial_number', $r->serial_number) }}" dir="ltr" style="text-align:left;" data-barcode data-ascii-en data-fa-en autocomplete="off" lang="en" spellcheck="false">
             </div>
             <div>
                 <label>کد قفل / پترن</label>

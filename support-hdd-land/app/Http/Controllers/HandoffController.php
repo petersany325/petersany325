@@ -273,6 +273,7 @@ class HandoffController extends Controller
             'needs_part' => ['nullable', 'boolean'],
             'result_status' => ['nullable', 'in:repairing,waiting_part,ready,unrepairable'],
             'visibility' => ['nullable', 'in:private,internal,public'],
+            'send_sms' => ['nullable', 'boolean'],
         ]);
 
         $report = ReceptionWorkReport::query()->create([
@@ -300,6 +301,24 @@ class HandoffController extends Controller
                 'گزارش کار تعمیرکار',
                 $data['summary']
             );
+
+            // پیامک مشتری هنگام تغییر وضعیت از کارتابل تعمیرکار (پیش‌فرض: ارسال)
+            $sendSms = $request->boolean('send_sms', true);
+            if ($sendSms) {
+                try {
+                    $smsResult = app(SmsNotificationService::class)->sendOnStatusChange(
+                        $reception->fresh(['customer', 'technician']),
+                        $data['result_status'],
+                        true
+                    );
+                    if ($smsResult && ! ($smsResult['ok'] ?? false) && empty($smsResult['skipped'])) {
+                        // keep work report success; surface SMS note
+                        session()->flash('error', 'گزارش ثبت شد ولی پیامک مشتری: '.($smsResult['message'] ?? 'ناموفق'));
+                    }
+                } catch (\Throwable $e) {
+                    session()->flash('error', 'گزارش ثبت شد ولی ارسال پیامک مشتری خطا داد.');
+                }
+            }
         }
 
         if ($tech && trim((string) ($data['summary'] ?? '')) !== '') {

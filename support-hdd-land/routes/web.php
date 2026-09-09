@@ -156,6 +156,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     });
 
+    // Shared customer name suggest (reception / delivery / blacklist) — ACL inside controller
+    Route::get('customers/suggest', [CustomerController::class, 'suggest'])->name('customers.suggest');
+
     Route::middleware(EnsurePermission::class.':customers')->group(function () {
         Route::resource('customers', CustomerController::class);
         Route::post('customers/{customer}/blacklist', [CustomerController::class, 'toggleBlacklist'])->name('customers.blacklist');
