@@ -255,8 +255,9 @@
         var name = (el.getAttribute('name') || el.getAttribute('data-name') || '').toLowerCase();
         var isLatinDeviceField = name.indexOf('serial') !== -1
             || name === 'model'
+            || name === 'brand'
             || name === 'brand_model';
-        return isLatinDeviceField && el.matches && el.matches('[data-barcode], [data-ascii-en]');
+        return isLatinDeviceField && el.matches && el.matches('[data-barcode], [data-ascii-en], [data-fa-en]');
     }
 
     function convertAsciiField(el, opts) {
@@ -268,7 +269,8 @@
             ? persianKeyboardToEnglish(el.value)
             : convertDigits(el.value);
         if (isSerialOrModelField(el)) {
-            converted = converted.toUpperCase();
+            // فقط حروف/اعداد انگلیسی و جداکننده‌های رایج سریال — زبان دیگر حذف شود.
+            converted = String(converted).toUpperCase().replace(/[^A-Z0-9\-_\/\.\+ ]+/g, '');
         }
         if (converted === el.value) return;
 
@@ -312,18 +314,13 @@
     }
 
     function initAsciiFields() {
-        // Live typing: digits only. Full FA→EN remap on blur/Enter/submit so
-        // fast barcode wedges are not corrupted by mid-keystroke value rewrites.
+        // Live typing for serial/model: FA→EN + strip non-English immediately.
         document.addEventListener('input', function (e) {
             var el = e.target;
             if (!el || !el.matches) return;
-            if (!(el.matches('[data-ascii-en]') || el.matches('[data-barcode]'))) return;
-            if (isSerialOrModelField(el)) {
-                var digitsOnly = convertDigits(el.value);
-                if (digitsOnly !== el.value) {
-                    el.value = digitsOnly;
-                    try { el.setSelectionRange(digitsOnly.length, digitsOnly.length); } catch (err) {}
-                }
+            if (!(el.matches('[data-ascii-en]') || el.matches('[data-barcode]') || el.matches('[data-fa-en]'))) return;
+            if (isSerialOrModelField(el) || el.matches('[data-fa-en]')) {
+                convertAsciiField(el, { caret: 'end' });
                 return;
             }
             convertAsciiField(el, { caret: 'end' });
@@ -333,7 +330,7 @@
         document.addEventListener('blur', function (e) {
             var el = e.target;
             if (!el || !el.matches) return;
-            if (el.matches('[data-ascii-en]') || el.matches('[data-barcode]')) {
+            if (el.matches('[data-ascii-en]') || el.matches('[data-barcode]') || el.matches('[data-fa-en]')) {
                 convertAsciiField(el, { caret: 'end' });
             }
         }, true);
@@ -1500,19 +1497,28 @@
     function detectStaffUiMode() {
         try {
             var forced = localStorage.getItem(UI_MODE_KEY);
+            var narrow = false;
+            var coarse = false;
+            try {
+                narrow = window.matchMedia('(max-width: 900px)').matches || window.innerWidth <= 900;
+                coarse = window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1100;
+            } catch (e2) {
+                narrow = window.innerWidth <= 900;
+            }
+            // موبایل واقعی: همیشه شل موبایل، حتی اگر قبلاً «کامپیوتر» ذخیره شده باشد.
+            if (narrow) {
+                if (forced === 'desktop') {
+                    try { localStorage.setItem(UI_MODE_KEY, 'auto'); } catch (e3) {}
+                }
+                return 'mobile';
+            }
             if (forced === 'mobile' || forced === 'desktop') {
                 return forced;
             }
-        } catch (e) {}
-        var narrow = false;
-        var coarse = false;
-        try {
-            narrow = window.matchMedia('(max-width: 900px)').matches;
-            coarse = window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1100;
-        } catch (e2) {
-            narrow = window.innerWidth <= 900;
+            return (narrow || coarse) ? 'mobile' : 'desktop';
+        } catch (e) {
+            return (window.innerWidth <= 900) ? 'mobile' : 'desktop';
         }
-        return (narrow || coarse) ? 'mobile' : 'desktop';
     }
 
     function applyStaffUiMode(mode) {

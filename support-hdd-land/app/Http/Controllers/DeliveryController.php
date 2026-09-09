@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\DeliveryBatch;
+use App\Models\Customer;
 use App\Models\Reception;
 use App\Services\AccountingService;
 use App\Services\ReceptionCustodyGate;
@@ -19,17 +20,106 @@ class DeliveryController extends Controller
     {
         return view('deliveries.group', [
             'recent' => DeliveryBatch::query()->withCount('receptions')->latest()->limit(8)->get(),
+            'customersSuggestUrl' => route('customers.suggest'),
+        ]);
+    }
+
+    /** Load undelivered (and recently delivered) tickets for one customer — group exit list. */
+    public function lookupCustomer(Request $request)
+    {
+        $customerId = (int) $request->input('customer_id', 0);
+        $phone = preg_replace('/\D+/', '', (string) $request->input('phone', '')) ?? '';
+
+        $customer = null;
+        if ($customerId > 0) {
+            $customer = Customer::query()->find($customerId);
+        } elseif (strlen($phone) >= 10) {
+            $customer = Customer::query()
+                ->where('phone', 'like', '%'.substr($phone, -10).'%')
+                ->orderByDesc('id')
+                ->first();
+        }
+
+        if (! $customer) {
+            return response()->json(['ok' => false, 'message' => 'مشتری پیدا نشد.', 'items' => []]);
+        }
+
+        $items = Reception::query()
+            ->with('customer')
+            ->where('customer_id', $customer->id)
+            ->where('status', '!=', 'cancelled')
+            ->orderByRaw("CASE WHEN status = 'delivered' THEN 1 ELSE 0 END")
+            ->orderByDesc('id')
+            ->limit(60)
+            ->get();
+
+        $gate = app(ReceptionCustodyGate::class);
+        $payload = $items->map(function (Reception $r) use ($gate) {
+            $block = $gate->deliveryBlockReason($r);
+
+            return [
+                'id' => $r->id,
+                'ticket_no' => $r->ticket_no,
+                'receipt_no' => $r->receipt_no,
+                'customer' => $r->customer?->name,
+                'phone' => $r->customer?->phone,
+                'serial' => $r->serial_number,
+                'device' => trim(($r->product_name ?? '').' '.($r->brand ?? '').' '.($r->model ?? '')),
+                'status' => $r->status,
+                'status_label' => $r->statusLabel(),
+                'custody' => $r->custodyLabel(),
+                'total_amount' => (int) $r->total_amount,
+                'paid_amount' => (int) $r->paid_amount,
+                'remaining' => $r->remainingAmount(),
+                'labor_cost' => (int) $r->labor_cost,
+                'parts_cost' => (int) $r->parts_cost,
+                'has_cost' => $r->hasCostDecision(),
+                'already_delivered' => $r->status === 'delivered',
+                'is_unrepairable' => $r->isUnrepairable(),
+                'is_no_charge_exit' => $r->isNoChargeExit(),
+                'custody_ok' => $block === null,
+                'custody_block' => $block,
+                'exit_otp_required' => (bool) $r->exit_otp_required,
+                'exit_otp_ready' => ! $r->needsExitOtp(),
+                'exit_otp_block' => $r->needsExitOtp()
+                    ? 'کد تأیید خروج مشتری هنوز تأیید نشده — از صفحه قبض ارسال/تأیید کنید.'
+                    : null,
+            ];
+        });
+
+        $open = $payload->where('already_delivered', false)->values();
+
+        return response()->json([
+            'ok' => true,
+            'customer' => [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'display_name' => $customer->displayName(),
+                'phone' => $customer->phone,
+            ],
+            'count' => $payload->count(),
+            'open_count' => $open->count(),
+            'missing_cost' => $open->where('has_cost', false)->count(),
+            'unsettled' => $open->where('remaining', '>', 0)->count(),
+            'custody_blocked' => $open->where('custody_ok', false)->count(),
+            'exit_otp_blocked' => $open->where('exit_otp_ready', false)->count(),
+            'items' => $payload->values(),
         ]);
     }
 
     public function lookup(Request $request)
     {
+        // Prefer customer_id / phone → full cartable list for that person.
+        if ($request->filled('customer_id') || $request->filled('phone')) {
+            return $this->lookupCustomer($request);
+        }
+
         $raw = (string) $request->input('tickets', '');
         $tokens = preg_split('/[\s,;]+/u', trim($raw)) ?: [];
         $tokens = array_values(array_filter(array_map('trim', $tokens)));
 
         if (! $tokens) {
-            return response()->json(['ok' => false, 'message' => 'حداقل یک شماره قبض وارد کنید.', 'items' => []]);
+            return response()->json(['ok' => false, 'message' => 'حداقل یک شماره قبض وارد کنید یا مشتری را انتخاب کنید.', 'items' => []]);
         }
 
         $items = Reception::query()

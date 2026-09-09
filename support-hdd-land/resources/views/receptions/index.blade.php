@@ -35,7 +35,8 @@
         <table>
             <thead>
             <tr>
-                <th>شماره</th>
+                <th>شماره قبض</th>
+                <th>تیکت</th>
                 <th>مشتری</th>
                 <th>کالا / مدل</th>
                 <th>سریال</th>
@@ -49,6 +50,7 @@
             <tbody>
             @forelse($receptions as $item)
                 <tr>
+                    <td dir="ltr" style="text-align:left;font-weight:700;">{{ $item->receipt_no ?: '—' }}</td>
                     <td>{{ $item->ticket_no }}</td>
                     <td>{{ $item->customer?->name }}<div class="muted">{{ $item->customer?->phone }}</div></td>
                     <td>{{ $item->product_name }} {{ $item->model }}</td>
@@ -73,7 +75,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="9">موردی یافت نشد.</td></tr>
+                <tr><td colspan="10">موردی یافت نشد.</td></tr>
             @endforelse
             </tbody>
         </table>

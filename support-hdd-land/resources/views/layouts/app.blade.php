@@ -16,18 +16,34 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp16">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp18">
     <script>
     (function () {
         try {
             var forced = localStorage.getItem('staff_ui_mode');
-            var mode = (forced === 'mobile' || forced === 'desktop')
-                ? forced
-                : (window.matchMedia('(max-width: 900px)').matches || (window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1100)
-                    ? 'mobile' : 'desktop');
+            var narrow = false;
+            var coarse = false;
+            try {
+                narrow = window.matchMedia('(max-width: 900px)').matches || window.innerWidth <= 900;
+                coarse = window.matchMedia('(pointer: coarse)').matches && window.innerWidth < 1100;
+            } catch (e0) {
+                narrow = window.innerWidth <= 900;
+            }
+            // روی عرض موبایل، حالت «کامپیوتر» ذخیره‌شده را نادیده بگیر تا کارتابل موبایل دیده شود.
+            var mode;
+            if (narrow) {
+                mode = (forced === 'mobile') ? 'mobile' : 'mobile';
+                if (forced === 'desktop') {
+                    try { localStorage.setItem('staff_ui_mode', 'auto'); } catch (e1) {}
+                }
+            } else if (forced === 'mobile' || forced === 'desktop') {
+                mode = forced;
+            } else {
+                mode = (narrow || coarse) ? 'mobile' : 'desktop';
+            }
             document.documentElement.setAttribute('data-ui-mode', mode);
         } catch (e) {
-            document.documentElement.setAttribute('data-ui-mode', 'desktop');
+            document.documentElement.setAttribute('data-ui-mode', (window.innerWidth <= 900) ? 'mobile' : 'desktop');
         }
     })();
     </script>
@@ -241,7 +257,7 @@
 @else
     @yield('content')
 @endauth
-<script src="{{ asset('js/app.js') }}?v=erp36"></script>
+<script src="{{ asset('js/app.js') }}?v=erp38"></script>
 <script>
 (function () {
     var bar = document.getElementById('win-menubar');

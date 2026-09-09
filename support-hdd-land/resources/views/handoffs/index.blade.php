@@ -135,12 +135,28 @@
                                 <form method="POST" action="{{ route('receptions.work-report', $row) }}" style="margin-bottom:8px;">
                                     @csrf
                                     <input type="text" name="summary" required maxlength="500" placeholder="گزارش کار این قبض…" style="min-width:200px;width:100%;margin-bottom:4px;">
+                                    <select name="result_status" style="width:100%;margin-bottom:4px;">
+                                        <option value="">بدون تغییر وضعیت</option>
+                                        <option value="repairing">در حال تعمیر</option>
+                                        <option value="waiting_part">منتظر قطعه</option>
+                                        <option value="ready">آماده تحویل</option>
+                                        <option value="unrepairable">غیرقابل تعمیر</option>
+                                    </select>
                                     <select name="visibility" style="width:100%;margin-bottom:4px;">
                                         @foreach(\App\Models\ReceptionWorkReport::VISIBILITIES as $k => $lab)
                                             <option value="{{ $k }}" @selected($k==='internal')>{{ $lab }}</option>
                                         @endforeach
                                     </select>
                                     <textarea name="details" rows="2" placeholder="جزئیات اختیاری" style="width:100%;margin-bottom:4px;"></textarea>
+                                    <div style="margin:0 0 6px;">
+                                        @include('partials.toggle', [
+                                            'name' => 'send_sms',
+                                            'label' => 'پیامک وضعیت برای مشتری',
+                                            'checked' => true,
+                                            'on' => 'برود',
+                                            'off' => 'نرود',
+                                        ])
+                                    </div>
                                     <div class="actions" style="margin:0;">
                                         <button class="btn btn-primary" type="submit">ثبت گزارش کار</button>
                                     </div>

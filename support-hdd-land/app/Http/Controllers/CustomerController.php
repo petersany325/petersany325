@@ -43,6 +43,64 @@ class CustomerController extends Controller
         return view('customers.index', compact('customers', 'q', 'filter'));
     }
 
+    /** Live name/phone suggest for reception, delivery, blacklist, etc. */
+    public function suggest(Request $request)
+    {
+        $user = $request->user();
+        abort_unless(
+            $user && ($user->canAccess('customers') || $user->canAccess('receptions') || $user->canAccess('handoffs')),
+            403
+        );
+
+        $q = trim((string) $request->query('q', ''));
+        $q = strtr($q, [
+            'ي' => 'ی', 'ك' => 'ک',
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+        ]);
+        $filter = (string) $request->query('filter', '');
+
+        if (mb_strlen($q) < 1) {
+            return response()->json(['ok' => true, 'q' => $q, 'count' => 0, 'customers' => []]);
+        }
+
+        $digits = preg_replace('/\D+/', '', $q) ?? '';
+        $rows = Customer::query()
+            ->withCount('receptions')
+            ->when($filter === 'blacklist', fn ($query) => $query->where('is_blacklisted', true))
+            ->where(function ($query) use ($q, $digits) {
+                $query->where('name', 'like', '%'.$q.'%')
+                    ->orWhere('alias', 'like', '%'.$q.'%');
+                if (strlen($digits) >= 3) {
+                    $query->orWhere('phone', 'like', '%'.$digits.'%');
+                }
+                if (mb_strlen($q) >= 3) {
+                    $query->orWhere('national_code', 'like', '%'.$q.'%');
+                }
+            })
+            ->orderByDesc('id')
+            ->limit(25)
+            ->get();
+
+        return response()->json([
+            'ok' => true,
+            'q' => $q,
+            'count' => $rows->count(),
+            'customers' => $rows->map(fn (Customer $c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'display_name' => $c->displayName(),
+                'alias' => $c->alias,
+                'phone' => $c->phone,
+                'job' => $c->job,
+                'is_blacklisted' => (bool) $c->is_blacklisted,
+                'visits' => (int) ($c->receptions_count ?? 0),
+            ])->values(),
+        ]);
+    }
+
     public function create()
     {
         return view('customers.create', [

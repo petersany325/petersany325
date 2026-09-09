@@ -15,18 +15,21 @@
         </div>
     </div>
 
-    <form class="ticket-search-bar" method="GET" style="margin:8px 0;">
+    <form class="ticket-search-bar" method="GET" style="margin:8px 0;" id="customer-search-form"
+          data-suggest-url="{{ route('customers.suggest') }}"
+          data-filter="{{ $filter ?? '' }}">
         @if(!empty($filter))
             <input type="hidden" name="filter" value="{{ $filter }}">
         @endif
-        <div class="field">
+        <div class="field" style="position:relative;flex:1;">
             <label>جستجو</label>
-            <input type="text" name="q" value="{{ $q }}" placeholder="نام، مستعار، تلفن، کد ملی" data-barcode data-ascii-en autocomplete="off">
+            <input type="text" name="q" id="customer-search-q" value="{{ $q }}" placeholder="نام را بنویسید — پیشنهاد زنده از بانک…" data-barcode autocomplete="off">
+            <div class="customer-pick-list" id="customer-search-pick" hidden></div>
         </div>
         <div class="actions" style="margin:0;">
-            <button class="btn btn-secondary" type="submit">جستجو</button>
+            <button class="btn btn-secondary" type="submit">جستجو در جدول</button>
             @if($q !== '' || ($filter ?? '') !== '')
-                <a class="btn btn-ghost" href="{{ route('customers.index') }}">پاک</a>
+                <a class="btn btn-ghost" href="{{ route('customers.index', array_filter(['filter' => $filter ?? null])) }}">پاک</a>
             @endif
         </div>
     </form>
@@ -93,3 +96,69 @@
     {{ $customers->links('partials.pagination') }}
 </div>
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    var form = document.getElementById('customer-search-form');
+    if (!form) return;
+    var url = form.getAttribute('data-suggest-url') || '';
+    var filter = form.getAttribute('data-filter') || '';
+    var input = document.getElementById('customer-search-q');
+    var pick = document.getElementById('customer-search-pick');
+    var timer = null;
+    var seq = 0;
+    function clearPick() { if (!pick) return; pick.innerHTML = ''; pick.hidden = true; }
+    function render(list) {
+        if (!pick) return;
+        pick.innerHTML = '';
+        if (!list.length) {
+            pick.hidden = false;
+            var e = document.createElement('div');
+            e.className = 'customer-pick-empty';
+            e.textContent = 'نتیجه‌ای نیست — Enter برای جستجوی جدول.';
+            pick.appendChild(e);
+            return;
+        }
+        list.forEach(function (c) {
+            var a = document.createElement('a');
+            a.href = '{{ url('/customers') }}/' + c.id;
+            a.className = 'customer-pick-item';
+            a.style.textDecoration = 'none';
+            var name = document.createElement('span');
+            name.className = 'customer-pick-name';
+            name.textContent = c.display_name || c.name || '—';
+            var meta = document.createElement('span');
+            meta.className = 'customer-pick-meta';
+            meta.textContent = [c.phone, c.visits != null ? (c.visits + ' قبض') : '', c.is_blacklisted ? 'لیست سیاه' : ''].filter(Boolean).join(' · ');
+            a.appendChild(name);
+            a.appendChild(meta);
+            pick.appendChild(a);
+        });
+        pick.hidden = false;
+    }
+    function run() {
+        var q = (input.value || '').trim();
+        if (q.length < 1) { clearPick(); return; }
+        var s = ++seq;
+        var u = url + '?q=' + encodeURIComponent(q) + (filter ? '&filter=' + encodeURIComponent(filter) : '');
+        fetch(u, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (s !== seq) return;
+                render((data && data.customers) || []);
+            })
+            .catch(function () {});
+    }
+    if (input) {
+        input.addEventListener('input', function () {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(run, 220);
+        });
+    }
+    document.addEventListener('click', function (e) {
+        if (pick && !pick.contains(e.target) && e.target !== input) clearPick();
+    });
+})();
+</script>
+@endpush
