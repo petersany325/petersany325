@@ -11,7 +11,8 @@ return new class extends Migration
         Schema::create('remote_part_preorders', function (Blueprint $table) {
             $table->id();
             $table->string('code', 32)->unique();
-            $table->foreignId('customer_id')->constrained('customers')->cascadeOnDelete();
+            // restrict: حذف مشتری نباید پیش‌سفارش و عکس‌های ذخیره‌شده را پاک کند
+            $table->foreignId('customer_id')->constrained('customers')->restrictOnDelete();
             $table->string('part_title', 160);
             $table->text('description')->nullable();
             $table->string('tracking_code', 80)->nullable();

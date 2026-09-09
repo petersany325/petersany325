@@ -105,6 +105,25 @@ class RemotePartPreorder extends Model
         return false;
     }
 
+    /**
+     * Photo metadata records whose files are missing on disk (should never happen
+     * if storage/ is preserved across updates).
+     *
+     * @return list<array{path:string,original_name:?string,label:?string}>
+     */
+    public function missingPhotos(): array
+    {
+        $missing = [];
+        foreach ($this->photoList() as $photo) {
+            $path = (string) ($photo['path'] ?? '');
+            if ($path === '' || ! Storage::disk('local')->exists($path)) {
+                $missing[] = $photo;
+            }
+        }
+
+        return $missing;
+    }
+
     public static function nextCode(): string
     {
         $year = now('Asia/Tehran')->format('y');

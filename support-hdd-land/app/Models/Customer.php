@@ -72,6 +72,11 @@ class Customer extends Model
         return $this->hasMany(CustomerMessage::class);
     }
 
+    public function remotePartPreorders(): HasMany
+    {
+        return $this->hasMany(RemotePartPreorder::class);
+    }
+
     /** Open receivable balance (operational: sum of remaining on non-cancelled tickets). */
     public function openDebtTotal(): int
     {

@@ -108,23 +108,26 @@ class CustomerController extends Controller
     public function destroy(Customer $customer)
     {
         $receiptCount = $customer->receptions()->count();
+        $preorderCount = \Illuminate\Support\Facades\Schema::hasTable('remote_part_preorders')
+            ? (int) $customer->remotePartPreorders()->count()
+            : 0;
 
-        // Soft-delete keeps historical receipts (FK is CASCADE on hard delete).
-        // Free unique name/phone so the same person can be registered again.
+        // Soft-delete only — never forceDelete. Historical receipts, messages and
+        // remote-part preorders (with photos in storage/) must remain intact.
         $customer->forceFill([
             'name' => mb_substr($customer->name, 0, 100).' «حذف‌شده»',
             'phone' => 'del'.$customer->id.'_'.preg_replace('/\D+/', '', (string) $customer->phone),
         ])->save();
 
-        if (method_exists($customer, 'messages') && $customer->messages()->exists()) {
-            $customer->messages()->delete();
-        }
-
         $customer->delete();
 
-        $message = $receiptCount > 0
-            ? "مشتری از فهرست حذف شد. {$receiptCount} قبض قبلی در سیستم باقی ماند."
-            : 'مشتری حذف شد.';
+        $message = 'مشتری از فهرست حذف شد.';
+        if ($receiptCount > 0) {
+            $message .= " {$receiptCount} قبض قبلی در سیستم باقی ماند.";
+        }
+        if ($preorderCount > 0) {
+            $message .= " {$preorderCount} پیش‌سفارش قطعه و عکس‌ها محفوظ ماند.";
+        }
 
         return redirect()->route('customers.index')->with('success', $message);
     }

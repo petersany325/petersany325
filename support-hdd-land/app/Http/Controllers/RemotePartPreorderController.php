@@ -81,6 +81,7 @@ class RemotePartPreorderController extends Controller
             'statusLabels' => RemotePartPreorder::STATUSES,
             'matchResults' => RemotePartPreorder::MATCH_RESULTS,
             'officePhone' => RemotePartPreorderSettings::officePhone(),
+            'missingPhotos' => $preorder->missingPhotos(),
         ]);
     }
 

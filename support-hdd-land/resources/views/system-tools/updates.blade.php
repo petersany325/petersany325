@@ -13,8 +13,14 @@
             <h2>آپدیت نرم‌افزار</h2>
             <p class="lead">
                 وقتی نسخه جدید روی سرور لایسنس منتشر شود، اینجا به‌صورت زنده نمایش داده می‌شود.
-                با یک کلیک فایل‌ها نصب و مایگریشن اجرا می‌شود — بدون دست زدن به .env و داده‌ها.
+                با یک کلیک فایل‌ها نصب و مایگریشن اجرا می‌شود.
             </p>
+            <div class="upd-safety">
+                <strong>حفاظت داده کاربری (اجباری):</strong>
+                آپدیت هرگز <code>.env</code>، پوشه <code>storage/</code> (عکس پیش‌سفارش، آپلودها، نشست)،
+                دیتابیس مشتریان/قبض‌ها و <code>vendor/</code> را پاک یا جایگزین نمی‌کند.
+                فقط کد برنامه به‌روز می‌شود.
+            </div>
         </div>
         <div class="sys-hero-status" data-upd-status-box>
             <div class="sys-status-title">وضعیت</div>
@@ -103,6 +109,8 @@
 @keyframes updPulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.45)}70%{box-shadow:0 0 0 10px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
 .upd-badge{display:inline-block;margin-top:10px;padding:4px 10px;border:1px solid #f5d59a;background:#fff6e5;color:#92400e;border-radius:6px;font-size:12px;font-weight:700}
 .upd-confirm{display:flex;align-items:flex-start;gap:8px;margin:10px 0;font-size:13px;line-height:1.5}
+.upd-safety{margin-top:12px;padding:10px 12px;border:1px solid #86efac;background:#f0fdf4;border-radius:8px;font-size:13px;line-height:1.7;color:#166534}
+.upd-safety code{direction:ltr;font-size:12px}
 .upd-changelog{margin:0;padding-right:18px;line-height:1.7}
 .upd-log{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;font-size:12px;overflow:auto;max-height:280px;direction:ltr;text-align:left}
 .upd-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 14px;margin:0 0 12px;border:1px solid #f5d59a;background:linear-gradient(90deg,#fff8eb,#fff);border-radius:8px}
