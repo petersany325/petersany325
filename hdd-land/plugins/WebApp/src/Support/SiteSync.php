@@ -64,11 +64,14 @@ class SiteSync
 
         // وقتی بنر Revolution زنده است، همان منبع صفحه اول فروشگاه اولویت دارد.
         try {
-            if (class_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class)
-                && \Plugins\ThemeBuilder\src\ThemeConfig::bannerIsLive()) {
-                $theme = \Plugins\ThemeBuilder\src\ThemeConfig::get();
-                $banner = $theme['banner'] ?? [];
-                $image = (string) \Plugins\ThemeBuilder\src\ThemeConfig::bannerUrl($banner, 1);
+            $resolved = class_exists(\Plugins\ThemeBuilder\src\HomepageBanner::class)
+                ? \Plugins\ThemeBuilder\src\HomepageBanner::resolve()
+                : ['live' => false, 'banner' => []];
+            if (! empty($resolved['live'])) {
+                $banner = $resolved['banner'];
+                $image = class_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class)
+                    ? (string) \Plugins\ThemeBuilder\src\ThemeConfig::bannerUrl($banner, 1)
+                    : (string) ($banner['image_url'] ?? $banner['image'] ?? '');
                 $layers = collect($banner['layers'] ?? [])->keyBy('id');
                 $read = static function ($layer, string $fallback = ''): string {
                     return $layer && ! empty($layer['enabled']) && empty($layer['deleted'])

@@ -25,6 +25,12 @@ class ThemeConfig
         'revolution_banner',
         'revolution_slider',
         'homepage_banner',
+        'themebuilder',
+        'themebuilder_settings',
+        'theme_builder_settings',
+        'tb_banner',
+        'builder_banner',
+        'homepage_revolution_banner',
     ];
 
     /** @return array<string, mixed> */
@@ -40,24 +46,39 @@ class ThemeConfig
             $theme = $raw;
         }
 
-        // Some installs store only the banner object under theme_banner / theme.banner.
-        if (! isset($theme['banner']) || ! is_array($theme['banner'])) {
-            if (isset($theme['image_url']) || isset($theme['layers']) || isset($theme['image'])) {
-                $theme = ['banner' => $theme];
+        // Resolve banner from nested / alias keys used by ThemeBuilder admin saves.
+        $banner = HomepageBanner::extractBanner($theme);
+        if ($banner === [] || (! HomepageBanner::looksLive($banner) && self::bannerLooksEmpty($banner))) {
+            // Dedicated banner-only setting keys (theme.banner, revolution_banner, …)
+            foreach (self::SETTING_KEYS as $key) {
+                if (! str_contains($key, 'banner') && ! str_contains($key, 'slider') && ! str_contains($key, 'revolution')) {
+                    continue;
+                }
+                $only = self::settingGet($key);
+                if (is_string($only) && $only !== '') {
+                    $decoded = json_decode($only, true);
+                    $only = is_array($decoded) ? $decoded : [];
+                }
+                if (! is_array($only) || $only === []) {
+                    continue;
+                }
+                $candidate = HomepageBanner::extractBanner($only);
+                if ($candidate !== [] && (HomepageBanner::looksLive($candidate) || ! self::bannerLooksEmpty($candidate))) {
+                    $banner = $candidate;
+                    break;
+                }
             }
         }
 
-        if (! isset($theme['banner']) || ! is_array($theme['banner'])) {
-            $theme['banner'] = self::defaultBanner();
-        } else {
-            $theme['banner'] = self::normalizeBanner($theme['banner']);
-        }
+        $theme['banner'] = self::normalizeBanner($banner !== [] ? $banner : self::defaultBanner());
 
-        $order = $theme['layout_order'] ?? $theme['sections_order'] ?? null;
+        $order = $theme['layout_order'] ?? $theme['layout_order'] ?? $theme['sections_order'] ?? null;
         if (! is_array($order)) {
             $order = ['banner', 'categories', 'featured'];
         }
-        $theme['layout_order'] = array_values($order);
+        $order = array_values($order);
+        $theme['layout_order'] = $order;
+        $theme['layout_order'] = $order;
 
         return $theme;
     }
@@ -279,5 +300,14 @@ class ThemeConfig
             'slider_pause_hover' => true,
             'layers' => [],
         ];
+    }
+    /** @param  array<string, mixed>  $b */
+    protected static function bannerLooksEmpty(array $b): bool
+    {
+        $img = trim((string) ($b['image_url'] ?? $b['image'] ?? $b['src'] ?? ''));
+        $img2 = trim((string) ($b['image2_url'] ?? $b['image2'] ?? ''));
+        $layers = $b['layers'] ?? [];
+
+        return $img === '' && $img2 === '' && (! is_array($layers) || $layers === []);
     }
 }

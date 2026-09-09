@@ -1,21 +1,26 @@
 @php
-  $themeClass = \Plugins\ThemeBuilder\src\ThemeConfig::class;
+  // پل پایدار بنرساز → صفحه اول (حتی اگر ThemeConfig پروداکشن bannerIsLive نداشته باشد)
+  $resolved = class_exists(\Plugins\ThemeBuilder\src\HomepageBanner::class)
+    ? \Plugins\ThemeBuilder\src\HomepageBanner::resolve()
+    : ['live' => false, 'banner' => []];
+  $useRevolution = ! empty($resolved['live']);
+  $banner = is_array($resolved['banner'] ?? null) ? $resolved['banner'] : [];
+
   $theme = [];
-  $banner = [];
-  $useRevolution = false;
+  $themeClass = \Plugins\ThemeBuilder\src\ThemeConfig::class;
   if (class_exists($themeClass) && method_exists($themeClass, 'get')) {
     try {
       $theme = $themeClass::get();
-      $banner = is_array($theme['banner'] ?? null) ? $theme['banner'] : [];
-      if (method_exists($themeClass, 'bannerIsLive')) {
-        $useRevolution = (bool) $themeClass::bannerIsLive($banner);
+      if ($banner === [] && is_array($theme['banner'] ?? null)) {
+        $banner = $theme['banner'];
       }
     } catch (\Throwable) {
-      $useRevolution = false;
+      $theme = [];
     }
   }
+
   // top_menu تکراری با هدر است؛ banner/hero جداگانه (Revolution یا home-hero) رندر می‌شوند.
-  $order = $theme['layout_order'] ?? ['banner','online','categories','featured','features','cta'];
+  $order = $theme['layout_order'] ?? $theme['layout_order'] ?? ['banner','online','categories','featured','features','cta'];
   $order = array_values(array_filter($order, fn ($s) => !in_array($s, ['top_menu','banner','hero'], true)));
   $featured = $featured ?? collect();
   $latest = $latest ?? collect();

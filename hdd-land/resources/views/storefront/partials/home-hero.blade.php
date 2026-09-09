@@ -5,36 +5,16 @@
   $mergeImage = \App\Support\HomePageConfig::imageUrl((string) ($home['hero_merge_image'] ?? ''));
   $layout = (string) ($home['hero_layout'] ?? 'split-rtl');
 
-  // مسیر واقعی صفحه اول از این partial است — بنر Revolution را همین‌جا اولویت بده.
-  $themeClass = \Plugins\ThemeBuilder\src\ThemeConfig::class;
-  $revolutionBanner = [];
-  $useRevolution = false;
-  if (class_exists($themeClass) && method_exists($themeClass, 'get')) {
-    try {
-      $theme = $themeClass::get();
-      $revolutionBanner = is_array($theme['banner'] ?? null) ? $theme['banner'] : [];
-      if (method_exists($themeClass, 'bannerIsLive')) {
-        $useRevolution = (bool) $themeClass::bannerIsLive($revolutionBanner);
-      } elseif (! empty($revolutionBanner['enabled'])) {
-        $img = method_exists($themeClass, 'bannerUrl') ? (string) $themeClass::bannerUrl($revolutionBanner, 1) : '';
-        $layers = is_array($revolutionBanner['layers'] ?? null) ? $revolutionBanner['layers'] : [];
-        $hasLayer = false;
-        foreach ($layers as $layer) {
-          if (is_array($layer) && ! empty($layer['enabled']) && empty($layer['deleted']) && trim((string) ($layer['content'] ?? '')) !== '') {
-            $hasLayer = true;
-            break;
-          }
-        }
-        $useRevolution = $img !== '' || $hasLayer;
-      }
-    } catch (\Throwable) {
-      $useRevolution = false;
-    }
-  }
+  // پل بنرساز → صفحه اول (اولویت با بنر زنده ThemeBuilder / Revolution)
+  $resolved = class_exists(\Plugins\ThemeBuilder\src\HomepageBanner::class)
+    ? \Plugins\ThemeBuilder\src\HomepageBanner::resolve()
+    : ['live' => false, 'banner' => []];
+  $useRevolution = ! empty($resolved['live']);
+  $revolutionBanner = is_array($resolved['banner'] ?? null) ? $resolved['banner'] : [];
 
   // اگر homepage از قبل Revolution را رندر کرده، دوباره نکش.
-  $alreadyRendered = ! empty($revolutionAlreadyRendered);
-  $skipHero = ! empty($skipHero) || $useRevolution;
+  $alreadyRendered = ! empty($revolutionAlreadyRendered) || ! empty($revolutionAlreadyRendered);
+  $skipHero = ! empty($skipHero) || ! empty($skipHero) || $useRevolution;
 @endphp
 
 @if($useRevolution && ! $alreadyRendered)
