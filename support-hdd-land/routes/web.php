@@ -442,6 +442,9 @@ Route::middleware('auth')->group(function () {
         Route::post('system-tools/updates/apply', [AppUpdateController::class, 'apply'])->name('system-tools.updates.apply');
     });
 
+    Route::get('my-license', [\App\Http\Controllers\MyLicenseController::class, 'index'])->name('my-license.index');
+    Route::post('my-license/refresh', [\App\Http\Controllers\MyLicenseController::class, 'refresh'])->name('my-license.refresh');
+
     Route::middleware(EnsurePermission::class.':licenses')->prefix('licenses')->name('licenses.')->group(function () {
         Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');
         Route::get('/online', [\App\Http\Controllers\LicenseAdminController::class, 'online'])->name('online');

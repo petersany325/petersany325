@@ -246,11 +246,28 @@ class NavMenu
                 'mark' => 'ل',
                 'hint' => 'ساخت سریال و گزارش آنلاین نصب مشتریان',
                 'admin_only' => true,
+                'seller_only' => true,
                 'children' => [
                     ['label' => 'مرکز لایسنس', 'route' => 'licenses.index', 'match' => 'licenses.index|licenses.issue|licenses.sms|licenses.revoke|licenses.unbind|licenses.extend', 'hint' => 'ساخت، ارسال SMS، باطل‌سازی', 'mark' => 'ل'],
                     ['label' => 'پلن و قیمت', 'route' => 'licenses.plans', 'match' => 'licenses.plans*', 'hint' => '۶ ماهه / یک‌ساله و قیمت‌ها', 'mark' => 'ق'],
                     ['label' => 'گزارش آنلاین', 'route' => 'licenses.online', 'match' => 'licenses.online', 'hint' => 'نصب‌های آنلاین / آفلاین', 'mark' => 'آ'],
                     ['label' => 'انتشار آپدیت', 'route' => 'licenses.releases', 'match' => 'licenses.releases*', 'hint' => 'ZIP برای پنل مشتریان', 'mark' => 'ن', 'admin_only' => true],
+                ],
+            ],
+            [
+                'key' => 'my_license',
+                'label' => 'لایسنس',
+                'permission' => null,
+                'route' => 'my-license.index',
+                'match' => 'my-license.*',
+                'mark' => 'ل',
+                'hint' => 'روز باقی‌مانده، تمدید و آپدیت نرم‌افزار',
+                'admin_only' => true,
+                'customer_only' => true,
+                'children' => [
+                    ['label' => 'وضعیت و روز باقی‌مانده', 'route' => 'my-license.index', 'match' => 'my-license.index', 'hint' => 'پلن، انقضا و روز مانده', 'mark' => 'و'],
+                    ['label' => 'تمدید لایسنس', 'route' => 'my-license.index', 'params' => ['focus' => 'renew'], 'match' => 'my-license.index', 'hint' => 'راهنمای تمدید با فروشنده', 'mark' => 'ت'],
+                    ['label' => 'آپدیت نرم‌افزار', 'route' => 'system-tools.updates', 'match' => 'system-tools.updates*', 'hint' => 'بررسی و نصب نسخه جدید', 'mark' => 'آ', 'permission' => 'system.tools'],
                 ],
             ],
             [
@@ -286,7 +303,14 @@ class NavMenu
         ];
 
         $out = [];
+        $isSeller = LicenseStatus::isSellerSite();
         foreach ($groups as $group) {
+            if (! empty($group['seller_only']) && ! $isSeller) {
+                continue;
+            }
+            if (! empty($group['customer_only']) && $isSeller) {
+                continue;
+            }
             if (! empty($group['admin_only']) && ! $user->isAdmin()) {
                 continue;
             }
@@ -301,6 +325,15 @@ class NavMenu
 
             $children = [];
             foreach ($group['children'] as $child) {
+                if (! empty($child['seller_only']) && ! $isSeller) {
+                    continue;
+                }
+                if (! empty($child['customer_only']) && $isSeller) {
+                    continue;
+                }
+                if (! empty($child['admin_only']) && ! $user->isAdmin()) {
+                    continue;
+                }
                 $perm = $child['permission'] ?? $group['permission'] ?? null;
                 if ($perm && ! $user->canAccess($perm)) {
                     continue;
@@ -370,6 +403,7 @@ class NavMenu
             'reports' => 'green',
             'system_tools' => 'teal',
             'licenses' => 'violet',
+            'my_license' => 'violet',
             'settings' => 'slate',
             default => 'slate',
         };

@@ -81,10 +81,38 @@ class LicenseStatus
             'expires_at' => $expires,
             'activated_jalali' => $activated !== '' ? jalali_date($activated) : null,
             'expires_jalali' => $expires !== '' ? jalali_date($expires) : null,
+            'days_remaining' => self::daysRemaining($expires),
             'lifetime' => $expires === '' && ($months === null || $months === 0),
             'summary' => self::summaryLine($planText, $months, $activated, $expires),
             'checked_at' => $fromFile['checked_at'] ?? null,
         ];
+    }
+
+    public static function daysRemaining(?string $expires): ?int
+    {
+        if ($expires === null || trim($expires) === '') {
+            return null;
+        }
+        try {
+            $end = \Illuminate\Support\Carbon::parse($expires)->startOfDay();
+            $today = now(config('app.timezone', 'Asia/Tehran'))->startOfDay();
+
+            return (int) $today->diffInDays($end, false);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** True when this install is the seller hub (no LICENSE_KEY). */
+    public static function isSellerSite(): bool
+    {
+        return trim((string) config('license.key')) === '';
+    }
+
+    /** True when this install is a licensed customer shop. */
+    public static function isCustomerSite(): bool
+    {
+        return ! self::isSellerSite();
     }
 
     private static function summaryLine(string $planText, ?int $months, string $activated, string $expires): string
