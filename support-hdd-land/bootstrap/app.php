@@ -28,10 +28,12 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\EnsurePortalCustomer::REMEMBER_COOKIE,
         ]);
 
-        // Customer installers activate/verify licenses without a browser CSRF session.
+        // Customer installers / update clients call license APIs without a browser CSRF session.
         $middleware->validateCsrfTokens(except: [
             'license/activate',
             'license/verify',
+            'license/updates/latest',
+            'license/updates/download',
         ]);
 
         $middleware->web(prepend: [
