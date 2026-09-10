@@ -444,6 +444,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('my-license', [\App\Http\Controllers\MyLicenseController::class, 'index'])->name('my-license.index');
     Route::post('my-license/refresh', [\App\Http\Controllers\MyLicenseController::class, 'refresh'])->name('my-license.refresh');
+    Route::get('contact', [\App\Http\Controllers\ContactController::class, 'index'])->name('contact.index');
 
     Route::middleware(EnsurePermission::class.':licenses')->prefix('licenses')->name('licenses.')->group(function () {
         Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');

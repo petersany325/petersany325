@@ -135,6 +135,7 @@ class SmsNotificationService
             if (! $phone) {
                 return ['ok' => false, 'message' => 'شماره موبایل مشتری موجود نیست.'];
             }
+            $phone = \App\Models\User::normalizePhone($phone) ?? $phone;
             if (trim($template) === '') {
                 return ['ok' => false, 'skipped' => true, 'message' => 'متن پیامک مشتری خالی است.'];
             }

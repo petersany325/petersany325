@@ -271,6 +271,17 @@ class NavMenu
                 ],
             ],
             [
+                'key' => 'contact',
+                'label' => 'تماس با ما',
+                'permission' => null,
+                'route' => 'contact.index',
+                'match' => 'contact.*',
+                'mark' => 'ت',
+                'hint' => 'پشتیبانی سرزمین هارد',
+                'customer_only' => true,
+                'children' => [],
+            ],
+            [
                 'key' => 'system_tools',
                 'label' => 'ابزارهای سیستم',
                 'permission' => 'system.tools',
@@ -404,6 +415,7 @@ class NavMenu
             'system_tools' => 'teal',
             'licenses' => 'violet',
             'my_license' => 'violet',
+            'contact' => 'blue',
             'settings' => 'slate',
             default => 'slate',
         };

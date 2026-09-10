@@ -236,13 +236,25 @@
         <div class="ws-pane" data-ws-pane="gateway">
             <div class="panel">
                 <h3>تنظیمات ارسال SMS (نیازپرداز)</h3>
+                @php
+                    $smsConfigured = trim((string) ($sms['username'] ?? '')) !== '' && trim((string) ($sms['from'] ?? '')) !== '';
+                @endphp
+                @unless($smsConfigured)
+                    <div class="panel" style="margin:0 0 10px;background:#fff7ed;border-color:#fdba74;">
+                        <strong>ارسال پیامک مشتری فعلاً آماده نیست.</strong>
+                        <div class="muted" style="margin-top:4px;font-size:12px;line-height:1.7;">
+                            یوزر/رمز پنل نیازپرداز و شماره خط فرستنده را اینجا ذخیره کنید، بعد با «ارسال پیامک تست» بررسی کنید.
+                            بدون این تنظیمات، پیامک وضعیت پذیرش و دعوت پرتال ارسال نمی‌شود.
+                        </div>
+                    </div>
+                @endunless
                 <form method="POST" action="{{ route('sms-statuses.gateway') }}">
                     @csrf
                     <div class="accept-row accept-row-2">
-                        <div><label>نام کاربری</label><input type="text" name="niazpardaz_username" value="{{ $sms['username'] }}"></div>
-                        <div><label>رمز</label><input type="password" name="niazpardaz_password" placeholder="در صورت تغییر"></div>
-                        <div><label>API Key</label><input type="text" name="niazpardaz_api_key" value="{{ $sms['api_key'] }}"></div>
-                        <div><label>شماره فرستنده</label><input type="text" name="niazpardaz_from" value="{{ $sms['from'] }}"></div>
+                        <div><label>نام کاربری</label><input type="text" name="niazpardaz_username" value="{{ $sms['username'] }}" autocomplete="off"></div>
+                        <div><label>رمز</label><input type="password" name="niazpardaz_password" placeholder="در صورت تغییر" autocomplete="new-password"></div>
+                        <div><label>API Key</label><input type="text" name="niazpardaz_api_key" value="{{ $sms['api_key'] }}" autocomplete="off"></div>
+                        <div><label>شماره فرستنده</label><input type="text" name="niazpardaz_from" value="{{ $sms['from'] }}" placeholder="مثلاً 3000..." dir="ltr" style="text-align:left;"></div>
                     </div>
                     <div class="actions"><button class="btn btn-primary" type="submit">ذخیره تنظیمات ارسال</button></div>
                 </form>
