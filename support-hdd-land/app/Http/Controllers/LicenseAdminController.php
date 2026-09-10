@@ -14,7 +14,7 @@ class LicenseAdminController extends Controller
 {
     private function assertSellerAdmin(Request $request): void
     {
-        $this->assertSellerAdmin($request);
+        abort_unless($request->user()?->isAdmin(), 403);
         // Customer installs must never see/use the license factory UI.
         abort_unless(\App\Support\LicenseStatus::isSellerSite(), 404);
     }
