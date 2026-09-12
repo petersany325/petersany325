@@ -135,6 +135,16 @@ class AppReleaseAdminController extends Controller
             ->with('success', $n > 0 ? ($n.' مورد انتخابی به‌عنوان تست‌شده علامت خورد.') : 'مورد تست‌نشده‌ای در انتخاب‌ها نبود.');
     }
 
+    public function destroyChange(string $change)
+    {
+        $this->assertSeller();
+        if (! $this->board->delete($change)) {
+            return back()->with('error', 'آیتم پیدا نشد.');
+        }
+
+        return back()->with('success', 'آیتم از تابلو حذف شد.');
+    }
+
     public function store(Request $request)
     {
         $this->assertSeller();
