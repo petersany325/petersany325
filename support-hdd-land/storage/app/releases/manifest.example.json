@@ -1,0 +1,17 @@
+{
+  "channel": "stable",
+  "latest": "1.1.0",
+  "releases": [
+    {
+      "version": "1.1.0",
+      "released_at": "2026-09-09",
+      "min_php": "8.2",
+      "changelog": [
+        "منوی آپدیت زنده در پنل مشتری",
+        "بهبود کارتابل و اقساط"
+      ],
+      "file": "hddland-1.1.0.zip",
+      "sha256": "REPLACE_WITH_SHA256_OF_ZIP"
+    }
+  ]
+}
