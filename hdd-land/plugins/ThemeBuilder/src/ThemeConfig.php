@@ -375,4 +375,259 @@ class ThemeConfig
 
         return $img === '' && $img2 === '' && (! is_array($layers) || $layers === []);
     }
+
+    /**
+     * Admin banner presets (ThemeBuilderController / theme-studio).
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    public const BANNER_PRESETS = [
+        'hero_wide' => [
+            'label' => 'هیرو عریض',
+            'layout' => 'full',
+            'align' => 'right',
+            'valign' => 'center',
+            'height' => 560,
+            'effect' => 'kenburns',
+            'overlay_opacity' => 12,
+        ],
+        'hero_split' => [
+            'label' => 'هیرو دو ستونه',
+            'layout' => 'split',
+            'align' => 'right',
+            'valign' => 'center',
+            'height' => 520,
+            'effect' => 'none',
+            'overlay_opacity' => 18,
+        ],
+        'promo_card' => [
+            'label' => 'کارت پرومو',
+            'layout' => 'card',
+            'align' => 'center',
+            'valign' => 'center',
+            'height' => 420,
+            'effect' => 'none',
+            'overlay_opacity' => 24,
+            'radius' => 24,
+        ],
+        'slider_duo' => [
+            'label' => 'اسلایدر دو تصویر',
+            'layout' => 'slider-duo',
+            'align' => 'right',
+            'valign' => 'center',
+            'height' => 520,
+            'slider_enabled' => true,
+            'effect' => 'none',
+            'overlay_opacity' => 16,
+        ],
+        'minimal' => [
+            'label' => 'مینیمال',
+            'layout' => 'full',
+            'align' => 'right',
+            'valign' => 'center',
+            'height' => 400,
+            'effect' => 'none',
+            'overlay_opacity' => 8,
+            'text_display' => 'simple',
+        ],
+    ];
+
+    /** @var array<string, string> */
+    public const BANNER_PLACEMENTS = [
+        'homepage' => 'صفحه اول — هیرو اصلی',
+        'shop' => 'فروشگاه',
+        'category' => 'صفحه دسته‌بندی',
+        'product' => 'صفحه محصول',
+        'hidden' => 'پنهان',
+    ];
+
+    /**
+     * Homepage section types for the studio builder.
+     *
+     * @var array<string, array{label: string}>
+     */
+    public const SECTION_TYPES = [
+        'banner' => ['label' => 'بنر / هیرو'],
+        'categories' => ['label' => 'دسته‌بندی‌ها'],
+        'featured' => ['label' => 'محصولات ویژه'],
+        'latest' => ['label' => 'جدیدترین‌ها'],
+        'brands' => ['label' => 'برندها'],
+        'features' => ['label' => 'ویژگی‌ها'],
+        'cta' => ['label' => 'فراخوان اقدام'],
+        'html' => ['label' => 'بلوک HTML'],
+        'online' => ['label' => 'وضعیت آنلاین'],
+        'hero' => ['label' => 'هیرو متنی'],
+    ];
+
+    /** Human-readable status line under the admin banner editor. */
+    public static function bannerHint(?array $banner = null): string
+    {
+        $b = self::normalizeBanner($banner ?? []);
+        if (! self::softBool($b['enabled'] ?? true, true)) {
+            return 'بنر خاموش است — در فروشگاه نمایش داده نمی‌شود.';
+        }
+        if (self::bannerIsLive($b)) {
+            $placement = (string) ($b['placement'] ?? 'homepage');
+            $label = self::BANNER_PLACEMENTS[$placement] ?? $placement;
+
+            return 'بنر زنده است — محل نمایش: '.$label;
+        }
+
+        return 'بنر فعال است ولی تصویر/لایه ندارد — یک تصویر یا لایه متن اضافه کنید.';
+    }
+
+    /**
+     * Merge an admin-submitted theme payload onto defaults / current theme.
+     *
+     * @param  array<string, mixed>  $incoming
+     * @return array<string, mixed>
+     */
+    public static function mergePublic(array $incoming): array
+    {
+        $current = [];
+        try {
+            $current = self::get();
+        } catch (\Throwable) {
+            $current = [];
+        }
+
+        $theme = array_replace_recursive([
+            'banner' => self::defaultBanner(),
+            'layout_order' => ['banner', 'categories', 'featured'],
+            'blocks' => [],
+        ], is_array($current) ? $current : [], $incoming);
+
+        if (isset($incoming['banner']) && is_array($incoming['banner'])) {
+            $theme['banner'] = self::normalizeBanner(array_replace_recursive(
+                self::defaultBanner(),
+                is_array($current['banner'] ?? null) ? $current['banner'] : [],
+                $incoming['banner']
+            ));
+        } else {
+            $theme['banner'] = self::normalizeBanner(is_array($theme['banner'] ?? null) ? $theme['banner'] : []);
+        }
+
+        if (isset($incoming['layout_order']) && is_array($incoming['layout_order'])) {
+            $theme['layout_order'] = array_values($incoming['layout_order']);
+        }
+        if (isset($incoming['blocks']) && is_array($incoming['blocks'])) {
+            $theme['blocks'] = $incoming['blocks'];
+        }
+
+        return $theme;
+    }
+
+    /**
+     * Persist theme (writes theme_homepage first so storefront readers find it).
+     *
+     * @param  array<string, mixed>  $theme
+     */
+    public static function save(array $theme): void
+    {
+        if (isset($theme['banner']) && is_array($theme['banner'])) {
+            $theme['banner'] = self::normalizeBanner($theme['banner']);
+        }
+
+        $json = json_encode($theme, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($json === false) {
+            throw new \RuntimeException('Theme JSON encode failed.');
+        }
+
+        $keys = ['theme_homepage', 'theme_builder', 'theme_config'];
+        $written = false;
+        foreach ($keys as $key) {
+            try {
+                if (class_exists(\App\Support\SettingsStore::class) && method_exists(\App\Support\SettingsStore::class, 'set')) {
+                    \App\Support\SettingsStore::set($key, $theme);
+                    $written = true;
+                    break;
+                }
+            } catch (\Throwable) {
+                //
+            }
+            try {
+                if (class_exists(\App\Support\SettingsStore::class) && method_exists(\App\Support\SettingsStore::class, 'put')) {
+                    \App\Support\SettingsStore::put($key, $theme);
+                    $written = true;
+                    break;
+                }
+            } catch (\Throwable) {
+                //
+            }
+            try {
+                if (class_exists(\App\Models\Setting::class)) {
+                    if (method_exists(\App\Models\Setting::class, 'setValue')) {
+                        \App\Models\Setting::setValue($key, $json);
+                        $written = true;
+                        break;
+                    }
+                    if (method_exists(\App\Models\Setting::class, 'set')) {
+                        \App\Models\Setting::set($key, $json);
+                        $written = true;
+                        break;
+                    }
+                }
+            } catch (\Throwable) {
+                //
+            }
+        }
+
+        if (! $written) {
+            DB::table('settings')->updateOrInsert(
+                ['key' => 'theme_homepage'],
+                ['value' => $json, 'updated_at' => now()]
+            );
+        }
+    }
+
+    /** Public URL for a stored theme media path. */
+    public static function publicUrlForPath(?string $path): string
+    {
+        $path = trim((string) $path);
+        if ($path === '') {
+            return '';
+        }
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '//')) {
+            return $path;
+        }
+        if (str_starts_with($path, '/')) {
+            return url($path);
+        }
+        // Common storage prefixes used by ThemeBuilder uploads.
+        foreach (['storage/', 'uploads/', 'theme/'] as $prefix) {
+            if (str_starts_with($path, $prefix)) {
+                return asset($path);
+            }
+        }
+
+        return asset('storage/'.$path);
+    }
+
+    /** Soft bool helper tolerant of "0"/"false"/0. */
+    protected static function softBool(mixed $value, bool $default = false): bool
+    {
+        foreach (['\\App\\Support\\SettingsStore', '\\App\\Support\\SettingsStore'] as $cls) {
+            if (class_exists($cls) && method_exists($cls, 'toBool')) {
+                return (bool) $cls::toBool($value, $default);
+            }
+        }
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_numeric($value)) {
+            return (int) $value !== 0;
+        }
+        $v = strtolower(trim((string) $value));
+        if ($v === '') {
+            return $default;
+        }
+        if (in_array($v, ['1', 'true', 'yes', 'on', 'enabled'], true)) {
+            return true;
+        }
+        if (in_array($v, ['0', 'false', 'no', 'off', 'disabled'], true)) {
+            return false;
+        }
+
+        return $default;
+    }
 }
