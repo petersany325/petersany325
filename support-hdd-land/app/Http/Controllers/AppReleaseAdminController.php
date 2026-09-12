@@ -116,14 +116,23 @@ class AppReleaseAdminController extends Controller
             ->with('success', 'انتخاب‌ها ذخیره شد. در مرحله انتشار، تغییرات انتخابی به آپدیت مشتری اضافه می‌شوند.');
     }
 
-    public function destroyChange(string $change)
+    public function markSelectedTested()
     {
         $this->assertSeller();
-        if (! $this->board->delete($change)) {
-            return back()->with('error', 'آیتم پیدا نشد.');
+        $board = $this->board->load();
+        $n = 0;
+        foreach ($board['items'] as $i => $item) {
+            if (! empty($item['selected']) && empty($item['tested'])) {
+                $board['items'][$i]['tested'] = true;
+                $board['items'][$i]['tested_at'] = now()->toIso8601String();
+                $n++;
+            }
         }
+        $this->board->save($board);
 
-        return back()->with('success', 'آیتم از تابلو حذف شد.');
+        return redirect()
+            ->route('licenses.releases', ['tab' => 'publish'])
+            ->with('success', $n > 0 ? ($n.' مورد انتخابی به‌عنوان تست‌شده علامت خورد.') : 'مورد تست‌نشده‌ای در انتخاب‌ها نبود.');
     }
 
     public function store(Request $request)
@@ -148,12 +157,12 @@ class AppReleaseAdminController extends Controller
             if ($selected === []) {
                 return back()->withInput()->with('error', 'حداقل یک تغییر را از تابلو انتخاب کنید.');
             }
-            if ($request->boolean('require_tested', true)) {
+            if ($request->boolean('require_tested')) {
                 $untested = collect($selected)->filter(fn ($i) => empty($i['tested']))->pluck('title')->all();
                 if ($untested !== []) {
                     return back()->withInput()->with(
                         'error',
-                        'این موارد هنوز تست نشده‌اند: '.implode('، ', $untested).' — یا تست کنید یا تیک «اجبار تست» را بردارید.'
+                        'این موارد هنوز تست نشده‌اند: '.implode('، ', $untested).' — یا از تابلو «علامت تست شد» بزنید، یا تیک «فقط موارد تست‌شده» را بردارید.'
                     );
                 }
             }

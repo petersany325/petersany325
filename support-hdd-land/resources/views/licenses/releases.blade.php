@@ -149,6 +149,10 @@
                     <strong>{{ $selectedCount }} تغییر انتخاب شده</strong>
                     @if($untestedSelected > 0)
                         <div class="muted">⚠️ {{ $untestedSelected }} مورد هنوز تست نشده.</div>
+                        <form method="POST" action="{{ route('licenses.releases.mark-tested') }}" style="margin-top:8px;">
+                            @csrf
+                            <button class="btn btn-secondary" type="submit">علامت همه انتخاب‌ها به‌عنوان تست‌شده</button>
+                        </form>
                     @endif
                     <ul style="margin:8px 0 0;padding-right:18px;">
                         @foreach(preg_split('/\r\n|\r|\n/', $selectedChangelog) ?: [] as $line)
@@ -183,8 +187,8 @@
                         <textarea name="changelog" rows="6" class="input" style="width:100%;">{{ old('changelog', $selectedChangelog) }}</textarea>
                     </label>
                     <label style="display:flex;gap:8px;align-items:center;">
-                        <input type="checkbox" name="require_tested" value="1" @checked(old('require_tested', '1') === '1')>
-                        فقط اگر همه انتخاب‌ها تست شده باشند منتشر شود
+                        <input type="checkbox" name="require_tested" value="1" @checked(old('require_tested') === '1')>
+                        فقط اگر همه انتخاب‌ها تست شده باشند منتشر شود (اختیاری)
                     </label>
                     <label style="display:flex;gap:8px;align-items:center;">
                         <input type="checkbox" name="set_latest" value="1" checked>

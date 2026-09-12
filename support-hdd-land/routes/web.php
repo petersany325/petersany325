@@ -464,6 +464,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/releases/changes/{change}/select', [AppReleaseAdminController::class, 'toggleSelected'])->name('releases.changes.select');
         Route::delete('/releases/changes/{change}', [AppReleaseAdminController::class, 'destroyChange'])->name('releases.changes.destroy');
         Route::post('/releases/selection', [AppReleaseAdminController::class, 'saveSelection'])->name('releases.selection');
+        Route::post('/releases/mark-tested', [AppReleaseAdminController::class, 'markSelectedTested'])->name('releases.mark-tested');
         Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
         Route::get('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'edit'])->name('edit');
         Route::post('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'update'])->name('update');
