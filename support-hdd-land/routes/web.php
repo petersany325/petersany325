@@ -459,6 +459,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'savePlans'])->name('plans.save');
         Route::get('/releases', [AppReleaseAdminController::class, 'index'])->name('releases');
         Route::post('/releases', [AppReleaseAdminController::class, 'store'])->name('releases.store');
+        Route::post('/releases/changes', [AppReleaseAdminController::class, 'storeChange'])->name('releases.changes.store');
+        Route::post('/releases/changes/{change}/test', [AppReleaseAdminController::class, 'toggleTested'])->name('releases.changes.test');
+        Route::post('/releases/changes/{change}/select', [AppReleaseAdminController::class, 'toggleSelected'])->name('releases.changes.select');
+        Route::delete('/releases/changes/{change}', [AppReleaseAdminController::class, 'destroyChange'])->name('releases.changes.destroy');
+        Route::post('/releases/selection', [AppReleaseAdminController::class, 'saveSelection'])->name('releases.selection');
         Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
         Route::get('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'edit'])->name('edit');
         Route::post('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'update'])->name('update');

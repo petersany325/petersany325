@@ -250,7 +250,7 @@ class NavMenu
                     ['label' => 'مرکز لایسنس', 'route' => 'licenses.index', 'match' => 'licenses.index|licenses.issue|licenses.sms|licenses.revoke|licenses.unbind|licenses.extend', 'hint' => 'ساخت، ارسال SMS، باطل‌سازی', 'mark' => 'ل'],
                     ['label' => 'پلن و قیمت', 'route' => 'licenses.plans', 'match' => 'licenses.plans*', 'hint' => '۶ ماهه / یک‌ساله و قیمت‌ها', 'mark' => 'ق'],
                     ['label' => 'گزارش آنلاین', 'route' => 'licenses.online', 'match' => 'licenses.online', 'hint' => 'نصب‌های آنلاین / آفلاین', 'mark' => 'آ'],
-                    ['label' => 'انتشار آپدیت', 'route' => 'licenses.releases', 'match' => 'licenses.releases*', 'hint' => 'ZIP برای پنل مشتریان', 'mark' => 'ن', 'admin_only' => true],
+                    ['label' => 'انتشار آپدیت', 'route' => 'licenses.releases', 'match' => 'licenses.releases*', 'hint' => 'تست انتخابی و ZIP مشتری', 'mark' => 'ن', 'admin_only' => true],
                 ],
             ],
             [
