@@ -244,6 +244,23 @@ class ReleaseChangeBoardService
         foreach ($existing as $rel) {
             $zip->addFile($root.'/'.$rel, $rel);
         }
+        // Customer installer requires artisan + app/ at package root (findAppRoot).
+        // Selective board zips must still satisfy that check so overlay can run.
+        if (is_file($root.'/artisan')) {
+            $zip->addFile($root.'/artisan', 'artisan');
+        } else {
+            $zip->addFromString('artisan', "#!/usr/bin/env php\n<?php\n// board overlay marker\n");
+        }
+        $hasAppFile = false;
+        foreach ($existing as $rel) {
+            if (str_starts_with(str_replace('\\', '/', $rel), 'app/')) {
+                $hasAppFile = true;
+                break;
+            }
+        }
+        if (! $hasAppFile) {
+            $zip->addFromString('app/.board_keep', "board\n");
+        }
         // Always ship a tiny marker so apply knows source
         $zip->addFromString(
             'RELEASE_BOARD.txt',
