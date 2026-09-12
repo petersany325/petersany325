@@ -8,10 +8,7 @@ use ReflectionClass;
 
 /**
  * Production plugin base: contract + route/view/migration wiring.
- * Method names intentionally avoid colliding with plugin static helpers
- * (e.g. ThemeBuilder::registerViews()).
- *
- * Restored on live after an empty BasePlugin broke plugin discovery (DISCOVERED=0 → site 404).
+ * Includes basePath() alias required by plugins (e.g. SupportTickets).
  */
 abstract class BasePlugin implements PluginContract
 {
@@ -70,9 +67,28 @@ abstract class BasePlugin implements PluginContract
         $this->bootPluginRoutes();
     }
 
+    /** Absolute filesystem path to this plugin directory. */
     protected function pluginPath(): string
     {
         return dirname((new ReflectionClass($this))->getFileName());
+    }
+
+    /**
+     * Alias used by several plugins (SupportTickets, etc.).
+     * Must remain public — plugins call $this->basePath() from boot().
+     */
+    public function basePath(string $path = ''): string
+    {
+        $base = $this->pluginPath();
+        $path = ltrim(str_replace(['\\', '..'], ['/', ''], $path), '/');
+
+        return $path === '' ? $base : $base.DIRECTORY_SEPARATOR.str_replace('/', DIRECTORY_SEPARATOR, $path);
+    }
+
+    /** @deprecated alias */
+    public function path(string $path = ''): string
+    {
+        return $this->basePath($path);
     }
 
     protected function bootPluginViews(): void
