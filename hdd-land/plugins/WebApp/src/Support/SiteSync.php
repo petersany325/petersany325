@@ -39,7 +39,7 @@ class SiteSync
             'cta2_url' => (string) ($home['hero_cta2_url'] ?? '/contact'),
         ];
 
-        $legacyTitles = ['', 'سرزمین هارد', 'سخت‌افزار مطمئن برای حرفه‌ای‌ها'];
+        $legacyTitles = ['', 'سرزمین هارد', 'سخت‌افزار مطمئن برای حرفه‌ای‌ها', 'سرزمین هارد'];
         $title = trim((string) ($s['hero_title'] ?? $home['hero_title'] ?? ''));
         $text = trim((string) ($s['hero_text'] ?? $home['hero_text'] ?? ''));
         $ctaLabel = trim((string) ($s['hero_cta_label'] ?? $home['hero_cta1_label'] ?? ''));
@@ -62,16 +62,26 @@ class SiteSync
         $image = '';
         $revolutionApplied = false;
 
-        // وقتی بنر Revolution زنده است، همان منبع صفحه اول فروشگاه اولویت دارد.
+        // Mobile web (/app) must prefer the live ThemeBuilder/Revolution homepage banner.
+        // Do not short-circuit on images/home/hero.jpg — that hid the studio banner on mobile.
         try {
             $resolved = class_exists(\Plugins\ThemeBuilder\src\HomepageBanner::class)
                 ? \Plugins\ThemeBuilder\src\HomepageBanner::resolve()
                 : ['live' => false, 'banner' => []];
-            if (! empty($resolved['live'])) {
-                $banner = $resolved['banner'];
-                $image = class_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class)
-                    ? (string) \Plugins\ThemeBuilder\src\ThemeConfig::bannerUrl($banner, 1)
-                    : (string) ($banner['image_url'] ?? $banner['image'] ?? '');
+            $isLive = ! empty($resolved['live']);
+            if ($isLive) {
+                $banner = is_array($resolved['banner'] ?? null) ? $resolved['banner'] : [];
+                if (class_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class)
+                    && method_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class, 'bannerUrl')) {
+                    $image = (string) \Plugins\ThemeBuilder\src\ThemeConfig::bannerUrl($banner, 1);
+                } else {
+                    $image = (string) ($banner['image_url'] ?? $banner['image'] ?? $banner['src'] ?? '');
+                    if ($image !== '' && ! str_starts_with($image, 'http') && ! str_starts_with($image, '/')) {
+                        $image = asset('uploads/'.$image);
+                    } elseif ($image !== '' && str_starts_with($image, '/')) {
+                        $image = url($image);
+                    }
+                }
                 $layers = collect($banner['layers'] ?? [])->keyBy('id');
                 $read = static function ($layer, string $fallback = ''): string {
                     return $layer && ! empty($layer['enabled']) && empty($layer['deleted'])
@@ -90,7 +100,9 @@ class SiteSync
                     $ctaLabel = $read($cta, $ctaLabel) ?: $ctaLabel;
                     $ctaUrl = trim((string) ($cta['url'] ?? $banner['cta_url'] ?? $ctaUrl)) ?: $ctaUrl;
                 }
-                $revolutionApplied = true;
+                if ($image !== '') {
+                    $revolutionApplied = true;
+                }
             }
         } catch (\Throwable) {
             //
@@ -98,18 +110,28 @@ class SiteSync
 
         if (! $revolutionApplied) {
             if ($customImage !== '') {
-                $image = HomePageConfig::imageUrl($customImage);
+                $image = method_exists(HomePageConfig::class, 'imageUrl')
+                    ? HomePageConfig::imageUrl($customImage)
+                    : asset(ltrim($customImage, '/'));
             } elseif (is_file($designedFile) && filesize($designedFile) > 0) {
                 $image = asset($designedRel);
             }
         }
+
+        $map = static function (string $url): string {
+            if (class_exists(PortalNav::class) && method_exists(PortalNav::class, 'mapUrlForWebApp')) {
+                return PortalNav::mapUrlForWebApp($url);
+            }
+
+            return $url;
+        };
 
         return [
             'image' => $image,
             'title' => $title,
             'text' => $text,
             'cta_label' => $ctaLabel,
-            'cta_url' => PortalNav::mapUrlForWebApp($ctaUrl),
+            'cta_url' => $map($ctaUrl),
             'kicker' => $kicker,
             'cta2_label' => $cta2Label,
             'cta2_url' => $cta2Url,
