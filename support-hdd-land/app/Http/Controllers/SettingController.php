@@ -41,7 +41,7 @@ class SettingController extends Controller
             'calendar' => CalendarSettings::all(),
             'faultTypes' => FaultType::orderBy('name')->get(),
             'referralSources' => ReferralSource::orderBy('name')->get(),
-            'users' => User::orderBy('name')->get(),
+            'users' => User::with('technician')->orderBy('name')->get(),
             'lookups' => $lookups,
             'sms' => [
                 'username' => AppSetting::getValue('niazpardaz_username', env('NIAZPARDAZ_USERNAME')),

@@ -1081,6 +1081,39 @@
             });
         }
 
+        function bumpSequentialCode(base, offset) {
+            if (!base) return '';
+            var ascii = convertDigits(String(base)).trim();
+            var match = ascii.match(/^(.*?)(\d+)(\D*)$/);
+            if (!match) return ascii;
+            var prefix = match[1];
+            var digits = match[2];
+            var suffix = match[3] || '';
+            var next = String(parseInt(digits, 10) + offset);
+            if (next.length < digits.length) {
+                next = Array(digits.length - next.length + 1).join('0') + next;
+            }
+            return prefix + next + suffix;
+        }
+
+        function assignGroupReceiptNumbers(cards) {
+            var baseReceipt = form ? (form.getAttribute('data-next-receipt') || '') : '';
+            var baseTicket = form ? (form.getAttribute('data-next-ticket') || '') : '';
+            cards.forEach(function (card, index) {
+                var receipt = bumpSequentialCode(baseReceipt, index);
+                var ticket = bumpSequentialCode(baseTicket, index);
+                var receiptEl = card.querySelector('[data-device-receipt]');
+                if (receiptEl) {
+                    receiptEl.textContent = receipt || '—';
+                    receiptEl.title = ticket
+                        ? ('شماره قبض: ' + receipt + ' | کد پذیرش: ' + ticket)
+                        : ('شماره قبض: ' + (receipt || '—'));
+                }
+                card.setAttribute('data-preview-receipt', receipt || '');
+                card.setAttribute('data-preview-ticket', ticket || '');
+            });
+        }
+
         function reindexDeviceCards() {
             var cards = groupDeviceList.querySelectorAll('[data-device-card]');
             cards.forEach(function (card, index) {
@@ -1091,6 +1124,7 @@
                 var indexEl = card.querySelector('.device-index');
                 if (indexEl) indexEl.textContent = 'قبض ' + toPersianDigits(index + 1);
             });
+            assignGroupReceiptNumbers(cards);
             updateGroupCountText(cards.length);
             return cards;
         }

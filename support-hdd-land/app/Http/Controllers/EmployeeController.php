@@ -15,11 +15,19 @@ class EmployeeController extends Controller
 {
     public function index()
     {
-        $employees = User::query()->orderBy('name')->paginate(20);
+        $employees = User::query()->with('technician')->orderBy('name')->paginate(20);
         $all = User::query()->get(['id', 'is_active', 'can_login_otp', 'can_login_password']);
+        $orphanTechnicians = Technician::query()
+            ->where(function ($q) {
+                $q->whereNull('user_id')->orWhere('user_id', 0);
+            })
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
 
         return view('employees.index', [
             'employees' => $employees,
+            'orphanTechnicians' => $orphanTechnicians,
             'stats' => [
                 'total' => $all->count(),
                 'active' => $all->where('is_active', true)->count(),
@@ -63,6 +71,7 @@ class EmployeeController extends Controller
                     'phone' => $user->phone,
                     'specialty' => $data['specialty'] ?? null,
                     'commission_percent' => (int) ($data['commission_percent'] ?? 0),
+                    'monthly_salary' => (int) ($data['monthly_salary'] ?? 0),
                     'is_active' => true,
                 ]
             );
@@ -123,9 +132,12 @@ class EmployeeController extends Controller
                     'phone' => $employee->phone,
                     'specialty' => $data['specialty'] ?? null,
                     'commission_percent' => (int) ($data['commission_percent'] ?? 0),
+                    'monthly_salary' => (int) ($data['monthly_salary'] ?? 0),
                     'is_active' => (bool) $employee->is_active,
                 ]
             );
+        } elseif ($employee->technician) {
+            $employee->technician->update(['is_active' => false]);
         }
 
         return redirect()->route('employees.index')->with('success', 'اطلاعات کارمند به‌روزرسانی شد.');
@@ -233,6 +245,7 @@ class EmployeeController extends Controller
             'permissions.*' => ['string', Rule::in(array_keys(Permissions::ALL))],
             'specialty' => ['nullable', 'string', 'max:120'],
             'commission_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'monthly_salary' => ['nullable', 'integer', 'min:0'],
         ], [
             'name.required' => 'نام کامل الزامی است.',
             'email.email' => 'ایمیل معتبر نیست.',

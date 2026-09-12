@@ -61,17 +61,21 @@
 
     <section class="emp-section" id="tech-specialty-box" style="{{ $currentRole === 'technician' ? '' : 'display:none' }}">
         <div class="emp-section-head">
-            <h3>تخصص و کمیسیون تعمیرکار</h3>
-            <p>این بخش برای نقش تعمیرکار است و با منوی «تخصص و کمیسیون» یکی است.</p>
+            <h3>تخصص، سود و حقوق تعمیرکار</h3>
+            <p>همین کارتابل، منبع تخصص و کمیسیون است (مثل «تعمیرگاه شرکت»). دیگر نیازی به منوی جدا نیست.</p>
         </div>
-        <div class="accept-row accept-row-2">
+        <div class="accept-row accept-row-3">
             <div>
                 <label>تخصص (هارد، بازیابی، لپ‌تاپ…)</label>
                 <input type="text" name="specialty" value="{{ old('specialty', $employee?->technician?->specialty ?? '') }}" placeholder="مثال: بازیابی اطلاعات هارد">
             </div>
             <div>
-                <label>کمیسیون %</label>
+                <label>درصد سود / کمیسیون %</label>
                 <input type="number" name="commission_percent" min="0" max="100" value="{{ old('commission_percent', $employee?->technician?->commission_percent ?? 0) }}">
+            </div>
+            <div>
+                <label>حقوق / دستمزد ماهانه (تومان)</label>
+                <input type="number" name="monthly_salary" min="0" step="1000" value="{{ old('monthly_salary', $employee?->technician?->monthly_salary ?? 0) }}" dir="ltr" style="text-align:left;">
             </div>
         </div>
     </section>

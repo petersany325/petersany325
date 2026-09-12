@@ -147,14 +147,12 @@ class NavMenu
                 'hint' => 'کارتابل، کارآموز، SMS',
                 'any_of' => ['employees', 'technicians'],
                 'children' => [
-                    ['label' => 'کارتابل کارمند', 'route' => 'employees.index', 'match' => 'employees.index|employees.edit', 'hint' => 'لیست، وظیفه، دسترسی', 'mark' => 'ک', 'permission' => 'employees'],
+                    ['label' => 'کارتابل کارمند', 'route' => 'employees.index', 'match' => 'employees.index|employees.edit|technicians.*', 'hint' => 'دسترسی، تخصص، سود و حقوق', 'mark' => 'ک', 'permission' => 'employees'],
                     ['label' => 'کارمند جدید', 'route' => 'employees.create', 'match' => 'employees.create', 'hint' => 'پذیرش / حسابدار / تعمیرکار…', 'mark' => '+', 'permission' => 'employees'],
                     ['label' => 'کارتابل کارآموز', 'route' => 'interns.index', 'match' => 'interns.index|interns.edit', 'hint' => 'دسترسی و پرتال ورود', 'mark' => 'آ', 'permission' => 'employees', 'sep' => true],
                     ['label' => 'کارآموز جدید', 'route' => 'interns.create', 'match' => 'interns.create', 'hint' => 'ثبت + فعال‌سازی ورود', 'mark' => '+', 'permission' => 'employees'],
                     ['label' => 'پرتال کارآموز (پیش‌نمایش)', 'route' => 'intern.portal', 'match' => 'intern.portal', 'hint' => 'نمای ورود کارآموز', 'mark' => 'پ', 'permission' => 'employees'],
                     ['label' => 'متن SMS خوش‌آمد', 'route' => 'staff-sms.templates', 'match' => 'staff-sms.*', 'hint' => 'کارمند و کارآموز', 'mark' => 'پ', 'permission' => 'employees'],
-                    ['label' => 'تخصص و کمیسیون تعمیرکار', 'route' => 'technicians.index', 'match' => 'technicians.index|technicians.edit', 'hint' => 'هارد، بازیابی، قیمت/٪', 'mark' => 'ت', 'permission' => 'technicians', 'sep' => true],
-                    ['label' => 'تعمیرکار جدید (قیمت)', 'route' => 'technicians.create', 'match' => 'technicians.create', 'hint' => 'تخصص + کمیسیون', 'mark' => '+', 'permission' => 'technicians'],
                 ],
             ],
             [

@@ -861,6 +861,19 @@ tbody tr:nth-child(even) { background: #f3f5f8; }
 }
 .device-card-toggle { border:0; background:transparent; color:#fff; display:flex; gap:8px; align-items:center; cursor:pointer; padding:2px; font:inherit; }
 .device-index { font-weight:800; font-size:11px; }
+.device-receipt-no {
+    display:inline-block;
+    margin-inline-start:6px;
+    padding:1px 7px;
+    border-radius:4px;
+    border:1px solid #93c5fd;
+    background:#eff6ff;
+    color:#1d4ed8;
+    font-weight:800;
+    font-size:12px;
+    letter-spacing:.02em;
+    font-variant-numeric:tabular-nums;
+}
 .device-preview { color:#c5ccd6 !important; font-size:10.5px; }
 .device-card-tools { display:flex; gap:3px; }
 .device-card-body { padding:7px; background:#f7f8fa; }
@@ -972,6 +985,18 @@ tbody tr:nth-child(even) { background: #f3f5f8; }
 .emp-card-head { display:flex; gap:8px; align-items:center; padding:7px; background:linear-gradient(180deg,#eceff3,#dfe4ea); }
 .emp-avatar { width:28px; height:28px; border-radius:2px; display:grid; place-items:center; background:#3a4454; color:#fff; font-weight:800; font-size:12px; }
 .emp-card-body { padding:7px; font-size:11px; }
+.emp-pay-box {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:6px;
+    margin:8px 0;
+    padding:7px 8px;
+    border:1px solid #dbe3ee;
+    border-radius:8px;
+    background:#f8fafc;
+}
+.emp-pay-box .muted { display:block; font-size:10px; margin-bottom:2px; }
+.emp-pay-box strong { font-size:12px; }
 .emp-card-foot { padding:6px 7px; border-top:1px solid #d9dee6; display:flex; gap:4px; flex-wrap:wrap; }
 .duty-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:6px; }
 .duty-card {
