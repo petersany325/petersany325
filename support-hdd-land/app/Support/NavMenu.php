@@ -147,7 +147,8 @@ class NavMenu
                 'hint' => 'کارتابل، کارآموز، SMS',
                 'any_of' => ['employees', 'technicians'],
                 'children' => [
-                    ['label' => 'کارتابل کارمند', 'route' => 'employees.index', 'match' => 'employees.index|employees.edit|technicians.*', 'hint' => 'دسترسی، تخصص، سود و حقوق', 'mark' => 'ک', 'permission' => 'employees'],
+                    ['label' => 'کارتابل کارمند', 'route' => 'employees.index', 'match' => 'employees.index|employees.edit', 'hint' => 'لیست، وظیفه، دسترسی', 'mark' => 'ک', 'permission' => 'employees'],
+                    ['label' => 'تخصص، سود و حقوق', 'route' => 'employees.pay', 'match' => 'employees.pay*', 'hint' => 'درصد سود و دستمزد تعمیرکار', 'mark' => '٪', 'permission' => 'employees|technicians', 'sep' => true],
                     ['label' => 'کارمند جدید', 'route' => 'employees.create', 'match' => 'employees.create', 'hint' => 'پذیرش / حسابدار / تعمیرکار…', 'mark' => '+', 'permission' => 'employees'],
                     ['label' => 'کارتابل کارآموز', 'route' => 'interns.index', 'match' => 'interns.index|interns.edit', 'hint' => 'دسترسی و پرتال ورود', 'mark' => 'آ', 'permission' => 'employees', 'sep' => true],
                     ['label' => 'کارآموز جدید', 'route' => 'interns.create', 'match' => 'interns.create', 'hint' => 'ثبت + فعال‌سازی ورود', 'mark' => '+', 'permission' => 'employees'],
@@ -344,8 +345,14 @@ class NavMenu
                     continue;
                 }
                 $perm = $child['permission'] ?? $group['permission'] ?? null;
-                if ($perm && ! $user->canAccess($perm)) {
-                    continue;
+                if ($perm) {
+                    $okPerm = collect(explode('|', (string) $perm))
+                        ->map(fn ($p) => trim($p))
+                        ->filter()
+                        ->contains(fn ($p) => $user->canAccess($p));
+                    if (! $okPerm) {
+                        continue;
+                    }
                 }
                 if (! empty($child['route']) && ! Route::has($child['route'])) {
                     continue;

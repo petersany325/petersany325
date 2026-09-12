@@ -12,11 +12,12 @@
     <div class="emp-cartable-hero">
         <div>
             <h2>کارتابل کارمندان</h2>
-            <p class="lead">ورود با موبایل + تأیید SMS، دسترسی، تخصص و درصد سود / حقوق تعمیرکار</p>
+            <p class="lead">ورود با موبایل + تأیید SMS و دسترسی طبق وظیفه</p>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <a class="btn btn-primary" href="{{ route('employees.create') }}">کارمند جدید</a>
-            <a class="btn btn-secondary" href="{{ route('interns.create') }}">کارآموز جدید</a>
+            <a class="btn btn-secondary" href="{{ route('employees.pay') }}">تخصص، سود و حقوق</a>
+            <a class="btn btn-ghost" href="{{ route('interns.create') }}">کارآموز جدید</a>
             <a class="btn btn-ghost" href="{{ route('interns.index') }}">کارتابل کارآموز</a>
             <a class="btn btn-ghost" href="{{ route('staff-sms.templates') }}">متن SMS</a>
         </div>
@@ -75,6 +76,9 @@
                 </div>
                 <footer class="emp-card-foot">
                     <a class="btn btn-secondary" href="{{ route('employees.edit', $employee) }}">ویرایش دسترسی</a>
+                    @if($tech)
+                        <a class="btn btn-ghost" href="{{ route('employees.pay') }}">سود و حقوق</a>
+                    @endif
                     <form method="POST" action="{{ route('employees.welcome-sms', $employee) }}">
                         @csrf
                         <button class="btn btn-ghost" type="submit" title="ارسال مجدد پیامک خوش‌آمدگویی">SMS خوش‌آمد</button>
@@ -97,29 +101,6 @@
             </div>
         @endforelse
     </div>
-
-    @if(($orphanTechnicians ?? collect())->isNotEmpty())
-        <div class="panel" style="margin-top:14px;">
-            <h3 style="margin-top:0;">تعمیرکاران بدون کارتابل ورود</h3>
-            <p class="muted" style="margin-top:0;">این‌ها فقط در لیست تعمیرکار هستند. برای ادغام کامل، از کارتابل کارمند ثبت/اتصال کنید.</p>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>نام</th><th>تخصص</th><th>درصد سود</th><th>حقوق</th><th></th></tr></thead>
-                    <tbody>
-                    @foreach($orphanTechnicians as $tech)
-                        <tr>
-                            <td>{{ $tech->name }}</td>
-                            <td>{{ $tech->specialty ?: '—' }}</td>
-                            <td>{{ (int) $tech->commission_percent }}٪</td>
-                            <td dir="ltr">{{ number_format((int) ($tech->monthly_salary ?? 0)) }}</td>
-                            <td><a class="btn btn-ghost" href="{{ route('employees.create') }}">ثبت در کارتابل</a></td>
-                        </tr>
-                    @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    @endif
 
     {{ $employees->links('partials.pagination') }}
 </div>

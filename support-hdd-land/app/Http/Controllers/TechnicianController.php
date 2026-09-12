@@ -15,15 +15,15 @@ class TechnicianController extends Controller
     public function index()
     {
         return redirect()
-            ->route('employees.index')
-            ->with('success', 'تخصص، درصد سود و حقوق تعمیرکار از کارتابل کارمند مدیریت می‌شود.');
+            ->route('employees.pay')
+            ->with('success', 'تخصص، درصد سود و حقوق تعمیرکار از منوی «تخصص، سود و حقوق» مدیریت می‌شود.');
     }
 
     public function create()
     {
         return redirect()
-            ->route('employees.create')
-            ->with('success', 'تعمیرکار را از کارتابل کارمند با نقش «تعمیرکار» ثبت کنید.');
+            ->route('employees.pay')
+            ->with('success', 'تعمیرکار / تعمیرگاه را در «تخصص، سود و حقوق» ثبت کنید.');
     }
 
     public function store(Request $request)

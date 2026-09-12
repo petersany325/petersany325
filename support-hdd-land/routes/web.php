@@ -298,6 +298,12 @@ Route::middleware('auth')->group(function () {
         Route::post('parts/{part}/tier-prices', [PartImportController::class, 'savePartTierPrices'])->name('parts.tier-prices');
     });
 
+    Route::middleware(EnsurePermission::class.':employees|technicians')->group(function () {
+        Route::get('employees/pay', [EmployeeController::class, 'payIndex'])->name('employees.pay');
+        Route::post('employees/pay', [EmployeeController::class, 'payStore'])->name('employees.pay.store');
+        Route::put('employees/pay/{technician}', [EmployeeController::class, 'payUpdate'])->name('employees.pay.update');
+    });
+
     Route::middleware(EnsurePermission::class.':technicians')->group(function () {
         Route::resource('technicians', TechnicianController::class)->except(['show']);
     });
