@@ -150,7 +150,8 @@ class PortalNav
             ['label' => 'سریال‌ها / گارانتی', 'href' => $u('serials'), 'show' => ! empty($perms['serials']) || ! empty($perms['sales']), 'active' => str_contains($path, 'staff/serials')],
             ['label' => 'فروش قطعه', 'href' => $u('sell'), 'show' => ! empty($perms['sales']) || ! empty($perms['orders']) || ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/sell')],
             ['label' => 'پشتیبانی', 'href' => $u('tickets'), 'show' => ! empty($perms['support']), 'active' => str_contains($path, 'staff/tickets')],
-            ['label' => 'حسابداری', 'href' => $u('accounting'), 'show' => ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/accounting') && ! str_contains($path, 'staff/sell')],
+            ['label' => 'حسابداری', 'href' => $u('accounting'), 'show' => ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/accounting') && ! str_contains($path, 'staff/sell') && ! str_contains($path, 'staff/accounting/stock')],
+            ['label' => 'انبار', 'href' => $u('accounting/stock'), 'show' => ! empty($perms['inventory']) || ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/accounting/stock')],
         ];
     }
 

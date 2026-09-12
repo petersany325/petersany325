@@ -25,6 +25,7 @@ class StaffAcl
             'products.delete' => 'حذف محصول',
             'support' => 'پشتیبانی / تیکت',
             'accounting' => 'حسابداری',
+            'inventory' => 'انبار و موجودی',
             'reports' => 'گزارش فروش و کار',
             'media' => 'کتابخانه رسانه',
             'system_tools' => 'تعمیر و نگهداری',
@@ -67,7 +68,7 @@ class StaffAcl
                 'label' => 'انباردار',
                 'permissions' => [
                     'products.view', 'products.create', 'products.edit', 'products.delete',
-                    'serials', 'media',
+                    'serials', 'media', 'inventory', 'accounting',
                 ],
             ],
             'technician' => [
