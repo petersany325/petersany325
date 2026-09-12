@@ -6,9 +6,11 @@
   $layout = (string) ($home['hero_layout'] ?? 'split-rtl');
 
   // پل بنرساز → صفحه اول (اولویت با بنر زنده ThemeBuilder / Revolution)
-  $resolved = class_exists(\Plugins\ThemeBuilder\src\HomepageBanner::class)
-    ? \Plugins\ThemeBuilder\src\HomepageBanner::resolve()
-    : ['live' => false, 'banner' => []];
+  $resolved = ['live' => false, 'banner' => []];
+  if (class_exists(\Plugins\ThemeBuilder\src\HomepageBanner::class)) {
+    \Plugins\ThemeBuilder\src\HomepageBanner::ensureViewsRegistered();
+    $resolved = \Plugins\ThemeBuilder\src\HomepageBanner::resolve();
+  }
   $useRevolution = ! empty($resolved['live']);
   $revolutionBanner = is_array($resolved['banner'] ?? null) ? $resolved['banner'] : [];
 
@@ -18,7 +20,14 @@
 @endphp
 
 @if($useRevolution && ! $alreadyRendered)
-  @include('theme-builder::storefront.partials.banner', ['b' => $revolutionBanner])
+  @php
+    $bannerView = view()->exists('theme-builder::storefront.partials.banner')
+      ? 'theme-builder::storefront.partials.banner'
+      : (view()->exists('themebuilder::storefront.partials.banner') ? 'themebuilder::storefront.partials.banner' : null);
+  @endphp
+  @if($bannerView)
+    @include($bannerView, ['b' => $revolutionBanner])
+  @endif
 @elseif(! $skipHero && ! empty($home['hero_enabled']))
 <section
   class="hl-hero hl-hero--{{ $layout }}"

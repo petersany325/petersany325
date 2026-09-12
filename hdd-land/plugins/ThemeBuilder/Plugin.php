@@ -28,7 +28,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '1.4.0';
+        return '1.5.0';
     }
 
     public function isCore(): bool
@@ -38,13 +38,23 @@ class Plugin extends BasePlugin
 
     public function boot(): void
     {
-        $views = base_path('plugins/ThemeBuilder/resources/views');
-        if (is_dir($views)) {
-            View::addNamespace('theme-builder', $views);
-            // Alias used by some older includes / production blades.
-            View::addNamespace('themebuilder', $views);
+        self::registerViews();
+        parent::boot();
+    }
+
+    /** Safe to call from blades/helpers even if plugin boot order is late. */
+    public static function registerViews(): void
+    {
+        $views = __DIR__.'/resources/views';
+        if (! is_dir($views)) {
+            $views = base_path('plugins/ThemeBuilder/resources/views');
+        }
+        if (! is_dir($views)) {
+            return;
         }
 
-        parent::boot();
+        View::addNamespace('theme-builder', $views);
+        // Alias used by some older includes / production blades.
+        View::addNamespace('themebuilder', $views);
     }
 }

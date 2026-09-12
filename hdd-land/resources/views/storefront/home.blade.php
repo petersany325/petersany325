@@ -6,6 +6,7 @@
   $bannerBridge = ['live' => false, 'banner' => []];
   try {
     if (class_exists(\Plugins\ThemeBuilder\src\HomepageBanner::class)) {
+      \Plugins\ThemeBuilder\src\HomepageBanner::ensureViewsRegistered();
       $bannerBridge = \Plugins\ThemeBuilder\src\HomepageBanner::resolve();
     } elseif (class_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class)) {
       $theme = \Plugins\ThemeBuilder\src\ThemeConfig::get();
@@ -20,18 +21,25 @@
   }
   $revolutionLive = ! empty($bannerBridge['live']);
   $bannerRendered = false;
+  $bannerView = null;
+  foreach (['theme-builder::storefront.partials.banner', 'themebuilder::storefront.partials.banner'] as $candidate) {
+    if (view()->exists($candidate)) {
+      $bannerView = $candidate;
+      break;
+    }
+  }
 @endphp
 
-@if($revolutionLive && view()->exists('theme-builder::storefront.partials.banner'))
+@if($revolutionLive && $bannerView)
   <div class="hl-revolution-banner-wrap">
-    @include('theme-builder::storefront.partials.banner', ['b' => $bannerBridge['banner']])
+    @include($bannerView, ['b' => $bannerBridge['banner']])
   </div>
   @php $bannerRendered = true; @endphp
 @endif
 
 <div class="hl-home-wrap">
-  @if(view()->exists('theme-builder::storefront.homepage'))
-    @include('theme-builder::storefront.homepage', [
+  @if(view()->exists('theme-builder::storefront.homepage') || view()->exists('themebuilder::storefront.homepage'))
+    @include(view()->exists('theme-builder::storefront.homepage') ? 'theme-builder::storefront.homepage' : 'themebuilder::storefront.homepage', [
       'featured' => $featured ?? collect(),
       'latest' => $latest ?? collect(),
       'categories' => $categories ?? collect(),

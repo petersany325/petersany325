@@ -5,6 +5,7 @@
   $resolved = ['live' => false, 'banner' => []];
   $theme = [];
   if (! $alreadyFromHome && class_exists(\Plugins\ThemeBuilder\src\HomepageBanner::class)) {
+    \Plugins\ThemeBuilder\src\HomepageBanner::ensureViewsRegistered();
     $resolved = \Plugins\ThemeBuilder\src\HomepageBanner::resolve();
   } elseif (! $alreadyFromHome) {
     $themeClass = \Plugins\ThemeBuilder\src\ThemeConfig::class;

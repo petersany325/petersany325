@@ -19,17 +19,17 @@ class HomepageBanner
         $live = false;
 
         try {
+            self::ensureViewsRegistered();
+
             if (class_exists(ThemeConfig::class) && method_exists(ThemeConfig::class, 'get')) {
                 $theme = ThemeConfig::get();
                 $banner = self::extractBanner(is_array($theme) ? $theme : []);
 
                 if (method_exists(ThemeConfig::class, 'normalizeBanner')) {
                     $banner = ThemeConfig::normalizeBanner($banner);
-                } elseif (method_exists(ThemeConfig::class, 'normalizeBanner')) {
-                    $banner = ThemeConfig::normalizeBanner($banner);
                 }
 
-                foreach (['bannerIsLive', 'isBannerLive', 'bannerIsLive', 'isBannerLive'] as $method) {
+                foreach (['bannerIsLive', 'isBannerLive'] as $method) {
                     if (method_exists(ThemeConfig::class, $method)) {
                         $live = (bool) ThemeConfig::$method($banner);
                         break;
@@ -65,6 +65,19 @@ class HomepageBanner
         ];
     }
 
+    /** Register theme-builder view namespace even if plugin boot ran too late. */
+    public static function ensureViewsRegistered(): void
+    {
+        try {
+            if (class_exists(\Plugins\ThemeBuilder\Plugin::class)
+                && method_exists(\Plugins\ThemeBuilder\Plugin::class, 'registerViews')) {
+                \Plugins\ThemeBuilder\Plugin::registerViews();
+            }
+        } catch (\Throwable) {
+            //
+        }
+    }
+
     public static function isLive(): bool
     {
         return self::resolve()['live'];
@@ -93,38 +106,54 @@ class HomepageBanner
             $theme['homepage']['banner'] ?? null,
             $theme['data']['banner'] ?? null,
             $theme['config']['banner'] ?? null,
+            $theme['theme']['banner'] ?? null,
+            $theme['builder']['banner'] ?? null,
+            $theme['canvas']['banner'] ?? null,
+            $theme['canvas'] ?? null,
         ];
 
         foreach ($candidates as $candidate) {
             if (! is_array($candidate)) {
                 continue;
             }
-            if (
-                isset($candidate['image_url'])
-                || isset($candidate['image'])
-                || isset($candidate['image2_url'])
-                || isset($candidate['src'])
-                || isset($candidate['layers'])
-                || isset($candidate['slides'])
-                || array_key_exists('enabled', $candidate)
-            ) {
+            // Nested canvas.banner inside canvas payloads.
+            if (isset($candidate['banner']) && is_array($candidate['banner'])) {
+                $nested = $candidate['banner'];
+                if (self::bannerPayloadLooksUseful($nested)) {
+                    return $nested;
+                }
+            }
+            if (self::bannerPayloadLooksUseful($candidate)) {
                 return $candidate;
             }
         }
 
         // Entire payload is a banner object.
-        if (
-            isset($theme['image_url'])
-            || isset($theme['image'])
-            || isset($theme['layers'])
-            || isset($theme['src'])
-        ) {
+        if (self::bannerPayloadLooksUseful($theme)) {
             return $theme;
         }
 
         return class_exists(ThemeConfig::class) && method_exists(ThemeConfig::class, 'defaultBanner')
             ? ThemeConfig::defaultBanner()
             : [];
+    }
+
+    /** @param  array<string, mixed>  $candidate */
+    protected static function bannerPayloadLooksUseful(array $candidate): bool
+    {
+        return isset($candidate['image_url'])
+            || isset($candidate['image'])
+            || isset($candidate['image2_url'])
+            || isset($candidate['image2'])
+            || isset($candidate['src'])
+            || isset($candidate['bg_image'])
+            || isset($candidate['desktop_image'])
+            || isset($candidate['background'])
+            || isset($candidate['layers'])
+            || isset($candidate['slides'])
+            || isset($candidate['elements'])
+            || isset($candidate['items'])
+            || array_key_exists('enabled', $candidate);
     }
 
     /** @param  array<string, mixed>  $banner */
@@ -140,7 +169,7 @@ class HomepageBanner
         }
 
         $img = '';
-        foreach (['image_url', 'image', 'src', 'image2_url', 'image2'] as $key) {
+        foreach (['image_url', 'image', 'src', 'image2_url', 'image2', 'bg_image', 'desktop_image', 'background'] as $key) {
             $val = trim((string) ($banner[$key] ?? ''));
             if ($val !== '') {
                 $img = $val;
@@ -148,18 +177,14 @@ class HomepageBanner
             }
         }
 
-        if ($img === '' && class_exists(ThemeConfig::class)) {
-            if (method_exists(ThemeConfig::class, 'bannerUrl')) {
-                $img = (string) ThemeConfig::bannerUrl($banner, 1);
-                if ($img === '') {
-                    $img = (string) ThemeConfig::bannerUrl($banner, 2);
-                }
-            } elseif (method_exists(ThemeConfig::class, 'bannerUrl')) {
-                $img = (string) ThemeConfig::bannerUrl($banner, 1);
+        if ($img === '' && class_exists(ThemeConfig::class) && method_exists(ThemeConfig::class, 'bannerUrl')) {
+            $img = (string) ThemeConfig::bannerUrl($banner, 1);
+            if ($img === '') {
+                $img = (string) ThemeConfig::bannerUrl($banner, 2);
             }
         }
 
-        $layers = $banner['layers'] ?? $banner['slides'] ?? [];
+        $layers = $banner['layers'] ?? $banner['slides'] ?? $banner['elements'] ?? $banner['items'] ?? [];
         $hasLayer = false;
         if (is_array($layers)) {
             foreach ($layers as $layer) {
@@ -167,9 +192,11 @@ class HomepageBanner
                     continue;
                 }
                 $on = \App\Support\SettingsStore::toBool($layer['enabled'] ?? true, true);
-                $deleted = ! empty($layer['deleted']) || ! empty($layer['is_deleted']);
-                $content = trim((string) ($layer['content'] ?? $layer['text'] ?? $layer['html'] ?? ''));
-                if ($on && ! $deleted && $content !== '') {
+                $deleted = \App\Support\SettingsStore::toBool($layer['deleted'] ?? false, false)
+                    || \App\Support\SettingsStore::toBool($layer['is_deleted'] ?? false, false);
+                $content = trim((string) ($layer['content'] ?? $layer['text'] ?? $layer['html'] ?? $layer['title'] ?? ''));
+                $layerImg = trim((string) ($layer['image'] ?? $layer['image_url'] ?? $layer['src'] ?? ''));
+                if ($on && ! $deleted && ($content !== '' || $layerImg !== '')) {
                     $hasLayer = true;
                     break;
                 }

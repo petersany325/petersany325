@@ -253,7 +253,15 @@ class ThemeConfig
         $hasImage = self::bannerUrl($b, 1) !== '' || self::bannerUrl($b, 2) !== '';
         $hasLayer = false;
         foreach ($b['layers'] as $layer) {
-            if (! empty($layer['enabled']) && empty($layer['deleted']) && trim((string) ($layer['content'] ?? '')) !== '') {
+            if (! is_array($layer)) {
+                continue;
+            }
+            $on = \App\Support\SettingsStore::toBool($layer['enabled'] ?? true, true);
+            $deleted = \App\Support\SettingsStore::toBool($layer['deleted'] ?? false, false)
+                || \App\Support\SettingsStore::toBool($layer['is_deleted'] ?? false, false);
+            $content = trim((string) ($layer['content'] ?? $layer['text'] ?? $layer['html'] ?? $layer['title'] ?? ''));
+            $layerImg = trim((string) ($layer['image'] ?? $layer['image_url'] ?? $layer['src'] ?? ''));
+            if ($on && ! $deleted && ($content !== '' || $layerImg !== '')) {
                 $hasLayer = true;
                 break;
             }
