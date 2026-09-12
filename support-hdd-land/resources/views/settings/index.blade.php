@@ -938,9 +938,12 @@
 
             <div class="emp-card-grid" style="margin-top:10px;">
                 @foreach($users->take(8) as $employee)
-                    @php $meta = \App\Support\Permissions::roleMeta($employee->role); @endphp
+                    @php
+                        $meta = \App\Support\Permissions::roleMeta($employee->role);
+                        $tech = $employee->technician;
+                    @endphp
                     <article class="emp-card tone-{{ $meta['tone'] }} {{ $employee->is_active ? '' : 'is-off' }}">
-                        <header class="emp-card-head"><meta charset="utf-8">
+                        <header class="emp-card-head">
                             <div class="emp-avatar">{{ $meta['mark'] }}</div>
                             <div>
                                 <strong>{{ $employee->name }}</strong>
@@ -953,6 +956,13 @@
                                 @if($employee->can_login_otp)<span class="chip chip-sms">موبایل / SMS</span>@endif
                                 @if($employee->can_login_password)<span class="chip chip-pass">رمز</span>@endif
                             </div>
+                            @if($tech)
+                                <div class="emp-pay-box">
+                                    <div><span class="muted">تخصص</span><strong>{{ $tech->specialty ?: '—' }}</strong></div>
+                                    <div><span class="muted">درصد سود</span><strong>{{ (int) $tech->commission_percent }}٪</strong></div>
+                                    <div><span class="muted">حقوق</span><strong dir="ltr">{{ number_format((int) ($tech->monthly_salary ?? 0)) }}</strong></div>
+                                </div>
+                            @endif
                         </div>
                         <footer class="emp-card-foot">
                             <a class="btn btn-secondary" href="{{ route('employees.edit', $employee) }}">دسترسی / وظیفه</a>
