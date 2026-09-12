@@ -81,7 +81,8 @@
         <a class="{{ request()->routeIs('admin.accounting.expenses')?'on':'' }}" href="{{ route('admin.accounting.expenses') }}">هزینه‌ها</a>
         <a class="{{ request()->routeIs('admin.accounting.payroll*')?'on':'' }}" href="{{ route('admin.accounting.payroll') }}">حقوق و دستمزد</a>
         <a class="{{ request()->routeIs('admin.accounting.commissions')?'on':'' }}" href="{{ route('admin.accounting.commissions') }}">درصد فروشندگان</a>
-        <div class="g">گزارش</div>
+        <div class="g">تنظیمات و گزارش</div>
+        <a class="{{ request()->routeIs('admin.accounting.settings*')?'on':'' }}" href="{{ route('admin.accounting.settings') }}">تنظیمات (دسته/حساب)</a>
         <a class="{{ request()->routeIs('admin.accounting.reports')?'on':'' }}" href="{{ route('admin.accounting.reports') }}">گزارش همه بخش‌ها</a>
         <a href="{{ url('/admin') }}">بازگشت ادمین</a>
       @else

@@ -12,8 +12,21 @@
       <form method="post" action="{{ route('admin.accounting.doc.issue',$doc->id) }}">@csrf
         <button class="btn o" type="submit">صدور سند</button>
       </form>
+      <form method="post" action="{{ route('admin.accounting.doc.delete.post',$doc->id) }}" onsubmit="return confirm('حذف قطعی پیش‌نویس؟')">@csrf
+        <button class="btn g" type="submit">حذف</button>
+      </form>
     @endif
-    @if($doc->type==='proforma' && $doc->status!=='converted')
+    @if(in_array($doc->status, ['draft','issued'], true))
+      <form method="post" action="{{ route('admin.accounting.doc.cancel',$doc->id) }}" onsubmit="return confirm('ابطال سند؟')">@csrf
+        <button class="btn w" type="submit">ابطال</button>
+      </form>
+    @endif
+    @if($doc->status==='cancelled')
+      <form method="post" action="{{ route('admin.accounting.doc.delete.post',$doc->id) }}" onsubmit="return confirm('حذف قطعی؟')">@csrf
+        <button class="btn g" type="submit">حذف قطعی</button>
+      </form>
+    @endif
+    @if($doc->type==='proforma' && $doc->status!=='converted' && $doc->status!=='cancelled')
       <form method="post" action="{{ route('admin.accounting.doc.convert',$doc->id) }}">@csrf
         <button class="btn w" type="submit">تبدیل به فاکتور فروش</button>
       </form>

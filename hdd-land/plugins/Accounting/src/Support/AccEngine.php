@@ -283,4 +283,58 @@ class AccEngine
     {
         return number_format((int) $n).' تومان';
     }
+
+    /** Cancel a draft (or issued without stock lines) document. */
+    public static function cancelDocument(int $id): bool
+    {
+        $doc = DB::table('acc_documents')->where('id', $id)->first();
+        if (! $doc || in_array((string) $doc->status, ['cancelled', 'converted'], true)) {
+            return false;
+        }
+        if ((string) $doc->status === 'issued') {
+            // reverse stock if applicable
+            $lines = DB::table('acc_document_lines')->where('document_id', $id)->get();
+            if (in_array($doc->type, ['purchase', 'stock_in'], true) && $doc->warehouse_id) {
+                foreach ($lines as $line) {
+                    if ($line->product_id) {
+                        self::adjustStock((int) $doc->warehouse_id, (int) $line->product_id, -1 * (float) $line->qty, (int) $line->unit_cost);
+                    }
+                }
+            }
+            if (in_array($doc->type, ['sale', 'stock_out'], true) && $doc->warehouse_id) {
+                foreach ($lines as $line) {
+                    if ($line->product_id) {
+                        self::adjustStock((int) $doc->warehouse_id, (int) $line->product_id, (float) $line->qty, (int) $line->unit_cost);
+                    }
+                }
+            }
+            if ($doc->type === 'transfer' && $doc->warehouse_id && $doc->warehouse_to_id) {
+                foreach ($lines as $line) {
+                    if ($line->product_id) {
+                        self::adjustStock((int) $doc->warehouse_id, (int) $line->product_id, (float) $line->qty, (int) $line->unit_cost);
+                        self::adjustStock((int) $doc->warehouse_to_id, (int) $line->product_id, -1 * (float) $line->qty, (int) $line->unit_cost);
+                    }
+                }
+            }
+        }
+        DB::table('acc_documents')->where('id', $id)->update([
+            'status' => 'cancelled',
+            'updated_at' => now(),
+        ]);
+
+        return true;
+    }
+
+    public static function deleteDocument(int $id): bool
+    {
+        $doc = DB::table('acc_documents')->where('id', $id)->first();
+        if (! $doc || ! in_array((string) $doc->status, ['draft', 'cancelled'], true)) {
+            return false;
+        }
+        DB::table('acc_document_serials')->where('document_id', $id)->delete();
+        DB::table('acc_document_lines')->where('document_id', $id)->delete();
+        DB::table('acc_documents')->where('id', $id)->delete();
+
+        return true;
+    }
 }

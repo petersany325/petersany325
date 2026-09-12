@@ -238,11 +238,11 @@ class HubController extends Controller
         DB::table('acc_banks')->insert([
             'name' => $name,
             'branch' => $request->input('branch'),
-            'account_no' => $request->input('account_no'),
+            'account_no' => $request->input('account_no', $request->input('account_no')),
             'iban' => $request->input('iban'),
-            'card_no' => $request->input('card_no'),
-            'holder' => $request->input('holder'),
-            'opening_balance' => (int) str_replace(',', '', (string) $request->input('opening_balance', 0)),
+            'card_no' => $request->input('card_no', $request->input('card_no')),
+            'holder' => $request->input('holder', $request->input('holder')),
+            'opening_balance' => (int) str_replace(',', '', (string) $request->input('opening_balance', $request->input('opening_balance', 0))),
             'is_active' => true,
             'created_at' => now(),
             'updated_at' => now(),
@@ -466,11 +466,238 @@ class HubController extends Controller
             ->select('type', DB::raw('count(*) as c'), DB::raw('sum(total) as s'))
             ->whereBetween('doc_date', [$from, $to])
             ->groupBy('type')->get();
-        $stockValue = (int) DB::table('acc_stock_balances')->selectRaw('COALESCE(SUM(qty * avg_cost),0) as v')->value('v');
+        $stockValue = 0;
+        try {
+            $stockValue = (int) DB::table('acc_stock_balances')->selectRaw('COALESCE(SUM(qty * avg_cost),0) as v')->value('v');
+        } catch (\Throwable) {
+        }
+        $menuReport = [
+            ['key' => 'sale', 'label' => 'فروش', 'count' => (int) DB::table('acc_documents')->where('type', 'sale')->whereBetween('doc_date', [$from, $to])->count(), 'total' => $sales],
+            ['key' => 'purchase', 'label' => 'خرید', 'count' => (int) DB::table('acc_documents')->where('type', 'purchase')->whereBetween('doc_date', [$from, $to])->count(), 'total' => $purchase],
+            ['key' => 'proforma', 'label' => 'پیش‌فاکتور', 'count' => (int) DB::table('acc_documents')->where('type', 'proforma')->whereBetween('doc_date', [$from, $to])->count(), 'total' => (int) DB::table('acc_documents')->where('type', 'proforma')->whereBetween('doc_date', [$from, $to])->sum('total')],
+            ['key' => 'voucher', 'label' => 'سند دستی', 'count' => (int) DB::table('acc_documents')->where('type', 'voucher')->whereBetween('doc_date', [$from, $to])->count(), 'total' => (int) DB::table('acc_documents')->where('type', 'voucher')->whereBetween('doc_date', [$from, $to])->sum('total')],
+            ['key' => 'expense', 'label' => 'هزینه', 'count' => (int) DB::table('acc_documents')->where('type', 'expense')->whereBetween('doc_date', [$from, $to])->count(), 'total' => $expense],
+            ['key' => 'stock', 'label' => 'انبار', 'count' => (int) DB::table('acc_documents')->whereIn('type', ['stock_in', 'stock_out', 'transfer'])->whereBetween('doc_date', [$from, $to])->count(), 'total' => $stockValue],
+            ['key' => 'payroll', 'label' => 'حقوق', 'count' => (int) (Schema::hasTable('acc_payroll_runs') ? DB::table('acc_payroll_runs')->whereBetween('created_at', [$from.' 00:00:00', $to.' 23:59:59'])->count() : 0), 'total' => (int) (Schema::hasTable('acc_payroll_runs') ? DB::table('acc_payroll_runs')->whereBetween('created_at', [$from.' 00:00:00', $to.' 23:59:59'])->sum('total_net') : 0)],
+            ['key' => 'commission', 'label' => 'کمیسیون', 'count' => (int) DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->where('commission_amount', '>', 0)->whereBetween('doc_date', [$from, $to])->count(), 'total' => $commission],
+            ['key' => 'banks', 'label' => 'بانک‌ها', 'count' => (int) DB::table('acc_banks')->where('is_active', 1)->count(), 'total' => (int) DB::table('acc_banks')->sum('opening_balance')],
+            ['key' => 'warehouses', 'label' => 'انبارها', 'count' => (int) DB::table('acc_warehouses')->where('is_active', 1)->count(), 'total' => $stockValue],
+        ];
+        $daily = DB::table('acc_documents')
+            ->select('doc_date', DB::raw("sum(case when type='sale' and status='issued' then total else 0 end) as sales"), DB::raw("sum(case when type='purchase' and status='issued' then total else 0 end) as purchase"), DB::raw("sum(case when type='expense' and status='issued' then total else 0 end) as expense"))
+            ->whereBetween('doc_date', [$from, $to])
+            ->groupBy('doc_date')
+            ->orderBy('doc_date')
+            ->get();
 
-        return view('accounting::admin.reports', compact('from', 'to', 'sales', 'purchase', 'expense', 'commission', 'byType', 'stockValue') + [
+        return view('accounting::admin.reports', compact('from', 'to', 'sales', 'purchase', 'expense', 'commission', 'byType', 'stockValue', 'menuReport', 'daily') + [
             'types' => AccEngine::TYPES,
+            'profit' => $sales - $purchase - $expense - $commission,
         ]);
+    }
+
+    /* ─── CRUD: warehouses ─── */
+    public function updateWarehouse(Request $request, int $id)
+    {
+        $row = DB::table('acc_warehouses')->where('id', $id)->first();
+        abort_unless($row, 404);
+        $code = strtoupper(trim((string) $request->input('code', $row->code)));
+        $name = trim((string) $request->input('name', $row->name));
+        if ($code === '' || $name === '') {
+            return back()->with('error', 'کد و نام انبار الزامی است.');
+        }
+        if ($request->boolean('is_default')) {
+            DB::table('acc_warehouses')->update(['is_default' => false]);
+        }
+        DB::table('acc_warehouses')->where('id', $id)->update([
+            'code' => $code,
+            'name' => $name,
+            'city' => $request->input('city'),
+            'address' => $request->input('address'),
+            'is_default' => $request->boolean('is_default') || (bool) $row->is_default,
+            'is_active' => $request->boolean('is_active', (bool) $row->is_active),
+            'updated_at' => now(),
+        ]);
+
+        return back()->with('success', 'انبار ویرایش شد.');
+    }
+
+    public function deleteWarehouse(int $id)
+    {
+        $row = DB::table('acc_warehouses')->where('id', $id)->first();
+        abort_unless($row, 404);
+        if ($row->is_default) {
+            return back()->with('error', 'انبار پیش‌فرض را نمی‌توان حذف کرد — ابتدا انبار دیگری را پیش‌فرض کنید.');
+        }
+        $used = DB::table('acc_documents')->where('warehouse_id', $id)->orWhere('warehouse_to_id', $id)->exists()
+            || (Schema::hasTable('acc_stock_balances') && DB::table('acc_stock_balances')->where('warehouse_id', $id)->where('qty', '!=', 0)->exists());
+        if ($used) {
+            DB::table('acc_warehouses')->where('id', $id)->update(['is_active' => false, 'updated_at' => now()]);
+
+            return back()->with('success', 'انبار به‌خاطر سابقه سند غیرفعال شد.');
+        }
+        DB::table('acc_warehouses')->where('id', $id)->delete();
+
+        return back()->with('success', 'انبار حذف شد.');
+    }
+
+    /* ─── CRUD: banks ─── */
+    public function updateBank(Request $request, int $id)
+    {
+        $row = DB::table('acc_banks')->where('id', $id)->first();
+        abort_unless($row, 404);
+        $name = trim((string) $request->input('name', $row->name));
+        if ($name === '') {
+            return back()->with('error', 'نام بانک الزامی است.');
+        }
+        DB::table('acc_banks')->where('id', $id)->update([
+            'name' => $name,
+            'branch' => $request->input('branch'),
+            'account_no' => $request->input('account_no'),
+            'iban' => $request->input('iban'),
+            'card_no' => $request->input('card_no'),
+            'holder' => $request->input('holder'),
+            'opening_balance' => (int) str_replace(',', '', (string) $request->input('opening_balance', $row->opening_balance)),
+            'is_active' => $request->boolean('is_active', (bool) $row->is_active),
+            'updated_at' => now(),
+        ]);
+
+        return back()->with('success', 'بانک ویرایش شد.');
+    }
+
+    public function deleteBank(int $id)
+    {
+        $used = DB::table('acc_documents')->where('bank_id', $id)->exists();
+        if ($used) {
+            DB::table('acc_banks')->where('id', $id)->update(['is_active' => false, 'updated_at' => now()]);
+
+            return back()->with('success', 'بانک به‌خاطر سابقه سند غیرفعال شد.');
+        }
+        DB::table('acc_banks')->where('id', $id)->delete();
+
+        return back()->with('success', 'بانک حذف شد.');
+    }
+
+    /* ─── CRUD: expense categories + chart accounts ─── */
+    public function settings()
+    {
+        return view('accounting::admin.settings', [
+            'categories' => DB::table('acc_expense_categories')->orderBy('name')->get(),
+            'accounts' => DB::table('acc_accounts')->orderBy('code')->get(),
+        ]);
+    }
+
+    public function storeCategory(Request $request)
+    {
+        $name = trim((string) $request->input('name'));
+        if ($name === '') {
+            return back()->with('error', 'نام دسته الزامی است.');
+        }
+        DB::table('acc_expense_categories')->insert([
+            'name' => $name,
+            'code' => $request->input('code') ?: null,
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return back()->with('success', 'دسته هزینه ثبت شد.');
+    }
+
+    public function updateCategory(Request $request, int $id)
+    {
+        DB::table('acc_expense_categories')->where('id', $id)->update([
+            'name' => trim((string) $request->input('name')),
+            'code' => $request->input('code'),
+            'is_active' => $request->boolean('is_active', true),
+            'updated_at' => now(),
+        ]);
+
+        return back()->with('success', 'دسته هزینه ویرایش شد.');
+    }
+
+    public function deleteCategory(int $id)
+    {
+        $used = DB::table('acc_documents')->where('category_id', $id)->exists();
+        if ($used) {
+            DB::table('acc_expense_categories')->where('id', $id)->update(['is_active' => false, 'updated_at' => now()]);
+
+            return back()->with('success', 'دسته غیرفعال شد.');
+        }
+        DB::table('acc_expense_categories')->where('id', $id)->delete();
+
+        return back()->with('success', 'دسته حذف شد.');
+    }
+
+    public function storeAccount(Request $request)
+    {
+        $code = trim((string) $request->input('code'));
+        $name = trim((string) $request->input('name'));
+        if ($code === '' || $name === '') {
+            return back()->with('error', 'کد و نام حساب الزامی است.');
+        }
+        DB::table('acc_accounts')->insert([
+            'code' => $code,
+            'name' => $name,
+            'type' => $request->input('type', 'expense'),
+            'is_active' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return back()->with('success', 'حساب ثبت شد.');
+    }
+
+    public function updateAccount(Request $request, int $id)
+    {
+        DB::table('acc_accounts')->where('id', $id)->update([
+            'code' => trim((string) $request->input('code')),
+            'name' => trim((string) $request->input('name')),
+            'type' => $request->input('type', 'expense'),
+            'is_active' => $request->boolean('is_active', true),
+            'updated_at' => now(),
+        ]);
+
+        return back()->with('success', 'حساب ویرایش شد.');
+    }
+
+    public function deleteAccount(int $id)
+    {
+        DB::table('acc_accounts')->where('id', $id)->update(['is_active' => false, 'updated_at' => now()]);
+
+        return back()->with('success', 'حساب غیرفعال شد.');
+    }
+
+    /* ─── Document cancel / delete ─── */
+    public function cancelDoc(int $id)
+    {
+        if (! AccEngine::cancelDocument($id)) {
+            return back()->with('error', 'امکان ابطال این سند نیست.');
+        }
+
+        return back()->with('success', 'سند ابطال شد و موجودی در صورت نیاز برگشت خورد.');
+    }
+
+    public function deleteDoc(int $id)
+    {
+        if (! AccEngine::deleteDocument($id)) {
+            return back()->with('error', 'فقط پیش‌نویس/ابطال‌شده قابل حذف قطعی است.');
+        }
+
+        return redirect()->route('admin.accounting.docs')->with('success', 'سند حذف شد.');
+    }
+
+    public function deletePayroll(int $id)
+    {
+        $run = DB::table('acc_payroll_runs')->where('id', $id)->first();
+        abort_unless($run, 404);
+        if ($run->status === 'paid') {
+            return back()->with('error', 'لیست پرداخت‌شده قابل حذف نیست.');
+        }
+        DB::table('acc_payslips')->where('payroll_run_id', $id)->delete();
+        DB::table('acc_payroll_runs')->where('id', $id)->delete();
+
+        return redirect()->route('admin.accounting.payroll')->with('success', 'لیست حقوق حذف شد.');
     }
 
     /** @return \Illuminate\Support\Collection<int,object> */

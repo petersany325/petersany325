@@ -25,7 +25,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '1.0.0';
+        return '1.1.0';
     }
 
     public function isCore(): bool
@@ -73,6 +73,7 @@ class Plugin extends BasePlugin
             ['label' => 'هزینه‌ها', 'route' => 'admin.accounting.expenses', 'icon' => '📉', 'group' => 'finance'],
             ['label' => 'حقوق و دستمزد', 'route' => 'admin.accounting.payroll', 'icon' => '👥', 'group' => 'hr'],
             ['label' => 'کمیسیون فروش', 'route' => 'admin.accounting.commissions', 'icon' => '%', 'group' => 'hr'],
+            ['label' => 'تنظیمات حسابداری', 'route' => 'admin.accounting.settings', 'icon' => '⚙', 'group' => 'settings'],
             ['label' => 'گزارش‌ها', 'route' => 'admin.accounting.reports', 'icon' => '📊', 'group' => 'reports'],
         ];
     }
