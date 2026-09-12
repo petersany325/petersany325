@@ -81,9 +81,16 @@
         <a class="{{ request()->routeIs('admin.accounting.expenses')?'on':'' }}" href="{{ route('admin.accounting.expenses') }}">هزینه‌ها</a>
         <a class="{{ request()->routeIs('admin.accounting.payroll*')?'on':'' }}" href="{{ route('admin.accounting.payroll') }}">حقوق و دستمزد</a>
         <a class="{{ request()->routeIs('admin.accounting.commissions')?'on':'' }}" href="{{ route('admin.accounting.commissions') }}">درصد فروشندگان</a>
+        <div class="g">چک و اقساط</div>
+        <a class="{{ request()->routeIs('admin.accounting.checks*')?'on':'' }}" href="{{ route('admin.accounting.checks') }}">چک‌ها</a>
+        <a class="{{ request()->routeIs('admin.accounting.installments*')?'on':'' }}" href="{{ route('admin.accounting.installments') }}">اقساط مشتریان</a>
         <div class="g">تنظیمات و گزارش</div>
         <a class="{{ request()->routeIs('admin.accounting.settings*')?'on':'' }}" href="{{ route('admin.accounting.settings') }}">تنظیمات (دسته/حساب)</a>
-        <a class="{{ request()->routeIs('admin.accounting.reports')?'on':'' }}" href="{{ route('admin.accounting.reports') }}">گزارش همه بخش‌ها</a>
+        <a class="{{ request()->routeIs('admin.accounting.reports')||request()->routeIs('admin.accounting.reports.*')?'on':'' }}" href="{{ route('admin.accounting.reports') }}">مرکز گزارش‌ها</a>
+        <a href="{{ route('admin.accounting.reports.sales') }}">گزارش فروش/خرید</a>
+        <a href="{{ route('admin.accounting.reports.staff') }}">گزارش کارمندان</a>
+        <a href="{{ route('admin.accounting.reports.warehouse') }}">گزارش انبار</a>
+        <a href="{{ route('admin.accounting.reports.checks') }}">گزارش چک</a>
         <a href="{{ url('/admin') }}">بازگشت ادمین</a>
       @else
         <div class="g">کارمند</div>
@@ -101,8 +108,8 @@
         <a href="{{ route('admin.accounting.hub') }}">میز</a>
         <a href="{{ route('admin.accounting.docs') }}">اسناد</a>
         <a href="{{ route('admin.accounting.stock') }}">انبار</a>
-        <a href="{{ route('admin.accounting.banks') }}">بانک</a>
-        <a href="{{ route('admin.accounting.payroll') }}">حقوق</a>
+        <a href="{{ route('admin.accounting.checks') }}">چک</a>
+        <a href="{{ route('admin.accounting.installments') }}">اقساط</a>
         <a href="{{ route('admin.accounting.reports') }}">گزارش</a>
       @else
         <a href="{{ route('staff.accounting.hub') }}">میز</a>

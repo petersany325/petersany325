@@ -30,6 +30,7 @@
   <nav class="bottom">
     <a href="{{ url('/app/account') }}"><span>☺</span>حساب</a>
     <a href="{{ route('account.invoices') }}"><span>▤</span>فاکتور</a>
+    <a href="{{ route('account.installments') }}"><span>◫</span>اقساط</a>
     <a href="{{ url('/account/orders') }}"><span>▣</span>سفارش</a>
     <a href="{{ url('/app') }}"><span>⌂</span>فروشگاه</a>
   </nav>

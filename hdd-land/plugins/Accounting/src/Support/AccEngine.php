@@ -20,6 +20,31 @@ class AccEngine
         'transfer' => 'انتقال بین انبار',
     ];
 
+    public const CHECK_DIRECTIONS = [
+        'receivable' => 'دریافتی',
+        'payable' => 'پرداختی',
+    ];
+
+    public const CHECK_STATUSES = [
+        'pending' => 'در انتظار',
+        'received' => 'وصول‌شده',
+        'paid' => 'پرداخت‌شده',
+        'returned' => 'برگشتی',
+        'delivered' => 'تحویل‌شده',
+        'bounced' => 'برگشت‌خورده',
+        'cancelled' => 'ابطال',
+    ];
+
+    public const INSTALLMENT_STATUSES = [
+        'pending' => 'در انتظار',
+        'reviewing' => 'در حال بررسی',
+        'approved' => 'تأیید شده',
+        'rejected' => 'رد شده',
+        'active' => 'فعال',
+        'completed' => 'تسویه',
+        'cancelled' => 'لغو',
+    ];
+
     public static function nextNumber(string $type): string
     {
         $prefix = match ($type) {
@@ -282,6 +307,137 @@ class AccEngine
     public static function money(int|float $n): string
     {
         return number_format((int) $n).' تومان';
+    }
+
+    public static function nextCheckNumber(): string
+    {
+        $stamp = date('ym');
+        $like = 'CHK-'.$stamp.'-%';
+        $last = 0;
+        try {
+            $row = DB::table('acc_checks')->where('number', 'like', $like)->orderByDesc('id')->value('number');
+            if (is_string($row) && preg_match('/(\d+)$/', $row, $m)) {
+                $last = (int) $m[1];
+            }
+        } catch (\Throwable) {
+        }
+
+        return sprintf('CHK-%s-%04d', $stamp, $last + 1);
+    }
+
+    public static function nextInstallmentNumber(): string
+    {
+        $stamp = date('ym');
+        $like = 'INS-'.$stamp.'-%';
+        $last = 0;
+        try {
+            $row = DB::table('acc_installment_requests')->where('number', 'like', $like)->orderByDesc('id')->value('number');
+            if (is_string($row) && preg_match('/(\d+)$/', $row, $m)) {
+                $last = (int) $m[1];
+            }
+        } catch (\Throwable) {
+        }
+
+        return sprintf('INS-%s-%04d', $stamp, $last + 1);
+    }
+
+    /** Build monthly schedule rows after approval. */
+    public static function buildInstallmentSchedule(int $requestId, int $months, int $monthlyAmount, ?string $startDate = null): void
+    {
+        if (! Schema::hasTable('acc_installment_schedules') || $months < 1) {
+            return;
+        }
+        DB::table('acc_installment_schedules')->where('request_id', $requestId)->delete();
+        $start = $startDate ? \Carbon\Carbon::parse($startDate) : now()->addMonth()->startOfMonth();
+        for ($i = 1; $i <= $months; $i++) {
+            DB::table('acc_installment_schedules')->insert([
+                'request_id' => $requestId,
+                'installment_no' => $i,
+                'due_date' => $start->copy()->addMonths($i - 1)->toDateString(),
+                'amount' => $monthlyAmount,
+                'status' => 'pending',
+                'paid_at' => null,
+                'paid_amount' => 0,
+                'notes' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Best-effort ticket creation for installment requests.
+     * Returns ticket id when a known tickets table exists.
+     */
+    public static function createInstallmentTicket(int $userId, string $subject, string $body, array $meta = []): ?int
+    {
+        $tables = ['tickets', 'support_tickets', 'helpdesk_tickets'];
+        foreach ($tables as $table) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+            try {
+                $cols = Schema::getColumnListing($table);
+                $row = ['created_at' => now(), 'updated_at' => now()];
+                foreach ([
+                    'user_id' => $userId,
+                    'customer_id' => $userId,
+                    'created_by' => $userId,
+                    'subject' => $subject,
+                    'title' => $subject,
+                    'message' => $body,
+                    'body' => $body,
+                    'content' => $body,
+                    'description' => $body,
+                    'status' => in_array('status', $cols, true) ? 'open' : null,
+                    'priority' => in_array('priority', $cols, true) ? 'normal' : null,
+                    'category' => in_array('category', $cols, true) ? 'installment' : null,
+                    'type' => in_array('type', $cols, true) ? 'installment' : null,
+                    'department' => in_array('department', $cols, true) ? 'sales' : null,
+                ] as $col => $val) {
+                    if ($val !== null && in_array($col, $cols, true)) {
+                        $row[$col] = $val;
+                    }
+                }
+                if (isset($meta['number']) && in_array('reference', $cols, true)) {
+                    $row['reference'] = $meta['number'];
+                }
+                $id = (int) DB::table($table)->insertGetId($row);
+                if ($id > 0) {
+                    // optional first message table
+                    foreach (['ticket_messages', 'support_ticket_messages', 'ticket_replies'] as $msgTable) {
+                        if (! Schema::hasTable($msgTable)) {
+                            continue;
+                        }
+                        $mcols = Schema::getColumnListing($msgTable);
+                        $msg = ['created_at' => now(), 'updated_at' => now()];
+                        foreach ([
+                            'ticket_id' => $id,
+                            'user_id' => $userId,
+                            'message' => $body,
+                            'body' => $body,
+                            'content' => $body,
+                            'is_staff' => false,
+                        ] as $col => $val) {
+                            if (in_array($col, $mcols, true)) {
+                                $msg[$col] = $val;
+                            }
+                        }
+                        try {
+                            DB::table($msgTable)->insert($msg);
+                        } catch (\Throwable) {
+                        }
+                        break;
+                    }
+
+                    return $id;
+                }
+            } catch (\Throwable) {
+                continue;
+            }
+        }
+
+        return null;
     }
 
     /** Cancel a draft (or issued without stock lines) document. */

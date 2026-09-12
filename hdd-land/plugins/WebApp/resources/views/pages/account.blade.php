@@ -20,6 +20,7 @@
       <a href="{{ url('/account/orders') }}">سفارش‌های من <span>‹</span></a>
     @endif
     <a href="{{ url('/account/invoices') }}">فاکتورها <span>‹</span></a>
+    <a href="{{ url('/account/installments') }}">اقساط <span>‹</span></a>
     @if(!empty($s['account_show_wallet']))
       <a href="{{ url('/account/wallet') }}">کیف پول <span>‹</span></a>
     @endif

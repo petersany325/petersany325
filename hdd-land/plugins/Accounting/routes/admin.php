@@ -1,7 +1,10 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Plugins\Accounting\src\Http\Controllers\Admin\CheckController;
 use Plugins\Accounting\src\Http\Controllers\Admin\HubController;
+use Plugins\Accounting\src\Http\Controllers\Admin\InstallmentController;
+use Plugins\Accounting\src\Http\Controllers\Admin\ReportController;
 
 Route::prefix('accounting')->name('accounting.')->group(function () {
     Route::get('/', [HubController::class, 'hub'])->name('hub');
@@ -52,5 +55,30 @@ Route::prefix('accounting')->name('accounting.')->group(function () {
     Route::post('/settings/accounts/{id}/update', [HubController::class, 'updateAccount'])->name('settings.accounts.update')->whereNumber('id');
     Route::post('/settings/accounts/{id}/delete', [HubController::class, 'deleteAccount'])->name('settings.accounts.delete')->whereNumber('id');
 
-    Route::get('/reports', [HubController::class, 'reports'])->name('reports');
+    // Checks
+    Route::get('/checks', [CheckController::class, 'index'])->name('checks');
+    Route::post('/checks', [CheckController::class, 'store'])->name('checks.store');
+    Route::post('/checks/{id}/update', [CheckController::class, 'update'])->name('checks.update')->whereNumber('id');
+    Route::post('/checks/{id}/status', [CheckController::class, 'setStatus'])->name('checks.status')->whereNumber('id');
+    Route::post('/checks/{id}/delete', [CheckController::class, 'destroy'])->name('checks.delete')->whereNumber('id');
+
+    // Installments
+    Route::get('/installments', [InstallmentController::class, 'index'])->name('installments');
+    Route::post('/installments', [InstallmentController::class, 'store'])->name('installments.store');
+    Route::get('/installments/{id}', [InstallmentController::class, 'show'])->name('installments.show')->whereNumber('id');
+    Route::post('/installments/{id}/status', [InstallmentController::class, 'updateStatus'])->name('installments.status')->whereNumber('id');
+    Route::post('/installments/{id}/schedules/{scheduleId}', [InstallmentController::class, 'markSchedule'])->name('installments.schedule')->whereNumber('id')->whereNumber('scheduleId');
+    Route::post('/installments/{id}/delete', [InstallmentController::class, 'destroy'])->name('installments.delete')->whereNumber('id');
+
+    // Reports hub + filtered reports
+    Route::get('/reports', [ReportController::class, 'hub'])->name('reports');
+    Route::get('/reports/overview', [HubController::class, 'reports'])->name('reports.overview');
+    Route::get('/reports/sales', [ReportController::class, 'sales'])->name('reports.sales');
+    Route::get('/reports/staff', [ReportController::class, 'staff'])->name('reports.staff');
+    Route::get('/reports/payroll', [ReportController::class, 'payroll'])->name('reports.payroll');
+    Route::get('/reports/vouchers', [ReportController::class, 'vouchers'])->name('reports.vouchers');
+    Route::get('/reports/warehouse', [ReportController::class, 'warehouse'])->name('reports.warehouse');
+    Route::get('/reports/customers', [ReportController::class, 'customers'])->name('reports.customers');
+    Route::get('/reports/checks', [ReportController::class, 'checks'])->name('reports.checks');
+    Route::get('/reports/installments', [ReportController::class, 'installments'])->name('reports.installments');
 });

@@ -25,7 +25,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '1.1.0';
+        return '1.2.0';
     }
 
     public function isCore(): bool
@@ -48,8 +48,12 @@ class Plugin extends BasePlugin
         $files = [
             $base.'/Support/AccEngine.php',
             $base.'/Http/Controllers/Admin/HubController.php',
+            $base.'/Http/Controllers/Admin/ReportController.php',
+            $base.'/Http/Controllers/Admin/CheckController.php',
+            $base.'/Http/Controllers/Admin/InstallmentController.php',
             $base.'/Http/Controllers/Staff/AccountingController.php',
             $base.'/Http/Controllers/Account/InvoiceController.php',
+            $base.'/Http/Controllers/Account/InstallmentController.php',
         ];
         foreach ($files as $f) {
             if (is_file($f)) {
@@ -73,8 +77,18 @@ class Plugin extends BasePlugin
             ['label' => 'هزینه‌ها', 'route' => 'admin.accounting.expenses', 'icon' => '📉', 'group' => 'finance'],
             ['label' => 'حقوق و دستمزد', 'route' => 'admin.accounting.payroll', 'icon' => '👥', 'group' => 'hr'],
             ['label' => 'کمیسیون فروش', 'route' => 'admin.accounting.commissions', 'icon' => '%', 'group' => 'hr'],
+            ['label' => 'چک‌ها', 'route' => 'admin.accounting.checks', 'icon' => '▭', 'group' => 'finance'],
+            ['label' => 'اقساط مشتریان', 'route' => 'admin.accounting.installments', 'icon' => '◫', 'group' => 'finance'],
             ['label' => 'تنظیمات حسابداری', 'route' => 'admin.accounting.settings', 'icon' => '⚙', 'group' => 'settings'],
-            ['label' => 'گزارش‌ها', 'route' => 'admin.accounting.reports', 'icon' => '📊', 'group' => 'reports'],
+            ['label' => 'مرکز گزارش‌ها', 'route' => 'admin.accounting.reports', 'icon' => '📊', 'group' => 'reports'],
+            ['label' => 'گزارش فروش/خرید', 'route' => 'admin.accounting.reports.sales', 'icon' => '📈', 'group' => 'reports'],
+            ['label' => 'گزارش کارمندان', 'route' => 'admin.accounting.reports.staff', 'icon' => '👤', 'group' => 'reports'],
+            ['label' => 'گزارش حقوق', 'route' => 'admin.accounting.reports.payroll', 'icon' => '👥', 'group' => 'reports'],
+            ['label' => 'گزارش اسناد', 'route' => 'admin.accounting.reports.vouchers', 'icon' => '▤', 'group' => 'reports'],
+            ['label' => 'گزارش انبار', 'route' => 'admin.accounting.reports.warehouse', 'icon' => '▣', 'group' => 'reports'],
+            ['label' => 'گزارش مشتریان', 'route' => 'admin.accounting.reports.customers', 'icon' => '☺', 'group' => 'reports'],
+            ['label' => 'گزارش چک‌ها', 'route' => 'admin.accounting.reports.checks', 'icon' => '▭', 'group' => 'reports'],
+            ['label' => 'گزارش اقساط', 'route' => 'admin.accounting.reports.installments', 'icon' => '◫', 'group' => 'reports'],
         ];
     }
 
@@ -216,6 +230,67 @@ class Plugin extends BasePlugin
                     $t->bigInteger('commission_amount')->default(0);
                     $t->bigInteger('deduction')->default(0);
                     $t->bigInteger('net')->default(0);
+                    $t->text('notes')->nullable();
+                    $t->timestamps();
+                });
+            }
+            if (! Schema::hasTable('acc_checks')) {
+                Schema::create('acc_checks', function ($t) {
+                    $t->id();
+                    $t->string('number', 64)->index();
+                    $t->string('direction', 16)->index(); // receivable | payable
+                    $t->string('status', 24)->default('pending')->index(); // pending, received, paid, returned, delivered, bounced, cancelled
+                    $t->string('bank_name', 120)->nullable();
+                    $t->string('branch', 120)->nullable();
+                    $t->string('account_no', 64)->nullable();
+                    $t->string('sayad', 64)->nullable();
+                    $t->string('party_name')->nullable();
+                    $t->unsignedBigInteger('party_user_id')->nullable()->index();
+                    $t->unsignedBigInteger('bank_id')->nullable();
+                    $t->unsignedBigInteger('document_id')->nullable()->index();
+                    $t->unsignedBigInteger('staff_id')->nullable();
+                    $t->bigInteger('amount')->default(0);
+                    $t->date('issue_date')->nullable();
+                    $t->date('due_date')->nullable()->index();
+                    $t->date('clear_date')->nullable();
+                    $t->text('notes')->nullable();
+                    $t->unsignedBigInteger('created_by')->nullable();
+                    $t->timestamps();
+                });
+            }
+            if (! Schema::hasTable('acc_installment_requests')) {
+                Schema::create('acc_installment_requests', function ($t) {
+                    $t->id();
+                    $t->string('number', 40)->unique();
+                    $t->unsignedBigInteger('user_id')->nullable()->index();
+                    $t->string('customer_name');
+                    $t->string('customer_mobile', 30)->nullable();
+                    $t->string('customer_national_id', 20)->nullable();
+                    $t->string('product_title');
+                    $t->unsignedBigInteger('product_id')->nullable();
+                    $t->bigInteger('product_price')->default(0);
+                    $t->bigInteger('down_payment')->default(0);
+                    $t->unsignedSmallInteger('months')->default(3);
+                    $t->bigInteger('monthly_amount')->default(0);
+                    $t->bigInteger('total_amount')->default(0);
+                    $t->string('status', 24)->default('pending')->index(); // pending, reviewing, approved, rejected, active, completed, cancelled
+                    $t->unsignedBigInteger('ticket_id')->nullable()->index();
+                    $t->unsignedBigInteger('approved_by')->nullable();
+                    $t->text('customer_note')->nullable();
+                    $t->text('admin_note')->nullable();
+                    $t->timestamps();
+                });
+            }
+            if (! Schema::hasTable('acc_installment_schedules')) {
+                Schema::create('acc_installment_schedules', function ($t) {
+                    $t->id();
+                    $t->unsignedBigInteger('request_id')->index();
+                    $t->unsignedSmallInteger('installment_no');
+                    $t->date('due_date')->nullable();
+                    $t->bigInteger('amount')->default(0);
+                    $t->string('status', 24)->default('pending'); // pending, paid, overdue, waived
+                    $t->date('paid_at')->nullable();
+                    $t->bigInteger('paid_amount')->default(0);
                     $t->text('notes')->nullable();
                     $t->timestamps();
                 });

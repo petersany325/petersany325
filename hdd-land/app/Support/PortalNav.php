@@ -97,6 +97,7 @@ class PortalNav
                     ['label' => 'خرید محصول', 'url' => '/account/shop', 'match' => 'account/shop', 'icon' => '◎'],
                     ['label' => 'سفارش‌های من', 'url' => '/account/orders', 'match' => 'account/orders', 'icon' => '▣'],
                     ['label' => 'فاکتورها', 'url' => '/account/invoices', 'match' => 'account/invoices', 'icon' => '▤'],
+                    ['label' => 'اقساط', 'url' => '/account/installments', 'match' => 'account/installments', 'icon' => '◫'],
                     ['label' => 'پیش‌خرید', 'url' => '/account/preorders', 'match' => 'account/preorders', 'icon' => '◷'],
                     ['label' => 'سبد خرید', 'url' => '/cart', 'icon' => '🛒'],
                     ['label' => 'پیگیری سفارش', 'url' => '/orders/track', 'icon' => '⌕'],
