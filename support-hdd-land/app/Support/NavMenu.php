@@ -148,13 +148,12 @@ class NavMenu
                 'any_of' => ['employees', 'technicians'],
                 'children' => [
                     ['label' => 'کارتابل کارمند', 'route' => 'employees.index', 'match' => 'employees.index|employees.edit', 'hint' => 'لیست، وظیفه، دسترسی', 'mark' => 'ک', 'permission' => 'employees'],
+                    ['label' => 'تخصص، سود و حقوق', 'route' => 'employees.pay', 'match' => 'employees.pay*', 'hint' => 'درصد سود و دستمزد تعمیرکار', 'mark' => '٪', 'permission' => 'employees|technicians', 'sep' => true],
                     ['label' => 'کارمند جدید', 'route' => 'employees.create', 'match' => 'employees.create', 'hint' => 'پذیرش / حسابدار / تعمیرکار…', 'mark' => '+', 'permission' => 'employees'],
                     ['label' => 'کارتابل کارآموز', 'route' => 'interns.index', 'match' => 'interns.index|interns.edit', 'hint' => 'دسترسی و پرتال ورود', 'mark' => 'آ', 'permission' => 'employees', 'sep' => true],
                     ['label' => 'کارآموز جدید', 'route' => 'interns.create', 'match' => 'interns.create', 'hint' => 'ثبت + فعال‌سازی ورود', 'mark' => '+', 'permission' => 'employees'],
                     ['label' => 'پرتال کارآموز (پیش‌نمایش)', 'route' => 'intern.portal', 'match' => 'intern.portal', 'hint' => 'نمای ورود کارآموز', 'mark' => 'پ', 'permission' => 'employees'],
                     ['label' => 'متن SMS خوش‌آمد', 'route' => 'staff-sms.templates', 'match' => 'staff-sms.*', 'hint' => 'کارمند و کارآموز', 'mark' => 'پ', 'permission' => 'employees'],
-                    ['label' => 'تخصص و کمیسیون تعمیرکار', 'route' => 'technicians.index', 'match' => 'technicians.index|technicians.edit', 'hint' => 'هارد، بازیابی، قیمت/٪', 'mark' => 'ت', 'permission' => 'technicians', 'sep' => true],
-                    ['label' => 'تعمیرکار جدید (قیمت)', 'route' => 'technicians.create', 'match' => 'technicians.create', 'hint' => 'تخصص + کمیسیون', 'mark' => '+', 'permission' => 'technicians'],
                 ],
             ],
             [
@@ -246,12 +245,40 @@ class NavMenu
                 'mark' => 'ل',
                 'hint' => 'ساخت سریال و گزارش آنلاین نصب مشتریان',
                 'admin_only' => true,
+                'seller_only' => true,
                 'children' => [
                     ['label' => 'مرکز لایسنس', 'route' => 'licenses.index', 'match' => 'licenses.index|licenses.issue|licenses.sms|licenses.revoke|licenses.unbind|licenses.extend', 'hint' => 'ساخت، ارسال SMS، باطل‌سازی', 'mark' => 'ل'],
                     ['label' => 'پلن و قیمت', 'route' => 'licenses.plans', 'match' => 'licenses.plans*', 'hint' => '۶ ماهه / یک‌ساله و قیمت‌ها', 'mark' => 'ق'],
                     ['label' => 'گزارش آنلاین', 'route' => 'licenses.online', 'match' => 'licenses.online', 'hint' => 'نصب‌های آنلاین / آفلاین', 'mark' => 'آ'],
-                    ['label' => 'انتشار آپدیت', 'route' => 'licenses.releases', 'match' => 'licenses.releases*', 'hint' => 'ZIP برای پنل مشتریان', 'mark' => 'ن', 'admin_only' => true],
+                    ['label' => 'انتشار آپدیت', 'route' => 'licenses.releases', 'match' => 'licenses.releases*', 'hint' => 'تست انتخابی و ZIP مشتری', 'mark' => 'ن', 'admin_only' => true],
                 ],
+            ],
+            [
+                'key' => 'my_license',
+                'label' => 'لایسنس',
+                'permission' => null,
+                'route' => 'my-license.index',
+                'match' => 'my-license.*',
+                'mark' => 'ل',
+                'hint' => 'روز باقی‌مانده، تمدید و آپدیت نرم‌افزار',
+                'admin_only' => true,
+                'customer_only' => true,
+                'children' => [
+                    ['label' => 'وضعیت و روز باقی‌مانده', 'route' => 'my-license.index', 'match' => 'my-license.index', 'hint' => 'پلن، انقضا و روز مانده', 'mark' => 'و'],
+                    ['label' => 'تمدید لایسنس', 'route' => 'my-license.index', 'params' => ['focus' => 'renew'], 'match' => 'my-license.index', 'hint' => 'راهنمای تمدید با فروشنده', 'mark' => 'ت'],
+                    ['label' => 'آپدیت نرم‌افزار', 'route' => 'system-tools.updates', 'match' => 'system-tools.updates*', 'hint' => 'بررسی و نصب نسخه جدید', 'mark' => 'آ', 'permission' => 'system.tools'],
+                ],
+            ],
+            [
+                'key' => 'contact',
+                'label' => 'تماس با ما',
+                'permission' => null,
+                'route' => 'contact.index',
+                'match' => 'contact.*',
+                'mark' => 'ت',
+                'hint' => 'پشتیبانی سرزمین هارد',
+                'customer_only' => true,
+                'children' => [],
             ],
             [
                 'key' => 'system_tools',
@@ -286,7 +313,14 @@ class NavMenu
         ];
 
         $out = [];
+        $isSeller = LicenseStatus::isSellerSite();
         foreach ($groups as $group) {
+            if (! empty($group['seller_only']) && ! $isSeller) {
+                continue;
+            }
+            if (! empty($group['customer_only']) && $isSeller) {
+                continue;
+            }
             if (! empty($group['admin_only']) && ! $user->isAdmin()) {
                 continue;
             }
@@ -301,9 +335,24 @@ class NavMenu
 
             $children = [];
             foreach ($group['children'] as $child) {
-                $perm = $child['permission'] ?? $group['permission'] ?? null;
-                if ($perm && ! $user->canAccess($perm)) {
+                if (! empty($child['seller_only']) && ! $isSeller) {
                     continue;
+                }
+                if (! empty($child['customer_only']) && $isSeller) {
+                    continue;
+                }
+                if (! empty($child['admin_only']) && ! $user->isAdmin()) {
+                    continue;
+                }
+                $perm = $child['permission'] ?? $group['permission'] ?? null;
+                if ($perm) {
+                    $okPerm = collect(explode('|', (string) $perm))
+                        ->map(fn ($p) => trim($p))
+                        ->filter()
+                        ->contains(fn ($p) => $user->canAccess($p));
+                    if (! $okPerm) {
+                        continue;
+                    }
                 }
                 if (! empty($child['route']) && ! Route::has($child['route'])) {
                     continue;
@@ -370,6 +419,8 @@ class NavMenu
             'reports' => 'green',
             'system_tools' => 'teal',
             'licenses' => 'violet',
+            'my_license' => 'violet',
+            'contact' => 'blue',
             'settings' => 'slate',
             default => 'slate',
         };

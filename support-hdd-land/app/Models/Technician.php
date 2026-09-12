@@ -10,7 +10,7 @@ class Technician extends Model
 {
     protected $fillable = [
         'user_id', 'name', 'phone', 'specialty',
-        'commission_percent', 'is_active',
+        'commission_percent', 'monthly_salary', 'is_active',
     ];
 
     protected function casts(): array

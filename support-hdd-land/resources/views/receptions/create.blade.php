@@ -50,7 +50,9 @@
       data-lookup-serial-url="{{ route('receptions.lookup-serial') }}"
       data-ensure-customer-url="{{ route('receptions.ensure-customer') }}"
       data-skip-phone="{{ $skipPhone ? '1' : '0' }}"
-      data-old-mode="{{ $oldMode }}">
+      data-old-mode="{{ $oldMode }}"
+      data-next-receipt="{{ $nextReceipt }}"
+      data-next-ticket="{{ $nextTicket }}">
     @csrf
     <input type="hidden" name="customer_id" value="{{ old('customer_id') }}">
     <input type="hidden" name="customer_phone" value="{{ old('customer_phone') }}">
@@ -436,6 +438,7 @@
         <div class="device-card-head">
             <button type="button" class="device-card-toggle" data-device-toggle>
                 <span class="device-index">قبض ۱</span>
+                <span class="device-receipt-no" data-device-receipt dir="ltr" title="شماره قبض این ردیف">—</span>
                 <span class="device-preview muted" data-device-preview>در حال تکمیل…</span>
             </button>
             <div class="device-card-tools">

@@ -761,6 +761,13 @@ class AppUpdateService
             }
         }
 
+        // Selective board overlay packages (relative paths + RELEASE_BOARD.txt)
+        foreach ($candidates as $cand) {
+            if (is_file($cand.'/RELEASE_BOARD.txt')) {
+                return $cand;
+            }
+        }
+
         return null;
     }
 

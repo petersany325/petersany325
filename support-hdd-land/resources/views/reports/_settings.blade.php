@@ -10,6 +10,9 @@
             <div>
                 <strong>تنظیمات سراسری گزارش‌ها</strong>
                 <span class="muted">این بازه و گراف روی همه گزارش‌ها اعمال می‌شود.</span>
+                <div class="muted" style="margin-top:4px;font-size:12px;" dir="ltr">
+                    بازه فعال: {{ jalali_date($rs['from'] ?? null) }} تا {{ jalali_date($rs['to'] ?? null) }}
+                </div>
             </div>
             <button class="btn btn-primary" type="submit">اعمال</button>
         </div>

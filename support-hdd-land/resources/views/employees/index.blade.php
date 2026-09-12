@@ -12,11 +12,12 @@
     <div class="emp-cartable-hero">
         <div>
             <h2>کارتابل کارمندان</h2>
-            <p class="lead">ورود با موبایل + تأیید SMS و دسترسی طبق وظیفه هر نفر</p>
+            <p class="lead">ورود با موبایل + تأیید SMS و دسترسی طبق وظیفه</p>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <a class="btn btn-primary" href="{{ route('employees.create') }}">کارمند جدید</a>
-            <a class="btn btn-secondary" href="{{ route('interns.create') }}">کارآموز جدید</a>
+            <a class="btn btn-secondary" href="{{ route('employees.pay') }}">تخصص، سود و حقوق</a>
+            <a class="btn btn-ghost" href="{{ route('interns.create') }}">کارآموز جدید</a>
             <a class="btn btn-ghost" href="{{ route('interns.index') }}">کارتابل کارآموز</a>
             <a class="btn btn-ghost" href="{{ route('staff-sms.templates') }}">متن SMS</a>
         </div>
@@ -31,7 +32,10 @@
 
     <div class="emp-card-grid">
         @forelse($employees as $employee)
-            @php $meta = \App\Support\Permissions::roleMeta($employee->role); @endphp
+            @php
+                $meta = \App\Support\Permissions::roleMeta($employee->role);
+                $tech = $employee->technician;
+            @endphp
             <article class="emp-card tone-{{ $meta['tone'] }} {{ $employee->is_active ? '' : 'is-off' }}">
                 <header class="emp-card-head">
                     <div class="emp-avatar">{{ $meta['mark'] }}</div>
@@ -54,6 +58,13 @@
                             <span class="chip">بدون ورود</span>
                         @endif
                     </div>
+                    @if($tech)
+                        <div class="emp-pay-box">
+                            <div><span class="muted">تخصص</span><strong>{{ $tech->specialty ?: '—' }}</strong></div>
+                            <div><span class="muted">درصد سود</span><strong>{{ (int) $tech->commission_percent }}٪</strong></div>
+                            <div><span class="muted">حقوق / دستمزد</span><strong dir="ltr">{{ number_format((int) ($tech->monthly_salary ?? 0)) }}</strong></div>
+                        </div>
+                    @endif
                     <div class="emp-perm-chips">
                         @foreach(array_slice($employee->permissionList(), 0, 5) as $perm)
                             <span class="chip chip-soft">{{ \App\Support\Permissions::ALL[$perm] ?? $perm }}</span>
@@ -65,6 +76,9 @@
                 </div>
                 <footer class="emp-card-foot">
                     <a class="btn btn-secondary" href="{{ route('employees.edit', $employee) }}">ویرایش دسترسی</a>
+                    @if($tech)
+                        <a class="btn btn-ghost" href="{{ route('employees.pay') }}">سود و حقوق</a>
+                    @endif
                     <form method="POST" action="{{ route('employees.welcome-sms', $employee) }}">
                         @csrf
                         <button class="btn btn-ghost" type="submit" title="ارسال مجدد پیامک خوش‌آمدگویی">SMS خوش‌آمد</button>

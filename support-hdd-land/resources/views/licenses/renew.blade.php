@@ -57,7 +57,7 @@
         <div class="accept-row accept-row-2" style="align-items:end;">
             <div>
                 <label>تاریخ پایان جدید</label>
-                <input type="text" name="expires_at" value="{{ $license->expires_at ? jalali_date($license->expires_at) : '' }}" placeholder="1405/06/01" dir="ltr" style="text-align:left;" required>
+                @include('partials.jalali-date', ['name' => 'expires_at', 'value' => $license->expires_at ? jalali_input($license->expires_at) : '', 'placeholder' => '1405/06/01', 'required' => true])
             </div>
             <div>
                 <button class="btn" type="submit">ذخیره تاریخ پایان</button>

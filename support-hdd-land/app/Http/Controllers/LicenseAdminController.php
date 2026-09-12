@@ -12,9 +12,16 @@ use Illuminate\Http\Request;
  */
 class LicenseAdminController extends Controller
 {
-    public function index(Request $request)
+    private function assertSellerAdmin(Request $request): void
     {
         abort_unless($request->user()?->isAdmin(), 403);
+        // Customer installs must never see/use the license factory UI.
+        abort_unless(\App\Support\LicenseStatus::isSellerSite(), 404);
+    }
+
+    public function index(Request $request)
+    {
+        $this->assertSellerAdmin($request);
 
         $q = ProductLicense::query()->latest('id');
 
@@ -55,7 +62,7 @@ class LicenseAdminController extends Controller
 
     public function plans(Request $request)
     {
-        abort_unless($request->user()?->isAdmin(), 403);
+        $this->assertSellerAdmin($request);
 
         $plans = array_values(LicensePlans::all());
 
@@ -64,7 +71,7 @@ class LicenseAdminController extends Controller
 
     public function savePlans(Request $request)
     {
-        abort_unless($request->user()?->isAdmin(), 403);
+        $this->assertSellerAdmin($request);
 
         $data = $request->validate([
             'plans' => ['required', 'array', 'min:1'],
@@ -81,7 +88,7 @@ class LicenseAdminController extends Controller
 
     public function online(Request $request)
     {
-        abort_unless($request->user()?->isAdmin(), 403);
+        $this->assertSellerAdmin($request);
 
         $onlineRows = ProductLicense::query()
             ->where('status', 'active')
@@ -105,7 +112,9 @@ class LicenseAdminController extends Controller
 
     public function issue(Request $request)
     {
-        abort_unless($request->user()?->isAdmin(), 403);
+        $this->assertSellerAdmin($request);
+
+        merge_jalali_dates($request, ['expires_at']);
 
         $data = $request->validate([
             'customer_name' => ['nullable', 'string', 'max:120'],
@@ -170,7 +179,7 @@ class LicenseAdminController extends Controller
 
     public function sendSms(Request $request, ProductLicense $license, NiazpardazSmsService $sms)
     {
-        abort_unless($request->user()?->isAdmin(), 403);
+        $this->assertSellerAdmin($request);
 
         $result = $this->sendLicenseSms($license, $sms);
         if (! ($result['ok'] ?? false)) {
@@ -182,7 +191,7 @@ class LicenseAdminController extends Controller
 
     public function revoke(Request $request, ProductLicense $license)
     {
-        abort_unless($request->user()?->isAdmin(), 403);
+        $this->assertSellerAdmin($request);
 
         $license->update([
             'status' => 'revoked',
@@ -194,7 +203,7 @@ class LicenseAdminController extends Controller
 
     public function unbind(Request $request, ProductLicense $license)
     {
-        abort_unless($request->user()?->isAdmin(), 403);
+        $this->assertSellerAdmin($request);
 
         $license->update([
             'status' => 'unused',
@@ -212,7 +221,7 @@ class LicenseAdminController extends Controller
 
     public function edit(Request $request, ProductLicense $license)
     {
-        abort_unless($request->user()?->isAdmin(), 403);
+        $this->assertSellerAdmin($request);
 
         $plans = LicensePlans::all();
 
@@ -221,7 +230,7 @@ class LicenseAdminController extends Controller
 
     public function update(Request $request, ProductLicense $license)
     {
-        abort_unless($request->user()?->isAdmin(), 403);
+        $this->assertSellerAdmin($request);
 
         $data = $request->validate([
             'customer_name' => ['nullable', 'string', 'max:120'],
@@ -277,7 +286,7 @@ class LicenseAdminController extends Controller
 
     public function renewForm(Request $request, ProductLicense $license)
     {
-        abort_unless($request->user()?->isAdmin(), 403);
+        $this->assertSellerAdmin($request);
 
         $plans = LicensePlans::all();
 
@@ -286,7 +295,7 @@ class LicenseAdminController extends Controller
 
     public function extend(Request $request, ProductLicense $license)
     {
-        abort_unless($request->user()?->isAdmin(), 403);
+        $this->assertSellerAdmin($request);
 
         $data = $request->validate([
             'expires_at' => ['nullable', 'string', 'max:20'],

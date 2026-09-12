@@ -298,6 +298,12 @@ Route::middleware('auth')->group(function () {
         Route::post('parts/{part}/tier-prices', [PartImportController::class, 'savePartTierPrices'])->name('parts.tier-prices');
     });
 
+    Route::middleware(EnsurePermission::class.':employees|technicians')->group(function () {
+        Route::get('employees/pay', [EmployeeController::class, 'payIndex'])->name('employees.pay');
+        Route::post('employees/pay', [EmployeeController::class, 'payStore'])->name('employees.pay.store');
+        Route::put('employees/pay/{technician}', [EmployeeController::class, 'payUpdate'])->name('employees.pay.update');
+    });
+
     Route::middleware(EnsurePermission::class.':technicians')->group(function () {
         Route::resource('technicians', TechnicianController::class)->except(['show']);
     });
@@ -398,6 +404,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware(EnsurePermission::class.':settings')->group(function () {
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::post('settings/general', [SettingController::class, 'updateGeneral'])->name('settings.general');
         Route::get('labels/preview', [LabelPrintController::class, 'preview'])->name('labels.preview');
         Route::post('settings/fault-types', [SettingController::class, 'storeFaultType'])->name('settings.fault-types');
         Route::put('settings/fault-types/{faultType}', [SettingController::class, 'updateFaultType'])->name('settings.fault-types.update');
@@ -441,6 +448,10 @@ Route::middleware('auth')->group(function () {
         Route::post('system-tools/updates/apply', [AppUpdateController::class, 'apply'])->name('system-tools.updates.apply');
     });
 
+    Route::get('my-license', [\App\Http\Controllers\MyLicenseController::class, 'index'])->name('my-license.index');
+    Route::post('my-license/refresh', [\App\Http\Controllers\MyLicenseController::class, 'refresh'])->name('my-license.refresh');
+    Route::get('contact', [\App\Http\Controllers\ContactController::class, 'index'])->name('contact.index');
+
     Route::middleware(EnsurePermission::class.':licenses')->prefix('licenses')->name('licenses.')->group(function () {
         Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');
         Route::get('/online', [\App\Http\Controllers\LicenseAdminController::class, 'online'])->name('online');
@@ -448,6 +459,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'savePlans'])->name('plans.save');
         Route::get('/releases', [AppReleaseAdminController::class, 'index'])->name('releases');
         Route::post('/releases', [AppReleaseAdminController::class, 'store'])->name('releases.store');
+        Route::post('/releases/changes', [AppReleaseAdminController::class, 'storeChange'])->name('releases.changes.store');
+        Route::post('/releases/changes/{change}/test', [AppReleaseAdminController::class, 'toggleTested'])->name('releases.changes.test');
+        Route::post('/releases/changes/{change}/select', [AppReleaseAdminController::class, 'toggleSelected'])->name('releases.changes.select');
+        Route::delete('/releases/changes/{change}', [AppReleaseAdminController::class, 'destroyChange'])->name('releases.changes.destroy');
+        Route::post('/releases/selection', [AppReleaseAdminController::class, 'saveSelection'])->name('releases.selection');
+        Route::post('/releases/mark-tested', [AppReleaseAdminController::class, 'markSelectedTested'])->name('releases.mark-tested');
         Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
         Route::get('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'edit'])->name('edit');
         Route::post('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'update'])->name('update');

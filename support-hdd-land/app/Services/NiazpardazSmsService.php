@@ -46,22 +46,29 @@ class NiazpardazSmsService
 
     public function send(string $phone, string $message, ?string $debugCode = null): array
     {
-        $username = AppSetting::getValue('niazpardaz_username', env('NIAZPARDAZ_USERNAME'));
-        $password = AppSetting::getValue('niazpardaz_password', env('NIAZPARDAZ_PASSWORD'));
-        $apiKey = AppSetting::getValue('niazpardaz_api_key', env('NIAZPARDAZ_API_KEY'));
-        $from = AppSetting::getValue('niazpardaz_from', env('NIAZPARDAZ_FROM_NUMBER'));
-
-        if (! $from) {
-            return ['ok' => false, 'message' => 'شماره فرستنده نیازپرداز تنظیم نشده است.'];
+        $phone = User::normalizePhone($phone) ?? '';
+        if ($phone === '') {
+            return ['ok' => false, 'message' => 'شماره موبایل معتبر نیست.'];
         }
 
-        if ($username && $password) {
+        $username = trim((string) AppSetting::getValue('niazpardaz_username', env('NIAZPARDAZ_USERNAME')));
+        $password = (string) AppSetting::getValue('niazpardaz_password', env('NIAZPARDAZ_PASSWORD'));
+        $apiKey = trim((string) AppSetting::getValue('niazpardaz_api_key', env('NIAZPARDAZ_API_KEY')));
+        $from = trim((string) AppSetting::getValue('niazpardaz_from', env('NIAZPARDAZ_FROM_NUMBER')));
+        // Normalize sender number digits (Persian/Arabic → ASCII)
+        $from = User::normalizePhone($from) ?: $from;
+
+        if ($from === '') {
+            return ['ok' => false, 'message' => 'شماره فرستنده نیازپرداز تنظیم نشده است. از منوی پیامک‌ها → تنظیمات ارسال SMS یا تنظیمات سیستم وارد کنید.'];
+        }
+
+        if ($username !== '' && $password !== '') {
             $panel = $this->sendViaPanel($username, $password, $from, $phone, $message);
             if (($panel['ok'] ?? false) === true) {
                 return $panel;
             }
 
-            $rest = $this->sendViaRestApi($username, $password, $from, $phone, $message, $apiKey);
+            $rest = $this->sendViaRestApi($username, $password, $from, $phone, $message, $apiKey !== '' ? $apiKey : null);
             if ($rest['ok']) {
                 return $rest;
             }
@@ -69,7 +76,7 @@ class NiazpardazSmsService
             return $panel ?: $rest;
         }
 
-        if ($apiKey) {
+        if ($apiKey !== '') {
             return $this->sendViaRestApi(null, null, $from, $phone, $message, $apiKey);
         }
 
@@ -84,7 +91,7 @@ class NiazpardazSmsService
             return $result;
         }
 
-        return ['ok' => false, 'message' => 'اطلاعات پنل نیازپرداز در تنظیمات وارد نشده است.'];
+        return ['ok' => false, 'message' => 'اطلاعات پنل نیازپرداز در تنظیمات وارد نشده است. از «پیامک‌ها → تنظیمات ارسال SMS» یوزر/رمز/خط را ذخیره کنید.'];
     }
 
     private function sendViaPanel(string $username, string $password, string $from, string $to, string $message): array

@@ -14,14 +14,16 @@ class TechnicianController extends Controller
 {
     public function index()
     {
-        $technicians = Technician::with('user')->orderBy('name')->paginate(20);
-
-        return view('technicians.index', compact('technicians'));
+        return redirect()
+            ->route('employees.pay')
+            ->with('success', 'تخصص، درصد سود و حقوق تعمیرکار از منوی «تخصص، سود و حقوق» مدیریت می‌شود.');
     }
 
     public function create()
     {
-        return view('technicians.create');
+        return redirect()
+            ->route('employees.pay')
+            ->with('success', 'تعمیرکار / تعمیرگاه را در «تخصص، سود و حقوق» ثبت کنید.');
     }
 
     public function store(Request $request)
@@ -63,7 +65,15 @@ class TechnicianController extends Controller
 
     public function edit(Technician $technician)
     {
-        return view('technicians.edit', compact('technician'));
+        if ($technician->user_id) {
+            return redirect()
+                ->route('employees.edit', $technician->user_id)
+                ->with('success', 'ویرایش تخصص و حقوق از کارتابل کارمند انجام می‌شود.');
+        }
+
+        return redirect()
+            ->route('employees.pay')
+            ->with('success', 'تخصص و حقوق این تعمیرکار را در همین صفحه ویرایش کنید؛ برای ورود جداگانه کارمند بسازید.');
     }
 
     public function update(Request $request, Technician $technician)
