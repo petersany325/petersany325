@@ -54,6 +54,7 @@ $codeFiles = [
     'app/Http/Controllers/TechnicianController.php',
     'app/Http/Controllers/SettingController.php',
     'app/Models/Technician.php',
+    'app/Support/LicenseStatus.php',
     'app/Support/NavMenu.php',
     'database/migrations/2026_09_12_060000_add_monthly_salary_to_technicians_table.php',
     'public/js/app.js',
