@@ -72,8 +72,8 @@ class TechnicianController extends Controller
         }
 
         return redirect()
-            ->route('employees.index')
-            ->with('success', 'این تعمیرکار را از کارتابل کارمند به حساب ورود وصل کنید.');
+            ->route('employees.pay')
+            ->with('success', 'تخصص و حقوق این تعمیرکار را در همین صفحه ویرایش کنید؛ برای ورود جداگانه کارمند بسازید.');
     }
 
     public function update(Request $request, Technician $technician)
