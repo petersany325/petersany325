@@ -15,6 +15,10 @@ use Illuminate\Support\Facades\Schema;
 class ThemeConfig
 {
     public const SETTING_KEYS = [
+        // Live admin saves Revolution/ThemeBuilder homepage banner here first.
+        'theme_homepage',
+        'theme_home',
+        'homepage_theme',
         'theme_builder',
         'theme_builder_config',
         'theme_config',
@@ -36,51 +40,104 @@ class ThemeConfig
     /** @return array<string, mixed> */
     public static function get(): array
     {
-        $raw = self::readRawSetting();
+        $bestTheme = [];
+        $bestBanner = [];
+        $bestScore = -1;
 
-        $theme = [];
-        if (is_string($raw) && $raw !== '') {
-            $decoded = json_decode($raw, true);
-            $theme = is_array($decoded) ? $decoded : [];
-        } elseif (is_array($raw)) {
-            $theme = $raw;
-        }
+        foreach (self::SETTING_KEYS as $key) {
+            $raw = self::settingGet($key);
+            if ($raw === null || $raw === '' || $raw === []) {
+                continue;
+            }
+            if (is_string($raw)) {
+                $decoded = json_decode($raw, true);
+                $raw = is_array($decoded) ? $decoded : [];
+            }
+            if (! is_array($raw) || $raw === []) {
+                continue;
+            }
 
-        // Resolve banner from nested / alias keys used by ThemeBuilder admin saves.
-        $banner = HomepageBanner::extractBanner($theme);
-        if ($banner === [] || (! HomepageBanner::looksLive($banner) && self::bannerLooksEmpty($banner))) {
-            // Dedicated banner-only setting keys (theme.banner, revolution_banner, …)
-            foreach (self::SETTING_KEYS as $key) {
-                if (! str_contains($key, 'banner') && ! str_contains($key, 'slider') && ! str_contains($key, 'revolution')) {
-                    continue;
-                }
-                $only = self::settingGet($key);
-                if (is_string($only) && $only !== '') {
-                    $decoded = json_decode($only, true);
-                    $only = is_array($decoded) ? $decoded : [];
-                }
-                if (! is_array($only) || $only === []) {
-                    continue;
-                }
-                $candidate = HomepageBanner::extractBanner($only);
-                if ($candidate !== [] && (HomepageBanner::looksLive($candidate) || ! self::bannerLooksEmpty($candidate))) {
-                    $banner = $candidate;
-                    break;
-                }
+            $candidate = HomepageBanner::extractBanner($raw);
+            $score = self::bannerScore($candidate);
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestBanner = $candidate;
+                $bestTheme = $raw;
             }
         }
 
-        $theme['banner'] = self::normalizeBanner($banner !== [] ? $banner : self::defaultBanner());
+        // Fallback: scan any settings row whose key looks theme/banner related.
+        if ($bestScore < 10) {
+            try {
+                if (class_exists(Schema::class) && Schema::hasTable('settings')) {
+                    $rows = DB::table('settings')->get(['key', 'value']);
+                    foreach ($rows as $row) {
+                        $key = (string) ($row->key ?? '');
+                        if ($key === '' || ! preg_match('/theme|banner|revolution|homepage|slider|builder/i', $key)) {
+                            continue;
+                        }
+                        $raw = $row->value;
+                        if (is_string($raw) && $raw !== '') {
+                            $decoded = json_decode($raw, true);
+                            $raw = is_array($decoded) ? $decoded : [];
+                        }
+                        if (! is_array($raw) || $raw === []) {
+                            continue;
+                        }
+                        $candidate = HomepageBanner::extractBanner($raw);
+                        $score = self::bannerScore($candidate);
+                        if ($score > $bestScore) {
+                            $bestScore = $score;
+                            $bestBanner = $candidate;
+                            $bestTheme = $raw;
+                        }
+                    }
+                }
+            } catch (\Throwable) {
+                //
+            }
+        }
 
-        $order = $theme['layout_order'] ?? $theme['layout_order'] ?? $theme['sections_order'] ?? null;
+        $theme = $bestTheme;
+        $theme['banner'] = self::normalizeBanner($bestBanner !== [] ? $bestBanner : self::defaultBanner());
+
+        $order = $theme['layout_order'] ?? $theme['sections_order'] ?? null;
         if (! is_array($order)) {
             $order = ['banner', 'categories', 'featured'];
         }
         $order = array_values($order);
         $theme['layout_order'] = $order;
-        $theme['layout_order'] = $order;
 
         return $theme;
+    }
+
+    /** Prefer banners that actually have image/layers/overlay copy. */
+    protected static function bannerScore(array $banner): int
+    {
+        if ($banner === []) {
+            return 0;
+        }
+        $score = 1;
+        foreach (['image_url', 'image', 'src', 'image2_url', 'image2', 'bg_image', 'desktop_image'] as $k) {
+            if (trim((string) ($banner[$k] ?? '')) !== '') {
+                $score += 50;
+                break;
+            }
+        }
+        foreach (['overlay_title', 'overlay_text', 'title', 'subtitle', 'heading', 'text'] as $k) {
+            if (trim((string) ($banner[$k] ?? '')) !== '') {
+                $score += 20;
+            }
+        }
+        $layers = $banner['layers'] ?? $banner['slides'] ?? $banner['elements'] ?? [];
+        if (is_array($layers)) {
+            $score += min(40, count($layers) * 8);
+        }
+        if (HomepageBanner::looksLive($banner)) {
+            $score += 25;
+        }
+
+        return $score;
     }
 
     /** @return mixed */

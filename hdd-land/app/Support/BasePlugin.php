@@ -2,12 +2,18 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\View;
+use ReflectionClass;
+
 /**
- * Minimal plugin base for the sparse HDD Land tree.
- * Production may already ship a richer BasePlugin; this covers
- * id/name/boot/routes/views registration hooks used by storefront plugins.
+ * Production plugin base: contract + route/view/migration wiring.
+ * Method names intentionally avoid colliding with plugin static helpers
+ * (e.g. ThemeBuilder::registerViews()).
+ *
+ * Restored on live after an empty BasePlugin broke plugin discovery (DISCOVERED=0 → site 404).
  */
-abstract class BasePlugin
+abstract class BasePlugin implements PluginContract
 {
     abstract public function id(): string;
 
@@ -23,19 +29,92 @@ abstract class BasePlugin
         return '1.0.0';
     }
 
+    /** @return list<string> */
+    public function dependencies(): array
+    {
+        return [];
+    }
+
     public function isCore(): bool
     {
         return false;
     }
 
-    public function boot(): void
+    public function install(): void
     {
         //
+    }
+
+    public function uninstall(): void
+    {
+        //
+    }
+
+    /** @return list<string> */
+    public function migrationPaths(): array
+    {
+        $path = $this->pluginPath().DIRECTORY_SEPARATOR.'database'.DIRECTORY_SEPARATOR.'migrations';
+
+        return is_dir($path) ? [$path] : [];
     }
 
     /** @return list<string> */
     public function adminMenu(): array
     {
         return [];
+    }
+
+    public function boot(): void
+    {
+        $this->bootPluginViews();
+        $this->bootPluginRoutes();
+    }
+
+    protected function pluginPath(): string
+    {
+        return dirname((new ReflectionClass($this))->getFileName());
+    }
+
+    protected function bootPluginViews(): void
+    {
+        $views = $this->pluginPath().DIRECTORY_SEPARATOR.'resources'.DIRECTORY_SEPARATOR.'views';
+        if (! is_dir($views)) {
+            return;
+        }
+
+        $id = $this->id();
+        View::addNamespace($id, $views);
+        $folder = basename($this->pluginPath());
+        View::addNamespace(strtolower($folder), $views);
+        View::addNamespace(str_replace('-', '', $id), $views);
+    }
+
+    protected function bootPluginRoutes(): void
+    {
+        $routesDir = $this->pluginPath().DIRECTORY_SEPARATOR.'routes';
+        if (! is_dir($routesDir)) {
+            return;
+        }
+
+        $web = $routesDir.DIRECTORY_SEPARATOR.'web.php';
+        if (is_file($web)) {
+            Route::middleware('web')->group($web);
+        }
+
+        $admin = $routesDir.DIRECTORY_SEPARATOR.'admin.php';
+        if (is_file($admin)) {
+            Route::middleware(['web', 'auth', 'admin'])
+                ->prefix('admin')
+                ->name('admin.')
+                ->group($admin);
+        }
+
+        $staff = $routesDir.DIRECTORY_SEPARATOR.'staff.php';
+        if (is_file($staff)) {
+            Route::middleware(['web', 'auth', 'staff'])
+                ->prefix('staff')
+                ->name('staff.')
+                ->group($staff);
+        }
     }
 }

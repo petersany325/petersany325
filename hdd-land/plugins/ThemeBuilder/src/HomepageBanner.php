@@ -149,6 +149,10 @@ class HomepageBanner
             || isset($candidate['bg_image'])
             || isset($candidate['desktop_image'])
             || isset($candidate['background'])
+            || isset($candidate['overlay_title'])
+            || isset($candidate['overlay_text'])
+            || isset($candidate['title'])
+            || isset($candidate['subtitle'])
             || isset($candidate['layers'])
             || isset($candidate['slides'])
             || isset($candidate['elements'])
@@ -203,6 +207,12 @@ class HomepageBanner
             }
         }
 
+        foreach (['overlay_title', 'overlay_text', 'title', 'subtitle', 'heading', 'text'] as $key) {
+            if (trim((string) ($banner[$key] ?? '')) !== '') {
+                return true;
+            }
+        }
+
         return $img !== '' || $hasLayer;
     }
 
@@ -210,6 +220,9 @@ class HomepageBanner
     protected static function readBannerFallback(): array
     {
         $keys = [
+            'theme_homepage',
+            'theme_home',
+            'homepage_theme',
             'theme_builder',
             'theme_builder_config',
             'theme_config',
