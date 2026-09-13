@@ -1,10 +1,35 @@
 /**
  * Specialized post Upload/Download menu widget (injected near editors).
  * Depends on /vbdlmanager/upload_api.php
+ *
+ * Categories come from AdminCP Access Grants (Upload) on a username/usergroup.
+ * Never mounts on Message Center / private-message compose.
  */
 (function () {
   if (window.__vbdlPostUploadInit) return;
   window.__vbdlPostUploadInit = true;
+
+  function isMessageCenterPage() {
+    var path = String(location.pathname || '').toLowerCase();
+    var href = String(location.href || '').toLowerCase();
+    var needles = [
+      'messagecenter',
+      'message-center',
+      'privatemessage',
+      'private-message',
+      'private_message',
+      '/pm/',
+      'contenttype=privatemessage',
+      'contenttypeid=22'
+    ];
+    for (var i = 0; i < needles.length; i++) {
+      if (path.indexOf(needles[i]) !== -1 || href.indexOf(needles[i]) !== -1) return true;
+    }
+    if (document.querySelector('.b-messagecenter, #messagecenter, [data-ui="messagecenter"], .privatemessage-compose, .js-messagecenter')) {
+      return true;
+    }
+    return false;
+  }
 
   function el(tag, attrs, html) {
     var n = document.createElement(tag);
@@ -14,8 +39,9 @@
   }
 
   function findEditorRoot() {
+    // Topic/post editors only — do not treat PM message textarea as a host on MC pages
     return document.querySelector('.js-editor, .b-editor, .editor-controls, #editor, .redactor-toolbar, .cke_chrome, form[action*="create-content"], form[action*="edit-content"]')
-      || document.querySelector('textarea[name="text"], textarea[name="message"]');
+      || document.querySelector('textarea[name="text"]');
   }
 
   function insertText(text) {
@@ -94,11 +120,14 @@
   }
 
   function tryMount() {
+    if (isMessageCenterPage()) return;
     var root = findEditorRoot();
     if (!root) return;
     var host = root.closest('form') || root.parentElement || root;
     mount(host);
   }
+
+  if (isMessageCenterPage()) return;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tryMount);
   else tryMount();

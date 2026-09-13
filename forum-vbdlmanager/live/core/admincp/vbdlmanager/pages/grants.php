@@ -77,8 +77,9 @@ vbdl_admin_header('Access Grants', 'grants');
 
 echo '<div class="vbdl-panel"><div class="vbdl-panel-h">Policy</div><div class="vbdl-panel-b">';
 echo '<p class="vbdl-muted" style="margin:0">Set VIP categories to <strong>grant_required</strong>. '
-	. 'Members of VIP SeDiv (or any VIP usergroup) still cannot download/upload there until you create a grant for that user or group. '
-	. 'Enable <em>Upload</em> on a grant to show that category in the post editor Downloads menu.</p>';
+	. 'VIP SeDiv membership alone does not unlock them — create a grant for the customer <strong>username</strong> (or a usergroup). '
+	. 'Enable <em>Upload</em> on that grant so the category appears in the <strong>forum post editor</strong> Downloads Manager menu. '
+	. 'The upload panel is <strong>not</strong> shown in Message Center; only admin grants control access.</p>';
 echo '</div></div>';
 
 if ($msg !== '')

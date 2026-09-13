@@ -52,10 +52,16 @@ class vbdlportal_Hooks
 
 	/**
 	 * Inject specialized Downloads upload menu on create/edit content pages.
+	 * Never on Message Center / private messages — upload access is only via
+	 * AdminCP Access Grants (per username or usergroup) for forum post editors.
 	 */
 	private static function injectPostUploadMenu($html)
 	{
 		$uri = strtolower((string)($_SERVER['REQUEST_URI'] ?? ''));
+		if (self::isMessageCenterUri($uri))
+		{
+			return $html;
+		}
 		$want = (strpos($uri, 'create-content') !== false
 			|| strpos($uri, 'edit-content') !== false
 			|| strpos($uri, '/new-content') !== false
@@ -69,7 +75,7 @@ class vbdlportal_Hooks
 		{
 			return $html;
 		}
-		if (stripos($html, 'vbdl-post-upload.js') !== false)
+		if (stripos($html, 'vbdl-post-upload.js') !== false || stripos($html, 'post-upload.js') !== false)
 		{
 			return $html;
 		}
@@ -80,6 +86,31 @@ class vbdlportal_Hooks
 			return preg_replace('/<\/body>/i', $assets . '</body>', $html, 1);
 		}
 		return $html . $assets;
+	}
+
+	/**
+	 * Message Center / PM compose (including create-content/privatemessage).
+	 */
+	private static function isMessageCenterUri($uri)
+	{
+		$uri = strtolower((string)$uri);
+		foreach (array(
+			'messagecenter',
+			'message-center',
+			'privatemessage',
+			'private-message',
+			'private_message',
+			'/pm/',
+			'contenttype=privatemessage',
+			'contenttypeid=22',
+		) as $needle)
+		{
+			if (strpos($uri, $needle) !== false)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static function skipRequest()
