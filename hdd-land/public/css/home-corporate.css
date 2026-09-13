@@ -1,3 +1,8 @@
+/* Kill legacy Revolution banner if an old blade still emits it */
+.hl-revolution-banner-wrap,
+.hl-revolution-banner-wrap *{display:none!important}
+.site-banner,.rev-slider,.rs-module{display:none!important}
+
 /* Modern homepage — full-bleed hero, editorial sections, fast paint */
 :root{
   --hl-ink:#071018;
