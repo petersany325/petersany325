@@ -209,6 +209,31 @@ class LicenseNetworkApiController extends Controller
         ]);
     }
 
+    public function markReturned(Request $request): JsonResponse
+    {
+        $auth = $this->authorizeLicense($request);
+        if ($auth instanceof JsonResponse) {
+            return $auth;
+        }
+        /** @var ProductLicense $self */
+        $self = $auth;
+        $data = $request->validate([
+            'uuid' => ['required', 'string', 'max:64'],
+            'dest_receipt_no' => ['nullable', 'string', 'max:60'],
+        ]);
+        $row = NetworkReferral::query()->where('uuid', $data['uuid'])->where('to_license_id', $self->id)->first();
+        if (! $row) {
+            return response()->json(['ok' => false, 'message' => 'ارجاع پیدا نشد.'], 404);
+        }
+        $row->update([
+            'status' => NetworkReferral::STATUS_RETURNED,
+            'dest_receipt_no' => $data['dest_receipt_no'] ?? $row->dest_receipt_no,
+            'decided_at' => now(),
+        ]);
+
+        return response()->json(['ok' => true, 'status' => $row->status]);
+    }
+
     /** @return ProductLicense|JsonResponse */
     private function authorizeLicense(Request $request)
     {

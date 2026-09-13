@@ -16,6 +16,8 @@ class NetworkReferral extends Model
 
     public const STATUS_REJECTED = 'rejected';
 
+    public const STATUS_RETURNED = 'returned';
+
     public const STATUS_CANCELLED = 'cancelled';
 
     protected $fillable = [

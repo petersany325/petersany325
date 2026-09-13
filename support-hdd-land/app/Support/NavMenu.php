@@ -57,7 +57,7 @@ class NavMenu
                 'any_of' => ['handoffs', 'partners'],
                 'children' => [
                     ['label' => 'کارتابل ارجاع', 'route' => 'handoffs.index', 'match' => 'handoffs.index', 'hint' => 'جستجو، تأیید دریافت، دست تعمیر', 'mark' => 'ک', 'permission' => 'handoffs'],
-                    ['label' => 'کارتابل ارجاع نماینده', 'route' => 'partners.cartable', 'match' => 'partners.cartable|partners.intake*|partners.pull', 'hint' => 'تأیید/رد قبض شبکه همکاران', 'mark' => 'نم', 'permission' => 'partners'],
+                    ['label' => 'کارتابل ارجاع نماینده', 'route' => 'partners.cartable', 'match' => 'partners.cartable|partners.intake*|partners.pull|partners.report', 'hint' => 'تأیید/رد قبض شبکه همکاران', 'mark' => 'نم', 'permission' => 'partners'],
                     ['label' => 'گزارش ارجاع / محل', 'route' => 'reports.custody', 'match' => 'reports.custody', 'hint' => 'گزارش سریال و قبض', 'mark' => 'گ', 'permission' => 'reports.custody'],
                 ],
             ],
@@ -66,12 +66,13 @@ class NavMenu
                 'label' => 'نمایندگان',
                 'permission' => 'partners',
                 'route' => 'partners.index',
-                'match' => 'partners.index|partners.create|partners.edit|partners.store|partners.update|partners.sync',
+                'match' => 'partners.index|partners.create|partners.edit|partners.store|partners.update|partners.sync|partners.report',
                 'mark' => 'ه',
                 'hint' => 'همکاران لایسنس‌دار فعال (شبکه داخلی)',
                 'children' => [
                     ['label' => 'فهرست همکاران شبکه', 'route' => 'partners.index', 'match' => 'partners.index|partners.edit|partners.sync', 'hint' => 'همگام از لایسنس‌های فعال', 'mark' => 'ف'],
                     ['label' => 'کارتابل ارجاع نماینده', 'route' => 'partners.cartable', 'match' => 'partners.cartable*', 'hint' => 'تأیید یا رد قبض ارجاعی', 'mark' => 'ک'],
+                    ['label' => 'گزارش ارجاع شبکه', 'route' => 'partners.report', 'match' => 'partners.report', 'hint' => 'قبض مبدأ/مقصد و وضعیت', 'mark' => 'گ'],
                 ],
             ],
             [
@@ -245,6 +246,7 @@ class NavMenu
                     ['label' => 'کالای خرج‌شده', 'route' => 'reports.parts-used', 'match' => 'reports.parts-used', 'permission' => 'reports.parts', 'hint' => '', 'mark' => 'ق'],
                     ['label' => 'عملیات کارگاه', 'route' => 'reports.operations', 'match' => 'reports.operations', 'permission' => 'reports.operations', 'hint' => '', 'mark' => 'ع'],
                     ['label' => 'ارجاع / محل دستگاه', 'route' => 'reports.custody', 'match' => 'reports.custody', 'permission' => 'reports.custody', 'hint' => '', 'mark' => 'ا'],
+                    ['label' => 'ارجاع شبکه نمایندگان', 'route' => 'partners.report', 'match' => 'partners.report', 'permission' => 'partners', 'hint' => 'قبض مبدأ/مقصد', 'mark' => 'ن'],
                     ['label' => 'صندوق و دریافت‌ها', 'route' => 'reports.payments', 'match' => 'reports.payments', 'permission' => 'reports.payments', 'hint' => '', 'mark' => 'ص'],
                     ['label' => 'تأیید فیش بانکی', 'route' => 'payment-receipts.index', 'match' => 'payment-receipts.*', 'permission' => 'payment.receipts', 'hint' => 'فیش کارت‌به‌کارت پرتال', 'mark' => 'ف'],
                     ['label' => 'پیام مشتری', 'route' => 'reports.messages', 'match' => 'reports.messages', 'permission' => 'reports.messages', 'hint' => '', 'mark' => 'م'],

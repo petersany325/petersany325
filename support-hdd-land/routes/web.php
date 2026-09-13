@@ -87,6 +87,9 @@ Route::post('/license/network/referrals/decide', [LicenseNetworkApiController::c
 Route::post('/license/network/referrals/status', [LicenseNetworkApiController::class, 'status'])
     ->middleware('throttle:60,1')
     ->name('license.network.status');
+Route::post('/license/network/referrals/return', [LicenseNetworkApiController::class, 'markReturned'])
+    ->middleware('throttle:60,1')
+    ->name('license.network.return');
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -272,6 +275,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('partners/{partner}', [PartnerController::class, 'destroy'])->name('partners.destroy');
 
         Route::get('partner-referrals', [PartnerReferralController::class, 'cartable'])->name('partners.cartable');
+        Route::get('partner-referrals/report', [PartnerReferralController::class, 'report'])->name('partners.report');
         Route::post('partner-referrals/pull', [PartnerReferralController::class, 'pull'])->name('partners.pull');
         Route::get('partner-referrals/intake', [PartnerReferralController::class, 'createInbound'])->name('partners.intake');
         Route::post('partner-referrals/intake', [PartnerReferralController::class, 'storeInbound'])->name('partners.intake.store');

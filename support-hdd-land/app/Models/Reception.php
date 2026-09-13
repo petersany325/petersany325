@@ -89,11 +89,13 @@ class Reception extends Model
     public function partnerApprovalLabel(): string
     {
         return match ($this->partner_approval_status) {
-            'pending' => 'در انتظار تأیید منشی',
-            'approved' => 'تأیید شده',
-            'rejected' => 'رد شده / برگشت',
+            'pending' => 'منتظر قطعه / تأیید منشی',
+            'approved' => 'تأیید شده — قبض این مجموعه',
+            'rejected' => 'رد شده / برگشت به مبدأ',
             'sent' => 'ارسال‌شده / منتظر مقصد',
             'accepted' => 'مقصد تأیید کرد',
+            'returned' => 'برگشت از مقصد — آماده خروج',
+            'returned_to_origin' => 'برگشت داده‌شده به مبدأ',
             default => $this->partner_approval_status ? (string) $this->partner_approval_status : '—',
         };
     }

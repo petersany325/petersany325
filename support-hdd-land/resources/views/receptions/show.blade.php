@@ -156,53 +156,61 @@
                     <h3 style="margin:0 0 8px;">ارجاع شبکه همکاران لایسنس‌دار</h3>
                     @if($reception->isPartnerPendingApproval())
                         <p class="muted" style="margin:0 0 8px;">قبض ارسالی از <strong>{{ $reception->partner?->displayName() }}</strong>
-                            @if($reception->partner_peer_receipt_no) · قبض مبدأ: <span dir="ltr">{{ $reception->partner_peer_receipt_no }}</span>@endif
-                            — مشتری کامل همین‌جا نمایش داده شده است.
+                            · قبض نماینده مبدأ: <strong dir="ltr">{{ $reception->partner_peer_receipt_no ?: '—' }}</strong>
+                            · پیش‌نویس قبض اینجا: <span dir="ltr">{{ $reception->receipt_no }}</span>
                         </p>
-                        <p class="muted" style="margin:0 0 8px;">منشی باید تأیید و ثبت کند؛ در غیر این صورت «تأیید نشد» بزنید تا قبض به مبدأ برگردد. تا قبل از تأیید، روند داخلی شروع نشود.</p>
+                        <p class="muted" style="margin:0 0 8px;">وضعیت: <strong>منتظر ورود قطعه</strong>. مشخصات را چک کنید؛ اگر قطعه رسید و هماهنگ بود تأیید کنید. اگر شماره قبض نماینده با قبض این مجموعه یکی باشد سیستم خطا می‌دهد.</p>
                         <div class="actions" style="flex-wrap:wrap;">
                             <form method="POST" action="{{ route('partners.approve', $reception) }}">
                                 @csrf
-                                <button class="btn btn-primary" type="submit">تأیید و ثبت قبض</button>
+                                <button class="btn btn-primary" type="submit">قطعه رسید — تأیید قبض</button>
                             </form>
                             <form method="POST" action="{{ route('partners.reject', $reception) }}" onsubmit="return confirm('رد شود و به همکار مبدأ برگردد؟');" class="accept-row" style="display:flex;gap:8px;align-items:end;">
                                 @csrf
-                                <input type="text" name="reason" placeholder="دلیل رد (اختیاری)" style="min-width:180px;">
-                                <button class="btn btn-danger" type="submit">تأیید نشد / برگشت</button>
+                                <input type="text" name="reason" placeholder="دلیل رد / ناهماهنگی" style="min-width:180px;">
+                                <button class="btn btn-danger" type="submit">رد قبض</button>
                             </form>
-                            <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'pending']) }}">کارتابل ارجاع نماینده</a>
+                            <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'pending']) }}">کارتابل</a>
                         </div>
                     @elseif($reception->partner_flow === 'inbound')
                         <p class="muted" style="margin:0 0 8px;">قبض ورودی شبکه از <strong>{{ $reception->partner?->displayName() }}</strong>
-                            @if($reception->partner_peer_receipt_no) · قبض مبدأ: <span dir="ltr">{{ $reception->partner_peer_receipt_no }}</span>@endif
+                            · قبض نماینده: <span dir="ltr">{{ $reception->partner_peer_receipt_no }}</span>
+                            · قبض این مجموعه: <span dir="ltr">{{ $reception->receipt_no }}</span>
                             · {{ $reception->partnerApprovalLabel() }}
                         </p>
-                        <p class="muted" style="margin:0 0 8px;">مشتری نهایی در همین قبض است؛ بعد از تأیید، بقیه امکانات طبق سیستم داخلی مجموعه.</p>
+                        <p class="muted" style="margin:0 0 8px;">بعد از تأیید، تعمیر/قیمت/پیامک طبق سیستم داخلی است. در پایان «ارجاع برگشت به همکار اول» بزنید.</p>
                         <div class="actions">
-                            <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'inbound']) }}">کارتابل ارجاع نماینده</a>
-                            @if($reception->partner_approval_status === 'approved' && in_array($reception->status, ['ready', 'unrepairable'], true))
-                                <form method="POST" action="{{ route('partners.mark-returned', $reception) }}">
+                            <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'inbound']) }}">کارتابل</a>
+                            @if($reception->partner_approval_status === 'approved')
+                                <form method="POST" action="{{ route('partners.mark-returned', $reception) }}" onsubmit="return confirm('برگشت به همکار اول؟');">
                                     @csrf
-                                    <button class="btn btn-primary" type="submit">علامت آماده برگشت به مبدأ</button>
+                                    <button class="btn btn-primary" type="submit">ارجاع برگشت به همکار اول / خروج</button>
                                 </form>
                             @endif
                         </div>
-                    @elseif($reception->partner_flow === 'outbound')
-                        <p class="muted" style="margin:0 0 8px;">ارسال‌شده به همکار: <strong>{{ $reception->partnerReferredTo?->displayName() }}</strong>
+                    @elseif($reception->partner_flow === 'outbound' || $reception->partner_flow === 'returned')
+                        <p class="muted" style="margin:0 0 8px;">
+                            @if($reception->partner_flow === 'returned')
+                                برگشت از همکار:
+                            @else
+                                ارسال‌شده به همکار:
+                            @endif
+                            <strong>{{ $reception->partnerReferredTo?->displayName() }}</strong>
                             · {{ $reception->partnerApprovalLabel() }}
                         </p>
                         <div class="actions">
                             <form method="POST" action="{{ route('partners.mark-returned', $reception) }}">
                                 @csrf
-                                <button class="btn btn-secondary" type="submit">ثبت برگشت دستی از همکار</button>
+                                <button class="btn btn-secondary" type="submit">آماده خروج / تحویل به مشتری</button>
                             </form>
                             <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'outbound']) }}">کارتابل</a>
+                            <a class="btn btn-ghost" href="{{ route('partners.report') }}">گزارش</a>
                         </div>
                     @else
                         <form method="POST" action="{{ route('partners.refer-out', $reception) }}" class="form-grid" style="grid-template-columns:1fr 1fr auto;align-items:end;">
                             @csrf
                             <div>
-                                <label>ارجاع به همکار شبکه</label>
+                                <label>ارجاع به همکار شبکه (با همین شماره قبض)</label>
                                 <select name="partner_id" required>
                                     <option value="">— انتخاب همکار لایسنس‌دار —</option>
                                     @foreach(($partners ?? []) as $p)
@@ -212,11 +220,11 @@
                             </div>
                             <div>
                                 <label>یادداشت برای مقصد</label>
-                                <input type="text" name="note" placeholder="مثلاً نیاز به تخصص خاص">
+                                <input type="text" name="note" placeholder="مثلاً قطعه ارسال شد / نیاز به تخصص">
                             </div>
                             <button class="btn btn-secondary" type="submit">ارسال ارجاع شبکه</button>
                         </form>
-                        <p class="muted" style="margin:8px 0 0;">قبض کامل مشتری برای همکار مقصد ارسال می‌شود؛ منشی آنجا باید تأیید یا رد کند.</p>
+                        <p class="muted" style="margin:8px 0 0;">شماره قبض شما (<span dir="ltr">{{ $reception->receipt_no }}</span>) برای مقصد به‌عنوان قبض مبدأ می‌ماند؛ مقصد قبض جداگانه خودش را می‌زند.</p>
                     @endif
                 </div>
             @endif
@@ -241,6 +249,7 @@
                     </div>
                     <button class="btn btn-primary" type="submit">ارجاع و درخواست تأیید دریافت</button>
                 </form>
+            @endif
             @endif
 
             @if(auth()->user()->technician && (int) $reception->custody_technician_id === (int) auth()->user()->technician->id && ($reception->custody ?? '') === 'with_technician')

@@ -103,10 +103,13 @@ class PartnerNetworkService
     public function fetchPeers(): array
     {
         if ($this->isSellerHub()) {
+            $selfDomain = $this->selfDomain();
+
             return ProductLicense::query()
                 ->where('status', 'active')
                 ->whereNotNull('domain')
                 ->where('domain', '!=', '')
+                ->when($selfDomain !== '', fn ($q) => $q->where('domain', '!=', $selfDomain))
                 ->orderBy('customer_name')
                 ->get()
                 ->map(fn (ProductLicense $l) => [
@@ -292,13 +295,22 @@ class PartnerNetworkService
                 ]);
             }
 
+            $peerReceipt = trim((string) ($origin['receipt_no'] ?? ($item['origin_receipt_no'] ?? '')));
+            $localReceipt = Reception::nextReceiptNo();
+            // Avoid issuing a local draft that already equals the peer receipt number.
+            $guard = 0;
+            while ($peerReceipt !== '' && $this->sameReceiptNo($localReceipt, $peerReceipt) && $guard < 30) {
+                $localReceipt = $this->bumpReceiptCandidate($localReceipt);
+                $guard++;
+            }
+
             Reception::query()->create([
                 'ticket_no' => Reception::nextTicketNo(),
-                'receipt_no' => Reception::nextReceiptNo(),
+                'receipt_no' => $localReceipt,
                 'customer_id' => $customer->id,
                 'partner_id' => $partner->id,
                 'partner_flow' => Reception::PARTNER_FLOW_INBOUND,
-                'partner_peer_receipt_no' => $origin['receipt_no'] ?? ($item['origin_receipt_no'] ?? null),
+                'partner_peer_receipt_no' => $peerReceipt !== '' ? $peerReceipt : null,
                 'partner_end_customer_note' => $origin['note'] ?? null,
                 'partner_approval_status' => 'pending',
                 'partner_network_ref' => $uuid,
@@ -319,7 +331,8 @@ class PartnerNetworkService
                 'delivered_by' => $device['delivered_by'] ?? null,
                 'technician_notes' => $device['technician_notes'] ?? null,
                 'referrer' => 'ارجاع شبکه: '.$partner->displayName(),
-                'status' => 'received',
+                // منتظر ورود قطعه / تأیید منشی
+                'status' => 'waiting_part',
                 'custody' => 'front_desk',
                 'created_by' => auth()->id(),
                 'received_at' => now(),
@@ -328,23 +341,60 @@ class PartnerNetworkService
             $this->ackPulled($uuid);
         }
 
-        return ['ok' => true, 'message' => $created > 0 ? ($created.' ارجاع جدید برای تأیید منشی آماده شد.') : 'ارجاع معلقی نبود.', 'created' => $created];
+        return ['ok' => true, 'message' => $created > 0 ? ($created.' ارجاع جدید — منتظر قطعه و تأیید منشی.') : 'ارجاع معلقی نبود.', 'created' => $created];
     }
 
-    /** @return array{ok:bool,message:string} */
+    /**
+     * Secretary confirms part arrived + details match.
+     * Peer receipt stays; this shop keeps/issues its own distinct receipt number.
+     *
+     * @return array{ok:bool,message:string}
+     */
     public function approveInbound(Reception $reception): array
     {
         if ($reception->partner_approval_status !== 'pending') {
             return ['ok' => false, 'message' => 'این قبض در انتظار تأیید شبکه نیست.'];
         }
+
+        $peer = trim((string) $reception->partner_peer_receipt_no);
+        if ($peer === '') {
+            return ['ok' => false, 'message' => 'خطای قبض: شماره قبض نماینده مبدأ ثبت نشده است.'];
+        }
+
+        // Peer receipt must not already exist as a local receipt in this shop.
+        $peerClash = Reception::withTrashed()
+            ->where('id', '!=', $reception->id)
+            ->where('receipt_no', $peer)
+            ->exists();
+        if ($peerClash) {
+            return ['ok' => false, 'message' => 'خطای قبض: شماره قبض نماینده مبدأ («'.$peer.'») با قبض این مجموعه یکسان/تکراری است.'];
+        }
+
+        // Local shop receipt must differ from peer receipt.
+        $local = trim((string) $reception->receipt_no);
+        if ($local === '' || $this->sameReceiptNo($local, $peer)) {
+            $local = Reception::nextReceiptNo();
+            $guard = 0;
+            while ($this->sameReceiptNo($local, $peer) && $guard < 30) {
+                $local = $this->bumpReceiptCandidate($local);
+                $guard++;
+            }
+            if ($this->sameReceiptNo($local, $peer)) {
+                return ['ok' => false, 'message' => 'خطای قبض: نتوانستیم قبض جدید متمایز از قبض نماینده بسازیم. پیشوند قبض را در تنظیمات عوض کنید.'];
+            }
+        }
+
+        // On confirm: keep peer receipt, finalize this shop's own receipt, start internal flow.
         $reception->update([
+            'receipt_no' => $local,
+            'partner_peer_receipt_no' => $peer,
             'partner_approval_status' => 'approved',
             'status' => 'received',
             'received_at' => $reception->received_at ?: now(),
         ]);
         $this->decideRemote($reception, true);
 
-        return ['ok' => true, 'message' => 'قبض تأیید و ثبت شد. از این لحظه طبق روند داخلی مجموعه ادامه دهید.'];
+        return ['ok' => true, 'message' => 'تأیید شد. قبض نماینده «'.$peer.'» نگه داشته شد و قبض این مجموعه «'.$local.'» ثبت شد. ادامه تعمیر طبق روند داخلی.'];
     }
 
     /** @return array{ok:bool,message:string} */
@@ -355,17 +405,41 @@ class PartnerNetworkService
         }
         $reception->update([
             'partner_approval_status' => 'rejected',
-            'partner_reject_reason' => $reason !== '' ? $reason : 'رد توسط منشی مقصد',
+            'partner_reject_reason' => $reason !== '' ? $reason : 'رد توسط منشی مقصد — ناهماهنگی مشخصات/قطعه',
             'partner_returned_at' => now(),
             'status' => 'cancelled',
         ]);
         $this->decideRemote($reception, false, $reason);
 
-        return ['ok' => true, 'message' => 'قبض رد و به همکار مبدأ برگشت داده شد.'];
+        return ['ok' => true, 'message' => 'قبض رد شد و به همکار مبدأ برگشت.'];
     }
 
     /**
-     * Refresh outbound referral statuses from hub (accepted/rejected).
+     * After repair/pricing/SMS: return device/receipt workflow to originating colleague for exit to customer.
+     *
+     * @return array{ok:bool,message:string}
+     */
+    public function returnToOrigin(Reception $reception): array
+    {
+        if (! $reception->isPartnerInbound() || $reception->partner_approval_status !== 'approved') {
+            return ['ok' => false, 'message' => 'فقط قبض ورودی تأییدشده را می‌توان به همکار مبدأ برگرداند.'];
+        }
+        if (in_array($reception->status, ['cancelled', 'delivered'], true)) {
+            return ['ok' => false, 'message' => 'این قبض قابل برگشت شبکه نیست.'];
+        }
+
+        $reception->update([
+            'partner_approval_status' => 'returned_to_origin',
+            'partner_returned_at' => now(),
+            'status' => 'ready',
+        ]);
+        $this->notifyReturned($reception);
+
+        return ['ok' => true, 'message' => 'ارجاع برگشت به همکار مبدأ ثبت شد. مبدأ می‌تواند خروج/تحویل به مشتری را انجام دهد.'];
+    }
+
+    /**
+     * Refresh outbound referral statuses from hub (accepted/rejected/returned).
      *
      * @return array{ok:bool,message:string,updated?:int}
      */
@@ -374,9 +448,9 @@ class PartnerNetworkService
         $outbound = Reception::query()
             ->where('partner_flow', Reception::PARTNER_FLOW_OUTBOUND)
             ->whereNotNull('partner_network_ref')
-            ->whereIn('partner_approval_status', ['sent', 'pending', null])
+            ->whereNotIn('partner_approval_status', ['rejected', 'returned_to_origin', 'returned'])
             ->latest('id')
-            ->limit(50)
+            ->limit(80)
             ->get();
         if ($outbound->isEmpty()) {
             return ['ok' => true, 'message' => 'ارسالی برای پیگیری نبود.', 'updated' => 0];
@@ -384,16 +458,26 @@ class PartnerNetworkService
 
         $updated = 0;
         foreach ($outbound as $r) {
-            $status = $this->fetchReferralStatus((string) $r->partner_network_ref);
-            if (! $status) {
+            $info = $this->fetchReferralStatusInfo((string) $r->partner_network_ref);
+            if (! $info) {
                 continue;
             }
+            $status = (string) ($info['status'] ?? '');
             if ($status === NetworkReferral::STATUS_ACCEPTED && $r->partner_approval_status !== 'accepted') {
                 $r->update(['partner_approval_status' => 'accepted']);
                 $updated++;
             } elseif ($status === NetworkReferral::STATUS_REJECTED && $r->partner_approval_status !== 'rejected') {
                 $r->update([
                     'partner_approval_status' => 'rejected',
+                    'partner_flow' => Reception::PARTNER_FLOW_RETURNED,
+                    'partner_returned_at' => now(),
+                    'partner_reject_reason' => $info['reject_reason'] ?? $r->partner_reject_reason,
+                    'status' => in_array($r->status, ['delivered', 'cancelled'], true) ? $r->status : 'ready',
+                ]);
+                $updated++;
+            } elseif ($status === NetworkReferral::STATUS_RETURNED && $r->partner_approval_status !== 'returned') {
+                $r->update([
+                    'partner_approval_status' => 'returned',
                     'partner_flow' => Reception::PARTNER_FLOW_RETURNED,
                     'partner_returned_at' => now(),
                     'status' => in_array($r->status, ['delivered', 'cancelled'], true) ? $r->status : 'ready',
@@ -403,6 +487,28 @@ class PartnerNetworkService
         }
 
         return ['ok' => true, 'message' => $updated.' وضعیت ارجاع به‌روز شد.', 'updated' => $updated];
+    }
+
+    private function sameReceiptNo(string $a, string $b): bool
+    {
+        return mb_strtoupper(trim($a)) === mb_strtoupper(trim($b));
+    }
+
+    private function bumpReceiptCandidate(string $current): string
+    {
+        if (preg_match('/^(.*?)(\d+)$/', $current, $m)) {
+            $prefix = $m[1];
+            $num = (int) $m[2];
+            $width = strlen($m[2]);
+            for ($i = 1; $i <= 50; $i++) {
+                $candidate = $prefix.str_pad((string) ($num + $i), $width, '0', STR_PAD_LEFT);
+                if (! Reception::withTrashed()->where('receipt_no', $candidate)->exists()) {
+                    return $candidate;
+                }
+            }
+        }
+
+        return Reception::nextReceiptNo();
     }
 
     public function isSellerHub(): bool
@@ -542,13 +648,23 @@ class PartnerNetworkService
         }
     }
 
-    private function fetchReferralStatus(string $uuid): ?string
+    /** @return array{status?:string,reject_reason?:string,dest_receipt_no?:string}|null */
+    private function fetchReferralStatusInfo(string $uuid): ?array
     {
         if ($uuid === '') {
             return null;
         }
         if ($this->isSellerHub()) {
-            return NetworkReferral::query()->where('uuid', $uuid)->value('status');
+            $row = NetworkReferral::query()->where('uuid', $uuid)->first();
+            if (! $row) {
+                return null;
+            }
+
+            return [
+                'status' => $row->status,
+                'reject_reason' => (string) ($row->reject_reason ?? ''),
+                'dest_receipt_no' => (string) ($row->dest_receipt_no ?? ''),
+            ];
         }
         $auth = $this->licenseAuthPayload();
         if ($auth === null) {
@@ -561,13 +677,47 @@ class PartnerNetworkService
             ]));
             $json = $response->json();
             if (is_array($json) && ($json['ok'] ?? false) === true) {
-                return (string) ($json['status'] ?? '');
+                return [
+                    'status' => (string) ($json['status'] ?? ''),
+                    'reject_reason' => (string) ($json['reject_reason'] ?? ''),
+                    'dest_receipt_no' => (string) ($json['dest_receipt_no'] ?? ''),
+                ];
             }
         } catch (Throwable $e) {
             Log::warning('partner_status_failed', ['uuid' => $uuid, 'error' => $e->getMessage()]);
         }
 
         return null;
+    }
+
+    private function notifyReturned(Reception $reception): void
+    {
+        $uuid = (string) $reception->partner_network_ref;
+        if ($uuid === '') {
+            return;
+        }
+        if ($this->isSellerHub()) {
+            NetworkReferral::query()->where('uuid', $uuid)->update([
+                'status' => NetworkReferral::STATUS_RETURNED,
+                'dest_receipt_no' => $reception->receipt_no,
+                'decided_at' => now(),
+            ]);
+
+            return;
+        }
+        $auth = $this->licenseAuthPayload();
+        if ($auth === null) {
+            return;
+        }
+        $server = rtrim((string) config('license.server'), '/');
+        try {
+            Http::timeout(25)->asForm()->acceptJson()->post($server.'/license/network/referrals/return', array_merge($auth, [
+                'uuid' => $uuid,
+                'dest_receipt_no' => (string) $reception->receipt_no,
+            ]));
+        } catch (Throwable $e) {
+            Log::warning('partner_return_failed', ['uuid' => $uuid, 'error' => $e->getMessage()]);
+        }
     }
 
     /**

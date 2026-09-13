@@ -32,8 +32,7 @@ class PartnerReferralController extends Controller
 
         $base = Reception::query()
             ->with(['customer', 'partner', 'partnerReferredTo', 'technician'])
-            ->whereNotNull('partner_flow')
-            ->whereNotIn('status', ['cancelled']);
+            ->whereNotNull('partner_flow');
 
         if ($q !== '') {
             $base->where(function ($inner) use ($q) {
@@ -48,26 +47,30 @@ class PartnerReferralController extends Controller
 
         $pending = (clone $base)->where('partner_flow', Reception::PARTNER_FLOW_INBOUND)
             ->where('partner_approval_status', 'pending')
+            ->where('status', '!=', 'cancelled')
             ->latest('id')->limit(80)->get();
 
         $inbound = (clone $base)->where('partner_flow', Reception::PARTNER_FLOW_INBOUND)
-            ->where(function ($q) {
-                $q->whereNull('partner_approval_status')
-                    ->orWhere('partner_approval_status', 'approved');
-            })
-            ->whereNotIn('status', ['delivered'])
+            ->where('partner_approval_status', 'approved')
+            ->whereNotIn('status', ['delivered', 'cancelled'])
             ->latest('id')->limit(80)->get();
 
         $outbound = (clone $base)->where('partner_flow', Reception::PARTNER_FLOW_OUTBOUND)
-            ->whereNotIn('status', ['delivered'])
+            ->whereNotIn('status', ['delivered', 'cancelled'])
             ->latest('id')->limit(80)->get();
 
-        $ready = (clone $base)->where('partner_flow', Reception::PARTNER_FLOW_INBOUND)
-            ->where('partner_approval_status', 'approved')
-            ->whereIn('status', ['ready', 'unrepairable'])
-            ->latest('id')->limit(80)->get();
+        $ready = (clone $base)->where(function ($q) {
+            $q->where(function ($i) {
+                $i->where('partner_flow', Reception::PARTNER_FLOW_INBOUND)
+                    ->where('partner_approval_status', 'approved')
+                    ->whereIn('status', ['ready', 'unrepairable']);
+            })->orWhere(function ($o) {
+                $o->where('partner_flow', Reception::PARTNER_FLOW_RETURNED)
+                    ->whereIn('partner_approval_status', ['returned', 'rejected']);
+            });
+        })->latest('id')->limit(80)->get();
 
-        $all = (clone $base)->latest('id')->limit(100)->get();
+        $all = (clone $base)->latest('id')->limit(120)->get();
 
         $list = match ($tab) {
             'inbound' => $inbound,
@@ -92,11 +95,58 @@ class PartnerReferralController extends Controller
         ]);
     }
 
+    public function report(Request $request): View
+    {
+        $this->network->refreshOutboundStatuses();
+        $flow = (string) $request->input('flow', 'all');
+        $q = trim((string) $request->input('q', ''));
+        $from = (string) $request->input('from', now()->subDays(30)->toDateString());
+        $to = (string) $request->input('to', now()->toDateString());
+
+        $query = Reception::query()
+            ->with(['customer', 'partner', 'partnerReferredTo'])
+            ->whereNotNull('partner_flow')
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to)
+            ->latest('id');
+
+        if ($flow !== 'all') {
+            $query->where('partner_flow', $flow);
+        }
+        if ($q !== '') {
+            $query->where(function ($inner) use ($q) {
+                $inner->where('receipt_no', 'like', '%'.$q.'%')
+                    ->orWhere('partner_peer_receipt_no', 'like', '%'.$q.'%')
+                    ->orWhere('serial_number', 'like', '%'.$q.'%')
+                    ->orWhere('ticket_no', 'like', '%'.$q.'%')
+                    ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('phone', 'like', '%'.$q.'%'))
+                    ->orWhereHas('partner', fn ($p) => $p->where('name', 'like', '%'.$q.'%')->orWhere('domain', 'like', '%'.$q.'%'));
+            });
+        }
+
+        $rows = $query->limit(300)->get();
+
+        return view('partners.report', [
+            'rows' => $rows,
+            'flow' => $flow,
+            'q' => $q,
+            'from' => $from,
+            'to' => $to,
+            'stats' => [
+                'total' => $rows->count(),
+                'pending' => $rows->where('partner_approval_status', 'pending')->count(),
+                'approved' => $rows->where('partner_approval_status', 'approved')->count(),
+                'rejected' => $rows->where('partner_approval_status', 'rejected')->count(),
+                'returned' => $rows->whereIn('partner_approval_status', ['returned', 'returned_to_origin'])->count(),
+            ],
+        ]);
+    }
+
     public function createInbound(): RedirectResponse
     {
         return redirect()
             ->route('partners.cartable', ['tab' => 'pending'])
-            ->with('success', 'قبض ارجاع شبکه به‌صورت خودکار در «در انتظار تأیید» می‌آید؛ پذیرش دستی لازم نیست.');
+            ->with('success', 'قبض ارجاع شبکه به‌صورت خودکار در «منتظر قطعه / تأیید» می‌آید.');
     }
 
     public function storeInbound(): RedirectResponse
@@ -115,7 +165,7 @@ class PartnerReferralController extends Controller
             return back()->with('error', 'این قبض هنوز تأیید نشده است.');
         }
         if ($reception->isPartnerInbound()) {
-            return back()->with('error', 'قبض ورودی شبکه را دوباره به همکار دیگر ارجاع ندهید؛ ابتدا کار را تمام و برگردانید.');
+            return back()->with('error', 'برای برگشت به همکار مبدأ از دکمه «ارجاع برگشت به همکار اول» استفاده کنید.');
         }
 
         $partner = Partner::query()->findOrFail((int) $data['partner_id']);
@@ -151,23 +201,26 @@ class PartnerReferralController extends Controller
 
     public function markReturned(Request $request, Reception $reception): RedirectResponse
     {
-        if ($reception->partner_flow === Reception::PARTNER_FLOW_OUTBOUND) {
+        // Destination shop: return repaired device/receipt to originating colleague.
+        if ($reception->isPartnerInbound() && $reception->partner_approval_status === 'approved') {
+            $result = $this->network->returnToOrigin($reception);
+
+            return back()->with($result['ok'] ? 'success' : 'error', $result['message']);
+        }
+
+        // Origin shop: mark local outbound as physically returned / ready for customer exit.
+        if ($reception->partner_flow === Reception::PARTNER_FLOW_OUTBOUND
+            || $reception->partner_flow === Reception::PARTNER_FLOW_RETURNED) {
             $reception->update([
                 'partner_flow' => Reception::PARTNER_FLOW_RETURNED,
                 'partner_returned_at' => now(),
+                'partner_approval_status' => $reception->partner_approval_status === 'returned'
+                    ? 'returned'
+                    : ($reception->partner_approval_status ?: 'returned'),
                 'status' => in_array($reception->status, ['delivered', 'cancelled'], true) ? $reception->status : 'ready',
             ]);
 
-            return back()->with('success', 'برگشت از همکار ثبت شد؛ آماده تحویل به مشتری.');
-        }
-
-        if ($reception->isPartnerInbound() && $reception->partner_approval_status === 'approved') {
-            $reception->update([
-                'partner_returned_at' => now(),
-                'status' => 'ready',
-            ]);
-
-            return back()->with('success', 'آماده برگشت به همکار مبدأ علامت خورد.');
+            return back()->with('success', 'برگشت از همکار ثبت شد؛ آماده خروج/تحویل به مشتری.');
         }
 
         return back()->with('error', 'این قبض برای برگشت آماده نیست.');
