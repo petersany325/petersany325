@@ -5,13 +5,13 @@
 <div class="top">
   <div>
     <h1>میز حسابداری مدرن</h1>
-    <p>فاکتور خرید/فروش با سریال، پیش‌فاکتور، سند دستی، بانک، انبار چندگانه، هزینه، حقوق و گزارش</p>
+    <p>فاکتور خرید/فروش با سریال، چک، اقساط، انبار چندگانه، حقوق و گزارش‌های فیلتردار</p>
   </div>
   <div class="actions">
     <a class="btn" href="{{ route('admin.accounting.docs.create',['type'=>'sale']) }}">فروش + سریال</a>
     <a class="btn g" href="{{ route('admin.accounting.docs.create',['type'=>'purchase']) }}">خرید</a>
-    <a class="btn w" href="{{ route('admin.accounting.docs.create',['type'=>'proforma']) }}">پیش‌فاکتور</a>
-    <a class="btn g" href="{{ route('admin.accounting.docs.create',['type'=>'voucher']) }}">سند دستی</a>
+    <a class="btn w" href="{{ route('admin.accounting.checks') }}">چک‌ها</a>
+    <a class="btn o" href="{{ route('admin.accounting.installments') }}">اقساط</a>
   </div>
 </div>
 <div class="grid">
@@ -21,6 +21,26 @@
   <div class="card"><h3>پیش‌فاکتور باز</h3><div class="v">{{ (int)($stats['proforma_open'] ?? 0) }}</div>
     <div class="s">{{ (int)($stats['warehouses'] ?? 0) }} انبار · {{ (int)($stats['banks'] ?? 0) }} بانک</div></div>
 </div>
+
+<div class="panel">
+  <div class="hd"><strong>منوهای جدید حسابداری</strong><a class="btn g" href="{{ route('admin.accounting.reports') }}">مرکز گزارش‌ها</a></div>
+  <div class="bd">
+    <div class="chips" style="margin:0">
+      <a href="{{ route('admin.accounting.checks') }}">چک‌ها — پرداختی / دریافتی / برگشتی / تحویل</a>
+      <a href="{{ route('admin.accounting.installments') }}">اقساط مشتریان — تأیید و جدول اقساط</a>
+      <a href="{{ route('admin.accounting.warehouses') }}">انبار چندگانه</a>
+      <a href="{{ route('admin.accounting.reports.sales') }}">گزارش فروش/خرید (فیلتر شماره فاکتور)</a>
+      <a href="{{ route('admin.accounting.reports.staff') }}">گزارش کارمندان و سود</a>
+      <a href="{{ route('admin.accounting.reports.payroll') }}">گزارش حقوق و مزایا</a>
+      <a href="{{ route('admin.accounting.reports.vouchers') }}">گزارش سند حسابداری</a>
+      <a href="{{ route('admin.accounting.reports.warehouse') }}">گزارش انبار با تفکیک</a>
+      <a href="{{ route('admin.accounting.reports.customers') }}">گزارش مشتریان</a>
+      <a href="{{ route('admin.accounting.reports.checks') }}">گزارش چک‌ها</a>
+      <a href="{{ route('admin.accounting.reports.installments') }}">گزارش اقساط</a>
+    </div>
+  </div>
+</div>
+
 <div class="chips">
   @foreach($types as $k=>$label)
     <a href="{{ route('admin.accounting.docs',['type'=>$k]) }}">{{ $label }} ({{ (int)($stats['docs'][$k] ?? 0) }})</a>
