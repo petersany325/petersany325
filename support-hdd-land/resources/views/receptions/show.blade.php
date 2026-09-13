@@ -837,7 +837,9 @@
         </div>
 
         @php
+            // قبل از تخفیف جدید (برای محاسبهٔ خودکار تسویه نهایی)
             $dueGross = max(0, $gross - (int) $reception->paid_amount);
+            // مانده واقعی فاکتور (بعد از تخفیف فعلی)
             $remain = $reception->remainingAmount();
             $canDeliverNow = ! $reception->isDelivered();
             $canCollectDebt = $reception->canCollectDebt();
@@ -1119,7 +1121,7 @@
             <p class="muted" style="margin:0 0 8px;">برای بیعانه یا پرداخت جزئی. تحویل نهایی فقط از پنل بالا پس از مشخص شدن حساب‌کتاب.</p>
             <div class="rx-pay-due">
                 <span>مبلغ قابل دریافت از مشتری</span>
-                <strong data-due-gross="{{ $dueGross }}">{{ number_format($dueGross) }} تومان</strong>
+                <strong data-due-remain="{{ $remain }}" data-due-gross="{{ $dueGross }}">{{ number_format($remain) }} تومان</strong>
             </div>
             @if(\App\Support\PaymentGateways::showOnReception())
                 @include('partials.payment-links', ['payTitle' => 'لینک بانک‌ها'])
@@ -1155,16 +1157,16 @@
                     </div>
                     <div>
                         <label>مبلغ دریافتی</label>
-                        <input type="number" name="amount" id="rx-pay-amount" min="1" value="{{ $dueGross }}" required>
+                        <input type="number" name="amount" id="rx-pay-amount" min="1" value="{{ $remain }}" required>
                     </div>
                     <div>
                         <label>تخفیف تسویه نهایی (تومان)</label>
                         <input type="number" name="discount" id="rx-pay-discount" min="0" value="{{ (int) $reception->discount }}" readonly>
-                        <div class="muted" style="font-size:11px;margin-top:3px;">فقط وقتی نوع پرداخت «تسویه نهایی» است؛ اگر کمتر بگیرید اختلاف تخفیف می‌شود.</div>
+                        <div class="muted" style="font-size:11px;margin-top:3px;" id="rx-pay-discount-hint">برای اعمال تخفیف، نوع را «تسویه نهایی» بگذارید و مبلغ دریافتی را کمتر از مانده وارد کنید؛ اختلاف خودکار تخفیف می‌شود. بیعانه/جزئی تخفیف را عوض نمی‌کند.</div>
                     </div>
                     <div>
                         <label>دلیل تخفیف</label>
-                        <input type="text" name="discount_reason" id="rx-pay-discount-reason" value="{{ $reception->discount_reason }}" placeholder="اختیاری">
+                        <input type="text" name="discount_reason" id="rx-pay-discount-reason" value="{{ $reception->discount_reason }}" placeholder="اختیاری" disabled>
                     </div>
                     <div>
                         <label>توضیح / پیگیری</label>
@@ -1309,15 +1311,33 @@
     var reasonEl = document.getElementById('rx-pay-discount-reason');
     var dueEl = document.querySelector('[data-due-gross]');
     var typeEl = document.querySelector('#rx-payment-form select[name="type"]');
+    var hintEl = document.getElementById('rx-pay-discount-hint');
     if (amountEl && discountEl && dueEl) {
-        var due = parseInt(dueEl.getAttribute('data-due-gross') || '0', 10) || 0;
+        var dueGross = parseInt(dueEl.getAttribute('data-due-gross') || '0', 10) || 0;
+        var dueRemain = parseInt(dueEl.getAttribute('data-due-remain') || String(dueGross), 10) || 0;
+        var existingDiscount = parseInt(discountEl.value || '0', 10) || 0;
         var syncDiscount = function () {
             var amount = parseInt(amountEl.value || '0', 10) || 0;
-            var isFinal = !typeEl || typeEl.value === 'final';
-            var diff = isFinal ? Math.max(0, due - amount) : 0;
-            discountEl.value = String(diff);
-            if (diff > 0 && reasonEl && !reasonEl.value) {
-                reasonEl.placeholder = 'تخفیف تسویه خودکار';
+            var isFinal = !!(typeEl && typeEl.value === 'final');
+            // فقط در تسویه نهایی فیلد تخفیف ارسال شود تا بیعانه/جزئی تخفیف قبلی را صفر نکند.
+            discountEl.disabled = !isFinal;
+            if (reasonEl) reasonEl.disabled = !isFinal;
+            if (isFinal) {
+                var diff = Math.max(0, dueGross - amount);
+                discountEl.value = String(diff);
+                if (diff > 0 && reasonEl && !reasonEl.value) {
+                    reasonEl.placeholder = 'تخفیف تسویه خودکار';
+                }
+                if (hintEl) {
+                    hintEl.textContent = diff > 0
+                        ? ('با این مبلغ، ' + diff.toLocaleString('en-US') + ' تومان تخفیف تسویه ثبت می‌شود.')
+                        : 'مانده کامل دریافت می‌شود؛ برای تخفیف مبلغ دریافتی را کمتر کنید.';
+                }
+            } else {
+                discountEl.value = String(existingDiscount);
+                if (hintEl) {
+                    hintEl.textContent = 'بیعانه/پرداخت جزئی تخفیف را تغییر نمی‌دهد. برای تخفیف خودکار نوع را «تسویه نهایی» کنید و کمتر دریافت کنید.';
+                }
             }
         };
         amountEl.addEventListener('input', syncDiscount);

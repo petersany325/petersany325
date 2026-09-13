@@ -1000,10 +1000,11 @@ class ReceptionController extends Controller
                 ? (int) $data['discount']
                 : null;
 
-            // تخفیف خودکار فقط در تسویه نهایی؛ پرداخت جزئی/بیعانه باقیمانده را تخفیف نمی‌زند.
-            if ($data['type'] === 'final' && $request->boolean('auto_discount', true) && $amount > 0) {
+            // تخفیف فقط در «تسویه نهایی» اعمال/جایگزین می‌شود.
+            // بیعانه و پرداخت جزئی نباید فیلد readonly تخفیف (=۰) را روی تخفیف پنل هزینه بنویسند.
+            if ($data['type'] === 'final' && $amount > 0) {
                 $dueBeforeDiscount = max(0, $gross - $paidBefore);
-                if ($amount < $dueBeforeDiscount) {
+                if ($request->boolean('auto_discount', true) && $amount < $dueBeforeDiscount) {
                     $auto = $dueBeforeDiscount - $amount;
                     $reason = trim((string) ($data['discount_reason'] ?? ''));
                     $reception->discount = $auto;
@@ -1020,13 +1021,6 @@ class ReceptionController extends Controller
                     $reception->save();
                     $reception->recalculateTotals();
                 }
-            } elseif ($explicitDiscount !== null && $data['type'] !== 'refund') {
-                $reception->discount = $explicitDiscount;
-                if (array_key_exists('discount_reason', $data)) {
-                    $reception->discount_reason = $data['discount_reason'];
-                }
-                $reception->save();
-                $reception->recalculateTotals();
             }
 
             $payment = Payment::create([
