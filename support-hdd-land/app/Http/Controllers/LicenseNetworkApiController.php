@@ -23,16 +23,18 @@ class LicenseNetworkApiController extends Controller
 
         $peers = ProductLicense::query()
             ->where('status', 'active')
+            ->where('network_visible', true)
             ->whereNotNull('domain')
             ->where('domain', '!=', '')
             ->where('id', '!=', $self->id)
-            ->orderBy('customer_name')
+            ->orderByRaw('COALESCE(NULLIF(org_name, ""), customer_name)')
             ->get()
             ->map(fn (ProductLicense $l) => [
-                'license_key' => $l->license_key,
+                // Privacy: never send license serial to other shops.
+                'org_name' => $l->networkDisplayName(),
                 'domain' => $l->domain,
-                'customer_name' => $l->customer_name,
-                'shop_name' => $l->customer_name,
+                'customer_name' => $l->networkDisplayName(),
+                'shop_name' => $l->networkDisplayName(),
                 'customer_phone' => $l->customer_phone,
                 'plan_label' => $l->plan_label,
                 'last_check_at' => optional($l->last_check_at)?->toIso8601String(),
@@ -44,7 +46,7 @@ class LicenseNetworkApiController extends Controller
             'ok' => true,
             'peers' => $peers,
             'count' => count($peers),
-            'message' => count($peers).' همکار فعال در شبکه.',
+            'message' => count($peers).' همکار فعال در شبکه (با اسم مجموعه).',
         ]);
     }
 
@@ -74,11 +76,12 @@ class LicenseNetworkApiController extends Controller
         $toDomain = ProductLicense::normalizeDomain((string) ($data['to_domain'] ?? ''));
         $to = ProductLicense::query()
             ->where('status', 'active')
+            ->where('network_visible', true)
             ->when($toKey !== '', fn ($q) => $q->where('license_key', $toKey))
             ->when($toKey === '' && $toDomain !== '', fn ($q) => $q->where('domain', $toDomain))
             ->first();
         if (! $to) {
-            return response()->json(['ok' => false, 'message' => 'همکار مقصد فعال پیدا نشد.'], 404);
+            return response()->json(['ok' => false, 'message' => 'همکار مقصد فعال در شبکه پیدا نشد (یا عضویت شبکه خاموش است).'], 404);
         }
         if ($to->id === $from->id) {
             return response()->json(['ok' => false, 'message' => 'نمی‌توانید به خودتان ارجاع دهید.'], 422);
@@ -89,8 +92,8 @@ class LicenseNetworkApiController extends Controller
             'to_license_id' => $to->id,
             'from_domain' => $from->domain,
             'to_domain' => $to->domain,
-            'from_shop_name' => $from->customer_name,
-            'to_shop_name' => $to->customer_name,
+            'from_shop_name' => $from->networkDisplayName(),
+            'to_shop_name' => $to->networkDisplayName(),
             'origin_receipt_no' => $data['origin_receipt_no'] ?? null,
             'origin_ticket_no' => $data['origin_ticket_no'] ?? null,
             'status' => NetworkReferral::STATUS_PENDING,

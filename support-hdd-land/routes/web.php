@@ -513,6 +513,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
         Route::get('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'edit'])->name('edit');
         Route::post('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'update'])->name('update');
+        Route::post('/{license}/network', [\App\Http\Controllers\LicenseAdminController::class, 'toggleNetwork'])->name('network');
         Route::get('/{license}/renew', [\App\Http\Controllers\LicenseAdminController::class, 'renewForm'])->name('renew');
         Route::post('/{license}/sms', [\App\Http\Controllers\LicenseAdminController::class, 'sendSms'])->name('sms');
         Route::post('/{license}/revoke', [\App\Http\Controllers\LicenseAdminController::class, 'revoke'])->name('revoke');

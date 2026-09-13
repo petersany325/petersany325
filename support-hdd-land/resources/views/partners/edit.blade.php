@@ -6,11 +6,10 @@
 
 @section('content')
 <section class="panel" style="max-width:760px;">
-    <p class="muted">هویت شبکه (نام/دامنه/لایسنس) از لایسنس‌های فعال همگام می‌شود و اینجا فقط یادداشت محلی قابل ویرایش است.</p>
+    <p class="muted">هویت شبکه با <strong>اسم مجموعه</strong> همگام می‌شود. سریال لایسنس به همکاران نمایش داده نمی‌شود.</p>
     <div class="accept-row accept-row-2" style="margin:12px 0;">
-        <div><label>نام</label><input type="text" value="{{ $partner->name }}" disabled></div>
+        <div><label>اسم مجموعه</label><input type="text" value="{{ $partner->displayName() }}" disabled></div>
         <div><label>دامنه</label><input type="text" value="{{ $partner->domain }}" disabled dir="ltr" style="text-align:left;"></div>
-        <div><label>لایسنس</label><input type="text" value="{{ $partner->license_key }}" disabled dir="ltr" style="text-align:left;"></div>
         <div><label>موبایل</label><input type="text" value="{{ $partner->phone }}" disabled dir="ltr" style="text-align:left;"></div>
     </div>
     <form method="POST" action="{{ route('partners.update', $partner) }}">

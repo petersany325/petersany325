@@ -29,72 +29,60 @@ class PartnerNetworkService
             return ['ok' => false, 'message' => 'همگام‌سازی همکاران ناموفق: '.$e->getMessage()];
         }
 
-        $seenKeys = [];
+        $seenDomains = [];
         $n = 0;
         foreach ($peers as $peer) {
-            $key = ProductLicense::normalizeKey((string) ($peer['license_key'] ?? ''));
             $domain = ProductLicense::normalizeDomain((string) ($peer['domain'] ?? ''));
-            if ($key === '' && $domain === '') {
+            $org = trim((string) ($peer['org_name'] ?? $peer['shop_name'] ?? $peer['customer_name'] ?? $peer['name'] ?? ''));
+            if ($domain === '' && $org === '') {
                 continue;
             }
-            if ($key !== '') {
-                $seenKeys[] = $key;
+            if ($domain !== '') {
+                $seenDomains[] = $domain;
             }
             $partner = null;
-            if ($key !== '') {
-                $partner = Partner::query()->where('license_key', $key)->first();
-            }
-            if (! $partner && $domain !== '') {
+            if ($domain !== '') {
                 $partner = Partner::query()->where('domain', $domain)->first();
+            }
+            if (! $partner && $org !== '') {
+                $partner = Partner::query()->where('org_name', $org)->where('source', 'license')->first();
             }
             if (! $partner) {
                 $partner = new Partner();
             }
-            $name = trim((string) ($peer['customer_name'] ?? $peer['name'] ?? '')) ?: ($domain !== '' ? $domain : $key);
+            $name = $org !== '' ? $org : ($domain !== '' ? $domain : 'همکار');
             $partner->fill([
                 'name' => $name,
-                'shop_name' => trim((string) ($peer['shop_name'] ?? $name)) ?: $name,
+                'org_name' => $org !== '' ? $org : $name,
+                'shop_name' => $name,
                 'phone' => trim((string) ($peer['customer_phone'] ?? $peer['phone'] ?? '')) ?: null,
                 'domain' => $domain !== '' ? $domain : $partner->domain,
-                'license_key' => $key !== '' ? $key : $partner->license_key,
-                'code' => $key !== '' ? $key : ($domain ?: $partner->code),
+                // Never store/show peer license serial on colleague shops.
+                'license_key' => null,
+                'code' => $domain !== '' ? $domain : ($org !== '' ? $org : $partner->code),
                 'source' => 'license',
                 'is_active' => true,
                 'last_synced_at' => now(),
-                'notes' => 'همکار لایسنس‌دار — همگام خودکار از شبکه',
+                'notes' => 'همکار شبکه — نمایش با اسم مجموعه (سریال لایسنس مخفی است)',
             ]);
             $partner->save();
             $partner->ensureCustomer();
             $n++;
         }
 
-        // Deactivate license-sourced partners no longer active (keep rows for history).
-        $q = Partner::query()->where('source', 'license')->where('is_active', true);
-        if ($seenKeys !== []) {
-            $q->where(function ($inner) use ($seenKeys) {
-                $inner->whereNotNull('license_key')->whereNotIn('license_key', $seenKeys);
-            });
-            // Also deactivate license partners without key that weren't refreshed in this sync.
+        if ($seenDomains !== []) {
             Partner::query()
                 ->where('source', 'license')
                 ->where('is_active', true)
-                ->whereNull('license_key')
-                ->where(function ($inner) {
-                    $inner->whereNull('last_synced_at')->orWhere('last_synced_at', '<', now()->subMinutes(5));
+                ->where(function ($q) use ($seenDomains) {
+                    $q->whereNull('domain')->orWhereNotIn('domain', $seenDomains);
                 })
                 ->update(['is_active' => false]);
         } elseif ($peers === []) {
             Partner::query()->where('source', 'license')->where('is_active', true)->update(['is_active' => false]);
         }
-        if ($seenKeys !== []) {
-            Partner::query()
-                ->where('source', 'license')
-                ->whereNotNull('license_key')
-                ->whereNotIn('license_key', $seenKeys)
-                ->update(['is_active' => false]);
-        }
 
-        return ['ok' => true, 'message' => $n.' همکار لایسنس‌دار همگام شد.', 'count' => $n];
+        return ['ok' => true, 'message' => $n.' همکار شبکه (با اسم مجموعه) همگام شد.', 'count' => $n];
     }
 
     /**
@@ -107,16 +95,18 @@ class PartnerNetworkService
 
             return ProductLicense::query()
                 ->where('status', 'active')
+                ->where('network_visible', true)
                 ->whereNotNull('domain')
                 ->where('domain', '!=', '')
                 ->when($selfDomain !== '', fn ($q) => $q->where('domain', '!=', $selfDomain))
-                ->orderBy('customer_name')
+                ->orderByRaw('COALESCE(NULLIF(org_name, ""), customer_name)')
                 ->get()
                 ->map(fn (ProductLicense $l) => [
-                    'license_key' => $l->license_key,
+                    // Never expose license serial to peer shops.
+                    'org_name' => $l->networkDisplayName(),
                     'domain' => $l->domain,
-                    'customer_name' => $l->customer_name,
-                    'shop_name' => $l->customer_name,
+                    'customer_name' => $l->networkDisplayName(),
+                    'shop_name' => $l->networkDisplayName(),
                     'customer_phone' => $l->customer_phone,
                     'plan_label' => $l->plan_label,
                     'last_check_at' => optional($l->last_check_at)?->toIso8601String(),
@@ -148,7 +138,7 @@ class PartnerNetworkService
         $reception->loadMissing('customer');
         $customer = $reception->customer;
         if (! $toPartner->domain && ! $toPartner->license_key) {
-            return ['ok' => false, 'message' => 'همکار مقصد دامنه/لایسنس شبکه ندارد.'];
+            return ['ok' => false, 'message' => 'همکار مقصد دامنه شبکه ندارد.'];
         }
 
         $payload = [
@@ -187,19 +177,21 @@ class PartnerNetworkService
             ],
             'from_shop' => [
                 'name' => shop_name(),
+                'org_name' => shop_name(),
                 'domain' => $this->selfDomain(),
-                'license_key' => $this->selfLicenseKey(),
+                // Do not include license_key in peer payload.
             ],
         ];
 
         if ($this->isSellerHub()) {
             $to = ProductLicense::query()
                 ->where('status', 'active')
+                ->where('network_visible', true)
                 ->when($toPartner->license_key, fn ($q) => $q->where('license_key', ProductLicense::normalizeKey((string) $toPartner->license_key)))
                 ->when(! $toPartner->license_key && $toPartner->domain, fn ($q) => $q->where('domain', ProductLicense::normalizeDomain((string) $toPartner->domain)))
                 ->first();
             if (! $to) {
-                return ['ok' => false, 'message' => 'لایسنس فعال مقصد در هاب پیدا نشد.'];
+                return ['ok' => false, 'message' => 'لایسنس فعال مقصد در شبکه پیدا نشد (یا عضویت شبکه خاموش است).'];
             }
             $row = NetworkReferral::query()->create([
                 'from_license_id' => null,
@@ -207,7 +199,7 @@ class PartnerNetworkService
                 'from_domain' => $this->selfDomain(),
                 'to_domain' => $to->domain,
                 'from_shop_name' => shop_name(),
-                'to_shop_name' => $to->customer_name,
+                'to_shop_name' => $to->networkDisplayName(),
                 'origin_receipt_no' => $reception->receipt_no,
                 'origin_ticket_no' => $reception->ticket_no,
                 'status' => NetworkReferral::STATUS_PENDING,
@@ -726,30 +718,30 @@ class PartnerNetworkService
      */
     private function upsertPartnerFromShop(array $from, array $item): Partner
     {
-        $key = ProductLicense::normalizeKey((string) ($from['license_key'] ?? ''));
         $domain = ProductLicense::normalizeDomain((string) ($from['domain'] ?? $item['from_domain'] ?? ''));
-        $name = trim((string) ($from['name'] ?? $item['from_shop_name'] ?? '')) ?: ($domain !== '' ? $domain : 'همکار شبکه');
+        $name = trim((string) ($from['org_name'] ?? $from['name'] ?? $item['from_shop_name'] ?? '')) ?: ($domain !== '' ? $domain : 'همکار شبکه');
 
         $partner = null;
-        if ($key !== '') {
-            $partner = Partner::query()->where('license_key', $key)->first();
-        }
-        if (! $partner && $domain !== '') {
+        if ($domain !== '') {
             $partner = Partner::query()->where('domain', $domain)->first();
+        }
+        if (! $partner) {
+            $partner = Partner::query()->where('org_name', $name)->where('source', 'license')->first();
         }
         if (! $partner) {
             $partner = new Partner();
         }
         $partner->fill([
             'name' => $name,
+            'org_name' => $name,
             'shop_name' => $name,
             'domain' => $domain !== '' ? $domain : null,
-            'license_key' => $key !== '' ? $key : null,
-            'code' => $key !== '' ? $key : $domain,
+            'license_key' => null,
+            'code' => $domain !== '' ? $domain : $name,
             'source' => 'license',
             'is_active' => true,
             'last_synced_at' => now(),
-            'notes' => 'همکار شبکه لایسنس‌دار',
+            'notes' => 'همکار شبکه — اسم مجموعه',
         ]);
         $partner->save();
         $partner->ensureCustomer();

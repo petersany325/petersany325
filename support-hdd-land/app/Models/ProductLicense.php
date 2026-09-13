@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class ProductLicense extends Model
 {
     protected $fillable = [
-        'license_key', 'customer_name', 'customer_phone', 'customer_email', 'domain', 'product',
+        'license_key', 'customer_name', 'org_name', 'customer_phone', 'customer_email', 'domain', 'product',
         'plan_code', 'plan_label', 'plan_months', 'price_toman',
-        'status', 'token', 'activated_at', 'expires_at', 'last_check_at',
+        'status', 'network_visible', 'token', 'activated_at', 'expires_at', 'last_check_at',
         'check_count', 'last_check_ip', 'last_check_version', 'meta', 'notes',
     ];
 
@@ -23,7 +23,30 @@ class ProductLicense extends Model
             'check_count' => 'integer',
             'plan_months' => 'integer',
             'price_toman' => 'integer',
+            'network_visible' => 'boolean',
         ];
+    }
+
+    /** Public name shown to other licensed shops in partner network (never the serial). */
+    public function networkDisplayName(): string
+    {
+        $org = trim((string) ($this->org_name ?? ''));
+        if ($org !== '') {
+            return $org;
+        }
+        $cust = trim((string) ($this->customer_name ?? ''));
+        if ($cust !== '') {
+            return $cust;
+        }
+
+        return trim((string) ($this->domain ?? '')) ?: 'همکار شبکه';
+    }
+
+    public function isInPartnerNetwork(): bool
+    {
+        return (bool) $this->network_visible
+            && $this->status === 'active'
+            && trim((string) $this->domain) !== '';
     }
 
     public function planSummary(): string

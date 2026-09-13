@@ -47,6 +47,7 @@ class LicenseAdminController extends Controller
             $q->where(function ($w) use ($search) {
                 $w->where('license_key', 'like', '%'.$search.'%')
                     ->orWhere('customer_name', 'like', '%'.$search.'%')
+                    ->orWhere('org_name', 'like', '%'.$search.'%')
                     ->orWhere('customer_phone', 'like', '%'.$search.'%')
                     ->orWhere('customer_email', 'like', '%'.$search.'%')
                     ->orWhere('domain', 'like', '%'.$search.'%');
@@ -118,6 +119,7 @@ class LicenseAdminController extends Controller
 
         $data = $request->validate([
             'customer_name' => ['nullable', 'string', 'max:120'],
+            'org_name' => ['nullable', 'string', 'max:160'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
             'customer_email' => ['nullable', 'email', 'max:160'],
             'domain_hint' => ['nullable', 'string', 'max:190'],
@@ -125,6 +127,7 @@ class LicenseAdminController extends Controller
             'expires_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'send_sms' => ['nullable', 'boolean'],
+            'network_visible' => ['nullable', 'boolean'],
             'start_from' => ['nullable', 'in:issue,activate'],
         ]);
 
@@ -144,9 +147,15 @@ class LicenseAdminController extends Controller
             $expiresAt = now()->addMonths((int) $plan['months'])->toDateString();
         }
 
+        $orgName = trim((string) ($data['org_name'] ?? ''));
+        if ($orgName === '') {
+            $orgName = trim((string) ($data['customer_name'] ?? '')) ?: null;
+        }
+
         $row = ProductLicense::query()->create([
             'license_key' => $key,
             'customer_name' => $data['customer_name'] ?? null,
+            'org_name' => $orgName,
             'customer_phone' => $data['customer_phone'] ?? null,
             'customer_email' => $data['customer_email'] ?? null,
             'product' => 'hddland-repair',
@@ -155,6 +164,7 @@ class LicenseAdminController extends Controller
             'plan_months' => $plan['months'],
             'price_toman' => (int) $plan['price'],
             'status' => 'unused',
+            'network_visible' => $request->boolean('network_visible', true),
             'expires_at' => $expiresAt,
             'notes' => $data['notes'] ?? null,
             'meta' => array_filter([
@@ -234,11 +244,13 @@ class LicenseAdminController extends Controller
 
         $data = $request->validate([
             'customer_name' => ['nullable', 'string', 'max:120'],
+            'org_name' => ['nullable', 'string', 'max:160'],
             'customer_phone' => ['nullable', 'string', 'max:30'],
             'customer_email' => ['nullable', 'email', 'max:160'],
             'domain' => ['nullable', 'string', 'max:190'],
             'plan_code' => ['nullable', 'string', 'max:30'],
             'status' => ['required', 'in:unused,active,revoked,expired'],
+            'network_visible' => ['nullable', 'boolean'],
             'starts_at' => ['nullable', 'string', 'max:20'],
             'expires_at' => ['nullable', 'string', 'max:20'],
             'notes' => ['nullable', 'string', 'max:2000'],
@@ -264,12 +276,18 @@ class LicenseAdminController extends Controller
         }
 
         $domain = trim((string) ($data['domain'] ?? ''));
+        $orgName = trim((string) ($data['org_name'] ?? ''));
+        if ($orgName === '') {
+            $orgName = trim((string) ($data['customer_name'] ?? $license->customer_name ?? '')) ?: null;
+        }
         $license->fill([
             'customer_name' => $data['customer_name'] ?? null,
+            'org_name' => $orgName,
             'customer_phone' => $data['customer_phone'] ?? null,
             'customer_email' => $data['customer_email'] ?? null,
             'domain' => $domain !== '' ? ProductLicense::normalizeDomain($domain) : null,
             'status' => $data['status'],
+            'network_visible' => $request->boolean('network_visible', (bool) $license->network_visible),
             'notes' => $data['notes'] ?? null,
             'activated_at' => $starts,
             'expires_at' => $ends,
@@ -282,6 +300,20 @@ class LicenseAdminController extends Controller
         $license->save();
 
         return redirect()->route('licenses.index')->with('success', 'لایسنس ویرایش شد: '.$license->license_key);
+    }
+
+    public function toggleNetwork(Request $request, ProductLicense $license)
+    {
+        $this->assertSellerAdmin($request);
+        $license->network_visible = ! (bool) $license->network_visible;
+        $license->save();
+
+        return back()->with(
+            'success',
+            $license->network_visible
+                ? ('عضویت شبکه برای «'.$license->networkDisplayName().'» روشن شد.')
+                : ('عضویت شبکه برای «'.$license->networkDisplayName().'» خاموش شد — در فهرست همکاران دیده نمی‌شود.')
+        );
     }
 
     public function renewForm(Request $request, ProductLicense $license)

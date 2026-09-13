@@ -22,10 +22,10 @@ class PartnerController extends Controller
         if ($q !== '') {
             $query->where(function ($inner) use ($q) {
                 $inner->where('name', 'like', '%'.$q.'%')
+                    ->orWhere('org_name', 'like', '%'.$q.'%')
                     ->orWhere('shop_name', 'like', '%'.$q.'%')
                     ->orWhere('phone', 'like', '%'.$q.'%')
                     ->orWhere('domain', 'like', '%'.$q.'%')
-                    ->orWhere('license_key', 'like', '%'.$q.'%')
                     ->orWhere('code', 'like', '%'.$q.'%');
             });
         }

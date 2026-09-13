@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Partner extends Model
 {
     protected $fillable = [
-        'name', 'phone', 'shop_name', 'code', 'domain', 'license_key', 'source',
+        'name', 'phone', 'shop_name', 'org_name', 'code', 'domain', 'license_key', 'source',
         'notes', 'is_active', 'customer_id', 'last_synced_at',
     ];
 
@@ -33,13 +33,17 @@ class Partner extends Model
 
     public function displayName(): string
     {
+        $org = trim((string) ($this->org_name ?? ''));
+        if ($org !== '') {
+            return $org;
+        }
         $shop = trim((string) $this->shop_name);
         $name = trim((string) $this->name);
         if ($shop !== '' && $shop !== $name) {
             return $name.' — '.$shop;
         }
 
-        return $name !== '' ? $name : (string) ($this->domain ?: $this->license_key ?: 'همکار');
+        return $name !== '' ? $name : (string) ($this->domain ?: 'همکار');
     }
 
     /**

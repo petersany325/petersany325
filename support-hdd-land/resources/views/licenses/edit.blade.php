@@ -21,6 +21,11 @@
         @csrf
         <div class="accept-row accept-row-3" style="align-items:end;">
             <div>
+                <label>اسم مجموعه *</label>
+                <input type="text" name="org_name" value="{{ old('org_name', $license->org_name) }}" required placeholder="نام عمومی در شبکه همکاران">
+                <div class="muted" style="font-size:11px;margin-top:4px;">در فهرست همکاران فقط همین نام دیده می‌شود؛ سریال لایسنس مخفی است.</div>
+            </div>
+            <div>
                 <label>نام مشتری</label>
                 <input type="text" name="customer_name" value="{{ old('customer_name', $license->customer_name) }}">
             </div>
@@ -71,6 +76,15 @@
                 <label>یادداشت</label>
                 <input type="text" name="notes" value="{{ old('notes', $license->notes) }}">
             </div>
+        </div>
+        <div style="margin-top:12px;">
+            @include('partials.toggle', [
+                'name' => 'network_visible',
+                'label' => 'عضویت در شبکه داخلی همکاران (سرچ فهرست نمایندگان)',
+                'checked' => (bool) old('network_visible', $license->network_visible ?? true),
+                'on' => 'ON — در سرچ همکاران',
+                'off' => 'OFF — خارج از شبکه',
+            ])
         </div>
         <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
             <button class="btn btn-primary" type="submit">ذخیره تغییرات</button>

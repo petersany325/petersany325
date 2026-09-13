@@ -65,6 +65,11 @@
             @csrf
             <div class="accept-row accept-row-3" style="align-items:end;">
                 <div>
+                    <label>اسم مجموعه *</label>
+                    <input type="text" name="org_name" value="{{ old('org_name') }}" required placeholder="مثلاً سرزمین هارد رشت">
+                    <div class="muted" style="font-size:11px;margin-top:4px;">همین نام در فهرست همکاران شبکه دیده می‌شود (سریال لایسنس به همکار نشان داده نمی‌شود).</div>
+                </div>
+                <div>
                     <label>نام مشتری / تعمیرگاه</label>
                     <input type="text" name="customer_name" value="{{ old('customer_name') }}" placeholder="مثلاً تعمیرگاه آریا">
                 </div>
@@ -112,6 +117,13 @@
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:10px;">
                 @include('partials.toggle', [
+                    'name' => 'network_visible',
+                    'label' => 'عضویت در شبکه داخلی همکاران',
+                    'checked' => (bool) old('network_visible', true),
+                    'on' => 'ON — در سرچ همکاران',
+                    'off' => 'OFF — خارج از شبکه',
+                ])
+                @include('partials.toggle', [
                     'name' => 'send_sms',
                     'label' => 'بعد از ساخت، سریال را SMS کن',
                     'checked' => (bool) old('send_sms', false),
@@ -126,7 +138,7 @@
     <form method="GET" action="{{ route('licenses.index') }}" class="accept-row accept-row-4" style="align-items:end;margin-bottom:12px;">
         <div>
             <label>جستجو</label>
-            <input type="text" name="q" value="{{ $search }}" placeholder="سریال / نام / دامنه / موبایل">
+            <input type="text" name="q" value="{{ $search }}" placeholder="سریال / اسم مجموعه / نام / دامنه / موبایل">
         </div>
         <div>
             <label>وضعیت</label>
@@ -157,10 +169,12 @@
             <thead>
             <tr>
                 <th>سریال</th>
+                <th>اسم مجموعه</th>
                 <th>مشتری</th>
                 <th>پلن / قیمت</th>
                 <th>دامنه</th>
                 <th>وضعیت</th>
+                <th>شبکه همکاران</th>
                 <th>شروع (شمسی)</th>
                 <th>پایان (شمسی)</th>
                 <th>آنلاین</th>
@@ -175,6 +189,10 @@
                         @if($row->notes)
                             <div class="muted" style="font-size:11px;">{{ $row->notes }}</div>
                         @endif
+                    </td>
+                    <td>
+                        <strong>{{ $row->org_name ?: $row->networkDisplayName() }}</strong>
+                        <div class="muted" style="font-size:11px;">نام عمومی شبکه</div>
                     </td>
                     <td>
                         {{ $row->customer_name ?: '—' }}
@@ -193,6 +211,14 @@
                     </td>
                     <td dir="ltr">{{ $row->domain ?: ($row->meta['domain_hint'] ?? '—') }}</td>
                     <td>{{ $row->statusLabel() }}</td>
+                    <td>
+                        <form method="POST" action="{{ route('licenses.network', $row) }}">
+                            @csrf
+                            <button class="btn" type="submit" style="padding:4px 10px;font-size:11px;font-weight:700;background:{{ $row->network_visible ? '#e8f8ef' : '#fff1f2' }};color:{{ $row->network_visible ? '#0f6b3a' : '#9f1239' }};border:1px solid {{ $row->network_visible ? '#86efac' : '#fecdd3' }};">
+                                {{ $row->network_visible ? 'ON — در سرچ' : 'OFF — خارج' }}
+                            </button>
+                        </form>
+                    </td>
                     <td>
                         @if($row->startsAt())
                             {{ jalali_date($row->startsAt()) }}
@@ -249,7 +275,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="9">سریالی نیست. از فرم بالا بسازید.</td></tr>
+                <tr><td colspan="11">سریالی نیست. از فرم بالا بسازید.</td></tr>
             @endforelse
             </tbody>
         </table>
