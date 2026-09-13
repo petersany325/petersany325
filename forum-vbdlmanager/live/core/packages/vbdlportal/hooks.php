@@ -58,10 +58,27 @@ class vbdlportal_Hooks
 	private static function injectPostUploadMenu($html)
 	{
 		$uri = strtolower((string)($_SERVER['REQUEST_URI'] ?? ''));
-		if (self::isMessageCenterUri($uri) || self::htmlLooksLikePrivateMessage($html))
+		$isMc = self::isMessageCenterUri($uri) || self::htmlLooksLikePrivateMessage($html);
+
+		// Always strip leftover DM upload markup from Message Center / PM HTML.
+		if ($isMc)
 		{
+			$html = preg_replace('/<div[^>]*id=["\']vbdl-post-upload-panel["\'][\\s\\S]*?<\\/div>/i', '', $html, 1);
+			$html = preg_replace('/<div[^>]*class=["\'][^"\']*vbdl-post-upload[^"\']*["\'][\\s\\S]*?<\\/div>/i', '', $html);
+			$html = preg_replace('/<div[^>]*class=["\'][^"\']*vbdl-quickupload[^"\']*["\'][\\s\\S]*?<\\/div>/i', '', $html);
+			// Still inject cleanup JS so SPA/late widgets are removed client-side.
+			if (stripos($html, 'post-upload.js') === false)
+			{
+				$assets = '<script defer src="/vbdlmanager/assets/post-upload.js?v=20260913mc2"></script>';
+				if (stripos($html, '</body>') !== false)
+				{
+					return preg_replace('/<\\/body>/i', $assets . '</body>', $html, 1);
+				}
+				return $html . $assets;
+			}
 			return $html;
 		}
+
 		$want = (strpos($uri, 'create-content') !== false
 			|| strpos($uri, 'edit-content') !== false
 			|| strpos($uri, '/new-content') !== false
@@ -79,12 +96,12 @@ class vbdlportal_Hooks
 		{
 			return $html;
 		}
-		// Cache-bust so Message Center clients pick up skip logic after deploys.
-		$assets = '<link rel="stylesheet" href="/vbdlmanager/assets/post-upload.css?v=20260913mc" />'
-			. '<script defer src="/vbdlmanager/assets/post-upload.js?v=20260913mc"></script>';
+		// Cache-bust so clients pick up skip/cleanup logic after deploys.
+		$assets = '<link rel="stylesheet" href="/vbdlmanager/assets/post-upload.css?v=20260913mc2" />'
+			. '<script defer src="/vbdlmanager/assets/post-upload.js?v=20260913mc2"></script>';
 		if (stripos($html, '</body>') !== false)
 		{
-			return preg_replace('/<\/body>/i', $assets . '</body>', $html, 1);
+			return preg_replace('/<\\/body>/i', $assets . '</body>', $html, 1);
 		}
 		return $html . $assets;
 	}

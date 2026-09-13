@@ -12,6 +12,26 @@
 </div>
 <script>
 (function(){
+	function isMessageCenterPage() {
+		var u = String(location.pathname || '') + String(location.href || '');
+		u = u.toLowerCase();
+		if (u.indexOf('messagecenter') !== -1 || u.indexOf('pmchat') !== -1 || u.indexOf('privatemessage') !== -1 || u.indexOf('private-message') !== -1 || u.indexOf('/messenger') !== -1) {
+			return true;
+		}
+		if (document.querySelector('input[name="recipients"], #recipients, input[name="msgrecipients"], #msgrecipients')) return true;
+		return false;
+	}
+	function removeSelf() {
+		var nodes = document.querySelectorAll('.vbdl-quickupload, [data-vbdl-qu="1"]');
+		for (var i = 0; i < nodes.length; i++) {
+			if (nodes[i] && nodes[i].parentNode) nodes[i].parentNode.removeChild(nodes[i]);
+		}
+	}
+	if (isMessageCenterPage()) {
+		removeSelf();
+		setInterval(removeSelf, 600);
+		return;
+	}
 	function initHost(host) {
 		if (!host || host.getAttribute('data-vbdl-inited') === '1') { return; }
 		host.setAttribute('data-vbdl-inited', '1');

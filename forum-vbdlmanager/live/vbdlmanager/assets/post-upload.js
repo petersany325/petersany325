@@ -3,12 +3,10 @@
  * Depends on /vbdlmanager/upload_api.php
  *
  * Categories come from AdminCP Access Grants (Upload) on a username/usergroup.
- * Never mounts on Message Center / private-message compose.
+ * Never mounts on Message Center / private-message / pmchat compose.
+ * Also removes any leftover DM upload widgets (including quickupload) on those pages.
  */
 (function () {
-  if (window.__vbdlPostUploadInit) return;
-  window.__vbdlPostUploadInit = true;
-
   function isMessageCenterPage() {
     var path = String(location.pathname || '').toLowerCase();
     var href = String(location.href || '').toLowerCase();
@@ -31,12 +29,37 @@
     if (document.querySelector('.b-messagecenter, #messagecenter, [data-ui="messagecenter"], .privatemessage-compose, .js-messagecenter, .b-pmchat, #pmchat, [data-ui="pmchat"]')) {
       return true;
     }
-    // Classic PM compose fields (Recipients / Subject) — never show DM upload here
     if (document.querySelector('input[name="recipients"], #recipients, input[name="msgrecipients"], #msgrecipients')) {
       return true;
     }
     return false;
   }
+
+  function removeDmUploadWidgets() {
+    var sel = '#vbdl-post-upload-panel, .vbdl-post-upload, .vbdl-quickupload, [data-vbdl-qu="1"]';
+    var nodes = document.querySelectorAll(sel);
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (n && n.parentNode) n.parentNode.removeChild(n);
+    }
+  }
+
+  // Message Center / pmchat: strip widgets and keep stripping if SPA re-injects
+  if (isMessageCenterPage()) {
+    removeDmUploadWidgets();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', removeDmUploadWidgets);
+    }
+    setInterval(removeDmUploadWidgets, 600);
+    try {
+      var mo = new MutationObserver(function () { removeDmUploadWidgets(); });
+      mo.observe(document.documentElement, { childList: true, subtree: true });
+    } catch (e) {}
+    return;
+  }
+
+  if (window.__vbdlPostUploadInit) return;
+  window.__vbdlPostUploadInit = true;
 
   function el(tag, attrs, html) {
     var n = document.createElement(tag);
@@ -46,7 +69,6 @@
   }
 
   function findEditorRoot() {
-    // Topic/post editors only — do not treat PM message textarea as a host on MC pages
     return document.querySelector('.js-editor, .b-editor, .editor-controls, #editor, .redactor-toolbar, .cke_chrome, form[action*="create-content"], form[action*="edit-content"]')
       || document.querySelector('textarea[name="text"]');
   }
@@ -68,6 +90,7 @@
   }
 
   function mount(panelParent) {
+    if (isMessageCenterPage()) { removeDmUploadWidgets(); return; }
     if (document.getElementById('vbdl-post-upload-panel')) return;
     var box = el('div', { id: 'vbdl-post-upload-panel', class: 'vbdl-post-upload' });
     box.innerHTML = ''
@@ -127,14 +150,12 @@
   }
 
   function tryMount() {
-    if (isMessageCenterPage()) return;
+    if (isMessageCenterPage()) { removeDmUploadWidgets(); return; }
     var root = findEditorRoot();
     if (!root) return;
     var host = root.closest('form') || root.parentElement || root;
     mount(host);
   }
-
-  if (isMessageCenterPage()) return;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tryMount);
   else tryMount();
