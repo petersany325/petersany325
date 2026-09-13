@@ -8,12 +8,12 @@
   $v = fn (string $key, $default = '') => old($key, $h[$key] ?? $default);
   $on = fn (string $key, bool $default = true) => (bool) old($key, array_key_exists($key, $h) ? $h[$key] : $default);
   $layouts = [
+    'overlay' => 'تصویر تمام‌عرض + متن روی تصویر',
     'split-rtl' => 'دو ستونه — متن راست',
     'split-ltr' => 'دو ستونه — متن چپ',
-    'overlay' => 'تصویر تمام‌عرض + متن روی تصویر',
     'stacked' => 'چیدمان عمودی (موبایل‌اول)',
   ];
-  $layout = (string) $v('hero_layout', 'split-rtl');
+  $layout = (string) $v('hero_layout', 'overlay');
   $image = (string) $v('hero_image', 'images/home/hero.jpg');
   $imageUrl = str_starts_with($image, 'http') ? $image : asset(ltrim($image, '/'));
 @endphp
@@ -75,8 +75,7 @@
   </div>
 
   <div class="hs-note">
-    بنرساز لایه‌ای Revolution از مسیر ادمین به این استودیو هدایت می‌شود تا خطای ۵۰۰ هنگام تغییر گزینه تکرار نشود.
-    فروشگاه‌های مدرن معمولاً به‌جای اسلایدر سنگین، هیرو ثابت با یک CTA دارند.
+    بنرساز قدیمی Revolution خاموش است. صفحه اول با هیرو تمام‌عرض مدرن و سبک رندر می‌شود.
   </div>
 
   @if(session('success'))
@@ -96,11 +95,7 @@
             <span>نمایش هیرو</span>
             <label class="hs-tog"><input type="checkbox" name="hero_enabled" value="1" @checked($on('hero_enabled', true))><i></i></label>
           </div>
-          <div class="hs-switch">
-            <span>موتور قدیمی Revolution (پیشنهاد: خاموش)</span>
-            <label class="hs-tog"><input type="checkbox" name="use_legacy_banner" value="1" @checked(! empty($useLegacyBanner))><i></i></label>
-          </div>
-        </div>
+</div>
 
         <div class="hs-card">
           <h2>چیدمان</h2>

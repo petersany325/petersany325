@@ -21,14 +21,15 @@ class HeroStudioController extends Controller
             'home' => HomePageConfig::get(),
             'previewDesktop' => url('/'),
             'previewApp' => url('/app'),
-            'useLegacyBanner' => SettingsStore::toBool(SettingsStore::get('hero_use_legacy_banner', false), false),
+            'useLegacyBanner' => false,
         ]);
     }
 
     public function update(Request $request): RedirectResponse
     {
         try {
-            SettingsStore::set('hero_use_legacy_banner', $request->boolean('use_legacy_banner') ? 1 : 0);
+            // Legacy Revolution banner stays permanently off.
+            SettingsStore::set('hero_use_legacy_banner', 0);
 
             // Only patch hero fields — never wipe trust/edu/about/corp blocks.
             $current = HomePageConfig::get();

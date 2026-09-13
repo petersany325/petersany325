@@ -15,20 +15,14 @@ class HomepageBanner
      */
     public static function resolve(): array
     {
-        // Modern Hero Studio is the default engine; Revolution only when explicitly enabled.
-        try {
-            $useLegacy = \App\Support\SettingsStore::toBool(
-                \App\Support\SettingsStore::get('hero_use_legacy_banner', false),
-                false
-            );
-            if (! $useLegacy) {
-                return ['live' => false, 'banner' => []];
-            }
-        } catch (\Throwable) {
-            // If settings fail, prefer modern hero (no Revolution).
-            return ['live' => false, 'banner' => []];
-        }
+        // Revolution / layered banner builder is permanently disabled.
+        // Storefront always uses the modern full-bleed hero.
+        return ['live' => false, 'banner' => []];
+    }
 
+    /** @deprecated Legacy path kept for reference; resolve() always returns inactive. */
+    public static function resolveLegacy(): array
+    {
         $banner = [];
         $live = false;
 
@@ -54,7 +48,6 @@ class HomepageBanner
                     $live = self::looksLive($banner);
                 }
 
-                // اگر ThemeConfig پروداکشن بنر خالی برگرداند، کلیدهای اختصاصی بنرساز را مستقیم بخوان.
                 if (! $live) {
                     $fallback = self::readBannerFallback();
                     if (self::looksLive($fallback)) {

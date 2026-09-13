@@ -26,28 +26,28 @@ class HomePageConfig
             'hero_webapp_cta1_url' => '/app/shop',
 
             // Visual design
-            'hero_layout' => 'split-rtl', // split-rtl | split-ltr | overlay | stacked | free
-            'hero_height' => 420,
-            'hero_radius' => 22,
+            'hero_layout' => 'overlay', // overlay full-bleed is the modern default
+            'hero_height' => 560,
+            'hero_radius' => 0,
             'hero_pad_y' => 24,
             'hero_pad_x' => 8,
-            'hero_font' => 'Vazirmatn',
+            'hero_font' => 'Estedad',
             'hero_kicker_size' => 14,
             'hero_title_size' => 34,
             'hero_text_size' => 15,
             'hero_cta_size' => 14,
-            'hero_bg' => '#ffffff',
+            'hero_bg' => '#071018',
             'hero_kicker_color' => '#e23d12',
-            'hero_title_color' => '#0b1220',
+            'hero_title_color' => '#ffffff',
             'hero_em_color' => '#e23d12',
-            'hero_text_color' => '#475569',
+            'hero_text_color' => '#dbe4f0',
             'hero_cta1_bg' => '#e23d12',
             'hero_cta1_color' => '#ffffff',
             'hero_cta2_bg' => '#ffffff',
             'hero_cta2_color' => '#e23d12',
             'hero_cta2_border' => '#e23d12',
             'hero_overlay_color' => '#0a0f19',
-            'hero_overlay_opacity' => 55,
+            'hero_overlay_opacity' => 62,
             'hero_image_fit' => 'cover',
             'hero_image_pos' => 'center',
             'hero_media_w' => 48, // % of banner width in split/overlay
@@ -206,11 +206,11 @@ class HomePageConfig
 
         $layouts = ['split-rtl', 'split-ltr', 'overlay', 'stacked', 'free'];
         if (! in_array($s['hero_layout'], $layouts, true)) {
-            $s['hero_layout'] = 'split-rtl';
+            $s['hero_layout'] = 'overlay';
         }
-        $fonts = ['Vazirmatn', 'Estedad', 'IRANSansX', 'Dana', 'system-ui'];
+        $fonts = ['Estedad', 'Vazirmatn', 'IRANSansX', 'Dana', 'system-ui'];
         if (! in_array($s['hero_font'], $fonts, true)) {
-            $s['hero_font'] = 'Vazirmatn';
+            $s['hero_font'] = 'Estedad';
         }
         if (! in_array($s['hero_image_fit'], ['cover', 'contain'], true)) {
             $s['hero_image_fit'] = 'cover';
@@ -223,7 +223,7 @@ class HomePageConfig
         }
 
         foreach ([
-            'hero_height' => [220, 720, 420],
+            'hero_height' => [220, 720, 560],
             'hero_radius' => [0, 40, 22],
             'hero_pad_y' => [0, 80, 24],
             'hero_pad_x' => [0, 80, 8],
