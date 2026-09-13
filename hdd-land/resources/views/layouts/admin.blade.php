@@ -144,10 +144,8 @@
     'webapp' => [
       'title' => 'وب‌سرویس',
       'icon' => '📱',
-      'open' => $is('web-app', 'homepage-settings', 'hero-studio', 'banner-settings'),
+      'open' => $is('web-app'),
       'items' => [
-        ['label' => 'استودیو هیرو مدرن', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')],
-        ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')],
         ['label' => 'تنظیمات وب‌اپ / PWA', 'href' => $u('web-app'), 'active' => $is('web-app')],
         ['label' => 'پیش‌نمایش وب‌اپ', 'href' => url('/app'), 'active' => false, 'ext' => true],
         ['label' => 'فایل Manifest', 'href' => url('/manifest.webmanifest'), 'active' => false, 'ext' => true],
@@ -281,22 +279,17 @@
       unset($groups['theme']);
     }
 
-    if ($staffCan('site.webapp') || $staffCan('site.homepage')) {
-      $webItems = [];
-      if ($staffCan('site.homepage')) {
-        $webItems[] = ['label' => 'استودیو هیرو مدرن', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')];
-        $webItems[] = ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')];
-      }
-      if ($staffCan('site.webapp')) {
-        $webItems[] = ['label' => 'تنظیمات وب‌اپ / PWA', 'href' => $u('web-app'), 'active' => $is('web-app')];
-        $webItems[] = ['label' => 'پیش‌نمایش وب‌اپ', 'href' => url('/app'), 'active' => false, 'ext' => true];
-        $webItems[] = ['label' => 'فایل Manifest', 'href' => url('/manifest.webmanifest'), 'active' => false, 'ext' => true];
-      }
+    // وب‌اپ فقط PWA — هیرو/صفحه اول فقط در «تنظیمات قالب» می‌ماند تا منو تکراری نشود.
+    if ($staffCan('site.webapp')) {
       $groups['webapp'] = [
         'title' => 'وب‌سرویس',
         'icon' => '📱',
-        'open' => $is('web-app', 'homepage-settings'),
-        'items' => $webItems,
+        'open' => $is('web-app'),
+        'items' => [
+          ['label' => 'تنظیمات وب‌اپ / PWA', 'href' => $u('web-app'), 'active' => $is('web-app')],
+          ['label' => 'پیش‌نمایش وب‌اپ', 'href' => url('/app'), 'active' => false, 'ext' => true],
+          ['label' => 'فایل Manifest', 'href' => url('/manifest.webmanifest'), 'active' => false, 'ext' => true],
+        ],
       ];
     } else {
       unset($groups['webapp']);

@@ -170,7 +170,7 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
   </div>
   <div class="row" style="gap:.5rem">
     <a class="btn btn-outline" href="{{ url('/') }}" target="_blank">پیش‌نمایش سایت</a>
-    <a class="btn btn-outline" href="{{ route('admin.theme-builder') }}">قالب صفحه اول</a>
+    <a class="btn btn-outline" href="{{ url('/admin/hero-studio') }}">استودیو هیرو مدرن</a>
   </div>
 </div>
 
