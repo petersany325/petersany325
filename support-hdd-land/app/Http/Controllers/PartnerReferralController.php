@@ -179,7 +179,7 @@ class PartnerReferralController extends Controller
     }
 
     /** Pick a receipt after choosing a colleague from network search. */
-    public function referForm(Partner $partner): View|RedirectResponse
+    public function referForm(Request $request, Partner $partner): View|RedirectResponse
     {
         if (! $partner->is_active) {
             return redirect()->route('partners.index')->with('error', 'این همکار غیرفعال است.');
@@ -187,23 +187,40 @@ class PartnerReferralController extends Controller
 
         $this->network->syncPeers();
 
-        $receptions = Reception::query()
+        $q = trim((string) $request->input('q', ''));
+        $query = Reception::query()
             ->with('customer')
             ->whereNotIn('status', ['delivered', 'cancelled'])
-            ->where(function ($q) {
-                $q->whereNull('partner_flow')
+            ->where(function ($inner) {
+                $inner->whereNull('partner_flow')
                     ->orWhere(function ($o) {
                         $o->where('partner_flow', Reception::PARTNER_FLOW_OUTBOUND)
                             ->whereIn('partner_approval_status', ['rejected', 'returned', 'returned_to_origin']);
                     });
-            })
-            ->latest('id')
-            ->limit(80)
-            ->get();
+            });
+
+        if ($q !== '') {
+            $query->where(function ($inner) use ($q) {
+                $inner->where('receipt_no', 'like', '%'.$q.'%')
+                    ->orWhere('ticket_no', 'like', '%'.$q.'%')
+                    ->orWhere('serial_number', 'like', '%'.$q.'%')
+                    ->orWhere('product_name', 'like', '%'.$q.'%')
+                    ->orWhere('brand', 'like', '%'.$q.'%')
+                    ->orWhere('model', 'like', '%'.$q.'%')
+                    ->orWhereHas('customer', function ($c) use ($q) {
+                        $c->where('name', 'like', '%'.$q.'%')
+                            ->orWhere('phone', 'like', '%'.$q.'%')
+                            ->orWhere('alias', 'like', '%'.$q.'%');
+                    });
+            });
+        }
+
+        $receptions = $query->latest('id')->limit($q !== '' ? 100 : 80)->get();
 
         return view('partners.refer', [
             'partner' => $partner,
             'receptions' => $receptions,
+            'q' => $q,
         ]);
     }
 
