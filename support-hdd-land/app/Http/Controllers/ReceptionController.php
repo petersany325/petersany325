@@ -464,6 +464,7 @@ class ReceptionController extends Controller
     {
         $reception->load([
             'customer.referralSource', 'technician', 'custodyTechnician', 'faultType',
+            'partner', 'partnerReferredTo',
             'parts.part', 'payments.receiver', 'creator',
             'costApprovals' => fn ($q) => $q->latest('id')->limit(12),
             'costStages',
@@ -502,6 +503,7 @@ class ReceptionController extends Controller
             'pendingHandoff' => $reception->handoffs->firstWhere('status', \App\Models\DeviceHandoff::STATUS_PENDING),
             'custodyChecklist' => $gate->checklist($reception),
             'workReports' => $reception->workReports,
+            'partners' => \App\Models\Partner::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'shop_name', 'phone']),
         ]));
     }
 

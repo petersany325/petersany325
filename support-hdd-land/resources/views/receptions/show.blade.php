@@ -151,6 +151,53 @@
                 </div>
             @endif
 
+            @if(auth()->user()->canAccess('partners'))
+                <div class="panel" style="margin:10px 0;padding:10px;border:1px solid #c9d6ea;background:#f7faff;">
+                    <h3 style="margin:0 0 8px;">ارجاع نماینده همکار</h3>
+                    @if($reception->partner_flow === 'inbound')
+                        <p class="muted" style="margin:0 0 8px;">قبض ورودی از نماینده: <strong>{{ $reception->partner?->displayName() }}</strong>
+                            @if($reception->partner_peer_receipt_no) · قبض مبدأ: <span dir="ltr">{{ $reception->partner_peer_receipt_no }}</span>@endif
+                        </p>
+                        <p class="muted" style="margin:0 0 8px;">طرف حساب = نماینده. هزینه/قطعات برای اوست؛ با مشتری نهایی تماس نگیرید.</p>
+                        <div class="actions">
+                            <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'inbound']) }}">کارتابل ارجاع نماینده</a>
+                            @if(in_array($reception->status, ['ready', 'unrepairable'], true))
+                                <form method="POST" action="{{ route('partners.mark-returned', $reception) }}">
+                                    @csrf
+                                    <button class="btn btn-primary" type="submit">علامت آماده برگشت به نماینده</button>
+                                </form>
+                            @endif
+                        </div>
+                    @elseif($reception->partner_flow === 'outbound')
+                        <p class="muted" style="margin:0 0 8px;">ارسال‌شده به نماینده: <strong>{{ $reception->partnerReferredTo?->displayName() }}</strong></p>
+                        <form method="POST" action="{{ route('partners.mark-returned', $reception) }}" class="actions">
+                            @csrf
+                            <button class="btn btn-secondary" type="submit">ثبت برگشت از نماینده</button>
+                            <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'outbound']) }}">کارتابل</a>
+                        </form>
+                    @else
+                        <form method="POST" action="{{ route('partners.refer-out', $reception) }}" class="form-grid" style="grid-template-columns:1fr 1fr auto;align-items:end;">
+                            @csrf
+                            <div>
+                                <label>ارجاع به نماینده دیگر</label>
+                                <select name="partner_id" required>
+                                    <option value="">— انتخاب نماینده —</option>
+                                    @foreach(($partners ?? []) as $p)
+                                        <option value="{{ $p->id }}">{{ $p->displayName() }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div>
+                                <label>یادداشت</label>
+                                <input type="text" name="note" placeholder="مثلاً نیاز به تخصص خاص">
+                            </div>
+                            <button class="btn btn-secondary" type="submit">ارجاع به نماینده</button>
+                        </form>
+                        <p class="muted" style="margin:8px 0 0;">مشتری نهایی فقط با شما طرف است؛ هزینه تعمیرگاه مقصد را به نماینده بگویید نه به مشتری.</p>
+                    @endif
+                </div>
+            @endif
+
             @if(auth()->user()->canAccess('receptions') && ($reception->custody ?? 'front_desk') !== 'with_technician' && ($reception->custody ?? '') !== 'returning' && empty($pendingHandoff))
                 <form method="POST" action="{{ route('receptions.handoffs.store', $reception) }}" class="form-grid" style="grid-template-columns:1fr 1fr auto;align-items:end;">
                     @csrf

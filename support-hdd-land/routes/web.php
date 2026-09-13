@@ -27,6 +27,8 @@ use App\Http\Controllers\Portal\RemotePartPreorderController as PortalRemotePart
 use App\Http\Controllers\RemotePartPreorderController;
 use App\Http\Controllers\PortalInviteController;
 use App\Http\Controllers\HandoffController;
+use App\Http\Controllers\PartnerController;
+use App\Http\Controllers\PartnerReferralController;
 use App\Http\Controllers\InternController;
 use App\Http\Controllers\InternPortalController;
 use App\Http\Controllers\LabelPrintController;
@@ -238,6 +240,21 @@ Route::middleware('auth')->group(function () {
         Route::post('handoffs/{handoff}/respond', [HandoffController::class, 'respond'])->name('handoffs.respond');
         Route::post('receptions/{reception}/handoffs/return', [HandoffController::class, 'store'])->name('receptions.handoffs.return');
         Route::post('receptions/{reception}/work-report', [HandoffController::class, 'storeWorkReport'])->name('receptions.work-report');
+    });
+
+    Route::middleware(EnsurePermission::class.':partners')->group(function () {
+        Route::get('partners', [PartnerController::class, 'index'])->name('partners.index');
+        Route::get('partners/create', [PartnerController::class, 'create'])->name('partners.create');
+        Route::post('partners', [PartnerController::class, 'store'])->name('partners.store');
+        Route::get('partners/{partner}/edit', [PartnerController::class, 'edit'])->name('partners.edit');
+        Route::put('partners/{partner}', [PartnerController::class, 'update'])->name('partners.update');
+        Route::delete('partners/{partner}', [PartnerController::class, 'destroy'])->name('partners.destroy');
+
+        Route::get('partner-referrals', [PartnerReferralController::class, 'cartable'])->name('partners.cartable');
+        Route::get('partner-referrals/intake', [PartnerReferralController::class, 'createInbound'])->name('partners.intake');
+        Route::post('partner-referrals/intake', [PartnerReferralController::class, 'storeInbound'])->name('partners.intake.store');
+        Route::post('receptions/{reception}/partner-refer', [PartnerReferralController::class, 'referOut'])->name('partners.refer-out');
+        Route::post('receptions/{reception}/partner-returned', [PartnerReferralController::class, 'markReturned'])->name('partners.mark-returned');
     });
 
     Route::middleware('auth')->prefix('intern')->name('intern.')->group(function () {

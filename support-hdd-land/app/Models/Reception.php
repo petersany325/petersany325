@@ -13,7 +13,9 @@ class Reception extends Model
 
     protected $fillable = [
         'ticket_no', 'receipt_no', 'batch_code', 'delivery_batch_id', 'account_code', 'admission_type', 'service_type', 'repair_type',
-        'customer_id', 'technician_id', 'custody_technician_id', 'fault_type_id', 'created_by',
+        'customer_id', 'partner_id', 'partner_flow', 'partner_peer_receipt_no', 'partner_end_customer_note',
+        'partner_referred_to_id', 'partner_referred_at', 'partner_returned_at',
+        'technician_id', 'custody_technician_id', 'fault_type_id', 'created_by',
         'custody',
         'product_name', 'brand', 'model', 'serial_number', 'lock_code', 'accessories', 'appearance_notes',
         'delivered_by', 'pickup_name', 'pickup_phone', 'referrer', 'commission', 'photo_path',
@@ -47,8 +49,34 @@ class Reception extends Model
             'warranty_end_date' => 'date',
             'warranty_return' => 'boolean',
             'capacity_changed' => 'boolean',
+            'partner_referred_at' => 'datetime',
+            'partner_returned_at' => 'datetime',
             'deleted_at' => 'datetime',
         ];
+    }
+
+    public const PARTNER_FLOW_INBOUND = 'inbound';
+    public const PARTNER_FLOW_OUTBOUND = 'outbound';
+    public const PARTNER_FLOW_RETURNED = 'returned';
+
+    public function partner(): BelongsTo
+    {
+        return $this->belongsTo(Partner::class);
+    }
+
+    public function partnerReferredTo(): BelongsTo
+    {
+        return $this->belongsTo(Partner::class, 'partner_referred_to_id');
+    }
+
+    public function isPartnerInbound(): bool
+    {
+        return $this->partner_flow === self::PARTNER_FLOW_INBOUND && $this->partner_id;
+    }
+
+    public function isPartnerOutbound(): bool
+    {
+        return $this->partner_flow === self::PARTNER_FLOW_OUTBOUND && $this->partner_referred_to_id;
     }
 
     public function deleter(): BelongsTo

@@ -8,6 +8,7 @@ class Permissions
         'dashboard' => 'داشبورد',
         'receptions' => 'قبض‌ها و پذیرش',
         'handoffs' => 'ارجاع دستگاه / کارتابل تعمیر',
+        'partners' => 'نمایندگان همکار و ارجاع نماینده',
         'notifications' => 'اعلان‌ها و پیام مشتری',
         'daily_logs' => 'دفتر روز / ثبت کار روزانه',
         'daily_logs.manage' => 'مدیریت دفتر روز (گزارش و تنظیمات)',
@@ -95,16 +96,16 @@ class Permissions
         return match ($role) {
             'admin' => array_keys(self::ALL),
             'receptionist' => [
-                'dashboard', 'receptions', 'handoffs', 'notifications', 'daily_logs', 'customers',
+                'dashboard', 'receptions', 'handoffs', 'partners', 'notifications', 'daily_logs', 'customers',
                 'portal.invites', 'device.blacklists', 'remote.preorders', 'parts', 'sms.statuses',
                 'reports.operations', 'reports.custody', 'reports.sms', 'reports.messages', 'trash', 'profile',
             ],
             'technician' => [
-                'dashboard', 'receptions', 'handoffs', 'notifications', 'daily_logs', 'parts', 'sms.statuses',
+                'dashboard', 'receptions', 'handoffs', 'partners', 'notifications', 'daily_logs', 'parts', 'sms.statuses',
                 'remote.preorders', 'reports.custody', 'reports.technicians', 'reports.sms', 'profile',
             ],
             'accountant' => [
-                'dashboard', 'receptions', 'handoffs', 'notifications',
+                'dashboard', 'receptions', 'handoffs', 'partners', 'notifications',
                 'reports.accounting', 'installments', 'payment.receipts', 'reports.operations', 'reports.payments',
                 'reports.technicians', 'reports.customers', 'reports.parts', 'reports.custody',
                 'customers', 'daily_logs', 'trash', 'profile',
