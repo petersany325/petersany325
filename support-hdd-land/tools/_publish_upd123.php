@@ -1,25 +1,23 @@
 <?php
 /**
- * Seller one-shot: publish a FULL customer update package 1.2.3.
- * Place in public_html/tmr/public/_publish_upd123.php then open:
- *   https://support.hdd-land.ir/_publish_upd123.php?t=upd123-cb9c
- *
- * Fixes invalid board-only 1.2.2 zip (missing artisan/app) that customers cannot install.
+ * Seller one-shot: publish full customer update 1.2.4 (configurable receipt prefix).
+ * Upload/rename to public/_publish_upd124.php then open:
+ *   https://support.hdd-land.ir/_publish_upd124.php?t=upd124-cb9c
  */
 declare(strict_types=1);
 header('Content-Type: text/plain; charset=utf-8');
 @set_time_limit(600);
 @ini_set('memory_limit', '512M');
 
-if (($_GET['t'] ?? '') !== 'upd123-cb9c') {
+if (($_GET['t'] ?? '') !== 'upd124-cb9c') {
     http_response_code(403);
     echo "Forbidden\n";
     exit;
 }
 
 $root = dirname(__DIR__);
-$branch = 'cursor/release-change-board-cb9c';
-$version = '1.2.3';
+$branch = 'cursor/receipt-prefix-setting-cb9c';
+$version = '1.2.4';
 $zipName = 'hddland-'.$version.'.zip';
 
 function out(string $m): void
@@ -36,7 +34,7 @@ function fetch(string $url): array
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_TIMEOUT => 300,
-        CURLOPT_USERAGENT => 'HDD-Land-Publish-123',
+        CURLOPT_USERAGENT => 'HDD-Land-Publish-124',
     ]);
     $body = curl_exec($ch);
     $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -65,18 +63,50 @@ out('ROOT='.$root);
 out('BRANCH='.$branch);
 out('VERSION='.$version);
 
+// Apply code files for seller immediately
+$codeFiles = [
+    'app/Models/Reception.php',
+    'app/Http/Controllers/SettingController.php',
+    'resources/views/settings/index.blade.php',
+    'resources/views/receptions/create.blade.php',
+    'resources/views/handoffs/index.blade.php',
+];
+$base = "https://raw.githubusercontent.com/petersany325/petersany325/{$branch}/support-hdd-land/";
+foreach ($codeFiles as $rel) {
+    [$code, $body, $err] = fetch($base.$rel);
+    if ($code >= 400 || strlen($body) < 50) {
+        out("FAIL pull {$rel} http={$code} err={$err}");
+        continue;
+    }
+    $dest = $root.'/'.$rel;
+    if (! is_dir(dirname($dest))) {
+        @mkdir(dirname($dest), 0755, true);
+    }
+    file_put_contents($dest, $body);
+    out("OK pull {$rel} ".strlen($body));
+}
+
+// Keep Peter's shop on T-20N explicitly
+try {
+    require $root.'/vendor/autoload.php';
+    $app = require $root.'/bootstrap/app.php';
+    $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+    App\Models\AppSetting::setValue('receipt_prefix', 'T-20N');
+    out('seller receipt_prefix=T-20N');
+} catch (Throwable $e) {
+    out('prefix set WARN '.$e->getMessage());
+}
+
 $zipUrl = "https://codeload.github.com/petersany325/petersany325/zip/refs/heads/{$branch}";
 out('Downloading branch zip...');
 [$zcode, $zbody, $zerr] = fetch($zipUrl);
 if ($zcode >= 400 || strlen($zbody) < 1000) {
-    out("FAIL branch zip http={$zcode} err={$zerr} bytes=".strlen($zbody));
+    out("FAIL branch zip http={$zcode} err={$zerr}");
     exit(1);
 }
 
 $tmp = $root.'/storage/app/tmp';
-if (! is_dir($tmp)) {
-    @mkdir($tmp, 0755, true);
-}
+@mkdir($tmp, 0755, true);
 $srcZip = $tmp.'/branch-'.$version.'.zip';
 file_put_contents($srcZip, $zbody);
 out('branch zip bytes='.strlen($zbody));
@@ -86,12 +116,11 @@ rrmdir($extract);
 @mkdir($extract, 0755, true);
 $zip = new ZipArchive();
 if ($zip->open($srcZip) !== true) {
-    out('FAIL open branch zip');
+    out('FAIL open zip');
     exit(1);
 }
 $zip->extractTo($extract);
 $zip->close();
-out('extracted');
 
 $src = null;
 foreach (scandir($extract) ?: [] as $d) {
@@ -105,10 +134,9 @@ foreach (scandir($extract) ?: [] as $d) {
     }
 }
 if (! $src) {
-    out('FAIL support-hdd-land app root not found');
+    out('FAIL app root');
     exit(1);
 }
-out('SRC='.$src);
 
 $packRoot = $tmp.'/pack_'.$version;
 rrmdir($packRoot);
@@ -143,27 +171,15 @@ foreach ($iterator as $file) {
         $copied++;
     }
 }
-out("packed files={$copied}");
-
-if (! is_file($packRoot.'/artisan') || ! is_dir($packRoot.'/app')) {
-    out('FAIL pack missing artisan/app');
-    exit(1);
-}
+out("packed={$copied}");
 
 $releaseDir = $root.'/storage/app/releases';
-if (! is_dir($releaseDir)) {
-    @mkdir($releaseDir, 0755, true);
-}
+@mkdir($releaseDir, 0755, true);
 $outZip = $releaseDir.'/'.$zipName;
 @unlink($outZip);
 $z = new ZipArchive();
-if ($z->open($outZip, ZipArchive::CREATE) !== true) {
-    out('FAIL create release zip');
-    exit(1);
-}
-$files = new RecursiveIteratorIterator(
-    new RecursiveDirectoryIterator($packRoot, FilesystemIterator::SKIP_DOTS)
-);
+$z->open($outZip, ZipArchive::CREATE);
+$files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($packRoot, FilesystemIterator::SKIP_DOTS));
 foreach ($files as $f) {
     if (! $f->isFile()) {
         continue;
@@ -174,7 +190,7 @@ foreach ($files as $f) {
 $z->close();
 $sha = hash_file('sha256', $outZip) ?: '';
 $size = (int) filesize($outZip);
-out("RELEASE_ZIP={$outZip} size={$size} sha256={$sha}");
+out("RELEASE size={$size} sha={$sha}");
 
 $manifestPath = $releaseDir.'/manifest.json';
 $prev = is_file($manifestPath) ? json_decode((string) file_get_contents($manifestPath), true) : [];
@@ -188,61 +204,35 @@ array_unshift($releases, [
     'released_at' => date('Y-m-d'),
     'min_php' => '8.2',
     'changelog' => [
-        'بسته کامل نصب‌پذیر برای مشتری (جایگزین ZIP ناقص 1.2.2)',
-        'منوی تخصص، سود و حقوق کارمند',
-        'شماره قبض روی ردیف پذیرش گروهی',
-        'معافیت CSRF برای API آپدیت مشتری',
-        'تابلو تغییرات و انتشار انتخابی آپدیت',
+        'پیشوند شماره قبض قابل تنظیم برای هر تعمیرگاه (دیگر همه T-20N نیستند)',
+        'تنظیمات → عمومی: فیلد پیشوند قبض',
+        'نصب‌های جدید پیش‌فرض R؛ فروشگاه‌هایی که قبلاً T-20N داشتند حفظ می‌شود',
     ],
     'file' => $zipName,
     'sha256' => $sha,
     'size' => $size,
     'source' => 'full',
 ]);
-$manifest = [
+file_put_contents($manifestPath, json_encode([
     'channel' => (string) ($prev['channel'] ?? 'stable'),
     'latest' => $version,
     'product' => (string) ($prev['product'] ?? 'hddland-repair'),
     'releases' => $releases,
     'updated_at' => date('c'),
-];
-file_put_contents($manifestPath, json_encode($manifest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 out('manifest latest='.$version);
 
-// Clean bulky tmp leftovers that were slowing the host
-foreach ([
-    $tmp.'/branch-1.2.0.zip',
-    $tmp.'/branch-1.2.1.zip',
-    $tmp.'/first_upd_branch.zip',
-    $root.'/_deploy_tmp_da045be9.zip',
-] as $junk) {
-    if (is_file($junk)) {
-        @unlink($junk);
-        out('deleted '.basename($junk));
-    }
-}
-foreach ([$tmp.'/extract_1.2.0', $tmp.'/extract_1.2.1', $tmp.'/first_upd_extract', $tmp.'/pack_1.2.0', $root.'/_deploy_tmp_da045be9'] as $dir) {
-    if (is_dir($dir)) {
-        rrmdir($dir);
-        out('rmdir '.basename($dir));
-    }
-}
-// keep current extract/pack briefly then remove
 rrmdir($extract);
 rrmdir($packRoot);
 @unlink($srcZip);
-out('cleaned tmp for '.$version);
 
 try {
-    require $root.'/vendor/autoload.php';
-    $app = require $root.'/bootstrap/app.php';
-    $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
     foreach (['route:clear', 'view:clear', 'config:clear', 'cache:clear'] as $cmd) {
         Illuminate\Support\Facades\Artisan::call($cmd);
         out($cmd.' OK');
     }
 } catch (Throwable $e) {
-    out('cache clear WARN '.$e->getMessage());
+    out('cache WARN '.$e->getMessage());
 }
 
 out('DONE');
