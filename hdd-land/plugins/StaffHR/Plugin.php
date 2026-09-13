@@ -241,7 +241,12 @@ if (! class_exists(StaffAcl::class, false)) {
                 'products.edit' => 'ویرایش محصول',
                 'products.delete' => 'حذف محصول',
                 'support' => 'پشتیبانی / تیکت',
-                'accounting' => 'حسابداری',
+                'accounting' => 'حسابداری (میز و اسناد)',
+                'accounting.settings' => 'تنظیمات حسابداری',
+                'accounting.reports' => 'گزارش‌های حسابداری',
+                'accounting.checks' => 'چک‌های حسابداری',
+                'accounting.installments' => 'اقساط مشتریان',
+                'accounting.payroll' => 'حقوق و کمیسیون فروش',
                 'inventory' => 'انبار و موجودی',
                 'reports' => 'گزارش فروش و کار',
                 'media' => 'کتابخانه رسانه',
@@ -279,7 +284,11 @@ if (! class_exists(StaffAcl::class, false)) {
                 ],
                 'accountant' => [
                     'label' => 'حسابداری',
-                    'permissions' => ['accounting', 'orders', 'reports'],
+                    'permissions' => [
+                        'accounting', 'accounting.settings', 'accounting.reports',
+                        'accounting.checks', 'accounting.installments', 'accounting.payroll',
+                        'inventory', 'orders', 'reports',
+                    ],
                 ],
                 'warehouse' => [
                     'label' => 'انباردار',
@@ -296,7 +305,7 @@ if (! class_exists(StaffAcl::class, false)) {
                     'label' => 'مدیر ظاهر سایت',
                     'permissions' => [
                         'site.mega_menu', 'site.theme_builder', 'site.theme_templates', 'site.page_builder',
-                        'site.homepage', 'site.footer', 'site.webapp',
+                        'site.homepage', 'site.footer', 'site.webapp', 'site.shop_settings',
                     ],
                 ],
                 'full_access' => [
@@ -341,6 +350,18 @@ if (! class_exists(StaffAcl::class, false)) {
             }
             $perms = self::normalizePermissions($staff->permissions ?? []);
             if (in_array('full_site', $perms, true) || in_array($permission, $perms, true)) {
+                return true;
+            }
+            if (
+                in_array('accounting', $perms, true)
+                && in_array($permission, [
+                    'accounting.reports',
+                    'accounting.checks',
+                    'accounting.installments',
+                    'accounting.payroll',
+                    'inventory',
+                ], true)
+            ) {
                 return true;
             }
 

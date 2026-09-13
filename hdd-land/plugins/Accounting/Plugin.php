@@ -25,7 +25,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '1.2.1';
+        return '1.2.2';
     }
 
     public function isCore(): bool
@@ -69,8 +69,13 @@ class Plugin extends BasePlugin
     public function adminMenu(): array
     {
         return [
-            ['label' => 'میز حسابداری', 'route' => 'admin.accounting.hub', 'icon' => '◈', 'group' => 'accounting'],
-            ['label' => 'اسناد مالی', 'route' => 'admin.accounting.docs', 'icon' => '▤', 'group' => 'accounting'],
+            ['label' => 'داشبورد حسابداری', 'route' => 'admin.accounting.hub', 'icon' => '◈', 'group' => 'accounting'],
+            ['label' => 'فاکتور و پیش‌فاکتور', 'route' => 'admin.accounting.docs', 'icon' => '▤', 'group' => 'accounting'],
+            ['label' => 'فاکتور فروش جدید', 'route' => 'admin.accounting.docs.create', 'icon' => '＋', 'group' => 'accounting', 'params' => ['type' => 'sale']],
+            ['label' => 'پیش‌فاکتور جدید', 'route' => 'admin.accounting.docs.create', 'icon' => '＋', 'group' => 'accounting', 'params' => ['type' => 'proforma']],
+            ['label' => 'فاکتور خرید', 'route' => 'admin.accounting.docs.create', 'icon' => '＋', 'group' => 'accounting', 'params' => ['type' => 'purchase']],
+            ['label' => 'دفتر روزنامه', 'route' => 'admin.accounting.docs', 'icon' => '▤', 'group' => 'accounting'],
+            ['label' => 'ثبت سند دستی', 'route' => 'admin.accounting.docs.create', 'icon' => '✎', 'group' => 'accounting', 'params' => ['type' => 'voucher']],
             ['label' => 'انبارها', 'route' => 'admin.accounting.warehouses', 'icon' => '▣', 'group' => 'warehouse'],
             ['label' => 'حواله و رسید', 'route' => 'admin.accounting.stock', 'icon' => '⇄', 'group' => 'warehouse'],
             ['label' => 'بانک‌ها', 'route' => 'admin.accounting.banks', 'icon' => '₿', 'group' => 'finance'],
@@ -79,9 +84,9 @@ class Plugin extends BasePlugin
             ['label' => 'کمیسیون فروش', 'route' => 'admin.accounting.commissions', 'icon' => '%', 'group' => 'hr'],
             ['label' => 'چک‌ها', 'route' => 'admin.accounting.checks', 'icon' => '▭', 'group' => 'finance'],
             ['label' => 'اقساط مشتریان', 'route' => 'admin.accounting.installments', 'icon' => '◫', 'group' => 'finance'],
+            ['label' => 'گزارش خرید و فروش', 'route' => 'admin.accounting.reports.sales', 'icon' => '📈', 'group' => 'reports'],
             ['label' => 'تنظیمات حسابداری', 'route' => 'admin.accounting.settings', 'icon' => '⚙', 'group' => 'settings'],
             ['label' => 'مرکز گزارش‌ها', 'route' => 'admin.accounting.reports', 'icon' => '📊', 'group' => 'reports'],
-            ['label' => 'گزارش فروش/خرید', 'route' => 'admin.accounting.reports.sales', 'icon' => '📈', 'group' => 'reports'],
             ['label' => 'گزارش کارمندان', 'route' => 'admin.accounting.reports.staff', 'icon' => '👤', 'group' => 'reports'],
             ['label' => 'گزارش حقوق', 'route' => 'admin.accounting.reports.payroll', 'icon' => '👥', 'group' => 'reports'],
             ['label' => 'گزارش اسناد', 'route' => 'admin.accounting.reports.vouchers', 'icon' => '▤', 'group' => 'reports'],

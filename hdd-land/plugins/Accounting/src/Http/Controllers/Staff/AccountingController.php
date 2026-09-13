@@ -76,4 +76,33 @@ class AccountingController extends Controller
             'to' => $to,
         ]);
     }
+
+    /**
+     * هدایت کارمند به منوی حسابداری ادمین (وب موبایل) با کنترل ACL.
+     */
+    public function toAdmin(Request $request, string $target = '')
+    {
+        $route = $request->route();
+        if ($target === '' && $route) {
+            $target = (string) ($route->parameter('target') ?? ($route->defaults['target'] ?? ''));
+        }
+        $map = [
+            '' => ['perm' => 'accounting', 'path' => '/admin/accounting'],
+            'checks' => ['perm' => 'accounting.checks', 'path' => '/admin/accounting/checks'],
+            'installments' => ['perm' => 'accounting.installments', 'path' => '/admin/accounting/installments'],
+            'settings' => ['perm' => 'accounting.settings', 'path' => '/admin/accounting/settings'],
+            'reports' => ['perm' => 'accounting.reports', 'path' => '/admin/accounting/reports'],
+        ];
+        $cfg = $map[$target] ?? $map[''];
+        $user = $request->user();
+        $ok = $user && method_exists($user, 'hasStaffPermission') && (
+            $user->hasStaffPermission($cfg['perm'])
+            || ($cfg['perm'] !== 'accounting.settings' && $user->hasStaffPermission('accounting'))
+        );
+        if (! $ok) {
+            return redirect()->to(url('/staff'))->with('error', 'دسترسی حسابداری برای این بخش فعال نیست.');
+        }
+
+        return redirect()->to(url($cfg['path']));
+    }
 }

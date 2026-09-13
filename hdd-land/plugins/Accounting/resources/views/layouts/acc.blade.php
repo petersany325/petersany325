@@ -102,6 +102,10 @@
         <a href="{{ route('staff.accounting.docs') }}">اسناد</a>
         <a href="{{ route('staff.accounting.stock') }}">انبار</a>
         <a href="{{ route('staff.accounting.reports') }}">گزارش</a>
+        <a href="{{ route('staff.accounting.checks') }}">چک‌ها</a>
+        <a href="{{ route('staff.accounting.installments') }}">اقساط</a>
+        <a href="{{ route('staff.accounting.settings') }}">تنظیمات حسابداری</a>
+        <a href="{{ route('staff.accounting.admin') }}">حسابداری ادمین (موبایل)</a>
         <a href="{{ url('/staff') }}">پنل کارمند</a>
       @endif
     </nav>
@@ -115,11 +119,15 @@
         <a href="{{ route('admin.accounting.checks') }}">چک</a>
         <a href="{{ route('admin.accounting.installments') }}">اقساط</a>
         <a href="{{ route('admin.accounting.reports') }}">گزارش</a>
+        <a href="{{ route('admin.accounting.settings') }}">تنظیمات</a>
       @else
         <a href="{{ route('staff.accounting.hub') }}">میز</a>
         <a href="{{ route('staff.accounting.docs') }}">اسناد</a>
         <a href="{{ route('staff.accounting.stock') }}">انبار</a>
+        <a href="{{ route('staff.accounting.checks') }}">چک</a>
+        <a href="{{ route('staff.accounting.installments') }}">اقساط</a>
         <a href="{{ route('staff.accounting.reports') }}">گزارش</a>
+        <a href="{{ route('staff.accounting.settings') }}">تنظیمات</a>
       @endif
     </div>
     @if(session('success'))<div class="flash ok">{{ session('success') }}</div>@endif

@@ -132,6 +132,37 @@ class EnsureUserIsAdmin
         if (str_starts_with($path, 'admin/shipping') || str_starts_with($path, 'admin/invoice')) {
             return 'full_site';
         }
+
+        // حسابداری — سوئیچ‌های جدا در تنظیمات کارمند
+        if ($path === 'admin/accounting' || str_starts_with($path, 'admin/accounting/')) {
+            if (str_starts_with($path, 'admin/accounting/settings')) {
+                return 'accounting.settings';
+            }
+            if (str_starts_with($path, 'admin/accounting/reports')) {
+                return 'accounting.reports';
+            }
+            if (str_starts_with($path, 'admin/accounting/checks')) {
+                return 'accounting.checks';
+            }
+            if (str_starts_with($path, 'admin/accounting/installments')) {
+                return 'accounting.installments';
+            }
+            if (
+                str_starts_with($path, 'admin/accounting/payroll')
+                || str_starts_with($path, 'admin/accounting/commissions')
+            ) {
+                return 'accounting.payroll';
+            }
+            if (
+                str_starts_with($path, 'admin/accounting/warehouses')
+                || str_starts_with($path, 'admin/accounting/stock')
+            ) {
+                return 'inventory';
+            }
+
+            return 'accounting';
+        }
+
         // داشبورد ادمین برای کارمند ممنوع
         if ($path === 'admin' || $path === 'admin/') {
             return null;

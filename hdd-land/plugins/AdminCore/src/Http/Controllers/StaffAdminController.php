@@ -350,7 +350,7 @@ class StaffAdminController extends Controller
             'is_active' => ['nullable'],
             'can_see_profit' => ['nullable'],
             'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['string', 'max:40'],
+            'permissions.*' => ['string', 'max:64'],
         ]);
     }
 

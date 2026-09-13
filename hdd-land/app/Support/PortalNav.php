@@ -162,8 +162,15 @@ class PortalNav
             ['label' => 'سریال‌ها / گارانتی', 'href' => $u('serials'), 'show' => ! empty($perms['serials']) || ! empty($perms['sales']), 'active' => str_contains($path, 'staff/serials')],
             ['label' => 'فروش قطعه', 'href' => $u('sell'), 'show' => ! empty($perms['sales']) || ! empty($perms['orders']) || ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/sell')],
             ['label' => 'پشتیبانی', 'href' => $u('tickets'), 'show' => ! empty($perms['support']), 'active' => str_contains($path, 'staff/tickets')],
-            ['label' => 'حسابداری', 'href' => $u('accounting'), 'show' => ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/accounting') && ! str_contains($path, 'staff/sell') && ! str_contains($path, 'staff/accounting/stock')],
+            ['label' => 'حسابداری', 'href' => $u('accounting'), 'show' => ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/accounting') && ! str_contains($path, 'staff/sell') && ! str_contains($path, 'staff/accounting/stock') && ! str_contains($path, 'staff/accounting/reports') && ! str_contains($path, 'staff/accounting/checks') && ! str_contains($path, 'staff/accounting/installments') && ! str_contains($path, 'staff/accounting/settings')],
+            ['label' => 'اسناد مالی', 'href' => $u('accounting/docs'), 'show' => ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/accounting/docs')],
             ['label' => 'انبار', 'href' => $u('accounting/stock'), 'show' => ! empty($perms['inventory']) || ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/accounting/stock')],
+            ['label' => 'چک‌ها', 'href' => $u('accounting/checks'), 'show' => ! empty($perms['accounting.checks']) || ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/accounting/checks')],
+            ['label' => 'اقساط', 'href' => $u('accounting/installments'), 'show' => ! empty($perms['accounting.installments']) || ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/accounting/installments')],
+            ['label' => 'گزارش حسابداری', 'href' => $u('accounting/reports'), 'show' => ! empty($perms['accounting.reports']) || ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/accounting/reports')],
+            ['label' => 'تنظیمات حسابداری', 'href' => $u('accounting/settings'), 'show' => ! empty($perms['accounting.settings']), 'active' => str_contains($path, 'staff/accounting/settings')],
+            // میان‌بر موبایل ادمین برای کارمند دارای دسترسی حسابداری
+            ['label' => 'حسابداری (ادمین موبایل)', 'href' => url('/admin/accounting'), 'show' => ! empty($perms['accounting']) || ! empty($perms['accounting.settings']) || ! empty($perms['accounting.reports']), 'active' => str_starts_with($path, 'admin/accounting')],
         ];
     }
 
