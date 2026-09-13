@@ -59,6 +59,12 @@ class SettingsStore
         }
     }
 
+    /** Alias used by ThemeConfig / older call sites. */
+    public static function put(string $key, mixed $value): void
+    {
+        self::set($key, $value);
+    }
+
     /** Normalize admin/DB truthy values ("0", "false", 0, false → false). */
     public static function toBool(mixed $value, bool $default = false): bool
     {

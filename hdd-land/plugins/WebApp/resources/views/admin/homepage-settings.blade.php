@@ -100,7 +100,7 @@
 <div class="hp-head">
   <div>
     <h1>تنظیمات آنلاین صفحه اول و طراحی بنر</h1>
-    <p class="hp-hint" style="margin:.35rem 0 0">اولویت نمایش صفحه اول: بنر زندهٔ استودیو قالب (Revolution)، در غیر این صورت هیرو همین پنل.</p>
+    <p class="hp-hint" style="margin:.35rem 0 0">اولویت نمایش صفحه اول: هیرو مدرن از استودیو هیرو؛ بلوک‌های پایین صفحه از همین پنل.</p>
     <p>سایز، فونت، رنگ، درگ‌ودراپ متن/منو/عکس، ریسایز بنر و ادغام تصویر — به‌همراه همه بلوک‌های صفحه اول.</p>
   </div>
   <div style="display:flex;gap:.45rem;flex-wrap:wrap">
@@ -439,7 +439,7 @@
           <p class="hp-hint">اگر بنر Revolution در استودیو قالب فعال و دارای تصویر/لایه باشد، همان بنر روی صفحه اول فروشگاه نمایش داده می‌شود و هیرو این صفحه موقتاً پنهان می‌ماند.</p>
           <div class="hp-map">
             <div><b>طراحی بنر آنلاین</b><span>همین صفحه (پشتیبان)</span></div>
-            <div><b>بنر Revolution / صفحه اول</b><span><a href="{{ url('/admin/theme-builder') }}">/admin/theme-builder</a></span></div>
+            <div><b>استودیو هیرو مدرن</b><span><a href="{{ url('/admin/hero-studio') }}">/admin/hero-studio</a></span></div>
             <div><b>مگامنو هدر</b><span><a href="{{ url('/admin/mega-menu') }}">/admin/mega-menu</a></span></div>
             <div><b>فوتر و لینک‌ها</b><span><a href="{{ url('/admin/footer-settings') }}">/admin/footer-settings</a></span></div>
             <div><b>نوار پایین وب‌اپ</b><span><a href="{{ url('/admin/web-app') }}">/admin/web-app</a></span></div>

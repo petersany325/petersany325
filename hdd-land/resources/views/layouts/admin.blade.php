@@ -131,10 +131,11 @@
     'theme' => [
       'title' => 'تنظیمات قالب',
       'icon' => '🎨',
-      'open' => $is('theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'homepage-settings', 'online-home', 'banner-settings'),
+      'open' => $is('hero-studio', 'theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'homepage-settings', 'online-home', 'banner-settings'),
       'items' => [
-        ['label' => 'طراحی بنر و تنظیمات آنلاین صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home', 'banner-settings')],
-        ['label' => 'استودیو قالب صفحه اول', 'href' => $u('theme-builder'), 'active' => $is('theme-builder') && ! $is('theme-templates')],
+        ['label' => 'استودیو هیرو / بنر صفحه اول', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')],
+        ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')],
+        ['label' => 'استودیو هیرو مدرن', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'theme-builder', 'banner-settings')],
         ['label' => 'نصب / آپدیت قالب', 'href' => $u('theme-templates'), 'active' => $is('theme-templates')],
         ['label' => 'صفحه‌ساز Elementor', 'href' => $u('page-builder'), 'active' => $is('page-builder')],
         ['label' => 'مگامنو', 'href' => $u('mega-menu'), 'active' => $is('mega-menu')],
@@ -146,7 +147,8 @@
       'icon' => '📱',
       'open' => $is('web-app', 'homepage-settings'),
       'items' => [
-        ['label' => 'طراحی بنر و تنظیمات آنلاین صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home', 'banner-settings')],
+        ['label' => 'استودیو هیرو / بنر صفحه اول', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')],
+        ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')],
         ['label' => 'تنظیمات وب‌اپ / PWA', 'href' => $u('web-app'), 'active' => $is('web-app')],
         ['label' => 'پیش‌نمایش وب‌اپ', 'href' => url('/app'), 'active' => false, 'ext' => true],
         ['label' => 'فایل Manifest', 'href' => url('/manifest.webmanifest'), 'active' => false, 'ext' => true],
@@ -252,10 +254,11 @@
     // تنظیمات قالب — هر آیتم با سوئیچ جدا
     $themeItems = [];
     if ($staffCan('site.theme_builder')) {
-      $themeItems[] = ['label' => 'استودیو قالب صفحه اول', 'href' => $u('theme-builder'), 'active' => $is('theme-builder') && ! $is('theme-templates')];
+      $themeItems[] = ['label' => 'استودیو هیرو مدرن', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'theme-builder', 'banner-settings')];
     }
     if ($staffCan('site.homepage')) {
-      $themeItems[] = ['label' => 'طراحی بنر و تنظیمات آنلاین صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home', 'banner-settings')];
+      $themeItems[] = ['label' => 'استودیو هیرو / بنر صفحه اول', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')],
+        ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')];
     }
     if ($staffCan('site.theme_templates')) {
       $themeItems[] = ['label' => 'نصب / آپدیت قالب', 'href' => $u('theme-templates'), 'active' => $is('theme-templates')];
@@ -273,7 +276,7 @@
       $groups['theme'] = [
         'title' => 'تنظیمات قالب',
         'icon' => '🎨',
-        'open' => $is('theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'homepage-settings', 'online-home', 'banner-settings', 'footer-settings'),
+        'open' => $is('hero-studio', 'theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'homepage-settings', 'online-home', 'banner-settings', 'footer-settings'),
         'items' => $themeItems,
       ];
     } else {
@@ -283,7 +286,8 @@
     if ($staffCan('site.webapp') || $staffCan('site.homepage')) {
       $webItems = [];
       if ($staffCan('site.homepage')) {
-        $webItems[] = ['label' => 'طراحی بنر و تنظیمات آنلاین صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home', 'banner-settings')];
+        $webItems[] = ['label' => 'استودیو هیرو / بنر صفحه اول', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')],
+        ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')];
       }
       if ($staffCan('site.webapp')) {
         $webItems[] = ['label' => 'تنظیمات وب‌اپ / PWA', 'href' => $u('web-app'), 'active' => $is('web-app')];

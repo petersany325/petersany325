@@ -15,6 +15,20 @@ class HomepageBanner
      */
     public static function resolve(): array
     {
+        // Modern Hero Studio is the default engine; Revolution only when explicitly enabled.
+        try {
+            $useLegacy = \App\Support\SettingsStore::toBool(
+                \App\Support\SettingsStore::get('hero_use_legacy_banner', false),
+                false
+            );
+            if (! $useLegacy) {
+                return ['live' => false, 'banner' => []];
+            }
+        } catch (\Throwable) {
+            // If settings fail, prefer modern hero (no Revolution).
+            return ['live' => false, 'banner' => []];
+        }
+
         $banner = [];
         $live = false;
 

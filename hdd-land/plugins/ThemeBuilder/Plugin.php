@@ -18,17 +18,17 @@ class Plugin extends BasePlugin
 
     public function name(): string
     {
-        return 'استودیو قالب و بنرساز';
+        return 'چیدمان صفحه اول (میراث)';
     }
 
     public function description(): string
     {
-        return 'بنرساز Revolution و چیدمان صفحه اول فروشگاه';
+        return 'رندر میراثی صفحه اول. ویرایش بنر از استودیو هیرو مدرن انجام می‌شود.';
     }
 
     public function version(): string
     {
-        return '1.5.0';
+        return '1.6.0';
     }
 
     public function isCore(): bool

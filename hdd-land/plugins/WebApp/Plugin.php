@@ -26,7 +26,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '2.3.3';
+        return '2.4.0';
     }
 
     public function isCore(): bool
