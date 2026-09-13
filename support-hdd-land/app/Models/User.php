@@ -64,7 +64,7 @@ class User extends Authenticatable
     public function homeRoute(): string
     {
         if ($this->isIntern()) {
-            return 'intern.portal';
+            return \Illuminate\Support\Facades\Route::has('intern.portal') ? 'intern.portal' : 'profile.edit';
         }
 
         $candidates = [
@@ -79,12 +79,15 @@ class User extends Authenticatable
         ];
 
         foreach ($candidates as $permission => $route) {
+            if (! \Illuminate\Support\Facades\Route::has($route)) {
+                continue;
+            }
             if ($this->canAccess($permission)) {
                 return $route;
             }
         }
 
-        return 'profile.edit';
+        return \Illuminate\Support\Facades\Route::has('profile.edit') ? 'profile.edit' : 'dashboard';
     }
 
     public function permissionList(): array

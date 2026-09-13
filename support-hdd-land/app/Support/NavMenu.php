@@ -382,8 +382,18 @@ class NavMenu
             }
 
             $group['children'] = $children;
+            if (! empty($group['route']) && ! Route::has($group['route'])) {
+                $group['route'] = $children[0]['route'] ?? null;
+            }
             if (empty($group['route']) && $children !== []) {
                 $group['route'] = $children[0]['route'];
+            }
+            // Drop menu groups whose links cannot be resolved on this install.
+            if (empty($group['route']) && $children === []) {
+                continue;
+            }
+            if (! empty($group['route']) && ! Route::has($group['route'])) {
+                continue;
             }
             $out[] = $group;
         }
