@@ -1,6 +1,7 @@
 @php
   try {
     $home = \App\Support\HomePageConfig::get();
+    $trust = \App\Support\HomePageConfig::trustItems($home);
     $brands = \App\Support\HomePageConfig::brands($home);
     $featured = $featured ?? null;
     if (!($featured instanceof \Illuminate\Support\Collection)) {
@@ -8,18 +9,98 @@
     }
   } catch (\Throwable $e) {
     $home = [];
+    $trust = [];
     $brands = [];
     $featured = collect();
   }
 @endphp
 
-@if($featured->isNotEmpty())
-<section class="hl-section hl-featured" aria-label="محصولات ویژه">
-  <div class="hl-section__head">
-    <h2>محصولات منتخب</h2>
-    <a href="{{ url('/products') }}">مشاهده فروشگاه</a>
+{{-- ۲) بند داستانی تمام‌عرض — درباره ما (یک پیام) --}}
+@if(! empty($home['about_enabled']))
+<section class="hl-band hl-band--about" aria-label="درباره فروشگاه">
+  <div class="hl-band__media" aria-hidden="true">
+    <img
+      src="{{ \App\Support\HomePageConfig::imageUrl((string) ($home['about_image'] ?? '')) }}"
+      alt=""
+      width="1600"
+      height="900"
+      loading="lazy"
+      decoding="async"
+      onerror="this.closest('.hl-band__media')?.classList.add('is-empty')"
+    >
   </div>
-  <div class="hl-featured__grid">
+  <div class="hl-band__copy">
+    <h2 class="hl-band__title">{{ $home['about_title'] ?? '' }}</h2>
+    @php
+      $aboutParas = array_values(array_filter(array_map('trim', preg_split('/\R/u', (string) ($home['about_text'] ?? '')) ?: [])));
+      $aboutLead = $aboutParas[0] ?? '';
+    @endphp
+    @if($aboutLead !== '')
+      <p class="hl-band__text">{{ $aboutLead }}</p>
+    @endif
+    <div class="hl-band__cta">
+      <a class="hl-link" href="{{ url('/about') }}">بیشتر بدانید</a>
+      <a class="hl-link hl-link--muted" href="{{ url('/contact') }}">تماس با ما</a>
+    </div>
+  </div>
+</section>
+@endif
+
+{{-- ۳) بند CTA سازمانی تمام‌عرض --}}
+@if(! empty($home['corp_enabled']))
+<section class="hl-band hl-band--corp" aria-label="خرید سازمانی">
+  <div class="hl-band__copy hl-band__copy--center">
+    <p class="hl-band__eyebrow">{{ $home['corp_subtitle'] ?? '' }}</p>
+    <h2 class="hl-band__title">{{ $home['corp_cta_title'] ?: ($home['corp_title'] ?? '') }}</h2>
+    <p class="hl-band__text">{{ $home['corp_cta_text'] ?? '' }}</p>
+    <div class="hl-band__cta">
+      <a class="hl-btn hl-btn--primary" href="{{ url($home['corp_cta_url'] ?? '/contact') }}">{{ $home['corp_cta_label'] ?? 'تماس با واحد فروش' }}</a>
+    </div>
+  </div>
+</section>
+
+{{-- ۴) شبکه پرومو ۲ستونه (مثل promoهای اپل) --}}
+@php
+  $corpTiles = [];
+  foreach ([1, 2, 3] as $i) {
+    $title = trim((string) ($home['corp_'.$i.'_title'] ?? ''));
+    if ($title === '') {
+      continue;
+    }
+    $corpTiles[] = [
+      'title' => $title,
+      'text' => (string) ($home['corp_'.$i.'_text'] ?? ''),
+      'image' => \App\Support\HomePageConfig::imageUrl((string) ($home['corp_'.$i.'_image'] ?? '')),
+      'url' => url($home['corp_'.$i.'_url'] ?? '/contact'),
+    ];
+  }
+@endphp
+@if($corpTiles !== [])
+<section class="hl-tiles" aria-label="خدمات سازمانی">
+  @foreach($corpTiles as $tile)
+    <a class="hl-tile" href="{{ $tile['url'] }}">
+      <span class="hl-tile__media" aria-hidden="true">
+        <img src="{{ $tile['image'] }}" alt="" width="900" height="700" loading="lazy" decoding="async" onerror="this.remove()">
+      </span>
+      <span class="hl-tile__copy">
+        <strong class="hl-tile__title">{{ $tile['title'] }}</strong>
+        <span class="hl-tile__text">{{ $tile['text'] }}</span>
+        <span class="hl-link">جزئیات</span>
+      </span>
+    </a>
+  @endforeach
+</section>
+@endif
+@endif
+
+{{-- ۵) محصولات منتخب — شبکه تمیز بدون کارت سنگین --}}
+@if($featured->isNotEmpty())
+<section class="hl-shelf" aria-label="محصولات ویژه">
+  <div class="hl-shelf__head">
+    <h2>محصولات منتخب</h2>
+    <a class="hl-link" href="{{ url('/products') }}">مشاهده فروشگاه</a>
+  </div>
+  <div class="hl-shelf__grid">
     @foreach($featured->take(8) as $product)
       @php
         try {
@@ -49,11 +130,11 @@
           $img = '';
         }
       @endphp
-      <a class="hl-featured__item" href="{{ $url }}">
+      <a class="hl-shelf__item" href="{{ $url }}">
         @if($img !== '' && ! str_contains($img, 'product-placeholder'))
-          <span class="hl-featured__media"><img src="{{ $img }}" alt="{{ $name }}" width="400" height="300" loading="lazy" decoding="async" onerror="this.closest('.hl-featured__media')?.classList.add('is-empty')"></span>
+          <span class="hl-shelf__media"><img src="{{ $img }}" alt="{{ $name }}" width="400" height="300" loading="lazy" decoding="async" onerror="this.closest('.hl-shelf__media')?.classList.add('is-empty')"></span>
         @else
-          <span class="hl-featured__ph" aria-hidden="true"></span>
+          <span class="hl-shelf__ph" aria-hidden="true"></span>
         @endif
         <strong>{{ $name }}</strong>
       </a>
@@ -62,87 +143,61 @@
 </section>
 @endif
 
+{{-- ۶) آموزش‌ها به‌صورت کاشی‌های داستانی --}}
 @if(! empty($home['edu_enabled']))
-<section class="hl-section hl-edu">
-  <div class="hl-section__head">
+@php
+  $eduTiles = [];
+  foreach ([1, 2, 3] as $i) {
+    $title = trim((string) ($home['edu_'.$i.'_title'] ?? ''));
+    if ($title === '') {
+      continue;
+    }
+    $eduTiles[] = [
+      'title' => $title,
+      'text' => (string) ($home['edu_'.$i.'_text'] ?? ''),
+      'image' => \App\Support\HomePageConfig::imageUrl((string) ($home['edu_'.$i.'_image'] ?? '')),
+      'url' => url($home['edu_'.$i.'_url'] ?? '/blog'),
+    ];
+  }
+@endphp
+@if($eduTiles !== [])
+<section class="hl-tiles hl-tiles--edu" aria-label="آموزش‌ها">
+  <div class="hl-shelf__head hl-shelf__head--bleed">
     <div>
       <h2>{{ $home['edu_title'] ?? 'آموزش‌ها' }}</h2>
       <p>{{ $home['edu_subtitle'] ?? '' }}</p>
     </div>
-    <a href="{{ url($home['edu_more_url'] ?? '/blog') }}">{{ $home['edu_more_label'] ?? 'همه آموزش‌ها' }}</a>
+    <a class="hl-link" href="{{ url($home['edu_more_url'] ?? '/blog') }}">{{ $home['edu_more_label'] ?? 'همه آموزش‌ها' }}</a>
   </div>
-  <div class="hl-edu__list">
-    @foreach([1, 2, 3] as $i)
-      @php $title = trim((string) ($home['edu_'.$i.'_title'] ?? '')); @endphp
-      @continue($title === '')
-      <a class="hl-edu__row" href="{{ url($home['edu_'.$i.'_url'] ?? '/blog') }}">
-        <img src="{{ \App\Support\HomePageConfig::imageUrl((string) ($home['edu_'.$i.'_image'] ?? '')) }}" alt="" width="640" height="420" loading="lazy" decoding="async" onerror="this.style.opacity='0'">
-        <div>
-          <strong>{{ $title }}</strong>
-          <p>{{ $home['edu_'.$i.'_text'] ?? '' }}</p>
-          <span>ادامه مطلب</span>
-        </div>
-      </a>
-    @endforeach
-  </div>
+  @foreach($eduTiles as $tile)
+    <a class="hl-tile hl-tile--light" href="{{ $tile['url'] }}">
+      <span class="hl-tile__media" aria-hidden="true">
+        <img src="{{ $tile['image'] }}" alt="" width="900" height="700" loading="lazy" decoding="async" onerror="this.remove()">
+      </span>
+      <span class="hl-tile__copy">
+        <strong class="hl-tile__title">{{ $tile['title'] }}</strong>
+        <span class="hl-tile__text">{{ $tile['text'] }}</span>
+        <span class="hl-link">ادامه مطلب</span>
+      </span>
+    </a>
+  @endforeach
+</section>
+@endif
+@endif
+
+{{-- ۷) اعتماد — نوار آرام بعد از محتوای اصلی (خارج از ویوپورت اول) --}}
+@if(! empty($home['trust_enabled']) && $trust !== [])
+<section class="hl-trust" aria-label="اعتماد">
+  @foreach($trust as $item)
+    <div class="hl-trust__item">
+      <strong>{{ $item['title'] }}</strong>
+      <span>{{ $item['text'] }}</span>
+    </div>
+  @endforeach
 </section>
 @endif
 
-@if(! empty($home['about_enabled']))
-<section class="hl-section hl-about">
-  <div class="hl-about__media">
-    <img src="{{ \App\Support\HomePageConfig::imageUrl((string) ($home['about_image'] ?? '')) }}" alt="{{ $home['about_title'] ?? '' }}" width="1200" height="800" loading="lazy" decoding="async" onerror="this.parentElement.classList.add('is-empty')">
-  </div>
-  <div class="hl-about__copy">
-    <h2>{{ $home['about_title'] ?? '' }}</h2>
-    @foreach(preg_split('/\R/u', (string) ($home['about_text'] ?? '')) ?: [] as $para)
-      @if(trim($para) !== '')
-        <p>{{ trim($para) }}</p>
-      @endif
-    @endforeach
-    <div class="hl-about__stats">
-      @foreach([1, 2, 3] as $i)
-        <div>
-          <b>{{ $home['about_stat'.$i.'_title'] ?? '' }}</b>
-          <span>{{ $home['about_stat'.$i.'_text'] ?? '' }}</span>
-        </div>
-      @endforeach
-    </div>
-  </div>
-</section>
-@endif
-
-@if(! empty($home['corp_enabled']))
-<section class="hl-section hl-corp">
-  <div class="hl-section__head">
-    <div>
-      <h2>{{ $home['corp_title'] ?? '' }}</h2>
-      <p>{{ $home['corp_subtitle'] ?? '' }}</p>
-    </div>
-  </div>
-  <div class="hl-corp__grid">
-    @foreach([1, 2, 3] as $i)
-      @php $title = trim((string) ($home['corp_'.$i.'_title'] ?? '')); @endphp
-      @continue($title === '')
-      <a class="hl-corp__panel" href="{{ url($home['corp_'.$i.'_url'] ?? '/contact') }}">
-        <img src="{{ \App\Support\HomePageConfig::imageUrl((string) ($home['corp_'.$i.'_image'] ?? '')) }}" alt="" width="1200" height="800" loading="lazy" decoding="async" onerror="this.remove()">
-        <div class="hl-corp__body">
-          <strong>{{ $title }}</strong>
-          <p>{{ $home['corp_'.$i.'_text'] ?? '' }}</p>
-        </div>
-      </a>
-    @endforeach
-  </div>
-  <div class="hl-corp__cta">
-    <div>
-      <h3>{{ $home['corp_cta_title'] ?? '' }}</h3>
-      <p>{{ $home['corp_cta_text'] ?? '' }}</p>
-    </div>
-    <a class="hl-btn hl-btn--primary" href="{{ url($home['corp_cta_url'] ?? '/contact') }}">{{ $home['corp_cta_label'] ?? 'تماس با ما' }}</a>
-  </div>
-</section>
-@endif
-
+{{-- ۸) برندها --}}
 @if(! empty($home['brands_enabled']) && $brands !== [])
 <section class="hl-brands" aria-label="برندها">
   @foreach($brands as $brand)

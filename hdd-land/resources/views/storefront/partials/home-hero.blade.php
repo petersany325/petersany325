@@ -1,10 +1,10 @@
 @php
   $home = \App\Support\HomePageConfig::get();
-  $trust = \App\Support\HomePageConfig::trustItems($home);
   $heroImage = \App\Support\HomePageConfig::imageUrl((string) ($home['hero_image'] ?? 'images/home/hero.jpg'));
   $shopName = trim((string) \App\Models\Setting::getValue('shop_name', 'سرزمین هارد'));
 @endphp
 
+{{-- ۱) هیرو تمام‌عرض: برند + یک تیتر + یک جمله + CTA — مثل ریتم اپل --}}
 @if(! empty($home['hero_enabled']))
 <section class="hl-hero" aria-label="هیرو فروشگاه" style="{{ \App\Support\HomePageConfig::heroStyleAttr($home) }}">
   <div class="hl-hero__bg" aria-hidden="true">
@@ -30,16 +30,5 @@
       <a class="hl-btn hl-btn--ghost" href="{{ url($home['hero_cta2_url'] ?: '/contact') }}">{{ $home['hero_cta2_label'] }}</a>
     </div>
   </div>
-</section>
-@endif
-
-@if(! empty($home['trust_enabled']) && $trust !== [])
-<section class="hl-trust" aria-label="اعتماد">
-  @foreach($trust as $item)
-    <div class="hl-trust__item">
-      <strong>{{ $item['title'] }}</strong>
-      <span>{{ $item['text'] }}</span>
-    </div>
-  @endforeach
 </section>
 @endif
