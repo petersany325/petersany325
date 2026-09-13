@@ -436,7 +436,7 @@
       <div class="hp-pane" data-pane="menus">
         <div class="hp-card">
           <h2>بررسی و به‌روزرسانی منوها</h2>
-          <p class="hp-hint">اگر بنر Revolution در استودیو قالب فعال و دارای تصویر/لایه باشد، همان بنر روی صفحه اول فروشگاه نمایش داده می‌شود و هیرو این صفحه موقتاً پنهان می‌ماند.</p>
+          <p class="hp-hint">بنرساز قدیمی Revolution خاموش است. هیرو صفحه اول را از <a href="{{ url('/admin/hero-studio') }}">استودیو هیرو مدرن</a> تنظیم کنید؛ این صفحه فقط بلوک‌های پایین صفحه اول را مدیریت می‌کند.</p>
           <div class="hp-map">
             <div><b>طراحی بنر آنلاین</b><span>همین صفحه (پشتیبان)</span></div>
             <div><b>استودیو هیرو مدرن</b><span><a href="{{ url('/admin/hero-studio') }}">/admin/hero-studio</a></span></div>
