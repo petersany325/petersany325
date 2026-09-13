@@ -180,11 +180,24 @@ class Product extends Model
     {
         if ($this->image) {
             $path = ltrim(str_replace('\\', '/', (string) $this->image), '/');
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                return $path;
+            }
+            if (str_starts_with($path, 'uploads/')) {
+                return asset($path);
+            }
+            // Live media library stores under public/uploads/media/...
             if (is_file(public_path('uploads/'.$path))) {
                 return asset('uploads/'.$path);
             }
+            if (is_file(public_path($path))) {
+                return asset($path);
+            }
+            if (str_starts_with($path, 'media/')) {
+                return asset('uploads/'.$path);
+            }
 
-            return asset('storage/'.$path);
+            return asset('uploads/'.$path);
         }
 
         return asset('product-placeholder.svg');
