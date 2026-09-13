@@ -80,6 +80,8 @@ class Plugin extends BasePlugin
             'show_nav_cart' => true,
             'show_nav_account' => true,
             'account_show_orders' => true,
+            'account_show_invoices' => true,
+            'account_show_installments' => true,
             'account_show_wallet' => true,
             'account_show_tickets' => true,
             'account_show_profile' => true,
@@ -353,7 +355,8 @@ class Plugin extends BasePlugin
             'force_app_on_mobile', 'offline_cache', 'hero_enabled', 'show_search',
             'show_categories', 'show_featured', 'show_quick_links',
             'show_nav_home', 'show_nav_shop', 'show_nav_cart', 'show_nav_account',
-            'account_show_orders', 'account_show_wallet', 'account_show_tickets',
+            'account_show_orders', 'account_show_invoices', 'account_show_installments',
+            'account_show_wallet', 'account_show_tickets',
             'account_show_profile', 'account_show_track', 'account_show_full_site',
             'product_show_add_cart', 'product_show_buy_now', 'cart_show_checkout',
             'animations', 'compact_cards',
@@ -482,6 +485,8 @@ class Plugin extends BasePlugin
             $children = [];
             if ($key === 'shop') {
                 $children = static::shopDrawerChildren();
+            } elseif ($key === 'account') {
+                $children = static::accountDrawerChildren($s);
             } elseif ($key === 'warranty') {
                 // Structured warranty menu (actions + companies) — avoid mega duplicates of /serial-check
                 $children = static::warrantyDrawerChildren();
@@ -578,6 +583,41 @@ class Plugin extends BasePlugin
         $children[] = ['label' => 'توشیبا', 'url' => '/app/shop?q='.rawurlencode('Toshiba')];
         $children[] = ['label' => 'سامسونگ', 'url' => '/app/shop?q='.rawurlencode('Samsung')];
         $children[] = ['label' => 'ای‌دیتا', 'url' => '/app/shop?q='.rawurlencode('ADATA')];
+
+        return $children;
+    }
+
+    /**
+     * Account drawer shortcuts for WebApp mobile menu (invoices, installments, …).
+     *
+     * @param  array<string,mixed>  $s
+     * @return list<array{label:string,url:string}>
+     */
+    protected static function accountDrawerChildren(array $s): array
+    {
+        $children = [
+            ['label' => 'ورود به حساب', 'url' => '/app/account'],
+        ];
+        if (! empty($s['account_show_orders'])) {
+            $children[] = ['label' => 'سفارش‌های من', 'url' => '/account/orders'];
+        }
+        if (! array_key_exists('account_show_invoices', $s) || ! empty($s['account_show_invoices'])) {
+            $children[] = ['label' => 'فاکتورها', 'url' => '/account/invoices'];
+        }
+        if (! array_key_exists('account_show_installments', $s) || ! empty($s['account_show_installments'])) {
+            $children[] = ['label' => 'اقساط', 'url' => '/account/installments'];
+        }
+        if (! empty($s['account_show_wallet'])) {
+            $children[] = ['label' => 'کیف پول', 'url' => '/account/wallet'];
+        }
+        if (! empty($s['account_show_tickets'])) {
+            $children[] = ['label' => 'تیکت پشتیبانی', 'url' => '/account/tickets'];
+        }
+        $children[] = ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials'];
+        if (! empty($s['account_show_track'])) {
+            $children[] = ['label' => 'پیگیری سفارش', 'url' => '/orders/track'];
+        }
+        $children[] = ['label' => 'کارتابل کامل مشتری', 'url' => '/account'];
 
         return $children;
     }

@@ -19,8 +19,12 @@
     @if(!empty($s['account_show_orders']))
       <a href="{{ url('/account/orders') }}">سفارش‌های من <span>‹</span></a>
     @endif
-    <a href="{{ url('/account/invoices') }}">فاکتورها <span>‹</span></a>
-    <a href="{{ url('/account/installments') }}">اقساط <span>‹</span></a>
+    @if(!array_key_exists('account_show_invoices', $s) || !empty($s['account_show_invoices']))
+      <a href="{{ url('/account/invoices') }}">فاکتورها <span>‹</span></a>
+    @endif
+    @if(!array_key_exists('account_show_installments', $s) || !empty($s['account_show_installments']))
+      <a href="{{ url('/account/installments') }}">اقساط <span>‹</span></a>
+    @endif
     @if(!empty($s['account_show_wallet']))
       <a href="{{ url('/account/wallet') }}">کیف پول <span>‹</span></a>
     @endif

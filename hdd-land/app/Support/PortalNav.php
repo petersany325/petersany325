@@ -73,7 +73,18 @@ class PortalNav
                     ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials'],
                 ],
             ],
-            ['label' => 'حساب', 'url' => '/app/account', 'children' => []],
+            [
+                'label' => 'حساب',
+                'url' => '/app/account',
+                'children' => [
+                    ['label' => 'حساب من', 'url' => '/app/account'],
+                    ['label' => 'سفارش‌های من', 'url' => '/account/orders'],
+                    ['label' => 'فاکتورها', 'url' => '/account/invoices'],
+                    ['label' => 'اقساط', 'url' => '/account/installments'],
+                    ['label' => 'کیف پول', 'url' => '/account/wallet'],
+                    ['label' => 'تیکت پشتیبانی', 'url' => '/account/tickets'],
+                ],
+            ],
         ];
     }
 
