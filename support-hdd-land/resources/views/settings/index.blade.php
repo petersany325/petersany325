@@ -274,6 +274,15 @@
                         <input type="text" name="invoice_address" value="{{ old('invoice_address', $invoice['address']) }}">
                     </div>
                     <div style="grid-column:1/-1">
+                        <label>اسم مجموعه در شبکه همکاران</label>
+                        <input type="text" name="network_org_name" value="{{ old('network_org_name', $invoice['network_org_name'] ?? '') }}" placeholder="سرزمین هارد مرکز تخصصی بازیابی اطلاعات و تعمیرات هارد دیسک">
+                        <div class="muted" style="font-size:11px;margin-top:4px;">همین نام در سرچ همکاران دیده می‌شود (سریال لایسنس مخفی است).</div>
+                    </div>
+                    <div style="grid-column:1/-1">
+                        <label>آدرس مجموعه در شبکه همکاران</label>
+                        <input type="text" name="network_address" value="{{ old('network_address', $invoice['network_address'] ?? '') }}" placeholder="اگر خالی باشد همان آدرس فاکتور استفاده می‌شود">
+                    </div>
+                    <div style="grid-column:1/-1">
                         <label>متن زیر عنوان / فوتر کوتاه</label>
                         <input type="text" name="invoice_footer" value="{{ old('invoice_footer', $invoice['footer']) }}">
                     </div>

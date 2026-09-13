@@ -273,6 +273,8 @@ Route::middleware('auth')->group(function () {
         Route::get('partners/{partner}/edit', [PartnerController::class, 'edit'])->name('partners.edit');
         Route::put('partners/{partner}', [PartnerController::class, 'update'])->name('partners.update');
         Route::delete('partners/{partner}', [PartnerController::class, 'destroy'])->name('partners.destroy');
+        Route::get('partners/{partner}/refer', [PartnerReferralController::class, 'referForm'])->name('partners.refer-form');
+        Route::post('partners/{partner}/refer', [PartnerReferralController::class, 'referSend'])->name('partners.refer-send');
 
         Route::get('partner-referrals', [PartnerReferralController::class, 'cartable'])->name('partners.cartable');
         Route::get('partner-referrals/report', [PartnerReferralController::class, 'report'])->name('partners.report');

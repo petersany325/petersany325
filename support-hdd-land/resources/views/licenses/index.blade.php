@@ -77,6 +77,10 @@
                     <label>موبایل</label>
                     <input type="text" name="customer_phone" value="{{ old('customer_phone') }}" dir="ltr" style="text-align:left;" placeholder="09xxxxxxxxx">
                 </div>
+                <div style="grid-column:1/-1;">
+                    <label>آدرس مجموعه</label>
+                    <input type="text" name="address" value="{{ old('address') }}" placeholder="شهر، خیابان، پلاک — در سرچ همکاران نمایش داده می‌شود">
+                </div>
                 <div>
                     <label>ایمیل</label>
                     <input type="email" name="customer_email" value="{{ old('customer_email') }}" dir="ltr" style="text-align:left;">
@@ -193,6 +197,9 @@
                     <td>
                         <strong>{{ $row->org_name ?: $row->networkDisplayName() }}</strong>
                         <div class="muted" style="font-size:11px;">نام عمومی شبکه</div>
+                        @if($row->address)
+                            <div class="muted" style="font-size:11px;margin-top:2px;">{{ $row->address }}</div>
+                        @endif
                     </td>
                     <td>
                         {{ $row->customer_name ?: '—' }}

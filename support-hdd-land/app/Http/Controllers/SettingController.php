@@ -56,6 +56,8 @@ class SettingController extends Controller
                 'shop_name' => AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه')),
                 'phones' => AppSetting::getValue('invoice_phones', ''),
                 'address' => AppSetting::getValue('invoice_address', ''),
+                'network_org_name' => AppSetting::getValue('network_org_name', \App\Services\PartnerNetworkService::DEFAULT_HUB_ORG_NAME),
+                'network_address' => AppSetting::getValue('network_address', AppSetting::getValue('invoice_address', '')),
                 'footer' => AppSetting::getValue('invoice_footer', 'مدیریت تعمیرکاران — قبض پذیرش'),
                 'terms' => AppSetting::getValue('invoice_terms', ''),
                 'auto_print' => AppSetting::getValue('invoice_auto_print', '0') === '1',
@@ -330,6 +332,8 @@ class SettingController extends Controller
             'invoice_shop_name' => ['nullable', 'string', 'max:160'],
             'invoice_phones' => ['nullable', 'string', 'max:160'],
             'invoice_address' => ['nullable', 'string', 'max:500'],
+            'network_org_name' => ['nullable', 'string', 'max:160'],
+            'network_address' => ['nullable', 'string', 'max:500'],
             'invoice_footer' => ['nullable', 'string', 'max:500'],
             'invoice_terms' => ['nullable', 'string', 'max:10000'],
             'invoice_auto_print' => ['nullable', 'boolean'],
@@ -353,6 +357,8 @@ class SettingController extends Controller
             'invoice_shop_name',
             'invoice_phones',
             'invoice_address',
+            'network_org_name',
+            'network_address',
             'invoice_footer',
             'invoice_terms',
         ];
@@ -380,6 +386,12 @@ class SettingController extends Controller
         ];
         foreach ($boolKeys as $key) {
             AppSetting::setValue($key, $request->boolean($key) ? '1' : '0');
+        }
+
+        try {
+            app(\App\Services\PartnerNetworkService::class)->ensureHubNetworkLicense();
+        } catch (\Throwable $e) {
+            // Hub sync is best-effort; invoice settings still saved.
         }
 
         return $this->settingsRedirect($request, 'invoice', 'success', 'تنظیمات فاکتور و چاپ ذخیره شد.');

@@ -178,6 +178,72 @@ class PartnerReferralController extends Controller
         return back()->with($result['ok'] ? 'success' : 'error', $result['message']);
     }
 
+    /** Pick a receipt after choosing a colleague from network search. */
+    public function referForm(Partner $partner): View|RedirectResponse
+    {
+        if (! $partner->is_active) {
+            return redirect()->route('partners.index')->with('error', 'این همکار غیرفعال است.');
+        }
+
+        $this->network->syncPeers();
+
+        $receptions = Reception::query()
+            ->with('customer')
+            ->whereNotIn('status', ['delivered', 'cancelled'])
+            ->where(function ($q) {
+                $q->whereNull('partner_flow')
+                    ->orWhere(function ($o) {
+                        $o->where('partner_flow', Reception::PARTNER_FLOW_OUTBOUND)
+                            ->whereIn('partner_approval_status', ['rejected', 'returned', 'returned_to_origin']);
+                    });
+            })
+            ->latest('id')
+            ->limit(80)
+            ->get();
+
+        return view('partners.refer', [
+            'partner' => $partner,
+            'receptions' => $receptions,
+        ]);
+    }
+
+    public function referSend(Request $request, Partner $partner): RedirectResponse
+    {
+        if (! $partner->is_active) {
+            return redirect()->route('partners.index')->with('error', 'این همکار غیرفعال است.');
+        }
+
+        $data = $request->validate([
+            'reception_id' => ['required', 'exists:receptions,id'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $reception = Reception::query()->findOrFail((int) $data['reception_id']);
+        if (in_array($reception->status, ['delivered', 'cancelled'], true)) {
+            return back()->with('error', 'این قبض قابل ارجاع نیست.');
+        }
+        if ($reception->isPartnerInbound() && $reception->partner_approval_status === 'pending') {
+            return back()->with('error', 'این قبض هنوز تأیید نشده است.');
+        }
+        if ($reception->isPartnerInbound()) {
+            return back()->with('error', 'برای برگشت به همکار مبدأ از کارتابل استفاده کنید.');
+        }
+        if ($reception->partner_flow === Reception::PARTNER_FLOW_OUTBOUND
+            && ! in_array((string) $reception->partner_approval_status, ['rejected', 'returned', 'returned_to_origin'], true)) {
+            return back()->with('error', 'این قبض قبلاً به همکار ارجاع شده است.');
+        }
+
+        $result = $this->network->sendReferral($reception, $partner, $data['note'] ?? null);
+
+        if (! ($result['ok'] ?? false)) {
+            return back()->with('error', $result['message'])->withInput();
+        }
+
+        return redirect()
+            ->route('partners.cartable', ['tab' => 'outbound'])
+            ->with('success', $result['message']);
+    }
+
     public function approve(Request $request, Reception $reception): RedirectResponse
     {
         $result = $this->network->approveInbound($reception);

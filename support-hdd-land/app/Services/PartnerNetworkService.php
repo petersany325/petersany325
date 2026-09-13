@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AppSetting;
 use App\Models\Customer;
 use App\Models\NetworkReferral;
 use App\Models\Partner;
@@ -18,10 +19,15 @@ use Throwable;
  */
 class PartnerNetworkService
 {
+    public const DEFAULT_HUB_ORG_NAME = 'سرزمین هارد مرکز تخصصی بازیابی اطلاعات و تعمیرات هارد دیسک';
+
     /** @return array{ok:bool,message:string,count?:int} */
     public function syncPeers(): array
     {
         try {
+            if ($this->isSellerHub()) {
+                $this->ensureHubNetworkLicense();
+            }
             $peers = $this->fetchPeers();
         } catch (Throwable $e) {
             Log::warning('partner_peers_sync_failed', ['error' => $e->getMessage()]);
@@ -51,11 +57,13 @@ class PartnerNetworkService
                 $partner = new Partner();
             }
             $name = $org !== '' ? $org : ($domain !== '' ? $domain : 'همکار');
+            $address = trim((string) ($peer['address'] ?? '')) ?: null;
             $partner->fill([
                 'name' => $name,
                 'org_name' => $org !== '' ? $org : $name,
                 'shop_name' => $name,
                 'phone' => trim((string) ($peer['customer_phone'] ?? $peer['phone'] ?? '')) ?: null,
+                'address' => $address,
                 'domain' => $domain !== '' ? $domain : $partner->domain,
                 // Never store/show peer license serial on colleague shops.
                 'license_key' => null,
@@ -91,6 +99,7 @@ class PartnerNetworkService
     public function fetchPeers(): array
     {
         if ($this->isSellerHub()) {
+            $this->ensureHubNetworkLicense();
             $selfDomain = $this->selfDomain();
 
             return ProductLicense::query()
@@ -101,16 +110,7 @@ class PartnerNetworkService
                 ->when($selfDomain !== '', fn ($q) => $q->where('domain', '!=', $selfDomain))
                 ->orderByRaw('COALESCE(NULLIF(org_name, ""), customer_name)')
                 ->get()
-                ->map(fn (ProductLicense $l) => [
-                    // Never expose license serial to peer shops.
-                    'org_name' => $l->networkDisplayName(),
-                    'domain' => $l->domain,
-                    'customer_name' => $l->networkDisplayName(),
-                    'shop_name' => $l->networkDisplayName(),
-                    'customer_phone' => $l->customer_phone,
-                    'plan_label' => $l->plan_label,
-                    'last_check_at' => optional($l->last_check_at)?->toIso8601String(),
-                ])
+                ->map(fn (ProductLicense $l) => $this->licenseToPeerArray($l))
                 ->all();
         }
 
@@ -176,8 +176,9 @@ class PartnerNetworkService
                 'technician_notes' => $reception->technician_notes,
             ],
             'from_shop' => [
-                'name' => shop_name(),
-                'org_name' => shop_name(),
+                'name' => $this->hubOrgName(),
+                'org_name' => $this->hubOrgName(),
+                'address' => $this->hubAddress(),
                 'domain' => $this->selfDomain(),
                 // Do not include license_key in peer payload.
             ],
@@ -198,7 +199,7 @@ class PartnerNetworkService
                 'to_license_id' => $to->id,
                 'from_domain' => $this->selfDomain(),
                 'to_domain' => $to->domain,
-                'from_shop_name' => shop_name(),
+                'from_shop_name' => $this->hubOrgName(),
                 'to_shop_name' => $to->networkDisplayName(),
                 'origin_receipt_no' => $reception->receipt_no,
                 'origin_ticket_no' => $reception->ticket_no,
@@ -508,6 +509,126 @@ class PartnerNetworkService
         return LicenseStatus::isSellerSite() || trim((string) config('license.key')) === '';
     }
 
+    /**
+     * Ensure seller hub appears in colleague search with public org name + address (never serial).
+     */
+    public function ensureHubNetworkLicense(): ?ProductLicense
+    {
+        if (! $this->isSellerHub()) {
+            return null;
+        }
+        $domain = $this->selfDomain();
+        if ($domain === '') {
+            return null;
+        }
+
+        $orgName = $this->hubOrgName();
+        $address = $this->hubAddress();
+        $phone = trim((string) AppSetting::getValue('invoice_phones', ''));
+        if ($phone !== '' && str_contains($phone, '|')) {
+            $phone = trim(explode('|', $phone)[0]);
+        }
+
+        $hub = ProductLicense::query()
+            ->where('domain', $domain)
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $hub) {
+            $hub = ProductLicense::query()->create([
+                'license_key' => ProductLicense::generateKey(),
+                'customer_name' => $orgName,
+                'org_name' => $orgName,
+                'customer_phone' => $phone !== '' ? $phone : null,
+                'address' => $address !== '' ? $address : null,
+                'domain' => $domain,
+                'product' => 'hddland-repair',
+                'plan_code' => 'hub',
+                'plan_label' => 'هاب شبکه',
+                'plan_months' => null,
+                'price_toman' => 0,
+                'status' => 'active',
+                'network_visible' => true,
+                'token' => bin2hex(random_bytes(16)),
+                'activated_at' => now(),
+                'notes' => 'هویت شبکه فروشنده — فقط برای فهرست همکاران',
+                'meta' => ['is_network_hub' => true],
+            ]);
+        } else {
+            $meta = is_array($hub->meta) ? $hub->meta : [];
+            $meta['is_network_hub'] = true;
+            $hub->fill([
+                'org_name' => $orgName,
+                'customer_name' => $hub->customer_name ?: $orgName,
+                'address' => $address !== '' ? $address : $hub->address,
+                'customer_phone' => $phone !== '' ? $phone : $hub->customer_phone,
+                'status' => 'active',
+                'network_visible' => true,
+                'meta' => $meta,
+            ]);
+            if (! $hub->token) {
+                $hub->token = bin2hex(random_bytes(16));
+            }
+            if (! $hub->activated_at) {
+                $hub->activated_at = now();
+            }
+            $hub->save();
+        }
+
+        return $hub;
+    }
+
+    /** @return array{org_name:string,address:string,domain:string,phone:?string} */
+    public function hubIdentity(): array
+    {
+        return [
+            'org_name' => $this->hubOrgName(),
+            'address' => $this->hubAddress(),
+            'domain' => $this->selfDomain(),
+            'phone' => trim((string) AppSetting::getValue('invoice_phones', '')) ?: null,
+        ];
+    }
+
+    public function hubOrgName(): string
+    {
+        $custom = trim((string) AppSetting::getValue('network_org_name', ''));
+        if ($custom !== '') {
+            return $custom;
+        }
+        if ($this->isSellerHub()) {
+            return self::DEFAULT_HUB_ORG_NAME;
+        }
+        $shop = trim((string) AppSetting::getValue('invoice_shop_name', ''));
+
+        return $shop !== '' ? $shop : shop_name();
+    }
+
+    public function hubAddress(): string
+    {
+        $custom = trim((string) AppSetting::getValue('network_address', ''));
+        if ($custom !== '') {
+            return $custom;
+        }
+
+        return trim((string) AppSetting::getValue('invoice_address', ''));
+    }
+
+    /** @return array<string, mixed> */
+    public function licenseToPeerArray(ProductLicense $l): array
+    {
+        return [
+            // Never expose license serial to peer shops.
+            'org_name' => $l->networkDisplayName(),
+            'domain' => $l->domain,
+            'address' => $l->address,
+            'customer_name' => $l->networkDisplayName(),
+            'shop_name' => $l->networkDisplayName(),
+            'customer_phone' => $l->customer_phone,
+            'plan_label' => $l->plan_label,
+            'last_check_at' => optional($l->last_check_at)?->toIso8601String(),
+        ];
+    }
+
     private function selfDomain(): string
     {
         $d = trim((string) config('license.domain'));
@@ -735,6 +856,7 @@ class PartnerNetworkService
             'name' => $name,
             'org_name' => $name,
             'shop_name' => $name,
+            'address' => trim((string) ($from['address'] ?? '')) ?: null,
             'domain' => $domain !== '' ? $domain : null,
             'license_key' => null,
             'code' => $domain !== '' ? $domain : $name,

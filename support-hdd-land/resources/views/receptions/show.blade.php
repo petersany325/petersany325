@@ -214,7 +214,7 @@
                                 <select name="partner_id" required>
                                     <option value="">— انتخاب همکار لایسنس‌دار —</option>
                                     @foreach(($partners ?? []) as $p)
-                                        <option value="{{ $p->id }}">{{ $p->displayName() }}@if($p->domain) ({{ $p->domain }})@endif</option>
+                                        <option value="{{ $p->id }}">{{ $p->displayName() }}@if($p->address) — {{ \Illuminate\Support\Str::limit($p->address, 40) }}@endif@if($p->domain) ({{ $p->domain }})@endif</option>
                                     @endforeach
                                 </select>
                             </div>

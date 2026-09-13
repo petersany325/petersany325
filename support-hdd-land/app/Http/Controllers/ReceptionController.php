@@ -503,7 +503,7 @@ class ReceptionController extends Controller
             'pendingHandoff' => $reception->handoffs->firstWhere('status', \App\Models\DeviceHandoff::STATUS_PENDING),
             'custodyChecklist' => $gate->checklist($reception),
             'workReports' => $reception->workReports,
-            'partners' => \App\Models\Partner::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'shop_name', 'phone']),
+            'partners' => \App\Models\Partner::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'org_name', 'shop_name', 'phone', 'address', 'domain']),
         ]));
     }
 

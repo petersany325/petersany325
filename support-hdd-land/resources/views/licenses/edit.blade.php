@@ -33,6 +33,10 @@
                 <label>موبایل</label>
                 <input type="text" name="customer_phone" value="{{ old('customer_phone', $license->customer_phone) }}" dir="ltr" style="text-align:left;">
             </div>
+            <div style="grid-column:1/-1;">
+                <label>آدرس مجموعه</label>
+                <input type="text" name="address" value="{{ old('address', $license->address) }}" placeholder="شهر، خیابان، پلاک">
+            </div>
             <div>
                 <label>ایمیل</label>
                 <input type="email" name="customer_email" value="{{ old('customer_email', $license->customer_email) }}" dir="ltr" style="text-align:left;">

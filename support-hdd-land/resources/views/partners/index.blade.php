@@ -7,7 +7,19 @@
 @section('content')
 <section class="panel" style="margin-bottom:12px;background:#f3f7ff;border-color:#b7c8e8;">
     <strong>شبکه داخلی همکاران</strong>
-    <p class="muted" style="margin:6px 0 0;">فهرست از لایسنس‌های فعال با عضویت شبکه (ON) همگام می‌شود. در جستجو فقط <b>اسم مجموعه</b> دیده می‌شود؛ سریال لایسنس مشتری به همکار نشان داده نمی‌شود.</p>
+    <p class="muted" style="margin:6px 0 0;">فهرست از لایسنس‌های فعال با عضویت شبکه (ON) همگام می‌شود. در جستجو فقط <b>اسم مجموعه</b> و <b>آدرس</b> دیده می‌شود؛ سریال لایسنس مشتری به همکار نشان داده نمی‌شود.</p>
+    @if(!empty($hubIdentity['org_name']))
+        <div style="margin-top:10px;padding:10px 12px;background:#fff;border:1px dashed #b7c8e8;border-radius:8px;">
+            <div class="muted" style="font-size:12px;">هویت مجموعه شما در شبکه</div>
+            <strong>{{ $hubIdentity['org_name'] }}</strong>
+            @if(!empty($hubIdentity['address']))
+                <div style="margin-top:4px;">{{ $hubIdentity['address'] }}</div>
+            @endif
+            @if(!empty($hubIdentity['domain']))
+                <div class="muted" dir="ltr" style="margin-top:4px;font-size:12px;">{{ $hubIdentity['domain'] }}</div>
+            @endif
+        </div>
+    @endif
     @if(!empty($sync['message']))
         <p class="muted" style="margin:8px 0 0;">آخرین همگام‌سازی: {{ $sync['message'] }}</p>
     @endif
@@ -16,8 +28,8 @@
 <section class="panel">
     <form method="GET" class="accept-row accept-row-3" style="align-items:end;">
         <div>
-            <label>جستجو اسم مجموعه</label>
-            <input type="text" name="q" value="{{ $q }}" placeholder="اسم مجموعه / موبایل / دامنه">
+            <label>جستجو اسم مجموعه / آدرس</label>
+            <input type="text" name="q" value="{{ $q }}" placeholder="اسم مجموعه / آدرس / موبایل / دامنه">
         </div>
         <div class="actions" style="margin:0;flex-wrap:wrap;">
             <button class="btn btn-primary" type="submit">جستجو</button>
@@ -37,10 +49,10 @@
             <thead>
             <tr>
                 <th>اسم مجموعه</th>
+                <th>آدرس</th>
                 <th>دامنه</th>
                 <th>موبایل</th>
                 <th>وضعیت</th>
-                <th>همگام</th>
                 <th></th>
             </tr>
             </thead>
@@ -48,11 +60,14 @@
             @forelse($partners as $p)
                 <tr>
                     <td><strong>{{ $p->displayName() }}</strong></td>
+                    <td>{{ $p->address ?: '—' }}</td>
                     <td dir="ltr">{{ $p->domain ?: '—' }}</td>
                     <td dir="ltr">{{ $p->phone ?: '—' }}</td>
                     <td>{{ $p->is_active ? 'فعال در شبکه' : 'غیرفعال' }}</td>
-                    <td>{{ optional($p->last_synced_at)->format('Y-m-d H:i') ?: '—' }}</td>
                     <td class="actions">
+                        @if($p->is_active)
+                            <a class="btn btn-primary" href="{{ route('partners.refer-form', $p) }}">انتخاب</a>
+                        @endif
                         <a class="btn btn-ghost" href="{{ route('partners.edit', $p) }}">یادداشت</a>
                     </td>
                 </tr>

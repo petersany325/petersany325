@@ -21,6 +21,8 @@ class LicenseNetworkApiController extends Controller
         /** @var ProductLicense $self */
         $self = $auth;
 
+        app(\App\Services\PartnerNetworkService::class)->ensureHubNetworkLicense();
+
         $peers = ProductLicense::query()
             ->where('status', 'active')
             ->where('network_visible', true)
@@ -33,6 +35,7 @@ class LicenseNetworkApiController extends Controller
                 // Privacy: never send license serial to other shops.
                 'org_name' => $l->networkDisplayName(),
                 'domain' => $l->domain,
+                'address' => $l->address,
                 'customer_name' => $l->networkDisplayName(),
                 'shop_name' => $l->networkDisplayName(),
                 'customer_phone' => $l->customer_phone,

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Partner extends Model
 {
     protected $fillable = [
-        'name', 'phone', 'shop_name', 'org_name', 'code', 'domain', 'license_key', 'source',
+        'name', 'phone', 'address', 'shop_name', 'org_name', 'code', 'domain', 'license_key', 'source',
         'notes', 'is_active', 'customer_id', 'last_synced_at',
     ];
 

@@ -24,6 +24,7 @@ class PartnerController extends Controller
                 $inner->where('name', 'like', '%'.$q.'%')
                     ->orWhere('org_name', 'like', '%'.$q.'%')
                     ->orWhere('shop_name', 'like', '%'.$q.'%')
+                    ->orWhere('address', 'like', '%'.$q.'%')
                     ->orWhere('phone', 'like', '%'.$q.'%')
                     ->orWhere('domain', 'like', '%'.$q.'%')
                     ->orWhere('code', 'like', '%'.$q.'%');
@@ -34,6 +35,7 @@ class PartnerController extends Controller
             'partners' => $query->paginate(40)->withQueryString(),
             'q' => $q,
             'sync' => $sync,
+            'hubIdentity' => $this->network->hubIdentity(),
         ]);
     }
 
