@@ -99,15 +99,32 @@ class EmployeeController extends Controller
     {
         $data = $this->validated($request);
 
+        $permissions = $data['role'] === 'admin'
+            ? array_keys(Permissions::ALL)
+            : array_values(array_unique(array_filter(
+                is_array($data['permissions'] ?? null) ? $data['permissions'] : []
+            )));
+        if ($data['role'] !== 'admin' && $permissions === []) {
+            $permissions = Permissions::defaultsForRole($data['role']);
+        }
+        // Login always redirects to homeRoute(); without dashboard/profile staff hit HTTP 403.
+        if ($data['role'] !== 'admin' && $data['role'] !== 'intern') {
+            if (! in_array('dashboard', $permissions, true)) {
+                array_unshift($permissions, 'dashboard');
+            }
+            if (! in_array('profile', $permissions, true)) {
+                $permissions[] = 'profile';
+            }
+            $permissions = array_values(array_unique($permissions));
+        }
+
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'] ?: null,
             'phone' => User::normalizePhone($data['phone']),
             'password' => $data['password'] ?: str()->random(12),
             'role' => $data['role'],
-            'permissions' => $data['role'] === 'admin'
-                ? array_keys(Permissions::ALL)
-                : ($data['permissions'] ?? Permissions::defaultsForRole($data['role'])),
+            'permissions' => $permissions,
             'can_login_otp' => $request->boolean('can_login_otp'),
             'can_login_password' => $request->boolean('can_login_password'),
             'is_active' => $request->boolean('is_active', true),
@@ -157,12 +174,30 @@ class EmployeeController extends Controller
     {
         $data = $this->validated($request, $employee);
 
+        $permissions = $employee->isAdmin() || $data['role'] === 'admin'
+            ? array_keys(Permissions::ALL)
+            : array_values(array_unique(array_filter(
+                is_array($data['permissions'] ?? null) ? $data['permissions'] : []
+            )));
+        if (! $employee->isAdmin() && $data['role'] !== 'admin' && $permissions === []) {
+            $permissions = Permissions::defaultsForRole($data['role']);
+        }
+        if (! $employee->isAdmin() && $data['role'] !== 'admin' && $data['role'] !== 'intern') {
+            if (! in_array('dashboard', $permissions, true)) {
+                array_unshift($permissions, 'dashboard');
+            }
+            if (! in_array('profile', $permissions, true)) {
+                $permissions[] = 'profile';
+            }
+            $permissions = array_values(array_unique($permissions));
+        }
+
         $payload = [
             'name' => $data['name'],
             'email' => $data['email'] ?: null,
             'phone' => User::normalizePhone($data['phone']),
             'role' => $data['role'],
-            'permissions' => $employee->isAdmin() ? array_keys(Permissions::ALL) : ($data['permissions'] ?? []),
+            'permissions' => $permissions,
             'can_login_otp' => $request->boolean('can_login_otp'),
             'can_login_password' => $request->boolean('can_login_password'),
             'is_active' => $request->boolean('is_active', true),

@@ -63,7 +63,28 @@ class User extends Authenticatable
 
     public function homeRoute(): string
     {
-        return $this->isIntern() ? 'intern.portal' : 'dashboard';
+        if ($this->isIntern()) {
+            return 'intern.portal';
+        }
+
+        $candidates = [
+            'dashboard' => 'dashboard',
+            'receptions' => 'receptions.index',
+            'handoffs' => 'handoffs.index',
+            'partners' => 'partners.index',
+            'notifications' => 'notifications.index',
+            'daily_logs' => 'daily-logs.index',
+            'customers' => 'customers.index',
+            'profile' => 'profile.edit',
+        ];
+
+        foreach ($candidates as $permission => $route) {
+            if ($this->canAccess($permission)) {
+                return $route;
+            }
+        }
+
+        return 'profile.edit';
     }
 
     public function permissionList(): array
