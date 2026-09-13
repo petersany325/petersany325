@@ -133,9 +133,8 @@
       'icon' => '🎨',
       'open' => $is('hero-studio', 'theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'homepage-settings', 'online-home', 'banner-settings'),
       'items' => [
-        ['label' => 'استودیو هیرو / بنر صفحه اول', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')],
-        ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')],
         ['label' => 'استودیو هیرو مدرن', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'theme-builder', 'banner-settings')],
+        ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')],
         ['label' => 'نصب / آپدیت قالب', 'href' => $u('theme-templates'), 'active' => $is('theme-templates')],
         ['label' => 'صفحه‌ساز Elementor', 'href' => $u('page-builder'), 'active' => $is('page-builder')],
         ['label' => 'مگامنو', 'href' => $u('mega-menu'), 'active' => $is('mega-menu')],
@@ -145,9 +144,9 @@
     'webapp' => [
       'title' => 'وب‌سرویس',
       'icon' => '📱',
-      'open' => $is('web-app', 'homepage-settings'),
+      'open' => $is('web-app', 'homepage-settings', 'hero-studio', 'banner-settings'),
       'items' => [
-        ['label' => 'استودیو هیرو / بنر صفحه اول', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')],
+        ['label' => 'استودیو هیرو مدرن', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')],
         ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')],
         ['label' => 'تنظیمات وب‌اپ / PWA', 'href' => $u('web-app'), 'active' => $is('web-app')],
         ['label' => 'پیش‌نمایش وب‌اپ', 'href' => url('/app'), 'active' => false, 'ext' => true],
@@ -253,12 +252,11 @@
 
     // تنظیمات قالب — هر آیتم با سوئیچ جدا
     $themeItems = [];
-    if ($staffCan('site.theme_builder')) {
+    if ($staffCan('site.theme_builder') || $staffCan('site.homepage')) {
       $themeItems[] = ['label' => 'استودیو هیرو مدرن', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'theme-builder', 'banner-settings')];
     }
     if ($staffCan('site.homepage')) {
-      $themeItems[] = ['label' => 'استودیو هیرو / بنر صفحه اول', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')],
-        ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')];
+      $themeItems[] = ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')];
     }
     if ($staffCan('site.theme_templates')) {
       $themeItems[] = ['label' => 'نصب / آپدیت قالب', 'href' => $u('theme-templates'), 'active' => $is('theme-templates')];
@@ -286,8 +284,8 @@
     if ($staffCan('site.webapp') || $staffCan('site.homepage')) {
       $webItems = [];
       if ($staffCan('site.homepage')) {
-        $webItems[] = ['label' => 'استودیو هیرو / بنر صفحه اول', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')],
-        ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')];
+        $webItems[] = ['label' => 'استودیو هیرو مدرن', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'banner-settings')];
+        $webItems[] = ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')];
       }
       if ($staffCan('site.webapp')) {
         $webItems[] = ['label' => 'تنظیمات وب‌اپ / PWA', 'href' => $u('web-app'), 'active' => $is('web-app')];

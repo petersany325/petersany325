@@ -29,7 +29,19 @@ class HeroStudioController extends Controller
     {
         try {
             SettingsStore::set('hero_use_legacy_banner', $request->boolean('use_legacy_banner') ? 1 : 0);
-            $saved = HomePageConfig::save($request->all());
+
+            // Only patch hero fields — never wipe trust/edu/about/corp blocks.
+            $current = HomePageConfig::get();
+            $heroPatch = $request->only([
+                'hero_kicker', 'hero_title', 'hero_title_em', 'hero_text', 'hero_image',
+                'hero_cta1_label', 'hero_cta1_url', 'hero_cta2_label', 'hero_cta2_url',
+                'hero_webapp_cta1_url', 'hero_layout', 'hero_font',
+                'hero_height', 'hero_radius', 'hero_title_size',
+                'hero_title_color', 'hero_cta1_bg',
+            ]);
+            $payload = array_merge($current, $heroPatch);
+            $payload['hero_enabled'] = $request->boolean('hero_enabled');
+            $saved = HomePageConfig::save($payload);
 
             try {
                 Plugin::saveSettings(array_merge(Plugin::settings(), [
