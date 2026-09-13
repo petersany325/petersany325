@@ -15,6 +15,7 @@ class Reception extends Model
         'ticket_no', 'receipt_no', 'batch_code', 'delivery_batch_id', 'account_code', 'admission_type', 'service_type', 'repair_type',
         'customer_id', 'partner_id', 'partner_flow', 'partner_peer_receipt_no', 'partner_end_customer_note',
         'partner_referred_to_id', 'partner_referred_at', 'partner_returned_at',
+        'partner_approval_status', 'partner_network_ref', 'partner_reject_reason', 'partner_payload',
         'technician_id', 'custody_technician_id', 'fault_type_id', 'created_by',
         'custody',
         'product_name', 'brand', 'model', 'serial_number', 'lock_code', 'accessories', 'appearance_notes',
@@ -51,6 +52,7 @@ class Reception extends Model
             'capacity_changed' => 'boolean',
             'partner_referred_at' => 'datetime',
             'partner_returned_at' => 'datetime',
+            'partner_payload' => 'array',
             'deleted_at' => 'datetime',
         ];
     }
@@ -77,6 +79,23 @@ class Reception extends Model
     public function isPartnerOutbound(): bool
     {
         return $this->partner_flow === self::PARTNER_FLOW_OUTBOUND && $this->partner_referred_to_id;
+    }
+
+    public function isPartnerPendingApproval(): bool
+    {
+        return $this->isPartnerInbound() && $this->partner_approval_status === 'pending';
+    }
+
+    public function partnerApprovalLabel(): string
+    {
+        return match ($this->partner_approval_status) {
+            'pending' => 'در انتظار تأیید منشی',
+            'approved' => 'تأیید شده',
+            'rejected' => 'رد شده / برگشت',
+            'sent' => 'ارسال‌شده / منتظر مقصد',
+            'accepted' => 'مقصد تأیید کرد',
+            default => $this->partner_approval_status ? (string) $this->partner_approval_status : '—',
+        };
     }
 
     public function deleter(): BelongsTo

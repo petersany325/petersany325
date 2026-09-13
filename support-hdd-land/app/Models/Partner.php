@@ -9,13 +9,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Partner extends Model
 {
     protected $fillable = [
-        'name', 'phone', 'shop_name', 'code', 'notes', 'is_active', 'customer_id',
+        'name', 'phone', 'shop_name', 'code', 'domain', 'license_key', 'source',
+        'notes', 'is_active', 'customer_id', 'last_synced_at',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'last_synced_at' => 'datetime',
         ];
     }
 
@@ -32,12 +34,16 @@ class Partner extends Model
     public function displayName(): string
     {
         $shop = trim((string) $this->shop_name);
+        $name = trim((string) $this->name);
+        if ($shop !== '' && $shop !== $name) {
+            return $name.' — '.$shop;
+        }
 
-        return $shop !== '' ? ($this->name.' — '.$shop) : (string) $this->name;
+        return $name !== '' ? $name : (string) ($this->domain ?: $this->license_key ?: 'همکار');
     }
 
     /**
-     * Ensure a Customer row exists so accounting/reception can bill the partner shop.
+     * Ensure a Customer row exists so accounting can settle with the partner shop if needed.
      */
     public function ensureCustomer(): Customer
     {
@@ -56,8 +62,8 @@ class Partner extends Model
         if (! $customer) {
             $customer = Customer::query()->create([
                 'name' => $this->displayName(),
-                'phone' => $phone !== '' ? $phone : ('partner-'.$this->id),
-                'notes' => 'نماینده همکار — '.$this->displayName(),
+                'phone' => $phone !== '' ? $phone : ('partner-'.($this->id ?: uniqid())),
+                'notes' => 'همکار لایسنس‌دار — '.$this->displayName().($this->domain ? ' @ '.$this->domain : ''),
             ]);
         }
 

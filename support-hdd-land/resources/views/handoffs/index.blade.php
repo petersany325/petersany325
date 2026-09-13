@@ -34,8 +34,8 @@
                 <button class="btn btn-primary" type="submit">جستجو</button>
                 <a class="btn btn-ghost" href="{{ route('handoffs.index') }}">پاک کردن</a>
                 @if(auth()->user()->canAccess('partners'))
-                    <a class="btn btn-secondary" href="{{ route('partners.cartable') }}">کارتابل ارجاع نماینده</a>
-                    <a class="btn btn-ghost" href="{{ route('partners.intake') }}">پذیرش از نماینده</a>
+                    <a class="btn btn-secondary" href="{{ route('partners.cartable', ['tab' => 'pending']) }}">کارتابل ارجاع نماینده</a>
+                    <a class="btn btn-ghost" href="{{ route('partners.index') }}">همکاران شبکه</a>
                 @endif
                 @if(auth()->user()->canAccess('reports.custody'))
                     <a class="btn btn-secondary" href="{{ route('reports.custody', array_filter(['ticket_no' => $ticket, 'serial' => $serial, 'q' => $q])) }}">گزارش کامل ارجاع</a>

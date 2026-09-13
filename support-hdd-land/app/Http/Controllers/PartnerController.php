@@ -3,21 +3,29 @@
 namespace App\Http\Controllers;
 
 use App\Models\Partner;
+use App\Services\PartnerNetworkService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PartnerController extends Controller
 {
+    public function __construct(private PartnerNetworkService $network)
+    {
+    }
+
     public function index(Request $request): View
     {
+        $sync = $this->network->syncPeers();
         $q = trim((string) $request->input('q', ''));
-        $query = Partner::query()->with('customer')->orderBy('name');
+        $query = Partner::query()->with('customer')->orderByDesc('is_active')->orderBy('name');
         if ($q !== '') {
             $query->where(function ($inner) use ($q) {
                 $inner->where('name', 'like', '%'.$q.'%')
                     ->orWhere('shop_name', 'like', '%'.$q.'%')
                     ->orWhere('phone', 'like', '%'.$q.'%')
+                    ->orWhere('domain', 'like', '%'.$q.'%')
+                    ->orWhere('license_key', 'like', '%'.$q.'%')
                     ->orWhere('code', 'like', '%'.$q.'%');
             });
         }
@@ -25,23 +33,27 @@ class PartnerController extends Controller
         return view('partners.index', [
             'partners' => $query->paginate(40)->withQueryString(),
             'q' => $q,
+            'sync' => $sync,
         ]);
     }
 
-    public function create(): View
+    public function sync(): RedirectResponse
     {
-        return view('partners.create', ['partner' => new Partner(['is_active' => true])]);
+        $sync = $this->network->syncPeers();
+
+        return back()->with($sync['ok'] ? 'success' : 'error', $sync['message']);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function create(): RedirectResponse
     {
-        $data = $this->validated($request);
-        $partner = Partner::query()->create($data);
-        $partner->ensureCustomer();
-
         return redirect()
             ->route('partners.index')
-            ->with('success', 'نماینده ثبت شد. قبض‌های ارجاعی به نام همین نماینده صادر می‌شوند.');
+            ->with('error', 'همکاران به‌صورت خودکار از لایسنس‌های فعال شبکه اضافه می‌شوند؛ ثبت دستی لازم نیست.');
+    }
+
+    public function store(): RedirectResponse
+    {
+        return $this->create();
     }
 
     public function edit(Partner $partner): View
@@ -51,39 +63,23 @@ class PartnerController extends Controller
 
     public function update(Request $request, Partner $partner): RedirectResponse
     {
-        $partner->update($this->validated($request));
-        $partner->ensureCustomer();
+        $data = $request->validate([
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+        // Network identity fields stay synced from licenses; only local notes/active override.
+        $partner->update([
+            'notes' => $data['notes'] ?? $partner->notes,
+            'is_active' => $request->boolean('is_active', $partner->is_active),
+        ]);
 
-        return redirect()
-            ->route('partners.index')
-            ->with('success', 'نماینده به‌روز شد.');
+        return redirect()->route('partners.index')->with('success', 'یادداشت همکار ذخیره شد.');
     }
 
     public function destroy(Partner $partner): RedirectResponse
     {
-        if ($partner->receptions()->exists()) {
-            $partner->update(['is_active' => false]);
+        $partner->update(['is_active' => false]);
 
-            return back()->with('success', 'نماینده قبض دارد؛ غیرفعال شد (حذف نشد).');
-        }
-        $partner->delete();
-
-        return back()->with('success', 'نماینده حذف شد.');
-    }
-
-    /** @return array<string,mixed> */
-    private function validated(Request $request): array
-    {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:120'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'shop_name' => ['nullable', 'string', 'max:160'],
-            'code' => ['nullable', 'string', 'max:40'],
-            'notes' => ['nullable', 'string', 'max:2000'],
-            'is_active' => ['nullable', 'boolean'],
-        ]);
-        $data['is_active'] = $request->boolean('is_active', true);
-
-        return $data;
+        return back()->with('success', 'همکار در فهرست محلی غیرفعال شد (از شبکه لایسنس حذف نمی‌شود).');
     }
 }

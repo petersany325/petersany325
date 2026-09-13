@@ -153,51 +153,75 @@
 
             @if(auth()->user()->canAccess('partners'))
                 <div class="panel" style="margin:10px 0;padding:10px;border:1px solid #c9d6ea;background:#f7faff;">
-                    <h3 style="margin:0 0 8px;">ارجاع نماینده همکار</h3>
-                    @if($reception->partner_flow === 'inbound')
-                        <p class="muted" style="margin:0 0 8px;">قبض ورودی از نماینده: <strong>{{ $reception->partner?->displayName() }}</strong>
+                    <h3 style="margin:0 0 8px;">ارجاع شبکه همکاران لایسنس‌دار</h3>
+                    @if($reception->isPartnerPendingApproval())
+                        <p class="muted" style="margin:0 0 8px;">قبض ارسالی از <strong>{{ $reception->partner?->displayName() }}</strong>
                             @if($reception->partner_peer_receipt_no) · قبض مبدأ: <span dir="ltr">{{ $reception->partner_peer_receipt_no }}</span>@endif
+                            — مشتری کامل همین‌جا نمایش داده شده است.
                         </p>
-                        <p class="muted" style="margin:0 0 8px;">طرف حساب = نماینده. هزینه/قطعات برای اوست؛ با مشتری نهایی تماس نگیرید.</p>
+                        <p class="muted" style="margin:0 0 8px;">منشی باید تأیید و ثبت کند؛ در غیر این صورت «تأیید نشد» بزنید تا قبض به مبدأ برگردد. تا قبل از تأیید، روند داخلی شروع نشود.</p>
+                        <div class="actions" style="flex-wrap:wrap;">
+                            <form method="POST" action="{{ route('partners.approve', $reception) }}">
+                                @csrf
+                                <button class="btn btn-primary" type="submit">تأیید و ثبت قبض</button>
+                            </form>
+                            <form method="POST" action="{{ route('partners.reject', $reception) }}" onsubmit="return confirm('رد شود و به همکار مبدأ برگردد؟');" class="accept-row" style="display:flex;gap:8px;align-items:end;">
+                                @csrf
+                                <input type="text" name="reason" placeholder="دلیل رد (اختیاری)" style="min-width:180px;">
+                                <button class="btn btn-danger" type="submit">تأیید نشد / برگشت</button>
+                            </form>
+                            <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'pending']) }}">کارتابل ارجاع نماینده</a>
+                        </div>
+                    @elseif($reception->partner_flow === 'inbound')
+                        <p class="muted" style="margin:0 0 8px;">قبض ورودی شبکه از <strong>{{ $reception->partner?->displayName() }}</strong>
+                            @if($reception->partner_peer_receipt_no) · قبض مبدأ: <span dir="ltr">{{ $reception->partner_peer_receipt_no }}</span>@endif
+                            · {{ $reception->partnerApprovalLabel() }}
+                        </p>
+                        <p class="muted" style="margin:0 0 8px;">مشتری نهایی در همین قبض است؛ بعد از تأیید، بقیه امکانات طبق سیستم داخلی مجموعه.</p>
                         <div class="actions">
                             <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'inbound']) }}">کارتابل ارجاع نماینده</a>
-                            @if(in_array($reception->status, ['ready', 'unrepairable'], true))
+                            @if($reception->partner_approval_status === 'approved' && in_array($reception->status, ['ready', 'unrepairable'], true))
                                 <form method="POST" action="{{ route('partners.mark-returned', $reception) }}">
                                     @csrf
-                                    <button class="btn btn-primary" type="submit">علامت آماده برگشت به نماینده</button>
+                                    <button class="btn btn-primary" type="submit">علامت آماده برگشت به مبدأ</button>
                                 </form>
                             @endif
                         </div>
                     @elseif($reception->partner_flow === 'outbound')
-                        <p class="muted" style="margin:0 0 8px;">ارسال‌شده به نماینده: <strong>{{ $reception->partnerReferredTo?->displayName() }}</strong></p>
-                        <form method="POST" action="{{ route('partners.mark-returned', $reception) }}" class="actions">
-                            @csrf
-                            <button class="btn btn-secondary" type="submit">ثبت برگشت از نماینده</button>
+                        <p class="muted" style="margin:0 0 8px;">ارسال‌شده به همکار: <strong>{{ $reception->partnerReferredTo?->displayName() }}</strong>
+                            · {{ $reception->partnerApprovalLabel() }}
+                        </p>
+                        <div class="actions">
+                            <form method="POST" action="{{ route('partners.mark-returned', $reception) }}">
+                                @csrf
+                                <button class="btn btn-secondary" type="submit">ثبت برگشت دستی از همکار</button>
+                            </form>
                             <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'outbound']) }}">کارتابل</a>
-                        </form>
+                        </div>
                     @else
                         <form method="POST" action="{{ route('partners.refer-out', $reception) }}" class="form-grid" style="grid-template-columns:1fr 1fr auto;align-items:end;">
                             @csrf
                             <div>
-                                <label>ارجاع به نماینده دیگر</label>
+                                <label>ارجاع به همکار شبکه</label>
                                 <select name="partner_id" required>
-                                    <option value="">— انتخاب نماینده —</option>
+                                    <option value="">— انتخاب همکار لایسنس‌دار —</option>
                                     @foreach(($partners ?? []) as $p)
-                                        <option value="{{ $p->id }}">{{ $p->displayName() }}</option>
+                                        <option value="{{ $p->id }}">{{ $p->displayName() }}@if($p->domain) ({{ $p->domain }})@endif</option>
                                     @endforeach
                                 </select>
                             </div>
                             <div>
-                                <label>یادداشت</label>
+                                <label>یادداشت برای مقصد</label>
                                 <input type="text" name="note" placeholder="مثلاً نیاز به تخصص خاص">
                             </div>
-                            <button class="btn btn-secondary" type="submit">ارجاع به نماینده</button>
+                            <button class="btn btn-secondary" type="submit">ارسال ارجاع شبکه</button>
                         </form>
-                        <p class="muted" style="margin:8px 0 0;">مشتری نهایی فقط با شما طرف است؛ هزینه تعمیرگاه مقصد را به نماینده بگویید نه به مشتری.</p>
+                        <p class="muted" style="margin:8px 0 0;">قبض کامل مشتری برای همکار مقصد ارسال می‌شود؛ منشی آنجا باید تأیید یا رد کند.</p>
                     @endif
                 </div>
             @endif
 
+            @if(! $reception->isPartnerPendingApproval())
             @if(auth()->user()->canAccess('receptions') && ($reception->custody ?? 'front_desk') !== 'with_technician' && ($reception->custody ?? '') !== 'returning' && empty($pendingHandoff))
                 <form method="POST" action="{{ route('receptions.handoffs.store', $reception) }}" class="form-grid" style="grid-template-columns:1fr 1fr auto;align-items:end;">
                     @csrf

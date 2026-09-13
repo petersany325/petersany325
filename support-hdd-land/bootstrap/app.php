@@ -34,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'license/verify',
             'license/updates/latest',
             'license/updates/download',
+            'license/network/*',
         ]);
 
         $middleware->web(prepend: [
