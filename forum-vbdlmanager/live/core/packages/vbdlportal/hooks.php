@@ -58,7 +58,7 @@ class vbdlportal_Hooks
 	private static function injectPostUploadMenu($html)
 	{
 		$uri = strtolower((string)($_SERVER['REQUEST_URI'] ?? ''));
-		if (self::isMessageCenterUri($uri))
+		if (self::isMessageCenterUri($uri) || self::htmlLooksLikePrivateMessage($html))
 		{
 			return $html;
 		}
@@ -79,8 +79,9 @@ class vbdlportal_Hooks
 		{
 			return $html;
 		}
-		$assets = '<link rel="stylesheet" href="/vbdlmanager/assets/post-upload.css" />'
-			. '<script defer src="/vbdlmanager/assets/post-upload.js"></script>';
+		// Cache-bust so Message Center clients pick up skip logic after deploys.
+		$assets = '<link rel="stylesheet" href="/vbdlmanager/assets/post-upload.css?v=20260913mc" />'
+			. '<script defer src="/vbdlmanager/assets/post-upload.js?v=20260913mc"></script>';
 		if (stripos($html, '</body>') !== false)
 		{
 			return preg_replace('/<\/body>/i', $assets . '</body>', $html, 1);
@@ -89,7 +90,7 @@ class vbdlportal_Hooks
 	}
 
 	/**
-	 * Message Center / PM compose (including create-content/privatemessage).
+	 * Message Center / PM / Messenger compose routes.
 	 */
 	private static function isMessageCenterUri($uri)
 	{
@@ -100,12 +101,43 @@ class vbdlportal_Hooks
 			'privatemessage',
 			'private-message',
 			'private_message',
+			'pmchat',
+			'vbmessenger',
+			'/messenger',
 			'/pm/',
 			'contenttype=privatemessage',
 			'contenttypeid=22',
 		) as $needle)
 		{
 			if (strpos($uri, $needle) !== false)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Detect PM compose chrome even when the request URI is a generic create-content route.
+	 */
+	private static function htmlLooksLikePrivateMessage($html)
+	{
+		$h = strtolower((string)$html);
+		foreach (array(
+			'id="messagecenter"',
+			'class="b-messagecenter',
+			'data-ui="messagecenter"',
+			'pmchat',
+			'privatemessage-compose',
+			'js-messagecenter',
+			'name="recipients"',
+			'id="recipients"',
+			'phrase="recipients"',
+			'data-contenttype="privatemessage"',
+			'contenttype-privatemessage',
+		) as $needle)
+		{
+			if (strpos($h, $needle) !== false)
 			{
 				return true;
 			}

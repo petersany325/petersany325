@@ -18,6 +18,9 @@
       'privatemessage',
       'private-message',
       'private_message',
+      'pmchat',
+      'vbmessenger',
+      '/messenger',
       '/pm/',
       'contenttype=privatemessage',
       'contenttypeid=22'
@@ -25,7 +28,11 @@
     for (var i = 0; i < needles.length; i++) {
       if (path.indexOf(needles[i]) !== -1 || href.indexOf(needles[i]) !== -1) return true;
     }
-    if (document.querySelector('.b-messagecenter, #messagecenter, [data-ui="messagecenter"], .privatemessage-compose, .js-messagecenter')) {
+    if (document.querySelector('.b-messagecenter, #messagecenter, [data-ui="messagecenter"], .privatemessage-compose, .js-messagecenter, .b-pmchat, #pmchat, [data-ui="pmchat"]')) {
+      return true;
+    }
+    // Classic PM compose fields (Recipients / Subject) — never show DM upload here
+    if (document.querySelector('input[name="recipients"], #recipients, input[name="msgrecipients"], #msgrecipients')) {
       return true;
     }
     return false;
