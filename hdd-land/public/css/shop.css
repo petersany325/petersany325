@@ -1458,3 +1458,26 @@ input:focus, select:focus, textarea:focus {
   .hl-headbar__utils .hdr-util,
   .hl-headbar__utils .hdr-logout button{padding:.38rem .62rem;font-size:.76rem;min-height:36px}
 }
+
+
+/* Mega menu English-quality polish inside boxed shell */
+body.site-boxed .mega-nav-pro{
+  gap:.15rem;
+  font-family:"Estedad","Estedad Variable",Tahoma,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+body.site-boxed .mega-nav-pro .mega-trigger{
+  font-size:.82rem;
+  font-weight:750;
+  letter-spacing:-.01em;
+  padding:.48rem .78rem;
+  border-radius:6px;
+}
+body.site-boxed .site-header,
+body.site-boxed .hl-header,
+body.site-boxed .header-nav-wrap{
+  overflow:visible !important;
+}
+body.site-boxed .mega-panel{
+  z-index:120;
+}

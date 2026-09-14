@@ -72,6 +72,24 @@
       });
     });
 
+
+    root.querySelectorAll('[data-mega-en]').forEach(function (en) {
+      var cats = en.querySelectorAll('[data-mega-en-cat]');
+      var panes = en.querySelectorAll('[data-mega-en-pane]');
+      function activate(id) {
+        cats.forEach(function (c) { c.classList.toggle('is-active', c.getAttribute('data-mega-en-cat') === id); });
+        panes.forEach(function (p) { p.classList.toggle('is-active', p.getAttribute('data-mega-en-pane') === id); });
+      }
+      cats.forEach(function (cat) {
+        cat.addEventListener('mouseenter', function () {
+          activate(cat.getAttribute('data-mega-en-cat'));
+        });
+        cat.addEventListener('focus', function () {
+          activate(cat.getAttribute('data-mega-en-cat'));
+        });
+      });
+    });
+
     root.querySelectorAll('[data-mega-tabs]').forEach(function (tabs) {
       tabs.querySelectorAll('[data-tab]').forEach(function (btn) {
         btn.addEventListener('click', function () {

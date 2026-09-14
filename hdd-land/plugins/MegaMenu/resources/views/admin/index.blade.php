@@ -303,7 +303,7 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
           <span>نوع نمایش زیرمنو / مگا</span>
           <select name="panel_layout" id="mm_panel_layout">
             @foreach(\Plugins\MegaMenu\Plugin::panelLayouts() as $k=>$lab)
-              <option value="{{ $k }}" @selected(($s['panel_layout']??'columns')===$k)>{{ $lab }}</option>
+              <option value="{{ $k }}" @selected(($s['panel_layout']??'graphic')===$k)>{{ $lab }}</option>
             @endforeach
           </select>
         </div>

@@ -71,9 +71,9 @@ class Plugin extends BasePlugin
             'header_bg_color' => '#ffffff',
             'header_opacity' => 100,
             'header_blur' => true,
-            'panel_fx' => 'soft',
+            'panel_fx' => 'shadow',
             'panel_bg' => 'white',
-            'panel_layout' => 'columns',
+            'panel_layout' => 'graphic',
             'panel_cols' => 4,
             'nav_item_gap' => 4,
             'panel_col_gap' => 16,
@@ -92,6 +92,7 @@ class Plugin extends BasePlugin
     public static function panelLayouts(): array
     {
         return [
+            'graphic' => 'گرافیکی انگلیسی (نوار کناری + پنل)',
             'columns' => 'ستونی (مگا منو)',
             'cascade' => 'آبشاری (کشویی)',
             'list' => 'لیستی تک‌ستونه',
@@ -128,7 +129,7 @@ class Plugin extends BasePlugin
             'header_blur' => ! empty($data['header_blur']),
             'panel_fx' => in_array(($data['panel_fx'] ?? ''), ['soft', 'glass', 'shadow', 'glow', 'lift', 'none'], true) ? $data['panel_fx'] : 'soft',
             'panel_bg' => in_array(($data['panel_bg'] ?? ''), ['white', 'soft', 'glass', 'transparent'], true) ? $data['panel_bg'] : 'white',
-            'panel_layout' => in_array(($data['panel_layout'] ?? ''), ['columns', 'cascade', 'list', 'dense'], true) ? $data['panel_layout'] : 'columns',
+            'panel_layout' => in_array(($data['panel_layout'] ?? ''), ['graphic', 'columns', 'cascade', 'list', 'dense'], true) ? $data['panel_layout'] : 'graphic',
             'panel_cols' => max(2, min(6, (int) ($data['panel_cols'] ?? 4))),
             'nav_item_gap' => max(0, min(32, (int) ($data['nav_item_gap'] ?? 4))),
             'panel_col_gap' => max(4, min(48, (int) ($data['panel_col_gap'] ?? 16))),

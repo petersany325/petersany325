@@ -30,7 +30,7 @@
   $gapBrand = (int) ($mm['gap_brand'] ?? 18);
   $panelFx = $mm['panel_fx'] ?? 'soft';
   $panelBg = $mm['panel_bg'] ?? 'white';
-  $panelLayout = $mm['panel_layout'] ?? 'columns';
+  $panelLayout = $mm['panel_layout'] ?? 'graphic';
   $panelCols = max(2, min(6, (int) ($mm['panel_cols'] ?? 4)));
   $navItemGap = max(0, min(32, (int) ($mm['nav_item_gap'] ?? 4)));
   $panelColGap = max(4, min(48, (int) ($mm['panel_col_gap'] ?? 16)));
@@ -49,12 +49,13 @@
       $titleKey = mb_strtolower($item->title ?? '');
       $shopish = str_contains($titleKey, 'محصول') || str_contains($titleKey, 'فروشگاه');
       $forceMega = (bool) $item->is_mega || ($shopish && $item->activeChildren->count() > 0);
+      $useGraphic = $forceMega || $panelLayout === 'graphic';
       $panelClass = $item->panelClasses();
-      if ($forceMega) {
-        if (in_array($panelLayout, ['cascade', 'list'], true)) {
+      if ($forceMega || $useGraphic) {
+        if (in_array($panelLayout, ['cascade', 'list'], true) && ! $useGraphic) {
           $panelClass = trim(str_replace(['is-mega-panel', 'w-wide', 'w-full', 'w-normal'], '', $panelClass).' is-mega-panel w-normal');
         } else {
-          $panelClass = trim(str_replace('is-dropdown', 'is-mega-panel w-wide', $panelClass).' is-mega-panel w-wide');
+          $panelClass = trim(str_replace(['is-dropdown', 'w-normal'], ['is-mega-panel w-wide', 'w-wide'], $panelClass).' is-mega-panel w-wide mega-panel--graphic');
         }
       }
     @endphp
@@ -126,36 +127,112 @@
               </div>
             </div>
           @else
-            <div class="{{ $forceMega ? 'mega-shell-pro' : '' }}">
-              <div class="mega-grid">
-                @foreach($item->activeChildren as $child)
-                  @include('mega-menu::storefront.partials.item-block', ['child' => $child, 'nested' => false, 'showIcons' => $showIcons])
-                @endforeach
+            @php
+              $orgPromoOn = ! empty($mm['org_promo_enabled']);
+              $orgPromoImg = trim((string) ($mm['org_promo_image'] ?? ''));
+              if ($orgPromoImg === '') { $orgPromoImg = asset('images/home/mega-promo.jpg'); }
+              elseif (! str_starts_with($orgPromoImg, 'http') && ! str_starts_with($orgPromoImg, '//')) {
+                $orgPromoImg = asset(ltrim($orgPromoImg, '/'));
+              }
+              $orgPromoHref = trim((string) ($mm['org_promo_url'] ?? '/products')) ?: '/products';
+              if (! str_starts_with($orgPromoHref, 'http') && ! str_starts_with($orgPromoHref, '//') && ! str_starts_with($orgPromoHref, '#')) {
+                $orgPromoHref = url($orgPromoHref);
+              }
+            @endphp
+            @if($useGraphic && $item->activeChildren->count())
+              {{-- English-style graphic mega: category rail + stage (same titles/links) --}}
+              <div class="mega-en" data-mega-en>
+                <aside class="mega-en-rail" aria-label="دسته‌ها">
+                  @foreach($item->activeChildren as $ci => $child)
+                    <a class="mega-en-cat {{ $ci === 0 ? 'is-active' : '' }}"
+                       href="{{ $child->href() }}"
+                       data-mega-en-cat="{{ $ci }}"
+                       @if($child->open_in_new) target="_blank" rel="noopener" @endif>
+                      @if($showIcons && $child->icon_image_url)
+                        <img class="mega-en-cat__ico" src="{{ $child->icon_image_url }}" alt="">
+                      @elseif($showIcons && $child->icon)
+                        <span class="mega-en-cat__ico mega-en-cat__ico--glyph" aria-hidden="true">{{ $child->icon }}</span>
+                      @else
+                        <span class="mega-en-cat__ico mega-en-cat__ico--dot" aria-hidden="true"></span>
+                      @endif
+                      <span class="mega-en-cat__label">{{ $child->title }}</span>
+                      @if($child->badge)<span class="mega-badge">{{ $child->badge }}</span>@endif
+                    </a>
+                  @endforeach
+                </aside>
+                <div class="mega-en-stage">
+                  @foreach($item->activeChildren as $ci => $child)
+                    <div class="mega-en-pane {{ $ci === 0 ? 'is-active' : '' }}" data-mega-en-pane="{{ $ci }}">
+                      <div class="mega-en-pane__copy">
+                        <p class="mega-en-pane__eyebrow">{{ $item->title }}</p>
+                        <h3 class="mega-en-pane__title">{{ $child->title }}</h3>
+                        @if($child->description)
+                          <p class="mega-en-pane__desc">{{ $child->description }}</p>
+                        @endif
+                        @if($child->activeChildren->count())
+                          <ul class="mega-en-list">
+                            @foreach($child->activeChildren as $grand)
+                              <li>
+                                <a href="{{ $grand->href() }}" @if($grand->open_in_new) target="_blank" rel="noopener" @endif>
+                                  @if($showIcons && $grand->icon_image_url)
+                                    <img src="{{ $grand->icon_image_url }}" alt="">
+                                  @elseif($showIcons && $grand->icon)
+                                    <span aria-hidden="true">{{ $grand->icon }}</span>
+                                  @endif
+                                  <span>{{ $grand->title }}</span>
+                                  @if($grand->badge)<em class="mega-badge">{{ $grand->badge }}</em>@endif
+                                </a>
+                              </li>
+                            @endforeach
+                          </ul>
+                        @endif
+                        <a class="mega-en-cta" href="{{ $child->href() }}" @if($child->open_in_new) target="_blank" rel="noopener" @endif>
+                          مشاهده {{ $child->title }}
+                        </a>
+                      </div>
+                      <div class="mega-en-pane__visual" aria-hidden="true">
+                        @if($child->image_url)
+                          <img src="{{ $child->image_url }}" alt="">
+                        @elseif($orgPromoOn)
+                          <img src="{{ $orgPromoImg }}" alt="">
+                        @else
+                          <div class="mega-en-pane__glow"></div>
+                        @endif
+                      </div>
+                    </div>
+                  @endforeach
+                  @if($orgPromoOn)
+                    <a class="mega-en-promo" href="{{ $orgPromoHref }}">
+                      <strong>{{ $mm['org_promo_title'] ?? 'پیشنهاد سازمانی' }}</strong>
+                      @if(!empty($mm['org_promo_desc']))
+                        <span>{{ $mm['org_promo_desc'] }}</span>
+                      @endif
+                      <em>{{ $mm['org_promo_button'] ?? 'مشاهده' }}</em>
+                    </a>
+                  @endif
+                </div>
               </div>
-              @if($forceMega && !empty($mm['org_promo_enabled']))
-                @php
-                  $orgPromoImg = trim((string) ($mm['org_promo_image'] ?? ''));
-                  if ($orgPromoImg === '') { $orgPromoImg = asset('images/home/mega-promo.jpg'); }
-                  elseif (! str_starts_with($orgPromoImg, 'http') && ! str_starts_with($orgPromoImg, '//')) {
-                    $orgPromoImg = asset(ltrim($orgPromoImg, '/'));
-                  }
-                  $orgPromoHref = trim((string) ($mm['org_promo_url'] ?? '/products')) ?: '/products';
-                  if (! str_starts_with($orgPromoHref, 'http') && ! str_starts_with($orgPromoHref, '//') && ! str_starts_with($orgPromoHref, '#')) {
-                    $orgPromoHref = url($orgPromoHref);
-                  }
-                @endphp
-                <a class="mega-promo mega-promo--designed" href="{{ $orgPromoHref }}">
-                  <img src="{{ $orgPromoImg }}" alt="" width="720" height="480" loading="lazy">
-                  <div class="mega-promo-body">
-                    <strong>{{ $mm['org_promo_title'] ?? 'پیشنهاد سازمانی' }}</strong>
-                    @if(!empty($mm['org_promo_desc']))
-                      <p>{{ $mm['org_promo_desc'] }}</p>
-                    @endif
-                    <span>{{ $mm['org_promo_button'] ?? 'مشاهده' }}</span>
-                  </div>
-                </a>
-              @endif
-            </div>
+            @else
+              <div class="{{ $forceMega ? 'mega-shell-pro' : '' }}">
+                <div class="mega-grid">
+                  @foreach($item->activeChildren as $child)
+                    @include('mega-menu::storefront.partials.item-block', ['child' => $child, 'nested' => false, 'showIcons' => $showIcons])
+                  @endforeach
+                </div>
+                @if($forceMega && $orgPromoOn)
+                  <a class="mega-promo mega-promo--designed" href="{{ $orgPromoHref }}">
+                    <img src="{{ $orgPromoImg }}" alt="" width="720" height="480" loading="lazy">
+                    <div class="mega-promo-body">
+                      <strong>{{ $mm['org_promo_title'] ?? 'پیشنهاد سازمانی' }}</strong>
+                      @if(!empty($mm['org_promo_desc']))
+                        <p>{{ $mm['org_promo_desc'] }}</p>
+                      @endif
+                      <span>{{ $mm['org_promo_button'] ?? 'مشاهده' }}</span>
+                    </div>
+                  </a>
+                @endif
+              </div>
+            @endif
           @endif
 
           @if($item->is_mega && ($item->form_type ?? 'none') !== 'none')
