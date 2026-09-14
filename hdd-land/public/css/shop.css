@@ -1479,7 +1479,8 @@ input:focus, select:focus, textarea:focus {
 }
 .hl-headbar{
   display:flex;align-items:center;gap:.75rem 1rem;
-  min-height:58px;padding:.55rem 0 .55rem;flex-wrap:nowrap;
+  min-height:58px;padding:.65rem 0 .75rem;flex-wrap:nowrap;
+  border-bottom:1px solid #eef2f6;
 }
 .hl-headbar .brand{flex:0 0 auto;display:inline-flex;align-items:center;gap:.65rem;font-weight:800}
 .hl-headbar .brand-logo,.hl-headbar .brand-logo-official{width:72px;height:44px;object-fit:contain}
@@ -1509,7 +1510,7 @@ input:focus, select:focus, textarea:focus {
   border:1px solid #f3c1bb;background:#fff1f0;color:#a32012;font:inherit;font-weight:800;font-size:.82rem;cursor:pointer
 }
 .hl-navrow{
-  padding:.15rem 0 .55rem;
+  padding:.55rem 0 .55rem;
   clear:both;
 }
 .hl-navrow .header-nav-slot{
