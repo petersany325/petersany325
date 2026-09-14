@@ -560,17 +560,17 @@
 }
 .mega-en{
   display:grid;
-  grid-template-columns:minmax(200px,240px) minmax(0,1fr);
-  min-height:340px;
+  grid-template-columns:minmax(210px,250px) minmax(0,1fr);
+  min-height:360px;
   direction:rtl;
   text-align:right;
   font-family:"Estedad","Estedad Variable",Tahoma,sans-serif;
   -webkit-font-smoothing:antialiased;
 }
 .mega-en-rail{
-  display:flex;flex-direction:column;gap:.35rem;
-  padding:.85rem .65rem;
-  background:#e8ecf2;
+  display:flex;flex-direction:column;gap:.4rem;
+  padding:1rem .7rem;
+  background:linear-gradient(180deg,#eef1f6 0%,#e4e9f0 100%);
   border-left:1px solid #d0d7e2;
 }
 .mega-en-cat{
@@ -597,18 +597,20 @@
 .mega-en-cat__label{flex:1 1 auto;line-height:1.35}
 .mega-en-stage{
   position:relative;display:flex;flex-direction:column;
-  padding:.75rem .85rem .85rem;background:#f7f8fb;min-width:0;
+  padding:.9rem 1rem 1rem;min-width:0;
+  background:
+    linear-gradient(180deg,#fbfcfe 0%,#f3f5f9 100%);
 }
 .mega-en-pane{
-  display:none;flex-direction:column;gap:.65rem;flex:1 1 auto;
+  display:none;flex-direction:column;gap:.75rem;flex:1 1 auto;
 }
 .mega-en-pane.is-active{display:flex}
 .mega-en-banner{
-  display:grid;grid-template-columns:minmax(0,1fr) minmax(140px,220px);
-  gap:.75rem;align-items:stretch;min-height:88px;
-  border-radius:4px;overflow:hidden;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,260px);
+  gap:0;align-items:stretch;min-height:112px;
+  border-radius:6px;overflow:hidden;
   background:linear-gradient(105deg,#2a3038 0%,#1a1f27 55%,#11151b 100%);
-  color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+  color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06),0 10px 24px rgba(15,23,42,.12);
 }
 .mega-en-banner__copy{
   display:flex;flex-direction:column;justify-content:center;gap:.2rem;

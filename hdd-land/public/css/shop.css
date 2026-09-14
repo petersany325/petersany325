@@ -92,9 +92,9 @@ body.site-boxed .hl-navrow{
     padding:.2rem .3rem;
     margin:0;
     display:flex;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
     align-items:center;
-    gap:.05rem;
+    gap:.02rem;
     overflow:visible !important;
     width:100%;
   }
@@ -102,9 +102,9 @@ body.site-boxed .hl-navrow{
   body.site-boxed .hl-navrow .mega-nav-pro .mega-trigger,
   body.site-boxed .hl-navrow .hl-extra-nav a{
     color:#f4f6f8 !important;
-    font-size:.8rem;
+    font-size:.74rem;
     font-weight:700;
-    padding:.48rem .7rem;
+    padding:.42rem .55rem;
     border-radius:3px;
     white-space:nowrap;
   }
@@ -1479,7 +1479,7 @@ input:focus, select:focus, textarea:focus {
 }
 .hl-headbar{
   display:flex;align-items:center;gap:.75rem 1rem;
-  min-height:58px;padding:.45rem 0 .15rem;flex-wrap:nowrap;
+  min-height:58px;padding:.55rem 0 .55rem;flex-wrap:nowrap;
 }
 .hl-headbar .brand{flex:0 0 auto;display:inline-flex;align-items:center;gap:.65rem;font-weight:800}
 .hl-headbar .brand-logo,.hl-headbar .brand-logo-official{width:72px;height:44px;object-fit:contain}
@@ -1509,7 +1509,8 @@ input:focus, select:focus, textarea:focus {
   border:1px solid #f3c1bb;background:#fff1f0;color:#a32012;font:inherit;font-weight:800;font-size:.82rem;cursor:pointer
 }
 .hl-navrow{
-  padding:0 0 .5rem;
+  padding:.15rem 0 .55rem;
+  clear:both;
 }
 .hl-navrow .header-nav-slot{
   width:100%;min-width:0;
