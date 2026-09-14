@@ -70,16 +70,27 @@ body.site-boxed .header-nav-wrap,
 body.site-boxed .mega-nav-pro{
   background:#2b3038;
   border-radius:4px;
-  padding:.2rem .35rem;
+  padding:.15rem .25rem;
   margin-top:.15rem;
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:.05rem;
+  overflow-x:auto;
+  overflow-y:visible;
+  scrollbar-width:thin;
+}
+body.site-boxed .mega-nav-pro .mega-item{
+  flex:0 0 auto;
 }
 body.site-boxed .mega-nav-pro .mega-trigger,
 body.site-boxed .hl-extra-nav a{
   color:#f4f6f8 !important;
-  font-size:.82rem;
+  font-size:.78rem;
   font-weight:700;
-  padding:.45rem .7rem;
+  padding:.4rem .58rem;
   border-radius:3px;
+  white-space:nowrap;
 }
 body.site-boxed .mega-nav-pro .mega-item.is-open > .mega-trigger,
 body.site-boxed .mega-nav-pro .mega-item.has-mega:hover > .mega-trigger,
@@ -89,7 +100,8 @@ body.site-boxed .hl-extra-nav a:hover{
 }
 body.site-boxed .mega-nav-pro .mega-caret{opacity:.85}
 body.site-boxed .hl-extra-nav{
-  display:inline-flex;align-items:center;gap:.1rem;margin-right:.25rem;
+  display:inline-flex;align-items:center;gap:.05rem;margin-right:.15rem;
+  flex:0 0 auto;flex-wrap:nowrap;
 }
 body.site-boxed .hl-searchbar{
   background:#fff;
@@ -1462,16 +1474,16 @@ input:focus, select:focus, textarea:focus {
 
 /* Mega menu English-quality polish inside boxed shell */
 body.site-boxed .mega-nav-pro{
-  gap:.15rem;
+  gap:.05rem;
   font-family:"Estedad","Estedad Variable",Tahoma,sans-serif;
   -webkit-font-smoothing:antialiased;
 }
 body.site-boxed .mega-nav-pro .mega-trigger{
-  font-size:.82rem;
+  font-size:.78rem;
   font-weight:750;
   letter-spacing:-.01em;
-  padding:.48rem .78rem;
-  border-radius:6px;
+  padding:.4rem .58rem;
+  border-radius:4px;
 }
 body.site-boxed .site-header,
 body.site-boxed .hl-header,
