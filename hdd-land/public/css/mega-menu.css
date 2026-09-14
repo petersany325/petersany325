@@ -701,4 +701,38 @@ body.site-boxed .mega-nav-pro{
   .mega-en-pane{grid-template-columns:1fr}
   .mega-en-pane__visual{min-height:120px}
   .mega-panel.mega-panel--graphic{min-width:0 !important;max-width:none;border:0 !important;box-shadow:none !important;border-radius:0 !important}
+
+  /* Boxed-shell desktop chrome must not paint the mobile drawer */
+  body.site-boxed .header-nav-wrap#headerNavWrap,
+  body.site-boxed > .header-nav-wrap#headerNavWrap,
+  body.nav-open .header-nav-wrap#headerNavWrap{
+    background:#fff !important;
+    color:#0f172a !important;
+    display:block !important;
+    overflow:auto !important;
+    flex-wrap:unset !important;
+    padding:1rem .95rem 1.25rem !important;
+    border-radius:0 !important;
+  }
+  body.site-boxed .header-nav-wrap#headerNavWrap .mega-nav-pro,
+  body.site-boxed .header-nav-wrap#headerNavWrap .mega-trigger,
+  body.site-boxed .header-nav-wrap#headerNavWrap .hl-extra-nav a{
+    color:#0f172a !important;
+    background:transparent !important;
+    white-space:normal !important;
+  }
+  body.site-boxed .header-nav-wrap#headerNavWrap .mobile-nav-head{
+    display:flex !important;
+    writing-mode:horizontal-tb !important;
+    transform:none !important;
+    rotate:none !important;
+  }
+  body.site-boxed .header-nav-wrap#headerNavWrap .hl-extra-nav{
+    display:flex !important;
+    flex-direction:column !important;
+    width:100%;
+    margin-top:.5rem;
+    padding-top:.5rem;
+    border-top:1px solid #e5e7eb;
+  }
 }

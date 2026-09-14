@@ -66,42 +66,45 @@ body.site-boxed .hl-header{
 body.site-boxed .hl-headbar{
   padding-block:.55rem .35rem;
 }
-body.site-boxed .header-nav-wrap,
-body.site-boxed .mega-nav-pro{
-  background:#2b3038;
-  border-radius:4px;
-  padding:.15rem .25rem;
-  margin-top:.15rem;
-  display:flex;
-  flex-wrap:nowrap;
-  align-items:center;
-  gap:.05rem;
-  overflow-x:auto;
-  overflow-y:visible;
-  scrollbar-width:thin;
-}
-body.site-boxed .mega-nav-pro .mega-item{
-  flex:0 0 auto;
-}
-body.site-boxed .mega-nav-pro .mega-trigger,
-body.site-boxed .hl-extra-nav a{
-  color:#f4f6f8 !important;
-  font-size:.78rem;
-  font-weight:700;
-  padding:.4rem .58rem;
-  border-radius:3px;
-  white-space:nowrap;
-}
-body.site-boxed .mega-nav-pro .mega-item.is-open > .mega-trigger,
-body.site-boxed .mega-nav-pro .mega-item.has-mega:hover > .mega-trigger,
-body.site-boxed .hl-extra-nav a:hover{
-  background:#e23d12 !important;
-  color:#fff !important;
-}
-body.site-boxed .mega-nav-pro .mega-caret{opacity:.85}
-body.site-boxed .hl-extra-nav{
-  display:inline-flex;align-items:center;gap:.05rem;margin-right:.15rem;
-  flex:0 0 auto;flex-wrap:nowrap;
+/* Dark compact nav chrome is desktop-only — never leak into mobile drawer */
+@media (min-width:961px){
+  body.site-boxed .header-nav-wrap,
+  body.site-boxed .mega-nav-pro{
+    background:#2b3038;
+    border-radius:4px;
+    padding:.15rem .25rem;
+    margin-top:.15rem;
+    display:flex;
+    flex-wrap:nowrap;
+    align-items:center;
+    gap:.05rem;
+    overflow-x:auto;
+    overflow-y:visible;
+    scrollbar-width:thin;
+  }
+  body.site-boxed .mega-nav-pro .mega-item{
+    flex:0 0 auto;
+  }
+  body.site-boxed .mega-nav-pro .mega-trigger,
+  body.site-boxed .hl-extra-nav a{
+    color:#f4f6f8 !important;
+    font-size:.78rem;
+    font-weight:700;
+    padding:.4rem .58rem;
+    border-radius:3px;
+    white-space:nowrap;
+  }
+  body.site-boxed .mega-nav-pro .mega-item.is-open > .mega-trigger,
+  body.site-boxed .mega-nav-pro .mega-item.has-mega:hover > .mega-trigger,
+  body.site-boxed .hl-extra-nav a:hover{
+    background:#e23d12 !important;
+    color:#fff !important;
+  }
+  body.site-boxed .mega-nav-pro .mega-caret{opacity:.85}
+  body.site-boxed .hl-extra-nav{
+    display:inline-flex;align-items:center;gap:.05rem;margin-right:.15rem;
+    flex:0 0 auto;flex-wrap:nowrap;
+  }
 }
 body.site-boxed .hl-searchbar{
   background:#fff;
@@ -130,12 +133,58 @@ body.site-boxed .site-banner{
   margin-inline:0;
   border-radius:10px;
 }
-@media (max-width:900px){
+@media (max-width:960px){
   body.site-boxed .site-shell{width:100%;box-shadow:none}
+  /* Reset boxed desktop nav so the slide-out drawer stays a clean white panel */
   body.site-boxed .header-nav-wrap,
-  body.site-boxed .mega-nav-pro{background:transparent;padding:0}
+  body.site-boxed .header-nav-wrap#headerNavWrap,
+  body.site-boxed .mega-nav-pro{
+    background:#fff !important;
+    padding:0 !important;
+    margin:0 !important;
+    border-radius:0 !important;
+    display:block !important;
+    flex-wrap:unset !important;
+    overflow:visible !important;
+    gap:0 !important;
+  }
+  body.site-boxed .mega-nav-pro .mega-item{flex:unset !important;width:100%}
   body.site-boxed .mega-nav-pro .mega-trigger,
-  body.site-boxed .hl-extra-nav a{color:var(--ink) !important}
+  body.site-boxed .hl-extra-nav a{
+    color:#0f172a !important;
+    white-space:normal !important;
+    background:transparent !important;
+  }
+  body.site-boxed .mega-nav-pro .mega-item.is-open > .mega-trigger,
+  body.site-boxed .hl-extra-nav a:hover{
+    background:transparent !important;
+    color:#e23d12 !important;
+  }
+  /* Keep company links visible inside the mobile drawer */
+  body.site-boxed .hl-extra-nav,
+  .header-nav-wrap .hl-extra-nav,
+  .hl-extra-nav{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:0 !important;
+    margin:.35rem 0 0 !important;
+    padding:.35rem 0 0 !important;
+    border-top:1px solid #e5e7eb;
+    flex-wrap:nowrap !important;
+  }
+  .header-nav-wrap .hl-extra-nav a,
+  .hl-extra-nav a{
+    display:flex !important;
+    align-items:center;
+    min-height:48px;
+    padding:.85rem .15rem !important;
+    border-bottom:1px solid #eef2f7;
+    font-size:.95rem !important;
+    font-weight:750 !important;
+    color:#0f172a !important;
+  }
+  .header-nav-wrap .hl-extra-nav a:last-child{border-bottom:0}
 }
 
 /* Legacy home chip menu — hidden on storefront (duplicates header mega-nav + categories). */
@@ -546,7 +595,9 @@ html.theme-preview .banner-place-tag{display:inline-flex}
   .hl-headbar .header-nav-slot{order:3;flex:1 1 100%}
   .hl-headbar__utils{gap:.3rem}
   .hl-headbar__utils .hdr-util{padding:.4rem .7rem;font-size:.8rem}
-  .hl-extra-nav{display:none}
+  /* Hide only when still sitting in the desktop header row — drawer keeps links */
+  .hl-headbar > .hl-extra-nav,
+  .header-nav-slot:not(:has(#headerNavWrap)) .hl-extra-nav{display:none}
   .hl-search{max-width:none}
 }
 @media (max-width:640px){
@@ -1463,7 +1514,8 @@ input:focus, select:focus, textarea:focus {
 @media (max-width:900px){
   .hl-headbar{flex-wrap:wrap;min-height:0}
   .hl-headbar .header-nav-slot{order:3;flex:1 1 100%}
-  .hl-extra-nav{display:none}
+  /* Do not hide extra links when they live inside the mobile drawer */
+  .hl-headbar > .hl-extra-nav{display:none}
   .hl-search{max-width:none}
 }
 @media (max-width:640px){
@@ -1473,17 +1525,19 @@ input:focus, select:focus, textarea:focus {
 
 
 /* Mega menu English-quality polish inside boxed shell */
-body.site-boxed .mega-nav-pro{
-  gap:.05rem;
-  font-family:"Estedad","Estedad Variable",Tahoma,sans-serif;
-  -webkit-font-smoothing:antialiased;
-}
-body.site-boxed .mega-nav-pro .mega-trigger{
-  font-size:.78rem;
-  font-weight:750;
-  letter-spacing:-.01em;
-  padding:.4rem .58rem;
-  border-radius:4px;
+@media (min-width:961px){
+  body.site-boxed .mega-nav-pro{
+    gap:.05rem;
+    font-family:"Estedad","Estedad Variable",Tahoma,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  body.site-boxed .mega-nav-pro .mega-trigger{
+    font-size:.78rem;
+    font-weight:750;
+    letter-spacing:-.01em;
+    padding:.4rem .58rem;
+    border-radius:4px;
+  }
 }
 body.site-boxed .site-header,
 body.site-boxed .hl-header,
