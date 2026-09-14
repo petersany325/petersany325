@@ -82,6 +82,9 @@ body.site-boxed .hl-navrow{
   padding-block:0 .45rem;
 }
 @media (min-width:961px){
+  /* IMPORTANT: never set overflow-x:auto here.
+     CSS treats overflow-y:visible as auto when the other axis is not visible,
+     which clips the graphic mega panels inside the dark nav strip. */
   body.site-boxed .hl-navrow .header-nav-wrap,
   body.site-boxed .hl-navrow .mega-nav-pro{
     background:#2b3038;
@@ -89,12 +92,11 @@ body.site-boxed .hl-navrow{
     padding:.2rem .3rem;
     margin:0;
     display:flex;
-    flex-wrap:nowrap;
+    flex-wrap:wrap;
     align-items:center;
     gap:.05rem;
-    overflow-x:auto;
-    overflow-y:visible;
-    scrollbar-width:thin;
+    overflow:visible !important;
+    width:100%;
   }
   body.site-boxed .hl-navrow .mega-nav-pro .mega-item{flex:0 0 auto}
   body.site-boxed .hl-navrow .mega-nav-pro .mega-trigger,
@@ -1566,9 +1568,13 @@ input:focus, select:focus, textarea:focus {
 }
 body.site-boxed .site-header,
 body.site-boxed .hl-header,
-body.site-boxed .header-nav-wrap{
+body.site-boxed .hl-navrow,
+body.site-boxed .header-nav-wrap,
+body.site-boxed .mega-nav-pro,
+body.site-boxed .mega-item{
   overflow:visible !important;
 }
-body.site-boxed .mega-panel{
-  z-index:120;
+body.site-boxed .mega-panel,
+body.site-boxed .mega-panel.mega-panel--graphic{
+  z-index:140 !important;
 }
