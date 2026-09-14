@@ -19,8 +19,8 @@
     <title>@yield('title', \App\Models\Setting::getValue('shop_name', config('app.name', 'فروشگاه'))) </title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=74">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=53">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=76">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=55">
     <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=20">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=5">
     <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=23">
@@ -84,12 +84,27 @@
     </div>
 </div>
 <header class="{{ $headerClass }} hl-header nav-align-{{ $mmNavAlign }}" @if($headerStyle !== '') style="{{ $headerStyle }}" @endif>
+    {{-- Row 1: brand + cart/login only (never share the nav strip) --}}
     <div class="container hl-headbar" dir="rtl">
         <button type="button" class="nav-toggle" id="navToggle" aria-label="منو" aria-expanded="false">☰</button>
         <a class="brand" href="{{ route('home') }}">
             <img class="brand-logo brand-logo-official" src="{{ asset('images/hdd-land-logo.png') }}?v=2" width="78" height="48" alt="لوگوی HDD LAND">
             <span>{{ $shopName }}</span>
         </a>
+        <div class="hl-headbar__utils" aria-label="حساب و سبد">
+          <a class="hdr-util" href="{{ url('/cart') }}">سبد خرید@if($cartCount>0)<i>{{ $cartCount }}</i>@endif</a>
+          @auth
+            <a class="hdr-util" href="{{ route('account.index') }}">حساب کاربری</a>
+            <form action="{{ url('/logout') }}" method="post" class="hdr-logout">@csrf
+              <button type="submit">خروج</button>
+            </form>
+          @else
+            <a class="hdr-util" href="{{ route('login') }}">ورود</a>
+          @endauth
+        </div>
+    </div>
+    {{-- Row 2: full-width nav strip (English-style, no utils overlap) --}}
+    <div class="container hl-navrow" dir="rtl">
         <div class="header-nav-slot" id="headerNavSlot">
           <div class="header-nav-wrap" id="headerNavWrap">
             <div class="mobile-nav-head">
@@ -103,17 +118,6 @@
               <a href="{{ url('/about') }}">درباره ما</a>
             </nav>
           </div>
-        </div>
-        <div class="hl-headbar__utils">
-          <a class="hdr-util" href="{{ url('/cart') }}">سبد خرید@if($cartCount>0)<i>{{ $cartCount }}</i>@endif</a>
-          @auth
-            <a class="hdr-util" href="{{ route('account.index') }}">حساب کاربری</a>
-            <form action="{{ url('/logout') }}" method="post" class="hdr-logout">@csrf
-              <button type="submit">خروج</button>
-            </form>
-          @else
-            <a class="hdr-util" href="{{ route('login') }}">ورود</a>
-          @endauth
         </div>
     </div>
     <div class="hl-searchbar">

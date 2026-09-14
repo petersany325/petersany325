@@ -64,16 +64,30 @@ body.site-boxed .hl-header{
   box-shadow:none;
 }
 body.site-boxed .hl-headbar{
-  padding-block:.55rem .35rem;
+  padding-block:.45rem .2rem;
+  display:flex;
+  align-items:center;
+  gap:.75rem;
 }
-/* Dark compact nav chrome is desktop-only — never leak into mobile drawer */
+body.site-boxed .hl-headbar .brand{flex:0 0 auto}
+body.site-boxed .hl-headbar__utils{
+  margin-inline-start:auto;
+  flex:0 0 auto;
+  position:relative;
+  z-index:6;
+  background:#fff;
+}
+/* Nav strip on its own row — cart/login never sit on this bar */
+body.site-boxed .hl-navrow{
+  padding-block:0 .45rem;
+}
 @media (min-width:961px){
-  body.site-boxed .header-nav-wrap,
-  body.site-boxed .mega-nav-pro{
+  body.site-boxed .hl-navrow .header-nav-wrap,
+  body.site-boxed .hl-navrow .mega-nav-pro{
     background:#2b3038;
     border-radius:4px;
-    padding:.15rem .25rem;
-    margin-top:.15rem;
+    padding:.2rem .3rem;
+    margin:0;
     display:flex;
     flex-wrap:nowrap;
     align-items:center;
@@ -82,29 +96,29 @@ body.site-boxed .hl-headbar{
     overflow-y:visible;
     scrollbar-width:thin;
   }
-  body.site-boxed .mega-nav-pro .mega-item{
-    flex:0 0 auto;
-  }
-  body.site-boxed .mega-nav-pro .mega-trigger,
-  body.site-boxed .hl-extra-nav a{
+  body.site-boxed .hl-navrow .mega-nav-pro .mega-item{flex:0 0 auto}
+  body.site-boxed .hl-navrow .mega-nav-pro .mega-trigger,
+  body.site-boxed .hl-navrow .hl-extra-nav a{
     color:#f4f6f8 !important;
-    font-size:.78rem;
+    font-size:.8rem;
     font-weight:700;
-    padding:.4rem .58rem;
+    padding:.48rem .7rem;
     border-radius:3px;
     white-space:nowrap;
   }
-  body.site-boxed .mega-nav-pro .mega-item.is-open > .mega-trigger,
-  body.site-boxed .mega-nav-pro .mega-item.has-mega:hover > .mega-trigger,
-  body.site-boxed .hl-extra-nav a:hover{
+  body.site-boxed .hl-navrow .mega-nav-pro .mega-item.is-open > .mega-trigger,
+  body.site-boxed .hl-navrow .mega-nav-pro .mega-item.has-mega:hover > .mega-trigger,
+  body.site-boxed .hl-navrow .hl-extra-nav a:hover{
     background:#e23d12 !important;
     color:#fff !important;
   }
-  body.site-boxed .mega-nav-pro .mega-caret{opacity:.85}
-  body.site-boxed .hl-extra-nav{
+  body.site-boxed .hl-navrow .mega-nav-pro .mega-caret{opacity:.85}
+  body.site-boxed .hl-navrow .hl-extra-nav{
     display:inline-flex;align-items:center;gap:.05rem;margin-right:.15rem;
     flex:0 0 auto;flex-wrap:nowrap;
   }
+  /* Hide company links from dark strip on desktop if they clutter — optional keep */
+  body.site-boxed .hl-navrow .hl-extra-nav{opacity:.92}
 }
 body.site-boxed .hl-searchbar{
   background:#fff;
@@ -541,15 +555,21 @@ html.theme-preview .banner-place-tag{display:inline-flex}
 }
 .hl-headbar{
   display:flex;align-items:center;gap:.75rem 1rem;
-  min-height:74px;padding:.7rem 0;flex-wrap:nowrap;
+  min-height:64px;padding:.55rem 0 .25rem;flex-wrap:nowrap;
 }
 .hl-headbar .brand{flex:0 0 auto;display:inline-flex;align-items:center;gap:.65rem;font-weight:800}
 .hl-headbar .brand-logo{width:72px;height:44px;object-fit:contain}
-.hl-headbar .header-nav-slot{flex:1 1 auto;min-width:0}
 .hl-headbar__utils,
 .header-utils{
   display:flex!important;align-items:center;justify-content:flex-end;
   gap:.4rem;flex:0 0 auto;flex-wrap:nowrap;margin-inline-start:auto;
+  position:relative;z-index:6;background:#fff;
+}
+.hl-navrow{
+  padding:0 0 .55rem;
+}
+.hl-navrow .header-nav-slot{
+  flex:1 1 auto;min-width:0;width:100%;
 }
 .hl-headbar__utils .hdr-util,
 .hl-headbar__utils .hdr-logout button,
@@ -1447,25 +1467,26 @@ input:focus, select:focus, textarea:focus {
   .hl-spec-grid{grid-template-columns:1fr}
 }
 
-/* === HL HEADER SHELL v68 === */
+/* === HL HEADER SHELL v75: brand/utils row + separate nav row === */
 .hl-header{
   position:sticky;top:0;z-index:80;
-  background:rgba(255,255,255,.94);
+  background:rgba(255,255,255,.96);
   backdrop-filter:saturate(160%) blur(14px);
   border-bottom:1px solid rgba(15,23,42,.08);
   box-shadow:0 10px 30px rgba(15,23,42,.05);
 }
 .hl-headbar{
   display:flex;align-items:center;gap:.75rem 1rem;
-  min-height:74px;padding:.7rem 0;flex-wrap:nowrap;
+  min-height:58px;padding:.45rem 0 .15rem;flex-wrap:nowrap;
 }
 .hl-headbar .brand{flex:0 0 auto;display:inline-flex;align-items:center;gap:.65rem;font-weight:800}
 .hl-headbar .brand-logo,.hl-headbar .brand-logo-official{width:72px;height:44px;object-fit:contain}
-.hl-headbar .header-nav-slot{flex:1 1 auto;min-width:0}
+.hl-headbar .header-nav-slot{display:none !important} /* nav moved to .hl-navrow */
 .hl-headbar__utils,
 .header-utils{
   display:flex!important;align-items:center;justify-content:flex-end;
   gap:.4rem;flex:0 0 auto;flex-wrap:nowrap;margin-inline-start:auto;
+  position:relative;z-index:8;background:#fff;
 }
 .hl-headbar__utils .hdr-util,
 .header-utils .hdr-util{
@@ -1484,6 +1505,12 @@ input:focus, select:focus, textarea:focus {
 .hl-headbar__utils .hdr-logout button{
   white-space:nowrap;min-height:40px;padding:.45rem .9rem;border-radius:999px;
   border:1px solid #f3c1bb;background:#fff1f0;color:#a32012;font:inherit;font-weight:800;font-size:.82rem;cursor:pointer
+}
+.hl-navrow{
+  padding:0 0 .5rem;
+}
+.hl-navrow .header-nav-slot{
+  width:100%;min-width:0;
 }
 .hl-extra-nav{
   display:flex;align-items:center;gap:.15rem .7rem;flex-wrap:wrap;
@@ -1512,10 +1539,8 @@ input:focus, select:focus, textarea:focus {
   background:var(--brand,#e23d12);color:#fff;font:inherit;font-weight:800;cursor:pointer
 }
 @media (max-width:900px){
-  .hl-headbar{flex-wrap:wrap;min-height:0}
-  .hl-headbar .header-nav-slot{order:3;flex:1 1 100%}
-  /* Do not hide extra links when they live inside the mobile drawer */
-  .hl-headbar > .hl-extra-nav{display:none}
+  .hl-headbar{flex-wrap:nowrap;min-height:0}
+  .hl-navrow{padding-bottom:.35rem}
   .hl-search{max-width:none}
 }
 @media (max-width:640px){

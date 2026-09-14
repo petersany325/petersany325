@@ -162,42 +162,52 @@
                 </aside>
                 <div class="mega-en-stage">
                   @foreach($item->activeChildren as $ci => $child)
-                    <div class="mega-en-pane {{ $ci === 0 ? 'is-active' : '' }}" data-mega-en-pane="{{ $ci }}">
-                      <div class="mega-en-pane__copy">
-                        <p class="mega-en-pane__eyebrow">{{ $item->title }}</p>
-                        <h3 class="mega-en-pane__title">{{ $child->title }}</h3>
-                        @if($child->description)
-                          <p class="mega-en-pane__desc">{{ $child->description }}</p>
-                        @endif
-                        @if($child->activeChildren->count())
-                          <ul class="mega-en-list">
-                            @foreach($child->activeChildren as $grand)
-                              <li>
-                                <a href="{{ $grand->href() }}" @if($grand->open_in_new) target="_blank" rel="noopener" @endif>
-                                  @if($showIcons && $grand->icon_image_url)
-                                    <img src="{{ $grand->icon_image_url }}" alt="">
-                                  @elseif($showIcons && $grand->icon)
-                                    <span aria-hidden="true">{{ $grand->icon }}</span>
-                                  @endif
-                                  <span>{{ $grand->title }}</span>
-                                  @if($grand->badge)<em class="mega-badge">{{ $grand->badge }}</em>@endif
-                                </a>
-                              </li>
-                            @endforeach
-                          </ul>
-                        @endif
-                        <a class="mega-en-cta" href="{{ $child->href() }}" @if($child->open_in_new) target="_blank" rel="noopener" @endif>
-                          مشاهده {{ $child->title }}
-                        </a>
+                    @php $hasKids = $child->activeChildren->count() > 0; @endphp
+                    <div class="mega-en-pane {{ $ci === 0 ? 'is-active' : '' }} {{ $hasKids ? 'has-links' : 'no-links' }}" data-mega-en-pane="{{ $ci }}">
+                      {{-- English-style graphic banner strip --}}
+                      <div class="mega-en-banner" aria-hidden="true">
+                        <div class="mega-en-banner__copy">
+                          <strong>{{ $child->title }}</strong>
+                          <span>{{ $item->title }} · HDD LAND</span>
+                        </div>
+                        <div class="mega-en-banner__mark">
+                          @if($child->image_url)
+                            <img src="{{ $child->image_url }}" alt="">
+                          @elseif($orgPromoOn)
+                            <img src="{{ $orgPromoImg }}" alt="">
+                          @else
+                            <em>HDD LAND</em>
+                          @endif
+                        </div>
                       </div>
-                      <div class="mega-en-pane__visual" aria-hidden="true">
-                        @if($child->image_url)
-                          <img src="{{ $child->image_url }}" alt="">
-                        @elseif($orgPromoOn)
-                          <img src="{{ $orgPromoImg }}" alt="">
-                        @else
-                          <div class="mega-en-pane__glow"></div>
-                        @endif
+                      <div class="mega-en-pane__body">
+                        <div class="mega-en-pane__copy">
+                          <p class="mega-en-pane__eyebrow">{{ $item->title }}</p>
+                          <h3 class="mega-en-pane__title">{{ $child->title }}</h3>
+                          @if($child->description)
+                            <p class="mega-en-pane__desc">{{ $child->description }}</p>
+                          @endif
+                          @if($hasKids)
+                            <ul class="mega-en-list">
+                              @foreach($child->activeChildren as $grand)
+                                <li>
+                                  <a href="{{ $grand->href() }}" @if($grand->open_in_new) target="_blank" rel="noopener" @endif>
+                                    @if($showIcons && $grand->icon_image_url)
+                                      <img src="{{ $grand->icon_image_url }}" alt="">
+                                    @elseif($showIcons && $grand->icon)
+                                      <span aria-hidden="true">{{ $grand->icon }}</span>
+                                    @endif
+                                    <span>{{ $grand->title }}</span>
+                                    @if($grand->badge)<em class="mega-badge">{{ $grand->badge }}</em>@endif
+                                  </a>
+                                </li>
+                              @endforeach
+                            </ul>
+                          @endif
+                          <a class="mega-en-cta" href="{{ $child->href() }}" @if($child->open_in_new) target="_blank" rel="noopener" @endif>
+                            مشاهده {{ $child->title }}
+                          </a>
+                        </div>
                       </div>
                     </div>
                   @endforeach
