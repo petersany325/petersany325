@@ -138,15 +138,15 @@
           <p class="hp-hint">بنرها و عکس‌ها را از اینجا کوچک/بزرگ کنید. مقدار کمتر = صفحه فشرده‌تر. بعد از ذخیره، یک‌بار رفرش سخت بزنید.</p>
           <div class="hp-grid">
             <div class="row2">
-              <label>ارتفاع هیرو<input type="number" min="180" max="720" name="hero_height" id="hero_height_struct" value="{{ $f('hero_height',360) }}"></label>
-              <label>ارتفاع بند درباره<input type="number" min="160" max="640" name="about_height" value="{{ $f('about_height',300) }}"></label>
+              <label>ارتفاع هیرو<input type="number" min="180" max="720" name="hero_height" id="hero_height_struct" value="{{ $f('hero_height',300) }}"></label>
+              <label>ارتفاع بند درباره<input type="number" min="160" max="640" name="about_height" value="{{ $f('about_height',220) }}"></label>
             </div>
             <div class="row2">
-              <label>ارتفاع بند سازمانی<input type="number" min="140" max="520" name="corp_height" value="{{ $f('corp_height',240) }}"></label>
-              <label>ارتفاع کاشی خدمات<input type="number" min="160" max="560" name="tile_height" value="{{ $f('tile_height',260) }}"></label>
+              <label>ارتفاع بند سازمانی<input type="number" min="140" max="520" name="corp_height" value="{{ $f('corp_height',200) }}"></label>
+              <label>ارتفاع کاشی خدمات<input type="number" min="160" max="560" name="tile_height" value="{{ $f('tile_height',220) }}"></label>
             </div>
             <div class="row2">
-              <label>ارتفاع کاشی آموزش<input type="number" min="140" max="480" name="edu_tile_height" value="{{ $f('edu_tile_height',220) }}"></label>
+              <label>ارتفاع کاشی آموزش<input type="number" min="140" max="480" name="edu_tile_height" value="{{ $f('edu_tile_height',200) }}"></label>
               <label>متن لینک کاشی‌ها<input name="tile_link_label" value="{{ $f('tile_link_label','جزئیات') }}"></label>
             </div>
           </div>
@@ -227,7 +227,7 @@
               </select>
             </label>
             <div class="row4">
-              <label>ارتفاع بنر (px)<input type="number" min="180" max="720" name="hero_height" id="hero_height" value="{{ $f('hero_height',360) }}"></label>
+              <label>ارتفاع بنر (px)<input type="number" min="180" max="720" name="hero_height" id="hero_height" value="{{ $f('hero_height',300) }}"></label>
               <label>گردی گوشه<input type="number" min="0" max="40" name="hero_radius" id="hero_radius" value="{{ $f('hero_radius',22) }}"></label>
               <label>پدینگ عمودی<input type="number" min="0" max="80" name="hero_pad_y" id="hero_pad_y" value="{{ $f('hero_pad_y',24) }}"></label>
               <label>پدینگ افقی<input type="number" min="0" max="80" name="hero_pad_x" id="hero_pad_x" value="{{ $f('hero_pad_x',8) }}"></label>

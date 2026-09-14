@@ -27,11 +27,11 @@ class HomePageConfig
 
             // Visual design
             'hero_layout' => 'overlay', // overlay full-bleed is the modern default
-            'hero_height' => 360,
-            'about_height' => 300,
-            'corp_height' => 240,
-            'tile_height' => 260,
-            'edu_tile_height' => 220,
+            'hero_height' => 300,
+            'about_height' => 220,
+            'corp_height' => 200,
+            'tile_height' => 220,
+            'edu_tile_height' => 200,
             'featured_enabled' => true,
             'featured_title' => 'محصولات منتخب',
             'about_cta1_label' => 'بیشتر بدانید',
@@ -259,11 +259,11 @@ class HomePageConfig
         }
 
         foreach ([
-            'hero_height' => [180, 720, 360],
-            'about_height' => [160, 640, 300],
-            'corp_height' => [140, 520, 240],
-            'tile_height' => [160, 560, 260],
-            'edu_tile_height' => [140, 480, 220],
+            'hero_height' => [180, 720, 300],
+            'about_height' => [160, 640, 220],
+            'corp_height' => [140, 520, 200],
+            'tile_height' => [160, 560, 220],
+            'edu_tile_height' => [140, 480, 200],
             'hero_radius' => [0, 40, 0],
             'hero_pad_y' => [0, 80, 20],
             'hero_pad_x' => [0, 80, 8],
@@ -414,11 +414,11 @@ class HomePageConfig
         $b = hexdec(substr($hex, 4, 2));
 
         $vars = [
-            '--hl-hero-h' => ((int) ($s['hero_height'] ?? 360)).'px',
-            '--hl-band-h' => ((int) ($s['about_height'] ?? 300)).'px',
-            '--hl-corp-h' => ((int) ($s['corp_height'] ?? 240)).'px',
-            '--hl-tile-h' => ((int) ($s['tile_height'] ?? 260)).'px',
-            '--hl-edu-h' => ((int) ($s['edu_tile_height'] ?? 220)).'px',
+            '--hl-hero-h' => ((int) ($s['hero_height'] ?? 300)).'px',
+            '--hl-band-h' => ((int) ($s['about_height'] ?? 220)).'px',
+            '--hl-corp-h' => ((int) ($s['corp_height'] ?? 200)).'px',
+            '--hl-tile-h' => ((int) ($s['tile_height'] ?? 220)).'px',
+            '--hl-edu-h' => ((int) ($s['edu_tile_height'] ?? 200)).'px',
             '--hl-hero-radius' => ((int) ($s['hero_radius'] ?? 0)).'px',
             '--hl-hero-pad-y' => ((int) ($s['hero_pad_y'] ?? 20)).'px',
             '--hl-hero-pad-x' => ((int) ($s['hero_pad_x'] ?? 8)).'px',

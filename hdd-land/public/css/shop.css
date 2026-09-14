@@ -39,6 +39,93 @@ a { color: inherit; text-decoration: none; }
 img { max-width: 100%; display: block; }
 .container { width: min(1180px, calc(100% - 2rem)); margin-inline: auto; }
 
+/* ===== Boxed site shell (English-site style: centered, not full-bleed) ===== */
+html body.site-boxed{
+  background:#d8dde6 !important;
+  background-image:none !important;
+}
+body.site-boxed .site-shell{
+  width:min(1200px, 100%);
+  margin:0 auto;
+  background:#fff;
+  min-height:100vh;
+  box-shadow:0 0 0 1px rgba(15,23,42,.06), 0 18px 50px rgba(15,23,42,.12);
+  /* visible so mega-menu dropdowns are not clipped */
+  overflow:visible;
+}
+body.site-boxed .topbar{
+  background:#f3f5f8;
+  border-bottom:1px solid #e5e9f0;
+}
+body.site-boxed .site-header,
+body.site-boxed .hl-header{
+  background:#fff !important;
+  border-bottom:0;
+  box-shadow:none;
+}
+body.site-boxed .hl-headbar{
+  padding-block:.55rem .35rem;
+}
+body.site-boxed .header-nav-wrap,
+body.site-boxed .mega-nav-pro{
+  background:#2b3038;
+  border-radius:4px;
+  padding:.2rem .35rem;
+  margin-top:.15rem;
+}
+body.site-boxed .mega-nav-pro .mega-trigger,
+body.site-boxed .hl-extra-nav a{
+  color:#f4f6f8 !important;
+  font-size:.82rem;
+  font-weight:700;
+  padding:.45rem .7rem;
+  border-radius:3px;
+}
+body.site-boxed .mega-nav-pro .mega-item.is-open > .mega-trigger,
+body.site-boxed .mega-nav-pro .mega-item.has-mega:hover > .mega-trigger,
+body.site-boxed .hl-extra-nav a:hover{
+  background:#e23d12 !important;
+  color:#fff !important;
+}
+body.site-boxed .mega-nav-pro .mega-caret{opacity:.85}
+body.site-boxed .hl-extra-nav{
+  display:inline-flex;align-items:center;gap:.1rem;margin-right:.25rem;
+}
+body.site-boxed .hl-searchbar{
+  background:#fff;
+  border-bottom:1px solid #eef1f5;
+  padding:.55rem 0 .75rem;
+}
+body.site-boxed .hl-search{
+  max-width:640px;
+  margin-inline:auto;
+}
+body.site-boxed .site-content.container{
+  width:100%;
+  max-width:none;
+  margin:0;
+  padding-inline:1rem;
+  padding-block:.75rem 1.25rem;
+  box-sizing:border-box;
+}
+body.site-boxed .site-main{
+  background:#fff;
+}
+/* Legacy full-bleed banners must stay inside the boxed shell */
+body.site-boxed .site-banner{
+  width:100%;
+  max-width:100%;
+  margin-inline:0;
+  border-radius:10px;
+}
+@media (max-width:900px){
+  body.site-boxed .site-shell{width:100%;box-shadow:none}
+  body.site-boxed .header-nav-wrap,
+  body.site-boxed .mega-nav-pro{background:transparent;padding:0}
+  body.site-boxed .mega-nav-pro .mega-trigger,
+  body.site-boxed .hl-extra-nav a{color:var(--ink) !important}
+}
+
 /* Legacy home chip menu — hidden on storefront (duplicates header mega-nav + categories). */
 .home-top-menu{display:none!important}
 

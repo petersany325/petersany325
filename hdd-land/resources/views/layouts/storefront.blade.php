@@ -19,9 +19,9 @@
     <title>@yield('title', \App\Models\Setting::getValue('shop_name', config('app.name', 'فروشگاه'))) </title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=68">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=49">
-    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=17">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=71">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=50">
+    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=20">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=4">
     <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=23">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
@@ -62,7 +62,8 @@
         }
     } catch (\Throwable $e) {}
 @endphp
-<body id="top" class="{{ request()->boolean('theme_preview') ? 'theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}">
+<body id="top" class="site-boxed{{ request()->boolean('theme_preview') ? ' theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}">
+<div class="site-shell">
 <div class="topbar">
     <div class="container">
         <div class="topbar-start">
@@ -142,11 +143,8 @@
         </div>
     @endif
     </div>
-    @if(request()->routeIs('home'))
-      @yield('content')
-    @else
-      <div class="container">@yield('content')</div>
-    @endif
+    {{-- Boxed standard shell: home + inner pages stay inside site-shell width --}}
+    <div class="container site-content">@yield('content')</div>
 </main>
 
 <footer class="site-footer legacy-footer" hidden>
@@ -208,5 +206,6 @@
 @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-foot'))
   @include('web-app::storefront-foot')
 @endif
+</div>{{-- /.site-shell --}}
 </body>
 </html>
