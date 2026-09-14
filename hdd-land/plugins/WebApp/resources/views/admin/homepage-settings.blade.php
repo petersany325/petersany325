@@ -121,7 +121,8 @@
   <div class="hp-wrap">
     <div>
       <div class="hp-tabs" id="hp-tabs">
-        <button type="button" class="on" data-pane="design">طراحی بنر</button>
+        <button type="button" class="on" data-pane="structure">ساختار و اندازه</button>
+        <button type="button" data-pane="design">طراحی بنر</button>
         <button type="button" data-pane="hero">متن بنر</button>
         <button type="button" data-pane="trust">اعتماد</button>
         <button type="button" data-pane="search">جستجو و خانه</button>
@@ -131,8 +132,54 @@
         <button type="button" data-pane="pwa">نصب و نوار پایین</button>
       </div>
 
+      <div class="hp-pane on" data-pane="structure">
+        <div class="hp-card">
+          <h2>ارتفاع بلوک‌های صفحه اول (پیکسل)</h2>
+          <p class="hp-hint">بنرها و عکس‌ها را از اینجا کوچک/بزرگ کنید. مقدار کمتر = صفحه فشرده‌تر. بعد از ذخیره، یک‌بار رفرش سخت بزنید.</p>
+          <div class="hp-grid">
+            <div class="row2">
+              <label>ارتفاع هیرو<input type="number" min="180" max="720" name="hero_height" id="hero_height_struct" value="{{ $f('hero_height',360) }}"></label>
+              <label>ارتفاع بند درباره<input type="number" min="160" max="640" name="about_height" value="{{ $f('about_height',300) }}"></label>
+            </div>
+            <div class="row2">
+              <label>ارتفاع بند سازمانی<input type="number" min="140" max="520" name="corp_height" value="{{ $f('corp_height',240) }}"></label>
+              <label>ارتفاع کاشی خدمات<input type="number" min="160" max="560" name="tile_height" value="{{ $f('tile_height',260) }}"></label>
+            </div>
+            <div class="row2">
+              <label>ارتفاع کاشی آموزش<input type="number" min="140" max="480" name="edu_tile_height" value="{{ $f('edu_tile_height',220) }}"></label>
+              <label>متن لینک کاشی‌ها<input name="tile_link_label" value="{{ $f('tile_link_label','جزئیات') }}"></label>
+            </div>
+          </div>
+        </div>
+        <div class="hp-card">
+          <h2>نمایش بخش‌ها</h2>
+          <div class="hp-switch"><span>هیرو</span><label class="hp-sw"><input type="checkbox" name="hero_enabled" value="1" @checked($on('hero_enabled', true))><i></i></label></div>
+          <div class="hp-switch"><span>درباره ما</span><label class="hp-sw"><input type="checkbox" name="about_enabled" value="1" @checked($on('about_enabled', true))><i></i></label></div>
+          <div class="hp-switch"><span>سازمانی</span><label class="hp-sw"><input type="checkbox" name="corp_enabled" value="1" @checked($on('corp_enabled', true))><i></i></label></div>
+          <div class="hp-switch"><span>محصولات منتخب</span><label class="hp-sw"><input type="checkbox" name="featured_enabled" value="1" @checked($on('featured_enabled', true))><i></i></label></div>
+          <div class="hp-switch"><span>آموزش‌ها</span><label class="hp-sw"><input type="checkbox" name="edu_enabled" value="1" @checked($on('edu_enabled', true))><i></i></label></div>
+          <div class="hp-switch"><span>نوار اعتماد</span><label class="hp-sw"><input type="checkbox" name="trust_enabled" value="1" @checked($on('trust_enabled', true))><i></i></label></div>
+          <div class="hp-switch"><span>برندها</span><label class="hp-sw"><input type="checkbox" name="brands_enabled" value="1" @checked($on('brands_enabled', true))><i></i></label></div>
+          <div class="hp-grid" style="margin-top:.75rem">
+            <label>عنوان محصولات منتخب<input name="featured_title" value="{{ $f('featured_title','محصولات منتخب') }}"></label>
+          </div>
+        </div>
+        <div class="hp-card">
+          <h2>لینک‌های بند درباره</h2>
+          <div class="hp-grid">
+            <div class="row2">
+              <label>متن لینک ۱<input name="about_cta1_label" value="{{ $f('about_cta1_label','بیشتر بدانید') }}"></label>
+              <label>آدرس لینک ۱<input name="about_cta1_url" value="{{ $f('about_cta1_url','/about') }}" dir="ltr"></label>
+            </div>
+            <div class="row2">
+              <label>متن لینک ۲<input name="about_cta2_label" value="{{ $f('about_cta2_label','تماس با ما') }}"></label>
+              <label>آدرس لینک ۲<input name="about_cta2_url" value="{{ $f('about_cta2_url','/contact') }}" dir="ltr"></label>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      <div class="hp-pane on" data-pane="design">
+      <div class="hp-pane" data-pane="design">
         <div class="hp-card">
           <h2>کانوس طراحی (درگ / ریسایز / ادغام)</h2>
           <p class="hp-hint">لایه متن، عکس اصلی و عکس ادغامی را بکشید. گوشه پایین‌راست برای ریسایز است. برای آزادی کامل، چیدمان «آزاد» را انتخاب کنید.</p>
@@ -180,7 +227,7 @@
               </select>
             </label>
             <div class="row4">
-              <label>ارتفاع بنر (px)<input type="number" min="220" max="720" name="hero_height" id="hero_height" value="{{ $f('hero_height',420) }}"></label>
+              <label>ارتفاع بنر (px)<input type="number" min="180" max="720" name="hero_height" id="hero_height" value="{{ $f('hero_height',360) }}"></label>
               <label>گردی گوشه<input type="number" min="0" max="40" name="hero_radius" id="hero_radius" value="{{ $f('hero_radius',22) }}"></label>
               <label>پدینگ عمودی<input type="number" min="0" max="80" name="hero_pad_y" id="hero_pad_y" value="{{ $f('hero_pad_y',24) }}"></label>
               <label>پدینگ افقی<input type="number" min="0" max="80" name="hero_pad_x" id="hero_pad_x" value="{{ $f('hero_pad_x',8) }}"></label>
@@ -480,6 +527,18 @@
     </aside>
   </div>
 </form>
+
+<script>
+(function(){
+  const a=document.getElementById('hero_height_struct');
+  const b=document.getElementById('hero_height');
+  if(!a||!b) return;
+  const sync=(src,dst)=>()=>{ dst.value=src.value; };
+  a.addEventListener('input', sync(a,b));
+  b.addEventListener('input', sync(b,a));
+})();
+</script>
+
 
 <script>
 (function () {

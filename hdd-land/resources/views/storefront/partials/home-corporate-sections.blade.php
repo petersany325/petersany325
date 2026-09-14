@@ -39,8 +39,8 @@
       <p class="hl-band__text">{{ $aboutLead }}</p>
     @endif
     <div class="hl-band__cta">
-      <a class="hl-link" href="{{ url('/about') }}">بیشتر بدانید</a>
-      <a class="hl-link hl-link--muted" href="{{ url('/contact') }}">تماس با ما</a>
+      <a class="hl-link" href="{{ url($home['about_cta1_url'] ?? '/about') }}">{{ $home['about_cta1_label'] ?? 'بیشتر بدانید' }}</a>
+      <a class="hl-link hl-link--muted" href="{{ url($home['about_cta2_url'] ?? '/contact') }}">{{ $home['about_cta2_label'] ?? 'تماس با ما' }}</a>
     </div>
   </div>
 </section>
@@ -85,7 +85,7 @@
       <span class="hl-tile__copy">
         <strong class="hl-tile__title">{{ $tile['title'] }}</strong>
         <span class="hl-tile__text">{{ $tile['text'] }}</span>
-        <span class="hl-link">جزئیات</span>
+        <span class="hl-link">{{ $home['tile_link_label'] ?? 'جزئیات' }}</span>
       </span>
     </a>
   @endforeach
@@ -94,10 +94,10 @@
 @endif
 
 {{-- ۵) محصولات منتخب — شبکه تمیز بدون کارت سنگین --}}
-@if($featured->isNotEmpty())
+@if(! empty($home['featured_enabled']) && $featured->isNotEmpty())
 <section class="hl-shelf" aria-label="محصولات ویژه">
   <div class="hl-shelf__head">
-    <h2>محصولات منتخب</h2>
+    <h2>{{ $home['featured_title'] ?? 'محصولات منتخب' }}</h2>
     <a class="hl-link" href="{{ url('/products') }}">مشاهده فروشگاه</a>
   </div>
   <div class="hl-shelf__grid">

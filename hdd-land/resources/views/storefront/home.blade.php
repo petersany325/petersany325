@@ -3,17 +3,14 @@
 @section('title', (isset($page) && is_object($page) && ! empty($page->seo_title)) ? $page->seo_title : 'خانه')
 
 @section('content')
+@php
+  $homeCfg = \App\Support\HomePageConfig::get();
+@endphp
 {{--
-  ساختار صفحه اول (ریتم شبیه اپل):
-  1) هیرو full-bleed
-  2) بند داستانی درباره
-  3) بند CTA سازمانی
-  4) شبکه پرومو ۲ستونه
-  5) قفسه محصولات
-  6) کاشی‌های آموزش
-  7) اعتماد + برندها
+  ساختار فشرده صفحه اول (ارتفاع‌ها از ادمین):
+  1) هیرو  2) درباره  3) سازمانی  4) کاشی‌ها  5) محصولات  6) آموزش  7) اعتماد/برند
 --}}
-<div class="hl-home">
+<div class="hl-home" style="{{ \App\Support\HomePageConfig::pageStyleAttr($homeCfg) }}">
   @include('storefront.partials.home-hero')
   @include('storefront.partials.home-corporate-sections')
 </div>

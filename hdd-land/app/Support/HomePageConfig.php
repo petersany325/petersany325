@@ -27,7 +27,18 @@ class HomePageConfig
 
             // Visual design
             'hero_layout' => 'overlay', // overlay full-bleed is the modern default
-            'hero_height' => 560,
+            'hero_height' => 360,
+            'about_height' => 300,
+            'corp_height' => 240,
+            'tile_height' => 260,
+            'edu_tile_height' => 220,
+            'featured_enabled' => true,
+            'featured_title' => 'محصولات منتخب',
+            'about_cta1_label' => 'بیشتر بدانید',
+            'about_cta1_url' => '/about',
+            'about_cta2_label' => 'تماس با ما',
+            'about_cta2_url' => '/contact',
+            'tile_link_label' => 'جزئیات',
             'hero_radius' => 0,
             'hero_pad_y' => 24,
             'hero_pad_x' => 8,
@@ -153,9 +164,30 @@ class HomePageConfig
     public static function save(array $d): array
     {
         $s = self::get();
+        // Accept admin aliases (kicker/kickers, enabled naming drift, etc.)
+        $aliases = [
+            'hero_kicker' => 'hero_kicker',
+            'hero_title_em' => 'hero_title_em',
+            'hero_overlay_opacity' => 'hero_overlay_opacity',
+            'sync_webapp' => 'sync_webapp',
+            'brands_text' => 'brands_text',
+            'search_placeholder' => 'search_placeholder',
+            'edu_more_label' => 'edu_more_label',
+            'edu_more_url' => 'edu_more_url',
+            'edu_subtitle' => 'edu_subtitle',
+            'show_featured' => 'featured_enabled',
+            'featured_title' => 'featured_title',
+        ];
+        foreach ($aliases as $from => $to) {
+            if (array_key_exists($from, $d) && ! array_key_exists($to, $d)) {
+                $d[$to] = $d[$from];
+            }
+        }
+
         foreach ([
             'hero_enabled', 'trust_enabled', 'edu_enabled', 'about_enabled',
             'corp_enabled', 'brands_enabled', 'sync_webapp', 'hero_merge_enabled',
+            'featured_enabled',
         ] as $k) {
             $s[$k] = ! empty($d[$k]);
         }
@@ -188,9 +220,13 @@ class HomePageConfig
             'edu_2_title' => 160, 'edu_2_text' => 300, 'edu_2_image' => 500, 'edu_2_url' => 300,
             'edu_3_title' => 160, 'edu_3_text' => 300, 'edu_3_image' => 500, 'edu_3_url' => 300,
             'about_title' => 160, 'about_text' => 1200, 'about_image' => 500,
+            'about_cta1_label' => 80, 'about_cta1_url' => 300,
+            'about_cta2_label' => 80, 'about_cta2_url' => 300,
             'about_stat1_title' => 80, 'about_stat1_text' => 120,
             'about_stat2_title' => 80, 'about_stat2_text' => 120,
             'about_stat3_title' => 80, 'about_stat3_text' => 120,
+            'featured_title' => 120,
+            'tile_link_label' => 60,
             'corp_title' => 160, 'corp_subtitle' => 300,
             'corp_1_title' => 160, 'corp_1_text' => 300, 'corp_1_image' => 500, 'corp_1_url' => 300,
             'corp_2_title' => 160, 'corp_2_text' => 300, 'corp_2_image' => 500, 'corp_2_url' => 300,
@@ -223,13 +259,17 @@ class HomePageConfig
         }
 
         foreach ([
-            'hero_height' => [220, 720, 560],
-            'hero_radius' => [0, 40, 22],
-            'hero_pad_y' => [0, 80, 24],
+            'hero_height' => [180, 720, 360],
+            'about_height' => [160, 640, 300],
+            'corp_height' => [140, 520, 240],
+            'tile_height' => [160, 560, 260],
+            'edu_tile_height' => [140, 480, 220],
+            'hero_radius' => [0, 40, 0],
+            'hero_pad_y' => [0, 80, 20],
             'hero_pad_x' => [0, 80, 8],
             'hero_kicker_size' => [10, 28, 14],
-            'hero_title_size' => [18, 64, 34],
-            'hero_text_size' => [11, 28, 15],
+            'hero_title_size' => [18, 64, 28],
+            'hero_text_size' => [11, 28, 14],
             'hero_cta_size' => [11, 24, 14],
             'hero_overlay_opacity' => [0, 90, 55],
             'hero_media_w' => [20, 80, 48],
@@ -374,20 +414,24 @@ class HomePageConfig
         $b = hexdec(substr($hex, 4, 2));
 
         $vars = [
-            '--hl-hero-h' => ((int) ($s['hero_height'] ?? 420)).'px',
-            '--hl-hero-radius' => ((int) ($s['hero_radius'] ?? 22)).'px',
-            '--hl-hero-pad-y' => ((int) ($s['hero_pad_y'] ?? 24)).'px',
+            '--hl-hero-h' => ((int) ($s['hero_height'] ?? 360)).'px',
+            '--hl-band-h' => ((int) ($s['about_height'] ?? 300)).'px',
+            '--hl-corp-h' => ((int) ($s['corp_height'] ?? 240)).'px',
+            '--hl-tile-h' => ((int) ($s['tile_height'] ?? 260)).'px',
+            '--hl-edu-h' => ((int) ($s['edu_tile_height'] ?? 220)).'px',
+            '--hl-hero-radius' => ((int) ($s['hero_radius'] ?? 0)).'px',
+            '--hl-hero-pad-y' => ((int) ($s['hero_pad_y'] ?? 20)).'px',
             '--hl-hero-pad-x' => ((int) ($s['hero_pad_x'] ?? 8)).'px',
             '--hl-hero-font' => $fontStack,
             '--hl-hero-kicker-size' => ((int) ($s['hero_kicker_size'] ?? 14)).'px',
-            '--hl-hero-title-size' => ((int) ($s['hero_title_size'] ?? 34)).'px',
-            '--hl-hero-text-size' => ((int) ($s['hero_text_size'] ?? 15)).'px',
+            '--hl-hero-title-size' => ((int) ($s['hero_title_size'] ?? 28)).'px',
+            '--hl-hero-text-size' => ((int) ($s['hero_text_size'] ?? 14)).'px',
             '--hl-hero-cta-size' => ((int) ($s['hero_cta_size'] ?? 14)).'px',
-            '--hl-hero-bg' => (string) ($s['hero_bg'] ?? '#ffffff'),
+            '--hl-hero-bg' => (string) ($s['hero_bg'] ?? '#071018'),
             '--hl-hero-kicker' => (string) ($s['hero_kicker_color'] ?? '#e23d12'),
-            '--hl-hero-title' => (string) ($s['hero_title_color'] ?? '#0b1220'),
+            '--hl-hero-title' => (string) ($s['hero_title_color'] ?? '#ffffff'),
             '--hl-hero-em' => (string) ($s['hero_em_color'] ?? '#e23d12'),
-            '--hl-hero-text' => (string) ($s['hero_text_color'] ?? '#475569'),
+            '--hl-hero-text' => (string) ($s['hero_text_color'] ?? '#dbe4f0'),
             '--hl-hero-cta1-bg' => (string) ($s['hero_cta1_bg'] ?? '#e23d12'),
             '--hl-hero-cta1-color' => (string) ($s['hero_cta1_color'] ?? '#ffffff'),
             '--hl-hero-cta2-bg' => (string) ($s['hero_cta2_bg'] ?? '#ffffff'),
@@ -417,5 +461,15 @@ class HomePageConfig
         }
 
         return implode(';', $out);
+    }
+
+    /**
+     * Page-level CSS vars (heights for all homepage blocks).
+     *
+     * @param  array<string,mixed>|null  $s
+     */
+    public static function pageStyleAttr(?array $s = null): string
+    {
+        return self::heroStyleAttr($s);
     }
 }
