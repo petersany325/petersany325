@@ -79,6 +79,12 @@ class Plugin extends BasePlugin
             'panel_col_gap' => 16,
             'panel_row_gap' => 12,
             'panel_padding' => 16,
+            // Keep mega panels inside the boxed site frame
+            'panel_contain' => true,
+            'panel_width_mode' => 'shell', // shell = full nav/shell width, item = under trigger
+            'font_family' => 'Estedad',
+            'nav_font_size' => 12,
+            'panel_font_size' => 12,
             'org_promo_enabled' => true,
             'org_promo_title' => 'پیشنهاد سازمانی',
             'org_promo_desc' => 'تأمین هارد و SSD برای کسب‌وکارها با گارانتی شفاف',
@@ -135,6 +141,15 @@ class Plugin extends BasePlugin
             'panel_col_gap' => max(4, min(48, (int) ($data['panel_col_gap'] ?? 16))),
             'panel_row_gap' => max(4, min(48, (int) ($data['panel_row_gap'] ?? 12))),
             'panel_padding' => max(8, min(48, (int) ($data['panel_padding'] ?? 16))),
+            'panel_contain' => array_key_exists('panel_contain', $data)
+                ? in_array((string) (is_array($data['panel_contain']) ? end($data['panel_contain']) : $data['panel_contain']), ['1', 'true', 'on', 'yes'], true)
+                : ! empty($current['panel_contain']),
+            'panel_width_mode' => in_array(($data['panel_width_mode'] ?? ''), ['shell', 'item'], true) ? $data['panel_width_mode'] : 'shell',
+            'font_family' => array_key_exists((string) ($data['font_family'] ?? 'Estedad'), self::fonts())
+                ? (string) ($data['font_family'] ?? 'Estedad')
+                : 'Estedad',
+            'nav_font_size' => max(11, min(16, (int) ($data['nav_font_size'] ?? 12))),
+            'panel_font_size' => max(11, min(15, (int) ($data['panel_font_size'] ?? 12))),
         ]);
 
         // همیشه فیلدهای پیشنهاد سازمانی را از درخواست ذخیره کن (فرم یکپارچه / AJAX)
@@ -410,15 +425,24 @@ class Plugin extends BasePlugin
     public static function fonts(): array
     {
         return [
-            '' => 'پیش‌فرض سایت (Vazirmatn)',
+            'Estedad' => 'استعداد (گرافیکی ریز — پیشنهادی)',
             'Vazirmatn' => 'وزیرمتن',
+            'IRANSansX' => 'ایران‌سنس X',
             'Noto Sans Arabic' => 'Noto Sans Arabic',
             'Cairo' => 'Cairo',
             'Tajawal' => 'Tajawal',
             'IBM Plex Sans Arabic' => 'IBM Plex Sans Arabic',
             'Tahoma' => 'Tahoma',
-            'Arial' => 'Arial',
-            'Tahoma, Arial, sans-serif' => 'سیستمی',
+            '' => 'پیش‌فرض قالب سایت',
+        ];
+    }
+
+    /** @return array<string, string> */
+    public static function panelWidthModes(): array
+    {
+        return [
+            'shell' => 'داخل کادر سایت (تمام عرض نوار منو)',
+            'item' => 'زیر همان آیتم منو',
         ];
     }
 

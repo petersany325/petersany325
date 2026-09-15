@@ -17,11 +17,57 @@
     });
   }
 
+  function containPanel(root, item, panel) {
+    if (!panel || !root) return;
+    var contain = root.getAttribute('data-mega-contain') !== '0';
+    if (!contain) {
+      panel.style.left = '';
+      panel.style.right = '';
+      panel.style.width = '';
+      panel.style.maxWidth = '';
+      panel.style.transform = '';
+      return;
+    }
+    var widthMode = root.getAttribute('data-mega-width') || 'shell';
+    var shell = document.querySelector('.site-shell') || document.querySelector('body.site-boxed .site-header') || root.closest('.header-nav-wrap') || root;
+    if (widthMode === 'shell') {
+      // CSS handles shell mode; clear inline overrides
+      panel.style.left = '';
+      panel.style.right = '';
+      panel.style.width = '';
+      panel.style.maxWidth = '';
+      panel.style.transform = '';
+      return;
+    }
+    // item mode: clamp within shell bounds
+    panel.style.left = '';
+    panel.style.right = '0px';
+    panel.style.transform = 'none';
+    var pr = panel.getBoundingClientRect();
+    var sr = shell.getBoundingClientRect();
+    if (!pr.width || !sr.width) return;
+    var shift = 0;
+    if (pr.left < sr.left) shift = sr.left - pr.left;
+    if (pr.right + shift > sr.right) shift = sr.right - pr.right;
+    if (Math.abs(shift) > 1) {
+      panel.style.right = (-shift) + 'px';
+    }
+    var maxW = Math.max(240, sr.width - 8);
+    if (pr.width > maxW) {
+      panel.style.maxWidth = maxW + 'px';
+      panel.style.width = maxW + 'px';
+    }
+  }
+
   function openItem(root, item, trigger) {
     clearTimeout(item._megaCloseTimer);
     closeAll(root, item);
     item.classList.add('is-open');
     if (trigger) trigger.setAttribute('aria-expanded', 'true');
+    var panel = item.querySelector('[data-mega-panel]');
+    if (panel) {
+      requestAnimationFrame(function () { containPanel(root, item, panel); });
+    }
   }
 
   function scheduleClose(item, trigger, delay) {

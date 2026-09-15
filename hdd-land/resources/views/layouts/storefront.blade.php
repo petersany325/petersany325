@@ -19,8 +19,8 @@
     <title>@yield('title', \App\Models\Setting::getValue('shop_name', config('app.name', 'فروشگاه'))) </title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=79">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=57">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=80">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=58">
     <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=20">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=5">
     <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=23">
@@ -194,7 +194,7 @@
     }
 @endphp
 @include('storefront.footer-modern')
-<script src="{{ asset('js/mega-menu.js') }}?v=44" defer></script>
+<script src="{{ asset('js/mega-menu.js') }}?v=45" defer></script>
 @php
   try {
     $scBase = base_path('plugins/SmartChat');

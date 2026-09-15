@@ -1580,3 +1580,15 @@ body.site-boxed .mega-panel,
 body.site-boxed .mega-panel.mega-panel--graphic{
   z-index:140 !important;
 }
+
+/* HL MEGA CONTAIN IN SHELL */
+@media (min-width:961px){
+  body.site-boxed .hl-navrow .header-nav-wrap{position:relative}
+  body.site-boxed .mega-nav-pro.mega-contain .mega-item.has-mega,
+  body.site-boxed .mega-nav-pro.mega-contain .mega-item.is-mega-root{position:static}
+  body.site-boxed .mega-nav-pro.mega-contain .mega-panel.is-mega-panel,
+  body.site-boxed .mega-nav-pro.mega-contain .mega-panel.mega-panel--graphic{
+    left:0!important;right:0!important;width:100%!important;max-width:100%!important;
+    min-width:0!important;transform:none!important;box-sizing:border-box
+  }
+}

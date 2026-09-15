@@ -547,8 +547,9 @@
 /* ===== English-style graphic mega (rail + banner stage) ===== */
 .mega-panel.mega-panel--graphic,
 .mega-panel.is-mega-panel.mega-panel--graphic{
-  min-width:min(920px,96vw) !important;
-  max-width:min(1100px,96vw);
+  min-width:0 !important;
+  max-width:min(1100px,100%);
+  width:auto;
   padding:0 !important;
   overflow:hidden;
   background:#f3f5f8 !important;
@@ -760,3 +761,80 @@ body.site-boxed .mega-panel.is-dropdown{
     border-top:1px solid #e5e7eb;
   }
 }
+
+/* ===== MEGA CONTAIN + GRAPHIC TYPE (admin-driven) ===== */
+.mega-nav-pro,
+.mega-nav-pro .mega-trigger,
+.mega-nav-pro .mega-panel{
+  font-family:var(--mega-font,"Estedad","Estedad Variable",Vazirmatn,Tahoma,sans-serif);
+  -webkit-font-smoothing:antialiased;
+}
+.mega-nav-pro .mega-trigger{
+  font-size:var(--mega-nav-fs,.75rem) !important;
+  font-weight:700;
+  letter-spacing:-.01em;
+  line-height:1.25;
+}
+.mega-nav-pro .mega-panel,
+.mega-nav-pro .mega-en,
+.mega-nav-pro .mega-en-cat,
+.mega-nav-pro .mega-en-pane__title,
+.mega-nav-pro .mega-en-pane__desc,
+.mega-nav-pro .mega-en-list a,
+.mega-nav-pro .mega-link,
+.mega-nav-pro .mega-en-cta{
+  font-size:var(--mega-panel-fs,.75rem);
+}
+.mega-nav-pro .mega-en-pane__title{font-size:calc(var(--mega-panel-fs,.75rem) + .2rem);font-weight:800}
+.mega-nav-pro .mega-en-pane__eyebrow{font-size:calc(var(--mega-panel-fs,.75rem) - .05rem)}
+.mega-nav-pro .mega-en-banner__copy strong{font-size:calc(var(--mega-panel-fs,.75rem) + .05rem)}
+.mega-nav-pro .mega-en-banner__copy span{font-size:calc(var(--mega-panel-fs,.75rem) - .08rem)}
+
+/* Graphic panels must not force > shell width */
+.mega-panel.mega-panel--graphic,
+.mega-panel.is-mega-panel.mega-panel--graphic{
+  min-width:0 !important;
+  max-width:100%;
+  width:auto;
+  box-sizing:border-box;
+}
+
+@media (min-width:961px){
+  /* Position relative to nav wrap so panels stay in the boxed frame */
+  body.site-boxed .hl-navrow .header-nav-wrap,
+  body.site-boxed .hl-navrow #headerNavWrap{
+    position:relative !important;
+  }
+  .mega-nav-pro.mega-contain.mega-width-shell .mega-item.has-mega,
+  .mega-nav-pro.mega-contain.mega-width-shell .mega-item.is-mega-root{
+    position:static;
+  }
+  .mega-nav-pro.mega-contain.mega-width-shell .mega-panel.is-mega-panel,
+  .mega-nav-pro.mega-contain.mega-width-shell .mega-panel.mega-panel--graphic,
+  body.site-boxed .mega-nav-pro.mega-contain .mega-panel.is-mega-panel,
+  body.site-boxed .mega-nav-pro.mega-contain .mega-panel.mega-panel--graphic{
+    left:0 !important;
+    right:0 !important;
+    width:100% !important;
+    max-width:100% !important;
+    min-width:0 !important;
+    transform:none !important;
+    box-sizing:border-box;
+  }
+  body.site-boxed .site-shell,
+  body.site-boxed .site-header,
+  body.site-boxed .hl-navrow{
+    overflow:visible !important;
+  }
+}
+
+.mega-en{
+  min-height:280px;
+  font-size:var(--mega-panel-fs,.75rem);
+}
+.mega-en-cat{
+  font-size:inherit;
+  padding:.55rem .5rem;
+  font-weight:700;
+}
+.mega-en-pane__title{text-transform:none}

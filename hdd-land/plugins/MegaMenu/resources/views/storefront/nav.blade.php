@@ -36,11 +36,25 @@
   $panelColGap = max(4, min(48, (int) ($mm['panel_col_gap'] ?? 16)));
   $panelRowGap = max(4, min(48, (int) ($mm['panel_row_gap'] ?? 12)));
   $panelPadding = max(8, min(48, (int) ($mm['panel_padding'] ?? 16)));
+  $panelContain = !isset($mm['panel_contain']) || !empty($mm['panel_contain']);
+  $panelWidthMode = in_array(($mm['panel_width_mode'] ?? 'shell'), ['shell', 'item'], true) ? ($mm['panel_width_mode'] ?? 'shell') : 'shell';
+  $fontFamily = trim((string) ($mm['font_family'] ?? 'Estedad'));
+  $navFontSize = max(11, min(16, (int) ($mm['nav_font_size'] ?? 12)));
+  $panelFontSize = max(11, min(15, (int) ($mm['panel_font_size'] ?? 12)));
+  $fontStack = $fontFamily !== ''
+    ? "'{$fontFamily}', Vazirmatn, Tahoma, sans-serif"
+    : 'Vazirmatn, Tahoma, sans-serif';
 @endphp
 @if($menuTree->count())
-<nav class="nav mega-nav mega-nav-pro nav-align-{{ $navAlign }} style-{{ $navStyle }} dd-{{ $ddSize }} panel-fx-{{ $panelFx }} panel-bg-{{ $panelBg }} layout-{{ $panelLayout }}"
-     data-mega-nav dir="rtl"
-     style="--mega-accent:{{ $accent }};--mega-gap-brand:{{ $gapBrand }}px;--mega-nav-gap:{{ $navItemGap }}px;--mega-layout-cols:{{ $panelCols }};--mega-cols:{{ $panelCols }};--mega-col-gap:{{ $panelColGap }}px;--mega-row-gap:{{ $panelRowGap }}px;--mega-panel-pad:{{ $panelPadding }}px">
+@if($fontFamily !== '' && ! in_array($fontFamily, ['Tahoma', 'Arial'], true))
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0/dist/font-face.css">
+@endif
+<nav class="nav mega-nav mega-nav-pro nav-align-{{ $navAlign }} style-{{ $navStyle }} dd-{{ $ddSize }} panel-fx-{{ $panelFx }} panel-bg-{{ $panelBg }} layout-{{ $panelLayout }} {{ $panelContain ? 'mega-contain' : '' }} mega-width-{{ $panelWidthMode }}"
+     data-mega-nav
+     data-mega-contain="{{ $panelContain ? '1' : '0' }}"
+     data-mega-width="{{ $panelWidthMode }}"
+     dir="rtl"
+     style="--mega-accent:{{ $accent }};--mega-gap-brand:{{ $gapBrand }}px;--mega-nav-gap:{{ $navItemGap }}px;--mega-layout-cols:{{ $panelCols }};--mega-cols:{{ $panelCols }};--mega-col-gap:{{ $panelColGap }}px;--mega-row-gap:{{ $panelRowGap }}px;--mega-panel-pad:{{ $panelPadding }}px;--mega-font:{{ $fontStack }};--mega-nav-fs:{{ $navFontSize }}px;--mega-panel-fs:{{ $panelFontSize }}px">
   @foreach($menuTree as $item)
     @php
       $hasPanel = $item->is_mega || $item->activeChildren->count() || ($item->form_type ?? 'none') !== 'none' || $item->show_search;

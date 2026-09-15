@@ -333,6 +333,44 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
         </div>
       </div>
 
+      <div class="mm-sec-title" style="color:#fff;font-size:.92rem;margin:1rem 0 .45rem">کادر سایت + فونت گرافیکی</div>
+      <p class="mm-hint" style="margin:0 0 .55rem">پنل مگا داخل کادر سفید سایت بماند و از فونت ریز استاندارد استفاده شود.</p>
+      <div class="mm-grid4">
+        <div class="mm-field">
+          <span>عرض پنل مگا</span>
+          <select name="panel_width_mode" id="mm_panel_width_mode">
+            @foreach(\Plugins\MegaMenu\Plugin::panelWidthModes() as $k=>$lab)
+              <option value="{{ $k }}" @selected(($s['panel_width_mode']??'shell')===$k)>{{ $lab }}</option>
+            @endforeach
+          </select>
+        </div>
+        <div class="mm-field">
+          <span>فونت گرافیکی منو</span>
+          <select name="font_family" id="mm_font_family">
+            @foreach(\Plugins\MegaMenu\Plugin::fonts() as $k=>$lab)
+              <option value="{{ $k }}" @selected(($s['font_family']??'Estedad')===$k)>{{ $lab }}</option>
+            @endforeach
+          </select>
+        </div>
+        <div class="mm-field">
+          <span id="mm-nav-fs-lab">اندازه فونت نوار: {{ $s['nav_font_size'] ?? 12 }}px</span>
+          <input type="range" name="nav_font_size" id="mm_nav_font_size" min="11" max="16" value="{{ $s['nav_font_size'] ?? 12 }}"
+                 oninput="document.getElementById('mm-nav-fs-lab').textContent='اندازه فونت نوار: '+this.value+'px'">
+        </div>
+        <div class="mm-field">
+          <span id="mm-panel-fs-lab">اندازه فونت پنل: {{ $s['panel_font_size'] ?? 12 }}px</span>
+          <input type="range" name="panel_font_size" id="mm_panel_font_size" min="11" max="15" value="{{ $s['panel_font_size'] ?? 12 }}"
+                 oninput="document.getElementById('mm-panel-fs-lab').textContent='اندازه فونت پنل: '+this.value+'px'">
+        </div>
+        <div class="mm-field" style="grid-column:1/-1">
+          <input type="hidden" name="panel_contain" value="0">
+          <label class="mm-check" style="display:flex;align-items:center;gap:.5rem;margin:0">
+            <input type="checkbox" name="panel_contain" value="1" @checked(!isset($s['panel_contain']) || !empty($s['panel_contain']))>
+            <span>پنل مگا از کادر سایت بیرون نزند (پیشنهادی)</span>
+          </label>
+        </div>
+      </div>
+
       <div class="mm-live-preview" id="mm-live-preview" dir="rtl">
         <div class="mm-live-preview__bar">
           <strong>پیش‌نمایش زنده</strong>
