@@ -466,7 +466,7 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
       <button type="button" class="btn btn-outline btn-sm" id="mm-expand-all">باز کردن همه</button>
       <button type="button" class="btn btn-outline btn-sm" id="mm-collapse-all">جمع کردن</button>
     </div>
-    <p class="mm-hint">آیتم را از دسته ⠿ بگیرید. برای زیرمنو کردن، روی یک آیتم نگه دارید تا قرمز شود و رها کنید (یا داخل خط‌چین زیر همان آیتم رها کنید).</p>
+    <p class="mm-hint">جابه‌جایی هم‌سطح: فقط درگ کنید. برای زیرمنو کردن: کلید <b>Alt</b> را نگه دارید و روی آیتم مقصد رها کنید. اگر درگ مشکل داشت، از لیست «منوی والد» در فرم کنار صفحه استفاده کنید.</p>
     <div id="mm-empty" class="mm-empty" style="display:none">هنوز آیتمی نیست. «منوی اصلی» را بزنید.</div>
     <ul id="mm-tree" class="mm-nest" data-parent=""></ul>
   </div>
@@ -485,7 +485,6 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
 
     <form id="mm-form" class="mm-form" autocomplete="off">
       <input type="hidden" name="id" id="f_id" value="">
-      <input type="hidden" name="parent_id" id="f_parent_id" value="">
       <input type="hidden" name="sort_order" id="f_sort_order" value="0">
 
       <div class="mm-pane on" data-pane="general">
@@ -497,6 +496,12 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
                 <option value="{{ $k }}">{{ $lab }}</option>
               @endforeach
             </select>
+          </label>
+          <label style="grid-column:1/-1">منوی والد (جایگزین درگ‌انددراپ)
+            <select name="parent_id" id="f_parent_id">
+              <option value="">— منوی اصلی (ریشه، بدون والد) —</option>
+            </select>
+            <small class="muted" style="display:block;margin-top:.25rem;font-weight:500">اگر درگ آیتم را زیر منوی اشتباه برد، از این لیست والد درست را انتخاب و ذخیره کنید.</small>
           </label>
           <label>آدرس / URL<input name="url" id="f_url" placeholder="/products"></label>
           <label>دسته محصول
@@ -790,6 +795,70 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
     return map;
   }
 
+  function collectDescendantIds(node, out){
+    out = out || new Set();
+    (node?.children || []).forEach(ch => {
+      out.add(+ch.id);
+      collectDescendantIds(ch, out);
+    });
+    return out;
+  }
+
+  function detachNode(nodes, id){
+    const list = nodes || [];
+    for (let i = 0; i < list.length; i++) {
+      if (+list[i].id === +id) {
+        const [removed] = list.splice(i, 1);
+        return removed;
+      }
+      const found = detachNode(list[i].children || [], id);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function reattachNode(node, parentId){
+    if (!node) return;
+    node.parent_id = parentId || null;
+    if (parentId) {
+      const p = findNode(tree, parentId);
+      if (p) {
+        p.children = p.children || [];
+        p.children.push(node);
+        return;
+      }
+    }
+    tree.push(node);
+  }
+
+  function fillParentOptions(currentId){
+    const sel = document.getElementById('f_parent_id');
+    if (!sel) return;
+    const blocked = new Set();
+    if (currentId) {
+      blocked.add(+currentId);
+      const cur = findNode(tree, currentId);
+      if (cur) collectDescendantIds(cur, blocked);
+    }
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— منوی اصلی (ریشه، بدون والد) —</option>';
+    function walk(nodes, depth){
+      (nodes || []).forEach(n => {
+        if (blocked.has(+n.id)) return;
+        const opt = document.createElement('option');
+        opt.value = String(n.id);
+        opt.textContent = (depth ? ('—'.repeat(depth) + ' ') : '') + (n.title || ('#' + n.id));
+        sel.appendChild(opt);
+        walk(n.children || [], depth + 1);
+      });
+    }
+    walk(tree, 0);
+    if (prev !== undefined && prev !== null) {
+      const want = String(prev || '');
+      if ([...sel.options].some(o => o.value === want)) sel.value = want;
+    }
+  }
+
   function defaults(){
     return {
       id: null, parent_id: null, title: 'آیتم جدید', type: 'link', url: '/',
@@ -810,6 +879,7 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
     const d = Object.assign(defaults(), item || {});
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
     const chk = (id, on) => { const el = document.getElementById(id); if (el) el.checked = !!on; };
+    fillParentOptions(d.id || null);
     set('f_id', d.id || '');
     set('f_parent_id', d.parent_id || '');
     set('f_sort_order', d.sort_order ?? 0);
@@ -1004,6 +1074,11 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
     });
   }
 
+  function wantNest(originalEvent){
+    // فقط با Alt یا Shift زیرمنو می‌شود — درگ معمولی فقط جابه‌جایی هم‌سطح / بین لیست‌ها
+    return !!(originalEvent && (originalEvent.altKey || originalEvent.shiftKey));
+  }
+
   function bindSortables(root){
     if (!window.Sortable) {
       toast('کتابخانه درگ‌اند‌دراپ لود نشد. صفحه را سخت‌رفرش کنید (Ctrl+F5).', true);
@@ -1022,7 +1097,7 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
         fallbackClass: 'sortable-fallback',
         swapThreshold: 0.65,
         invertSwap: true,
-        emptyInsertThreshold: 64,
+        emptyInsertThreshold: 12,
         bubbleScroll: true,
         scroll: true,
         scrollSensitivity: 60,
@@ -1042,7 +1117,23 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
         onMove(evt, originalEvent){
           if (nestDepth(evt.to) > 4) return false;
           clearNestHover();
-          // اگر موس روی ردیف یک آیتم است، هایلایت «زیرمجموعه شو»
+
+          // بدون Alt/Shift: اجازه نده آیتم ریشه وارد nest فرزند شود (مگر جابه‌جایی داخل همان nest)
+          const fromDepth = nestDepth(evt.from);
+          const toDepth = nestDepth(evt.to);
+          if (!wantNest(originalEvent) && toDepth > fromDepth && evt.to !== evt.from) {
+            // هنوز اجازه reorder داخل همان سطح یا بیرون کشیدن به ریشه را بده
+            if (evt.to.classList.contains('mm-nest') && evt.to !== root && fromDepth === 0) {
+              return false;
+            }
+          }
+
+          if (!wantNest(originalEvent)) {
+            if (evt.to) evt.to.classList.add('mm-drop-target');
+            return true;
+          }
+
+          // با Alt/Shift: هایلایت «زیرمجموعه شو»
           const clientX = originalEvent && (originalEvent.clientX ?? (originalEvent.touches && originalEvent.touches[0]?.clientX));
           const clientY = originalEvent && (originalEvent.clientY ?? (originalEvent.touches && originalEvent.touches[0]?.clientY));
           if (clientX != null && clientY != null) {
@@ -1052,18 +1143,10 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
             if (fallback) fallback.style.display = '';
             const li = under && under.closest ? under.closest('#mm-tree .mm-item') : null;
             if (li && li !== evt.dragged && !evt.dragged.contains(li)) {
-              const row = li.querySelector(':scope > .mm-row') || li.firstElementChild;
-              if (row) {
-                const rect = row.getBoundingClientRect();
-                // نیمه چپ ردیف (RTL: نزدیک‌تر به تورفتگی) = نود کودک
-                const midX = rect.left + rect.width * 0.45;
-                if (clientX <= midX || (clientY >= rect.top && clientY <= rect.bottom && clientX >= rect.left && clientX <= rect.right && (clientY - rect.top) > rect.height * 0.55)) {
-                  li.classList.add('mm-nest-hover');
-                  nestHoverLi = li;
-                  const nest = childNestOf(li);
-                  if (nest) nest.classList.add('mm-drop-target');
-                }
-              }
+              li.classList.add('mm-nest-hover');
+              nestHoverLi = li;
+              const nest = childNestOf(li);
+              if (nest) nest.classList.add('mm-drop-target');
             }
           }
           if (evt.to) evt.to.classList.add('mm-drop-target');
@@ -1075,9 +1158,10 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
         onEnd(evt){
           document.body.classList.remove('mm-dragging');
           dragLockUntil = Date.now() + 400;
-          // اگر روی یک آیتم hover کرده بودیم، به عنوان فرزند همان آیتم منتقل کن
+          // فقط اگر Alt/Shift نگه داشته شده بود، به nest والد هایلایت‌شده منتقل کن
           try {
-            if (nestHoverLi && evt && evt.item && nestHoverLi !== evt.item && !evt.item.contains(nestHoverLi)) {
+            const oe = evt && evt.originalEvent;
+            if (wantNest(oe) && nestHoverLi && evt && evt.item && nestHoverLi !== evt.item && !evt.item.contains(nestHoverLi)) {
               const targetNest = childNestOf(nestHoverLi);
               if (targetNest && nestDepth(targetNest) <= 4) {
                 targetNest.appendChild(evt.item);
@@ -1120,13 +1204,16 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
     try {
       await api(ROUTES.reorder, 'POST', payload);
       const map = flattenMap(tree);
-      function hydrate(nodes){
+      function hydrate(nodes, parentId){
         return nodes.map(n => {
           const base = map[n.id] || { id: n.id, title: '?', type: 'link', children: [] };
-          return Object.assign({}, base, { children: hydrate(n.children || []) });
+          return Object.assign({}, base, {
+            parent_id: parentId || null,
+            children: hydrate(n.children || [], n.id),
+          });
         });
       }
-      tree = hydrate(payload.tree);
+      tree = hydrate(payload.tree, null);
       toast('ترتیب/زیرمنو ذخیره شد');
     } catch (e) {
       toast(e.message || 'خطا در ذخیره ترتیب', true);
@@ -1263,10 +1350,18 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
     const id = document.getElementById('f_id').value;
     try {
       if (id) {
-        delete payload.parent_id; // سطح فقط با درگ‌اند‌دراپ عوض می‌شود
+        const before = findNode(tree, id);
+        const prevParent = before ? (before.parent_id || null) : null;
+        const nextParent = payload.parent_id || null;
         const data = await api(ROUTES.update + '/' + id, 'PUT', payload);
         const n = findNode(tree, id);
-        if (n) Object.assign(n, data.item, { children: n.children || [] });
+        if (n) Object.assign(n, data.item, { children: n.children || [], parent_id: nextParent });
+        if (+prevParent !== +nextParent && n) {
+          const moved = detachNode(tree, id) || n;
+          moved.children = n.children || moved.children || [];
+          Object.assign(moved, data.item, { children: moved.children, parent_id: nextParent });
+          reattachNode(moved, nextParent);
+        }
         selectedId = +id;
         toast(data.message || 'ذخیره شد');
       } else {
