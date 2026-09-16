@@ -137,14 +137,17 @@ function vbdl_req_is_staff($userinfo, $repo)
 	return false;
 }
 
-function vbdl_req_send_mail($to, $subject, $bodyText, $filename, $bytes, $fromEmail, $fromName)
+function vbdl_req_send_mail($to, $subject, $bodyText, $filename, $bytes, $fromEmail, $fromName, $token = '')
 {
 	$to = trim($to);
 	$subject = trim($subject);
 	if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL))
 	{
-		return 'Invalid destination email';
+		return array('error' => 'Invalid destination email');
 	}
+	$token = preg_replace('/[^A-Za-z0-9\-]/', '', (string)$token);
+	$uniq = function_exists('random_bytes') ? bin2hex(random_bytes(4)) : bin2hex(openssl_random_pseudo_bytes(4));
+	$messageId = '<' . ($token !== '' ? $token : ('VBDL-REQ-' . strtoupper($uniq))) . '.' . $uniq . '@hdd-land.com>';
 	$boundary = 'vbdl_req_' . md5(uniqid((string)mt_rand(), true));
 	$safeName = preg_replace('/[^\w.\-()+@]+/', '_', $filename);
 	if ($safeName === '')
@@ -155,6 +158,12 @@ function vbdl_req_send_mail($to, $subject, $bodyText, $filename, $bytes, $fromEm
 	$headers[] = 'MIME-Version: 1.0';
 	$headers[] = 'From: ' . sprintf('"%s" <%s>', addcslashes($fromName, '"'), $fromEmail);
 	$headers[] = 'Reply-To: ' . $fromEmail;
+	$headers[] = 'Message-ID: ' . $messageId;
+	if ($token !== '')
+	{
+		$headers[] = 'X-VBDL-Token: ' . $token;
+	}
+	$headers[] = 'X-VBDL-Kind: req';
 	$headers[] = 'Content-Type: multipart/mixed; boundary="' . $boundary . '"';
 	$headers[] = 'X-Mailer: HDD-LAND-VBDL-LicenseRequest';
 	$msg = '';
@@ -169,7 +178,11 @@ function vbdl_req_send_mail($to, $subject, $bodyText, $filename, $bytes, $fromEm
 	$msg .= chunk_split(base64_encode($bytes)) . "\r\n";
 	$msg .= '--' . $boundary . "--\r\n";
 	$ok = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $msg, implode("\r\n", $headers));
-	return $ok ? '' : 'mail() failed — check server mail configuration';
+	if (!$ok)
+	{
+		return array('error' => 'mail() failed — check server mail configuration');
+	}
+	return array('ok' => true, 'message_id' => $messageId, 'token' => $token);
 }
 
 if ($userid < 1)
@@ -289,20 +302,34 @@ if ($do === 'submit')
 	{
 		vbdl_req_fail($result['error'], 500);
 	}
-	$err = vbdl_req_send_mail(
+	$sent = vbdl_req_send_mail(
 		$result['to_email'],
 		$result['subject'],
 		$result['body'],
 		$result['filename'],
 		$result['bytes'],
 		'info@hdd-land.com',
-		'HDD LAND License Desk'
+		'HDD LAND License Desk',
+		isset($result['token']) ? $result['token'] : ''
 	);
-	if ($err !== '')
+	if (!empty($sent['error']))
 	{
-		vbdl_req_fail($err, 500);
+		vbdl_req_fail($sent['error'], 500);
+	}
+	if (!empty($result['token']))
+	{
+		$lr->storeOutboundMeta($result['token'], array(
+			'outbound_message_id' => isset($sent['message_id']) ? $sent['message_id'] : '',
+			'outbound_from' => 'info@hdd-land.com',
+			'outbound_to' => $result['to_email'],
+			'outbound_subject' => $result['subject'],
+			'outbound_kind' => 'req',
+			'outbound_sent_dateline' => time(),
+		));
 	}
 	unset($result['bytes'], $result['body']);
+	$result['message_id'] = isset($sent['message_id']) ? $sent['message_id'] : '';
+	$result['from_email'] = 'info@hdd-land.com';
 	echo json_encode($result);
 	exit;
 }

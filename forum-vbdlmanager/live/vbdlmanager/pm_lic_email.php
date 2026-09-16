@@ -592,13 +592,13 @@ function vbdl_pmlic_read_file_bytes(mysqli $m, $prefix, $filedataid, $filehash, 
 	return null;
 }
 
-function vbdl_pmlic_send_mail($to, $subject, $bodyText, $filename, $bytes, $fromEmail, $fromName, $replyTo = '')
+function vbdl_pmlic_send_mail($to, $subject, $bodyText, $filename, $bytes, $fromEmail, $fromName, $replyTo = '', $token = '', $kind = 'lic')
 {
 	$to = trim($to);
 	$subject = trim($subject);
 	if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL))
 	{
-		return 'Invalid destination email';
+		return array('error' => 'Invalid destination email');
 	}
 	if ($subject === '')
 	{
@@ -609,6 +609,14 @@ function vbdl_pmlic_send_mail($to, $subject, $bodyText, $filename, $bytes, $from
 	{
 		$replyTo = $fromEmail;
 	}
+	$token = preg_replace('/[^A-Za-z0-9\-]/', '', (string)$token);
+	$kind = preg_replace('/[^a-z0-9_\-]/i', '', (string)$kind);
+	if ($kind === '')
+	{
+		$kind = 'lic';
+	}
+	$uniq = function_exists('random_bytes') ? bin2hex(random_bytes(4)) : bin2hex(openssl_random_pseudo_bytes(4));
+	$messageId = '<' . ($token !== '' ? $token : ('VBDL-' . strtoupper($uniq))) . '.' . $uniq . '@hdd-land.com>';
 
 	$boundary = 'vbdl_' . md5(uniqid((string)mt_rand(), true));
 	$safeName = preg_replace('/[^\w.\-()+@]+/', '_', $filename);
@@ -622,6 +630,12 @@ function vbdl_pmlic_send_mail($to, $subject, $bodyText, $filename, $bytes, $from
 	$headers[] = 'MIME-Version: 1.0';
 	$headers[] = 'From: ' . sprintf('"%s" <%s>', addcslashes($fromName, '"'), $fromEmail);
 	$headers[] = 'Reply-To: ' . $replyTo;
+	$headers[] = 'Message-ID: ' . $messageId;
+	if ($token !== '')
+	{
+		$headers[] = 'X-VBDL-Token: ' . $token;
+	}
+	$headers[] = 'X-VBDL-Kind: ' . $kind;
 	$headers[] = 'Content-Type: multipart/mixed; boundary="' . $boundary . '"';
 	$headers[] = 'X-Mailer: HDD-LAND-VBDL-License';
 
@@ -640,9 +654,9 @@ function vbdl_pmlic_send_mail($to, $subject, $bodyText, $filename, $bytes, $from
 	$ok = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $msg, implode("\r\n", $headers));
 	if (!$ok)
 	{
-		return 'mail() failed — check server mail configuration';
+		return array('error' => 'mail() failed — check server mail configuration');
 	}
-	return '';
+	return array('ok' => true, 'message_id' => $messageId, 'token' => $token);
 }
 
 if ($userid < 1)
@@ -879,7 +893,7 @@ if ($do === 'vip_submit')
 	$body .= "The reply will be posted automatically back into the same Message Center ticket.\n";
 
 	$fromEmail = 'info@hdd-land.com';
-	$err = vbdl_pmlic_send_mail(
+	$sent = vbdl_pmlic_send_mail(
 		$to,
 		$subject,
 		$body,
@@ -887,12 +901,22 @@ if ($do === 'vip_submit')
 		$bytes,
 		$fromEmail,
 		'HDD LAND License Desk',
-		$fromEmail
+		$fromEmail,
+		$token,
+		'lic'
 	);
-	if ($err !== '')
+	if (!empty($sent['error']))
 	{
-		vbdl_pmlic_fail($err, 500);
+		vbdl_pmlic_fail($sent['error'], 500);
 	}
+	$lm->storeOutboundMeta($token, array(
+		'outbound_message_id' => isset($sent['message_id']) ? $sent['message_id'] : '',
+		'outbound_from' => $fromEmail,
+		'outbound_to' => $to,
+		'outbound_subject' => $subject,
+		'outbound_kind' => 'lic',
+		'outbound_sent_dateline' => time(),
+	));
 
 	$msgUrl = '/messagecenter/view/' . ($starterNode > 0 ? $starterNode : $messageNode);
 	echo json_encode(array(
@@ -903,6 +927,7 @@ if ($do === 'vip_submit')
 		'license_label' => $type['label'],
 		'token' => $token,
 		'from_email' => $fromEmail,
+		'message_id' => isset($sent['message_id']) ? $sent['message_id'] : '',
 		'message_nodeid' => $messageNode,
 		'message_url' => $msgUrl,
 		'customer_username' => $customer,

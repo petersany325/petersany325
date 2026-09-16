@@ -61,6 +61,100 @@ class vbdl_LicenseMail
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 		@$this->db->query($sql);
 		$this->migrateColumns();
+		$this->ensureSeenTable();
+	}
+
+	/**
+	 * Dedupe inbound RFC822 Message-IDs so the same reply is never applied twice.
+	 */
+	public function ensureSeenTable()
+	{
+		$sql = "CREATE TABLE IF NOT EXISTS {$this->prefix}vbdl_license_mail_seen (
+			message_id VARCHAR(255) NOT NULL,
+			token VARCHAR(64) NOT NULL DEFAULT '',
+			kind VARCHAR(32) NOT NULL DEFAULT '',
+			seen_dateline INT UNSIGNED NOT NULL DEFAULT 0,
+			PRIMARY KEY (message_id),
+			KEY token (token),
+			KEY seen_dateline (seen_dateline)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+		@$this->db->query($sql);
+	}
+
+	public function normalizeMessageId($messageId)
+	{
+		$id = trim((string)$messageId);
+		$id = trim($id, "<> \t\r\n");
+		$id = preg_replace('/\s+/', '', $id);
+		if (strlen($id) > 240)
+		{
+			$id = substr($id, 0, 240);
+		}
+		return $id;
+	}
+
+	public function hasSeenMessageId($messageId)
+	{
+		$id = $this->normalizeMessageId($messageId);
+		if ($id === '')
+		{
+			return false;
+		}
+		$esc = $this->db->real_escape_string($id);
+		$res = @$this->db->query(
+			'SELECT 1 FROM ' . $this->prefix . 'vbdl_license_mail_seen WHERE message_id=\'' . $esc . '\' LIMIT 1'
+		);
+		return ($res && $res->fetch_row());
+	}
+
+	public function markSeenMessageId($messageId, $token = '', $kind = '')
+	{
+		$id = $this->normalizeMessageId($messageId);
+		if ($id === '')
+		{
+			return false;
+		}
+		$esc = $this->db->real_escape_string($id);
+		$tokenEsc = $this->db->real_escape_string(preg_replace('/[^A-Za-z0-9\-]/', '', (string)$token));
+		$kindEsc = $this->db->real_escape_string(preg_replace('/[^a-z0-9_\-]/i', '', (string)$kind));
+		$now = time();
+		return (bool)@$this->db->query(
+			'INSERT IGNORE INTO ' . $this->prefix . 'vbdl_license_mail_seen (message_id, token, kind, seen_dateline) VALUES ('
+			. '\'' . $esc . '\',\'' . $tokenEsc . '\',\'' . $kindEsc . '\',' . $now . ')'
+		);
+	}
+
+	/**
+	 * Persist outbound Message-ID / tracking headers into ticket meta JSON.
+	 */
+	public function storeOutboundMeta($token, array $extra)
+	{
+		$token = preg_replace('/[^A-Za-z0-9\-]/', '', (string)$token);
+		if ($token === '')
+		{
+			return false;
+		}
+		$esc = $this->db->real_escape_string($token);
+		$res = $this->db->query(
+			'SELECT meta FROM ' . $this->prefix . 'vbdl_license_mail WHERE token=\'' . $esc . '\' LIMIT 1'
+		);
+		$meta = array();
+		if ($res && ($row = $res->fetch_assoc()) && !empty($row['meta']))
+		{
+			$decoded = json_decode((string)$row['meta'], true);
+			if (is_array($decoded))
+			{
+				$meta = $decoded;
+			}
+		}
+		foreach ($extra as $k => $v)
+		{
+			$meta[$k] = $v;
+		}
+		$json = $this->db->real_escape_string(json_encode($meta));
+		return (bool)$this->db->query(
+			'UPDATE ' . $this->prefix . 'vbdl_license_mail SET meta=\'' . $json . '\' WHERE token=\'' . $esc . '\''
+		);
 	}
 
 	protected function migrateColumns()
@@ -776,10 +870,20 @@ class vbdl_LicenseMail
 
 	/**
 	 * Match a reply subject (e.g. Re: Subject license SeHGST imager) to a still-sent ticket.
+	 * Only returns a row when exactly ONE open "sent" ticket matches — never guess among same-day duplicates.
 	 */
 	public function findSentBySubject($subject)
 	{
 		$subject = trim(preg_replace('/^(?:Re|Fw|Fwd|AW|SV|Antw)\s*:\s*/i', '', (string)$subject));
+		// Prefer explicit token in subject when present (high confidence).
+		if (preg_match('/\b(VBDL-LIC-[A-Z0-9\-]+)\b/i', $subject, $tm))
+		{
+			$byTok = $this->findByToken(strtoupper($tm[1]));
+			if ($byTok && !empty($byTok['status']) && $byTok['status'] === 'sent')
+			{
+				return $byTok;
+			}
+		}
 		$subject = trim(preg_replace('/\s*\[VBDL-LIC-[A-Z0-9\-]+\]\s*/i', ' ', $subject));
 		$subject = trim(preg_replace('/\s+/', ' ', $subject));
 		if ($subject === '')
@@ -807,11 +911,20 @@ class vbdl_LicenseMail
 			'SELECT * FROM ' . $this->prefix . 'vbdl_license_mail '
 			. 'WHERE status=\'sent\' AND ('
 			. 'subject=\'' . $esc . '\' OR subject LIKE \'' . $esc . ' [%\' OR subject LIKE \'%' . $esc . '%\''
-			. ') ORDER BY id DESC LIMIT 1'
+			. ') ORDER BY id DESC LIMIT 3'
 		);
-		if ($res && ($row = $res->fetch_assoc()))
+		$rows = array();
+		if ($res)
 		{
-			return $row;
+			while ($row = $res->fetch_assoc())
+			{
+				$rows[] = $row;
+			}
+		}
+		// Ambiguous: multiple open same-product tickets — refuse subject fallback.
+		if (count($rows) === 1)
+		{
+			return $rows[0];
 		}
 		return null;
 	}

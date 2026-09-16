@@ -152,7 +152,7 @@ if ($maildir !== '' && is_dir($maildir) && @is_readable($maildir))
 	usort($files, function ($a, $b) {
 		return filemtime($b) - filemtime($a);
 	});
-	$files = array_slice($files, 0, 80);
+	$files = array_slice($files, 0, 120);
 	foreach ($files as $path)
 	{
 		$raw = @file_get_contents($path);
@@ -283,9 +283,12 @@ exit;
 
 /**
  * Resolve a license reply RFC822 into ticket updates.
- * - Tries every VBDL-LIC token (not only the first / already-returned one)
- * - Falls back to product subject matching when token is missing
- * - Imports .src or posts plain-text rejection
+ * Matching priority (high → low):
+ *   1) X-VBDL-Token header
+ *   2) Token in Subject
+ *   3) Token in body / quoted mail
+ *   4) Unique open subject fallback (exactly one still-sent ticket)
+ * Also ignores own outbound (From info@), auto-acks, and already-seen Message-IDs.
  */
 function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 {
@@ -298,7 +301,6 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 	if (preg_match('/^Subject:\s*(.+)$/mi', $raw, $sm))
 	{
 		$subject = trim(preg_replace('/\s+/', ' ', $sm[1]));
-		// Decode simple MIME encoded-words
 		if (function_exists('iconv_mime_decode'))
 		{
 			$decoded = @iconv_mime_decode($subject, 0, 'UTF-8');
@@ -309,8 +311,88 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 		}
 	}
 
-	// Purchase-request path first
-	$reqToken = $lr->extractTokenFromText($raw);
+	$from = '';
+	if (preg_match('/^From:\s*(.+)$/mi', $raw, $fm))
+	{
+		$from = trim($fm[1]);
+	}
+	// Never process our own outbound copies that land in INBOX / cur.
+	if ($from !== '' && preg_match('/info@hdd-land\.com/i', $from))
+	{
+		$skipped[] = array('reason' => 'own_outbound_from_info', 'subject' => $subject, 'from' => $from);
+		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
+	}
+
+	$messageId = '';
+	if (preg_match('/^Message-ID:\s*(.+)$/mi', $raw, $mmid))
+	{
+		$messageId = trim($mmid[1]);
+	}
+	if ($messageId !== '' && $lm->hasSeenMessageId($messageId))
+	{
+		$skipped[] = array('reason' => 'already_seen_message_id', 'message_id' => $messageId, 'subject' => $subject);
+		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
+	}
+
+	$headerToken = '';
+	if (preg_match('/^X-VBDL-Token:\s*([A-Za-z0-9\-]+)/mi', $raw, $htm))
+	{
+		$headerToken = strtoupper(trim($htm[1]));
+	}
+	// In-Reply-To / References often echo our outbound Message-ID which embeds the token.
+	if ($headerToken === '')
+	{
+		$threadHeads = '';
+		if (preg_match('/^In-Reply-To:\s*(.+)$/mi', $raw, $irm))
+		{
+			$threadHeads .= ' ' . $irm[1];
+		}
+		if (preg_match('/^References:\s*([\s\S]*?)(?=\r?\n(?![ \t])|\z)/mi', $raw, $rfm))
+		{
+			$threadHeads .= ' ' . $rfm[1];
+		}
+		if (preg_match('/\b(VBDL-(?:LIC|REQ)-[A-Z0-9\-]+)\b/i', $threadHeads, $ttm))
+		{
+			$headerToken = strtoupper($ttm[1]);
+		}
+	}
+	$headerKind = '';
+	if (preg_match('/^X-VBDL-Kind:\s*([A-Za-z0-9_\-]+)/mi', $raw, $hkm))
+	{
+		$headerKind = strtolower(trim($hkm[1]));
+	}
+
+	// Purchase-request path first (header token / subject / body).
+	$reqTokens = array();
+	if ($headerToken !== '' && strpos($headerToken, 'VBDL-REQ-') === 0)
+	{
+		$reqTokens[] = $headerToken;
+	}
+	foreach ($lr->extractAllTokensFromText($subject) as $t)
+	{
+		if (!in_array($t, $reqTokens, true))
+		{
+			$reqTokens[] = $t;
+		}
+	}
+	foreach ($lr->extractAllTokensFromText($raw) as $t)
+	{
+		if (!in_array($t, $reqTokens, true))
+		{
+			$reqTokens[] = $t;
+		}
+	}
+	$reqToken = $reqTokens ? $reqTokens[0] : '';
+	if ($reqToken === '' && ($headerKind === 'req' || stripos($subject, 'License Request') !== false))
+	{
+		$bySubReq = $lr->findSentBySubject($subject !== '' ? $subject : $raw);
+		if ($bySubReq)
+		{
+			$reqToken = $bySubReq['token'];
+			$skipped[] = array('token' => $reqToken, 'reason' => 'matched_req_by_subject', 'subject' => $subject);
+		}
+	}
+
 	if ($reqToken !== '')
 	{
 		$rec = $lr->findByToken($reqToken);
@@ -327,7 +409,17 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 				}
 				else
 				{
-					$processed[] = array('token' => $reqToken, 'file' => $parsedTxt['filename'], 'kind' => 'license_txt', 'via' => $via);
+					$processed[] = array(
+						'token' => $reqToken,
+						'file' => $parsedTxt['filename'],
+						'kind' => 'license_txt',
+						'via' => $via,
+						'match' => ($headerToken !== '' ? 'x_vbdl_token' : 'token'),
+					);
+					if ($messageId !== '')
+					{
+						$lm->markSeenMessageId($messageId, $reqToken, 'license_txt');
+					}
 				}
 			}
 			else
@@ -350,6 +442,10 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 							'text_node' => isset($result['text_nodeid']) ? $result['text_nodeid'] : 0,
 							'via' => $via,
 						);
+						if ($messageId !== '')
+						{
+							$lm->markSeenMessageId($messageId, $reqToken, 'rejected_text');
+						}
 					}
 				}
 				else
@@ -359,12 +455,21 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 						'reason' => ($textBody === '' ? 'no_txt_and_no_text' : 'auto_ack_ignored'),
 						'subject' => $subject,
 					);
+					// Mark auto-acks seen so they do not keep reappearing.
+					if ($messageId !== '' && $textBody !== '' && vbdl_inbox_is_auto_ack($textBody))
+					{
+						$lm->markSeenMessageId($messageId, $reqToken, 'auto_ack');
+					}
 				}
 			}
 		}
 		elseif ($rec)
 		{
 			$skipped[] = array('token' => $reqToken, 'reason' => 'already_' . $rec['status']);
+			if ($messageId !== '')
+			{
+				$lm->markSeenMessageId($messageId, $reqToken, 'already_' . $rec['status']);
+			}
 		}
 		else
 		{
@@ -373,8 +478,29 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
 	}
 
-	$tokens = $lm->extractAllTokensFromText($raw);
+	// Active License SeDiv (.src) path
+	$tokens = array();
+	if ($headerToken !== '' && strpos($headerToken, 'VBDL-LIC-') === 0)
+	{
+		$tokens[] = $headerToken;
+	}
+	foreach ($lm->extractAllTokensFromText($subject) as $t)
+	{
+		if (!in_array($t, $tokens, true))
+		{
+			$tokens[] = $t;
+		}
+	}
+	foreach ($lm->extractAllTokensFromText($raw) as $t)
+	{
+		if (!in_array($t, $tokens, true))
+		{
+			$tokens[] = $t;
+		}
+	}
+
 	$candidates = array();
+	$matchHow = 'token';
 	foreach ($tokens as $token)
 	{
 		$rec = $lm->findByToken($token);
@@ -390,15 +516,33 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 		}
 		$candidates[] = $rec;
 	}
+	if ($headerToken !== '' && strpos($headerToken, 'VBDL-LIC-') === 0)
+	{
+		$matchHow = 'x_vbdl_token';
+	}
+	elseif ($tokens && preg_match('/\bVBDL-LIC-/i', $subject))
+	{
+		$matchHow = 'subject_token';
+	}
 
-	// Subject fallback when reply has .src but no usable open token
+	// Subject fallback when reply has .src but no usable open token — unique open ticket only.
 	if (!$candidates)
 	{
 		$bySub = $lm->findSentBySubject($subject !== '' ? $subject : $raw);
 		if ($bySub)
 		{
 			$candidates[] = $bySub;
+			$matchHow = 'subject_unique';
 			$skipped[] = array('token' => $bySub['token'], 'reason' => 'matched_by_subject', 'subject' => $subject);
+		}
+		else
+		{
+			// Detect ambiguity for diagnostics
+			$cleanSub = trim(preg_replace('/^(?:Re|Fw|Fwd|AW|SV|Antw)\s*:\s*/i', '', $subject));
+			if ($cleanSub !== '' && preg_match('/Subject license /i', $cleanSub))
+			{
+				$skipped[] = array('reason' => 'subject_ambiguous_or_none', 'subject' => $subject);
+			}
 		}
 	}
 
@@ -415,7 +559,7 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 	$parsed = vbdl_inbox_extract_src_from_rfc822($raw);
 	if (!empty($parsed['bytes']))
 	{
-		// One .src attachment → bind to the first still-sent candidate (usually the reply's own token).
+		// One .src attachment → bind to the first still-sent candidate (header/subject token preferred).
 		$rec = $candidates[0];
 		$result = $lm->returnSrcToTicket($rec, $parsed['filename'], $parsed['bytes'], (int)$rec['staff_userid']);
 		if (!empty($result['error']))
@@ -430,18 +574,32 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 				'node' => $result['attach_nodeid'],
 				'via' => $via,
 				'kind' => 'src',
-				'match' => !empty($tokens) ? 'token' : 'subject',
+				'match' => $matchHow,
 			);
+			if ($messageId !== '')
+			{
+				$lm->markSeenMessageId($messageId, $rec['token'], 'src');
+			}
 		}
 		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
 	}
 
-	// No .src — plain-text rejection for the primary candidate only
+	// No .src — plain-text rejection for the primary candidate only (never auto-acks).
 	$rec = $candidates[0];
 	$text = vbdl_inbox_extract_text_from_rfc822($raw);
+	$text = vbdl_inbox_normalize_reply_charset($text);
 	if ($text === '')
 	{
 		$errors[] = array('token' => $rec['token'], 'error' => 'No .src attachment and no usable reply text');
+		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
+	}
+	if (vbdl_inbox_is_auto_ack($text))
+	{
+		$skipped[] = array('token' => $rec['token'], 'reason' => 'auto_ack_ignored', 'subject' => $subject);
+		if ($messageId !== '')
+		{
+			$lm->markSeenMessageId($messageId, $rec['token'], 'auto_ack');
+		}
 		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
 	}
 	$result = $lm->rejectReplyToTicket($rec, $text, (int)$rec['staff_userid']);
@@ -456,7 +614,12 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 			'kind' => 'rejected',
 			'text_node' => isset($result['text_nodeid']) ? $result['text_nodeid'] : 0,
 			'via' => $via,
+			'match' => $matchHow,
 		);
+		if ($messageId !== '')
+		{
+			$lm->markSeenMessageId($messageId, $rec['token'], 'rejected');
+		}
 	}
 	return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
 }
@@ -474,6 +637,14 @@ function vbdl_inbox_is_auto_ack($text)
 	}
 	if (preg_match('/thank you for your email,\s*i will reply as soon as possible/i', $t)
 		&& strlen($t) < 500)
+	{
+		return true;
+	}
+	// Common mailbox / vacation / delivery acks that must never hard-reject a ticket.
+	if (strlen($t) < 600 && preg_match(
+		'/(out of office|automatic reply|auto[- ]?reply|delivery status notification|mail delivery subsystem|undeliverable|i received your (mail|message|email))/i',
+		$t
+	))
 	{
 		return true;
 	}
@@ -573,10 +744,25 @@ function vbdl_inbox_part_filename($part)
 
 function vbdl_inbox_scan_maildir($dir, array &$files, $depth = 0)
 {
-	if ($depth > 4 || !is_dir($dir) || !@is_readable($dir))
+	if ($depth > 3 || !is_dir($dir) || !@is_readable($dir))
 	{
 		return;
 	}
+	// Mailbox root: only INBOX cur/ + new/. Never scan .Sent / .Drafts / Archive
+	// (those contain our own outbound copies and can false-match tickets).
+	if ($depth === 0)
+	{
+		foreach (array('cur', 'new') as $sub)
+		{
+			$path = rtrim($dir, '/') . '/' . $sub;
+			if (is_dir($path) && @is_readable($path))
+			{
+				vbdl_inbox_scan_maildir($path, $files, 1);
+			}
+		}
+		return;
+	}
+
 	$ents = @scandir($dir);
 	if (!$ents)
 	{
@@ -588,7 +774,7 @@ function vbdl_inbox_scan_maildir($dir, array &$files, $depth = 0)
 		{
 			continue;
 		}
-		// Skip dovecot index files
+		// Skip dovecot index files and nested folders (cur/new are flat).
 		if (strpos($e, 'dovecot') === 0 || $e === 'subscriptions' || $e === 'maildirfolder')
 		{
 			continue;
@@ -597,13 +783,19 @@ function vbdl_inbox_scan_maildir($dir, array &$files, $depth = 0)
 		{
 			continue;
 		}
+		// Explicitly ignore IMAP special folders if somehow nested.
+		if ($e[0] === '.' || strcasecmp($e, 'Sent') === 0 || strcasecmp($e, 'Drafts') === 0
+			|| strcasecmp($e, 'Trash') === 0 || strcasecmp($e, 'Archive') === 0
+			|| strcasecmp($e, 'Junk') === 0 || strcasecmp($e, 'Spam') === 0)
+		{
+			continue;
+		}
 		$path = $dir . '/' . $e;
 		if (is_dir($path))
 		{
-			// Prefer cur/new; still recurse into Archive lightly
-			vbdl_inbox_scan_maildir($path, $files, $depth + 1);
+			continue;
 		}
-		elseif (is_file($path) && @is_readable($path) && filesize($path) > 200)
+		if (is_file($path) && @is_readable($path) && filesize($path) > 200)
 		{
 			$files[] = $path;
 		}

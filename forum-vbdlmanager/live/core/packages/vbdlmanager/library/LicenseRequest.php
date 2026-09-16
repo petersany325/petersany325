@@ -140,11 +140,104 @@ class vbdl_LicenseRequest
 
 	public function extractTokenFromText($text)
 	{
-		if (preg_match('/\b(VBDL-REQ-[A-Z0-9\-]+)\b/i', (string)$text, $m))
+		$all = $this->extractAllTokensFromText($text);
+		return $all ? $all[0] : '';
+	}
+
+	/**
+	 * All VBDL-REQ tokens in a message (order preserved, unique).
+	 */
+	public function extractAllTokensFromText($text)
+	{
+		$out = array();
+		if (!preg_match_all('/\b(VBDL-REQ-[A-Z0-9\-]+)\b/i', (string)$text, $mm))
 		{
-			return strtoupper($m[1]);
+			return $out;
 		}
-		return '';
+		foreach ($mm[1] as $tok)
+		{
+			$tok = strtoupper($tok);
+			if (!in_array($tok, $out, true))
+			{
+				$out[] = $tok;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Subject fallback for License Request replies — only when exactly one open "sent" request matches.
+	 */
+	public function findSentBySubject($subject)
+	{
+		$subject = trim(preg_replace('/^(?:Re|Fw|Fwd|AW|SV|Antw)\s*:\s*/i', '', (string)$subject));
+		if (preg_match('/\b(VBDL-REQ-[A-Z0-9\-]+)\b/i', $subject, $tm))
+		{
+			$byTok = $this->findByToken(strtoupper($tm[1]));
+			if ($byTok && !empty($byTok['status']) && $byTok['status'] === 'sent')
+			{
+				return $byTok;
+			}
+		}
+		$subject = trim(preg_replace('/\s*\[VBDL-REQ-[A-Z0-9\-]+\]\s*/i', ' ', $subject));
+		$subject = trim(preg_replace('/\s+/', ' ', $subject));
+		$base = $this->requestSubject();
+		if ($subject === '' || stripos($subject, $base) === false)
+		{
+			return null;
+		}
+		$esc = $this->db->real_escape_string($base);
+		$res = $this->db->query(
+			'SELECT * FROM ' . $this->prefix . 'vbdl_license_request '
+			. 'WHERE status=\'sent\' AND (subject=\'' . $esc . '\' OR subject LIKE \'' . $esc . ' [%\' OR subject LIKE \'%' . $esc . '%\') '
+			. 'ORDER BY id DESC LIMIT 3'
+		);
+		$rows = array();
+		if ($res)
+		{
+			while ($row = $res->fetch_assoc())
+			{
+				$rows[] = $row;
+			}
+		}
+		if (count($rows) === 1)
+		{
+			return $rows[0];
+		}
+		return null;
+	}
+
+	/**
+	 * Persist outbound Message-ID / tracking headers into request meta JSON.
+	 */
+	public function storeOutboundMeta($token, array $extra)
+	{
+		$token = preg_replace('/[^A-Za-z0-9\-]/', '', (string)$token);
+		if ($token === '')
+		{
+			return false;
+		}
+		$esc = $this->db->real_escape_string($token);
+		$res = $this->db->query(
+			'SELECT meta FROM ' . $this->prefix . 'vbdl_license_request WHERE token=\'' . $esc . '\' LIMIT 1'
+		);
+		$meta = array();
+		if ($res && ($row = $res->fetch_assoc()) && !empty($row['meta']))
+		{
+			$decoded = json_decode((string)$row['meta'], true);
+			if (is_array($decoded))
+			{
+				$meta = $decoded;
+			}
+		}
+		foreach ($extra as $k => $v)
+		{
+			$meta[$k] = $v;
+		}
+		$json = $this->db->real_escape_string(json_encode($meta));
+		return (bool)$this->db->query(
+			'UPDATE ' . $this->prefix . 'vbdl_license_request SET meta=\'' . $json . '\' WHERE token=\'' . $esc . '\''
+		);
 	}
 
 	public function findByToken($token)
