@@ -122,7 +122,7 @@ void start_clone(AppState& a, bool confirmed) {
         return;
     }
     a.running = true;
-    a.status_message = "Cloning…";
+                a.status_message = "Cloning...";
     a.worker = std::make_unique<std::thread>([&a]() {
         a.last_result = a.engine.run();
         a.running = false;
@@ -234,11 +234,11 @@ int run_gui(int argc, char** argv) {
 
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("File")) {
-                if (ImGui::MenuItem("Load progress log…")) {
+                if (ImGui::MenuItem("Load progress log...")) {
                     auto f = native_open_file("Open progress log", "Log\0*.log;*.progress.log\0All\0*.*\0");
                     if (!f.empty()) std::snprintf(a.log_path, sizeof(a.log_path), "%s", f.c_str());
                 }
-                if (ImGui::MenuItem("Choose log path…")) {
+                if (ImGui::MenuItem("Choose log path...")) {
                     auto f = native_save_file("Save progress log", "Log\0*.log\0All\0*.*\0");
                     if (!f.empty()) std::snprintf(a.log_path, sizeof(a.log_path), "%s", f.c_str());
                 }
@@ -258,16 +258,17 @@ int run_gui(int argc, char** argv) {
             ImGui::EndMenuBar();
         }
 
-        ImGui::TextUnformatted("Sector-level clone / recovery of failing disks — not a file copy utility.");
+        ImGui::TextUnformatted("Sector-level clone / recovery of failing disks -- not a file copy utility.");
         ImGui::Separator();
         draw_disk_table(a);
 
         ImGui::Separator();
-        if (ImGui::BeginTable("pick", 2, ImGuiTableFlags_BordersInnerV)) {
+        if (ImGui::BeginTable("pick", 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchSame)) {
             ImGui::TableNextColumn();
-            ImGui::Text("Source (read only)");
+            ImGui::TextUnformatted("Source (read only)");
+            ImGui::SetNextItemWidth(-1);
             ImGui::InputText("##src", a.source_path, sizeof(a.source_path));
-            if (ImGui::Button("Source image file…")) {
+            if (ImGui::Button("Source image file...")) {
                 auto f = native_open_file("Source image", "Images\0*.img;*.dd;*.bin\0All\0*.*\0");
                 if (!f.empty()) {
                     std::snprintf(a.source_path, sizeof(a.source_path), "%s", f.c_str());
@@ -276,9 +277,10 @@ int run_gui(int argc, char** argv) {
                 }
             }
             ImGui::TableNextColumn();
-            ImGui::Text("Destination (WRITES HERE)");
+            ImGui::TextUnformatted("Destination (WRITES HERE)");
+            ImGui::SetNextItemWidth(-1);
             ImGui::InputText("##dst", a.dest_path, sizeof(a.dest_path));
-            if (ImGui::Button("Destination image file…")) {
+            if (ImGui::Button("Destination image file...")) {
                 auto f = native_save_file("Destination image", "Images\0*.img;*.dd\0All\0*.*\0");
                 if (!f.empty()) {
                     std::snprintf(a.dest_path, sizeof(a.dest_path), "%s", f.c_str());
@@ -289,13 +291,16 @@ int run_gui(int argc, char** argv) {
             ImGui::EndTable();
         }
 
-        ImGui::InputText("Progress log (resume)", a.log_path, sizeof(a.log_path));
+        ImGui::TextUnformatted("Progress log (resume)");
+        ImGui::SetNextItemWidth(-1);
+        ImGui::InputText("##log", a.log_path, sizeof(a.log_path));
 
         const char* modes[] = {"Auto-detect", "Generic (block I/O)", "ATA pass-through",
                                 "SCSI pass-through"};
-        ImGui::Combo("I/O mode", &a.io_mode, modes, IM_ARRAYSIZE(modes));
+        ImGui::TextUnformatted("I/O mode");
+        ImGui::SetNextItemWidth(280);
+        ImGui::Combo("##iomode", &a.io_mode, modes, IM_ARRAYSIZE(modes));
 
-        ImGui::BeginGroup();
         bool p1 = !a.settings.no_phase1, p2 = !a.settings.no_phase2, p3 = !a.settings.no_phase3,
              p4 = !a.settings.no_phase4, tr = !a.settings.no_trim, sc = !a.settings.no_scrape;
         if (ImGui::Checkbox("Phase 1", &p1)) a.settings.no_phase1 = !p1;
@@ -309,18 +314,29 @@ int run_gui(int argc, char** argv) {
         if (ImGui::Checkbox("Trim", &tr)) a.settings.no_trim = !tr;
         ImGui::SameLine();
         if (ImGui::Checkbox("Scrape", &sc)) a.settings.no_scrape = !sc;
-        ImGui::Checkbox("Skip on error (phases 1–2)", &a.settings.skip_enabled);
+        ImGui::Checkbox("Skip on error (phases 1-2)", &a.settings.skip_enabled);
         ImGui::SameLine();
         ImGui::Checkbox("Skip fast", &a.settings.skip_fast);
-        ImGui::InputInt("Cluster (sectors)", &a.settings.cluster_size);
-        ImGui::SameLine();
-        ImGui::InputInt("Retries", &a.settings.retries);
-        int skip_kb = static_cast<int>((a.settings.min_skip_sectors * a.settings.sector_size) / 1024);
-        if (ImGui::InputInt("Min skip (KiB)", &skip_kb)) {
-            if (skip_kb < 64) skip_kb = 64;
-            a.settings.min_skip_sectors = (static_cast<int64_t>(skip_kb) * 1024) / a.settings.sector_size;
+
+        if (ImGui::BeginTable("settings", 3, ImGuiTableFlags_SizingStretchProp)) {
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Cluster (sectors)");
+            ImGui::SetNextItemWidth(-1);
+            ImGui::InputInt("##cluster", &a.settings.cluster_size);
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Retries");
+            ImGui::SetNextItemWidth(-1);
+            ImGui::InputInt("##retries", &a.settings.retries);
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted("Min skip (KiB)");
+            ImGui::SetNextItemWidth(-1);
+            int skip_kb = static_cast<int>((a.settings.min_skip_sectors * a.settings.sector_size) / 1024);
+            if (ImGui::InputInt("##skipkb", &skip_kb)) {
+                if (skip_kb < 64) skip_kb = 64;
+                a.settings.min_skip_sectors = (static_cast<int64_t>(skip_kb) * 1024) / a.settings.sector_size;
+            }
+            ImGui::EndTable();
         }
-        ImGui::EndGroup();
 
         auto prog = a.engine.progress();
         draw_map(a.engine.map(), 28.0f);
