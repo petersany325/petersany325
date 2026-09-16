@@ -114,7 +114,8 @@ class vbdlportal_Hooks
 	}
 
 	/**
-	 * Message Center only: staff "Send to email" UI for .lic ticket attachments.
+	 * Message Center: inject "active license sediv" sidebar for SeDiv VIP.
+	 * License send logic runs only on /vbdlmanager/sediv_active_license.php — not on normal tickets.
 	 */
 	private static function injectPmLicEmailUi($html)
 	{
@@ -124,12 +125,11 @@ class vbdlportal_Hooks
 		{
 			return $html;
 		}
-		if (stripos($html, 'pm-lic-email.js') !== false)
+		if (stripos($html, 'sediv-mc-nav.js') !== false)
 		{
 			return $html;
 		}
-		$assets = '<link rel="stylesheet" href="/vbdlmanager/assets/pm-lic-email.css?v=20260916e" />'
-			. '<script defer src="/vbdlmanager/assets/pm-lic-email.js?v=20260916e"></script>';
+		$assets = '<script defer src="/vbdlmanager/assets/sediv-mc-nav.js?v=20260916f"></script>';
 		if (stripos($html, '</body>') !== false)
 		{
 			return preg_replace('/<\/body>/i', $assets . '</body>', $html, 1);

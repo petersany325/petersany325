@@ -145,9 +145,9 @@ echo '<div class="vbdl-form-row"><label>WhatsApp button label</label><input clas
 
 echo '<hr style="border:0;border-top:1px solid #d9e2ec;margin:20px 0" />';
 echo '<h3 style="margin:0 0 10px">SeDiv VIP license → email + .src return</h3>';
-echo '<p class="vbdl-muted">For SeDiv VIP customers only: staff clicks <strong>Send to email</strong> beside a <code>.lic</code> file. '
-	. 'Mail goes locked to the SeDiv inbox with subject <code>Active SeDiv 2026</code> plus a tracking token. '
-	. 'When the activated <code>.src</code> comes back (IMAP poll or manual upload), it is posted into the same Message Center ticket.</p>';
+echo '<p class="vbdl-muted">SeDiv VIP members use Message Center → <strong>active license sediv</strong> to upload <code>.lic</code>. '
+	. 'Mail is sent from the host as <code>info@hdd-land.com</code> to the SeDiv inbox with subject <code>Active SeDiv 2026</code> plus a tracking token. '
+	. 'When the activated <code>.src</code> comes back (IMAP poll or manual upload on that page), it is posted into the same Message Center ticket.</p>';
 echo '<div class="vbdl-form-row"><label>SeDiv license inbox (To)</label><input class="vbdl-input" name="license_sediv_email" value="'
 	. vbdl_h(isset($s['license_sediv_email']) ? $s['license_sediv_email'] : 'sedivlic@list.ru')
 	. '" placeholder="sedivlic@list.ru" /></div>';

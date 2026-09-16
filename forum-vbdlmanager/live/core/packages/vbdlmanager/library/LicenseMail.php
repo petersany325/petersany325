@@ -106,6 +106,133 @@ class vbdl_LicenseMail
 		return $this->acl->isVip($u);
 	}
 
+	public function listForUser($userid, $limit = 30)
+	{
+		$userid = (int)$userid;
+		$limit = max(1, min(100, (int)$limit));
+		$out = array();
+		$res = $this->db->query(
+			'SELECT token, message_nodeid, starter_nodeid, lic_filename, status, return_filename, return_filedataid, '
+			. 'sent_dateline, returned_dateline FROM ' . $this->prefix . 'vbdl_license_mail '
+			. 'WHERE customer_userid=' . $userid . ' ORDER BY id DESC LIMIT ' . $limit
+		);
+		if ($res)
+		{
+			while ($row = $res->fetch_assoc())
+			{
+				$out[] = $row;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Create a Message Center starter ticket for a VIP self-service license request.
+	 * Returns message_nodeid / starter_nodeid (same for starter).
+	 */
+	public function createVipLicenseTicket($userid, $username, $token, $licFilename)
+	{
+		$userid = (int)$userid;
+		$username = (string)$username;
+		$token = (string)$token;
+		$licFilename = (string)$licFilename;
+		$now = time();
+		$p = $this->prefix;
+
+		// Prefer vB private message API when available.
+		try
+		{
+			if (class_exists('vB_Api', false))
+			{
+				$api = vB_Api::instanceInternal('content_privatemessage');
+				if ($api && method_exists($api, 'add'))
+				{
+					$title = 'Active License SeDiv — ' . $token;
+					$text = "Active License SeDiv request created.\n"
+						. "Tracking token: {$token}\n"
+						. "License file: {$licFilename}\n\n"
+						. "When activation returns, the .src file will be attached in this ticket.";
+					$data = array(
+						'title' => $title,
+						'rawtext' => $text,
+						'msgtext' => $text,
+						'sentto' => array($userid),
+						'recipients' => $username,
+						'parentid' => 0,
+						'userid' => $userid,
+					);
+					$result = $api->add($data, array('bypassPerms' => true));
+					$nodeid = 0;
+					if (is_array($result))
+					{
+						if (!empty($result['nodeid']))
+						{
+							$nodeid = (int)$result['nodeid'];
+						}
+						elseif (!empty($result[0]))
+						{
+							$nodeid = (int)$result[0];
+						}
+					}
+					elseif (is_numeric($result))
+					{
+						$nodeid = (int)$result;
+					}
+					if ($nodeid > 0)
+					{
+						$starter = $nodeid;
+						$res = $this->db->query('SELECT starter FROM ' . $p . 'node WHERE nodeid=' . $nodeid . ' LIMIT 1');
+						if ($res && ($row = $res->fetch_assoc()) && !empty($row['starter']))
+						{
+							$starter = (int)$row['starter'];
+						}
+						return array('message_nodeid' => $nodeid, 'starter_nodeid' => $starter);
+					}
+				}
+			}
+		}
+		catch (Throwable $e)
+		{
+		}
+
+		// SQL fallback: create a visible text node owned by the VIP user (MC-compatible best effort).
+		$textType = $this->contentTypeId('Text');
+		if ($textType < 1)
+		{
+			return array('error' => 'Cannot create Message Center ticket (contenttype missing)');
+		}
+		$title = 'Active License SeDiv — ' . $token;
+		$rawtext = "Active License SeDiv request created.\nTracking token: {$token}\nLicense file: {$licFilename}\n";
+		$nodeid = $this->insertNode(array(
+			'userid' => $userid,
+			'authorname' => $username !== '' ? $username : $this->usernameById($userid),
+			'parentid' => 0,
+			'starter' => 0,
+			'contenttypeid' => $textType,
+			'title' => $title,
+			'createdate' => $now,
+			'lastcontent' => $now,
+			'lastcontentid' => 0,
+			'lastauthorid' => $userid,
+			'publishdate' => $now,
+			'showpublished' => 1,
+			'showopen' => 1,
+			'approved' => 1,
+			'showapproved' => 1,
+		));
+		if ($nodeid < 1)
+		{
+			return array('error' => 'Failed creating Message Center ticket');
+		}
+		$this->db->query('UPDATE ' . $p . 'node SET starter=' . $nodeid . ', lastcontentid=' . $nodeid . ' WHERE nodeid=' . $nodeid);
+		$this->db->query(
+			'INSERT INTO ' . $p . 'text (nodeid, rawtext, htmltitle) VALUES ('
+			. $nodeid . ',\'' . $this->db->real_escape_string($rawtext) . '\',\''
+			. $this->db->real_escape_string($title) . '\')'
+		);
+		return array('message_nodeid' => $nodeid, 'starter_nodeid' => $nodeid);
+	}
+
 	public function makeToken()
 	{
 		if (function_exists('random_bytes'))
