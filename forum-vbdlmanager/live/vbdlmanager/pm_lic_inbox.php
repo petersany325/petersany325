@@ -551,7 +551,19 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 		$hasSrc = (bool)preg_match('/\.src/i', $raw);
 		if ($hasSrc)
 		{
-			$skipped[] = array('reason' => 'src_without_matching_ticket', 'subject' => $subject);
+			$alreadyHandled = false;
+			foreach ($skipped as $sk)
+			{
+				if (!empty($sk['reason']) && strpos((string)$sk['reason'], 'already_') === 0)
+				{
+					$alreadyHandled = true;
+					break;
+				}
+			}
+			$skipped[] = array(
+				'reason' => $alreadyHandled ? 'src_already_handled' : 'src_without_matching_ticket',
+				'subject' => $subject,
+			);
 		}
 		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
 	}
