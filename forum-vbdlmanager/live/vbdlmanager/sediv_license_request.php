@@ -1,6 +1,6 @@
 <?php
 /**
- * License purchase request desk (all signed-in users).
+ * License Request desk (all signed-in users).
  * Upload payment receipt → MC ticket + email → .txt license return → admin adds VIP SeDiv.
  */
 define('THIS_SCRIPT', 'vbdl_sediv_license_request');
@@ -85,7 +85,7 @@ foreach (explode(',', $rawStaff) as $g)
 
 $username = !empty($userinfo['username']) ? (string)$userinfo['username'] : '';
 $email = !empty($userinfo['email']) ? (string)$userinfo['email'] : '';
-$requestTo = 'info@hdd-land.com';
+$requestTo = 'sedivlic@list.ru';
 try
 {
 	$m = ($database instanceof mysqli) ? $database : null;
@@ -100,12 +100,12 @@ catch (Throwable $e)
 {
 }
 ?><!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>درخواست لایسنس — HDD LAND</title>
-<link rel="stylesheet" href="/vbdlmanager/assets/sediv-license-request.css?v=20260916a" />
+<title>License Request — HDD LAND</title>
+<link rel="stylesheet" href="/vbdlmanager/assets/sediv-license-request.css?v=20260916c" />
 </head>
 <body class="vbdl-req-page">
 <header class="vbdl-req-top">
@@ -116,27 +116,27 @@ catch (Throwable $e)
 	</nav>
 </header>
 <main class="vbdl-req-main">
-	<p class="vbdl-req-kicker">Message Center · License purchase</p>
-	<h1>درخواست لایسنس</h1>
-	<p class="vbdl-req-lead">عکس فیش واریز را بفرستید. تیکت Message Center باز می‌شود و فیش به ایمیل اکتیو ارسال می‌گردد. وقتی لایسنس به‌صورت فایل <code>.txt</code> برگردد، داخل همین تیکت قرار می‌گیرد و وضعیت «تأیید شده» می‌شود. سپس ادمین شما را به VIP SeDiv اضافه می‌کند تا بتوانید از active license sediv استفاده کنید.</p>
+	<p class="vbdl-req-kicker">Message Center · License Request</p>
+	<h1>License Request</h1>
+	<p class="vbdl-req-lead">Upload your payment receipt. A Message Center ticket opens and the receipt is emailed to the license inbox. When the license comes back as a <code>.txt</code> file, it is posted into the same ticket and marked approved. An admin can then add you to VIP SeDiv so you can use Active License SeDiv.</p>
 
 	<section class="vbdl-req-card" id="vbdl-req-upload">
-		<h2>ارسال فیش پرداخت</h2>
+		<h2>Send payment receipt</h2>
 		<div class="vbdl-req-meta">
 			<div><span>Username</span><strong><?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?></strong></div>
 			<div><span>Email</span><strong><?php echo htmlspecialchars($email !== '' ? $email : '(not set)', ENT_QUOTES, 'UTF-8'); ?></strong></div>
 			<div><span>To</span><strong><?php echo htmlspecialchars($requestTo, ENT_QUOTES, 'UTF-8'); ?></strong></div>
-			<div><span>Subject</span><strong>License purchase request</strong></div>
+			<div><span>Subject</span><strong>License Request</strong></div>
 		</div>
 		<label class="vbdl-req-file">
-			<span>عکس فیش / رسید (jpg, png, webp, pdf)</span>
+			<span>Payment receipt (jpg, png, webp, pdf)</span>
 			<input type="file" id="vbdl-req-receipt" accept="image/*,.pdf,application/pdf" />
 		</label>
 		<label class="vbdl-req-note">
-			<span>توضیح (اختیاری)</span>
-			<textarea id="vbdl-req-note" rows="2" placeholder="مثلاً مبلغ و تاریخ واریز"></textarea>
+			<span>Note (optional)</span>
+			<textarea id="vbdl-req-note" rows="2" placeholder="optional note"></textarea>
 		</label>
-		<button type="button" class="vbdl-req-btn" id="vbdl-req-submit">ارسال درخواست</button>
+		<button type="button" class="vbdl-req-btn" id="vbdl-req-submit">Send request</button>
 		<p class="vbdl-req-msg" id="vbdl-req-msg" role="status"></p>
 		<p class="vbdl-req-ticketlink" id="vbdl-req-ticketlink" hidden></p>
 	</section>
@@ -144,17 +144,17 @@ catch (Throwable $e)
 	<?php if ($canStaff): ?>
 	<section class="vbdl-req-card" id="vbdl-req-admin">
 		<div class="vbdl-req-row">
-			<h2>گزارش ادمین — افزودن به VIP SeDiv</h2>
+			<h2>Admin report — Add to VIP SeDiv</h2>
 			<button type="button" class="vbdl-req-linkbtn" id="vbdl-req-admin-refresh">Refresh</button>
 		</div>
-		<p class="vbdl-req-muted">درخواست‌های تأییدشده (لایسنس `.txt` دریافت شده). کاربر را به گروه VIP SeDiv اضافه کنید.</p>
+		<p class="vbdl-req-muted">Approved requests (license <code>.txt</code> received). Add the user to the VIP SeDiv group.</p>
 		<div id="vbdl-req-admin-list" class="vbdl-req-list">Loading…</div>
 	</section>
 	<?php endif; ?>
 
 	<section class="vbdl-req-card">
 		<div class="vbdl-req-row">
-			<h2><?php echo $canStaff ? 'همه درخواست‌ها' : 'درخواست‌های شما'; ?></h2>
+			<h2><?php echo $canStaff ? 'All requests' : 'Your requests'; ?></h2>
 			<button type="button" class="vbdl-req-linkbtn" id="vbdl-req-refresh">Refresh</button>
 		</div>
 		<div id="vbdl-req-list" class="vbdl-req-list">Loading…</div>
@@ -167,6 +167,6 @@ window.__VBDL_REQ_PAGE__ = {
   email: <?php echo json_encode($email); ?>
 };
 </script>
-<script defer src="/vbdlmanager/assets/sediv-license-request.js?v=20260916a"></script>
+<script defer src="/vbdlmanager/assets/sediv-license-request.js?v=20260916c"></script>
 </body>
 </html>

@@ -279,6 +279,8 @@ class vbdl_Db
 			('license_sediv_subject', 'Active SeDiv 2026'),
 			('license_src_retention_days', '7'),
 			('license_vip_only', '1'),
+			('license_request_email', 'sedivlic@list.ru'),
+			('license_request_subject', 'License Request'),
 			('license_inbox_key', ''),
 			('license_imap_host', ''),
 			('license_imap_port', '993'),

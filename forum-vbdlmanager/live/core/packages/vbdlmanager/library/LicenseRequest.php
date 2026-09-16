@@ -1,6 +1,6 @@
 <?php
 /**
- * License purchase request: payment receipt → activator email → .txt license return → admin VIP add.
+ * License Request: payment receipt → sedivlic email → .txt license return → admin VIP add.
  */
 class vbdl_LicenseRequest
 {
@@ -59,18 +59,46 @@ class vbdl_LicenseRequest
 			KEY status (status)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 		@$this->db->query($sql);
+		$this->migrateRequestSettings();
+	}
+
+	/**
+	 * Ensure English label + sedivlic To email (migrate older install defaults).
+	 */
+	protected function migrateRequestSettings()
+	{
+		$oldEmails = array('', 'info@hdd-land.com');
+		$curEmail = trim((string)$this->repo->getSetting('license_request_email', ''));
+		if (in_array($curEmail, $oldEmails, true))
+		{
+			$this->repo->setSetting('license_request_email', 'sedivlic@list.ru');
+		}
+		$oldSubjects = array('', 'License purchase request');
+		$curSubject = trim((string)$this->repo->getSetting('license_request_subject', ''));
+		if (in_array($curSubject, $oldSubjects, true))
+		{
+			$this->repo->setSetting('license_request_subject', 'License Request');
+		}
 	}
 
 	public function requestEmail()
 	{
-		$e = trim((string)$this->repo->getSetting('license_request_email', 'info@hdd-land.com'));
-		return $e !== '' ? $e : 'info@hdd-land.com';
+		$e = trim((string)$this->repo->getSetting('license_request_email', 'sedivlic@list.ru'));
+		if ($e === '' || $e === 'info@hdd-land.com')
+		{
+			return 'sedivlic@list.ru';
+		}
+		return $e;
 	}
 
 	public function requestSubject()
 	{
-		$s = trim((string)$this->repo->getSetting('license_request_subject', 'License purchase request'));
-		return $s !== '' ? $s : 'License purchase request';
+		$s = trim((string)$this->repo->getSetting('license_request_subject', 'License Request'));
+		if ($s === '' || $s === 'License purchase request')
+		{
+			return 'License Request';
+		}
+		return $s;
 	}
 
 	public function supportUserid()
@@ -219,7 +247,7 @@ class vbdl_LicenseRequest
 			$username,
 			$token,
 			$filename,
-			'License purchase request',
+			'License Request',
 			$this->requestSubject()
 		);
 		if (!empty($ticket['error']))
@@ -258,7 +286,7 @@ class vbdl_LicenseRequest
 			return array('error' => 'DB insert failed: ' . $this->db->error);
 		}
 
-		$body = "License purchase request\n";
+		$body = "License Request\n";
 		$body .= "========================\n\n";
 		$body .= "Tracking token: {$token}\n";
 		$body .= "(Keep this token in your reply subject or body)\n\n";
@@ -336,11 +364,9 @@ class vbdl_LicenseRequest
 		}
 
 		$replyText = trim(preg_replace('/\r\n?/', "\n", (string)$replyText));
-		$notice = "تأیید شد ✅\n"
-			. "لایسنس شما دریافت و داخل همین تیکت قرار گرفت.\n"
-			. "می‌توانید از فایل لایسنس (.txt) برای ساخت/اکتیو در منوی active license sediv استفاده کنید.\n\n"
-			. "Approved — your license file is attached to this ticket.\n"
-			. "Use it with Active License SeDiv after an admin adds you to VIP SeDiv.";
+		$notice = "Approved\n"
+			. "Your license file has been received and attached to this ticket.\n"
+			. "You can use the .txt license with Active License SeDiv after an admin adds you to VIP SeDiv.";
 		if ($replyText !== '')
 		{
 			$notice .= "\n\n--- Activator message ---\n" . substr($replyText, 0, 8000);

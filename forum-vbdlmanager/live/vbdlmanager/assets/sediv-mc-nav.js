@@ -1,6 +1,6 @@
 /**
  * Message Center sidebar:
- * - "درخواست لایسنس" for all signed-in users (above active license)
+ * - "License Request" for all signed-in users (above active license)
  * - "active license sediv" for SeDiv VIP / staff
  */
 (function () {
@@ -66,7 +66,7 @@
         req.innerHTML = ''
           + '<a class="folder-link vbdl-sediv-req-link" href="' + (cfg.license_request_url || REQUEST_PAGE) + '">'
           + '<span class="vbdl-sediv-req-ico" aria-hidden="true"></span>'
-          + '<span class="vbdl-sediv-req-label">درخواست لایسنس</span>'
+          + '<span class="vbdl-sediv-req-label">License Request</span>'
           + '</a>';
         insertAfter(req, after);
       }

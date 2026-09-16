@@ -1,5 +1,5 @@
 /**
- * License purchase request desk — all users + admin VIP add queue.
+ * License Request desk — all users + admin VIP add queue.
  */
 (function () {
   var page = window.__VBDL_REQ_PAGE__ || {};
@@ -18,10 +18,10 @@
   }
 
   function statusLabel(st) {
-    if (st === 'approved') return 'تأیید شده';
-    if (st === 'vip_added') return 'VIP اضافه شد';
-    if (st === 'rejected') return 'رد شده';
-    if (st === 'error') return 'خطا';
+    if (st === 'approved') return 'approved';
+    if (st === 'vip_added') return 'VIP added';
+    if (st === 'rejected') return 'rejected';
+    if (st === 'error') return 'error';
     return st || 'sent';
   }
 
@@ -39,7 +39,7 @@
         }
         var rows = data.items || [];
         if (!rows.length) {
-          listEl.textContent = 'هنوز درخواستی ثبت نشده.';
+          listEl.textContent = 'No requests yet.';
           return;
         }
         listEl.innerHTML = '';
@@ -91,7 +91,7 @@
         }
         var rows = data.items || [];
         if (!rows.length) {
-          adminList.textContent = 'هیچ درخواست تأییدشدهٔ در انتظار VIP نیست.';
+          adminList.textContent = 'No approved requests waiting for VIP add.';
           return;
         }
         adminList.innerHTML = '';
@@ -158,17 +158,17 @@
   function submitReceipt() {
     var input = document.getElementById('vbdl-req-receipt');
     if (!input.files || !input.files[0]) {
-      msg.textContent = 'فیش پرداخت را انتخاب کنید';
+      msg.textContent = 'Choose a payment receipt file';
       return;
     }
     var name = String(input.files[0].name || '');
     if (!/\.(jpe?g|png|gif|webp|pdf)$/i.test(name)) {
-      msg.textContent = 'فقط تصویر یا PDF پذیرفته می‌شود';
+      msg.textContent = 'Only image or PDF files are accepted';
       return;
     }
     var btn = document.getElementById('vbdl-req-submit');
     btn.disabled = true;
-    msg.textContent = 'در حال ارسال…';
+    msg.textContent = 'Sending…';
     if (ticketLink) { ticketLink.hidden = true; ticketLink.innerHTML = ''; }
     var fd = new FormData();
     fd.append('do', 'submit');
@@ -179,10 +179,10 @@
       .then(function (data) {
         btn.disabled = false;
         if (!data.ok) {
-          msg.textContent = data.error || 'ارسال ناموفق';
+          msg.textContent = data.error || 'Send failed';
           return;
         }
-        msg.textContent = 'ارسال شد. تیکت باز شد و فیش به ایمیل اکتیو رفت.';
+        msg.textContent = 'Sent. Ticket opened and receipt emailed to the license inbox.';
         input.value = '';
         if (ticketLink && data.message_url) {
           ticketLink.hidden = false;
@@ -190,7 +190,7 @@
           var a = document.createElement('a');
           a.className = 'vbdl-req-dl';
           a.href = data.message_url;
-          a.textContent = 'باز کردن تیکت';
+          a.textContent = 'Open your ticket';
           ticketLink.appendChild(a);
         }
         loadList();

@@ -1,6 +1,6 @@
 <?php
 /**
- * License purchase request API (all users).
+ * License Request API (all users).
  *
  * do=config | list | submit | admin_pending | admin_add_vip
  */

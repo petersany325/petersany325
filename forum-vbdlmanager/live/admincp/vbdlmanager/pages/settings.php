@@ -163,15 +163,15 @@ echo '<div class="vbdl-form-row"><label>Legacy subject fallback</label><input cl
 echo '<div class="vbdl-form-row"><label>.src retention days</label><input class="vbdl-input" name="license_src_retention_days" value="'
 	. vbdl_h(isset($s['license_src_retention_days']) ? $s['license_src_retention_days'] : '7')
 	. '" placeholder="7" /><p class="vbdl-muted">After this many days, purge returned <code>.src</code> bytes; keep filename + download report.</p></div>';
-echo '<h4 style="margin:16px 0 8px">License purchase request (all users)</h4>';
-echo '<p class="vbdl-muted">Message Center → <strong>درخواست لایسنس</strong>: user uploads payment receipt photo. '
-	. 'Mail goes to the activator inbox; reply with a <code>.txt</code> license into the same ticket (approved). '
+echo '<h4 style="margin:16px 0 8px">License Request (all users)</h4>';
+echo '<p class="vbdl-muted">Message Center → <strong>License Request</strong>: user uploads payment receipt photo. '
+	. 'Mail goes to <code>sedivlic@list.ru</code>; reply with a <code>.txt</code> license into the same ticket (approved). '
 	. 'Admin then uses the report queue to add the user to VIP SeDiv.</p>';
-echo '<div class="vbdl-form-row"><label>Purchase request To email</label><input class="vbdl-input" name="license_request_email" value="'
-	. vbdl_h(isset($s['license_request_email']) ? $s['license_request_email'] : 'info@hdd-land.com')
-	. '" placeholder="info@hdd-land.com" /></div>';
-echo '<div class="vbdl-form-row"><label>Purchase request subject</label><input class="vbdl-input" name="license_request_subject" value="'
-	. vbdl_h(isset($s['license_request_subject']) ? $s['license_request_subject'] : 'License purchase request')
+echo '<div class="vbdl-form-row"><label>License Request To email</label><input class="vbdl-input" name="license_request_email" value="'
+	. vbdl_h(isset($s['license_request_email']) ? $s['license_request_email'] : 'sedivlic@list.ru')
+	. '" placeholder="sedivlic@list.ru" /></div>';
+echo '<div class="vbdl-form-row"><label>License Request subject</label><input class="vbdl-input" name="license_request_subject" value="'
+	. vbdl_h(isset($s['license_request_subject']) ? $s['license_request_subject'] : 'License Request')
 	. '" /></div>';
 echo '<div class="vbdl-form-row"><label>VIP SeDiv usergroup to assign</label><input class="vbdl-input" name="license_request_vip_usergroupid" value="'
 	. vbdl_h(isset($s['license_request_vip_usergroupid']) ? $s['license_request_vip_usergroupid'] : '')
