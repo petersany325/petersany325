@@ -345,7 +345,18 @@ function vbdl_pmlic_resolve_attachment($filedataid, $attachmentid, $nodeid, $nee
 		return $out;
 	}
 
-	$bytes = vbdl_pmlic_read_file_bytes($m, $p, (int)$row['filedataid'], (string)$row['filehash']);
+	$fdUserid = !empty($row['fd_userid']) ? (int)$row['fd_userid'] : 0;
+	if ($fdUserid < 1 && !empty($row['attach_userid']))
+	{
+		$fdUserid = (int)$row['attach_userid'];
+	}
+	$bytes = vbdl_pmlic_read_file_bytes(
+		$m,
+		$p,
+		(int)$row['filedataid'],
+		(string)$row['filehash'],
+		$fdUserid
+	);
 	if ($bytes === null || $bytes === '')
 	{
 		return array('error' => 'Could not read license file contents');
@@ -355,48 +366,147 @@ function vbdl_pmlic_resolve_attachment($filedataid, $attachmentid, $nodeid, $nee
 	return $out;
 }
 
-function vbdl_pmlic_read_file_bytes(mysqli $m, $prefix, $filedataid, $filehash)
+/**
+ * Resolve attachment storage roots used by this vB install.
+ * @return string[]
+ */
+function vbdl_pmlic_attach_roots()
 {
-	$filedataid = (int)$filedataid;
-	// 1) Blob column (common on smaller forums)
-	$res = $m->query('SELECT filedata FROM ' . $prefix . 'filedata WHERE filedataid=' . $filedataid . ' LIMIT 1');
-	if ($res && ($row = $res->fetch_assoc()) && isset($row['filedata']) && $row['filedata'] !== '' && $row['filedata'] !== null)
+	global $vbulletin;
+	$roots = array();
+	$forumRoot = realpath(dirname(__FILE__) . '/..');
+	if ($forumRoot === false)
 	{
-		return $row['filedata'];
+		$forumRoot = dirname(__FILE__) . '/..';
 	}
 
-	// 2) Filesystem paths used by vBulletin
-	$forumRoot = dirname(__FILE__) . '/..';
-	$config = array();
-	$cfg = $forumRoot . '/core/includes/config.php';
-	if (!is_file($cfg))
+	$add = function ($path) use (&$roots, $forumRoot)
 	{
-		$cfg = $forumRoot . '/includes/config.php';
-	}
-	if (is_file($cfg))
-	{
-		include $cfg;
-	}
-	$attachPath = '';
-	if (!empty($config['Misc']['attachmentpath']))
-	{
-		$attachPath = rtrim((string)$config['Misc']['attachmentpath'], '/');
-	}
-	$candidates = array();
-	if ($attachPath !== '')
-	{
-		$candidates[] = $attachPath . '/' . floor($filedataid / 1000) . '/' . $filedataid . '.attach';
-		$candidates[] = $attachPath . '/' . $filedataid . '.attach';
-		if ($filehash !== '')
+		$path = trim((string)$path);
+		if ($path === '')
 		{
-			$candidates[] = $attachPath . '/' . $filehash;
-			$candidates[] = $attachPath . '/' . substr($filehash, 0, 2) . '/' . $filehash;
+			return;
+		}
+		$path = rtrim(str_replace('\\', '/', $path), '/');
+		// Relative paths are against forum root (chdir already set there).
+		if ($path[0] !== '/')
+		{
+			$path = rtrim(str_replace('\\', '/', $forumRoot), '/') . '/' . ltrim($path, './');
+		}
+		$roots[$path] = $path;
+	};
+
+	if (!empty($vbulletin->config['Misc']['attachmentpath']))
+	{
+		$add($vbulletin->config['Misc']['attachmentpath']);
+	}
+	if (!empty($vbulletin->options['attachpath']))
+	{
+		$add($vbulletin->options['attachpath']);
+	}
+	if (class_exists('vB', false))
+	{
+		try
+		{
+			$cfg = vB::getConfig();
+			if (!empty($cfg['Misc']['attachmentpath']))
+			{
+				$add($cfg['Misc']['attachmentpath']);
+			}
+		}
+		catch (Throwable $e)
+		{
+		}
+		try
+		{
+			if (method_exists('vB', 'getDatastore'))
+			{
+				$opt = vB::getDatastore()->getOption('attachpath');
+				if (!empty($opt))
+				{
+					$add($opt);
+				}
+			}
+		}
+		catch (Throwable $e)
+		{
 		}
 	}
-	$candidates[] = $forumRoot . '/core/attachment/' . floor($filedataid / 1000) . '/' . $filedataid . '.attach';
-	$candidates[] = $forumRoot . '/attachment/' . floor($filedataid / 1000) . '/' . $filedataid . '.attach';
 
-	foreach ($candidates as $path)
+	// Local config include (may no-op if already loaded; still safe).
+	$config = array();
+	$cfgFile = $forumRoot . '/core/includes/config.php';
+	if (!is_file($cfgFile))
+	{
+		$cfgFile = $forumRoot . '/includes/config.php';
+	}
+	if (is_file($cfgFile))
+	{
+		include $cfgFile;
+	}
+	if (!empty($config['Misc']['attachmentpath']))
+	{
+		$add($config['Misc']['attachmentpath']);
+	}
+
+	$add($forumRoot . '/core/attachment');
+	$add($forumRoot . '/attachment');
+	$add($forumRoot . '/core/internal_data/attachments');
+	$add($forumRoot . '/internal_data/attachments');
+
+	return array_values($roots);
+}
+
+function vbdl_pmlic_read_file_bytes(mysqli $m, $prefix, $filedataid, $filehash, $userid = 0)
+{
+	$filedataid = (int)$filedataid;
+	$userid = (int)$userid;
+	$filehash = (string)$filehash;
+
+	// 1) Blob column (DB storage / small forums)
+	$res = $m->query(
+		'SELECT filedata, userid, filehash, filesize FROM ' . $prefix . 'filedata WHERE filedataid=' . $filedataid . ' LIMIT 1'
+	);
+	$row = ($res) ? $res->fetch_assoc() : null;
+	if ($row)
+	{
+		if ($userid < 1 && !empty($row['userid']))
+		{
+			$userid = (int)$row['userid'];
+		}
+		if ($filehash === '' && !empty($row['filehash']))
+		{
+			$filehash = (string)$row['filehash'];
+		}
+		if (isset($row['filedata']) && $row['filedata'] !== '' && $row['filedata'] !== null)
+		{
+			return $row['filedata'];
+		}
+	}
+
+	// 2) Filesystem — vB5/6 uses {attachpath}/{u/s/e/r/i/d}/{filedataid}.attach
+	$candidates = array();
+	$userSeg = ($userid > 0) ? implode('/', str_split((string)$userid)) : '';
+	foreach (vbdl_pmlic_attach_roots() as $root)
+	{
+		if ($userSeg !== '')
+		{
+			$candidates[] = $root . '/' . $userSeg . '/' . $filedataid . '.attach';
+		}
+		$candidates[] = $root . '/' . floor($filedataid / 1000) . '/' . $filedataid . '.attach';
+		$candidates[] = $root . '/' . $filedataid . '.attach';
+		if ($filehash !== '')
+		{
+			$candidates[] = $root . '/' . $filehash;
+			$candidates[] = $root . '/' . substr($filehash, 0, 2) . '/' . $filehash;
+			if ($userSeg !== '')
+			{
+				$candidates[] = $root . '/' . $userSeg . '/' . $filehash;
+			}
+		}
+	}
+
+	foreach (array_unique($candidates) as $path)
 	{
 		if (is_file($path) && is_readable($path))
 		{
@@ -408,15 +518,68 @@ function vbdl_pmlic_read_file_bytes(mysqli $m, $prefix, $filedataid, $filehash)
 		}
 	}
 
-	// 3) vB library if present
+	// 3) vB API / library (handles storage type, permissions, local FS)
+	try
+	{
+		if (class_exists('vB_Api', false))
+		{
+			$api = vB_Api::instanceInternal('filedata');
+			if ($api && method_exists($api, 'fetchImageByFiledataid'))
+			{
+				$size = 'full';
+				if (class_exists('vB_Api_Filedata', false))
+				{
+					try
+					{
+						$ref = new ReflectionClass('vB_Api_Filedata');
+						if ($ref->hasConstant('SIZE_FULL'))
+						{
+							$size = $ref->getConstant('SIZE_FULL');
+						}
+					}
+					catch (Throwable $e)
+					{
+					}
+				}
+				$img = $api->fetchImageByFiledataid($filedataid, $size, true, 0);
+				if (is_array($img) && !empty($img['filedata']))
+				{
+					return $img['filedata'];
+				}
+			}
+		}
+	}
+	catch (Throwable $e)
+	{
+	}
+
 	try
 	{
 		if (class_exists('vB_Library', false))
 		{
 			$lib = vB_Library::instance('filedata');
-			if ($lib && method_exists($lib, 'fetchImageFile'))
+			if ($lib)
 			{
-				// not ideal; skip
+				if (method_exists($lib, 'fetchImageByFiledataid'))
+				{
+					$img = $lib->fetchImageByFiledataid($filedataid, true);
+					if (is_array($img) && !empty($img['filedata']))
+					{
+						return $img['filedata'];
+					}
+				}
+				if (method_exists($lib, 'getFileData'))
+				{
+					$data = $lib->getFileData($filedataid);
+					if (is_string($data) && $data !== '')
+					{
+						return $data;
+					}
+					if (is_array($data) && !empty($data['filedata']))
+					{
+						return $data['filedata'];
+					}
+				}
 			}
 		}
 	}

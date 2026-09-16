@@ -234,7 +234,17 @@
     fd.append('attachmentid', String(payload.attachmentid || 0));
     fd.append('nodeid', String(payload.nodeid || 0));
     fetch('/vbdlmanager/pm_lic_email.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          var data;
+          try { data = JSON.parse(t); }
+          catch (e) {
+            throw new Error((t && t.replace(/<[^>]+>/g, ' ').trim().slice(0, 160)) || ('HTTP ' + r.status));
+          }
+          data._http = r.status;
+          return data;
+        });
+      })
       .then(function (data) {
         btn.disabled = false;
         if (!data.ok) {
@@ -245,9 +255,9 @@
         if (data.token) m.querySelector('#vbdl-pmlic-token').value = data.token;
         setTimeout(closeModal, 1800);
       })
-      .catch(function () {
+      .catch(function (err) {
         btn.disabled = false;
-        msg.textContent = 'Network error';
+        msg.textContent = (err && err.message) ? err.message : 'Network error';
       });
   }
 
@@ -264,7 +274,14 @@
     fd.append('srcfile', fileInput.files[0]);
     msg.textContent = 'Uploading .src into ticket…';
     fetch('/vbdlmanager/pm_lic_email.php', { method: 'POST', body: fd, credentials: 'same-origin' })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          try { return JSON.parse(t); }
+          catch (e) {
+            throw new Error((t && t.replace(/<[^>]+>/g, ' ').trim().slice(0, 160)) || ('HTTP ' + r.status));
+          }
+        });
+      })
       .then(function (data) {
         if (!data.ok) {
           msg.textContent = data.error || 'Return upload failed';
@@ -273,7 +290,9 @@
         msg.textContent = 'Posted .src into ticket. Refresh to see it.';
         setTimeout(function () { location.reload(); }, 1200);
       })
-      .catch(function () { msg.textContent = 'Network error'; });
+      .catch(function (err) {
+        msg.textContent = (err && err.message) ? err.message : 'Network error';
+      });
   }
 
   function decorate() {
