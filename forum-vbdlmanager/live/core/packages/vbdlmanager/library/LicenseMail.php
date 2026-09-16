@@ -72,6 +72,15 @@ class vbdl_LicenseMail
 		return (string)$this->repo->getSetting('license_vip_only', '1') !== '0';
 	}
 
+	/**
+	 * Support/admin userid that receives every VIP license ticket (default: 1).
+	 */
+	public function supportUserid()
+	{
+		$id = (int)$this->repo->getSetting('license_support_userid', '1');
+		return $id > 0 ? $id : 1;
+	}
+
 	public function customerEmail($userid)
 	{
 		$userid = (int)$userid;
@@ -114,8 +123,8 @@ class vbdl_LicenseMail
 		$limit = max(1, min(100, (int)$limit));
 		$out = array();
 		$res = $this->db->query(
-			'SELECT token, message_nodeid, starter_nodeid, lic_filename, status, return_filename, return_filedataid, '
-			. 'sent_dateline, returned_dateline FROM ' . $this->prefix . 'vbdl_license_mail '
+			'SELECT token, message_nodeid, starter_nodeid, customer_userid, customer_username, lic_filename, status, '
+			. 'return_filename, return_filedataid, sent_dateline, returned_dateline FROM ' . $this->prefix . 'vbdl_license_mail '
 			. 'WHERE customer_userid=' . $userid . ' ORDER BY id DESC LIMIT ' . $limit
 		);
 		if ($res)
@@ -129,8 +138,30 @@ class vbdl_LicenseMail
 	}
 
 	/**
-	 * Create a Message Center starter ticket for a VIP self-service license request.
-	 * Returns message_nodeid / starter_nodeid (same for starter).
+	 * Staff overview: all VIP license tickets (send + return review).
+	 */
+	public function listAll($limit = 50)
+	{
+		$limit = max(1, min(200, (int)$limit));
+		$out = array();
+		$res = $this->db->query(
+			'SELECT token, message_nodeid, starter_nodeid, customer_userid, customer_username, lic_filename, status, '
+			. 'return_filename, return_filedataid, sent_dateline, returned_dateline FROM ' . $this->prefix . 'vbdl_license_mail '
+			. 'ORDER BY id DESC LIMIT ' . $limit
+		);
+		if ($res)
+		{
+			while ($row = $res->fetch_assoc())
+			{
+				$out[] = $row;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Create a Message Center ticket for a VIP license request.
+	 * VIP is the author; support/admin is a participant so staff can review the full send/return flow.
 	 */
 	public function createVipLicenseTicket($userid, $username, $token, $licFilename)
 	{
@@ -138,101 +169,258 @@ class vbdl_LicenseMail
 		$username = (string)$username;
 		$token = (string)$token;
 		$licFilename = (string)$licFilename;
-		$now = time();
 		$p = $this->prefix;
+		$supportId = $this->supportUserid();
+		if ($supportId === $userid)
+		{
+			// VIP is also support — still open a normal self ticket.
+			$supportId = $userid;
+		}
+		$supportName = $this->usernameById($supportId);
 
-		// Prefer vB private message API when available.
 		try
 		{
-			if (class_exists('vB_Api', false))
+			if (!class_exists('vB_Api'))
 			{
-				$api = vB_Api::instanceInternal('content_privatemessage');
-				if ($api && method_exists($api, 'add'))
+				return array('error' => 'Cannot create Message Center ticket for VIP + support');
+			}
+			$api = vB_Api::instanceInternal('content_privatemessage');
+			if ($api && method_exists($api, 'add'))
+			{
+				$title = 'Active License SeDiv - ' . $token;
+				$text = "Active License SeDiv request\n"
+					. "================================\n"
+					. "VIP user: {$username} (userid {$userid})\n"
+					. "Tracking token: {$token}\n"
+					. "License file: {$licFilename}\n\n"
+					. "This ticket is for license send + activated .src return only.\n"
+					. "Support can review every step here.";
+				$recipients = ($supportId !== $userid) ? $supportName : $username;
+				$sentto = ($supportId !== $userid) ? array($supportId) : array($userid);
+				$data = array(
+					'title' => $title,
+					'rawtext' => $text,
+					'msgtext' => $text,
+					'sentto' => $sentto,
+					'recipients' => $recipients,
+					'parentid' => 0,
+					'userid' => $userid,
+				);
+				$result = $api->add($data, array('bypassPerms' => true));
+				$nodeid = 0;
+				if (is_array($result))
 				{
-					$title = 'Active License SeDiv — ' . $token;
-					$text = "Active License SeDiv request created.\n"
-						. "Tracking token: {$token}\n"
-						. "License file: {$licFilename}\n\n"
-						. "When activation returns, the .src file will be attached in this ticket.";
-					$data = array(
-						'title' => $title,
-						'rawtext' => $text,
-						'msgtext' => $text,
-						'sentto' => array($userid),
-						'recipients' => $username,
-						'parentid' => 0,
-						'userid' => $userid,
-					);
-					$result = $api->add($data, array('bypassPerms' => true));
-					$nodeid = 0;
-					if (is_array($result))
+					if (!empty($result['nodeid']))
 					{
-						if (!empty($result['nodeid']))
-						{
-							$nodeid = (int)$result['nodeid'];
-						}
-						elseif (!empty($result[0]))
-						{
-							$nodeid = (int)$result[0];
-						}
+						$nodeid = (int)$result['nodeid'];
 					}
-					elseif (is_numeric($result))
+					elseif (!empty($result[0]))
 					{
-						$nodeid = (int)$result;
-					}
-					if ($nodeid > 0)
-					{
-						$starter = $nodeid;
-						$res = $this->db->query('SELECT starter FROM ' . $p . 'node WHERE nodeid=' . $nodeid . ' LIMIT 1');
-						if ($res && ($row = $res->fetch_assoc()) && !empty($row['starter']))
-						{
-							$starter = (int)$row['starter'];
-						}
-						return array('message_nodeid' => $nodeid, 'starter_nodeid' => $starter);
+						$nodeid = (int)$result[0];
 					}
 				}
+				elseif (is_numeric($result))
+				{
+					$nodeid = (int)$result;
+				}
+				if ($nodeid > 0)
+				{
+					$starter = $nodeid;
+					$res = $this->db->query('SELECT starter FROM ' . $p . 'node WHERE nodeid=' . $nodeid . ' LIMIT 1');
+					if ($res && ($row = $res->fetch_assoc()) && !empty($row['starter']))
+					{
+						$starter = (int)$row['starter'];
+					}
+					$this->ensureParticipant($nodeid, $userid);
+					if ($supportId !== $userid)
+					{
+						$this->ensureParticipant($nodeid, $supportId);
+					}
+					return array(
+						'message_nodeid' => $nodeid,
+						'starter_nodeid' => $starter,
+						'support_userid' => $supportId,
+					);
+				}
+				return array('error' => 'PM API returned no nodeid');
 			}
 		}
 		catch (Throwable $e)
 		{
+			return array('error' => 'PM ticket failed: ' . $e->getMessage());
 		}
 
-		// SQL fallback: create a visible text node owned by the VIP user (MC-compatible best effort).
-		$textType = $this->contentTypeId('Text');
-		if ($textType < 1)
+		return array('error' => 'Cannot create Message Center ticket for VIP + support');
+	}
+
+	/**
+	 * Ensure a user can see the PM ticket (inbox/sent_items folder row).
+	 */
+	protected function ensureParticipant($nodeid, $userid)
+	{
+		$nodeid = (int)$nodeid;
+		$userid = (int)$userid;
+		if ($nodeid < 1 || $userid < 1)
 		{
-			return array('error' => 'Cannot create Message Center ticket (contenttype missing)');
+			return;
 		}
-		$title = 'Active License SeDiv — ' . $token;
-		$rawtext = "Active License SeDiv request created.\nTracking token: {$token}\nLicense file: {$licFilename}\n";
-		$nodeid = $this->insertNode(array(
-			'userid' => $userid,
-			'authorname' => $username !== '' ? $username : $this->usernameById($userid),
-			'parentid' => 0,
-			'starter' => 0,
-			'contenttypeid' => $textType,
-			'title' => $title,
-			'createdate' => $now,
+		$p = $this->prefix;
+		$res = $this->db->query(
+			'SELECT userid FROM ' . $p . 'sentto WHERE nodeid=' . $nodeid . ' AND userid=' . $userid . ' LIMIT 1'
+		);
+		if ($res && $res->fetch_assoc())
+		{
+			return;
+		}
+		$folderid = $this->messagesFolderId($userid);
+		$this->db->query(
+			'INSERT IGNORE INTO ' . $p . 'sentto (nodeid, userid, folderid, deleted, msgread) VALUES ('
+			. $nodeid . ',' . $userid . ',' . (int)$folderid . ',0,0)'
+		);
+	}
+
+	protected function messagesFolderId($userid)
+	{
+		$userid = (int)$userid;
+		$p = $this->prefix;
+		$res = $this->db->query(
+			'SELECT folderid FROM ' . $p . 'messagefolder WHERE userid=' . $userid
+			. ' AND titlephrase=\'messages\' LIMIT 1'
+		);
+		if ($res && ($row = $res->fetch_assoc()))
+		{
+			return (int)$row['folderid'];
+		}
+		// Fallback: any non-system custom/inbox-like folder
+		$res = $this->db->query(
+			'SELECT folderid FROM ' . $p . 'messagefolder WHERE userid=' . $userid . ' ORDER BY folderid ASC LIMIT 1'
+		);
+		if ($res && ($row = $res->fetch_assoc()))
+		{
+			return (int)$row['folderid'];
+		}
+		return 0;
+	}
+
+	/**
+	 * Attach a binary file (.lic / .src) under a PM ticket so MC lists it.
+	 */
+	public function attachFileToTicket($parentId, $starterId, $ownerUserid, $filename, $bytes)
+	{
+		$parentId = (int)$parentId;
+		$starterId = (int)$starterId;
+		$ownerUserid = (int)$ownerUserid;
+		$filename = preg_replace('/[^\w.\-()+@]+/', '_', (string)$filename);
+		if ($parentId < 1 || $ownerUserid < 1 || $bytes === '' || $bytes === null)
+		{
+			return array('error' => 'Invalid attach parameters');
+		}
+		if ($starterId < 1)
+		{
+			$starterId = $parentId;
+		}
+		$p = $this->prefix;
+		$now = time();
+		$hash = md5($bytes);
+		$size = strlen($bytes);
+		$ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+		if ($ext === '')
+		{
+			$ext = 'bin';
+		}
+		$attachType = $this->contentTypeId('Attach');
+		if ($attachType < 1)
+		{
+			return array('error' => 'contenttype Attach missing');
+		}
+
+		$filedataid = 0;
+		if ($size <= 512000)
+		{
+			$hex = bin2hex($bytes);
+			$sqlFd = 'INSERT INTO ' . $p . 'filedata (userid, dateline, filehash, filesize, extension, filedata, refcount) VALUES ('
+				. $ownerUserid . ',' . $now . ',\'' . $this->db->real_escape_string($hash) . '\','
+				. $size . ',\'' . $this->db->real_escape_string($ext) . '\',UNHEX(\'' . $hex . '\'),1)';
+			if ($this->db->query($sqlFd))
+			{
+				$filedataid = (int)$this->db->insert_id;
+			}
+		}
+		if ($filedataid < 1)
+		{
+			$sqlFd = 'INSERT INTO ' . $p . 'filedata (userid, dateline, filehash, filesize, extension, filedata, refcount) VALUES ('
+				. $ownerUserid . ',' . $now . ',\'' . $this->db->real_escape_string($hash) . '\','
+				. $size . ',\'' . $this->db->real_escape_string($ext) . '\',\'\',1)';
+			if (!$this->db->query($sqlFd))
+			{
+				return array('error' => 'filedata insert failed: ' . $this->db->error);
+			}
+			$filedataid = (int)$this->db->insert_id;
+			if ($this->writeAttachFile($filedataid, $ownerUserid, $bytes) === '')
+			{
+				return array('error' => 'Could not write attachment to filesystem');
+			}
+		}
+		$this->db->query('UPDATE ' . $p . 'filedata SET refcount=GREATEST(refcount,1) WHERE filedataid=' . $filedataid);
+
+		$parent = null;
+		$resP = $this->db->query('SELECT routeid FROM ' . $p . 'node WHERE nodeid=' . $parentId . ' LIMIT 1');
+		if ($resP)
+		{
+			$parent = $resP->fetch_assoc();
+		}
+		$routeid = $parent && !empty($parent['routeid']) ? (int)$parent['routeid'] : 63;
+		$author = $this->usernameById($ownerUserid);
+
+		$attachNode = $this->insertNode(array(
+			'routeid' => $routeid,
+			'userid' => $ownerUserid,
+			'authorname' => $author,
+			'parentid' => $parentId,
+			'starter' => $starterId,
+			'contenttypeid' => $attachType,
+			'created' => $now,
 			'lastcontent' => $now,
 			'lastcontentid' => 0,
-			'lastauthorid' => $userid,
+			'lastcontentauthor' => $author,
+			'lastauthorid' => $ownerUserid,
+			'lastprefixid' => '',
 			'publishdate' => $now,
 			'showpublished' => 1,
 			'showopen' => 1,
+			'open' => 1,
 			'approved' => 1,
 			'showapproved' => 1,
+			'ipaddress' => '',
+			'CRC32' => (string)sprintf('%u', crc32($filename)),
+			'prefixid' => '',
+			'inlist' => 0,
+			'protected' => 1,
+			'nodeoptions' => 138,
+			'hasphoto' => 0,
 		));
-		if ($nodeid < 1)
+		if ($attachNode < 1)
 		{
-			return array('error' => 'Failed creating Message Center ticket');
+			return array('error' => 'Failed creating attach node: ' . $this->lastNodeError);
 		}
-		$this->db->query('UPDATE ' . $p . 'node SET starter=' . $nodeid . ', lastcontentid=' . $nodeid . ' WHERE nodeid=' . $nodeid);
+		$this->ensureClosure($attachNode, $parentId, $now);
 		$this->db->query(
-			'INSERT INTO ' . $p . 'text (nodeid, rawtext, htmltitle) VALUES ('
-			. $nodeid . ',\'' . $this->db->real_escape_string($rawtext) . '\',\''
-			. $this->db->real_escape_string($title) . '\')'
+			'INSERT INTO ' . $p . 'attach (nodeid, filedataid, filename, counter, settings, visible) VALUES ('
+			. $attachNode . ',' . $filedataid . ',\'' . $this->db->real_escape_string($filename) . '\',0,\'\',1)'
 		);
-		return array('message_nodeid' => $nodeid, 'starter_nodeid' => $nodeid);
+		$this->db->query(
+			'UPDATE ' . $p . 'node SET lastcontent=' . $now . ', lastcontentid=' . $attachNode
+			. ', lastcontentauthor=\'' . $this->db->real_escape_string($author) . '\''
+			. ', lastauthorid=' . $ownerUserid
+			. ', hasphoto=1'
+			. ' WHERE nodeid=' . $parentId
+		);
+		$this->clearNodeCaches(array($parentId, $attachNode));
+		return array(
+			'ok' => true,
+			'filedataid' => $filedataid,
+			'attach_nodeid' => $attachNode,
+		);
 	}
 
 	public function makeToken()

@@ -672,12 +672,14 @@ if ($do === 'config')
 		'default_subject_prefix' => $sedivSubject,
 		'from_email' => 'info@hdd-land.com',
 		'return_ext' => 'src',
+		'support_userid' => $lm ? $lm->supportUserid() : 1,
 		'imap_configured' => (
 			(trim((string)$repo->getSetting('license_imap_host', '')) !== ''
 				&& trim((string)$repo->getSetting('license_imap_user', '')) !== ''
 				&& trim((string)$repo->getSetting('license_imap_pass', '')) !== '')
 			|| (is_dir('/home/hddrecov/mail/hdd-land.com/info') && @is_readable('/home/hddrecov/mail/hdd-land.com/info'))
 		) ? 1 : 0,
+		'maildir_ready' => (is_dir('/home/hddrecov/mail/hdd-land.com/info') && @is_readable('/home/hddrecov/mail/hdd-land.com/info')) ? 1 : 0,
 		'imap_host' => trim((string)$repo->getSetting('license_imap_host', '')),
 		'imap_user' => trim((string)$repo->getSetting('license_imap_user', '')),
 		'inbox_key_set' => trim((string)$repo->getSetting('license_inbox_key', '')) !== '' ? 1 : 0,
@@ -726,18 +728,32 @@ if ($do === 'vip_list')
 	{
 		vbdl_pmlic_fail('SeDiv VIP only', 403);
 	}
-	$listUser = $userid;
-	if ($can && !$isSedivVip && !empty($_REQUEST['userid']))
+	$staffView = ($can && !$isSedivVip);
+	if ($can && !empty($_REQUEST['all']))
 	{
-		$listUser = (int)$_REQUEST['userid'];
+		$staffView = true;
 	}
-	$rows = $lm->listForUser($listUser);
+	if ($staffView)
+	{
+		$rows = $lm->listAll(80);
+	}
+	else
+	{
+		$listUser = $userid;
+		if ($can && !empty($_REQUEST['userid']))
+		{
+			$listUser = (int)$_REQUEST['userid'];
+		}
+		$rows = $lm->listForUser($listUser);
+	}
 	$items = array();
 	foreach ($rows as $row)
 	{
 		$msgId = !empty($row['starter_nodeid']) ? (int)$row['starter_nodeid'] : (int)$row['message_nodeid'];
 		$items[] = array(
 			'token' => $row['token'],
+			'customer_username' => isset($row['customer_username']) ? $row['customer_username'] : '',
+			'customer_userid' => isset($row['customer_userid']) ? (int)$row['customer_userid'] : 0,
 			'lic_filename' => $row['lic_filename'],
 			'status' => $row['status'],
 			'return_filename' => $row['return_filename'],
@@ -745,7 +761,7 @@ if ($do === 'vip_list')
 			'message_url' => $msgId > 0 ? ('/messagecenter/view/' . $msgId) : '',
 		);
 	}
-	echo json_encode(array('ok' => true, 'items' => $items));
+	echo json_encode(array('ok' => true, 'items' => $items, 'staff_view' => $staffView ? 1 : 0));
 	exit;
 }
 
@@ -784,6 +800,15 @@ if ($do === 'vip_submit')
 	}
 	$messageNode = (int)$ticket['message_nodeid'];
 	$starterNode = (int)$ticket['starter_nodeid'];
+	$supportId = !empty($ticket['support_userid']) ? (int)$ticket['support_userid'] : $lm->supportUserid();
+
+	// Attach .lic into the new ticket so VIP + support both see the sent file.
+	$attached = $lm->attachFileToTicket($messageNode, $starterNode, $userid, $filename, $bytes);
+	if (!empty($attached['error']))
+	{
+		vbdl_pmlic_fail('Ticket created but .lic attach failed: ' . $attached['error'], 500);
+	}
+
 	$to = $lm->sedivEmail();
 	$subjectBase = $lm->sedivSubject();
 	$subject = $subjectBase . ' [' . $token . ']';
@@ -795,8 +820,8 @@ if ($do === 'vip_submit')
 		'customer_userid' => $userid,
 		'customer_username' => $customer,
 		'customer_email' => $customerEmail,
-		'staff_userid' => $userid,
-		'filedataid' => 0,
+		'staff_userid' => $supportId,
+		'filedataid' => (int)$attached['filedataid'],
 		'lic_filename' => $filename,
 		'to_email' => $to,
 		'subject' => $subject,
@@ -814,8 +839,8 @@ if ($do === 'vip_submit')
 	$body .= "Customer email: " . ($customerEmail !== '' ? $customerEmail : '(not set)') . "\n";
 	$body .= "Customer userid: " . $userid . "\n";
 	$body .= "License filename: " . $filename . "\n";
-	$body .= "Message node id: " . $messageNode . "\n";
-	$body .= "Submitted via: Active License SeDiv\n";
+	$body .= "Message Center ticket: https://forum.hdd-land.com/messagecenter/view/" . ($starterNode > 0 ? $starterNode : $messageNode) . "\n";
+	$body .= "Submitted via: Active License SeDiv (VIP self-service)\n";
 	$body .= "Forum: https://forum.hdd-land.com/\n";
 	if ($note !== '')
 	{
@@ -840,6 +865,7 @@ if ($do === 'vip_submit')
 		vbdl_pmlic_fail($err, 500);
 	}
 
+	$msgUrl = '/messagecenter/view/' . ($starterNode > 0 ? $starterNode : $messageNode);
 	echo json_encode(array(
 		'ok' => true,
 		'sent_to' => $to,
@@ -847,8 +873,10 @@ if ($do === 'vip_submit')
 		'token' => $token,
 		'from_email' => $fromEmail,
 		'message_nodeid' => $messageNode,
-		'message_url' => '/messagecenter/view/' . ($starterNode > 0 ? $starterNode : $messageNode),
+		'message_url' => $msgUrl,
 		'customer_username' => $customer,
+		'support_userid' => $supportId,
+		'lic_attach_nodeid' => (int)$attached['attach_nodeid'],
 	));
 	exit;
 }

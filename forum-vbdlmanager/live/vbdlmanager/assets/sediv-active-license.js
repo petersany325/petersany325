@@ -1,11 +1,13 @@
 /**
  * Active License SeDiv — VIP desk page.
+ * VIP: upload .lic → ticket (VIP+support) → email. Staff: review all tickets.
  */
 (function () {
   var page = window.__VBDL_SEDIV_PAGE__ || {};
   var msg = document.getElementById('vbdl-sediv-msg');
   var returnMsg = document.getElementById('vbdl-sediv-return-msg');
   var listEl = document.getElementById('vbdl-sediv-list');
+  var ticketLink = document.getElementById('vbdl-sediv-ticketlink');
 
   function parseJson(r) {
     return r.text().then(function (t) {
@@ -19,7 +21,9 @@
   function loadList() {
     if (!listEl) return;
     listEl.textContent = 'Loading…';
-    fetch('/vbdlmanager/pm_lic_email.php?do=vip_list', { credentials: 'same-origin' })
+    var url = '/vbdlmanager/pm_lic_email.php?do=vip_list';
+    if (page.canStaff) url += '&all=1';
+    fetch(url, { credentials: 'same-origin' })
       .then(parseJson)
       .then(function (data) {
         if (!data.ok) {
@@ -28,7 +32,9 @@
         }
         var rows = data.items || [];
         if (!rows.length) {
-          listEl.textContent = 'No license requests yet.';
+          listEl.textContent = page.canStaff && !page.isVip
+            ? 'No VIP license tickets yet.'
+            : 'No license tickets yet. Send a .lic above to open one.';
           return;
         }
         listEl.innerHTML = '';
@@ -37,9 +43,11 @@
           item.className = 'vbdl-sediv-item';
           var left = document.createElement('div');
           var title = document.createElement('strong');
-          title.textContent = row.lic_filename || 'license.lic';
+          var who = row.customer_username ? (row.customer_username + ' · ') : '';
+          title.textContent = who + (row.lic_filename || 'license.lic');
           var meta = document.createElement('small');
-          meta.textContent = (row.token || '') + ' · ' + (row.sent_label || '') + (row.status === 'returned' && row.return_filename ? (' · ' + row.return_filename) : '');
+          meta.textContent = (row.token || '') + ' · ' + (row.sent_label || '')
+            + (row.status === 'returned' && row.return_filename ? (' · ' + row.return_filename) : '');
           left.appendChild(title);
           left.appendChild(meta);
           var right = document.createElement('div');
@@ -47,7 +55,7 @@
           badge.className = 'vbdl-sediv-badge is-' + (row.status || 'sent');
           badge.textContent = row.status || 'sent';
           right.appendChild(badge);
-          if (row.status === 'returned' && row.message_url) {
+          if (row.message_url) {
             right.appendChild(document.createTextNode(' '));
             var a = document.createElement('a');
             a.className = 'vbdl-sediv-dl';
@@ -82,7 +90,11 @@
     }
     var btn = document.getElementById('vbdl-sediv-submit');
     btn.disabled = true;
-    msg.textContent = 'Sending…';
+    msg.textContent = 'Sending… opening ticket…';
+    if (ticketLink) {
+      ticketLink.hidden = true;
+      ticketLink.innerHTML = '';
+    }
     var fd = new FormData();
     fd.append('do', 'vip_submit');
     fd.append('licfile', input.files[0]);
@@ -95,9 +107,21 @@
           msg.textContent = data.error || 'Send failed';
           return;
         }
-        msg.textContent = 'Sent. Token ' + data.token + (data.message_url ? ' — ticket created.' : '');
+        msg.textContent = 'Sent to license inbox. Ticket opened for you and support.';
         input.value = '';
-        if (data.token) document.getElementById('vbdl-sediv-token').value = data.token;
+        if (data.token) {
+          var tokEl = document.getElementById('vbdl-sediv-token');
+          if (tokEl) tokEl.value = data.token;
+        }
+        if (ticketLink && data.message_url) {
+          ticketLink.hidden = false;
+          ticketLink.innerHTML = '';
+          var a = document.createElement('a');
+          a.className = 'vbdl-sediv-dl';
+          a.href = data.message_url;
+          a.textContent = 'Open your license ticket';
+          ticketLink.appendChild(a);
+        }
         loadList();
       })
       .catch(function (err) {
@@ -134,24 +158,27 @@
   function showImapStatus() {
     if (!page.canStaff) return;
     var card = document.getElementById('vbdl-sediv-imap-card');
-    var msg = document.getElementById('vbdl-sediv-imap-msg');
+    var statusMsg = document.getElementById('vbdl-sediv-imap-msg');
     var pollBtn = document.getElementById('vbdl-sediv-poll');
-    if (!card) return;
+    if (!card || !statusMsg) return;
     card.hidden = false;
     fetch('/vbdlmanager/pm_lic_email.php?do=config', { credentials: 'same-origin', cache: 'no-store' })
       .then(parseJson)
       .then(function (cfg) {
         if (!cfg.ok) return;
-        if (cfg.imap_configured) {
-          msg.textContent = 'IMAP ready for ' + (cfg.imap_user || 'inbox') + ' @ ' + (cfg.imap_host || '') + '. Use Poll inbox now, or set a cron on pm_lic_inbox.php.';
+        if (cfg.maildir_ready) {
+          statusMsg.textContent = 'Auto-import is active via local info@ maildir. Returned .src files are posted into the same VIP ticket. Poll now or use cron on pm_lic_inbox.php.';
+          if (pollBtn) pollBtn.hidden = false;
+        } else if (cfg.imap_configured) {
+          statusMsg.textContent = 'IMAP ready for ' + (cfg.imap_user || 'inbox') + '. Poll inbox now or set cron on pm_lic_inbox.php.';
           if (pollBtn) pollBtn.hidden = false;
         } else {
-          msg.textContent = 'IMAP password is not set in AdminCP → Download Manager → Settings. Replies land in info@hdd-land.com but are not auto-imported until license_imap_pass (and cron) are configured. Use manual .src upload below for this reply.';
+          statusMsg.textContent = 'Auto-import not ready. Configure maildir/IMAP, or use manual .src upload below.';
           if (pollBtn) pollBtn.hidden = true;
         }
       })
       .catch(function () {
-        msg.textContent = 'Could not load IMAP status.';
+        statusMsg.textContent = 'Could not load auto-return status.';
       });
   }
 
@@ -162,7 +189,7 @@
       .then(parseJson)
       .then(function (data) {
         if (data.skipped) {
-          pollMsg.textContent = data.message || 'IMAP not configured';
+          pollMsg.textContent = data.message || 'Inbox not configured';
           return;
         }
         if (!data.ok) {
@@ -170,7 +197,8 @@
           return;
         }
         var n = (data.processed && data.processed.length) || 0;
-        pollMsg.textContent = 'Checked ' + (data.checked || 0) + ' messages, imported ' + n + '.';
+        pollMsg.textContent = 'Checked ' + (data.checked || 0) + ' messages, imported ' + n
+          + (data.mode ? (' (' + data.mode + ')') : '') + '.';
         loadList();
       })
       .catch(function (err) {
@@ -186,11 +214,13 @@
   if (refresh) refresh.addEventListener('click', loadList);
   var pollBtn = document.getElementById('vbdl-sediv-poll');
   if (pollBtn) pollBtn.addEventListener('click', pollInbox);
-  // Prefill token from query ?token=
   try {
     var q = new URLSearchParams(location.search || '');
     var tok = q.get('token');
-    if (tok) document.getElementById('vbdl-sediv-token').value = tok;
+    if (tok) {
+      var tokEl = document.getElementById('vbdl-sediv-token');
+      if (tokEl) tokEl.value = tok;
+    }
   } catch (e) {}
   showImapStatus();
   loadList();
