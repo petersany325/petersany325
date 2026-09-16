@@ -403,6 +403,8 @@ class vbdl_LicenseMail
 				return array('error' => 'Could not write .src attachment to filesystem');
 			}
 		}
+		// vB fetchNodeAttachments joins only filedata with refcount > 0.
+		$this->db->query('UPDATE ' . $p . 'filedata SET refcount=GREATEST(refcount,1) WHERE filedataid=' . (int)$filedataid);
 
 		// contenttypeid for Text + Attach
 		$textType = $this->contentTypeId('Text');
@@ -413,6 +415,19 @@ class vbdl_LicenseMail
 		}
 
 		$customer = (string)$record['customer_username'];
+		$customerId = (int)$record['customer_userid'];
+		if ($customerId < 1)
+		{
+			$resC = $this->db->query('SELECT userid, authorname FROM ' . $p . 'node WHERE nodeid=' . (int)$parentId . ' LIMIT 1');
+			if ($resC && ($rowC = $resC->fetch_assoc()))
+			{
+				$customerId = (int)$rowC['userid'];
+				if ($customer === '' && !empty($rowC['authorname']))
+				{
+					$customer = (string)$rowC['authorname'];
+				}
+			}
+		}
 		$rawtext = 'Activated SeDiv license (.src) received for user ' . $customer . ".\n"
 			. 'Tracking: ' . $record['token'] . "\n"
 			. 'File: ' . $filename;
@@ -425,14 +440,17 @@ class vbdl_LicenseMail
 			$parent = $resP->fetch_assoc();
 		}
 		$routeid = $parent && !empty($parent['routeid']) ? (int)$parent['routeid'] : 63;
-		$author = $this->usernameById($userid);
+		$staffAuthor = $this->usernameById($userid);
+		// Match normal MC .lic attaches: owned by ticket author, inlist=0, protected=1, null titles.
+		$attachUserid = $customerId > 0 ? $customerId : $userid;
+		$attachAuthor = $customer !== '' ? $customer : $this->usernameById($attachUserid);
 
-		// 2) Text reply under the PM ticket (vB6 uses `created`, not createdate)
+		// 2) Text note under the PM ticket (vB6 uses `created`, not createdate)
 		$title = 'Activated license (.src)';
 		$textNode = $this->insertNode(array(
 			'routeid' => $routeid,
 			'userid' => $userid,
-			'authorname' => $author,
+			'authorname' => $staffAuthor,
 			'parentid' => (int)$parentId,
 			'starter' => (int)$starterId,
 			'contenttypeid' => $textType,
@@ -442,7 +460,7 @@ class vbdl_LicenseMail
 			'created' => $now,
 			'lastcontent' => $now,
 			'lastcontentid' => 0,
-			'lastcontentauthor' => $author,
+			'lastcontentauthor' => $staffAuthor,
 			'lastauthorid' => $userid,
 			'lastprefixid' => '',
 			'publishdate' => $now,
@@ -455,16 +473,16 @@ class vbdl_LicenseMail
 			'CRC32' => (string)sprintf('%u', crc32($rawtext)),
 			'prefixid' => '',
 			'inlist' => 1,
-			'protected' => 0,
+			'protected' => 1,
 			'nodeoptions' => 138,
 		));
 		if ($textNode < 1)
 		{
-			// Fallback: attach .src directly under the PM node (same as .lic uploads).
 			$textNode = (int)$parentId;
 		}
 		else
 		{
+			$this->ensureClosure((int)$textNode, (int)$parentId, $now);
 			$this->db->query(
 				'INSERT INTO ' . $p . 'text (nodeid, rawtext, htmltitle) VALUES ('
 				. $textNode . ',\'' . $this->db->real_escape_string($rawtext) . '\',\''
@@ -472,23 +490,19 @@ class vbdl_LicenseMail
 			);
 		}
 
-		// 3) attach node under text reply (or directly under PM)
-		$attachParent = $textNode > 0 ? $textNode : (int)$parentId;
+		// 3) Attach .src directly under the PM node (same placement as user-uploaded .lic).
 		$attachNode = $this->insertNode(array(
 			'routeid' => $routeid,
-			'userid' => $userid,
-			'authorname' => $author,
-			'parentid' => $attachParent,
+			'userid' => $attachUserid,
+			'authorname' => $attachAuthor,
+			'parentid' => (int)$parentId,
 			'starter' => (int)$starterId,
 			'contenttypeid' => $attachType,
-			'title' => $filename,
-			'htmltitle' => $filename,
-			'urlident' => preg_replace('/[^a-z0-9\-]+/i', '-', strtolower($filename)),
 			'created' => $now,
 			'lastcontent' => $now,
 			'lastcontentid' => 0,
-			'lastcontentauthor' => $author,
-			'lastauthorid' => $userid,
+			'lastcontentauthor' => $attachAuthor,
+			'lastauthorid' => $attachUserid,
 			'lastprefixid' => '',
 			'publishdate' => $now,
 			'showpublished' => 1,
@@ -499,8 +513,8 @@ class vbdl_LicenseMail
 			'ipaddress' => '',
 			'CRC32' => (string)sprintf('%u', crc32($filename)),
 			'prefixid' => '',
-			'inlist' => 1,
-			'protected' => 0,
+			'inlist' => 0,
+			'protected' => 1,
 			'nodeoptions' => 138,
 			'hasphoto' => 0,
 		));
@@ -508,19 +522,27 @@ class vbdl_LicenseMail
 		{
 			return array('error' => 'Failed creating attach node: ' . $this->lastNodeError);
 		}
+		$this->ensureClosure((int)$attachNode, (int)$parentId, $now);
 		$this->db->query(
 			'INSERT INTO ' . $p . 'attach (nodeid, filedataid, filename, counter, settings) VALUES ('
 			. $attachNode . ',' . $filedataid . ',\'' . $this->db->real_escape_string($filename) . '\',0,\'\')'
 		);
+		$this->db->query(
+			'UPDATE ' . $p . 'filedata SET refcount=GREATEST(refcount,1), userid=' . (int)$attachUserid
+			. ' WHERE filedataid=' . (int)$filedataid
+		);
 
-		// Update parent lastcontent pointers lightly
+		// Update parent lastcontent + hasphoto so MC lists attachments.
 		$this->db->query(
 			'UPDATE ' . $p . 'node SET lastcontent=' . $now . ', lastcontentid=' . (int)$attachNode
-			. ', lastcontentauthor=\'' . $this->db->real_escape_string($author) . '\''
+			. ', lastcontentauthor=\'' . $this->db->real_escape_string($staffAuthor) . '\''
 			. ', lastauthorid=' . $userid
+			. ', hasphoto=1'
 			. ', totalcount=totalcount+1, textcount=textcount+1'
 			. ' WHERE nodeid=' . (int)$parentId
 		);
+
+		$this->clearNodeCaches(array((int)$parentId, (int)$textNode, (int)$attachNode));
 
 		return array(
 			'filedataid' => $filedataid,
@@ -635,5 +657,72 @@ class vbdl_LicenseMail
 			return 0;
 		}
 		return (int)$this->db->insert_id;
+	}
+
+	/**
+	 * Mirror vB node closure rows so Message Center can discover children.
+	 */
+	protected function ensureClosure($nodeid, $parentid, $publishdate = 0)
+	{
+		$nodeid = (int)$nodeid;
+		$parentid = (int)$parentid;
+		$publishdate = (int)$publishdate;
+		if ($nodeid < 1)
+		{
+			return;
+		}
+		if ($publishdate < 1)
+		{
+			$publishdate = time();
+		}
+		$p = $this->prefix;
+		$this->db->query(
+			'INSERT IGNORE INTO ' . $p . 'closure (parent, child, depth, displayorder, publishdate) VALUES ('
+			. $nodeid . ',' . $nodeid . ',0,0,' . $publishdate . ')'
+		);
+		if ($parentid > 0)
+		{
+			$this->db->query(
+				'INSERT IGNORE INTO ' . $p . 'closure (parent, child, depth, displayorder, publishdate) '
+				. 'SELECT parent, ' . $nodeid . ', depth+1, 0, ' . $publishdate
+				. ' FROM ' . $p . 'closure WHERE child=' . $parentid
+			);
+		}
+	}
+
+	protected function clearNodeCaches(array $nodeids)
+	{
+		$nodeids = array_values(array_unique(array_filter(array_map('intval', $nodeids))));
+		if (!$nodeids)
+		{
+			return;
+		}
+		try
+		{
+			if (class_exists('vB_Cache', false))
+			{
+				$events = array();
+				foreach ($nodeids as $id)
+				{
+					$events[] = 'nodeChg_' . $id;
+				}
+				vB_Cache::allCacheEvent($events);
+			}
+			if (class_exists('vB_Library', false))
+			{
+				$lib = vB_Library::instance('node');
+				if ($lib && method_exists($lib, 'clearCacheEvents'))
+				{
+					$lib->clearCacheEvents($nodeids);
+				}
+				if ($lib && method_exists($lib, 'clearChildCache'))
+				{
+					$lib->clearChildCache($nodeids[0]);
+				}
+			}
+		}
+		catch (Throwable $e)
+		{
+		}
 	}
 }
