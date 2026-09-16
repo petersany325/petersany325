@@ -12,6 +12,8 @@ define('THIS_SCRIPT', 'vbdl_pm_lic_email');
 define('CSRF_PROTECTION', false);
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Pragma: no-cache');
 
 $forumRoot = dirname(__FILE__) . '/..';
 chdir($forumRoot);
