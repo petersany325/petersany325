@@ -76,6 +76,9 @@ if(WIN32)
   if(MSVC)
     target_link_options(hddsuperclone-windows PRIVATE /MANIFEST:NO)
     # Keep a console so --cli works from cmd.exe; GUI still opens a window.
+  else()
+    # MinGW: ship a single .exe without libgcc/libstdc++ DLLs.
+    target_link_options(hddsuperclone-windows PRIVATE -static-libgcc -static-libstdc++)
   endif()
 else()
   find_package(PkgConfig REQUIRED)
