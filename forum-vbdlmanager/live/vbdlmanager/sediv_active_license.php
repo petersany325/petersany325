@@ -103,7 +103,7 @@ $email = !empty($userinfo['email']) ? (string)$userinfo['email'] : '';
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Active License SeDiv — HDD LAND</title>
-<link rel="stylesheet" href="/vbdlmanager/assets/sediv-active-license.css?v=20260916f" />
+<link rel="stylesheet" href="/vbdlmanager/assets/sediv-active-license.css?v=20260916g" />
 </head>
 <body class="vbdl-sediv-page">
 <header class="vbdl-sediv-top">
@@ -177,6 +177,6 @@ window.__VBDL_SEDIV_PAGE__ = {
   email: <?php echo json_encode($email); ?>
 };
 </script>
-<script defer src="/vbdlmanager/assets/sediv-active-license.js?v=20260916f"></script>
+<script defer src="/vbdlmanager/assets/sediv-active-license.js?v=20260916g"></script>
 </body>
 </html>
