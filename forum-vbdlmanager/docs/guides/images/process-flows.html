@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>HDD Land Company · Process Flow</title>
+<style>
+  body{margin:0;background:#f5f7fa;font:15px/1.4 "Segoe UI",system-ui,sans-serif;color:#102a43}
+  .wrap{padding:28px}
+  h2{margin:0 0 18px;font-size:20px;color:#0b3d5c}
+  .flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .box{background:#fff;border:1px solid #d9e2ec;border-radius:10px;padding:14px 16px;min-width:150px;max-width:190px;box-shadow:0 1px 2px rgba(16,42,67,.06)}
+  .box b{display:block;margin-bottom:4px;color:#0b3d5c}
+  .arrow{font-size:22px;color:#627d98;font-weight:700}
+  .note{margin-top:18px;color:#486581;font-size:13px}
+  .guide-banner{background:#0b2a4a;color:#fff;padding:10px 24px;font:600 13px/1.4 system-ui,sans-serif}
+</style>
+</head>
+<body>
+<div class="guide-banner">HDD Land Company · Process overview</div>
+<div class="wrap" id="flow-req">
+  <h2>License Request flow</h2>
+  <div class="flow">
+    <div class="box"><b>1. Upload receipt</b>jpg / png / pdf on License Request desk</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>2. Ticket opens</b>Message Center + token VBDL-REQ-…</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>3. Email sent</b>From info@hdd-land.com To sedivlic@list.ru</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>4. License reply</b>.txt attached into same ticket</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>5. Admin VIP</b>Add customer to VIP SeDiv</div>
+  </div>
+  <p class="note">Keep the tracking token in every reply. Status path: sent → approved → vip_added</p>
+</div>
+<div class="wrap" id="flow-lic">
+  <h2>Active License SeDiv flow</h2>
+  <div class="flow">
+    <div class="box"><b>1. Choose type</b>Exact product subject</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>2. Upload .lic</b>Send from Active License desk</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>3. Ticket + email</b>Token VBDL-LIC-… in subject</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>4. Activated .src</b>Auto-imported to ticket</div>
+    <div class="arrow">→</div>
+    <div class="box"><b>5. Download</b>Use Source.src in SeDiv</div>
+  </div>
+  <p class="note">If activation fails, a plain-text reply is posted as rejected — send a new request after fixing the license file.</p>
+</div>
+</body>
+</html>

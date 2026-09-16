@@ -1,0 +1,1019 @@
+<?php
+/**
+ * Message Center: email a .lic PM attachment to the license activator.
+ *
+ * GET  ?do=config  → defaults + whether current user may use the feature
+ * POST ?do=send    → email To/Subject + filedataid|attachmentid|nodeid
+ *
+ * Username in the email is ALWAYS resolved server-side from the attachment author
+ * (never trusted from the browser).
+ */
+define('THIS_SCRIPT', 'vbdl_pm_lic_email');
+define('CSRF_PROTECTION', false);
+
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Pragma: no-cache');
+
+$forumRoot = dirname(__FILE__) . '/..';
+chdir($forumRoot);
+
+if (is_file($forumRoot . '/core/includes/init.php'))
+{
+	require_once $forumRoot . '/core/includes/init.php';
+}
+elseif (is_file($forumRoot . '/includes/init.php'))
+{
+	require_once $forumRoot . '/includes/init.php';
+}
+else
+{
+	echo json_encode(array('ok' => false, 'error' => 'Forum bootstrap missing'));
+	exit;
+}
+
+require_once $forumRoot . '/core/packages/vbdlmanager/library/Bootstrap.php';
+require_once $forumRoot . '/core/packages/vbdlmanager/library/LicenseMail.php';
+
+global $vbulletin, $db, $table_prefix;
+$prefix = isset($table_prefix) ? $table_prefix : '';
+$database = isset($db) ? $db : (isset($vbulletin->db) ? $vbulletin->db : null);
+
+try
+{
+	vbdl_Bootstrap::init($database, $prefix);
+}
+catch (Exception $e)
+{
+	echo json_encode(array('ok' => false, 'error' => 'Download Manager unavailable'));
+	exit;
+}
+
+$repo = vbdl_Bootstrap::$repo;
+$acl = vbdl_Bootstrap::$acl;
+$userinfo = isset($vbulletin->userinfo) ? $vbulletin->userinfo : array('userid' => 0);
+$userid = !empty($userinfo['userid']) ? (int)$userinfo['userid'] : 0;
+$do = isset($_REQUEST['do']) ? preg_replace('/[^a-z_]/', '', strtolower((string)$_REQUEST['do'])) : '';
+
+function vbdl_pmlic_license_mail()
+{
+	static $lm = null;
+	if ($lm instanceof vbdl_LicenseMail)
+	{
+		return $lm;
+	}
+	$m = vbdl_pmlic_db();
+	if (!$m)
+	{
+		return null;
+	}
+	$lm = new vbdl_LicenseMail($m, vbdl_pmlic_prefix(), vbdl_Bootstrap::$repo, vbdl_Bootstrap::$acl);
+	return $lm;
+}
+
+function vbdl_pmlic_fail($msg, $code = 400)
+{
+	http_response_code($code);
+	echo json_encode(array('ok' => false, 'error' => $msg));
+	exit;
+}
+
+function vbdl_pmlic_group_ids($userinfo)
+{
+	$ids = array();
+	if (!empty($userinfo['usergroupid']))
+	{
+		$ids[] = (int)$userinfo['usergroupid'];
+	}
+	if (!empty($userinfo['membergroupids']))
+	{
+		foreach (explode(',', (string)$userinfo['membergroupids']) as $g)
+		{
+			$g = (int)trim($g);
+			if ($g > 0)
+			{
+				$ids[] = $g;
+			}
+		}
+	}
+	return array_values(array_unique($ids));
+}
+
+function vbdl_pmlic_can_send($userinfo, $repo)
+{
+	if (empty($userinfo['userid']))
+	{
+		return false;
+	}
+	// Full administrators always allowed
+	if (!empty($userinfo['usergroupid']) && (int)$userinfo['usergroupid'] === 6)
+	{
+		return true;
+	}
+	$raw = trim((string)$repo->getSetting('license_email_usergroupids', '6'));
+	if ($raw === '')
+	{
+		$raw = '6';
+	}
+	$allowed = array();
+	foreach (explode(',', $raw) as $g)
+	{
+		$g = (int)trim($g);
+		if ($g > 0)
+		{
+			$allowed[] = $g;
+		}
+	}
+	$userGroups = vbdl_pmlic_group_ids($userinfo);
+	foreach ($userGroups as $g)
+	{
+		if (in_array($g, $allowed, true))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+function vbdl_pmlic_db()
+{
+	static $mysqli = null;
+	if ($mysqli instanceof mysqli)
+	{
+		return $mysqli;
+	}
+	$config = array();
+	$forumRoot = dirname(__FILE__) . '/..';
+	$cfg = $forumRoot . '/core/includes/config.php';
+	if (!is_file($cfg))
+	{
+		$cfg = $forumRoot . '/includes/config.php';
+	}
+	if (!is_file($cfg))
+	{
+		return null;
+	}
+	include $cfg;
+	$host = $config['MasterServer']['servername'] ?? 'localhost';
+	$port = !empty($config['MasterServer']['port']) ? (int)$config['MasterServer']['port'] : 3306;
+	$user = $config['MasterServer']['username'] ?? '';
+	$pass = $config['MasterServer']['password'] ?? '';
+	$dbn = $config['Database']['dbname'] ?? '';
+	$mysqli = @new mysqli($host, $user, $pass, $dbn, $port);
+	if ($mysqli->connect_errno)
+	{
+		return null;
+	}
+	$mysqli->set_charset('utf8mb4');
+	return $mysqli;
+}
+
+function vbdl_pmlic_prefix()
+{
+	global $table_prefix;
+	if (isset($table_prefix) && is_string($table_prefix))
+	{
+		return $table_prefix;
+	}
+	$config = array();
+	$forumRoot = dirname(__FILE__) . '/..';
+	$cfg = $forumRoot . '/core/includes/config.php';
+	if (!is_file($cfg))
+	{
+		$cfg = $forumRoot . '/includes/config.php';
+	}
+	if (is_file($cfg))
+	{
+		include $cfg;
+		return isset($config['Database']['tableprefix']) ? $config['Database']['tableprefix'] : '';
+	}
+	return '';
+}
+
+/**
+ * Resolve .lic attachment metadata + authoritative customer username from DB.
+ * Set $needBytes=false for UI preview (username only).
+ */
+function vbdl_pmlic_resolve_attachment($filedataid, $attachmentid, $nodeid, $needBytes = true)
+{
+	$m = vbdl_pmlic_db();
+	if (!$m)
+	{
+		return array('error' => 'Database unavailable');
+	}
+	$p = vbdl_pmlic_prefix();
+	$filedataid = (int)$filedataid;
+	$attachmentid = (int)$attachmentid;
+	$nodeid = (int)$nodeid;
+
+	// Collect candidate ids — vB filedata/fetch?id= may be filedataid OR attach nodeid.
+	$ids = array();
+	foreach (array($filedataid, $attachmentid, $nodeid) as $id)
+	{
+		$id = (int)$id;
+		if ($id > 0)
+		{
+			$ids[$id] = $id;
+		}
+	}
+	if (!$ids)
+	{
+		return array('error' => 'Missing attachment id');
+	}
+	$idList = implode(',', array_map('intval', array_values($ids)));
+
+	$sql = "
+		SELECT
+			a.filedataid,
+			a.nodeid AS attach_nodeid,
+			a.filename,
+			fd.filesize AS fd_filesize,
+			fd.extension,
+			fd.filehash,
+			fd.userid AS fd_userid,
+			n.userid AS attach_userid,
+			n.parentid AS message_nodeid,
+			u.username AS attach_username,
+			pn.userid AS message_userid,
+			pu.username AS message_username
+		FROM {$p}attach a
+		INNER JOIN {$p}filedata fd ON fd.filedataid = a.filedataid
+		INNER JOIN {$p}node n ON n.nodeid = a.nodeid
+		INNER JOIN {$p}user u ON u.userid = n.userid
+		LEFT JOIN {$p}node pn ON pn.nodeid = n.parentid
+		LEFT JOIN {$p}user pu ON pu.userid = pn.userid
+		WHERE (
+			a.filedataid IN ($idList)
+			OR a.nodeid IN ($idList)
+			OR n.parentid IN ($idList)
+			OR n.nodeid IN ($idList)
+		)
+		ORDER BY
+			CASE
+				WHEN LOWER(a.filename) LIKE '%.lic' THEN 0
+				WHEN LOWER(IFNULL(fd.extension,'')) = 'lic' THEN 0
+				ELSE 1
+			END,
+			a.filedataid DESC
+		LIMIT 1
+	";
+
+	$res = $m->query($sql);
+	if (!$res)
+	{
+		return array('error' => 'Attachment query failed: ' . $m->error);
+	}
+	if (!($row = $res->fetch_assoc()))
+	{
+		// Fallback: walk PM starter → children for any .lic attach
+		$sql2 = "
+			SELECT
+				a.filedataid,
+				a.nodeid AS attach_nodeid,
+				a.filename,
+				fd.filesize AS fd_filesize,
+				fd.extension,
+				fd.filehash,
+				fd.userid AS fd_userid,
+				n.userid AS attach_userid,
+				n.parentid AS message_nodeid,
+				u.username AS attach_username,
+				pn.userid AS message_userid,
+				pu.username AS message_username
+			FROM {$p}attach a
+			INNER JOIN {$p}filedata fd ON fd.filedataid = a.filedataid
+			INNER JOIN {$p}node n ON n.nodeid = a.nodeid
+			INNER JOIN {$p}user u ON u.userid = n.userid
+			LEFT JOIN {$p}node pn ON pn.nodeid = n.parentid
+			LEFT JOIN {$p}user pu ON pu.userid = pn.userid
+			WHERE (
+				n.parentid IN ($idList)
+				OR n.starter IN ($idList)
+				OR pn.starter IN ($idList)
+				OR pn.parentid IN ($idList)
+			)
+			AND (
+				LOWER(a.filename) LIKE '%.lic'
+				OR LOWER(IFNULL(fd.extension,'')) = 'lic'
+			)
+			ORDER BY a.filedataid DESC
+			LIMIT 1
+		";
+		$res2 = $m->query($sql2);
+		if ($res2)
+		{
+			$row = $res2->fetch_assoc();
+		}
+		if (empty($row))
+		{
+			return array('error' => 'Attachment not found');
+		}
+	}
+
+	$filename = (string)$row['filename'];
+	$ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+	if ($ext === '' && !empty($row['extension']))
+	{
+		$ext = strtolower((string)$row['extension']);
+	}
+	if ($ext !== 'lic')
+	{
+		return array('error' => 'Only .lic license files can be emailed');
+	}
+
+	// Prefer the user who uploaded the attach node; fallback to parent message author.
+	$customerUser = trim((string)$row['attach_username']);
+	$customerId = (int)$row['attach_userid'];
+	if ($customerUser === '' && !empty($row['message_username']))
+	{
+		$customerUser = trim((string)$row['message_username']);
+		$customerId = (int)$row['message_userid'];
+	}
+	if ($customerUser === '')
+	{
+		return array('error' => 'Could not resolve customer username for this file');
+	}
+
+	$out = array(
+		'filedataid' => (int)$row['filedataid'],
+		'filename' => $filename !== '' ? $filename : ('license-' . $customerUser . '.lic'),
+		'customer_username' => $customerUser,
+		'customer_userid' => $customerId,
+		'message_nodeid' => !empty($row['message_nodeid']) ? (int)$row['message_nodeid'] : (int)$row['attach_nodeid'],
+	);
+
+	if (!$needBytes)
+	{
+		return $out;
+	}
+
+	$fdUserid = !empty($row['fd_userid']) ? (int)$row['fd_userid'] : 0;
+	if ($fdUserid < 1 && !empty($row['attach_userid']))
+	{
+		$fdUserid = (int)$row['attach_userid'];
+	}
+	$bytes = vbdl_pmlic_read_file_bytes(
+		$m,
+		$p,
+		(int)$row['filedataid'],
+		(string)$row['filehash'],
+		$fdUserid
+	);
+	if ($bytes === null || $bytes === '')
+	{
+		return array('error' => 'Could not read license file contents');
+	}
+	$out['filesize'] = strlen($bytes);
+	$out['bytes'] = $bytes;
+	return $out;
+}
+
+/**
+ * Resolve attachment storage roots used by this vB install.
+ * @return string[]
+ */
+function vbdl_pmlic_attach_roots()
+{
+	global $vbulletin;
+	$roots = array();
+	$forumRoot = realpath(dirname(__FILE__) . '/..');
+	if ($forumRoot === false)
+	{
+		$forumRoot = dirname(__FILE__) . '/..';
+	}
+
+	$add = function ($path) use (&$roots, $forumRoot)
+	{
+		$path = trim((string)$path);
+		if ($path === '')
+		{
+			return;
+		}
+		$path = rtrim(str_replace('\\', '/', $path), '/');
+		// Relative paths are against forum root (chdir already set there).
+		if ($path[0] !== '/')
+		{
+			$path = rtrim(str_replace('\\', '/', $forumRoot), '/') . '/' . ltrim($path, './');
+		}
+		$roots[$path] = $path;
+	};
+
+	if (!empty($vbulletin->config['Misc']['attachmentpath']))
+	{
+		$add($vbulletin->config['Misc']['attachmentpath']);
+	}
+	if (!empty($vbulletin->options['attachpath']))
+	{
+		$add($vbulletin->options['attachpath']);
+	}
+	if (class_exists('vB', false))
+	{
+		try
+		{
+			$cfg = vB::getConfig();
+			if (!empty($cfg['Misc']['attachmentpath']))
+			{
+				$add($cfg['Misc']['attachmentpath']);
+			}
+		}
+		catch (Throwable $e)
+		{
+		}
+		try
+		{
+			if (method_exists('vB', 'getDatastore'))
+			{
+				$opt = vB::getDatastore()->getOption('attachpath');
+				if (!empty($opt))
+				{
+					$add($opt);
+				}
+			}
+		}
+		catch (Throwable $e)
+		{
+		}
+	}
+
+	// Local config include (may no-op if already loaded; still safe).
+	$config = array();
+	$cfgFile = $forumRoot . '/core/includes/config.php';
+	if (!is_file($cfgFile))
+	{
+		$cfgFile = $forumRoot . '/includes/config.php';
+	}
+	if (is_file($cfgFile))
+	{
+		include $cfgFile;
+	}
+	if (!empty($config['Misc']['attachmentpath']))
+	{
+		$add($config['Misc']['attachmentpath']);
+	}
+
+	$add($forumRoot . '/core/attachment');
+	$add($forumRoot . '/attachment');
+	$add($forumRoot . '/core/internal_data/attachments');
+	$add($forumRoot . '/internal_data/attachments');
+
+	return array_values($roots);
+}
+
+function vbdl_pmlic_read_file_bytes(mysqli $m, $prefix, $filedataid, $filehash, $userid = 0)
+{
+	$filedataid = (int)$filedataid;
+	$userid = (int)$userid;
+	$filehash = (string)$filehash;
+
+	// 1) Blob column (DB storage / small forums)
+	$res = $m->query(
+		'SELECT filedata, userid, filehash, filesize FROM ' . $prefix . 'filedata WHERE filedataid=' . $filedataid . ' LIMIT 1'
+	);
+	$row = ($res) ? $res->fetch_assoc() : null;
+	if ($row)
+	{
+		if ($userid < 1 && !empty($row['userid']))
+		{
+			$userid = (int)$row['userid'];
+		}
+		if ($filehash === '' && !empty($row['filehash']))
+		{
+			$filehash = (string)$row['filehash'];
+		}
+		if (isset($row['filedata']) && $row['filedata'] !== '' && $row['filedata'] !== null)
+		{
+			return $row['filedata'];
+		}
+	}
+
+	// 2) Filesystem — vB5/6 uses {attachpath}/{u/s/e/r/i/d}/{filedataid}.attach
+	$candidates = array();
+	$userSeg = ($userid > 0) ? implode('/', str_split((string)$userid)) : '';
+	foreach (vbdl_pmlic_attach_roots() as $root)
+	{
+		if ($userSeg !== '')
+		{
+			$candidates[] = $root . '/' . $userSeg . '/' . $filedataid . '.attach';
+		}
+		$candidates[] = $root . '/' . floor($filedataid / 1000) . '/' . $filedataid . '.attach';
+		$candidates[] = $root . '/' . $filedataid . '.attach';
+		if ($filehash !== '')
+		{
+			$candidates[] = $root . '/' . $filehash;
+			$candidates[] = $root . '/' . substr($filehash, 0, 2) . '/' . $filehash;
+			if ($userSeg !== '')
+			{
+				$candidates[] = $root . '/' . $userSeg . '/' . $filehash;
+			}
+		}
+	}
+
+	foreach (array_unique($candidates) as $path)
+	{
+		if (is_file($path) && is_readable($path))
+		{
+			$data = @file_get_contents($path);
+			if ($data !== false && $data !== '')
+			{
+				return $data;
+			}
+		}
+	}
+
+	// 3) vB API / library (handles storage type, permissions, local FS)
+	try
+	{
+		if (class_exists('vB_Api', false))
+		{
+			$api = vB_Api::instanceInternal('filedata');
+			if ($api && method_exists($api, 'fetchImageByFiledataid'))
+			{
+				$size = 'full';
+				if (class_exists('vB_Api_Filedata', false))
+				{
+					try
+					{
+						$ref = new ReflectionClass('vB_Api_Filedata');
+						if ($ref->hasConstant('SIZE_FULL'))
+						{
+							$size = $ref->getConstant('SIZE_FULL');
+						}
+					}
+					catch (Throwable $e)
+					{
+					}
+				}
+				$img = $api->fetchImageByFiledataid($filedataid, $size, true, 0);
+				if (is_array($img) && !empty($img['filedata']))
+				{
+					return $img['filedata'];
+				}
+			}
+		}
+	}
+	catch (Throwable $e)
+	{
+	}
+
+	try
+	{
+		if (class_exists('vB_Library', false))
+		{
+			$lib = vB_Library::instance('filedata');
+			if ($lib)
+			{
+				if (method_exists($lib, 'fetchImageByFiledataid'))
+				{
+					$img = $lib->fetchImageByFiledataid($filedataid, true);
+					if (is_array($img) && !empty($img['filedata']))
+					{
+						return $img['filedata'];
+					}
+				}
+				if (method_exists($lib, 'getFileData'))
+				{
+					$data = $lib->getFileData($filedataid);
+					if (is_string($data) && $data !== '')
+					{
+						return $data;
+					}
+					if (is_array($data) && !empty($data['filedata']))
+					{
+						return $data['filedata'];
+					}
+				}
+			}
+		}
+	}
+	catch (Throwable $e)
+	{
+	}
+
+	return null;
+}
+
+function vbdl_pmlic_send_mail($to, $subject, $bodyText, $filename, $bytes, $fromEmail, $fromName, $replyTo = '', $token = '', $kind = 'lic')
+{
+	$to = trim($to);
+	$subject = trim($subject);
+	if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL))
+	{
+		return array('error' => 'Invalid destination email');
+	}
+	if ($subject === '')
+	{
+		$subject = 'License file';
+	}
+	$replyTo = trim($replyTo);
+	if ($replyTo === '' || !filter_var($replyTo, FILTER_VALIDATE_EMAIL))
+	{
+		$replyTo = $fromEmail;
+	}
+	$token = preg_replace('/[^A-Za-z0-9\-]/', '', (string)$token);
+	$kind = preg_replace('/[^a-z0-9_\-]/i', '', (string)$kind);
+	if ($kind === '')
+	{
+		$kind = 'lic';
+	}
+	$uniq = function_exists('random_bytes') ? bin2hex(random_bytes(4)) : bin2hex(openssl_random_pseudo_bytes(4));
+	$messageId = '<' . ($token !== '' ? $token : ('VBDL-' . strtoupper($uniq))) . '.' . $uniq . '@hdd-land.com>';
+
+	$boundary = 'vbdl_' . md5(uniqid((string)mt_rand(), true));
+	$safeName = preg_replace('/[^\w.\-()+@]+/', '_', $filename);
+	$ext = strtolower(pathinfo($safeName, PATHINFO_EXTENSION));
+	if ($safeName === '' || !preg_match('/^(lic|src|jpg|jpeg|png|gif|webp|pdf|txt)$/i', $ext))
+	{
+		$safeName = ($ext !== '' ? ('file.' . $ext) : 'attachment.bin');
+	}
+
+	$headers = array();
+	$headers[] = 'MIME-Version: 1.0';
+	$headers[] = 'From: ' . sprintf('"%s" <%s>', addcslashes($fromName, '"'), $fromEmail);
+	$headers[] = 'Reply-To: ' . $replyTo;
+	$headers[] = 'Message-ID: ' . $messageId;
+	if ($token !== '')
+	{
+		$headers[] = 'X-VBDL-Token: ' . $token;
+	}
+	$headers[] = 'X-VBDL-Kind: ' . $kind;
+	$headers[] = 'Content-Type: multipart/mixed; boundary="' . $boundary . '"';
+	$headers[] = 'X-Mailer: HDD-LAND-VBDL-License';
+
+	$msg = '';
+	$msg .= '--' . $boundary . "\r\n";
+	$msg .= "Content-Type: text/plain; charset=UTF-8\r\n";
+	$msg .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+	$msg .= $bodyText . "\r\n\r\n";
+	$msg .= '--' . $boundary . "\r\n";
+	$msg .= 'Content-Type: application/octet-stream; name="' . $safeName . "\"\r\n";
+	$msg .= "Content-Transfer-Encoding: base64\r\n";
+	$msg .= 'Content-Disposition: attachment; filename="' . $safeName . "\"\r\n\r\n";
+	$msg .= chunk_split(base64_encode($bytes)) . "\r\n";
+	$msg .= '--' . $boundary . "--\r\n";
+
+	$ok = @mail($to, '=?UTF-8?B?' . base64_encode($subject) . '?=', $msg, implode("\r\n", $headers));
+	if (!$ok)
+	{
+		return array('error' => 'mail() failed — check server mail configuration');
+	}
+	return array('ok' => true, 'message_id' => $messageId, 'token' => $token);
+}
+
+if ($userid < 1)
+{
+	vbdl_pmlic_fail('Please sign in', 401);
+}
+
+$can = vbdl_pmlic_can_send($userinfo, $repo);
+$lm = vbdl_pmlic_license_mail();
+$isSedivVip = $acl->isVip($userinfo);
+
+if ($do === 'config')
+{
+	$sedivTo = $lm ? $lm->sedivEmail() : 'sedivlic@list.ru';
+	$sedivSubject = $lm ? $lm->sedivSubject() : 'Active SeDiv 2026';
+	$vipOnly = $lm ? ($lm->vipOnly() ? 1 : 0) : 1;
+	$types = $lm ? $lm->licenseTypes() : array();
+	echo json_encode(array(
+		'ok' => true,
+		'can_send' => $can ? 1 : 0,
+		'is_sediv_vip' => $isSedivVip ? 1 : 0,
+		'show_active_license_menu' => ($isSedivVip || $can) ? 1 : 0,
+		'active_license_url' => '/vbdlmanager/sediv_active_license.php',
+		'vip_only' => $vipOnly,
+		'locked_to' => $sedivTo,
+		'locked_subject' => $sedivSubject,
+		'default_to' => $sedivTo,
+		'default_subject_prefix' => $sedivSubject,
+		'license_types' => $types,
+		'src_retention_days' => $lm ? $lm->srcRetentionDays() : 7,
+		'from_email' => 'info@hdd-land.com',
+		'return_ext' => 'src',
+		'support_userid' => $lm ? $lm->supportUserid() : 1,
+		'imap_configured' => (
+			(trim((string)$repo->getSetting('license_imap_host', '')) !== ''
+				&& trim((string)$repo->getSetting('license_imap_user', '')) !== ''
+				&& trim((string)$repo->getSetting('license_imap_pass', '')) !== '')
+			|| (is_dir('/home/hddrecov/mail/hdd-land.com/info') && @is_readable('/home/hddrecov/mail/hdd-land.com/info'))
+		) ? 1 : 0,
+		'maildir_ready' => (is_dir('/home/hddrecov/mail/hdd-land.com/info') && @is_readable('/home/hddrecov/mail/hdd-land.com/info')) ? 1 : 0,
+		'imap_host' => trim((string)$repo->getSetting('license_imap_host', '')),
+		'imap_user' => trim((string)$repo->getSetting('license_imap_user', '')),
+		'inbox_key_set' => trim((string)$repo->getSetting('license_inbox_key', '')) !== '' ? 1 : 0,
+	));
+	exit;
+}
+
+if ($do === 'token_info')
+{
+	if (!$can)
+	{
+		vbdl_pmlic_fail('Staff only', 403);
+	}
+	if (!$lm)
+	{
+		vbdl_pmlic_fail('License mail unavailable', 500);
+	}
+	$token = isset($_REQUEST['token']) ? (string)$_REQUEST['token'] : '';
+	$rec = $lm->findByToken($token);
+	if (!$rec)
+	{
+		vbdl_pmlic_fail('Unknown tracking token');
+	}
+	$msgId = !empty($rec['starter_nodeid']) ? (int)$rec['starter_nodeid'] : (int)$rec['message_nodeid'];
+	echo json_encode(array(
+		'ok' => true,
+		'token' => $rec['token'],
+		'status' => $rec['status'],
+		'customer_username' => $rec['customer_username'],
+		'customer_userid' => (int)$rec['customer_userid'],
+		'lic_filename' => $rec['lic_filename'],
+		'return_filename' => $rec['return_filename'],
+		'message_nodeid' => (int)$rec['message_nodeid'],
+		'message_url' => $msgId > 0 ? ('/messagecenter/view/' . $msgId) : '',
+	));
+	exit;
+}
+
+if ($do === 'vip_list')
+{
+	if (!$lm)
+	{
+		vbdl_pmlic_fail('License mail unavailable', 500);
+	}
+	if (!$isSedivVip && !$can)
+	{
+		vbdl_pmlic_fail('SeDiv VIP only', 403);
+	}
+	$staffView = ($can && !$isSedivVip);
+	if ($can && !empty($_REQUEST['all']))
+	{
+		$staffView = true;
+	}
+	if ($staffView)
+	{
+		$rows = $lm->listAll(80);
+	}
+	else
+	{
+		$listUser = $userid;
+		if ($can && !empty($_REQUEST['userid']))
+		{
+			$listUser = (int)$_REQUEST['userid'];
+		}
+		$rows = $lm->listForUser($listUser);
+	}
+	$items = array();
+	foreach ($rows as $row)
+	{
+		$msgId = !empty($row['starter_nodeid']) ? (int)$row['starter_nodeid'] : (int)$row['message_nodeid'];
+		$items[] = array(
+			'token' => $row['token'],
+			'customer_username' => isset($row['customer_username']) ? $row['customer_username'] : '',
+			'customer_userid' => isset($row['customer_userid']) ? (int)$row['customer_userid'] : 0,
+			'lic_filename' => $row['lic_filename'],
+			'license_type' => isset($row['license_type']) ? $row['license_type'] : '',
+			'license_label' => isset($row['license_label']) ? $row['license_label'] : '',
+			'subject' => isset($row['subject']) ? $row['subject'] : '',
+			'status' => $row['status'],
+			'return_filename' => $row['return_filename'],
+			'reply_text' => isset($row['reply_text']) ? $row['reply_text'] : '',
+			'src_purged' => !empty($row['src_purged']) ? 1 : 0,
+			'src_available' => !empty($row['src_available']) ? 1 : 0,
+			'download_count' => isset($row['download_count']) ? (int)$row['download_count'] : 0,
+			'sent_label' => !empty($row['sent_dateline']) ? date('Y-m-d H:i', (int)$row['sent_dateline']) : '',
+			'returned_label' => !empty($row['returned_dateline']) ? date('Y-m-d H:i', (int)$row['returned_dateline']) : '',
+			'message_url' => $msgId > 0 ? ('/messagecenter/view/' . $msgId) : '',
+		);
+	}
+	echo json_encode(array('ok' => true, 'items' => $items, 'staff_view' => $staffView ? 1 : 0));
+	exit;
+}
+
+if ($do === 'vip_submit')
+{
+	if (!$lm)
+	{
+		vbdl_pmlic_fail('License mail unavailable', 500);
+	}
+	if (!$isSedivVip)
+	{
+		vbdl_pmlic_fail('Only SeDiv VIP members can submit licenses here', 403);
+	}
+	$typeId = isset($_POST['license_type']) ? (string)$_POST['license_type'] : '';
+	$type = $lm->getLicenseType($typeId);
+	if (!$type)
+	{
+		vbdl_pmlic_fail('Choose a license type from the list');
+	}
+	if (empty($_FILES['licfile']) || !is_uploaded_file($_FILES['licfile']['tmp_name']))
+	{
+		vbdl_pmlic_fail('Upload a .lic file');
+	}
+	$filename = (string)$_FILES['licfile']['name'];
+	if (!preg_match('/\.lic$/i', $filename))
+	{
+		vbdl_pmlic_fail('Only .lic files are accepted');
+	}
+	$bytes = file_get_contents($_FILES['licfile']['tmp_name']);
+	if ($bytes === false || $bytes === '')
+	{
+		vbdl_pmlic_fail('Could not read license file contents');
+	}
+	$note = isset($_POST['note']) ? trim((string)$_POST['note']) : '';
+	$customer = !empty($userinfo['username']) ? (string)$userinfo['username'] : ('userid-' . $userid);
+	$customerEmail = $lm->customerEmail($userid);
+	$token = $lm->makeToken();
+	// Exact subject text sedivlic expects, plus tracking token for auto-return.
+	$subjectBase = $type['subject'];
+	$subject = $subjectBase . ' [' . $token . ']';
+	$ticket = $lm->createVipLicenseTicket(
+		$userid,
+		$customer,
+		$token,
+		$filename,
+		$type['label'],
+		$subjectBase
+	);
+	if (!empty($ticket['error']))
+	{
+		vbdl_pmlic_fail($ticket['error'], 500);
+	}
+	$messageNode = (int)$ticket['message_nodeid'];
+	$starterNode = (int)$ticket['starter_nodeid'];
+	$supportId = !empty($ticket['support_userid']) ? (int)$ticket['support_userid'] : $lm->supportUserid();
+
+	// Attach .lic into the new ticket so VIP + support both see the sent file.
+	$attached = $lm->attachFileToTicket($messageNode, $starterNode, $userid, $filename, $bytes);
+	if (!empty($attached['error']))
+	{
+		vbdl_pmlic_fail('Ticket created but .lic attach failed: ' . $attached['error'], 500);
+	}
+
+	$to = $lm->sedivEmail();
+
+	$rec = $lm->createSentRecord(array(
+		'token' => $token,
+		'message_nodeid' => $messageNode,
+		'starter_nodeid' => $starterNode,
+		'customer_userid' => $userid,
+		'customer_username' => $customer,
+		'customer_email' => $customerEmail,
+		'staff_userid' => $supportId,
+		'filedataid' => (int)$attached['filedataid'],
+		'lic_filename' => $filename,
+		'license_type' => $type['id'],
+		'to_email' => $to,
+		'subject' => $subject,
+	));
+	if (!empty($rec['error']))
+	{
+		vbdl_pmlic_fail($rec['error'], 500);
+	}
+
+	$body = $type['label'] . " — license activation request\n";
+	$body .= "==============================================\n\n";
+	$body .= "Tracking token: " . $token . "\n";
+	$body .= "(Please keep this token in your reply subject or body)\n\n";
+	$body .= "License type: " . $type['label'] . "\n";
+	$body .= "Email subject line: " . $subjectBase . "\n";
+	$body .= "Customer username: " . $customer . "\n";
+	$body .= "Customer email: " . ($customerEmail !== '' ? $customerEmail : '(not set)') . "\n";
+	$body .= "Customer userid: " . $userid . "\n";
+	$body .= "License filename: " . $filename . "\n";
+	$body .= "Message Center ticket: https://forum.hdd-land.com/messagecenter/view/" . ($starterNode > 0 ? $starterNode : $messageNode) . "\n";
+	$body .= "Submitted via: Active License SeDiv (VIP self-service)\n";
+	$body .= "Forum: https://forum.hdd-land.com/\n";
+	if ($note !== '')
+	{
+		$body .= "\nCustomer note:\n" . $note . "\n";
+	}
+	$body .= "\nPlease activate this .lic and reply with the activated .src file.\n";
+	$body .= "If activation fails, reply with a plain-text explanation (no .src).\n";
+	$body .= "The reply will be posted automatically back into the same Message Center ticket.\n";
+
+	$fromEmail = 'info@hdd-land.com';
+	$sent = vbdl_pmlic_send_mail(
+		$to,
+		$subject,
+		$body,
+		$filename,
+		$bytes,
+		$fromEmail,
+		'HDD LAND License Desk',
+		$fromEmail,
+		$token,
+		'lic'
+	);
+	if (!empty($sent['error']))
+	{
+		vbdl_pmlic_fail($sent['error'], 500);
+	}
+	$lm->storeOutboundMeta($token, array(
+		'outbound_message_id' => isset($sent['message_id']) ? $sent['message_id'] : '',
+		'outbound_from' => $fromEmail,
+		'outbound_to' => $to,
+		'outbound_subject' => $subject,
+		'outbound_kind' => 'lic',
+		'outbound_sent_dateline' => time(),
+	));
+
+	$msgUrl = '/messagecenter/view/' . ($starterNode > 0 ? $starterNode : $messageNode);
+	echo json_encode(array(
+		'ok' => true,
+		'sent_to' => $to,
+		'subject' => $subject,
+		'license_type' => $type['id'],
+		'license_label' => $type['label'],
+		'token' => $token,
+		'from_email' => $fromEmail,
+		'message_id' => isset($sent['message_id']) ? $sent['message_id'] : '',
+		'message_nodeid' => $messageNode,
+		'message_url' => $msgUrl,
+		'customer_username' => $customer,
+		'support_userid' => $supportId,
+		'lic_attach_nodeid' => (int)$attached['attach_nodeid'],
+	));
+	exit;
+}
+
+if ($do === 'return_upload')
+{
+	// Staff OR the VIP customer who owns the token can return .src into the ticket.
+	$token = isset($_POST['token']) ? (string)$_POST['token'] : '';
+	if (!$lm)
+	{
+		vbdl_pmlic_fail('License mail unavailable', 500);
+	}
+	$rec = $lm->findByToken($token);
+	if (!$rec)
+	{
+		vbdl_pmlic_fail('Unknown tracking token');
+	}
+	$ownerId = (int)$rec['customer_userid'];
+	if (!$can && !($isSedivVip && $ownerId === $userid))
+	{
+		vbdl_pmlic_fail('Not allowed to return this license', 403);
+	}
+	if (empty($_FILES['srcfile']) || !is_uploaded_file($_FILES['srcfile']['tmp_name']))
+	{
+		vbdl_pmlic_fail('Upload a .src file');
+	}
+	$name = (string)$_FILES['srcfile']['name'];
+	if (!preg_match('/\.src$/i', $name))
+	{
+		vbdl_pmlic_fail('Only .src return files are accepted');
+	}
+	$bytes = file_get_contents($_FILES['srcfile']['tmp_name']);
+	$result = $lm->returnSrcToTicket($rec, $name, $bytes, $userid);
+	if (!empty($result['error']))
+	{
+		vbdl_pmlic_fail($result['error'], 500);
+	}
+	echo json_encode(array_merge(array('ok' => true), $result));
+	exit;
+}
+
+if (!$can)
+{
+	vbdl_pmlic_fail('You are not allowed to email license files', 403);
+}
+
+if ($do === 'resolve')
+{
+	$filedataid = isset($_REQUEST['filedataid']) ? (int)$_REQUEST['filedataid'] : 0;
+	$attachmentid = isset($_REQUEST['attachmentid']) ? (int)$_REQUEST['attachmentid'] : 0;
+	$nodeid = isset($_REQUEST['nodeid']) ? (int)$_REQUEST['nodeid'] : 0;
+	$resolved = vbdl_pmlic_resolve_attachment($filedataid, $attachmentid, $nodeid, false);
+	if (!empty($resolved['error']))
+	{
+		vbdl_pmlic_fail($resolved['error']);
+	}
+	$custId = (int)$resolved['customer_userid'];
+	$isVip = $lm ? $lm->isCustomerVip($custId) : false;
+	$custEmail = $lm ? $lm->customerEmail($custId) : '';
+	$vipOnly = $lm ? $lm->vipOnly() : true;
+	echo json_encode(array(
+		'ok' => true,
+		'customer_username' => $resolved['customer_username'],
+		'customer_userid' => $custId,
+		'customer_email' => $custEmail,
+		'is_vip' => $isVip ? 1 : 0,
+		'vip_only' => $vipOnly ? 1 : 0,
+		'can_use_sediv_flow' => (!$vipOnly || $isVip) ? 1 : 0,
+		'locked_to' => $lm ? $lm->sedivEmail() : 'sedivlic@list.ru',
+		'locked_subject' => $lm ? $lm->sedivSubject() : 'Active SeDiv 2026',
+		'filename' => $resolved['filename'],
+		'filedataid' => (int)$resolved['filedataid'],
+		'message_nodeid' => (int)$resolved['message_nodeid'],
+	));
+	exit;
+}
+
+if ($do !== 'send')
+{
+	vbdl_pmlic_fail('Unknown action — use Active License SeDiv menu for VIP submissions');
+}
+
+// Staff ticket-side send is retired: VIP self-service runs only via Active License SeDiv.
+vbdl_pmlic_fail('License send now runs only from Message Center → active license sediv', 400);
