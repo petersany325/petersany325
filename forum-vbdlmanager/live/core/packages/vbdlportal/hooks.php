@@ -128,8 +128,8 @@ class vbdlportal_Hooks
 		{
 			return $html;
 		}
-		$assets = '<link rel="stylesheet" href="/vbdlmanager/assets/pm-lic-email.css?v=20260916c" />'
-			. '<script defer src="/vbdlmanager/assets/pm-lic-email.js?v=20260916c"></script>';
+		$assets = '<link rel="stylesheet" href="/vbdlmanager/assets/pm-lic-email.css?v=20260916d" />'
+			. '<script defer src="/vbdlmanager/assets/pm-lic-email.js?v=20260916d"></script>';
 		if (stripos($html, '</body>') !== false)
 		{
 			return preg_replace('/<\/body>/i', $assets . '</body>', $html, 1);

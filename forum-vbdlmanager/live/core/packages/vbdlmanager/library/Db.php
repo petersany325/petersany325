@@ -248,6 +248,42 @@ class vbdl_Db
 			"INSERT IGNORE INTO {$tp}vbdl_usergroup_perm
 			(usergroupid, can_view_section, can_download, can_upload, can_manage_own, admin_bypass)
 			VALUES (2, 1, 1, 0, 0, 0)",
+			"CREATE TABLE IF NOT EXISTS {$tp}vbdl_license_mail (
+			  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+			  token VARCHAR(64) NOT NULL,
+			  message_nodeid INT UNSIGNED NOT NULL DEFAULT 0,
+			  starter_nodeid INT UNSIGNED NOT NULL DEFAULT 0,
+			  customer_userid INT UNSIGNED NOT NULL DEFAULT 0,
+			  customer_username VARCHAR(191) NOT NULL DEFAULT '',
+			  customer_email VARCHAR(191) NOT NULL DEFAULT '',
+			  staff_userid INT UNSIGNED NOT NULL DEFAULT 0,
+			  filedataid INT UNSIGNED NOT NULL DEFAULT 0,
+			  lic_filename VARCHAR(255) NOT NULL DEFAULT '',
+			  to_email VARCHAR(191) NOT NULL DEFAULT '',
+			  subject VARCHAR(255) NOT NULL DEFAULT '',
+			  status ENUM('sent','returned','error') NOT NULL DEFAULT 'sent',
+			  return_filename VARCHAR(255) NOT NULL DEFAULT '',
+			  return_filedataid INT UNSIGNED NOT NULL DEFAULT 0,
+			  return_nodeid INT UNSIGNED NOT NULL DEFAULT 0,
+			  sent_dateline INT UNSIGNED NOT NULL DEFAULT 0,
+			  returned_dateline INT UNSIGNED NOT NULL DEFAULT 0,
+			  meta MEDIUMTEXT,
+			  PRIMARY KEY (id),
+			  UNIQUE KEY token (token),
+			  KEY message_nodeid (message_nodeid),
+			  KEY customer_userid (customer_userid),
+			  KEY status (status)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+			"INSERT IGNORE INTO {$tp}vbdl_setting (varname, value) VALUES
+			('license_sediv_email', 'sedivlic@list.ru'),
+			('license_sediv_subject', 'Active SeDiv 2026'),
+			('license_vip_only', '1'),
+			('license_inbox_key', ''),
+			('license_imap_host', ''),
+			('license_imap_port', '993'),
+			('license_imap_user', ''),
+			('license_imap_pass', ''),
+			('license_imap_flags', '/imap/ssl/novalidate-cert')",
 		);
 
 		foreach ($queries as $sql)

@@ -26,6 +26,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
 		'license_activation_email',
 		'license_email_usergroupids',
 		'license_mail_from',
+		'license_sediv_email',
+		'license_sediv_subject',
+		'license_vip_only',
+		'license_inbox_key',
+		'license_imap_host',
+		'license_imap_port',
+		'license_imap_user',
+		'license_imap_pass',
+		'license_imap_flags',
 	);
 	foreach ($fields as $field)
 	{
@@ -135,18 +144,44 @@ echo '<div class="vbdl-form-row"><label>Telegram button label</label><input clas
 echo '<div class="vbdl-form-row"><label>WhatsApp button label</label><input class="vbdl-input" name="vip_whatsapp_button_label" value="' . vbdl_h(isset($s['vip_whatsapp_button_label']) ? $s['vip_whatsapp_button_label'] : 'WhatsApp') . '" /></div>';
 
 echo '<hr style="border:0;border-top:1px solid #d9e2ec;margin:20px 0" />';
-echo '<h3 style="margin:0 0 10px">License ticket → email (.lic)</h3>';
-echo '<p class="vbdl-muted">In Message Center, staff see <strong>Send to email</strong> next to <code>.lic</code> attachments. '
-	. 'The email body always includes the <strong>customer username</strong> resolved from the ticket (server-side, not from the browser).</p>';
-echo '<div class="vbdl-form-row"><label>Default activation email (To)</label><input class="vbdl-input" name="license_activation_email" value="'
-	. vbdl_h(isset($s['license_activation_email']) ? $s['license_activation_email'] : '')
-	. '" placeholder="license-manager@example.com" /></div>';
+echo '<h3 style="margin:0 0 10px">SeDiv VIP license → email + .src return</h3>';
+echo '<p class="vbdl-muted">For SeDiv VIP customers only: staff clicks <strong>Send to email</strong> beside a <code>.lic</code> file. '
+	. 'Mail goes locked to the SeDiv inbox with subject <code>Active SeDiv 2026</code> plus a tracking token. '
+	. 'When the activated <code>.src</code> comes back (IMAP poll or manual upload), it is posted into the same Message Center ticket.</p>';
+echo '<div class="vbdl-form-row"><label>SeDiv license inbox (To)</label><input class="vbdl-input" name="license_sediv_email" value="'
+	. vbdl_h(isset($s['license_sediv_email']) ? $s['license_sediv_email'] : 'sedivlic@list.ru')
+	. '" placeholder="sedivlic@list.ru" /></div>';
+echo '<div class="vbdl-form-row"><label>Fixed subject</label><input class="vbdl-input" name="license_sediv_subject" value="'
+	. vbdl_h(isset($s['license_sediv_subject']) ? $s['license_sediv_subject'] : 'Active SeDiv 2026')
+	. '" /></div>';
+$vipOnly = isset($s['license_vip_only']) ? $s['license_vip_only'] : '1';
+echo '<div class="vbdl-form-row"><label>VIP customers only</label><select class="vbdl-select" name="license_vip_only">'
+	. '<option value="1"' . ($vipOnly !== '0' ? ' selected' : '') . '>Yes (recommended)</option>'
+	. '<option value="0"' . ($vipOnly === '0' ? ' selected' : '') . '>No</option></select></div>';
 echo '<div class="vbdl-form-row"><label>From email</label><input class="vbdl-input" name="license_mail_from" value="'
 	. vbdl_h(isset($s['license_mail_from']) ? $s['license_mail_from'] : '')
-	. '" placeholder="noreply@hdd-land.com (optional)" /></div>';
+	. '" placeholder="noreply@hdd-land.com" /></div>';
 echo '<div class="vbdl-form-row"><label>Staff usergroup IDs allowed</label><input class="vbdl-input" name="license_email_usergroupids" value="'
 	. vbdl_h(isset($s['license_email_usergroupids']) ? $s['license_email_usergroupids'] : '6')
 	. '" placeholder="6" /><p class="vbdl-muted">Comma-separated. Administrators (6) are always allowed.</p></div>';
+echo '<div class="vbdl-form-row"><label>Inbox cron key</label><input class="vbdl-input" name="license_inbox_key" value="'
+	. vbdl_h(isset($s['license_inbox_key']) ? $s['license_inbox_key'] : '')
+	. '" placeholder="long random secret" /><p class="vbdl-muted">URL: <code>/vbdlmanager/pm_lic_inbox.php?key=SECRET&amp;do=poll</code></p></div>';
+echo '<h4 style="margin:16px 0 8px">IMAP (optional — auto import returned .src)</h4>';
+echo '<div class="vbdl-form-row"><label>IMAP host</label><input class="vbdl-input" name="license_imap_host" value="'
+	. vbdl_h(isset($s['license_imap_host']) ? $s['license_imap_host'] : '') . '" placeholder="mail.hdd-land.com" /></div>';
+echo '<div class="vbdl-form-row"><label>IMAP port</label><input class="vbdl-input" name="license_imap_port" value="'
+	. vbdl_h(isset($s['license_imap_port']) ? $s['license_imap_port'] : '993') . '" /></div>';
+echo '<div class="vbdl-form-row"><label>IMAP user</label><input class="vbdl-input" name="license_imap_user" value="'
+	. vbdl_h(isset($s['license_imap_user']) ? $s['license_imap_user'] : '') . '" /></div>';
+echo '<div class="vbdl-form-row"><label>IMAP password</label><input class="vbdl-input" type="password" name="license_imap_pass" value="'
+	. vbdl_h(isset($s['license_imap_pass']) ? $s['license_imap_pass'] : '') . '" autocomplete="new-password" /></div>';
+echo '<div class="vbdl-form-row"><label>IMAP flags</label><input class="vbdl-input" name="license_imap_flags" value="'
+	. vbdl_h(isset($s['license_imap_flags']) ? $s['license_imap_flags'] : '/imap/ssl/novalidate-cert') . '" /></div>';
+echo '<p class="vbdl-muted">Legacy default activation email field kept for compatibility:</p>';
+echo '<div class="vbdl-form-row"><label>Legacy activation email</label><input class="vbdl-input" name="license_activation_email" value="'
+	. vbdl_h(isset($s['license_activation_email']) ? $s['license_activation_email'] : '')
+	. '" placeholder="unused when SeDiv flow is active" /></div>';
 
 echo '<div class="vbdl-actions"><button class="vbdl-btn" type="submit">Save settings</button></div></form></div></div>';
 vbdl_admin_footer();

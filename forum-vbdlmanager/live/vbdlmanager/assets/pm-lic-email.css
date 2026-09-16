@@ -29,6 +29,9 @@
   border:0;border-radius:7px;background:#0f6cbd;color:#fff;font-weight:800;padding:9px 14px;cursor:pointer
 }
 .vbdl-pmlic-send:disabled{opacity:.55;cursor:not-allowed}
-.vbdl-pmlic-cancel{
-  border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;font-weight:700;padding:9px 14px;cursor:pointer
+.vbdl-pmlic-hr{border:0;border-top:1px solid #e2e8f0;margin:14px 0}
+.vbdl-pmlic-return-h{font-size:13px;font-weight:800;margin:0 0 8px}
+.vbdl-pmlic-return-btn{
+  margin-top:8px;border:0;border-radius:7px;background:#0f766e;color:#fff;font-weight:800;padding:9px 14px;cursor:pointer
 }
+.vbdl-pmlic-return-btn:hover{background:#0d9488}
