@@ -673,9 +673,10 @@ if ($do === 'config')
 		'from_email' => 'info@hdd-land.com',
 		'return_ext' => 'src',
 		'imap_configured' => (
-			trim((string)$repo->getSetting('license_imap_host', '')) !== ''
-			&& trim((string)$repo->getSetting('license_imap_user', '')) !== ''
-			&& trim((string)$repo->getSetting('license_imap_pass', '')) !== ''
+			(trim((string)$repo->getSetting('license_imap_host', '')) !== ''
+				&& trim((string)$repo->getSetting('license_imap_user', '')) !== ''
+				&& trim((string)$repo->getSetting('license_imap_pass', '')) !== '')
+			|| (is_dir('/home/hddrecov/mail/hdd-land.com/info') && @is_readable('/home/hddrecov/mail/hdd-land.com/info'))
 		) ? 1 : 0,
 		'imap_host' => trim((string)$repo->getSetting('license_imap_host', '')),
 		'imap_user' => trim((string)$repo->getSetting('license_imap_user', '')),

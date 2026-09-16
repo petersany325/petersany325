@@ -12,6 +12,8 @@ class vbdl_LicenseMail
 	protected $repo;
 	/** @var vbdl_Acl */
 	protected $acl;
+	/** @var string */
+	protected $lastNodeError = '';
 
 	public function __construct(mysqli $db, $prefix, vbdl_Repository $repo, vbdl_Acl $acl)
 	{
@@ -368,20 +370,39 @@ class vbdl_LicenseMail
 	{
 		$p = $this->prefix;
 		$now = time();
-		$hash = sha1($bytes);
+		// vB filehash column is MD5 (32 chars), not SHA1.
+		$hash = md5($bytes);
 		$size = strlen($bytes);
 		$ext = 'src';
 
-		// 1) filedata via UNHEX (portable across hosts)
-		$hex = bin2hex($bytes);
-		$sqlFd = 'INSERT INTO ' . $p . 'filedata (userid, dateline, filehash, filesize, extension, filedata) VALUES ('
-			. (int)$userid . ',' . (int)$now . ',\'' . $this->db->real_escape_string($hash) . '\','
-			. (int)$size . ',\'' . $this->db->real_escape_string($ext) . '\',UNHEX(\'' . $hex . '\'))';
-		if (!$this->db->query($sqlFd))
+		$filedataid = 0;
+		// Large .src files: metadata in DB + bytes on filesystem (userid digit path).
+		if ($size <= 512000)
 		{
-			return array('error' => 'filedata insert failed: ' . $this->db->error);
+			$hex = bin2hex($bytes);
+			$sqlFd = 'INSERT INTO ' . $p . 'filedata (userid, dateline, filehash, filesize, extension, filedata) VALUES ('
+				. (int)$userid . ',' . (int)$now . ',\'' . $this->db->real_escape_string($hash) . '\','
+				. (int)$size . ',\'' . $this->db->real_escape_string($ext) . '\',UNHEX(\'' . $hex . '\'))';
+			if ($this->db->query($sqlFd))
+			{
+				$filedataid = (int)$this->db->insert_id;
+			}
 		}
-		$filedataid = (int)$this->db->insert_id;
+		if ($filedataid < 1)
+		{
+			$sqlFd = 'INSERT INTO ' . $p . 'filedata (userid, dateline, filehash, filesize, extension, filedata) VALUES ('
+				. (int)$userid . ',' . (int)$now . ',\'' . $this->db->real_escape_string($hash) . '\','
+				. (int)$size . ',\'' . $this->db->real_escape_string($ext) . '\',\'\')';
+			if (!$this->db->query($sqlFd))
+			{
+				return array('error' => 'filedata insert failed: ' . $this->db->error);
+			}
+			$filedataid = (int)$this->db->insert_id;
+			if ($this->writeAttachFile($filedataid, $userid, $bytes) === '')
+			{
+				return array('error' => 'Could not write .src attachment to filesystem');
+			}
+		}
 
 		// contenttypeid for Text + Attach
 		$textType = $this->contentTypeId('Text');
@@ -396,54 +417,96 @@ class vbdl_LicenseMail
 			. 'Tracking: ' . $record['token'] . "\n"
 			. 'File: ' . $filename;
 
-		// 2) text reply node under parent message
+		// Load parent routeid / author defaults (vB6 node schema).
+		$parent = null;
+		$resP = $this->db->query('SELECT routeid, userid, authorname FROM ' . $p . 'node WHERE nodeid=' . (int)$parentId . ' LIMIT 1');
+		if ($resP)
+		{
+			$parent = $resP->fetch_assoc();
+		}
+		$routeid = $parent && !empty($parent['routeid']) ? (int)$parent['routeid'] : 63;
+		$author = $this->usernameById($userid);
+
+		// 2) Text reply under the PM ticket (vB6 uses `created`, not createdate)
 		$title = 'Activated license (.src)';
 		$textNode = $this->insertNode(array(
+			'routeid' => $routeid,
 			'userid' => $userid,
-			'authorname' => $this->usernameById($userid),
+			'authorname' => $author,
 			'parentid' => (int)$parentId,
 			'starter' => (int)$starterId,
 			'contenttypeid' => $textType,
 			'title' => $title,
-			'createdate' => $now,
+			'htmltitle' => $title,
+			'urlident' => 'activated-license-src',
+			'created' => $now,
 			'lastcontent' => $now,
 			'lastcontentid' => 0,
+			'lastcontentauthor' => $author,
 			'lastauthorid' => $userid,
+			'lastprefixid' => '',
 			'publishdate' => $now,
 			'showpublished' => 1,
 			'showopen' => 1,
+			'open' => 1,
 			'approved' => 1,
 			'showapproved' => 1,
+			'ipaddress' => '',
+			'CRC32' => (string)sprintf('%u', crc32($rawtext)),
+			'prefixid' => '',
+			'inlist' => 1,
+			'protected' => 0,
+			'nodeoptions' => 138,
 		));
 		if ($textNode < 1)
 		{
-			return array('error' => 'Failed creating reply node');
+			// Fallback: attach .src directly under the PM node (same as .lic uploads).
+			$textNode = (int)$parentId;
 		}
-		$this->db->query(
-			'INSERT INTO ' . $p . 'text (nodeid, rawtext, htmltitle) VALUES ('
-			. $textNode . ',\'' . $this->db->real_escape_string($rawtext) . '\',\''
-			. $this->db->real_escape_string($title) . '\')'
-		);
+		else
+		{
+			$this->db->query(
+				'INSERT INTO ' . $p . 'text (nodeid, rawtext, htmltitle) VALUES ('
+				. $textNode . ',\'' . $this->db->real_escape_string($rawtext) . '\',\''
+				. $this->db->real_escape_string($title) . '\')'
+			);
+		}
 
-		// 3) attach node under text reply
+		// 3) attach node under text reply (or directly under PM)
+		$attachParent = $textNode > 0 ? $textNode : (int)$parentId;
 		$attachNode = $this->insertNode(array(
+			'routeid' => $routeid,
 			'userid' => $userid,
-			'authorname' => $this->usernameById($userid),
-			'parentid' => $textNode,
+			'authorname' => $author,
+			'parentid' => $attachParent,
 			'starter' => (int)$starterId,
 			'contenttypeid' => $attachType,
 			'title' => $filename,
-			'createdate' => $now,
+			'htmltitle' => $filename,
+			'urlident' => preg_replace('/[^a-z0-9\-]+/i', '-', strtolower($filename)),
+			'created' => $now,
 			'lastcontent' => $now,
+			'lastcontentid' => 0,
+			'lastcontentauthor' => $author,
+			'lastauthorid' => $userid,
+			'lastprefixid' => '',
 			'publishdate' => $now,
 			'showpublished' => 1,
 			'showopen' => 1,
+			'open' => 1,
 			'approved' => 1,
 			'showapproved' => 1,
+			'ipaddress' => '',
+			'CRC32' => (string)sprintf('%u', crc32($filename)),
+			'prefixid' => '',
+			'inlist' => 1,
+			'protected' => 0,
+			'nodeoptions' => 138,
+			'hasphoto' => 0,
 		));
 		if ($attachNode < 1)
 		{
-			return array('error' => 'Failed creating attach node');
+			return array('error' => 'Failed creating attach node: ' . $this->lastNodeError);
 		}
 		$this->db->query(
 			'INSERT INTO ' . $p . 'attach (nodeid, filedataid, filename, counter, settings) VALUES ('
@@ -452,9 +515,11 @@ class vbdl_LicenseMail
 
 		// Update parent lastcontent pointers lightly
 		$this->db->query(
-			'UPDATE ' . $p . 'node SET lastcontent=' . $now . ', lastcontentid=' . $textNode
-			. ', lastauthor=\'' . $this->db->real_escape_string($this->usernameById($userid)) . '\''
-			. ', lastauthorid=' . $userid . ' WHERE nodeid=' . (int)$parentId
+			'UPDATE ' . $p . 'node SET lastcontent=' . $now . ', lastcontentid=' . (int)$attachNode
+			. ', lastcontentauthor=\'' . $this->db->real_escape_string($author) . '\''
+			. ', lastauthorid=' . $userid
+			. ', totalcount=totalcount+1, textcount=textcount+1'
+			. ' WHERE nodeid=' . (int)$parentId
 		);
 
 		return array(
@@ -467,6 +532,62 @@ class vbdl_LicenseMail
 	protected function postPmReplyWithAttachNoBlob($parentId, $starterId, $userid, $filename, $bytes, array $record)
 	{
 		return array('error' => 'filedata blob insert unavailable on this host');
+	}
+
+	protected function writeAttachFile($filedataid, $userid, $bytes)
+	{
+		$filedataid = (int)$filedataid;
+		$userid = (int)$userid;
+		$roots = array();
+		global $vbulletin;
+		if (!empty($vbulletin->config['Misc']['attachmentpath']))
+		{
+			$roots[] = rtrim((string)$vbulletin->config['Misc']['attachmentpath'], '/');
+		}
+		// LicenseMail.php → library → vbdlmanager → packages → core → forum root
+		$forumRoot = realpath(dirname(__FILE__) . '/../../../../..');
+		if ($forumRoot === false)
+		{
+			$forumRoot = '/home/hddrecov/public_html/forum';
+		}
+		$config = array();
+		$cfg = $forumRoot . '/core/includes/config.php';
+		if (is_file($cfg))
+		{
+			include $cfg;
+		}
+		if (!empty($config['Misc']['attachmentpath']))
+		{
+			$ap = rtrim((string)$config['Misc']['attachmentpath'], '/');
+			if ($ap !== '' && isset($ap[0]) && $ap[0] !== '/')
+			{
+				$ap = rtrim($forumRoot, '/') . '/' . ltrim($ap, './');
+			}
+			array_unshift($roots, $ap);
+		}
+		$roots[] = $forumRoot . '/core/attachment';
+		$roots[] = $forumRoot . '/attachment';
+		$userSeg = ($userid > 0) ? implode('/', str_split((string)$userid)) : '0';
+		foreach (array_unique($roots) as $root)
+		{
+			if ($root === '')
+			{
+				continue;
+			}
+			$dir = $root . '/' . $userSeg;
+			if (!is_dir($dir))
+			{
+				@mkdir($dir, 0755, true);
+			}
+			$path = $dir . '/' . $filedataid . '.attach';
+			$n = @file_put_contents($path, $bytes);
+			if ($n !== false && $n > 0)
+			{
+				@chmod($path, 0644);
+				return $path;
+			}
+		}
+		return '';
 	}
 
 	protected function contentTypeId($class)
@@ -510,6 +631,7 @@ class vbdl_LicenseMail
 		$sql = 'INSERT INTO ' . $this->prefix . 'node (' . implode(',', $cols) . ') VALUES (' . implode(',', $vals) . ')';
 		if (!$this->db->query($sql))
 		{
+			$this->lastNodeError = $this->db->error;
 			return 0;
 		}
 		return (int)$this->db->insert_id;

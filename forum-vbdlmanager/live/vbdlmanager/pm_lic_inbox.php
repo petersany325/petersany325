@@ -124,6 +124,62 @@ $user = trim((string)$repo->getSetting('license_imap_user', ''));
 $pass = (string)$repo->getSetting('license_imap_pass', '');
 $port = (int)$repo->getSetting('license_imap_port', '993');
 $flags = trim((string)$repo->getSetting('license_imap_flags', '/imap/ssl/novalidate-cert'));
+
+// Prefer local Maildir when readable (same host as forum) — no IMAP password needed.
+$maildir = trim((string)$repo->getSetting('license_maildir', '/home/hddrecov/mail/hdd-land.com/info'));
+if ($maildir !== '' && is_dir($maildir) && @is_readable($maildir))
+{
+	$processed = array();
+	$errors = array();
+	$files = array();
+	vbdl_inbox_scan_maildir($maildir, $files, 0);
+	// newest first
+	usort($files, function ($a, $b) {
+		return filemtime($b) - filemtime($a);
+	});
+	$files = array_slice($files, 0, 40);
+	foreach ($files as $path)
+	{
+		$raw = @file_get_contents($path);
+		if ($raw === false || $raw === '')
+		{
+			continue;
+		}
+		$token = $lm->extractTokenFromText($raw);
+		if ($token === '')
+		{
+			continue;
+		}
+		$rec = $lm->findByToken($token);
+		if (!$rec || $rec['status'] === 'returned')
+		{
+			continue;
+		}
+		$parsed = vbdl_inbox_extract_src_from_rfc822($raw);
+		if (empty($parsed['bytes']))
+		{
+			$errors[] = array('token' => $token, 'error' => 'No .src attachment found in maildir message');
+			continue;
+		}
+		$result = $lm->returnSrcToTicket($rec, $parsed['filename'], $parsed['bytes'], (int)$rec['staff_userid']);
+		if (!empty($result['error']))
+		{
+			$errors[] = array('token' => $token, 'error' => $result['error']);
+			continue;
+		}
+		$processed[] = array('token' => $token, 'file' => $parsed['filename'], 'node' => $result['attach_nodeid'], 'via' => 'maildir');
+	}
+	echo json_encode(array(
+		'ok' => true,
+		'mode' => 'maildir',
+		'maildir' => $maildir,
+		'processed' => $processed,
+		'errors' => $errors,
+		'checked' => count($files),
+	));
+	exit;
+}
+
 if ($host === '' || $user === '' || $pass === '')
 {
 	echo json_encode(array(
@@ -287,4 +343,85 @@ function vbdl_inbox_part_filename($part)
 		}
 	}
 	return (string)$filename;
+}
+
+function vbdl_inbox_scan_maildir($dir, array &$files, $depth = 0)
+{
+	if ($depth > 4 || !is_dir($dir) || !@is_readable($dir))
+	{
+		return;
+	}
+	$ents = @scandir($dir);
+	if (!$ents)
+	{
+		return;
+	}
+	foreach ($ents as $e)
+	{
+		if ($e === '.' || $e === '..')
+		{
+			continue;
+		}
+		// Skip dovecot index files
+		if (strpos($e, 'dovecot') === 0 || $e === 'subscriptions' || $e === 'maildirfolder')
+		{
+			continue;
+		}
+		$path = $dir . '/' . $e;
+		if (is_dir($path))
+		{
+			// Prefer cur/new; still recurse into Archive lightly
+			vbdl_inbox_scan_maildir($path, $files, $depth + 1);
+		}
+		elseif (is_file($path) && @is_readable($path) && filesize($path) > 200)
+		{
+			$files[] = $path;
+		}
+	}
+}
+
+function vbdl_inbox_extract_src_from_rfc822($raw)
+{
+	$filename = 'Source.src';
+	if (preg_match('/filename\*?=(?:UTF-8\'\')?"?([^";\r\n]+\.src)"?/i', $raw, $m)
+		|| preg_match('/name="?([^";\r\n]+\.src)"?/i', $raw, $m))
+	{
+		$filename = basename(urldecode(trim($m[1], "\"' ")));
+	}
+	// Split on common multipart boundaries and find .src part
+	if (preg_match_all('/(--[^\r\n]+)\r?\n([\s\S]*?)(?=\r?\n--[^\r\n]+|$)/', $raw, $parts, PREG_SET_ORDER))
+	{
+		foreach ($parts as $part)
+		{
+			$body = $part[2];
+			if (!preg_match('/\.src/i', $body))
+			{
+				continue;
+			}
+			if (!preg_match('/filename|name=/i', $body))
+			{
+				continue;
+			}
+			if (preg_match('/Content-Transfer-Encoding:\s*base64/i', $body)
+				&& preg_match('/\r?\n\r?\n([A-Za-z0-9\/+\r\n=]+)/', $body, $b))
+			{
+				$bytes = base64_decode(preg_replace('/\s+/', '', $b[1]));
+				if ($bytes !== false && $bytes !== '')
+				{
+					return array('filename' => $filename, 'bytes' => $bytes);
+				}
+			}
+		}
+	}
+	// Fallback: first large base64 block after a .src disposition
+	if (preg_match('/Content-Disposition:[^\n]*\.src[\s\S]*?Content-Transfer-Encoding:\s*base64[\s\S]*?\r?\n\r?\n([A-Za-z0-9\/+\r\n=]+)/i', $raw, $m)
+		|| preg_match('/filename="?[^"\n]+\.src"?[\s\S]*?Content-Transfer-Encoding:\s*base64[\s\S]*?\r?\n\r?\n([A-Za-z0-9\/+\r\n=]+)/i', $raw, $m))
+	{
+		$bytes = base64_decode(preg_replace('/\s+/', '', $m[1]));
+		if ($bytes !== false && $bytes !== '')
+		{
+			return array('filename' => $filename, 'bytes' => $bytes);
+		}
+	}
+	return array('filename' => $filename, 'bytes' => null);
 }
