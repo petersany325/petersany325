@@ -332,8 +332,43 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 			}
 			else
 			{
-				$errors[] = array('token' => $reqToken, 'error' => 'No .txt license attachment found for purchase request');
+				// Plain-text activator reply (instructions / rejection) — still post into the user ticket.
+				$textBody = vbdl_inbox_extract_text_from_rfc822($raw);
+				$textBody = vbdl_inbox_normalize_reply_charset($textBody);
+				if ($textBody !== '' && !vbdl_inbox_is_auto_ack($textBody))
+				{
+					$result = $lr->rejectWithText($rec, $textBody, (int)$rec['staff_userid']);
+					if (!empty($result['error']))
+					{
+						$errors[] = array('token' => $reqToken, 'error' => $result['error']);
+					}
+					else
+					{
+						$processed[] = array(
+							'token' => $reqToken,
+							'kind' => 'rejected_text',
+							'text_node' => isset($result['text_nodeid']) ? $result['text_nodeid'] : 0,
+							'via' => $via,
+						);
+					}
+				}
+				else
+				{
+					$skipped[] = array(
+						'token' => $reqToken,
+						'reason' => ($textBody === '' ? 'no_txt_and_no_text' : 'auto_ack_ignored'),
+						'subject' => $subject,
+					);
+				}
 			}
+		}
+		elseif ($rec)
+		{
+			$skipped[] = array('token' => $reqToken, 'reason' => 'already_' . $rec['status']);
+		}
+		else
+		{
+			$skipped[] = array('token' => $reqToken, 'reason' => 'unknown_req_token');
 		}
 		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
 	}
@@ -426,6 +461,60 @@ function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
 	return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
 }
 
+function vbdl_inbox_is_auto_ack($text)
+{
+	$t = strtolower(trim((string)$text));
+	if ($t === '')
+	{
+		return true;
+	}
+	if (strlen($t) < 40 && preg_match('/thank you for your email/i', $t))
+	{
+		return true;
+	}
+	if (preg_match('/thank you for your email,\s*i will reply as soon as possible/i', $t)
+		&& strlen($t) < 500)
+	{
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Best-effort decode of activator replies (often Windows-1251 from SeDiv).
+ */
+function vbdl_inbox_normalize_reply_charset($text)
+{
+	$text = (string)$text;
+	if ($text === '')
+	{
+		return '';
+	}
+	// Already valid UTF-8 with Cyrillic?
+	if (preg_match('/[\x{0400}-\x{04FF}]/u', $text))
+	{
+		return $text;
+	}
+	// Common mojibake: CP1251 interpreted as Latin-1/ISO-8859-1
+	if (function_exists('mb_convert_encoding'))
+	{
+		$try = @mb_convert_encoding($text, 'UTF-8', 'Windows-1251');
+		if (is_string($try) && $try !== '' && preg_match('/[\x{0400}-\x{04FF}]/u', $try))
+		{
+			return $try;
+		}
+	}
+	if (function_exists('iconv'))
+	{
+		$try = @iconv('Windows-1251', 'UTF-8//IGNORE', $text);
+		if (is_string($try) && $try !== '' && preg_match('/[\x{0400}-\x{04FF}]/u', $try))
+		{
+			return $try;
+		}
+	}
+	return $text;
+}
+
 function vbdl_inbox_flatten_parts($structure, $prefix, array &$out)
 {
 	if (!isset($structure->parts) || !is_array($structure->parts))
@@ -501,6 +590,10 @@ function vbdl_inbox_scan_maildir($dir, array &$files, $depth = 0)
 		}
 		// Skip dovecot index files
 		if (strpos($e, 'dovecot') === 0 || $e === 'subscriptions' || $e === 'maildirfolder')
+		{
+			continue;
+		}
+		if (preg_match('/\.(cache|log|index|uidlist|tmp)$/i', $e))
 		{
 			continue;
 		}
@@ -604,6 +697,11 @@ function vbdl_inbox_extract_text_from_rfc822($raw)
 {
 	$raw = (string)$raw;
 	$candidates = array();
+	$charset = 'UTF-8';
+	if (preg_match('/Content-Type:\s*text\/plain[^\r\n]*charset=["\']?([^\s"\';\r\n]+)/i', $raw, $cm))
+	{
+		$charset = trim($cm[1]);
+	}
 
 	// Prefer text/plain parts
 	if (preg_match_all(
@@ -616,7 +714,8 @@ function vbdl_inbox_extract_text_from_rfc822($raw)
 		foreach ($mm as $row)
 		{
 			$chunk = $row[1];
-			if (preg_match('/Content-Transfer-Encoding:\s*base64/i', $row[0]))
+			$headerBlock = $row[0];
+			if (preg_match('/Content-Transfer-Encoding:\s*base64/i', $headerBlock))
 			{
 				$decoded = base64_decode(preg_replace('/\s+/', '', $chunk));
 				if (is_string($decoded) && $decoded !== '')
@@ -624,7 +723,7 @@ function vbdl_inbox_extract_text_from_rfc822($raw)
 					$chunk = $decoded;
 				}
 			}
-			elseif (preg_match('/Content-Transfer-Encoding:\s*quoted-printable/i', $row[0]))
+			elseif (preg_match('/Content-Transfer-Encoding:\s*quoted-printable/i', $headerBlock))
 			{
 				$chunk = quoted_printable_decode($chunk);
 			}
@@ -637,20 +736,37 @@ function vbdl_inbox_extract_text_from_rfc822($raw)
 		// Single-part body after headers
 		if (preg_match('/\r?\n\r?\n([\s\S]+)$/', $raw, $m))
 		{
-			$candidates[] = $m[1];
+			$chunk = $m[1];
+			if (preg_match('/Content-Transfer-Encoding:\s*quoted-printable/i', $raw))
+			{
+				$chunk = quoted_printable_decode($chunk);
+			}
+			elseif (preg_match('/Content-Transfer-Encoding:\s*base64/i', $raw))
+			{
+				$decoded = base64_decode(preg_replace('/\s+/', '', $chunk));
+				if (is_string($decoded) && $decoded !== '')
+				{
+					$chunk = $decoded;
+				}
+			}
+			$candidates[] = $chunk;
 		}
 	}
 
 	$best = '';
 	foreach ($candidates as $c)
 	{
+		if (stripos($charset, '1251') !== false || stripos($charset, 'koi8') !== false)
+		{
+			$c = vbdl_inbox_normalize_reply_charset($c);
+		}
 		$t = vbdl_inbox_clean_reply_text($c);
 		if (strlen($t) > strlen($best))
 		{
 			$best = $t;
 		}
 	}
-	return $best;
+	return vbdl_inbox_normalize_reply_charset($best);
 }
 
 function vbdl_inbox_clean_reply_text($text)
@@ -667,23 +783,29 @@ function vbdl_inbox_clean_reply_text($text)
 	}
 	$lines = preg_split('/\n/', $text);
 	$out = array();
+	$kept = 0;
 	foreach ($lines as $line)
 	{
 		$trim = rtrim($line);
-		// Drop common quoted / signature / mailer noise
+		// Drop common quoted / signature / mailer noise — but only after real content starts.
 		if (preg_match('/^>/', $trim))
 		{
 			continue;
 		}
-		if (preg_match('/^(-{2,}\s*$|_{5,}|From:\s|Sent:\s|To:\s|Subject:\s|Content-Type:)/i', $trim))
+		if ($kept > 0 && preg_match('/^(-{5,}\s*$|_{5,}|From:\s|Sent:\s|To:\s|Subject:\s|Content-Type:)/i', $trim))
 		{
 			break;
 		}
-		if (preg_match('/^On .+ wrote:$/i', $trim))
+		if ($kept > 0 && preg_match('/^On .+ wrote:$/i', $trim))
 		{
 			break;
 		}
+		// Leading dashed banners from SeDiv are kept as content (not treated as signature).
 		$out[] = $trim;
+		if (trim($trim) !== '')
+		{
+			$kept++;
+		}
 	}
 	$text = trim(implode("\n", $out));
 	$text = preg_replace("/\n{3,}/", "\n\n", $text);
@@ -707,11 +829,10 @@ function vbdl_inbox_extract_txt_from_rfc822($raw)
 		$filename = basename(urldecode(trim($m[1], "\"' ")));
 	}
 
-	$parts = array();
-	if (preg_match('/boundary=("?)([^";\r\n]+)\1/i', $raw, $b))
+	$parts = preg_split('/\r?\n--[^\r\n]+(?:--)?\r?\n/', (string)$raw);
+	if (!$parts || count($parts) < 2)
 	{
-		$boundary = $b[2];
-		$parts = preg_split('/--' . preg_quote($boundary, '/') . '(?:--)?\r?\n/', $raw);
+		$parts = array($raw);
 	}
 	foreach ($parts as $part)
 	{
@@ -723,12 +844,15 @@ function vbdl_inbox_extract_txt_from_rfc822($raw)
 		{
 			continue;
 		}
+		if (preg_match('/Content-Type:\s*multipart\//i', $part) && !preg_match('/Content-Transfer-Encoding:\s*(base64|quoted-printable|8bit|7bit)/i', $part))
+		{
+			continue;
+		}
 		if (!preg_match('/\r?\n\r?\n([\s\S]+)$/', $part, $body))
 		{
 			continue;
 		}
-		$bodyTxt = $body[1];
-		$bodyTxt = preg_replace('/\r?\n--[^\r\n]*$/s', '', $bodyTxt);
+		$bodyTxt = preg_replace('/\r?\n--[^\r\n]*\s*$/s', '', $body[1]);
 		if (preg_match('/Content-Transfer-Encoding:\s*base64/i', $part))
 		{
 			$bytes = base64_decode(preg_replace('/\s+/', '', $bodyTxt));
@@ -743,6 +867,11 @@ function vbdl_inbox_extract_txt_from_rfc822($raw)
 		}
 		if (is_string($bytes) && strlen(trim($bytes)) > 3)
 		{
+			if (preg_match('/filename\*?=(?:UTF-8\'\')?"?([^";\r\n]+\.txt)"?/i', $part, $fm)
+				|| preg_match('/name="?([^";\r\n]+\.txt)"?/i', $part, $fm))
+			{
+				$filename = basename(urldecode(trim($fm[1], "\"' ")));
+			}
 			return array('filename' => $filename, 'bytes' => $bytes);
 		}
 	}

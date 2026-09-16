@@ -397,6 +397,67 @@ class vbdl_LicenseRequest
 	}
 
 	/**
+	 * Activator replied with plain text only (no .txt license) → post into ticket and mark rejected.
+	 */
+	public function rejectWithText(array $record, $replyText, $staffUserid = 0)
+	{
+		$replyText = trim(preg_replace('/\r\n?/', "\n", (string)$replyText));
+		if ($replyText === '')
+		{
+			return array('error' => 'Empty reply text');
+		}
+		if (strlen($replyText) > 20000)
+		{
+			$replyText = substr($replyText, 0, 20000) . "\n…";
+		}
+		if (!empty($record['status']) && in_array($record['status'], array('approved', 'vip_added', 'rejected'), true))
+		{
+			return array('ok' => true, 'skipped' => 1, 'reason' => 'already_' . $record['status']);
+		}
+
+		$parentId = (int)$record['message_nodeid'];
+		$starter = (int)$record['starter_nodeid'];
+		if ($parentId < 1)
+		{
+			return array('error' => 'Missing message node');
+		}
+		if ($starter < 1)
+		{
+			$starter = $parentId;
+		}
+		$userid = (int)$staffUserid;
+		if ($userid < 1)
+		{
+			$userid = (int)$record['staff_userid'];
+		}
+		if ($userid < 1)
+		{
+			$userid = 1;
+		}
+
+		$notice = "Activator reply (no license .txt attached)\n"
+			. "=========================================\n\n"
+			. $replyText;
+		$textNode = $this->mail->postTextToTicket($parentId, $starter, $userid, 'License request reply', $notice);
+
+		$tokenEsc = $this->db->real_escape_string($record['token']);
+		$replyEsc = $this->db->real_escape_string($replyText);
+		$now = time();
+		$this->db->query(
+			'UPDATE ' . $this->prefix . 'vbdl_license_request SET status=\'rejected\', '
+			. 'reply_text=\'' . $replyEsc . '\', approved_dateline=' . $now
+			. ' WHERE token=\'' . $tokenEsc . '\''
+		);
+
+		return array(
+			'ok' => true,
+			'token' => $record['token'],
+			'status' => 'rejected',
+			'text_nodeid' => (int)$textNode,
+		);
+	}
+
+	/**
 	 * Admin: add customer to VIP SeDiv secondary group and close the report.
 	 */
 	public function addCustomerToVip(array $record, $adminUserid)
