@@ -169,13 +169,13 @@ echo '<div class="vbdl-form-row"><label>Inbox cron key</label><input class="vbdl
 	. '" placeholder="long random secret" /><p class="vbdl-muted">URL: <code>/vbdlmanager/pm_lic_inbox.php?key=SECRET&amp;do=poll</code></p></div>';
 echo '<h4 style="margin:16px 0 8px">IMAP (optional — auto import returned .src)</h4>';
 echo '<div class="vbdl-form-row"><label>IMAP host</label><input class="vbdl-input" name="license_imap_host" value="'
-	. vbdl_h(isset($s['license_imap_host']) ? $s['license_imap_host'] : '') . '" placeholder="mail.hdd-land.com" /></div>';
+	. vbdl_h(isset($s['license_imap_host']) && $s['license_imap_host'] !== '' ? $s['license_imap_host'] : 'mail.hdd-land.com') . '" placeholder="mail.hdd-land.com" /></div>';
 echo '<div class="vbdl-form-row"><label>IMAP port</label><input class="vbdl-input" name="license_imap_port" value="'
 	. vbdl_h(isset($s['license_imap_port']) ? $s['license_imap_port'] : '993') . '" /></div>';
 echo '<div class="vbdl-form-row"><label>IMAP user</label><input class="vbdl-input" name="license_imap_user" value="'
-	. vbdl_h(isset($s['license_imap_user']) ? $s['license_imap_user'] : '') . '" /></div>';
+	. vbdl_h(isset($s['license_imap_user']) && $s['license_imap_user'] !== '' ? $s['license_imap_user'] : 'info@hdd-land.com') . '" placeholder="info@hdd-land.com" /></div>';
 echo '<div class="vbdl-form-row"><label>IMAP password</label><input class="vbdl-input" type="password" name="license_imap_pass" value="'
-	. vbdl_h(isset($s['license_imap_pass']) ? $s['license_imap_pass'] : '') . '" autocomplete="new-password" /></div>';
+	. vbdl_h(isset($s['license_imap_pass']) ? $s['license_imap_pass'] : '') . '" autocomplete="new-password" /><p class="vbdl-muted">Required for auto-import of returned <code>.src</code> from <code>info@hdd-land.com</code>. Without this, replies stay in the mailbox until you upload manually on Active License SeDiv.</p></div>';
 echo '<div class="vbdl-form-row"><label>IMAP flags</label><input class="vbdl-input" name="license_imap_flags" value="'
 	. vbdl_h(isset($s['license_imap_flags']) ? $s['license_imap_flags'] : '/imap/ssl/novalidate-cert') . '" /></div>';
 echo '<p class="vbdl-muted">Legacy default activation email field kept for compatibility:</p>';

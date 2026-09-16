@@ -145,9 +145,16 @@ $email = !empty($userinfo['email']) ? (string)$userinfo['email'] : '';
 	</section>
 	<?php endif; ?>
 
+	<section class="vbdl-sediv-card" id="vbdl-sediv-imap-card" hidden>
+		<h2>Auto-import status (IMAP)</h2>
+		<p class="vbdl-sediv-muted" id="vbdl-sediv-imap-msg">Checking…</p>
+		<button type="button" class="vbdl-sediv-btn vbdl-sediv-btn-alt" id="vbdl-sediv-poll" hidden>Poll inbox now</button>
+		<p class="vbdl-sediv-msg" id="vbdl-sediv-poll-msg" role="status"></p>
+	</section>
+
 	<section class="vbdl-sediv-card">
 		<h2>Return activated .src into ticket</h2>
-		<p class="vbdl-sediv-muted">Paste the tracking token from the activation email and upload the returned <code>.src</code>. It posts into the same Message Center ticket.</p>
+		<p class="vbdl-sediv-muted">If the reply is already in <code>info@hdd-land.com</code>, download <code>Source.src</code>, paste the tracking token from the subject (e.g. <code>VBDL-LIC-…</code>), and upload it here. It posts into the same Message Center ticket.</p>
 		<label class="vbdl-sediv-note"><span>Tracking token</span><input type="text" id="vbdl-sediv-token" placeholder="VBDL-LIC-..." /></label>
 		<label class="vbdl-sediv-file"><span>Activated .src file</span><input type="file" id="vbdl-sediv-src" accept=".src,application/octet-stream" /></label>
 		<button type="button" class="vbdl-sediv-btn vbdl-sediv-btn-alt" id="vbdl-sediv-return">Upload .src to ticket</button>

@@ -672,6 +672,45 @@ if ($do === 'config')
 		'default_subject_prefix' => $sedivSubject,
 		'from_email' => 'info@hdd-land.com',
 		'return_ext' => 'src',
+		'imap_configured' => (
+			trim((string)$repo->getSetting('license_imap_host', '')) !== ''
+			&& trim((string)$repo->getSetting('license_imap_user', '')) !== ''
+			&& trim((string)$repo->getSetting('license_imap_pass', '')) !== ''
+		) ? 1 : 0,
+		'imap_host' => trim((string)$repo->getSetting('license_imap_host', '')),
+		'imap_user' => trim((string)$repo->getSetting('license_imap_user', '')),
+		'inbox_key_set' => trim((string)$repo->getSetting('license_inbox_key', '')) !== '' ? 1 : 0,
+	));
+	exit;
+}
+
+if ($do === 'token_info')
+{
+	if (!$can)
+	{
+		vbdl_pmlic_fail('Staff only', 403);
+	}
+	if (!$lm)
+	{
+		vbdl_pmlic_fail('License mail unavailable', 500);
+	}
+	$token = isset($_REQUEST['token']) ? (string)$_REQUEST['token'] : '';
+	$rec = $lm->findByToken($token);
+	if (!$rec)
+	{
+		vbdl_pmlic_fail('Unknown tracking token');
+	}
+	$msgId = !empty($rec['starter_nodeid']) ? (int)$rec['starter_nodeid'] : (int)$rec['message_nodeid'];
+	echo json_encode(array(
+		'ok' => true,
+		'token' => $rec['token'],
+		'status' => $rec['status'],
+		'customer_username' => $rec['customer_username'],
+		'customer_userid' => (int)$rec['customer_userid'],
+		'lic_filename' => $rec['lic_filename'],
+		'return_filename' => $rec['return_filename'],
+		'message_nodeid' => (int)$rec['message_nodeid'],
+		'message_url' => $msgId > 0 ? ('/messagecenter/view/' . $msgId) : '',
 	));
 	exit;
 }

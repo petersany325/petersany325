@@ -131,11 +131,67 @@
       });
   }
 
+  function showImapStatus() {
+    if (!page.canStaff) return;
+    var card = document.getElementById('vbdl-sediv-imap-card');
+    var msg = document.getElementById('vbdl-sediv-imap-msg');
+    var pollBtn = document.getElementById('vbdl-sediv-poll');
+    if (!card) return;
+    card.hidden = false;
+    fetch('/vbdlmanager/pm_lic_email.php?do=config', { credentials: 'same-origin', cache: 'no-store' })
+      .then(parseJson)
+      .then(function (cfg) {
+        if (!cfg.ok) return;
+        if (cfg.imap_configured) {
+          msg.textContent = 'IMAP ready for ' + (cfg.imap_user || 'inbox') + ' @ ' + (cfg.imap_host || '') + '. Use Poll inbox now, or set a cron on pm_lic_inbox.php.';
+          if (pollBtn) pollBtn.hidden = false;
+        } else {
+          msg.textContent = 'IMAP password is not set in AdminCP → Download Manager → Settings. Replies land in info@hdd-land.com but are not auto-imported until license_imap_pass (and cron) are configured. Use manual .src upload below for this reply.';
+          if (pollBtn) pollBtn.hidden = true;
+        }
+      })
+      .catch(function () {
+        msg.textContent = 'Could not load IMAP status.';
+      });
+  }
+
+  function pollInbox() {
+    var pollMsg = document.getElementById('vbdl-sediv-poll-msg');
+    pollMsg.textContent = 'Polling…';
+    fetch('/vbdlmanager/pm_lic_inbox.php?do=poll', { credentials: 'same-origin', cache: 'no-store' })
+      .then(parseJson)
+      .then(function (data) {
+        if (data.skipped) {
+          pollMsg.textContent = data.message || 'IMAP not configured';
+          return;
+        }
+        if (!data.ok) {
+          pollMsg.textContent = data.error || 'Poll failed';
+          return;
+        }
+        var n = (data.processed && data.processed.length) || 0;
+        pollMsg.textContent = 'Checked ' + (data.checked || 0) + ' messages, imported ' + n + '.';
+        loadList();
+      })
+      .catch(function (err) {
+        pollMsg.textContent = (err && err.message) ? err.message : 'Network error';
+      });
+  }
+
   var submitBtn = document.getElementById('vbdl-sediv-submit');
   if (submitBtn) submitBtn.addEventListener('click', submitLic);
   var retBtn = document.getElementById('vbdl-sediv-return');
   if (retBtn) retBtn.addEventListener('click', returnSrc);
   var refresh = document.getElementById('vbdl-sediv-refresh');
   if (refresh) refresh.addEventListener('click', loadList);
+  var pollBtn = document.getElementById('vbdl-sediv-poll');
+  if (pollBtn) pollBtn.addEventListener('click', pollInbox);
+  // Prefill token from query ?token=
+  try {
+    var q = new URLSearchParams(location.search || '');
+    var tok = q.get('token');
+    if (tok) document.getElementById('vbdl-sediv-token').value = tok;
+  } catch (e) {}
+  showImapStatus();
   loadList();
 })();
