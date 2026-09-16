@@ -277,6 +277,7 @@ class vbdl_Db
 			"INSERT IGNORE INTO {$tp}vbdl_setting (varname, value) VALUES
 			('license_sediv_email', 'sedivlic@list.ru'),
 			('license_sediv_subject', 'Active SeDiv 2026'),
+			('license_src_retention_days', '7'),
 			('license_vip_only', '1'),
 			('license_inbox_key', ''),
 			('license_imap_host', ''),

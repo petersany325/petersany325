@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
 		'license_mail_from',
 		'license_sediv_email',
 		'license_sediv_subject',
+		'license_src_retention_days',
 		'license_vip_only',
 		'license_inbox_key',
 		'license_imap_host',
@@ -145,15 +146,20 @@ echo '<div class="vbdl-form-row"><label>WhatsApp button label</label><input clas
 
 echo '<hr style="border:0;border-top:1px solid #d9e2ec;margin:20px 0" />';
 echo '<h3 style="margin:0 0 10px">SeDiv VIP license → email + .src return</h3>';
-echo '<p class="vbdl-muted">SeDiv VIP members use Message Center → <strong>active license sediv</strong> to upload <code>.lic</code>. '
-	. 'Mail is sent from the host as <code>info@hdd-land.com</code> to the SeDiv inbox with subject <code>Active SeDiv 2026</code> plus a tracking token. '
-	. 'When the activated <code>.src</code> comes back (IMAP poll or manual upload on that page), it is posted into the same Message Center ticket.</p>';
+echo '<p class="vbdl-muted">SeDiv VIP members use Message Center → <strong>active license sediv</strong> to choose a license product and upload <code>.lic</code>. '
+	. 'Mail is sent from <code>info@hdd-land.com</code> to the SeDiv inbox with the <strong>exact product subject</strong> '
+	. '(e.g. <code>Subject license SeDiv imager</code>) plus a tracking token. '
+	. 'Returned <code>.src</code> or plain-text rejection replies are posted into the same Message Center ticket. '
+	. 'After retention, <code>.src</code> binaries are purged while filename and download count remain.</p>';
 echo '<div class="vbdl-form-row"><label>SeDiv license inbox (To)</label><input class="vbdl-input" name="license_sediv_email" value="'
 	. vbdl_h(isset($s['license_sediv_email']) ? $s['license_sediv_email'] : 'sedivlic@list.ru')
 	. '" placeholder="sedivlic@list.ru" /></div>';
-echo '<div class="vbdl-form-row"><label>Fixed subject</label><input class="vbdl-input" name="license_sediv_subject" value="'
+echo '<div class="vbdl-form-row"><label>Legacy subject fallback</label><input class="vbdl-input" name="license_sediv_subject" value="'
 	. vbdl_h(isset($s['license_sediv_subject']) ? $s['license_sediv_subject'] : 'Active SeDiv 2026')
-	. '" /></div>';
+	. '" /><p class="vbdl-muted">VIP desk now uses per-product subjects. This field is kept for older staff tools only.</p></div>';
+echo '<div class="vbdl-form-row"><label>.src retention days</label><input class="vbdl-input" name="license_src_retention_days" value="'
+	. vbdl_h(isset($s['license_src_retention_days']) ? $s['license_src_retention_days'] : '7')
+	. '" placeholder="7" /><p class="vbdl-muted">After this many days, purge returned <code>.src</code> bytes; keep filename + download report.</p></div>';
 $vipOnly = isset($s['license_vip_only']) ? $s['license_vip_only'] : '1';
 echo '<div class="vbdl-form-row"><label>VIP customers only</label><select class="vbdl-select" name="license_vip_only">'
 	. '<option value="1"' . ($vipOnly !== '0' ? ' selected' : '') . '>Yes (recommended)</option>'

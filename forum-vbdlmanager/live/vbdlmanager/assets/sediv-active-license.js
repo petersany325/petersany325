@@ -1,6 +1,6 @@
 /**
  * Active License SeDiv — VIP desk page.
- * VIP: upload .lic → ticket (VIP+support) → email. Staff: review all tickets.
+ * VIP: pick type → upload .lic → ticket (VIP+support) → email. Staff: review all tickets.
  */
 (function () {
   var page = window.__VBDL_SEDIV_PAGE__ || {};
@@ -8,6 +8,7 @@
   var returnMsg = document.getElementById('vbdl-sediv-return-msg');
   var listEl = document.getElementById('vbdl-sediv-list');
   var ticketLink = document.getElementById('vbdl-sediv-ticketlink');
+  var subjectPreview = document.getElementById('vbdl-sediv-subject-preview');
 
   function parseJson(r) {
     return r.text().then(function (t) {
@@ -16,6 +17,22 @@
         throw new Error((t && t.replace(/<[^>]+>/g, ' ').trim().slice(0, 160)) || ('HTTP ' + r.status));
       }
     });
+  }
+
+  function selectedType() {
+    var el = document.querySelector('input[name="vbdl_sediv_type"]:checked');
+    if (!el) return null;
+    return {
+      id: el.value,
+      subject: el.getAttribute('data-subject') || '',
+      label: el.getAttribute('data-label') || ''
+    };
+  }
+
+  function syncSubjectPreview() {
+    if (!subjectPreview) return;
+    var t = selectedType();
+    subjectPreview.textContent = t && t.subject ? t.subject : '—';
   }
 
   function loadList() {
@@ -44,10 +61,19 @@
           var left = document.createElement('div');
           var title = document.createElement('strong');
           var who = row.customer_username ? (row.customer_username + ' · ') : '';
-          title.textContent = who + (row.lic_filename || 'license.lic');
+          var typeBit = row.license_label ? (row.license_label + ' · ') : '';
+          title.textContent = who + typeBit + (row.lic_filename || 'license.lic');
           var meta = document.createElement('small');
-          meta.textContent = (row.token || '') + ' · ' + (row.sent_label || '')
-            + (row.status === 'returned' && row.return_filename ? (' · ' + row.return_filename) : '');
+          var bits = [row.token || '', row.sent_label || ''];
+          if (row.status === 'returned' && row.return_filename) {
+            bits.push(row.return_filename);
+            if (row.src_purged) bits.push('src purged after retention');
+            else if (typeof row.download_count === 'number') bits.push(row.download_count + ' downloads');
+          }
+          if (row.status === 'rejected' && row.reply_text) {
+            bits.push(String(row.reply_text).replace(/\s+/g, ' ').slice(0, 80));
+          }
+          meta.textContent = bits.filter(Boolean).join(' · ');
           left.appendChild(title);
           left.appendChild(meta);
           var right = document.createElement('div');
@@ -78,6 +104,11 @@
       msg.textContent = 'Only SeDiv VIP members can submit a license here.';
       return;
     }
+    var type = selectedType();
+    if (!type || !type.id) {
+      msg.textContent = 'Choose a license type';
+      return;
+    }
     var input = document.getElementById('vbdl-sediv-lic');
     if (!input.files || !input.files[0]) {
       msg.textContent = 'Choose a .lic file';
@@ -97,6 +128,7 @@
     }
     var fd = new FormData();
     fd.append('do', 'vip_submit');
+    fd.append('license_type', type.id);
     fd.append('licfile', input.files[0]);
     fd.append('note', (document.getElementById('vbdl-sediv-note').value || '').trim());
     fetch('/vbdlmanager/pm_lic_email.php', { method: 'POST', body: fd, credentials: 'same-origin' })
@@ -107,7 +139,7 @@
           msg.textContent = data.error || 'Send failed';
           return;
         }
-        msg.textContent = 'Sent to license inbox. Ticket opened for you and support.';
+        msg.textContent = 'Sent to license inbox (' + (data.subject || type.subject) + '). Ticket opened for you and support.';
         input.value = '';
         if (data.token) {
           var tokEl = document.getElementById('vbdl-sediv-token');
@@ -166,11 +198,12 @@
       .then(parseJson)
       .then(function (cfg) {
         if (!cfg.ok) return;
+        var days = cfg.src_retention_days || 7;
         if (cfg.maildir_ready) {
-          statusMsg.textContent = 'Auto-import is active via local info@ maildir. Returned .src files are posted into the same VIP ticket. Poll now or use cron on pm_lic_inbox.php.';
+          statusMsg.textContent = 'Auto-import is active via local info@ maildir. Returned .src or text replies post into the VIP ticket. .src files are purged after ' + days + ' days (filename + download count kept).';
           if (pollBtn) pollBtn.hidden = false;
         } else if (cfg.imap_configured) {
-          statusMsg.textContent = 'IMAP ready for ' + (cfg.imap_user || 'inbox') + '. Poll inbox now or set cron on pm_lic_inbox.php.';
+          statusMsg.textContent = 'IMAP ready for ' + (cfg.imap_user || 'inbox') + '. Poll inbox now or set cron on pm_lic_inbox.php. Retention: ' + days + ' days.';
           if (pollBtn) pollBtn.hidden = false;
         } else {
           statusMsg.textContent = 'Auto-import not ready. Configure maildir/IMAP, or use manual .src upload below.';
@@ -197,14 +230,22 @@
           return;
         }
         var n = (data.processed && data.processed.length) || 0;
+        var p = data.purged_count || 0;
         pollMsg.textContent = 'Checked ' + (data.checked || 0) + ' messages, imported ' + n
-          + (data.mode ? (' (' + data.mode + ')') : '') + '.';
+          + (data.mode ? (' (' + data.mode + ')') : '')
+          + (p ? (', purged ' + p + ' expired .src') : '') + '.';
         loadList();
       })
       .catch(function (err) {
         pollMsg.textContent = (err && err.message) ? err.message : 'Network error';
       });
   }
+
+  var typeRadios = document.querySelectorAll('input[name="vbdl_sediv_type"]');
+  for (var i = 0; i < typeRadios.length; i++) {
+    typeRadios[i].addEventListener('change', syncSubjectPreview);
+  }
+  syncSubjectPreview();
 
   var submitBtn = document.getElementById('vbdl-sediv-submit');
   if (submitBtn) submitBtn.addEventListener('click', submitLic);

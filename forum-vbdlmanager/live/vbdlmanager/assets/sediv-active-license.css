@@ -56,7 +56,16 @@
 }
 .vbdl-sediv-badge.is-sent{background:#dbeafe;color:#1d4ed8}
 .vbdl-sediv-badge.is-returned{background:#dcfce7;color:#166534}
+.vbdl-sediv-badge.is-rejected{background:#ffedd5;color:#c2410c}
 .vbdl-sediv-badge.is-error{background:#fee2e2;color:#b91c1c}
+.vbdl-sediv-types{
+  border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin:0 0 14px;background:#f8fafc
+}
+.vbdl-sediv-types legend{padding:0 6px;font-size:12px;font-weight:800;color:#334155}
+.vbdl-sediv-type{
+  display:flex;align-items:flex-start;gap:8px;margin:6px 0;font-size:13px;font-weight:600;color:#0f172a;cursor:pointer
+}
+.vbdl-sediv-type input{margin-top:2px}
 .vbdl-sediv-dl{color:#0369a1;font-weight:700;text-decoration:none}
 .vbdl-sediv-ticketlink{margin:12px 0 0;font-size:14px}
 .vbdl-sediv-ticketlink a{font-size:14px}

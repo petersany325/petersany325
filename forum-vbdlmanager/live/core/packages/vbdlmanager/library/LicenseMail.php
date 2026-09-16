@@ -37,12 +37,18 @@ class vbdl_LicenseMail
 			staff_userid INT UNSIGNED NOT NULL DEFAULT 0,
 			filedataid INT UNSIGNED NOT NULL DEFAULT 0,
 			lic_filename VARCHAR(255) NOT NULL DEFAULT '',
+			license_type VARCHAR(64) NOT NULL DEFAULT '',
 			to_email VARCHAR(191) NOT NULL DEFAULT '',
 			subject VARCHAR(255) NOT NULL DEFAULT '',
-			status ENUM('sent','returned','error') NOT NULL DEFAULT 'sent',
+			status ENUM('sent','returned','rejected','error') NOT NULL DEFAULT 'sent',
 			return_filename VARCHAR(255) NOT NULL DEFAULT '',
 			return_filedataid INT UNSIGNED NOT NULL DEFAULT 0,
 			return_nodeid INT UNSIGNED NOT NULL DEFAULT 0,
+			reply_text MEDIUMTEXT,
+			src_purged TINYINT UNSIGNED NOT NULL DEFAULT 0,
+			src_purged_dateline INT UNSIGNED NOT NULL DEFAULT 0,
+			download_count INT UNSIGNED NOT NULL DEFAULT 0,
+			last_download_dateline INT UNSIGNED NOT NULL DEFAULT 0,
 			sent_dateline INT UNSIGNED NOT NULL DEFAULT 0,
 			returned_dateline INT UNSIGNED NOT NULL DEFAULT 0,
 			meta MEDIUMTEXT,
@@ -50,9 +56,102 @@ class vbdl_LicenseMail
 			UNIQUE KEY token (token),
 			KEY message_nodeid (message_nodeid),
 			KEY customer_userid (customer_userid),
-			KEY status (status)
+			KEY status (status),
+			KEY license_type (license_type)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
 		@$this->db->query($sql);
+		$this->migrateColumns();
+	}
+
+	protected function migrateColumns()
+	{
+		$p = $this->prefix;
+		$cols = array();
+		$res = @$this->db->query('SHOW COLUMNS FROM ' . $p . 'vbdl_license_mail');
+		if ($res)
+		{
+			while ($row = $res->fetch_assoc())
+			{
+				$cols[strtolower($row['Field'])] = true;
+			}
+		}
+		$alters = array(
+			'license_type' => "ADD COLUMN license_type VARCHAR(64) NOT NULL DEFAULT '' AFTER lic_filename",
+			'reply_text' => "ADD COLUMN reply_text MEDIUMTEXT NULL AFTER return_nodeid",
+			'src_purged' => "ADD COLUMN src_purged TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER reply_text",
+			'src_purged_dateline' => "ADD COLUMN src_purged_dateline INT UNSIGNED NOT NULL DEFAULT 0 AFTER src_purged",
+			'download_count' => "ADD COLUMN download_count INT UNSIGNED NOT NULL DEFAULT 0 AFTER src_purged_dateline",
+			'last_download_dateline' => "ADD COLUMN last_download_dateline INT UNSIGNED NOT NULL DEFAULT 0 AFTER download_count",
+		);
+		foreach ($alters as $col => $ddl)
+		{
+			if (empty($cols[$col]))
+			{
+				@$this->db->query('ALTER TABLE ' . $p . 'vbdl_license_mail ' . $ddl);
+			}
+		}
+		// Allow rejected status on existing installs.
+		@$this->db->query(
+			"ALTER TABLE {$p}vbdl_license_mail MODIFY status ENUM('sent','returned','rejected','error') NOT NULL DEFAULT 'sent'"
+		);
+	}
+
+	/**
+	 * Fixed license products + exact email subjects for sedivlic recognition.
+	 */
+	public function licenseTypes()
+	{
+		return array(
+			array(
+				'id' => 'sediv_imager',
+				'group' => 'imager',
+				'label' => 'All license SeDiv imager',
+				'subject' => 'Subject license SeDiv imager',
+			),
+			array(
+				'id' => 'sehitachi_imager',
+				'group' => 'imager',
+				'label' => 'All license SeHitachi imager',
+				'subject' => 'Subject license SeHitachi imager',
+			),
+			array(
+				'id' => 'sedivx_imager',
+				'group' => 'imager',
+				'label' => 'All license SeDivX imager',
+				'subject' => 'Subject license SeDivX imager',
+			),
+			array(
+				'id' => 'sehgst_imager',
+				'group' => 'imager',
+				'label' => 'All license SeHGST imager',
+				'subject' => 'Subject license SeHGST imager',
+			),
+			array(
+				'id' => 'sediv_repairs',
+				'group' => 'repairs',
+				'label' => 'All license SeDiv repairs',
+				'subject' => 'Subject license SeDiv repairs',
+			),
+			array(
+				'id' => 'sehitachi_repairs',
+				'group' => 'repairs',
+				'label' => 'All license SeHitachi repairs',
+				'subject' => 'Subject license SeHitachi repairs',
+			),
+		);
+	}
+
+	public function getLicenseType($typeId)
+	{
+		$typeId = preg_replace('/[^a-z0-9_]/', '', strtolower((string)$typeId));
+		foreach ($this->licenseTypes() as $t)
+		{
+			if ($t['id'] === $typeId)
+			{
+				return $t;
+			}
+		}
+		return null;
 	}
 
 	public function sedivEmail()
@@ -65,6 +164,12 @@ class vbdl_LicenseMail
 	{
 		$s = trim((string)$this->repo->getSetting('license_sediv_subject', 'Active SeDiv 2026'));
 		return $s !== '' ? $s : 'Active SeDiv 2026';
+	}
+
+	public function srcRetentionDays()
+	{
+		$d = (int)$this->repo->getSetting('license_src_retention_days', '7');
+		return $d > 0 ? $d : 7;
 	}
 
 	public function vipOnly()
@@ -117,21 +222,28 @@ class vbdl_LicenseMail
 		return $this->acl->isVip($u);
 	}
 
+	public function listSelectColumns()
+	{
+		return 'token, message_nodeid, starter_nodeid, customer_userid, customer_username, lic_filename, '
+			. 'license_type, subject, status, return_filename, return_filedataid, return_nodeid, '
+			. 'reply_text, src_purged, src_purged_dateline, download_count, last_download_dateline, '
+			. 'sent_dateline, returned_dateline';
+	}
+
 	public function listForUser($userid, $limit = 30)
 	{
 		$userid = (int)$userid;
 		$limit = max(1, min(100, (int)$limit));
 		$out = array();
 		$res = $this->db->query(
-			'SELECT token, message_nodeid, starter_nodeid, customer_userid, customer_username, lic_filename, status, '
-			. 'return_filename, return_filedataid, sent_dateline, returned_dateline FROM ' . $this->prefix . 'vbdl_license_mail '
+			'SELECT ' . $this->listSelectColumns() . ' FROM ' . $this->prefix . 'vbdl_license_mail '
 			. 'WHERE customer_userid=' . $userid . ' ORDER BY id DESC LIMIT ' . $limit
 		);
 		if ($res)
 		{
 			while ($row = $res->fetch_assoc())
 			{
-				$out[] = $row;
+				$out[] = $this->enrichListRow($row);
 			}
 		}
 		return $out;
@@ -145,30 +257,80 @@ class vbdl_LicenseMail
 		$limit = max(1, min(200, (int)$limit));
 		$out = array();
 		$res = $this->db->query(
-			'SELECT token, message_nodeid, starter_nodeid, customer_userid, customer_username, lic_filename, status, '
-			. 'return_filename, return_filedataid, sent_dateline, returned_dateline FROM ' . $this->prefix . 'vbdl_license_mail '
+			'SELECT ' . $this->listSelectColumns() . ' FROM ' . $this->prefix . 'vbdl_license_mail '
 			. 'ORDER BY id DESC LIMIT ' . $limit
 		);
 		if ($res)
 		{
 			while ($row = $res->fetch_assoc())
 			{
-				$out[] = $row;
+				$out[] = $this->enrichListRow($row);
 			}
 		}
 		return $out;
+	}
+
+	protected function enrichListRow(array $row)
+	{
+		$type = $this->getLicenseType(isset($row['license_type']) ? $row['license_type'] : '');
+		$row['license_label'] = $type ? $type['label'] : (isset($row['license_type']) ? (string)$row['license_type'] : '');
+		$row['src_available'] = (
+			!empty($row['status']) && $row['status'] === 'returned'
+			&& empty($row['src_purged'])
+			&& !empty($row['return_filedataid'])
+		) ? 1 : 0;
+		// Keep download_count in sync with Message Center attach counter when present.
+		if (!empty($row['return_nodeid']))
+		{
+			$this->syncDownloadCountFromAttach($row);
+		}
+		return $row;
+	}
+
+	protected function syncDownloadCountFromAttach(array &$row)
+	{
+		$nodeid = (int)$row['return_nodeid'];
+		if ($nodeid < 1)
+		{
+			return;
+		}
+		$res = $this->db->query(
+			'SELECT counter FROM ' . $this->prefix . 'attach WHERE nodeid=' . $nodeid . ' LIMIT 1'
+		);
+		if (!$res || !($a = $res->fetch_assoc()))
+		{
+			return;
+		}
+		$counter = (int)$a['counter'];
+		$stored = (int)$row['download_count'];
+		if ($counter > $stored)
+		{
+			$tokenEsc = $this->db->real_escape_string((string)$row['token']);
+			$this->db->query(
+				'UPDATE ' . $this->prefix . 'vbdl_license_mail SET download_count=' . $counter
+				. ', last_download_dateline=' . time()
+				. ' WHERE token=\'' . $tokenEsc . '\' AND download_count < ' . $counter
+			);
+			$row['download_count'] = $counter;
+		}
 	}
 
 	/**
 	 * Create a Message Center ticket for a VIP license request.
 	 * VIP is the author; support/admin is a participant so staff can review the full send/return flow.
 	 */
-	public function createVipLicenseTicket($userid, $username, $token, $licFilename)
+	public function createVipLicenseTicket($userid, $username, $token, $licFilename, $typeLabel = '', $emailSubject = '')
 	{
 		$userid = (int)$userid;
 		$username = (string)$username;
 		$token = (string)$token;
 		$licFilename = (string)$licFilename;
+		$typeLabel = trim((string)$typeLabel);
+		$emailSubject = trim((string)$emailSubject);
+		if ($typeLabel === '')
+		{
+			$typeLabel = 'Active License SeDiv';
+		}
 		$p = $this->prefix;
 		$supportId = $this->supportUserid();
 		if ($supportId === $userid)
@@ -187,13 +349,18 @@ class vbdl_LicenseMail
 			$api = vB_Api::instanceInternal('content_privatemessage');
 			if ($api && method_exists($api, 'add'))
 			{
-				$title = 'Active License SeDiv - ' . $token;
-				$text = "Active License SeDiv request\n"
+				$title = $typeLabel . ' - ' . $token;
+				$text = $typeLabel . " request\n"
 					. "================================\n"
 					. "VIP user: {$username} (userid {$userid})\n"
 					. "Tracking token: {$token}\n"
-					. "License file: {$licFilename}\n\n"
-					. "This ticket is for license send + activated .src return only.\n"
+					. "License type: {$typeLabel}\n"
+					. "License file: {$licFilename}\n";
+				if ($emailSubject !== '')
+				{
+					$text .= "Email subject: {$emailSubject}\n";
+				}
+				$text .= "\nThis ticket is for license send + activated .src return only.\n"
 					. "Support can review every step here.";
 				$recipients = ($supportId !== $userid) ? $supportName : $username;
 				$sentto = ($supportId !== $userid) ? array($supportId) : array($userid);
@@ -475,16 +642,17 @@ class vbdl_LicenseMail
 		$staffId = (int)$data['staff_userid'];
 		$filedataid = (int)$data['filedataid'];
 		$licName = $this->db->real_escape_string((string)$data['lic_filename']);
+		$licType = $this->db->real_escape_string(isset($data['license_type']) ? (string)$data['license_type'] : '');
 		$to = $this->db->real_escape_string((string)$data['to_email']);
 		$subject = $this->db->real_escape_string((string)$data['subject']);
 		$tokenEsc = $this->db->real_escape_string($token);
 		$now = time();
 		$sql = 'INSERT INTO ' . $this->prefix . 'vbdl_license_mail
 			(token, message_nodeid, starter_nodeid, customer_userid, customer_username, customer_email,
-			 staff_userid, filedataid, lic_filename, to_email, subject, status, sent_dateline)
+			 staff_userid, filedataid, lic_filename, license_type, to_email, subject, status, sent_dateline)
 			VALUES (\'' . $tokenEsc . '\',' . $messageNode . ',' . $starter . ',' . $custId
 			. ',\'' . $custUser . '\',\'' . $custEmail . '\',' . $staffId . ',' . $filedataid
-			. ',\'' . $licName . '\',\'' . $to . '\',\'' . $subject . '\',\'sent\',' . $now . ')';
+			. ',\'' . $licName . '\',\'' . $licType . '\',\'' . $to . '\',\'' . $subject . '\',\'sent\',' . $now . ')';
 		if (!$this->db->query($sql))
 		{
 			return array('error' => 'DB insert failed: ' . $this->db->error);
@@ -580,6 +748,263 @@ class vbdl_LicenseMail
 			'attach_nodeid' => $retNode,
 			'message_nodeid' => (int)$posted['text_nodeid'],
 		);
+	}
+
+	/**
+	 * Activation failed / text-only reply from license inbox → post into ticket as rejected.
+	 */
+	public function rejectReplyToTicket(array $record, $replyText, $staffUserid = 0)
+	{
+		$replyText = trim((string)$replyText);
+		$replyText = preg_replace('/\r\n?/', "\n", $replyText);
+		// Drop quoted mail noise / huge blobs
+		if (strlen($replyText) > 20000)
+		{
+			$replyText = substr($replyText, 0, 20000) . "\n…";
+		}
+		if ($replyText === '')
+		{
+			return array('error' => 'Empty reply text');
+		}
+		if (!empty($record['status']) && ($record['status'] === 'returned' || $record['status'] === 'rejected'))
+		{
+			return array('ok' => true, 'skipped' => 1, 'reason' => 'already_' . $record['status']);
+		}
+
+		$parentId = (int)$record['message_nodeid'];
+		$starter = (int)$record['starter_nodeid'];
+		if ($parentId < 1)
+		{
+			return array('error' => 'Missing message node');
+		}
+		if ($starter < 1)
+		{
+			$starter = $parentId;
+		}
+		$userid = (int)$staffUserid;
+		if ($userid < 1)
+		{
+			$userid = (int)$record['staff_userid'];
+		}
+		if ($userid < 1)
+		{
+			$userid = 1;
+		}
+
+		$title = 'License reply (not activated)';
+		$rawtext = "License activation reply (no .src attachment)\n"
+			. "Tracking: " . $record['token'] . "\n\n"
+			. $replyText;
+		$textNode = $this->postPmTextReply($parentId, $starter, $userid, $title, $rawtext);
+		if ($textNode < 1)
+		{
+			return array('error' => 'Failed posting reply text: ' . $this->lastNodeError);
+		}
+
+		$tokenEsc = $this->db->real_escape_string($record['token']);
+		$replyEsc = $this->db->real_escape_string($replyText);
+		$now = time();
+		$this->db->query(
+			'UPDATE ' . $this->prefix . 'vbdl_license_mail SET status=\'rejected\', reply_text=\'' . $replyEsc . '\', '
+			. 'returned_dateline=' . $now . ', return_nodeid=' . (int)$textNode
+			. ' WHERE token=\'' . $tokenEsc . '\''
+		);
+
+		return array(
+			'ok' => true,
+			'token' => $record['token'],
+			'status' => 'rejected',
+			'text_nodeid' => $textNode,
+			'reply_preview' => substr($replyText, 0, 200),
+		);
+	}
+
+	/**
+	 * After retention window, delete .src binary but keep filename + download report.
+	 */
+	public function purgeExpiredSrcFiles($limit = 50)
+	{
+		$days = $this->srcRetentionDays();
+		$cutoff = time() - ($days * 86400);
+		$limit = max(1, min(200, (int)$limit));
+		$p = $this->prefix;
+		$res = $this->db->query(
+			'SELECT token, return_filedataid, return_nodeid, return_filename, download_count, returned_dateline '
+			. 'FROM ' . $p . 'vbdl_license_mail '
+			. 'WHERE status=\'returned\' AND src_purged=0 AND return_filedataid>0 '
+			. 'AND returned_dateline>0 AND returned_dateline<' . (int)$cutoff
+			. ' ORDER BY returned_dateline ASC LIMIT ' . $limit
+		);
+		$purged = array();
+		if (!$res)
+		{
+			return $purged;
+		}
+		while ($row = $res->fetch_assoc())
+		{
+			$this->syncDownloadCountFromAttach($row);
+			$filedataid = (int)$row['return_filedataid'];
+			$nodeid = (int)$row['return_nodeid'];
+			if ($filedataid > 0)
+			{
+				// Wipe blob; keep filedata row so attach metadata/filename still resolve if needed.
+				$this->db->query(
+					'UPDATE ' . $p . 'filedata SET filedata=\'\', filesize=0 WHERE filedataid=' . $filedataid
+				);
+				$this->deleteAttachFileFromDisk($filedataid);
+			}
+			if ($nodeid > 0)
+			{
+				// Soft-hide attach visibility while keeping counter/filename on the row.
+				$this->db->query(
+					'UPDATE ' . $p . 'attach SET visible=0 WHERE nodeid=' . $nodeid
+				);
+			}
+			$tokenEsc = $this->db->real_escape_string((string)$row['token']);
+			$now = time();
+			$this->db->query(
+				'UPDATE ' . $p . 'vbdl_license_mail SET src_purged=1, src_purged_dateline=' . $now
+				. ', return_filedataid=0'
+				. ' WHERE token=\'' . $tokenEsc . '\''
+			);
+			$purged[] = array(
+				'token' => $row['token'],
+				'filename' => $row['return_filename'],
+				'downloads' => (int)$row['download_count'],
+				'returned_dateline' => (int)$row['returned_dateline'],
+			);
+		}
+		return $purged;
+	}
+
+	protected function deleteAttachFileFromDisk($filedataid)
+	{
+		$filedataid = (int)$filedataid;
+		if ($filedataid < 1)
+		{
+			return;
+		}
+		$forumRoot = realpath(dirname(__FILE__) . '/../../../../..');
+		if ($forumRoot === false)
+		{
+			$forumRoot = '/home/hddrecov/public_html/forum';
+		}
+		$roots = array(
+			$forumRoot . '/core/attachment',
+			$forumRoot . '/attachment',
+		);
+		$config = array();
+		$cfg = $forumRoot . '/core/includes/config.php';
+		if (is_file($cfg))
+		{
+			include $cfg;
+		}
+		if (!empty($config['Misc']['attachmentpath']))
+		{
+			$ap = rtrim((string)$config['Misc']['attachmentpath'], '/');
+			if ($ap !== '' && isset($ap[0]) && $ap[0] !== '/')
+			{
+				$ap = rtrim($forumRoot, '/') . '/' . ltrim($ap, './');
+			}
+			array_unshift($roots, $ap);
+		}
+		foreach (array_unique($roots) as $root)
+		{
+			if ($root === '' || !is_dir($root))
+			{
+				continue;
+			}
+			$matches = glob($root . '/*/' . $filedataid . '.attach');
+			if (!$matches)
+			{
+				$matches = glob($root . '/*/*/' . $filedataid . '.attach');
+			}
+			if (!$matches)
+			{
+				$direct = $root . '/' . $filedataid . '.attach';
+				if (is_file($direct))
+				{
+					$matches = array($direct);
+				}
+			}
+			if (is_array($matches))
+			{
+				foreach ($matches as $path)
+				{
+					@unlink($path);
+				}
+			}
+		}
+	}
+
+	protected function postPmTextReply($parentId, $starterId, $userid, $title, $rawtext)
+	{
+		$parentId = (int)$parentId;
+		$starterId = (int)$starterId;
+		$userid = (int)$userid;
+		$p = $this->prefix;
+		$now = time();
+		$textType = $this->contentTypeId('Text');
+		if ($textType < 1 || $parentId < 1)
+		{
+			return 0;
+		}
+		$parent = null;
+		$resP = $this->db->query('SELECT routeid FROM ' . $p . 'node WHERE nodeid=' . $parentId . ' LIMIT 1');
+		if ($resP)
+		{
+			$parent = $resP->fetch_assoc();
+		}
+		$routeid = $parent && !empty($parent['routeid']) ? (int)$parent['routeid'] : 63;
+		$author = $this->usernameById($userid);
+		$textNode = $this->insertNode(array(
+			'routeid' => $routeid,
+			'userid' => $userid,
+			'authorname' => $author,
+			'parentid' => $parentId,
+			'starter' => $starterId > 0 ? $starterId : $parentId,
+			'contenttypeid' => $textType,
+			'title' => $title,
+			'htmltitle' => $title,
+			'urlident' => 'license-reply-text',
+			'created' => $now,
+			'lastcontent' => $now,
+			'lastcontentid' => 0,
+			'lastcontentauthor' => $author,
+			'lastauthorid' => $userid,
+			'lastprefixid' => '',
+			'publishdate' => $now,
+			'showpublished' => 1,
+			'showopen' => 1,
+			'open' => 1,
+			'approved' => 1,
+			'showapproved' => 1,
+			'ipaddress' => '',
+			'CRC32' => (string)sprintf('%u', crc32($rawtext)),
+			'prefixid' => '',
+			'inlist' => 1,
+			'protected' => 1,
+			'nodeoptions' => 138,
+		));
+		if ($textNode < 1)
+		{
+			return 0;
+		}
+		$this->ensureClosure($textNode, $parentId, $now);
+		$this->db->query(
+			'INSERT INTO ' . $p . 'text (nodeid, rawtext, htmltitle) VALUES ('
+			. $textNode . ',\'' . $this->db->real_escape_string($rawtext) . '\',\''
+			. $this->db->real_escape_string($title) . '\')'
+		);
+		$this->db->query(
+			'UPDATE ' . $p . 'node SET lastcontent=' . $now . ', lastcontentid=' . $textNode
+			. ', lastcontentauthor=\'' . $this->db->real_escape_string($author) . '\''
+			. ', lastauthorid=' . $userid
+			. ', totalcount=totalcount+1, textcount=textcount+1'
+			. ' WHERE nodeid=' . $parentId
+		);
+		$this->clearNodeCaches(array($parentId, $textNode));
+		return $textNode;
 	}
 
 	protected function postPmReplyWithAttach($parentId, $starterId, $userid, $filename, $bytes, array $record)

@@ -1,8 +1,8 @@
 <?php
 /**
  * SeDiv VIP — Active License SeDiv desk.
- * VIP: upload .lic → opens MC ticket (VIP + support) → emails sedivlic@list.ru
- * Returned .src is posted into the same ticket. Staff can review every request.
+ * VIP: pick license type → upload .lic → opens MC ticket (VIP + support) → emails sedivlic@list.ru
+ * Returned .src (or text rejection) is posted into the same ticket. Staff can review every request.
  */
 define('THIS_SCRIPT', 'vbdl_sediv_active_license');
 define('CSRF_PROTECTION', false);
@@ -97,13 +97,48 @@ if (!$isVip && !$canStaff)
 
 $username = !empty($userinfo['username']) ? (string)$userinfo['username'] : '';
 $email = !empty($userinfo['email']) ? (string)$userinfo['email'] : '';
+
+// Build LicenseMail for type list (mysqli via Bootstrap repo db if available).
+$licenseTypes = array();
+try
+{
+	$m = null;
+	if ($database instanceof mysqli)
+	{
+		$m = $database;
+	}
+	elseif (is_object($database) && method_exists($database, 'get_connection'))
+	{
+		$m = $database->get_connection();
+	}
+	if ($m instanceof mysqli)
+	{
+		$lm = new vbdl_LicenseMail($m, $prefix, vbdl_Bootstrap::$repo, $acl);
+		$licenseTypes = $lm->licenseTypes();
+	}
+}
+catch (Throwable $e)
+{
+	$licenseTypes = array();
+}
+if (!$licenseTypes)
+{
+	$licenseTypes = array(
+		array('id' => 'sediv_imager', 'label' => 'All license SeDiv imager', 'subject' => 'Subject license SeDiv imager'),
+		array('id' => 'sehitachi_imager', 'label' => 'All license SeHitachi imager', 'subject' => 'Subject license SeHitachi imager'),
+		array('id' => 'sedivx_imager', 'label' => 'All license SeDivX imager', 'subject' => 'Subject license SeDivX imager'),
+		array('id' => 'sehgst_imager', 'label' => 'All license SeHGST imager', 'subject' => 'Subject license SeHGST imager'),
+		array('id' => 'sediv_repairs', 'label' => 'All license SeDiv repairs', 'subject' => 'Subject license SeDiv repairs'),
+		array('id' => 'sehitachi_repairs', 'label' => 'All license SeHitachi repairs', 'subject' => 'Subject license SeHitachi repairs'),
+	);
+}
 ?><!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Active License SeDiv — HDD LAND</title>
-<link rel="stylesheet" href="/vbdlmanager/assets/sediv-active-license.css?v=20260916h" />
+<link rel="stylesheet" href="/vbdlmanager/assets/sediv-active-license.css?v=20260916i" />
 </head>
 <body class="vbdl-sediv-page">
 <header class="vbdl-sediv-top">
@@ -116,7 +151,7 @@ $email = !empty($userinfo['email']) ? (string)$userinfo['email'] : '';
 <main class="vbdl-sediv-main">
 	<p class="vbdl-sediv-kicker">SeDiv VIP · Message Center</p>
 	<h1>Active License SeDiv</h1>
-	<p class="vbdl-sediv-lead">Choose your <code>.lic</code> and press Send. A new Message Center ticket opens for you and support. The file is emailed to the license inbox; when the activated <code>.src</code> returns, it is attached to the same ticket.</p>
+	<p class="vbdl-sediv-lead">Choose the license product, upload your <code>.lic</code>, and press Send. A Message Center ticket opens for you and support. The file is emailed with the exact subject for that product; when the activated <code>.src</code> (or a text reply) returns, it is posted into the same ticket.</p>
 
 	<section class="vbdl-sediv-card" id="vbdl-sediv-upload-card" <?php echo $isVip ? '' : 'hidden'; ?>>
 		<h2>Send license</h2>
@@ -124,8 +159,20 @@ $email = !empty($userinfo['email']) ? (string)$userinfo['email'] : '';
 			<div><span>Username</span><strong id="vbdl-sediv-user"><?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?></strong></div>
 			<div><span>Email</span><strong id="vbdl-sediv-email"><?php echo htmlspecialchars($email !== '' ? $email : '(not set)', ENT_QUOTES, 'UTF-8'); ?></strong></div>
 			<div><span>To</span><strong>sedivlic@list.ru</strong></div>
-			<div><span>Subject</span><strong>Active SeDiv 2026</strong></div>
+			<div><span>Subject</span><strong id="vbdl-sediv-subject-preview"><?php echo htmlspecialchars($licenseTypes[0]['subject'], ENT_QUOTES, 'UTF-8'); ?></strong></div>
 		</div>
+		<fieldset class="vbdl-sediv-types">
+			<legend>License type</legend>
+			<?php foreach ($licenseTypes as $i => $t): ?>
+			<label class="vbdl-sediv-type">
+				<input type="radio" name="vbdl_sediv_type" value="<?php echo htmlspecialchars($t['id'], ENT_QUOTES, 'UTF-8'); ?>"
+					data-subject="<?php echo htmlspecialchars($t['subject'], ENT_QUOTES, 'UTF-8'); ?>"
+					data-label="<?php echo htmlspecialchars($t['label'], ENT_QUOTES, 'UTF-8'); ?>"
+					<?php echo $i === 0 ? 'checked' : ''; ?> />
+				<span><?php echo htmlspecialchars($t['label'], ENT_QUOTES, 'UTF-8'); ?></span>
+			</label>
+			<?php endforeach; ?>
+		</fieldset>
 		<label class="vbdl-sediv-file">
 			<span>License file (.lic)</span>
 			<input type="file" id="vbdl-sediv-lic" accept=".lic,application/octet-stream" />
@@ -175,9 +222,10 @@ window.__VBDL_SEDIV_PAGE__ = {
   isVip: <?php echo $isVip ? 1 : 0; ?>,
   canStaff: <?php echo $canStaff ? 1 : 0; ?>,
   username: <?php echo json_encode($username); ?>,
-  email: <?php echo json_encode($email); ?>
+  email: <?php echo json_encode($email); ?>,
+  licenseTypes: <?php echo json_encode($licenseTypes); ?>
 };
 </script>
-<script defer src="/vbdlmanager/assets/sediv-active-license.js?v=20260916h"></script>
+<script defer src="/vbdlmanager/assets/sediv-active-license.js?v=20260916i"></script>
 </body>
 </html>

@@ -659,6 +659,7 @@ if ($do === 'config')
 	$sedivTo = $lm ? $lm->sedivEmail() : 'sedivlic@list.ru';
 	$sedivSubject = $lm ? $lm->sedivSubject() : 'Active SeDiv 2026';
 	$vipOnly = $lm ? ($lm->vipOnly() ? 1 : 0) : 1;
+	$types = $lm ? $lm->licenseTypes() : array();
 	echo json_encode(array(
 		'ok' => true,
 		'can_send' => $can ? 1 : 0,
@@ -670,6 +671,8 @@ if ($do === 'config')
 		'locked_subject' => $sedivSubject,
 		'default_to' => $sedivTo,
 		'default_subject_prefix' => $sedivSubject,
+		'license_types' => $types,
+		'src_retention_days' => $lm ? $lm->srcRetentionDays() : 7,
 		'from_email' => 'info@hdd-land.com',
 		'return_ext' => 'src',
 		'support_userid' => $lm ? $lm->supportUserid() : 1,
@@ -755,9 +758,17 @@ if ($do === 'vip_list')
 			'customer_username' => isset($row['customer_username']) ? $row['customer_username'] : '',
 			'customer_userid' => isset($row['customer_userid']) ? (int)$row['customer_userid'] : 0,
 			'lic_filename' => $row['lic_filename'],
+			'license_type' => isset($row['license_type']) ? $row['license_type'] : '',
+			'license_label' => isset($row['license_label']) ? $row['license_label'] : '',
+			'subject' => isset($row['subject']) ? $row['subject'] : '',
 			'status' => $row['status'],
 			'return_filename' => $row['return_filename'],
+			'reply_text' => isset($row['reply_text']) ? $row['reply_text'] : '',
+			'src_purged' => !empty($row['src_purged']) ? 1 : 0,
+			'src_available' => !empty($row['src_available']) ? 1 : 0,
+			'download_count' => isset($row['download_count']) ? (int)$row['download_count'] : 0,
 			'sent_label' => !empty($row['sent_dateline']) ? date('Y-m-d H:i', (int)$row['sent_dateline']) : '',
+			'returned_label' => !empty($row['returned_dateline']) ? date('Y-m-d H:i', (int)$row['returned_dateline']) : '',
 			'message_url' => $msgId > 0 ? ('/messagecenter/view/' . $msgId) : '',
 		);
 	}
@@ -774,6 +785,12 @@ if ($do === 'vip_submit')
 	if (!$isSedivVip)
 	{
 		vbdl_pmlic_fail('Only SeDiv VIP members can submit licenses here', 403);
+	}
+	$typeId = isset($_POST['license_type']) ? (string)$_POST['license_type'] : '';
+	$type = $lm->getLicenseType($typeId);
+	if (!$type)
+	{
+		vbdl_pmlic_fail('Choose a license type from the list');
 	}
 	if (empty($_FILES['licfile']) || !is_uploaded_file($_FILES['licfile']['tmp_name']))
 	{
@@ -793,7 +810,17 @@ if ($do === 'vip_submit')
 	$customer = !empty($userinfo['username']) ? (string)$userinfo['username'] : ('userid-' . $userid);
 	$customerEmail = $lm->customerEmail($userid);
 	$token = $lm->makeToken();
-	$ticket = $lm->createVipLicenseTicket($userid, $customer, $token, $filename);
+	// Exact subject text sedivlic expects, plus tracking token for auto-return.
+	$subjectBase = $type['subject'];
+	$subject = $subjectBase . ' [' . $token . ']';
+	$ticket = $lm->createVipLicenseTicket(
+		$userid,
+		$customer,
+		$token,
+		$filename,
+		$type['label'],
+		$subjectBase
+	);
 	if (!empty($ticket['error']))
 	{
 		vbdl_pmlic_fail($ticket['error'], 500);
@@ -810,8 +837,6 @@ if ($do === 'vip_submit')
 	}
 
 	$to = $lm->sedivEmail();
-	$subjectBase = $lm->sedivSubject();
-	$subject = $subjectBase . ' [' . $token . ']';
 
 	$rec = $lm->createSentRecord(array(
 		'token' => $token,
@@ -823,6 +848,7 @@ if ($do === 'vip_submit')
 		'staff_userid' => $supportId,
 		'filedataid' => (int)$attached['filedataid'],
 		'lic_filename' => $filename,
+		'license_type' => $type['id'],
 		'to_email' => $to,
 		'subject' => $subject,
 	));
@@ -831,10 +857,12 @@ if ($do === 'vip_submit')
 		vbdl_pmlic_fail($rec['error'], 500);
 	}
 
-	$body = "Active SeDiv 2026 — license activation request\n";
+	$body = $type['label'] . " — license activation request\n";
 	$body .= "==============================================\n\n";
 	$body .= "Tracking token: " . $token . "\n";
 	$body .= "(Please keep this token in your reply subject or body)\n\n";
+	$body .= "License type: " . $type['label'] . "\n";
+	$body .= "Email subject line: " . $subjectBase . "\n";
 	$body .= "Customer username: " . $customer . "\n";
 	$body .= "Customer email: " . ($customerEmail !== '' ? $customerEmail : '(not set)') . "\n";
 	$body .= "Customer userid: " . $userid . "\n";
@@ -847,7 +875,8 @@ if ($do === 'vip_submit')
 		$body .= "\nCustomer note:\n" . $note . "\n";
 	}
 	$body .= "\nPlease activate this .lic and reply with the activated .src file.\n";
-	$body .= "The .src will be posted automatically back into the same Message Center ticket.\n";
+	$body .= "If activation fails, reply with a plain-text explanation (no .src).\n";
+	$body .= "The reply will be posted automatically back into the same Message Center ticket.\n";
 
 	$fromEmail = 'info@hdd-land.com';
 	$err = vbdl_pmlic_send_mail(
@@ -870,6 +899,8 @@ if ($do === 'vip_submit')
 		'ok' => true,
 		'sent_to' => $to,
 		'subject' => $subject,
+		'license_type' => $type['id'],
+		'license_label' => $type['label'],
 		'token' => $token,
 		'from_email' => $fromEmail,
 		'message_nodeid' => $messageNode,

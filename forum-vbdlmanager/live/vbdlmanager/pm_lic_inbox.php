@@ -113,9 +113,21 @@ if (!$m)
 }
 $lm = new vbdl_LicenseMail($m, vbdl_inbox_prefix(), $repo, vbdl_Bootstrap::$acl);
 
-if ($do !== 'poll')
+if ($do !== 'poll' && $do !== 'purge')
 {
 	echo json_encode(array('ok' => false, 'error' => 'Unknown action'));
+	exit;
+}
+
+if ($do === 'purge')
+{
+	$purged = $lm->purgeExpiredSrcFiles(80);
+	echo json_encode(array(
+		'ok' => true,
+		'purged' => $purged,
+		'retention_days' => $lm->srcRetentionDays(),
+		'count' => count($purged),
+	));
 	exit;
 }
 
@@ -151,24 +163,43 @@ if ($maildir !== '' && is_dir($maildir) && @is_readable($maildir))
 			continue;
 		}
 		$rec = $lm->findByToken($token);
-		if (!$rec || $rec['status'] === 'returned')
+		if (!$rec || $rec['status'] === 'returned' || $rec['status'] === 'rejected')
 		{
 			continue;
 		}
 		$parsed = vbdl_inbox_extract_src_from_rfc822($raw);
-		if (empty($parsed['bytes']))
+		if (!empty($parsed['bytes']))
 		{
-			$errors[] = array('token' => $token, 'error' => 'No .src attachment found in maildir message');
+			$result = $lm->returnSrcToTicket($rec, $parsed['filename'], $parsed['bytes'], (int)$rec['staff_userid']);
+			if (!empty($result['error']))
+			{
+				$errors[] = array('token' => $token, 'error' => $result['error']);
+				continue;
+			}
+			$processed[] = array('token' => $token, 'file' => $parsed['filename'], 'node' => $result['attach_nodeid'], 'via' => 'maildir', 'kind' => 'src');
 			continue;
 		}
-		$result = $lm->returnSrcToTicket($rec, $parsed['filename'], $parsed['bytes'], (int)$rec['staff_userid']);
+		// No .src — treat plain-text reply as activation failure / rejection notice.
+		$text = vbdl_inbox_extract_text_from_rfc822($raw);
+		if ($text === '')
+		{
+			$errors[] = array('token' => $token, 'error' => 'No .src attachment and no usable reply text');
+			continue;
+		}
+		$result = $lm->rejectReplyToTicket($rec, $text, (int)$rec['staff_userid']);
 		if (!empty($result['error']))
 		{
 			$errors[] = array('token' => $token, 'error' => $result['error']);
 			continue;
 		}
-		$processed[] = array('token' => $token, 'file' => $parsed['filename'], 'node' => $result['attach_nodeid'], 'via' => 'maildir');
+		$processed[] = array(
+			'token' => $token,
+			'kind' => 'rejected',
+			'text_node' => isset($result['text_nodeid']) ? $result['text_nodeid'] : 0,
+			'via' => 'maildir',
+		);
 	}
+	$purged = $lm->purgeExpiredSrcFiles(40);
 	echo json_encode(array(
 		'ok' => true,
 		'mode' => 'maildir',
@@ -176,6 +207,8 @@ if ($maildir !== '' && is_dir($maildir) && @is_readable($maildir))
 		'processed' => $processed,
 		'errors' => $errors,
 		'checked' => count($files),
+		'purged' => $purged,
+		'purged_count' => count($purged),
 	));
 	exit;
 }
@@ -231,7 +264,7 @@ foreach ($ids as $msgno)
 		continue;
 	}
 	$rec = $lm->findByToken($token);
-	if (!$rec || $rec['status'] === 'returned')
+	if (!$rec || $rec['status'] === 'returned' || $rec['status'] === 'rejected')
 	{
 		continue;
 	}
@@ -264,28 +297,48 @@ foreach ($ids as $msgno)
 			break;
 		}
 	}
-	if ($srcBytes === null)
+	if ($srcBytes !== null)
+	{
+		$result = $lm->returnSrcToTicket($rec, $srcName, $srcBytes, (int)$rec['staff_userid']);
+		if (!empty($result['error']))
+		{
+			$errors[] = array('token' => $token, 'error' => $result['error']);
+			continue;
+		}
+		$processed[] = array('token' => $token, 'file' => $srcName, 'node' => $result['attach_nodeid'], 'kind' => 'src');
+		@imap_setflag_full($imap, (string)$msgno, '\\Seen');
+		continue;
+	}
+
+	$text = vbdl_inbox_extract_text_from_rfc822($header . "\n" . $body);
+	if ($text === '')
 	{
 		$errors[] = array('token' => $token, 'error' => 'No .src attachment found');
 		continue;
 	}
-
-	$result = $lm->returnSrcToTicket($rec, $srcName, $srcBytes, (int)$rec['staff_userid']);
+	$result = $lm->rejectReplyToTicket($rec, $text, (int)$rec['staff_userid']);
 	if (!empty($result['error']))
 	{
 		$errors[] = array('token' => $token, 'error' => $result['error']);
 		continue;
 	}
-	$processed[] = array('token' => $token, 'file' => $srcName, 'node' => $result['attach_nodeid']);
+	$processed[] = array(
+		'token' => $token,
+		'kind' => 'rejected',
+		'text_node' => isset($result['text_nodeid']) ? $result['text_nodeid'] : 0,
+	);
 	@imap_setflag_full($imap, (string)$msgno, '\\Seen');
 }
 
 imap_close($imap);
+$purged = $lm->purgeExpiredSrcFiles(40);
 echo json_encode(array(
 	'ok' => true,
 	'processed' => $processed,
 	'errors' => $errors,
 	'checked' => count($ids),
+	'purged' => $purged,
+	'purged_count' => count($purged),
 ));
 exit;
 
@@ -449,4 +502,102 @@ function vbdl_inbox_extract_src_from_rfc822($raw)
 		}
 	}
 	return array('filename' => $filename, 'bytes' => null);
+}
+
+/**
+ * Extract usable plain-text body from an RFC822 message (activation failure replies).
+ */
+function vbdl_inbox_extract_text_from_rfc822($raw)
+{
+	$raw = (string)$raw;
+	$candidates = array();
+
+	// Prefer text/plain parts
+	if (preg_match_all(
+		'/Content-Type:\s*text\/plain[^\r\n]*\r?\n(?:[^\r\n]+\r?\n)*\r?\n([\s\S]*?)(?=\r?\n--|\z)/i',
+		$raw,
+		$mm,
+		PREG_SET_ORDER
+	))
+	{
+		foreach ($mm as $row)
+		{
+			$chunk = $row[1];
+			if (preg_match('/Content-Transfer-Encoding:\s*base64/i', $row[0]))
+			{
+				$decoded = base64_decode(preg_replace('/\s+/', '', $chunk));
+				if (is_string($decoded) && $decoded !== '')
+				{
+					$chunk = $decoded;
+				}
+			}
+			elseif (preg_match('/Content-Transfer-Encoding:\s*quoted-printable/i', $row[0]))
+			{
+				$chunk = quoted_printable_decode($chunk);
+			}
+			$candidates[] = $chunk;
+		}
+	}
+
+	if (!$candidates)
+	{
+		// Single-part body after headers
+		if (preg_match('/\r?\n\r?\n([\s\S]+)$/', $raw, $m))
+		{
+			$candidates[] = $m[1];
+		}
+	}
+
+	$best = '';
+	foreach ($candidates as $c)
+	{
+		$t = vbdl_inbox_clean_reply_text($c);
+		if (strlen($t) > strlen($best))
+		{
+			$best = $t;
+		}
+	}
+	return $best;
+}
+
+function vbdl_inbox_clean_reply_text($text)
+{
+	$text = (string)$text;
+	$text = preg_replace('/\r\n?/', "\n", $text);
+	// Strip HTML if present
+	if (stripos($text, '<html') !== false || stripos($text, '<body') !== false)
+	{
+		$text = preg_replace('/<style[\s\S]*?<\/style>/i', '', $text);
+		$text = preg_replace('/<script[\s\S]*?<\/script>/i', '', $text);
+		$text = strip_tags($text);
+		$text = html_entity_decode($text, ENT_QUOTES, 'UTF-8');
+	}
+	$lines = preg_split('/\n/', $text);
+	$out = array();
+	foreach ($lines as $line)
+	{
+		$trim = rtrim($line);
+		// Drop common quoted / signature / mailer noise
+		if (preg_match('/^>/', $trim))
+		{
+			continue;
+		}
+		if (preg_match('/^(-{2,}\s*$|_{5,}|From:\s|Sent:\s|To:\s|Subject:\s|Content-Type:)/i', $trim))
+		{
+			break;
+		}
+		if (preg_match('/^On .+ wrote:$/i', $trim))
+		{
+			break;
+		}
+		$out[] = $trim;
+	}
+	$text = trim(implode("\n", $out));
+	$text = preg_replace("/\n{3,}/", "\n\n", $text);
+	// Ignore tiny auto-ack fluff
+	if (strlen($text) < 8)
+	{
+		return '';
+	}
+	return $text;
 }
