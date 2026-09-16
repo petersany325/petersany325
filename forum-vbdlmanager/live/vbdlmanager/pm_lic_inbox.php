@@ -31,6 +31,7 @@ else
 
 require_once $forumRoot . '/core/packages/vbdlmanager/library/Bootstrap.php';
 require_once $forumRoot . '/core/packages/vbdlmanager/library/LicenseMail.php';
+require_once $forumRoot . '/core/packages/vbdlmanager/library/LicenseRequest.php';
 
 global $vbulletin, $db, $table_prefix;
 $prefix = isset($table_prefix) ? $table_prefix : '';
@@ -112,6 +113,7 @@ if (!$m)
 	exit;
 }
 $lm = new vbdl_LicenseMail($m, vbdl_inbox_prefix(), $repo, vbdl_Bootstrap::$acl);
+$lr = new vbdl_LicenseRequest($m, vbdl_inbox_prefix(), $repo, vbdl_Bootstrap::$acl, $lm);
 
 if ($do !== 'poll' && $do !== 'purge')
 {
@@ -158,10 +160,41 @@ if ($maildir !== '' && is_dir($maildir) && @is_readable($maildir))
 			continue;
 		}
 		$token = $lm->extractTokenFromText($raw);
-		if ($token === '')
+		$reqToken = ($token === '') ? $lr->extractTokenFromText($raw) : '';
+		if ($token === '' && $reqToken === '')
 		{
 			continue;
 		}
+
+		// Purchase request replies (.txt license)
+		if ($reqToken !== '' || ($token !== '' && stripos($token, 'VBDL-REQ-') === 0))
+		{
+			$rt = $reqToken !== '' ? $reqToken : $token;
+			$rec = $lr->findByToken($rt);
+			if ($rec && $rec['status'] === 'sent')
+			{
+				$parsedTxt = vbdl_inbox_extract_txt_from_rfc822($raw);
+				if (!empty($parsedTxt['bytes']))
+				{
+					$textBody = vbdl_inbox_extract_text_from_rfc822($raw);
+					$result = $lr->approveWithLicense($rec, $parsedTxt['filename'], $parsedTxt['bytes'], $textBody, (int)$rec['staff_userid']);
+					if (!empty($result['error']))
+					{
+						$errors[] = array('token' => $rt, 'error' => $result['error']);
+					}
+					else
+					{
+						$processed[] = array('token' => $rt, 'file' => $parsedTxt['filename'], 'kind' => 'license_txt', 'via' => 'maildir');
+					}
+				}
+				else
+				{
+					$errors[] = array('token' => $rt, 'error' => 'No .txt license attachment found for purchase request');
+				}
+			}
+			continue;
+		}
+
 		$rec = $lm->findByToken($token);
 		if (!$rec || $rec['status'] === 'returned' || $rec['status'] === 'rejected')
 		{
@@ -259,10 +292,64 @@ foreach ($ids as $msgno)
 	$header = imap_fetchheader($imap, $msgno);
 	$blob = $subject . "\n" . $header . "\n" . $body;
 	$token = $lm->extractTokenFromText($blob);
-	if ($token === '')
+	$reqToken = ($token === '') ? $lr->extractTokenFromText($blob) : '';
+	if ($token === '' && $reqToken === '')
 	{
 		continue;
 	}
+
+	if ($reqToken !== '')
+	{
+		$rec = $lr->findByToken($reqToken);
+		if (!$rec || $rec['status'] !== 'sent')
+		{
+			continue;
+		}
+		$structure = imap_fetchstructure($imap, $msgno);
+		$parts = array();
+		vbdl_inbox_flatten_parts($structure, '', $parts);
+		$txtBytes = null;
+		$txtName = 'license.txt';
+		foreach ($parts as $part)
+		{
+			$name = isset($part['filename']) ? (string)$part['filename'] : '';
+			if ($name === '' || !preg_match('/\.txt$/i', $name))
+			{
+				continue;
+			}
+			$data = imap_fetchbody($imap, $msgno, $part['section']);
+			if ((int)$part['encoding'] === 3)
+			{
+				$data = base64_decode($data);
+			}
+			elseif ((int)$part['encoding'] === 4)
+			{
+				$data = quoted_printable_decode($data);
+			}
+			if ($data !== false && trim((string)$data) !== '')
+			{
+				$txtBytes = $data;
+				$txtName = $name;
+				break;
+			}
+		}
+		if ($txtBytes === null)
+		{
+			$errors[] = array('token' => $reqToken, 'error' => 'No .txt license attachment found');
+			continue;
+		}
+		$textBody = vbdl_inbox_extract_text_from_rfc822($header . "\n" . $body);
+		$result = $lr->approveWithLicense($rec, $txtName, $txtBytes, $textBody, (int)$rec['staff_userid']);
+		if (!empty($result['error']))
+		{
+			$errors[] = array('token' => $reqToken, 'error' => $result['error']);
+			continue;
+		}
+		$processed[] = array('token' => $reqToken, 'file' => $txtName, 'kind' => 'license_txt');
+		@imap_setflag_full($imap, (string)$msgno, '\\Seen');
+		continue;
+	}
+
 	$rec = $lm->findByToken($token);
 	if (!$rec || $rec['status'] === 'returned' || $rec['status'] === 'rejected')
 	{
@@ -600,4 +687,58 @@ function vbdl_inbox_clean_reply_text($text)
 		return '';
 	}
 	return $text;
+}
+
+/**
+ * Extract .txt license attachment from purchase-request replies.
+ */
+function vbdl_inbox_extract_txt_from_rfc822($raw)
+{
+	$filename = 'license.txt';
+	if (preg_match('/filename\*?=(?:UTF-8\'\')?"?([^";\r\n]+\.txt)"?/i', $raw, $m)
+		|| preg_match('/name="?([^";\r\n]+\.txt)"?/i', $raw, $m))
+	{
+		$filename = basename(urldecode(trim($m[1], "\"' ")));
+	}
+
+	$parts = array();
+	if (preg_match('/boundary=("?)([^";\r\n]+)\1/i', $raw, $b))
+	{
+		$boundary = $b[2];
+		$parts = preg_split('/--' . preg_quote($boundary, '/') . '(?:--)?\r?\n/', $raw);
+	}
+	foreach ($parts as $part)
+	{
+		if (!is_string($part) || $part === '')
+		{
+			continue;
+		}
+		if (!preg_match('/\.txt/i', $part) || !preg_match('/filename|name=/i', $part))
+		{
+			continue;
+		}
+		if (!preg_match('/\r?\n\r?\n([\s\S]+)$/', $part, $body))
+		{
+			continue;
+		}
+		$bodyTxt = $body[1];
+		$bodyTxt = preg_replace('/\r?\n--[^\r\n]*$/s', '', $bodyTxt);
+		if (preg_match('/Content-Transfer-Encoding:\s*base64/i', $part))
+		{
+			$bytes = base64_decode(preg_replace('/\s+/', '', $bodyTxt));
+		}
+		elseif (preg_match('/Content-Transfer-Encoding:\s*quoted-printable/i', $part))
+		{
+			$bytes = quoted_printable_decode($bodyTxt);
+		}
+		else
+		{
+			$bytes = $bodyTxt;
+		}
+		if (is_string($bytes) && strlen(trim($bytes)) > 3)
+		{
+			return array('filename' => $filename, 'bytes' => $bytes);
+		}
+	}
+	return array('filename' => $filename, 'bytes' => null);
 }

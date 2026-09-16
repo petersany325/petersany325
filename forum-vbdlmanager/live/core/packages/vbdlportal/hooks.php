@@ -129,7 +129,7 @@ class vbdlportal_Hooks
 		{
 			return $html;
 		}
-		$assets = '<script defer src="/vbdlmanager/assets/sediv-mc-nav.js?v=20260916f"></script>';
+		$assets = '<script defer src="/vbdlmanager/assets/sediv-mc-nav.js?v=20260916j"></script>';
 		if (stripos($html, '</body>') !== false)
 		{
 			return preg_replace('/<\/body>/i', $assets . '</body>', $html, 1);

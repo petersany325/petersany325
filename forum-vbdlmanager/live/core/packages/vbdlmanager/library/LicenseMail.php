@@ -339,6 +339,7 @@ class vbdl_LicenseMail
 			$supportId = $userid;
 		}
 		$supportName = $this->usernameById($supportId);
+		$data = null;
 
 		try
 		{
@@ -448,7 +449,7 @@ class vbdl_LicenseMail
 		{
 			$msg = trim(preg_replace('/\s+/', ' ', strip_tags($e->getMessage())));
 			// Still retry once via no-flood library if flood somehow threw.
-			if (stripos($msg, 'pmfloodcheck') !== false && class_exists('vB_Library'))
+			if (stripos($msg, 'pmfloodcheck') !== false && class_exists('vB_Library') && is_array($data))
 			{
 				try
 				{
@@ -1004,6 +1005,11 @@ class vbdl_LicenseMail
 				}
 			}
 		}
+	}
+
+	public function postTextToTicket($parentId, $starterId, $userid, $title, $rawtext)
+	{
+		return $this->postPmTextReply((int)$parentId, (int)$starterId, (int)$userid, (string)$title, (string)$rawtext);
 	}
 
 	protected function postPmTextReply($parentId, $starterId, $userid, $title, $rawtext)

@@ -613,9 +613,9 @@ function vbdl_pmlic_send_mail($to, $subject, $bodyText, $filename, $bytes, $from
 	$boundary = 'vbdl_' . md5(uniqid((string)mt_rand(), true));
 	$safeName = preg_replace('/[^\w.\-()+@]+/', '_', $filename);
 	$ext = strtolower(pathinfo($safeName, PATHINFO_EXTENSION));
-	if ($safeName === '' || ($ext !== 'lic' && $ext !== 'src'))
+	if ($safeName === '' || !preg_match('/^(lic|src|jpg|jpeg|png|gif|webp|pdf|txt)$/i', $ext))
 	{
-		$safeName = 'license.lic';
+		$safeName = ($ext !== '' ? ('file.' . $ext) : 'attachment.bin');
 	}
 
 	$headers = array();
