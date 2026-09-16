@@ -57,12 +57,38 @@
     var href = a.getAttribute('href') || '';
     var text = (a.textContent || '').trim();
     var title = a.getAttribute('title') || '';
-    var blob = (href + ' ' + text + ' ' + title).toLowerCase();
+    var download = a.getAttribute('download') || '';
+    var blob = (href + ' ' + text + ' ' + title + ' ' + download).toLowerCase();
     if (blob.indexOf('.lic') === -1) return false;
-    // Prefer real attachment links; still allow .lic text near attach chrome
-    if (/filedata\/fetch|\/attachment\/|content_attach|attachment\.php|filedataid=/i.test(href)) return true;
-    if (/\.lic(\?|#|$)/i.test(href) || /\.lic$/i.test(text)) return true;
+    if (/filedata\/fetch|\/attachment\/|content_attach|attachment\.php|filedataid=|attachmentid=/i.test(href)) return true;
+    if (/\.lic(\?|#|$)/i.test(href) || /\.lic$/i.test(text) || /\.lic$/i.test(download)) return true;
     return false;
+  }
+
+  function findLicTargets() {
+    var found = [];
+    var seen = {};
+    var anchors = document.querySelectorAll('a[href]');
+    for (var i = 0; i < anchors.length; i++) {
+      var a = anchors[i];
+      if (!isLicAnchor(a)) continue;
+      var key = (a.getAttribute('href') || '') + '|' + (a.textContent || '');
+      if (seen[key]) continue;
+      seen[key] = 1;
+      found.push(a);
+    }
+    // Also match attachment filename text that is not a pure .lic href
+    var nodes = document.querySelectorAll('.attachments a, .b-media a, .attached-files a, .b-post-attachments a, .js-attachments a, a.filename, .filename a');
+    for (var j = 0; j < nodes.length; j++) {
+      var n = nodes[j];
+      var t = (n.textContent || '').trim().toLowerCase();
+      if (t.indexOf('.lic') === -1) continue;
+      var k2 = (n.getAttribute('href') || '') + '|' + t;
+      if (seen[k2]) continue;
+      seen[k2] = 1;
+      found.push(n);
+    }
+    return found;
   }
 
   function guessCustomerNear(a) {
@@ -106,10 +132,35 @@
     modalEl._payload = null;
   }
 
+  function applyResolvedUser(m, username) {
+    var userInput = m.querySelector('#vbdl-pmlic-user');
+    var subjInput = m.querySelector('#vbdl-pmlic-subject');
+    userInput.value = username;
+    var prefix = cfg.default_subject_prefix || '[License]';
+    var filename = (m._payload && m._payload.filename) ? m._payload.filename : 'license.lic';
+    subjInput.value = prefix + ' ' + username + ' — ' + filename;
+    if (m._payload) m._payload.customerHint = username;
+  }
+
+  function resolveUsername(payload, m) {
+    var q = new URLSearchParams();
+    q.set('do', 'resolve');
+    q.set('filedataid', String(payload.filedataid || 0));
+    q.set('attachmentid', String(payload.attachmentid || 0));
+    q.set('nodeid', String(payload.nodeid || 0));
+    fetch('/vbdlmanager/pm_lic_email.php?' + q.toString(), { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || !data.ok || !data.customer_username) return;
+        applyResolvedUser(m, data.customer_username);
+      })
+      .catch(function () {});
+  }
+
   function openModal(payload) {
     var m = ensureModal();
     m._payload = payload;
-    m.querySelector('#vbdl-pmlic-user').value = payload.customerHint || '(resolved on send)';
+    m.querySelector('#vbdl-pmlic-user').value = payload.customerHint || 'Resolving from database…';
     m.querySelector('#vbdl-pmlic-to').value = cfg.default_to || '';
     var subj = (cfg.default_subject_prefix || '[License]');
     if (payload.customerHint) subj += ' ' + payload.customerHint;
@@ -119,6 +170,7 @@
     m.querySelector('#vbdl-pmlic-file').textContent = 'File: ' + (payload.filename || 'license.lic');
     m.querySelector('#vbdl-pmlic-msg').textContent = '';
     m.removeAttribute('hidden');
+    resolveUsername(payload, m);
   }
 
   function sendNow() {
@@ -160,15 +212,16 @@
 
   function decorate() {
     if (!cfg.can_send) return;
-    var anchors = document.querySelectorAll('a[href]');
-    for (var i = 0; i < anchors.length; i++) {
-      var a = anchors[i];
-      if (!isLicAnchor(a)) continue;
-      if (a.parentElement && a.parentElement.querySelector('.vbdl-pmlic-btn')) continue;
-      // Prefer attach boxes
-      var box = a.closest('.attachments, .b-media, .attached-files, .b-post-attachments, .js-attachments, .attach');
-      var host = box || a.parentElement;
-      if (!host) continue;
+    var targets = findLicTargets();
+    for (var i = 0; i < targets.length; i++) {
+      var a = targets[i];
+      if (a.getAttribute('data-vbdl-pmlic') === '1') continue;
+      var parent = a.parentElement;
+      if (parent && parent.querySelector('.vbdl-pmlic-btn')) {
+        a.setAttribute('data-vbdl-pmlic', '1');
+        continue;
+      }
+      if (!parent) continue;
 
       var ids = parseIdsFromHref(a.getAttribute('href') || '');
       var filename = (a.textContent || '').trim() || 'license.lic';
@@ -194,8 +247,9 @@
           });
         });
       })(ids, filename, a);
-      if (a.nextSibling) a.parentNode.insertBefore(btn, a.nextSibling);
-      else a.parentNode.appendChild(btn);
+      a.setAttribute('data-vbdl-pmlic', '1');
+      if (a.nextSibling) parent.insertBefore(btn, a.nextSibling);
+      else parent.appendChild(btn);
     }
   }
 

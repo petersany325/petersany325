@@ -20,7 +20,7 @@ $map = array(
   '/core/packages/vbdlportal/hooks.php' => '/core/packages/vbdlportal/hooks.php',
   '/core/admincp/vbdlmanager/pages/settings.php' => '/core/admincp/vbdlmanager/pages/settings.php',
 );
-$out = array('rev'=>'pm-lic-email-1','branch'=>$branch,'ts'=>time());
+$out = array('rev'=>'pm-lic-email-2','branch'=>$branch,'ts'=>time());
 foreach ($map as $rel => $path) {
   $url = $raw . $path;
   $bin = false;

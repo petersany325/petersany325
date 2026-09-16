@@ -171,9 +171,10 @@ function vbdl_pmlic_prefix()
 }
 
 /**
- * Resolve .lic attachment + authoritative customer username from DB.
+ * Resolve .lic attachment metadata + authoritative customer username from DB.
+ * Set $needBytes=false for UI preview (username only).
  */
-function vbdl_pmlic_resolve_attachment($filedataid, $attachmentid, $nodeid)
+function vbdl_pmlic_resolve_attachment($filedataid, $attachmentid, $nodeid, $needBytes = true)
 {
 	$m = vbdl_pmlic_db();
 	if (!$m)
@@ -257,21 +258,27 @@ function vbdl_pmlic_resolve_attachment($filedataid, $attachmentid, $nodeid)
 		return array('error' => 'Could not resolve customer username for this file');
 	}
 
+	$out = array(
+		'filedataid' => (int)$row['filedataid'],
+		'filename' => $filename !== '' ? $filename : ('license-' . $customerUser . '.lic'),
+		'customer_username' => $customerUser,
+		'customer_userid' => $customerId,
+		'message_nodeid' => !empty($row['message_nodeid']) ? (int)$row['message_nodeid'] : (int)$row['attach_nodeid'],
+	);
+
+	if (!$needBytes)
+	{
+		return $out;
+	}
+
 	$bytes = vbdl_pmlic_read_file_bytes($m, $p, (int)$row['filedataid'], (string)$row['filehash']);
 	if ($bytes === null || $bytes === '')
 	{
 		return array('error' => 'Could not read license file contents');
 	}
-
-	return array(
-		'filedataid' => (int)$row['filedataid'],
-		'filename' => $filename !== '' ? $filename : ('license-' . $customerUser . '.lic'),
-		'filesize' => strlen($bytes),
-		'bytes' => $bytes,
-		'customer_username' => $customerUser,
-		'customer_userid' => $customerId,
-		'message_nodeid' => !empty($row['message_nodeid']) ? (int)$row['message_nodeid'] : (int)$row['attach_nodeid'],
-	);
+	$out['filesize'] = strlen($bytes);
+	$out['bytes'] = $bytes;
+	return $out;
 }
 
 function vbdl_pmlic_read_file_bytes(mysqli $m, $prefix, $filedataid, $filehash)
@@ -428,14 +435,35 @@ if ($do === 'config')
 	exit;
 }
 
-if ($do !== 'send')
-{
-	vbdl_pmlic_fail('Unknown action');
-}
-
 if (!$can)
 {
 	vbdl_pmlic_fail('You are not allowed to email license files', 403);
+}
+
+if ($do === 'resolve')
+{
+	$filedataid = isset($_REQUEST['filedataid']) ? (int)$_REQUEST['filedataid'] : 0;
+	$attachmentid = isset($_REQUEST['attachmentid']) ? (int)$_REQUEST['attachmentid'] : 0;
+	$nodeid = isset($_REQUEST['nodeid']) ? (int)$_REQUEST['nodeid'] : 0;
+	$resolved = vbdl_pmlic_resolve_attachment($filedataid, $attachmentid, $nodeid, false);
+	if (!empty($resolved['error']))
+	{
+		vbdl_pmlic_fail($resolved['error']);
+	}
+	echo json_encode(array(
+		'ok' => true,
+		'customer_username' => $resolved['customer_username'],
+		'customer_userid' => (int)$resolved['customer_userid'],
+		'filename' => $resolved['filename'],
+		'filedataid' => (int)$resolved['filedataid'],
+		'message_nodeid' => (int)$resolved['message_nodeid'],
+	));
+	exit;
+}
+
+if ($do !== 'send')
+{
+	vbdl_pmlic_fail('Unknown action');
 }
 
 $to = isset($_POST['to']) ? trim((string)$_POST['to']) : '';
@@ -469,6 +497,8 @@ $staffName = !empty($userinfo['username']) ? (string)$userinfo['username'] : ('u
 $forumUrl = 'https://forum.hdd-land.com/';
 $body = "Forum license activation request\n";
 $body .= "================================\n\n";
+$body .= "*** FOR USERNAME: " . $customer . " ***\n";
+$body .= "*** نام کاربری مشتری: " . $customer . " ***\n\n";
 $body .= "Customer username: " . $customer . "\n";
 $body .= "Customer userid: " . $customerId . "\n";
 $body .= "License filename: " . $filename . "\n";
@@ -480,7 +510,7 @@ if ($note !== '')
 {
 	$body .= "\nStaff note:\n" . $note . "\n";
 }
-$body .= "\nPlease activate this .lic file and send the active license back to staff.\n";
+$body .= "\nPlease activate this .lic file for username \"" . $customer . "\" and send the active license back to staff.\n";
 
 $fromEmail = trim((string)$repo->getSetting('license_mail_from', ''));
 if ($fromEmail === '' || !filter_var($fromEmail, FILTER_VALIDATE_EMAIL))
