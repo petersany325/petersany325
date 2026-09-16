@@ -254,7 +254,8 @@ class vbdl_LicenseMail
 	}
 
 	/**
-	 * Ensure a user can see the PM ticket (inbox/sent_items folder row).
+	 * Ensure a user can see the PM ticket in their Inbox (messages folder).
+	 * VIP senders otherwise only get Sent Items and miss the ticket in Inbox.
 	 */
 	protected function ensureParticipant($nodeid, $userid)
 	{
@@ -265,17 +266,44 @@ class vbdl_LicenseMail
 			return;
 		}
 		$p = $this->prefix;
-		$res = $this->db->query(
-			'SELECT userid FROM ' . $p . 'sentto WHERE nodeid=' . $nodeid . ' AND userid=' . $userid . ' LIMIT 1'
-		);
-		if ($res && $res->fetch_assoc())
+		$inboxId = $this->messagesFolderId($userid);
+		if ($inboxId < 1)
 		{
 			return;
 		}
-		$folderid = $this->messagesFolderId($userid);
+		$res = $this->db->query(
+			'SELECT folderid FROM ' . $p . 'sentto WHERE nodeid=' . $nodeid . ' AND userid=' . $userid
+		);
+		$hasInbox = false;
+		$any = false;
+		if ($res)
+		{
+			while ($row = $res->fetch_assoc())
+			{
+				$any = true;
+				if ((int)$row['folderid'] === $inboxId)
+				{
+					$hasInbox = true;
+				}
+			}
+		}
+		if ($hasInbox)
+		{
+			return;
+		}
+		if ($any)
+		{
+			// Prefer Inbox over Sent Items for VIP visibility.
+			$this->db->query(
+				'UPDATE ' . $p . 'sentto SET folderid=' . (int)$inboxId . ', deleted=0'
+				. ' WHERE nodeid=' . $nodeid . ' AND userid=' . $userid
+				. ' LIMIT 1'
+			);
+			return;
+		}
 		$this->db->query(
 			'INSERT IGNORE INTO ' . $p . 'sentto (nodeid, userid, folderid, deleted, msgread) VALUES ('
-			. $nodeid . ',' . $userid . ',' . (int)$folderid . ',0,0)'
+			. $nodeid . ',' . $userid . ',' . (int)$inboxId . ',0,0)'
 		);
 	}
 
