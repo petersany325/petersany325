@@ -1,0 +1,223 @@
+/**
+ * Message Center: "Send to email" next to .lic attachments (staff only).
+ * Username in the outgoing email is resolved server-side from the attachment author.
+ */
+(function () {
+  if (window.__vbdlPmLicEmailInit) return;
+  window.__vbdlPmLicEmailInit = true;
+
+  function isMessageCenterPage() {
+    var path = String(location.pathname || '').toLowerCase();
+    var href = String(location.href || '').toLowerCase();
+    var needles = [
+      'messagecenter', 'message-center', 'privatemessage', 'private-message',
+      'private_message', 'pmchat', 'vbmessenger', '/messenger', '/pm/',
+      'contenttype=privatemessage', 'contenttypeid=22'
+    ];
+    for (var i = 0; i < needles.length; i++) {
+      if (path.indexOf(needles[i]) !== -1 || href.indexOf(needles[i]) !== -1) return true;
+    }
+    return !!document.querySelector('.b-messagecenter, #messagecenter, [data-ui="messagecenter"], .b-pmchat, #pmchat, .privatemessage-compose');
+  }
+
+  if (!isMessageCenterPage()) return;
+
+  var cfg = { can_send: 0, default_to: '', default_subject_prefix: '[License]' };
+  var modalEl = null;
+
+  function el(tag, attrs, html) {
+    var n = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) { n.setAttribute(k, attrs[k]); });
+    if (html != null) n.innerHTML = html;
+    return n;
+  }
+
+  function parseIdsFromHref(href) {
+    var out = { filedataid: 0, attachmentid: 0, nodeid: 0 };
+    if (!href) return out;
+    var h = String(href);
+    var m;
+    m = h.match(/filedataid[=/](\d+)/i);
+    if (m) out.filedataid = parseInt(m[1], 10);
+    m = h.match(/attachmentid[=/](\d+)/i);
+    if (m) out.attachmentid = parseInt(m[1], 10);
+    m = h.match(/\/attachment\/(\d+)/i);
+    if (m) out.attachmentid = parseInt(m[1], 10);
+    m = h.match(/[?&]id=(\d+)/i);
+    if (m && !out.filedataid && !out.attachmentid) out.attachmentid = parseInt(m[1], 10);
+    m = h.match(/\/filedata\/fetch\/(\d+)/i);
+    if (m) out.filedataid = parseInt(m[1], 10);
+    m = h.match(/nodeid[=/](\d+)/i);
+    if (m) out.nodeid = parseInt(m[1], 10);
+    return out;
+  }
+
+  function isLicAnchor(a) {
+    if (!a || !a.getAttribute) return false;
+    var href = a.getAttribute('href') || '';
+    var text = (a.textContent || '').trim();
+    var title = a.getAttribute('title') || '';
+    var blob = (href + ' ' + text + ' ' + title).toLowerCase();
+    if (blob.indexOf('.lic') === -1) return false;
+    // Prefer real attachment links; still allow .lic text near attach chrome
+    if (/filedata\/fetch|\/attachment\/|content_attach|attachment\.php|filedataid=/i.test(href)) return true;
+    if (/\.lic(\?|#|$)/i.test(href) || /\.lic$/i.test(text)) return true;
+    return false;
+  }
+
+  function guessCustomerNear(a) {
+    // UI hint only — server re-resolves and overwrites
+    var root = a.closest('.b-post, .b-message, .l-row, article, li, .b-content-entry, .js-content-entry, .b-privatemessage') || a.parentElement;
+    if (!root) return '';
+    var nameEl = root.querySelector('.author, .b-post__author, .username, a.username, .b-userinfo__name, .js-userinfo__name, .b-meta__username');
+    if (nameEl) return (nameEl.textContent || '').trim();
+    return '';
+  }
+
+  function ensureModal() {
+    if (modalEl) return modalEl;
+    modalEl = el('div', { id: 'vbdl-pmlic-modal', class: 'vbdl-pmlic-modal', hidden: 'hidden' });
+    modalEl.innerHTML = ''
+      + '<div class="vbdl-pmlic-dialog" role="dialog" aria-modal="true">'
+      + '  <div class="vbdl-pmlic-head">Send license (.lic) to email</div>'
+      + '  <div class="vbdl-pmlic-sub">Customer username is filled automatically from the ticket and verified on the server.</div>'
+      + '  <label>Customer username<input type="text" id="vbdl-pmlic-user" readonly /></label>'
+      + '  <label>To email<input type="email" id="vbdl-pmlic-to" required /></label>'
+      + '  <label>Subject<input type="text" id="vbdl-pmlic-subject" required /></label>'
+      + '  <label>Note (optional)<textarea id="vbdl-pmlic-note" rows="2" placeholder="optional note for license manager"></textarea></label>'
+      + '  <div class="vbdl-pmlic-file" id="vbdl-pmlic-file"></div>'
+      + '  <div class="vbdl-pmlic-msg" id="vbdl-pmlic-msg"></div>'
+      + '  <div class="vbdl-pmlic-actions">'
+      + '    <button type="button" class="vbdl-pmlic-send" id="vbdl-pmlic-send">Send email</button>'
+      + '    <button type="button" class="vbdl-pmlic-cancel" id="vbdl-pmlic-cancel">Cancel</button>'
+      + '  </div>'
+      + '</div>';
+    document.body.appendChild(modalEl);
+    modalEl.querySelector('#vbdl-pmlic-cancel').addEventListener('click', closeModal);
+    modalEl.addEventListener('click', function (e) {
+      if (e.target === modalEl) closeModal();
+    });
+    return modalEl;
+  }
+
+  function closeModal() {
+    if (!modalEl) return;
+    modalEl.setAttribute('hidden', 'hidden');
+    modalEl._payload = null;
+  }
+
+  function openModal(payload) {
+    var m = ensureModal();
+    m._payload = payload;
+    m.querySelector('#vbdl-pmlic-user').value = payload.customerHint || '(resolved on send)';
+    m.querySelector('#vbdl-pmlic-to').value = cfg.default_to || '';
+    var subj = (cfg.default_subject_prefix || '[License]');
+    if (payload.customerHint) subj += ' ' + payload.customerHint;
+    if (payload.filename) subj += ' — ' + payload.filename;
+    m.querySelector('#vbdl-pmlic-subject').value = subj;
+    m.querySelector('#vbdl-pmlic-note').value = '';
+    m.querySelector('#vbdl-pmlic-file').textContent = 'File: ' + (payload.filename || 'license.lic');
+    m.querySelector('#vbdl-pmlic-msg').textContent = '';
+    m.removeAttribute('hidden');
+  }
+
+  function sendNow() {
+    var m = ensureModal();
+    var payload = m._payload || {};
+    var msg = m.querySelector('#vbdl-pmlic-msg');
+    var btn = m.querySelector('#vbdl-pmlic-send');
+    var to = m.querySelector('#vbdl-pmlic-to').value.trim();
+    var subject = m.querySelector('#vbdl-pmlic-subject').value.trim();
+    var note = m.querySelector('#vbdl-pmlic-note').value.trim();
+    if (!to) { msg.textContent = 'Enter destination email'; return; }
+    if (!subject) { msg.textContent = 'Enter subject'; return; }
+    btn.disabled = true;
+    msg.textContent = 'Sending…';
+    var fd = new FormData();
+    fd.append('do', 'send');
+    fd.append('to', to);
+    fd.append('subject', subject);
+    fd.append('note', note);
+    fd.append('filedataid', String(payload.filedataid || 0));
+    fd.append('attachmentid', String(payload.attachmentid || 0));
+    fd.append('nodeid', String(payload.nodeid || 0));
+    fetch('/vbdlmanager/pm_lic_email.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        btn.disabled = false;
+        if (!data.ok) {
+          msg.textContent = data.error || 'Send failed';
+          return;
+        }
+        msg.textContent = 'Sent to ' + data.sent_to + ' for user ' + data.customer_username;
+        setTimeout(closeModal, 1200);
+      })
+      .catch(function () {
+        btn.disabled = false;
+        msg.textContent = 'Network error';
+      });
+  }
+
+  function decorate() {
+    if (!cfg.can_send) return;
+    var anchors = document.querySelectorAll('a[href]');
+    for (var i = 0; i < anchors.length; i++) {
+      var a = anchors[i];
+      if (!isLicAnchor(a)) continue;
+      if (a.parentElement && a.parentElement.querySelector('.vbdl-pmlic-btn')) continue;
+      // Prefer attach boxes
+      var box = a.closest('.attachments, .b-media, .attached-files, .b-post-attachments, .js-attachments, .attach');
+      var host = box || a.parentElement;
+      if (!host) continue;
+
+      var ids = parseIdsFromHref(a.getAttribute('href') || '');
+      var filename = (a.textContent || '').trim() || 'license.lic';
+      if (!/\.lic$/i.test(filename)) {
+        var hm = (a.getAttribute('href') || '').match(/([^\/?]+\.lic)/i);
+        if (hm) filename = hm[1];
+      }
+      var btn = el('button', {
+        type: 'button',
+        class: 'vbdl-pmlic-btn',
+        title: 'Email this .lic to the license activator'
+      }, 'Send to email');
+      (function (idsRef, filenameRef, anchorRef) {
+        btn.addEventListener('click', function (ev) {
+          ev.preventDefault();
+          ev.stopPropagation();
+          openModal({
+            filedataid: idsRef.filedataid,
+            attachmentid: idsRef.attachmentid,
+            nodeid: idsRef.nodeid,
+            filename: filenameRef,
+            customerHint: guessCustomerNear(anchorRef)
+          });
+        });
+      })(ids, filename, a);
+      if (a.nextSibling) a.parentNode.insertBefore(btn, a.nextSibling);
+      else a.parentNode.appendChild(btn);
+    }
+  }
+
+  function boot() {
+    ensureModal();
+    document.getElementById('vbdl-pmlic-send').addEventListener('click', sendNow);
+    fetch('/vbdlmanager/pm_lic_email.php?do=config', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data || !data.ok) return;
+        cfg = data;
+        if (!cfg.can_send) return;
+        decorate();
+        setInterval(decorate, 1200);
+        try {
+          var mo = new MutationObserver(function () { decorate(); });
+          mo.observe(document.documentElement, { childList: true, subtree: true });
+        } catch (e) {}
+      })
+      .catch(function () {});
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();

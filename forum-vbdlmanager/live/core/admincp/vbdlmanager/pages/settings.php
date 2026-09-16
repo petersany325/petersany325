@@ -23,6 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
 		'vip_telegram_button_label',
 		'vip_whatsapp_button_label',
 		'force_dm_for_attachments',
+		'license_activation_email',
+		'license_email_usergroupids',
+		'license_mail_from',
 	);
 	foreach ($fields as $field)
 	{
@@ -130,6 +133,20 @@ echo '<div class="vbdl-form-row"><label>Telegram bot / channel URL</label><input
 echo '<div class="vbdl-form-row"><label>WhatsApp</label><input class="vbdl-input" name="vip_contact_whatsapp" value="' . vbdl_h(isset($s['vip_contact_whatsapp']) ? $s['vip_contact_whatsapp'] : '') . '" placeholder="https://wa.me/98912... or phone digits" /></div>';
 echo '<div class="vbdl-form-row"><label>Telegram button label</label><input class="vbdl-input" name="vip_telegram_button_label" value="' . vbdl_h(isset($s['vip_telegram_button_label']) ? $s['vip_telegram_button_label'] : 'Telegram') . '" /></div>';
 echo '<div class="vbdl-form-row"><label>WhatsApp button label</label><input class="vbdl-input" name="vip_whatsapp_button_label" value="' . vbdl_h(isset($s['vip_whatsapp_button_label']) ? $s['vip_whatsapp_button_label'] : 'WhatsApp') . '" /></div>';
+
+echo '<hr style="border:0;border-top:1px solid #d9e2ec;margin:20px 0" />';
+echo '<h3 style="margin:0 0 10px">License ticket → email (.lic)</h3>';
+echo '<p class="vbdl-muted">In Message Center, staff see <strong>Send to email</strong> next to <code>.lic</code> attachments. '
+	. 'The email body always includes the <strong>customer username</strong> resolved from the ticket (server-side, not from the browser).</p>';
+echo '<div class="vbdl-form-row"><label>Default activation email (To)</label><input class="vbdl-input" name="license_activation_email" value="'
+	. vbdl_h(isset($s['license_activation_email']) ? $s['license_activation_email'] : '')
+	. '" placeholder="license-manager@example.com" /></div>';
+echo '<div class="vbdl-form-row"><label>From email</label><input class="vbdl-input" name="license_mail_from" value="'
+	. vbdl_h(isset($s['license_mail_from']) ? $s['license_mail_from'] : '')
+	. '" placeholder="noreply@hdd-land.com (optional)" /></div>';
+echo '<div class="vbdl-form-row"><label>Staff usergroup IDs allowed</label><input class="vbdl-input" name="license_email_usergroupids" value="'
+	. vbdl_h(isset($s['license_email_usergroupids']) ? $s['license_email_usergroupids'] : '6')
+	. '" placeholder="6" /><p class="vbdl-muted">Comma-separated. Administrators (6) are always allowed.</p></div>';
 
 echo '<div class="vbdl-actions"><button class="vbdl-btn" type="submit">Save settings</button></div></form></div></div>';
 vbdl_admin_footer();

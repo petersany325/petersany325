@@ -33,6 +33,7 @@ class vbdlportal_Hooks
 
 		$html = self::injectVipDownloadLink($html);
 		$html = self::injectPostUploadMenu($html);
+		$html = self::injectPmLicEmailUi($html);
 
 		$forceDm = '0';
 		if (isset($o['force_dm_for_attachments']))
@@ -106,6 +107,30 @@ class vbdlportal_Hooks
 		if (stripos($html, '</body>') !== false)
 		{
 			return preg_replace('/<\\/body>/i', $assets . '</body>', $html, 1);
+		}
+		return $html . $assets;
+	}
+
+	/**
+	 * Message Center only: staff "Send to email" UI for .lic ticket attachments.
+	 */
+	private static function injectPmLicEmailUi($html)
+	{
+		$uri = strtolower((string)($_SERVER['REQUEST_URI'] ?? ''));
+		$isMc = self::isMessageCenterUri($uri) || self::htmlLooksLikePrivateMessage($html);
+		if (!$isMc)
+		{
+			return $html;
+		}
+		if (stripos($html, 'pm-lic-email.js') !== false)
+		{
+			return $html;
+		}
+		$assets = '<link rel="stylesheet" href="/vbdlmanager/assets/pm-lic-email.css?v=20260916a" />'
+			. '<script defer src="/vbdlmanager/assets/pm-lic-email.js?v=20260916a"></script>';
+		if (stripos($html, '</body>') !== false)
+		{
+			return preg_replace('/<\/body>/i', $assets . '</body>', $html, 1);
 		}
 		return $html . $assets;
 	}
