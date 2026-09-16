@@ -145,13 +145,14 @@ if ($maildir !== '' && is_dir($maildir) && @is_readable($maildir))
 {
 	$processed = array();
 	$errors = array();
+	$skipped = array();
 	$files = array();
 	vbdl_inbox_scan_maildir($maildir, $files, 0);
 	// newest first
 	usort($files, function ($a, $b) {
 		return filemtime($b) - filemtime($a);
 	});
-	$files = array_slice($files, 0, 40);
+	$files = array_slice($files, 0, 80);
 	foreach ($files as $path)
 	{
 		$raw = @file_get_contents($path);
@@ -159,78 +160,28 @@ if ($maildir !== '' && is_dir($maildir) && @is_readable($maildir))
 		{
 			continue;
 		}
-		$token = $lm->extractTokenFromText($raw);
-		$reqToken = ($token === '') ? $lr->extractTokenFromText($raw) : '';
-		if ($token === '' && $reqToken === '')
+		$result = vbdl_inbox_handle_rfc822($lm, $lr, $raw, 'maildir');
+		if (!empty($result['processed']))
 		{
-			continue;
-		}
-
-		// Purchase request replies (.txt license)
-		if ($reqToken !== '' || ($token !== '' && stripos($token, 'VBDL-REQ-') === 0))
-		{
-			$rt = $reqToken !== '' ? $reqToken : $token;
-			$rec = $lr->findByToken($rt);
-			if ($rec && $rec['status'] === 'sent')
+			foreach ($result['processed'] as $row)
 			{
-				$parsedTxt = vbdl_inbox_extract_txt_from_rfc822($raw);
-				if (!empty($parsedTxt['bytes']))
-				{
-					$textBody = vbdl_inbox_extract_text_from_rfc822($raw);
-					$result = $lr->approveWithLicense($rec, $parsedTxt['filename'], $parsedTxt['bytes'], $textBody, (int)$rec['staff_userid']);
-					if (!empty($result['error']))
-					{
-						$errors[] = array('token' => $rt, 'error' => $result['error']);
-					}
-					else
-					{
-						$processed[] = array('token' => $rt, 'file' => $parsedTxt['filename'], 'kind' => 'license_txt', 'via' => 'maildir');
-					}
-				}
-				else
-				{
-					$errors[] = array('token' => $rt, 'error' => 'No .txt license attachment found for purchase request');
-				}
+				$processed[] = $row;
 			}
-			continue;
 		}
-
-		$rec = $lm->findByToken($token);
-		if (!$rec || $rec['status'] === 'returned' || $rec['status'] === 'rejected')
+		if (!empty($result['errors']))
 		{
-			continue;
-		}
-		$parsed = vbdl_inbox_extract_src_from_rfc822($raw);
-		if (!empty($parsed['bytes']))
-		{
-			$result = $lm->returnSrcToTicket($rec, $parsed['filename'], $parsed['bytes'], (int)$rec['staff_userid']);
-			if (!empty($result['error']))
+			foreach ($result['errors'] as $row)
 			{
-				$errors[] = array('token' => $token, 'error' => $result['error']);
-				continue;
+				$errors[] = $row;
 			}
-			$processed[] = array('token' => $token, 'file' => $parsed['filename'], 'node' => $result['attach_nodeid'], 'via' => 'maildir', 'kind' => 'src');
-			continue;
 		}
-		// No .src — treat plain-text reply as activation failure / rejection notice.
-		$text = vbdl_inbox_extract_text_from_rfc822($raw);
-		if ($text === '')
+		if (!empty($result['skipped']))
 		{
-			$errors[] = array('token' => $token, 'error' => 'No .src attachment and no usable reply text');
-			continue;
+			foreach ($result['skipped'] as $row)
+			{
+				$skipped[] = $row;
+			}
 		}
-		$result = $lm->rejectReplyToTicket($rec, $text, (int)$rec['staff_userid']);
-		if (!empty($result['error']))
-		{
-			$errors[] = array('token' => $token, 'error' => $result['error']);
-			continue;
-		}
-		$processed[] = array(
-			'token' => $token,
-			'kind' => 'rejected',
-			'text_node' => isset($result['text_nodeid']) ? $result['text_nodeid'] : 0,
-			'via' => 'maildir',
-		);
 	}
 	$purged = $lm->purgeExpiredSrcFiles(40);
 	echo json_encode(array(
@@ -239,6 +190,7 @@ if ($maildir !== '' && is_dir($maildir) && @is_readable($maildir))
 		'maildir' => $maildir,
 		'processed' => $processed,
 		'errors' => $errors,
+		'skipped' => array_slice($skipped, 0, 30),
 		'checked' => count($files),
 		'purged' => $purged,
 		'purged_count' => count($purged),
@@ -272,149 +224,48 @@ if (!$imap)
 
 $processed = array();
 $errors = array();
+$skipped = array();
 $ids = imap_search($imap, 'UNSEEN') ?: array();
 // Also scan recent mail with .src in case flags are wrong
 if (!$ids)
 {
 	$ids = imap_search($imap, 'ALL') ?: array();
-	$ids = array_slice(array_reverse($ids), 0, 30);
+	$ids = array_slice(array_reverse($ids), 0, 40);
 }
 
 foreach ($ids as $msgno)
 {
-	$overview = imap_fetch_overview($imap, (string)$msgno, 0);
-	$subject = '';
-	if (!empty($overview[0]->subject))
-	{
-		$subject = imap_utf8($overview[0]->subject);
-	}
-	$body = imap_body($imap, $msgno);
 	$header = imap_fetchheader($imap, $msgno);
-	$blob = $subject . "\n" . $header . "\n" . $body;
-	$token = $lm->extractTokenFromText($blob);
-	$reqToken = ($token === '') ? $lr->extractTokenFromText($blob) : '';
-	if ($token === '' && $reqToken === '')
+	$body = imap_body($imap, $msgno);
+	$raw = $header . "\n" . $body;
+	$result = vbdl_inbox_handle_rfc822($lm, $lr, $raw, 'imap');
+	$did = false;
+	if (!empty($result['processed']))
 	{
-		continue;
+		foreach ($result['processed'] as $row)
+		{
+			$processed[] = $row;
+			$did = true;
+		}
 	}
-
-	if ($reqToken !== '')
+	if (!empty($result['errors']))
 	{
-		$rec = $lr->findByToken($reqToken);
-		if (!$rec || $rec['status'] !== 'sent')
+		foreach ($result['errors'] as $row)
 		{
-			continue;
+			$errors[] = $row;
 		}
-		$structure = imap_fetchstructure($imap, $msgno);
-		$parts = array();
-		vbdl_inbox_flatten_parts($structure, '', $parts);
-		$txtBytes = null;
-		$txtName = 'license.txt';
-		foreach ($parts as $part)
+	}
+	if (!empty($result['skipped']))
+	{
+		foreach ($result['skipped'] as $row)
 		{
-			$name = isset($part['filename']) ? (string)$part['filename'] : '';
-			if ($name === '' || !preg_match('/\.txt$/i', $name))
-			{
-				continue;
-			}
-			$data = imap_fetchbody($imap, $msgno, $part['section']);
-			if ((int)$part['encoding'] === 3)
-			{
-				$data = base64_decode($data);
-			}
-			elseif ((int)$part['encoding'] === 4)
-			{
-				$data = quoted_printable_decode($data);
-			}
-			if ($data !== false && trim((string)$data) !== '')
-			{
-				$txtBytes = $data;
-				$txtName = $name;
-				break;
-			}
+			$skipped[] = $row;
 		}
-		if ($txtBytes === null)
-		{
-			$errors[] = array('token' => $reqToken, 'error' => 'No .txt license attachment found');
-			continue;
-		}
-		$textBody = vbdl_inbox_extract_text_from_rfc822($header . "\n" . $body);
-		$result = $lr->approveWithLicense($rec, $txtName, $txtBytes, $textBody, (int)$rec['staff_userid']);
-		if (!empty($result['error']))
-		{
-			$errors[] = array('token' => $reqToken, 'error' => $result['error']);
-			continue;
-		}
-		$processed[] = array('token' => $reqToken, 'file' => $txtName, 'kind' => 'license_txt');
+	}
+	if ($did)
+	{
 		@imap_setflag_full($imap, (string)$msgno, '\\Seen');
-		continue;
 	}
-
-	$rec = $lm->findByToken($token);
-	if (!$rec || $rec['status'] === 'returned' || $rec['status'] === 'rejected')
-	{
-		continue;
-	}
-
-	$structure = imap_fetchstructure($imap, $msgno);
-	$parts = array();
-	vbdl_inbox_flatten_parts($structure, '', $parts);
-	$srcBytes = null;
-	$srcName = '';
-	foreach ($parts as $part)
-	{
-		$name = isset($part['filename']) ? (string)$part['filename'] : '';
-		if ($name === '' || !preg_match('/\.src$/i', $name))
-		{
-			continue;
-		}
-		$data = imap_fetchbody($imap, $msgno, $part['section']);
-		if ((int)$part['encoding'] === 3)
-		{
-			$data = base64_decode($data);
-		}
-		elseif ((int)$part['encoding'] === 4)
-		{
-			$data = quoted_printable_decode($data);
-		}
-		if ($data !== false && $data !== '')
-		{
-			$srcBytes = $data;
-			$srcName = $name;
-			break;
-		}
-	}
-	if ($srcBytes !== null)
-	{
-		$result = $lm->returnSrcToTicket($rec, $srcName, $srcBytes, (int)$rec['staff_userid']);
-		if (!empty($result['error']))
-		{
-			$errors[] = array('token' => $token, 'error' => $result['error']);
-			continue;
-		}
-		$processed[] = array('token' => $token, 'file' => $srcName, 'node' => $result['attach_nodeid'], 'kind' => 'src');
-		@imap_setflag_full($imap, (string)$msgno, '\\Seen');
-		continue;
-	}
-
-	$text = vbdl_inbox_extract_text_from_rfc822($header . "\n" . $body);
-	if ($text === '')
-	{
-		$errors[] = array('token' => $token, 'error' => 'No .src attachment found');
-		continue;
-	}
-	$result = $lm->rejectReplyToTicket($rec, $text, (int)$rec['staff_userid']);
-	if (!empty($result['error']))
-	{
-		$errors[] = array('token' => $token, 'error' => $result['error']);
-		continue;
-	}
-	$processed[] = array(
-		'token' => $token,
-		'kind' => 'rejected',
-		'text_node' => isset($result['text_nodeid']) ? $result['text_nodeid'] : 0,
-	);
-	@imap_setflag_full($imap, (string)$msgno, '\\Seen');
 }
 
 imap_close($imap);
@@ -423,11 +274,157 @@ echo json_encode(array(
 	'ok' => true,
 	'processed' => $processed,
 	'errors' => $errors,
+	'skipped' => array_slice($skipped, 0, 30),
 	'checked' => count($ids),
 	'purged' => $purged,
 	'purged_count' => count($purged),
 ));
 exit;
+
+/**
+ * Resolve a license reply RFC822 into ticket updates.
+ * - Tries every VBDL-LIC token (not only the first / already-returned one)
+ * - Falls back to product subject matching when token is missing
+ * - Imports .src or posts plain-text rejection
+ */
+function vbdl_inbox_handle_rfc822($lm, $lr, $raw, $via = 'maildir')
+{
+	$processed = array();
+	$errors = array();
+	$skipped = array();
+	$raw = (string)$raw;
+
+	$subject = '';
+	if (preg_match('/^Subject:\s*(.+)$/mi', $raw, $sm))
+	{
+		$subject = trim(preg_replace('/\s+/', ' ', $sm[1]));
+		// Decode simple MIME encoded-words
+		if (function_exists('iconv_mime_decode'))
+		{
+			$decoded = @iconv_mime_decode($subject, 0, 'UTF-8');
+			if (is_string($decoded) && $decoded !== '')
+			{
+				$subject = $decoded;
+			}
+		}
+	}
+
+	// Purchase-request path first
+	$reqToken = $lr->extractTokenFromText($raw);
+	if ($reqToken !== '')
+	{
+		$rec = $lr->findByToken($reqToken);
+		if ($rec && $rec['status'] === 'sent')
+		{
+			$parsedTxt = vbdl_inbox_extract_txt_from_rfc822($raw);
+			if (!empty($parsedTxt['bytes']))
+			{
+				$textBody = vbdl_inbox_extract_text_from_rfc822($raw);
+				$result = $lr->approveWithLicense($rec, $parsedTxt['filename'], $parsedTxt['bytes'], $textBody, (int)$rec['staff_userid']);
+				if (!empty($result['error']))
+				{
+					$errors[] = array('token' => $reqToken, 'error' => $result['error']);
+				}
+				else
+				{
+					$processed[] = array('token' => $reqToken, 'file' => $parsedTxt['filename'], 'kind' => 'license_txt', 'via' => $via);
+				}
+			}
+			else
+			{
+				$errors[] = array('token' => $reqToken, 'error' => 'No .txt license attachment found for purchase request');
+			}
+		}
+		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
+	}
+
+	$tokens = $lm->extractAllTokensFromText($raw);
+	$candidates = array();
+	foreach ($tokens as $token)
+	{
+		$rec = $lm->findByToken($token);
+		if (!$rec)
+		{
+			$skipped[] = array('token' => $token, 'reason' => 'unknown_token');
+			continue;
+		}
+		if ($rec['status'] === 'returned' || $rec['status'] === 'rejected')
+		{
+			$skipped[] = array('token' => $token, 'reason' => 'already_' . $rec['status']);
+			continue;
+		}
+		$candidates[] = $rec;
+	}
+
+	// Subject fallback when reply has .src but no usable open token
+	if (!$candidates)
+	{
+		$bySub = $lm->findSentBySubject($subject !== '' ? $subject : $raw);
+		if ($bySub)
+		{
+			$candidates[] = $bySub;
+			$skipped[] = array('token' => $bySub['token'], 'reason' => 'matched_by_subject', 'subject' => $subject);
+		}
+	}
+
+	if (!$candidates)
+	{
+		$hasSrc = (bool)preg_match('/\.src/i', $raw);
+		if ($hasSrc)
+		{
+			$skipped[] = array('reason' => 'src_without_matching_ticket', 'subject' => $subject);
+		}
+		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
+	}
+
+	$parsed = vbdl_inbox_extract_src_from_rfc822($raw);
+	if (!empty($parsed['bytes']))
+	{
+		// One .src attachment → bind to the first still-sent candidate (usually the reply's own token).
+		$rec = $candidates[0];
+		$result = $lm->returnSrcToTicket($rec, $parsed['filename'], $parsed['bytes'], (int)$rec['staff_userid']);
+		if (!empty($result['error']))
+		{
+			$errors[] = array('token' => $rec['token'], 'error' => $result['error']);
+		}
+		else
+		{
+			$processed[] = array(
+				'token' => $rec['token'],
+				'file' => $parsed['filename'],
+				'node' => $result['attach_nodeid'],
+				'via' => $via,
+				'kind' => 'src',
+				'match' => !empty($tokens) ? 'token' : 'subject',
+			);
+		}
+		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
+	}
+
+	// No .src — plain-text rejection for the primary candidate only
+	$rec = $candidates[0];
+	$text = vbdl_inbox_extract_text_from_rfc822($raw);
+	if ($text === '')
+	{
+		$errors[] = array('token' => $rec['token'], 'error' => 'No .src attachment and no usable reply text');
+		return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
+	}
+	$result = $lm->rejectReplyToTicket($rec, $text, (int)$rec['staff_userid']);
+	if (!empty($result['error']))
+	{
+		$errors[] = array('token' => $rec['token'], 'error' => $result['error']);
+	}
+	else
+	{
+		$processed[] = array(
+			'token' => $rec['token'],
+			'kind' => 'rejected',
+			'text_node' => isset($result['text_nodeid']) ? $result['text_nodeid'] : 0,
+			'via' => $via,
+		);
+	}
+	return array('processed' => $processed, 'errors' => $errors, 'skipped' => $skipped);
+}
 
 function vbdl_inbox_flatten_parts($structure, $prefix, array &$out)
 {
@@ -529,22 +526,11 @@ function vbdl_inbox_extract_src_from_rfc822($raw)
 		$filename = basename(urldecode(trim($m[1], "\"' ")));
 	}
 
-	$parts = array();
-	if (preg_match('/boundary=("?)([^";\r\n]+)\1/i', $raw, $b))
+	// Split on ANY MIME boundary so nested multipart/mixed replies still expose the .src part.
+	$parts = preg_split('/\r?\n--[^\r\n]+(?:--)?\r?\n/', (string)$raw);
+	if (!$parts || count($parts) < 2)
 	{
-		$boundary = $b[2];
-		$parts = preg_split('/--' . preg_quote($boundary, '/') . '(?:--)?\r?\n/', $raw);
-	}
-	if (!$parts)
-	{
-		// Generic multipart split
-		if (preg_match_all('/(--[^\r\n]+)\r?\n([\s\S]*?)(?=\r?\n--[^\r\n]+|$)/', $raw, $mm, PREG_SET_ORDER))
-		{
-			foreach ($mm as $row)
-			{
-				$parts[] = $row[2];
-			}
-		}
+		$parts = array($raw);
 	}
 
 	foreach ($parts as $part)
@@ -557,7 +543,8 @@ function vbdl_inbox_extract_src_from_rfc822($raw)
 		{
 			continue;
 		}
-		if (!preg_match('/Content-Transfer-Encoding:\s*base64/i', $part))
+		// Skip container parts that only declare nested multipart
+		if (preg_match('/Content-Type:\s*multipart\//i', $part) && !preg_match('/Content-Transfer-Encoding:\s*(base64|quoted-printable)/i', $part))
 		{
 			continue;
 		}
@@ -566,14 +553,33 @@ function vbdl_inbox_extract_src_from_rfc822($raw)
 			continue;
 		}
 		$bodyTxt = $body[1];
-		$bodyTxt = preg_replace('/\r?\n--[^\r\n]*$/s', '', $bodyTxt);
-		$bytes = base64_decode(preg_replace('/\s+/', '', $bodyTxt), true);
-		if ($bytes === false)
+		$bodyTxt = preg_replace('/\r?\n--[^\r\n]*\s*$/s', '', $bodyTxt);
+
+		$bytes = null;
+		if (preg_match('/Content-Transfer-Encoding:\s*base64/i', $part))
 		{
-			$bytes = base64_decode(preg_replace('/\s+/', '', $bodyTxt));
+			$bytes = base64_decode(preg_replace('/\s+/', '', $bodyTxt), true);
+			if ($bytes === false)
+			{
+				$bytes = base64_decode(preg_replace('/\s+/', '', $bodyTxt));
+			}
 		}
-		if (is_string($bytes) && strlen($bytes) > 100)
+		elseif (preg_match('/Content-Transfer-Encoding:\s*quoted-printable/i', $part))
 		{
+			$bytes = quoted_printable_decode($bodyTxt);
+		}
+		else
+		{
+			// Some activators send binary/8bit attachments
+			$bytes = $bodyTxt;
+		}
+		if (is_string($bytes) && strlen($bytes) > 20)
+		{
+			if (preg_match('/filename\*?=(?:UTF-8\'\')?"?([^";\r\n]+\.src)"?/i', $part, $fm)
+				|| preg_match('/name="?([^";\r\n]+\.src)"?/i', $part, $fm))
+			{
+				$filename = basename(urldecode(trim($fm[1], "\"' ")));
+			}
 			return array('filename' => $filename, 'bytes' => $bytes);
 		}
 	}

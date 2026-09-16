@@ -231,9 +231,14 @@
         }
         var n = (data.processed && data.processed.length) || 0;
         var p = data.purged_count || 0;
+        var sk = (data.skipped && data.skipped.length) || 0;
+        var er = (data.errors && data.errors.length) || 0;
         pollMsg.textContent = 'Checked ' + (data.checked || 0) + ' messages, imported ' + n
           + (data.mode ? (' (' + data.mode + ')') : '')
-          + (p ? (', purged ' + p + ' expired .src') : '') + '.';
+          + (p ? (', purged ' + p + ' expired .src') : '')
+          + (er ? (', errors ' + er) : '')
+          + (sk ? (', skipped ' + sk) : '')
+          + '.';
         loadList();
       })
       .catch(function (err) {

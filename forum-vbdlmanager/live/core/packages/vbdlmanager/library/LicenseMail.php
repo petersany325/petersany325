@@ -748,11 +748,72 @@ class vbdl_LicenseMail
 
 	public function extractTokenFromText($text)
 	{
-		if (preg_match('/\b(VBDL-LIC-[A-Z0-9\-]+)\b/i', (string)$text, $m))
+		$all = $this->extractAllTokensFromText($text);
+		return $all ? $all[0] : '';
+	}
+
+	/**
+	 * All VBDL-LIC tokens in a message (order preserved, unique).
+	 * Replies that quote several tickets must not stop at the first (already returned) token.
+	 */
+	public function extractAllTokensFromText($text)
+	{
+		$out = array();
+		if (!preg_match_all('/\b(VBDL-LIC-[A-Z0-9\-]+)\b/i', (string)$text, $mm))
 		{
-			return strtoupper($m[1]);
+			return $out;
 		}
-		return '';
+		foreach ($mm[1] as $tok)
+		{
+			$tok = strtoupper($tok);
+			if (!in_array($tok, $out, true))
+			{
+				$out[] = $tok;
+			}
+		}
+		return $out;
+	}
+
+	/**
+	 * Match a reply subject (e.g. Re: Subject license SeHGST imager) to a still-sent ticket.
+	 */
+	public function findSentBySubject($subject)
+	{
+		$subject = trim(preg_replace('/^(?:Re|Fw|Fwd|AW|SV|Antw)\s*:\s*/i', '', (string)$subject));
+		$subject = trim(preg_replace('/\s*\[VBDL-LIC-[A-Z0-9\-]+\]\s*/i', ' ', $subject));
+		$subject = trim(preg_replace('/\s+/', ' ', $subject));
+		if ($subject === '')
+		{
+			return null;
+		}
+
+		// Prefer exact known product subjects.
+		$base = '';
+		foreach ($this->licenseTypes() as $t)
+		{
+			if (stripos($subject, $t['subject']) !== false)
+			{
+				$base = $t['subject'];
+				break;
+			}
+		}
+		if ($base === '')
+		{
+			$base = $subject;
+		}
+
+		$esc = $this->db->real_escape_string($base);
+		$res = $this->db->query(
+			'SELECT * FROM ' . $this->prefix . 'vbdl_license_mail '
+			. 'WHERE status=\'sent\' AND ('
+			. 'subject=\'' . $esc . '\' OR subject LIKE \'' . $esc . ' [%\' OR subject LIKE \'%' . $esc . '%\''
+			. ') ORDER BY id DESC LIMIT 1'
+		);
+		if ($res && ($row = $res->fetch_assoc()))
+		{
+			return $row;
+		}
+		return null;
 	}
 
 	/**
