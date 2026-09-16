@@ -388,37 +388,62 @@ function vbdl_inbox_extract_src_from_rfc822($raw)
 	{
 		$filename = basename(urldecode(trim($m[1], "\"' ")));
 	}
-	// Split on common multipart boundaries and find .src part
-	if (preg_match_all('/(--[^\r\n]+)\r?\n([\s\S]*?)(?=\r?\n--[^\r\n]+|$)/', $raw, $parts, PREG_SET_ORDER))
+
+	$parts = array();
+	if (preg_match('/boundary=("?)([^";\r\n]+)\1/i', $raw, $b))
 	{
-		foreach ($parts as $part)
+		$boundary = $b[2];
+		$parts = preg_split('/--' . preg_quote($boundary, '/') . '(?:--)?\r?\n/', $raw);
+	}
+	if (!$parts)
+	{
+		// Generic multipart split
+		if (preg_match_all('/(--[^\r\n]+)\r?\n([\s\S]*?)(?=\r?\n--[^\r\n]+|$)/', $raw, $mm, PREG_SET_ORDER))
 		{
-			$body = $part[2];
-			if (!preg_match('/\.src/i', $body))
+			foreach ($mm as $row)
 			{
-				continue;
-			}
-			if (!preg_match('/filename|name=/i', $body))
-			{
-				continue;
-			}
-			if (preg_match('/Content-Transfer-Encoding:\s*base64/i', $body)
-				&& preg_match('/\r?\n\r?\n([A-Za-z0-9\/+\r\n=]+)/', $body, $b))
-			{
-				$bytes = base64_decode(preg_replace('/\s+/', '', $b[1]));
-				if ($bytes !== false && $bytes !== '')
-				{
-					return array('filename' => $filename, 'bytes' => $bytes);
-				}
+				$parts[] = $row[2];
 			}
 		}
 	}
-	// Fallback: first large base64 block after a .src disposition
-	if (preg_match('/Content-Disposition:[^\n]*\.src[\s\S]*?Content-Transfer-Encoding:\s*base64[\s\S]*?\r?\n\r?\n([A-Za-z0-9\/+\r\n=]+)/i', $raw, $m)
-		|| preg_match('/filename="?[^"\n]+\.src"?[\s\S]*?Content-Transfer-Encoding:\s*base64[\s\S]*?\r?\n\r?\n([A-Za-z0-9\/+\r\n=]+)/i', $raw, $m))
+
+	foreach ($parts as $part)
+	{
+		if (!is_string($part) || $part === '')
+		{
+			continue;
+		}
+		if (!preg_match('/\.src/i', $part) || !preg_match('/filename|name=/i', $part))
+		{
+			continue;
+		}
+		if (!preg_match('/Content-Transfer-Encoding:\s*base64/i', $part))
+		{
+			continue;
+		}
+		if (!preg_match('/\r?\n\r?\n([\s\S]+)$/', $part, $body))
+		{
+			continue;
+		}
+		$bodyTxt = $body[1];
+		$bodyTxt = preg_replace('/\r?\n--[^\r\n]*$/s', '', $bodyTxt);
+		$bytes = base64_decode(preg_replace('/\s+/', '', $bodyTxt), true);
+		if ($bytes === false)
+		{
+			$bytes = base64_decode(preg_replace('/\s+/', '', $bodyTxt));
+		}
+		if (is_string($bytes) && strlen($bytes) > 100)
+		{
+			return array('filename' => $filename, 'bytes' => $bytes);
+		}
+	}
+
+	// Fallback: name/filename .src then later base64 body (any header order)
+	if (preg_match('/(?:filename|name)="?[^"\n]+\.src"?[\s\S]*?Content-Transfer-Encoding:\s*base64[\s\S]*?\r?\n\r?\n([A-Za-z0-9\/+\r\n=]+)/i', $raw, $m)
+		|| preg_match('/Content-Transfer-Encoding:\s*base64[\s\S]*?(?:filename|name)="?[^"\n]+\.src"?[\s\S]*?\r?\n\r?\n([A-Za-z0-9\/+\r\n=]+)/i', $raw, $m))
 	{
 		$bytes = base64_decode(preg_replace('/\s+/', '', $m[1]));
-		if ($bytes !== false && $bytes !== '')
+		if (is_string($bytes) && $bytes !== '')
 		{
 			return array('filename' => $filename, 'bytes' => $bytes);
 		}
