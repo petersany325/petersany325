@@ -43,13 +43,29 @@
     if (m) out.attachmentid = parseInt(m[1], 10);
     m = h.match(/\/attachment\/(\d+)/i);
     if (m) out.attachmentid = parseInt(m[1], 10);
-    m = h.match(/[?&]id=(\d+)/i);
-    if (m && !out.filedataid && !out.attachmentid) out.attachmentid = parseInt(m[1], 10);
     m = h.match(/\/filedata\/fetch\/(\d+)/i);
     if (m) out.filedataid = parseInt(m[1], 10);
+    // vB5 Message Center: /filedata/fetch?id=NODE_OR_FILEDATA
+    m = h.match(/filedata\/fetch\?[^#]*\bid=(\d+)/i) || h.match(/[?&]id=(\d+)/i);
+    if (m) {
+      var id = parseInt(m[1], 10);
+      // Pass the same id in all slots — server tries filedataid/nodeid/attach.nodeid.
+      if (!out.filedataid) out.filedataid = id;
+      if (!out.attachmentid) out.attachmentid = id;
+      if (!out.nodeid) out.nodeid = id;
+    }
     m = h.match(/nodeid[=/](\d+)/i);
     if (m) out.nodeid = parseInt(m[1], 10);
     return out;
+  }
+
+  function cleanFilename(text, href) {
+    var raw = String(text || '').replace(/\s+/g, ' ').trim();
+    var m = raw.match(/([^\s\\/]+\.lic)\b/i);
+    if (m) return m[1];
+    m = String(href || '').match(/([^\/?]+\.lic)/i);
+    if (m) return m[1];
+    return raw || 'license.lic';
   }
 
   function isLicAnchor(a) {
@@ -224,11 +240,12 @@
       if (!parent) continue;
 
       var ids = parseIdsFromHref(a.getAttribute('href') || '');
-      var filename = (a.textContent || '').trim() || 'license.lic';
-      if (!/\.lic$/i.test(filename)) {
-        var hm = (a.getAttribute('href') || '').match(/([^\/?]+\.lic)/i);
-        if (hm) filename = hm[1];
+      // Also pass surrounding message node from URL when present (/messagecenter/view/12345)
+      if (!ids.nodeid) {
+        var pathNode = String(location.pathname || '').match(/messagecenter\/view\/(\d+)/i);
+        if (pathNode) ids.nodeid = parseInt(pathNode[1], 10);
       }
+      var filename = cleanFilename(a.textContent || '', a.getAttribute('href') || '');
       var btn = el('button', {
         type: 'button',
         class: 'vbdl-pmlic-btn',

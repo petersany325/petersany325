@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<product productid="vbdl_pmlic2" active="1">
-<title>VBDL PM Lic Email 2</title>
-<description>Redeploy Message Center .lic send-to-email with username in email</description>
-<version>1.0.1</version>
+<product productid="vbdl_pmlic3" active="1">
+<title>VBDL PM Lic Email 3</title>
+<description>Fix .lic resolve for filedata/fetch?id=</description>
+<version>1.0.2</version>
 <url>https://forum.hdd-land.com/</url>
 <versioncheckurl></versioncheckurl>
 <dependencies></dependencies>
 <codes>
-<code version="1.0.1">
+<code version="1.0.2">
 <installcode><![CDATA[
 
 $base = '/home/hddrecov/public_html/forum';

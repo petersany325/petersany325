@@ -186,6 +186,22 @@ function vbdl_pmlic_resolve_attachment($filedataid, $attachmentid, $nodeid, $nee
 	$attachmentid = (int)$attachmentid;
 	$nodeid = (int)$nodeid;
 
+	// Collect candidate ids — vB filedata/fetch?id= may be filedataid OR attach nodeid.
+	$ids = array();
+	foreach (array($filedataid, $attachmentid, $nodeid) as $id)
+	{
+		$id = (int)$id;
+		if ($id > 0)
+		{
+			$ids[$id] = $id;
+		}
+	}
+	if (!$ids)
+	{
+		return array('error' => 'Missing attachment id');
+	}
+	$idList = implode(',', array_map('intval', array_values($ids)));
+
 	$sql = "
 		SELECT
 			a.filedataid,
@@ -207,31 +223,73 @@ function vbdl_pmlic_resolve_attachment($filedataid, $attachmentid, $nodeid, $nee
 		INNER JOIN {$p}user u ON u.userid = n.userid
 		LEFT JOIN {$p}node pn ON pn.nodeid = n.parentid
 		LEFT JOIN {$p}user pu ON pu.userid = pn.userid
-		WHERE 1=1
+		WHERE (
+			a.filedataid IN ($idList)
+			OR a.nodeid IN ($idList)
+			OR n.parentid IN ($idList)
+			OR n.nodeid IN ($idList)
+		)
+		ORDER BY
+			CASE
+				WHEN LOWER(a.filename) LIKE '%.lic' THEN 0
+				WHEN LOWER(IFNULL(fd.extension,'')) = 'lic' THEN 0
+				ELSE 1
+			END,
+			a.filedataid DESC
+		LIMIT 1
 	";
-	if ($filedataid > 0)
-	{
-		$sql .= ' AND a.filedataid = ' . $filedataid;
-	}
-	elseif ($attachmentid > 0)
-	{
-		// Some skins use attachmentid == attach.nodeid
-		$sql .= ' AND a.nodeid = ' . $attachmentid;
-	}
-	elseif ($nodeid > 0)
-	{
-		$sql .= ' AND (a.nodeid = ' . $nodeid . ' OR n.parentid = ' . $nodeid . ')';
-	}
-	else
-	{
-		return array('error' => 'Missing attachment id');
-	}
-	$sql .= ' ORDER BY a.filedataid DESC LIMIT 1';
 
 	$res = $m->query($sql);
-	if (!$res || !($row = $res->fetch_assoc()))
+	if (!$res)
 	{
-		return array('error' => 'Attachment not found');
+		return array('error' => 'Attachment query failed: ' . $m->error);
+	}
+	if (!($row = $res->fetch_assoc()))
+	{
+		// Fallback: walk PM starter → children for any .lic attach
+		$sql2 = "
+			SELECT
+				a.filedataid,
+				a.nodeid AS attach_nodeid,
+				a.filename,
+				a.filesize AS attach_filesize,
+				fd.filesize AS fd_filesize,
+				fd.extension,
+				fd.filehash,
+				fd.userid AS fd_userid,
+				n.userid AS attach_userid,
+				n.parentid AS message_nodeid,
+				u.username AS attach_username,
+				pn.userid AS message_userid,
+				pu.username AS message_username
+			FROM {$p}attach a
+			INNER JOIN {$p}filedata fd ON fd.filedataid = a.filedataid
+			INNER JOIN {$p}node n ON n.nodeid = a.nodeid
+			INNER JOIN {$p}user u ON u.userid = n.userid
+			LEFT JOIN {$p}node pn ON pn.nodeid = n.parentid
+			LEFT JOIN {$p}user pu ON pu.userid = pn.userid
+			WHERE (
+				n.parentid IN ($idList)
+				OR n.starter IN ($idList)
+				OR pn.starter IN ($idList)
+				OR pn.parentid IN ($idList)
+			)
+			AND (
+				LOWER(a.filename) LIKE '%.lic'
+				OR LOWER(IFNULL(fd.extension,'')) = 'lic'
+			)
+			ORDER BY a.filedataid DESC
+			LIMIT 1
+		";
+		$res2 = $m->query($sql2);
+		if ($res2)
+		{
+			$row = $res2->fetch_assoc();
+		}
+		if (empty($row))
+		{
+			return array('error' => 'Attachment not found');
+		}
 	}
 
 	$filename = (string)$row['filename'];
