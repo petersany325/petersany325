@@ -342,79 +342,148 @@ class vbdl_LicenseMail
 
 		try
 		{
-			if (!class_exists('vB_Api'))
+			if (!class_exists('vB_Api') && !class_exists('vB_Library'))
 			{
 				return array('error' => 'Cannot create Message Center ticket for VIP + support');
 			}
-			$api = vB_Api::instanceInternal('content_privatemessage');
-			if ($api && method_exists($api, 'add'))
+			$title = $typeLabel . ' - ' . $token;
+			$text = $typeLabel . " request\n"
+				. "================================\n"
+				. "VIP user: {$username} (userid {$userid})\n"
+				. "Tracking token: {$token}\n"
+				. "License type: {$typeLabel}\n"
+				. "License file: {$licFilename}\n";
+			if ($emailSubject !== '')
 			{
-				$title = $typeLabel . ' - ' . $token;
-				$text = $typeLabel . " request\n"
-					. "================================\n"
-					. "VIP user: {$username} (userid {$userid})\n"
-					. "Tracking token: {$token}\n"
-					. "License type: {$typeLabel}\n"
-					. "License file: {$licFilename}\n";
-				if ($emailSubject !== '')
-				{
-					$text .= "Email subject: {$emailSubject}\n";
-				}
-				$text .= "\nThis ticket is for license send + activated .src return only.\n"
-					. "Support can review every step here.";
-				$recipients = ($supportId !== $userid) ? $supportName : $username;
-				$sentto = ($supportId !== $userid) ? array($supportId) : array($userid);
-				$data = array(
-					'title' => $title,
-					'rawtext' => $text,
-					'msgtext' => $text,
-					'sentto' => $sentto,
-					'recipients' => $recipients,
-					'parentid' => 0,
-					'userid' => $userid,
-				);
-				$result = $api->add($data, array('bypassPerms' => true));
-				$nodeid = 0;
-				if (is_array($result))
-				{
-					if (!empty($result['nodeid']))
-					{
-						$nodeid = (int)$result['nodeid'];
-					}
-					elseif (!empty($result[0]))
-					{
-						$nodeid = (int)$result[0];
-					}
-				}
-				elseif (is_numeric($result))
-				{
-					$nodeid = (int)$result;
-				}
-				if ($nodeid > 0)
-				{
-					$starter = $nodeid;
-					$res = $this->db->query('SELECT starter FROM ' . $p . 'node WHERE nodeid=' . $nodeid . ' LIMIT 1');
-					if ($res && ($row = $res->fetch_assoc()) && !empty($row['starter']))
-					{
-						$starter = (int)$row['starter'];
-					}
-					$this->ensureParticipant($nodeid, $userid);
-					if ($supportId !== $userid)
-					{
-						$this->ensureParticipant($nodeid, $supportId);
-					}
-					return array(
-						'message_nodeid' => $nodeid,
-						'starter_nodeid' => $starter,
-						'support_userid' => $supportId,
-					);
-				}
-				return array('error' => 'PM API returned no nodeid');
+				$text .= "Email subject: {$emailSubject}\n";
 			}
+			$text .= "\nThis ticket is for license send + activated .src return only.\n"
+				. "Support can review every step here.";
+			$recipients = ($supportId !== $userid) ? $supportName : $username;
+			$sentto = ($supportId !== $userid) ? array($supportId) : array($userid);
+			$data = array(
+				'title' => $title,
+				'rawtext' => $text,
+				'msgtext' => $text,
+				'sentto' => $sentto,
+				'recipients' => $recipients,
+				'parentid' => 0,
+				'userid' => $userid,
+			);
+			// VIP may send several license types in a row — skip PM flood check.
+			$opts = array(
+				'bypassPerms' => true,
+				'skipFloodCheck' => true,
+			);
+			$result = null;
+			if (class_exists('vB_Library'))
+			{
+				$lib = vB_Library::instance('content_privatemessage');
+				if ($lib && method_exists($lib, 'addMessageNoFlood'))
+				{
+					$result = $lib->addMessageNoFlood($data, $opts);
+				}
+				elseif ($lib && method_exists($lib, 'add'))
+				{
+					$result = $lib->add($data, $opts);
+				}
+			}
+			if ($result === null && class_exists('vB_Api'))
+			{
+				$api = vB_Api::instanceInternal('content_privatemessage');
+				if ($api && method_exists($api, 'add'))
+				{
+					$result = $api->add($data, $opts);
+				}
+			}
+			if ($result === null)
+			{
+				return array('error' => 'Cannot create Message Center ticket for VIP + support');
+			}
+			// Library addMessageNoFlood may return nodeid int; API returns array.
+			if (is_array($result) && !empty($result['errors']))
+			{
+				$err = $result['errors'];
+				$msg = is_array($err) ? json_encode($err) : (string)$err;
+				return array('error' => 'PM ticket failed: ' . strip_tags($msg));
+			}
+			$nodeid = 0;
+			if (is_array($result))
+			{
+				if (!empty($result['nodeid']))
+				{
+					$nodeid = (int)$result['nodeid'];
+				}
+				elseif (!empty($result[0]) && is_numeric($result[0]))
+				{
+					$nodeid = (int)$result[0];
+				}
+			}
+			elseif (is_numeric($result))
+			{
+				$nodeid = (int)$result;
+			}
+			if ($nodeid > 0)
+			{
+				$starter = $nodeid;
+				$res = $this->db->query('SELECT starter FROM ' . $p . 'node WHERE nodeid=' . $nodeid . ' LIMIT 1');
+				if ($res && ($row = $res->fetch_assoc()) && !empty($row['starter']))
+				{
+					$starter = (int)$row['starter'];
+				}
+				$this->ensureParticipant($nodeid, $userid);
+				if ($supportId !== $userid)
+				{
+					$this->ensureParticipant($nodeid, $supportId);
+				}
+				return array(
+					'message_nodeid' => $nodeid,
+					'starter_nodeid' => $starter,
+					'support_userid' => $supportId,
+				);
+			}
+			return array('error' => 'PM API returned no nodeid');
 		}
 		catch (Throwable $e)
 		{
-			return array('error' => 'PM ticket failed: ' . $e->getMessage());
+			$msg = trim(preg_replace('/\s+/', ' ', strip_tags($e->getMessage())));
+			// Still retry once via no-flood library if flood somehow threw.
+			if (stripos($msg, 'pmfloodcheck') !== false && class_exists('vB_Library'))
+			{
+				try
+				{
+					$lib = vB_Library::instance('content_privatemessage');
+					if ($lib && method_exists($lib, 'addMessageNoFlood'))
+					{
+						$result = $lib->addMessageNoFlood($data, array('bypassPerms' => true, 'skipFloodCheck' => true));
+						$nodeid = is_numeric($result) ? (int)$result : (is_array($result) && !empty($result['nodeid']) ? (int)$result['nodeid'] : 0);
+						if ($nodeid > 0)
+						{
+							$starter = $nodeid;
+							$res = $this->db->query('SELECT starter FROM ' . $p . 'node WHERE nodeid=' . $nodeid . ' LIMIT 1');
+							if ($res && ($row = $res->fetch_assoc()) && !empty($row['starter']))
+							{
+								$starter = (int)$row['starter'];
+							}
+							$this->ensureParticipant($nodeid, $userid);
+							if ($supportId !== $userid)
+							{
+								$this->ensureParticipant($nodeid, $supportId);
+							}
+							return array(
+								'message_nodeid' => $nodeid,
+								'starter_nodeid' => $starter,
+								'support_userid' => $supportId,
+							);
+						}
+					}
+				}
+				catch (Throwable $e2)
+				{
+					$msg = trim(preg_replace('/\s+/', ' ', strip_tags($e2->getMessage())));
+				}
+			}
+			return array('error' => 'PM ticket failed: ' . $msg);
 		}
 
 		return array('error' => 'Cannot create Message Center ticket for VIP + support');
