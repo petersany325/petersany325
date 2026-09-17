@@ -450,9 +450,51 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
       </div>
     </div>
 
+    <div style="margin-top:1rem;padding-top:.85rem;border-top:1px solid rgba(255,255,255,.08)">
+      <div class="mm-sec-title" style="color:#fff;font-size:.92rem;margin-bottom:.45rem">راهنمای فروش سایت تعمیرکاران (کارتابل‌ها)</div>
+      <p class="mm-hint" style="margin:0 0 .7rem">برای هر کارتابل عنوان، توضیح کوتاه، متن کامل صفحه و <b>لینک آپارات</b> را تنظیم کنید. آپلود فیلم فقط روی آپارات انجام می‌شود.</p>
+      @php $repairGuides = \Plugins\MegaMenu\Plugin::repairShopGuides(false); @endphp
+      @foreach($repairGuides as $g)
+        @php $slug = $g['slug']; @endphp
+        <div style="margin-bottom:.85rem;padding:.75rem;border:1px solid rgba(255,255,255,.1);border-radius:10px;background:rgba(0,0,0,.12)">
+          <input type="hidden" name="repair_guides[{{ $slug }}][slug]" value="{{ $slug }}">
+          <input type="hidden" name="repair_guides[{{ $slug }}][is_active]" value="0">
+          <div class="mm-inline" style="margin:0 0 .55rem">
+            <label>
+              <input type="checkbox" name="repair_guides[{{ $slug }}][is_active]" value="1" @checked(!empty($g['is_active']))>
+              <span>فعال: {{ $g['title'] }}</span>
+            </label>
+          </div>
+          <div class="mm-grid4">
+            <div class="mm-field">
+              <span>عنوان</span>
+              <input type="text" name="repair_guides[{{ $slug }}][title]" value="{{ $g['title'] }}" maxlength="120">
+            </div>
+            <div class="mm-field">
+              <span>ترتیب</span>
+              <input type="number" name="repair_guides[{{ $slug }}][sort]" value="{{ $g['sort'] }}" min="1" max="99">
+            </div>
+            <div class="mm-field" style="grid-column:1/-1">
+              <span>توضیح کوتاه (دکمه لندینگ)</span>
+              <input type="text" name="repair_guides[{{ $slug }}][short]" value="{{ $g['short'] }}" maxlength="255">
+            </div>
+            <div class="mm-field" style="grid-column:1/-1">
+              <span>لینک آپارات</span>
+              <input type="text" name="repair_guides[{{ $slug }}][aparat_url]" value="{{ $g['aparat_url'] }}" maxlength="500" placeholder="https://www.aparat.com/v/XXXXX" dir="ltr">
+            </div>
+            <div class="mm-field" style="grid-column:1/-1">
+              <span>متن کامل صفحه</span>
+              <textarea name="repair_guides[{{ $slug }}][body]" rows="4" maxlength="20000">{{ $g['body'] }}</textarea>
+            </div>
+          </div>
+          <p class="mm-hint" style="margin:.45rem 0 0">صفحه عمومی: <a href="{{ url('/sites/repair-shop/'.$slug) }}" target="_blank" rel="noopener" style="color:#f0c9a8">/sites/repair-shop/{{ $slug }}</a></p>
+        </div>
+      @endforeach
+    </div>
+
     <div class="mm-inline" style="margin-top:.75rem">
-      <button class="btn btn-primary" type="submit" id="mm-settings-save">ذخیره تنظیمات + پیشنهاد سازمانی</button>
-      <a class="btn btn-outline" href="{{ url('/') }}" target="_blank" rel="noopener">پیش‌نمایش سایت</a>
+      <button class="btn btn-primary" type="submit" id="mm-settings-save">ذخیره تنظیمات + پیشنهاد سازمانی + کارتابل‌ها</button>
+      <a class="btn btn-outline" href="{{ url('/sites/repair-shop') }}" target="_blank" rel="noopener">پیش‌نمایش صفحه فروش</a>
     </div>
   </form>
 </details>

@@ -91,6 +91,7 @@ class Plugin extends BasePlugin
             'org_promo_button' => 'مشاهده',
             'org_promo_url' => '/products',
             'org_promo_image' => '/images/home/mega-promo.jpg',
+            'repair_guides' => [],
         ], is_array($decoded) ? $decoded : []);
     }
 
@@ -164,6 +165,10 @@ class Plugin extends BasePlugin
             $merged['org_promo_button'] = mb_substr(trim((string) ($data['org_promo_button'] ?? 'مشاهده')), 0, 60) ?: 'مشاهده';
             $merged['org_promo_url'] = mb_substr($promoUrl, 0, 500);
             $merged['org_promo_image'] = mb_substr($promoImage, 0, 500);
+        }
+
+        if (array_key_exists('repair_guides', $data) && is_array($data['repair_guides'])) {
+            $merged['repair_guides'] = static::sanitizeRepairGuidesInput($data['repair_guides']);
         }
 
         $payload = json_encode($merged, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -267,6 +272,172 @@ class Plugin extends BasePlugin
     }
 
     /**
+     * راهنمای بخش‌های صفحه فروش تعمیرکاران (کارتابل‌ها و …)
+     *
+     * @return list<array{slug:string,title:string,short:string,body:string,aparat_url:string,is_active:bool,sort:int}>
+     */
+    public static function repairShopGuideDefaults(): array
+    {
+        return [
+            [
+                'slug' => 'referral',
+                'title' => 'کارتابل ارجاع',
+                'short' => 'دریافت/بازگشت دستگاه و دست تعمیر',
+                'body' => "کارتابل ارجاع هسته گردش دستگاه بین پذیرش و تعمیرکار است.\n\nاز این کارتابل، دریافت دستگاه توسط تعمیرکار، وضعیت دست تعمیر، و بازگشت دستگاه به پذیرش مدیریت می‌شود.\n\nتوضیحات کامل‌تر و ویدیوی آموزشی را می‌توانید از تنظیمات ادمین همین بخش تکمیل کنید.",
+                'aparat_url' => '',
+                'is_active' => true,
+                'sort' => 1,
+            ],
+            [
+                'slug' => 'cost-approval',
+                'title' => 'کارتابل تأیید هزینه',
+                'short' => 'تأیید جراحی/بازیابی و لینک‌ها',
+                'body' => "کارتابل تأیید هزینه برای بررسی و تأیید هزینه‌های جراحی، بازیابی و موارد مرتبط است.\n\nلینک‌ها و جزئیات تأیید از همین بخش پیگیری می‌شود.\n\nمتن کامل و لینک آپارات را از ادمین تنظیم کنید.",
+                'aparat_url' => '',
+                'is_active' => true,
+                'sort' => 2,
+            ],
+            [
+                'slug' => 'staff',
+                'title' => 'کارتابل کارمند',
+                'short' => 'کارمندان، نقش و دسترسی',
+                'body' => "کارتابل کارمند محل مدیریت کارمندان، نقش‌ها و دسترسی‌های سیستم است.\n\nاز اینجا می‌توان نقش تعمیرکار و سایر نقش‌ها را برای ورود و سطح دسترسی تنظیم کرد.\n\nتوضیح کامل‌تر را در ادمین بنویسید و لینک آپارات را اضافه کنید.",
+                'aparat_url' => '',
+                'is_active' => true,
+                'sort' => 3,
+            ],
+            [
+                'slug' => 'trainee',
+                'title' => 'کارتابل کارآموز',
+                'short' => 'کارآموزان و پرتال ورود',
+                'body' => "کارتابل کارآموز برای مدیریت کارآموزان و پرتال ورود آن‌هاست.\n\nدسترسی آموزشی و ورود کارآموز از این بخش کنترل می‌شود.\n\nجزئیات و ویدیو را از تنظیمات ادمین تکمیل کنید.",
+                'aparat_url' => '',
+                'is_active' => true,
+                'sort' => 4,
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{slug:string,title:string,short:string,body:string,aparat_url:string,is_active:bool,sort:int}>
+     */
+    public static function repairShopGuides(bool $onlyActive = true): array
+    {
+        $saved = static::settings()['repair_guides'] ?? [];
+        if (! is_array($saved)) {
+            $saved = [];
+        }
+        $bySlug = [];
+        foreach ($saved as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $slug = trim((string) ($row['slug'] ?? ''));
+            if ($slug !== '') {
+                $bySlug[$slug] = $row;
+            }
+        }
+
+        $out = [];
+        foreach (static::repairShopGuideDefaults() as $def) {
+            $slug = $def['slug'];
+            $ov = $bySlug[$slug] ?? [];
+            $merged = array_merge($def, is_array($ov) ? $ov : []);
+            $merged['slug'] = $slug;
+            $merged['title'] = mb_substr(trim((string) ($merged['title'] ?? $def['title'])), 0, 120) ?: $def['title'];
+            $merged['short'] = mb_substr(trim((string) ($merged['short'] ?? $def['short'])), 0, 255);
+            $merged['body'] = trim((string) ($merged['body'] ?? $def['body']));
+            $merged['aparat_url'] = mb_substr(trim((string) ($merged['aparat_url'] ?? '')), 0, 500);
+            $merged['is_active'] = array_key_exists('is_active', $merged)
+                ? (bool) $merged['is_active']
+                : true;
+            $merged['sort'] = (int) ($merged['sort'] ?? $def['sort']);
+            if ($onlyActive && ! $merged['is_active']) {
+                continue;
+            }
+            $out[] = $merged;
+        }
+
+        usort($out, static fn ($a, $b) => ($a['sort'] <=> $b['sort']) ?: strcmp($a['slug'], $b['slug']));
+
+        return $out;
+    }
+
+    public static function repairShopGuide(string $slug): ?array
+    {
+        foreach (static::repairShopGuides(false) as $g) {
+            if ($g['slug'] === $slug) {
+                return $g;
+            }
+        }
+
+        return null;
+    }
+
+    /** تبدیل لینک آپارات به آدرس embed */
+    public static function aparatEmbedUrl(?string $url): string
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return '';
+        }
+        if (preg_match('#aparat\.com/video/video/embed/videohash/([A-Za-z0-9]+)#i', $url, $m)) {
+            return 'https://www.aparat.com/video/video/embed/videohash/'.$m[1].'/vt/frame';
+        }
+        if (preg_match('#aparat\.com/v/([A-Za-z0-9]+)#i', $url, $m)) {
+            return 'https://www.aparat.com/video/video/embed/videohash/'.$m[1].'/vt/frame';
+        }
+        if (preg_match('#aparat\.com/video/([A-Za-z0-9]+)#i', $url, $m)) {
+            return 'https://www.aparat.com/video/video/embed/videohash/'.$m[1].'/vt/frame';
+        }
+
+        return '';
+    }
+
+    /**
+     * @param  array<string,mixed>  $input
+     * @return list<array{slug:string,title:string,short:string,body:string,aparat_url:string,is_active:bool,sort:int}>
+     */
+    public static function sanitizeRepairGuidesInput(array $input): array
+    {
+        $allowed = [];
+        foreach (static::repairShopGuideDefaults() as $def) {
+            $allowed[$def['slug']] = $def;
+        }
+        $out = [];
+        foreach ($allowed as $slug => $def) {
+            $row = $input[$slug] ?? null;
+            if (! is_array($row)) {
+                // also accept list form
+                foreach ($input as $maybe) {
+                    if (is_array($maybe) && ($maybe['slug'] ?? '') === $slug) {
+                        $row = $maybe;
+                        break;
+                    }
+                }
+            }
+            if (! is_array($row)) {
+                $row = [];
+            }
+            $enabledRaw = $row['is_active'] ?? 1;
+            if (is_array($enabledRaw)) {
+                $enabledRaw = end($enabledRaw);
+            }
+            $out[] = [
+                'slug' => $slug,
+                'title' => mb_substr(trim((string) ($row['title'] ?? $def['title'])), 0, 120) ?: $def['title'],
+                'short' => mb_substr(trim((string) ($row['short'] ?? $def['short'])), 0, 255),
+                'body' => mb_substr(trim((string) ($row['body'] ?? $def['body'])), 0, 20000),
+                'aparat_url' => mb_substr(trim((string) ($row['aparat_url'] ?? '')), 0, 500),
+                'is_active' => in_array((string) $enabledRaw, ['1', 'true', 'on', 'yes'], true),
+                'sort' => max(1, min(99, (int) ($row['sort'] ?? $def['sort']))),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * کاتالوگ فروش انواع سایت — منوی متنی + صفحات پیشرفته
      *
      * @return array<int, array{slug:string,title:string,short:string,tagline:string,features:array<int,string>}>
@@ -282,6 +453,9 @@ class Plugin extends BasePlugin
                 'features' => [],
                 'detail_intro' => 'مدیریت تعمیرکاران در این سیستم چند لایه است؛ فقط لیست نام نیست.',
                 'detail_summary' => 'مدیریت تعمیرکاران = پروفایل + کمیسیون + ورود، به‌اضافه گردش کامل ارجاع/تأیید/گزارش‌کار/بازگشت، و گزارش عملکرد با کمیسیون و موجودی دست تعمیر.',
+                'has_guides' => true,
+                'guides_heading' => '۴ کارتابل اصلی مدیریت',
+                'guides_sub' => 'روی هر کارتابل بزنید تا توضیح کامل و ویدیوی آموزشی را ببینید. لینک آپارات از ادمین تنظیم می‌شود.',
                 'sections' => [
                     [
                         'title' => '۱) ثبت و پروفایل تعمیرکار',

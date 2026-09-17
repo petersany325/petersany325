@@ -12,6 +12,7 @@
   } catch (\Throwable $e) {}
   $hasSections = ! empty($item['sections']) && is_array($item['sections']);
   $features = $item['features'] ?? [];
+  $guides = $guides ?? [];
 @endphp
 <section class="ws-page">
   <header class="ws-hero">
@@ -26,10 +27,30 @@
       <p class="ws-lead">{{ $item['tagline'] }}</p>
       <div class="ws-cta-row">
         <a class="ws-btn ws-btn--accent" href="{{ $contactUrl }}?subject={{ urlencode('درخواست دمو: '.$item['title']) }}">درخواست دمو و قیمت</a>
-        <a class="ws-btn ws-btn--ghost" href="#ws-features">{{ $hasSections ? 'جزئیات سیستم' : 'امکانات محصول' }}</a>
+        @if(!empty($guides))
+          <a class="ws-btn ws-btn--ghost" href="#ws-guides">کارتابل‌های اصلی</a>
+        @else
+          <a class="ws-btn ws-btn--ghost" href="#ws-features">{{ $hasSections ? 'جزئیات سیستم' : 'امکانات محصول' }}</a>
+        @endif
       </div>
     </div>
   </header>
+
+  @if(!empty($guides))
+    <div class="ws-wrap ws-section" id="ws-guides">
+      <h2>{{ $item['guides_heading'] ?? 'بخش‌های سیستم' }}</h2>
+      <p class="ws-sub">{{ $item['guides_sub'] ?? 'برای مطالعه کامل هر بخش را باز کنید.' }}</p>
+      <div class="ws-guide-grid">
+        @foreach($guides as $g)
+          <a class="ws-guide-btn" href="{{ url('/sites/repair-shop/'.$g['slug']) }}">
+            <strong>{{ $g['title'] }}</strong>
+            <span>{{ $g['short'] }}</span>
+            <em>مشاهده جزئیات ←</em>
+          </a>
+        @endforeach
+      </div>
+    </div>
+  @endif
 
   <div class="ws-wrap ws-section" id="ws-features">
     @if($hasSections)
@@ -69,7 +90,7 @@
           <span>{{ $item['detail_summary'] }}</span>
         </div>
       @endif
-    @else
+    @elseif(!empty($features))
       <h2>امکانات کلیدی</h2>
       <p class="ws-sub">همه جزئیات در همین صفحه است تا منوی سایت شلوغ نشود.</p>
       <ul class="ws-features">
@@ -82,10 +103,10 @@
 
   <div class="ws-wrap ws-section">
     <h2>آموزش منوها و ویدیو</h2>
-    <p class="ws-sub">در مرحله بعد، برای هر بخش منوی مدیریت این محصول صفحه آموزش فارسی + ویدیوی آپارات اضافه می‌شود.</p>
+    <p class="ws-sub">برای هر کارتابل صفحه جدا با متن کامل دارید؛ لینک آپارات را از ادمین مگامنو تنظیم کنید.</p>
     <div class="ws-soon">
-      <strong>به‌زودی:</strong>
-      مرکز آموزش منو‌به‌منو، تنظیمات ویدیو آپارات و محتوای سئو برای «{{ $item['title'] }}».
+      <strong>ادمین:</strong>
+      تنظیمات اصلی مگامنو → بخش «راهنمای فروش سایت تعمیرکاران» → عنوان، متن و لینک آپارات هر کارتابل.
     </div>
   </div>
 

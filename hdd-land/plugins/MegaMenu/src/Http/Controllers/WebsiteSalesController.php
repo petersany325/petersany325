@@ -26,9 +26,35 @@ class WebsiteSalesController
             abort(404);
         }
 
+        $guides = [];
+        if (! empty($item['has_guides'])) {
+            $guides = MegaMenuPlugin::repairShopGuides(true);
+        }
+
         return view('mega-menu::storefront.sites.show', [
             'item' => $item,
             'items' => MegaMenuPlugin::websiteSalesCatalog(),
+            'guides' => $guides,
+        ]);
+    }
+
+    public function repairGuide(string $guide): View
+    {
+        MegaMenuPlugin::syncWebsiteSalesMenu();
+
+        $current = MegaMenuPlugin::repairShopGuide($guide);
+        if (! $current || empty($current['is_active'])) {
+            abort(404);
+        }
+
+        $all = MegaMenuPlugin::repairShopGuides(true);
+        $embed = MegaMenuPlugin::aparatEmbedUrl($current['aparat_url'] ?? '');
+
+        return view('mega-menu::storefront.sites.guide', [
+            'product' => collect(MegaMenuPlugin::websiteSalesCatalog())->firstWhere('slug', 'repair-shop'),
+            'guide' => $current,
+            'guides' => $all,
+            'embedUrl' => $embed,
         ]);
     }
 }
