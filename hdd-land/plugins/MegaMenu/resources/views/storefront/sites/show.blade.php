@@ -10,6 +10,8 @@
       $contactUrl = route('contact');
     }
   } catch (\Throwable $e) {}
+  $hasSections = ! empty($item['sections']) && is_array($item['sections']);
+  $features = $item['features'] ?? [];
 @endphp
 <section class="ws-page">
   <header class="ws-hero">
@@ -24,19 +26,58 @@
       <p class="ws-lead">{{ $item['tagline'] }}</p>
       <div class="ws-cta-row">
         <a class="ws-btn ws-btn--accent" href="{{ $contactUrl }}?subject={{ urlencode('درخواست دمو: '.$item['title']) }}">درخواست دمو و قیمت</a>
-        <a class="ws-btn ws-btn--ghost" href="#ws-features">امکانات محصول</a>
+        <a class="ws-btn ws-btn--ghost" href="#ws-features">{{ $hasSections ? 'جزئیات سیستم' : 'امکانات محصول' }}</a>
       </div>
     </div>
   </header>
 
   <div class="ws-wrap ws-section" id="ws-features">
-    <h2>امکانات کلیدی</h2>
-    <p class="ws-sub">همه جزئیات در همین صفحه است تا منوی سایت شلوغ نشود.</p>
-    <ul class="ws-features">
-      @foreach($item['features'] as $f)
-        <li>{{ $f }}</li>
-      @endforeach
-    </ul>
+    @if($hasSections)
+      <h2>مدیریت تعمیرکاران — چندلایه</h2>
+      @if(!empty($item['detail_intro']))
+        <p class="ws-sub">{{ $item['detail_intro'] }}</p>
+      @endif
+
+      <div class="ws-layers">
+        @foreach($item['sections'] as $section)
+          <article class="ws-layer">
+            <h3>{{ $section['title'] }}</h3>
+            @if(!empty($section['lead']))
+              <p class="ws-layer__lead">{{ $section['lead'] }}</p>
+            @endif
+            @if(!empty($section['steps']))
+              <ol class="ws-steps">
+                @foreach($section['steps'] as $step)
+                  <li>{{ $step }}</li>
+                @endforeach
+              </ol>
+            @endif
+            @if(!empty($section['items']))
+              <ul class="ws-bullets">
+                @foreach($section['items'] as $row)
+                  <li>{{ $row }}</li>
+                @endforeach
+              </ul>
+            @endif
+          </article>
+        @endforeach
+      </div>
+
+      @if(!empty($item['detail_summary']))
+        <div class="ws-summary">
+          <strong>خلاصه:</strong>
+          <span>{{ $item['detail_summary'] }}</span>
+        </div>
+      @endif
+    @else
+      <h2>امکانات کلیدی</h2>
+      <p class="ws-sub">همه جزئیات در همین صفحه است تا منوی سایت شلوغ نشود.</p>
+      <ul class="ws-features">
+        @foreach($features as $f)
+          <li>{{ $f }}</li>
+        @endforeach
+      </ul>
+    @endif
   </div>
 
   <div class="ws-wrap ws-section">
