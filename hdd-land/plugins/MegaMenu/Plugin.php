@@ -593,6 +593,10 @@ TXT,
         if (preg_match('/^[«"“]/u', $line)) {
             return false;
         }
+        // جملهٔ مقدماتی فهرست (مثل «سیستم جلوی این‌ها را می‌گیرد:») عنوان نیست
+        if (preg_match('/[:：]$/u', $line)) {
+            return false;
+        }
         // عنوان‌های کوتاه بدون نقطهٔ پایانی جمله
         if (! preg_match('/[۔.]$/u', $line) && ! str_contains($line, '؛')) {
             return true;
