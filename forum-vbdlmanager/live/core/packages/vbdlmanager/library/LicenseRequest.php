@@ -4,7 +4,7 @@
  */
 class vbdl_LicenseRequest
 {
-	/** @var mysqli */
+	/** @var object */
 	protected $db;
 	/** @var string */
 	protected $prefix;
@@ -15,7 +15,7 @@ class vbdl_LicenseRequest
 	/** @var vbdl_LicenseMail */
 	protected $mail;
 
-	public function __construct(mysqli $db, $prefix, vbdl_Repository $repo, vbdl_Acl $acl, vbdl_LicenseMail $mail)
+	public function __construct($db, $prefix, vbdl_Repository $repo, vbdl_Acl $acl, vbdl_LicenseMail $mail)
 	{
 		$this->db = $db;
 		$this->prefix = (string)$prefix;

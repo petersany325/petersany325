@@ -4,7 +4,7 @@
  */
 class vbdl_LicenseMail
 {
-	/** @var mysqli */
+	/** @var object */
 	protected $db;
 	/** @var string */
 	protected $prefix;
@@ -15,7 +15,7 @@ class vbdl_LicenseMail
 	/** @var string */
 	protected $lastNodeError = '';
 
-	public function __construct(mysqli $db, $prefix, vbdl_Repository $repo, vbdl_Acl $acl)
+	public function __construct($db, $prefix, vbdl_Repository $repo, vbdl_Acl $acl)
 	{
 		$this->db = $db;
 		$this->prefix = (string)$prefix;
