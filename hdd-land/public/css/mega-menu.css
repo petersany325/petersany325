@@ -73,8 +73,8 @@
 .mega-panel.is-dropdown{
   display:none;position:absolute;top:calc(100% + 2px);right:0;left:auto;z-index:95;
   min-width:180px;max-width:min(280px,92vw);width:max-content;
-  padding:.4rem;padding-top:.45rem;
-  border-radius:14px;border:1px solid rgba(226,232,240,.9);
+  padding:.35rem;padding-top:.4rem;
+  border-radius:12px;border:1px solid rgba(226,232,240,.9);
   background:var(--mega-panel-bg,#fff);
   box-shadow:0 14px 34px rgba(15,23,42,.12),0 2px 6px rgba(15,23,42,.04);
   opacity:0;transform:translateY(6px) scale(.98);pointer-events:none;
@@ -88,14 +88,14 @@
   transform:none;
 }
 .mega-panel.is-dropdown .mega-grid{
-  display:flex;flex-direction:column;gap:.1rem;
-  grid-template-columns:none;
+  display:flex;flex-direction:column;gap:.05rem !important;
+  grid-template-columns:none !important;
 }
 .mega-panel.is-dropdown .mega-col{padding:0}
 .mega-panel.is-dropdown .mega-link,
 .mega-panel.is-dropdown .mega-sub{
-  padding:.58rem .75rem;border-radius:9px;margin:0;gap:.45rem;
-  font-size:.93rem;font-weight:650;font-variation-settings:"wght" 650;
+  padding:.55rem .7rem;border-radius:9px;margin:0;gap:.35rem;
+  font-size:.9rem;font-weight:650;font-variation-settings:"wght" 650;
   letter-spacing:-.01em;color:#1e293b;line-height:1.35;
 }
 .mega-panel.is-dropdown .mega-link:hover,
@@ -111,15 +111,20 @@
 .mega-panel.is-dropdown .mm-web-sales-item .mega-desc{
   display:block;
   color:#64748b;
-  font-size:.75rem;
+  font-size:.72rem;
   font-weight:500;
-  margin-top:.15rem;
-  line-height:1.45;
+  margin-top:.12rem;
+  line-height:1.4;
 }
 .mega-panel.is-dropdown.mm-web-sales{
-  min-width:min(300px,92vw);
-  max-width:min(360px,94vw);
-  padding:.5rem;
+  min-width:min(280px,92vw);
+  max-width:min(340px,94vw);
+  padding:.4rem !important;
+}
+.mega-panel.is-dropdown.mm-web-sales .mega-link,
+.mega-panel.is-dropdown.mm-web-sales .mega-sub{
+  padding:.62rem .75rem;
+  font-weight:700;
 }
 .mega-panel.is-dropdown.mm-web-sales .mega-ico,
 .mega-panel.is-dropdown.mm-web-sales .mega-ico-img,
@@ -264,8 +269,13 @@
 .mega-panel.is-dropdown{
   padding:var(--mega-panel-pad,.85rem);
 }
+.mega-panel.is-dropdown.mm-web-sales,
+.mega-panel.is-dropdown.mm-web-sales-panel{
+  padding:.4rem !important;
+}
 .mega-panel.is-mega-panel.w-full,
 .mega-panel.is-mega-panel.w-wide{
+  /* keep existing wide/full rules below */
   min-width:min(980px,96vw);
 }
 .mega-panel.is-mega-panel .mega-grid{
@@ -822,9 +832,12 @@ body.site-boxed .mega-panel.is-dropdown{
   body.site-boxed .hl-navrow #headerNavWrap{
     position:relative !important;
   }
-  .mega-nav-pro.mega-contain.mega-width-shell .mega-item.has-mega,
+  /* فقط مگاپنل‌ها نسبت به کل نوار پهن می‌شوند — زیرمنوی متنی استاندارد زیر همان آیتم می‌ماند */
   .mega-nav-pro.mega-contain.mega-width-shell .mega-item.is-mega-root{
     position:static;
+  }
+  .mega-nav-pro.mega-contain .mega-item.has-mega:not(.is-mega-root){
+    position:relative;
   }
   .mega-nav-pro.mega-contain.mega-width-shell .mega-panel.is-mega-panel,
   .mega-nav-pro.mega-contain.mega-width-shell .mega-panel.mega-panel--graphic,
@@ -837,6 +850,15 @@ body.site-boxed .mega-panel.is-dropdown{
     min-width:0 !important;
     transform:none !important;
     box-sizing:border-box;
+  }
+  /* dropdown استاندارد: همیشه زیر همان trigger */
+  .mega-nav-pro.mega-contain .mega-panel.is-dropdown,
+  body.site-boxed .mega-nav-pro.mega-contain .mega-panel.is-dropdown{
+    left:auto !important;
+    right:0 !important;
+    width:max-content !important;
+    max-width:min(360px,94vw) !important;
+    transform:none !important;
   }
   body.site-boxed .site-shell,
   body.site-boxed .site-header,

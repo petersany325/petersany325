@@ -19,6 +19,15 @@
 
   function containPanel(root, item, panel) {
     if (!panel || !root) return;
+    // زیرمنوی متنی استاندارد را کش نکن — فقط مگاپنل
+    if (panel.classList.contains('is-dropdown') && !panel.classList.contains('is-mega-panel')) {
+      panel.style.left = '';
+      panel.style.right = '';
+      panel.style.width = '';
+      panel.style.maxWidth = '';
+      panel.style.transform = '';
+      return;
+    }
     var contain = root.getAttribute('data-mega-contain') !== '0';
     if (!contain) {
       panel.style.left = '';

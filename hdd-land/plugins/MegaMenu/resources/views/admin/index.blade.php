@@ -334,7 +334,7 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
       </div>
 
       <div class="mm-sec-title" style="color:#fff;font-size:.92rem;margin:1rem 0 .45rem">کادر سایت + فونت گرافیکی</div>
-      <p class="mm-hint" style="margin:0 0 .55rem">پنل مگا داخل کادر سفید سایت بماند و از فونت ریز استاندارد استفاده شود.</p>
+      <p class="mm-hint" style="margin:0 0 .55rem">این تنظیمات فقط روی <b>مگاپنل</b> اثر می‌گذارد. زیرمنوی متنی (مثل طراحی و فروش سایت) همیشه استاندارد زیر همان آیتم باز می‌شود.</p>
       <div class="mm-grid4">
         <div class="mm-field">
           <span>عرض پنل مگا</span>
