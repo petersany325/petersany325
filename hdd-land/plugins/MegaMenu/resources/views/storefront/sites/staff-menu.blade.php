@@ -21,16 +21,16 @@
         <span>/</span>
         <span>منوی کارکنان</span>
       </nav>
-      <p class="ws-kicker">نمونه طراحی</p>
+      <p class="ws-kicker">منوی اصلی سیستم</p>
       <h1 class="ws-brand">منوی کارکنان</h1>
-      <p class="ws-lead">فهرست متنی همان منوی اصلی سیستم. روی آیتم‌های آماده‌شده بزنید تا صفحه آموزش باز شود؛ بقیه فعلاً فقط نمونهٔ ساختارند.</p>
+      <p class="ws-lead">همان منویی که نیروها داخل سیستم می‌بینند. روی هر عنوان بزنید تا صفحه آموزش همان بخش باز شود.</p>
     </div>
   </header>
 
   <div class="ws-wrap ws-section">
     <p class="ws-outline-note">
-      <strong>نمونه:</strong>
-      آیتم‌های دارای آموزش کامل با رنگ تأکیدی لینک شده‌اند. بقیه ساختار منو را نشان می‌دهند و بعداً با متن + آپارات پر می‌شوند.
+      <strong>راهنما:</strong>
+      آیتم‌های دارای آموزش کامل (مثل کارتابل ارجاع) مستقیم به متن + ویدیو می‌روند. بقیه هم صفحه توضیح دارند و متن/آپارات‌شان قابل تکمیل است.
     </p>
 
     <nav class="ws-outline" aria-label="منوی کارکنان">
@@ -41,7 +41,7 @@
             @if(!empty($section['guide']))
               <a class="ws-outline__title is-ready" href="{{ url('/sites/repair-shop/'.$section['guide']) }}">{{ $section['title'] }}</a>
             @else
-              <span class="ws-outline__title">{{ $section['title'] }}</span>
+              <a class="ws-outline__title is-ready" href="{{ url('/sites/repair-shop/m/'.$section['slug']) }}">{{ $section['title'] }}</a>
             @endif
           </div>
           @if(!empty($section['note']))
@@ -54,7 +54,7 @@
                   @if(!empty($child['guide']))
                     <a class="is-ready" href="{{ url('/sites/repair-shop/'.$child['guide']) }}">{{ $child['title'] }}</a>
                   @else
-                    <span>{{ $child['title'] }}</span>
+                    <a class="is-ready" href="{{ url('/sites/repair-shop/m/'.$child['slug']) }}">{{ $child['title'] }}</a>
                   @endif
                 </li>
               @endforeach
@@ -66,6 +66,7 @@
 
     <div class="ws-guide-nav">
       <a class="ws-btn ws-btn--line" href="{{ url('/sites/repair-shop') }}">→ بازگشت به صفحه محصول</a>
+      <a class="ws-btn ws-btn--line" href="{{ url('/sites/repair-shop/customer-menu') }}">منوی کارتابل مشتری ←</a>
       <a class="ws-btn ws-btn--accent" href="{{ $contactUrl }}?subject={{ urlencode('دمو: منوی کارکنان') }}">درخواست دمو</a>
     </div>
   </div>

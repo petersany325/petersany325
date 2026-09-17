@@ -695,146 +695,323 @@ TXT,
     }
 
     /**
-     * نمونهٔ فهرست متنی «منوی کارکنان» برای صفحه فروش (اسکلت نمایشی)
+     * فهرست متنی «منوی کارکنان» — هر آیتم به صفحه آموزش لینک می‌شود
      *
-     * @return list<array{num:string,title:string,note?:string,guide?:string,children?:list<array{title:string,guide?:string}>}>
+     * @return list<array{num:string,slug:string,title:string,note?:string,guide?:string,short?:string,children?:list<array{slug:string,title:string,guide?:string,short?:string}>}>
      */
-    public static function staffMenuSample(): array
+    public static function staffMenuTree(): array
     {
         return [
             [
                 'num' => '۱',
+                'slug' => 'desk',
                 'title' => 'میز کار',
                 'note' => 'برای کارآموز: پرتال کارآموز',
+                'short' => 'ورود روزانه نیرو به کارتابل و میانبرهای کاری',
                 'children' => [
-                    ['title' => 'پرتال کارآموز (پیش‌نمایش)', 'guide' => 'trainee'],
+                    ['slug' => 'trainee-portal', 'title' => 'پرتال کارآموز (پیش‌نمایش)', 'guide' => 'trainee', 'short' => 'ورود محدود کارآموز و ثبت دفتر روز'],
                 ],
             ],
             [
                 'num' => '۲',
+                'slug' => 'reception',
                 'title' => 'پذیرش',
+                'short' => 'ثبت قبض، جستجو، لیست و تحویل گروهی',
                 'children' => [
-                    ['title' => 'پذیرش جدید'],
-                    ['title' => 'جستجوی قبض'],
-                    ['title' => 'لیست قبض‌ها'],
-                    ['title' => 'تحویل گروهی'],
+                    ['slug' => 'reception-new', 'title' => 'پذیرش جدید', 'short' => 'ساخت قبض پذیرش دستگاه'],
+                    ['slug' => 'receipt-search', 'title' => 'جستجوی قبض', 'short' => 'پیدا کردن قبض با سریال، موبایل یا شماره'],
+                    ['slug' => 'receipt-list', 'title' => 'لیست قبض‌ها', 'short' => 'مرور و فیلتر همه قبض‌های پذیرش'],
+                    ['slug' => 'group-delivery', 'title' => 'تحویل گروهی', 'short' => 'تحویل چند دستگاه با هم'],
                 ],
             ],
             [
                 'num' => '۳',
+                'slug' => 'referral-section',
                 'title' => 'ارجاع / کارتابل تعمیر',
+                'short' => 'جابه‌جایی دستگاه بین پذیرش و تعمیرکار',
                 'children' => [
-                    ['title' => 'کارتابل ارجاع', 'guide' => 'referral'],
-                    ['title' => 'گزارش ارجاع / محل'],
+                    ['slug' => 'referral', 'title' => 'کارتابل ارجاع', 'guide' => 'referral', 'short' => 'تأیید دریافت، دست تعمیر، بازگشت'],
+                    ['slug' => 'referral-report', 'title' => 'گزارش ارجاع / محل', 'short' => 'محل فعلی دستگاه و تاریخچه ارجاع'],
                 ],
             ],
             [
                 'num' => '۴',
+                'slug' => 'notifications',
                 'title' => 'اعلان‌ها',
+                'short' => 'اعلان‌های داخلی کارتابل برای نیروها',
             ],
             [
                 'num' => '۵',
+                'slug' => 'daybook',
                 'title' => 'دفتر روز',
+                'short' => 'ثبت خدمات روزانه و گزارش کار روز',
                 'children' => [
-                    ['title' => 'ثبت امروز'],
-                    ['title' => 'گزارش همه'],
+                    ['slug' => 'daybook-today', 'title' => 'ثبت امروز', 'short' => 'ثبت خدمت انجام‌شده در همان روز'],
+                    ['slug' => 'daybook-report', 'title' => 'گزارش همه', 'short' => 'مرور ثبت‌های دفتر روز'],
                 ],
             ],
             [
                 'num' => '۶',
+                'slug' => 'cost-section',
                 'title' => 'تأیید هزینه',
+                'short' => 'لینک تأیید مبلغ برای مشتری و خدمات مشمول',
                 'children' => [
-                    ['title' => 'کارتابل تأییدها', 'guide' => 'cost-approval'],
-                    ['title' => 'خدمات مشمول'],
+                    ['slug' => 'cost-approval', 'title' => 'کارتابل تأییدها', 'guide' => 'cost-approval', 'short' => 'ارسال لینک و پیگیری تأیید/رد مشتری'],
+                    ['slug' => 'cost-services', 'title' => 'خدمات مشمول', 'short' => 'تعیین خدماتی که تأیید مشتری لازم دارند'],
                 ],
             ],
             [
                 'num' => '۷',
+                'slug' => 'customers',
                 'title' => 'مشتریان',
+                'short' => 'فهرست و ثبت مشتری تعمیرگاه',
                 'children' => [
-                    ['title' => 'فهرست مشتریان'],
-                    ['title' => 'مشتری جدید'],
+                    ['slug' => 'customer-list', 'title' => 'فهرست مشتریان', 'short' => 'جستجو و مدیریت مشتریان'],
+                    ['slug' => 'customer-new', 'title' => 'مشتری جدید', 'short' => 'ثبت مشتری با موبایل و مشخصات'],
                 ],
             ],
             [
                 'num' => '۸',
+                'slug' => 'warehouse',
                 'title' => 'انبار',
+                'short' => 'موجودی، رسید، حواله و کارتکس',
                 'children' => [
-                    ['title' => 'میز انبار'],
-                    ['title' => 'انبارهای چندگانه'],
-                    ['title' => 'رسید ورود'],
-                    ['title' => 'حواله خروج'],
-                    ['title' => 'کارتکس / گردش'],
-                    ['title' => 'ارزش موجودی'],
-                    ['title' => 'کالای جدید'],
+                    ['slug' => 'warehouse-desk', 'title' => 'میز انبار', 'short' => 'نمای کلی عملیات انبار'],
+                    ['slug' => 'warehouse-multi', 'title' => 'انبارهای چندگانه', 'short' => 'مدیریت چند انبار'],
+                    ['slug' => 'warehouse-in', 'title' => 'رسید ورود', 'short' => 'ورود کالا به انبار'],
+                    ['slug' => 'warehouse-out', 'title' => 'حواله خروج', 'short' => 'خروج کالا از انبار'],
+                    ['slug' => 'warehouse-kardex', 'title' => 'کارتکس / گردش', 'short' => 'گردش موجودی کالا'],
+                    ['slug' => 'warehouse-value', 'title' => 'ارزش موجودی', 'short' => 'ارزش ریالی موجودی'],
+                    ['slug' => 'warehouse-item-new', 'title' => 'کالای جدید', 'short' => 'تعریف کالای انبار'],
                 ],
             ],
             [
                 'num' => '۹',
+                'slug' => 'employees',
                 'title' => 'کارمندان',
+                'short' => 'نیرو، کارآموز، دسترسی و کمیسیون',
                 'children' => [
-                    ['title' => 'کارتابل کارمند', 'guide' => 'staff'],
-                    ['title' => 'کارمند جدید'],
-                    ['title' => 'کارتابل کارآموز', 'guide' => 'trainee'],
-                    ['title' => 'کارآموز جدید'],
-                    ['title' => 'پرتال کارآموز (پیش‌نمایش)', 'guide' => 'trainee'],
-                    ['title' => 'متن SMS خوش‌آمد'],
-                    ['title' => 'تخصص و کمیسیون تعمیرکار'],
-                    ['title' => 'تعمیرکار جدید (قیمت)'],
+                    ['slug' => 'staff', 'title' => 'کارتابل کارمند', 'guide' => 'staff', 'short' => 'تعریف نیرو، وظیفه و دسترسی'],
+                    ['slug' => 'staff-new', 'title' => 'کارمند جدید', 'short' => 'ساخت حساب کارمند جدید'],
+                    ['slug' => 'trainee', 'title' => 'کارتابل کارآموز', 'guide' => 'trainee', 'short' => 'ثبت دوره و پرتال کارآموز'],
+                    ['slug' => 'trainee-new', 'title' => 'کارآموز جدید', 'short' => 'ثبت کارآموز و بازه دوره'],
+                    ['slug' => 'trainee-portal-preview', 'title' => 'پرتال کارآموز (پیش‌نمایش)', 'guide' => 'trainee', 'short' => 'پیش‌نمایش ورود کارآموز'],
+                    ['slug' => 'welcome-sms', 'title' => 'متن SMS خوش‌آمد', 'short' => 'قالب پیامک ورود نیرو'],
+                    ['slug' => 'tech-commission', 'title' => 'تخصص و کمیسیون تعمیرکار', 'short' => 'تخصص و درصد کمیسیون'],
+                    ['slug' => 'tech-new-price', 'title' => 'تعمیرکار جدید (قیمت)', 'short' => 'تعریف تعمیرکار با نرخ/قیمت'],
                 ],
             ],
             [
                 'num' => '۱۰',
+                'slug' => 'sms',
                 'title' => 'پیامک‌ها',
+                'short' => 'گزارش و قالب پیامک قبض‌ها',
                 'children' => [
-                    ['title' => 'گزارش پیامک قبض‌ها'],
-                    ['title' => 'تعریف وضعیت / قالب'],
+                    ['slug' => 'sms-receipt-report', 'title' => 'گزارش پیامک قبض‌ها', 'short' => 'پیگیری پیامک‌های ارسال‌شده'],
+                    ['slug' => 'sms-templates', 'title' => 'تعریف وضعیت / قالب', 'short' => 'قالب پیامک وضعیت‌ها'],
                 ],
             ],
             [
                 'num' => '۱۱',
+                'slug' => 'accounting',
                 'title' => 'حسابداری',
+                'short' => 'اسناد، سرفصل، معین و بدهکاران',
                 'children' => [
-                    ['title' => 'میز حسابداری'],
-                    ['title' => 'اسناد روزنامه'],
-                    ['title' => 'سرفصل حساب‌ها'],
-                    ['title' => 'دفتر معین'],
-                    ['title' => 'تراز آزمایشی'],
-                    ['title' => 'بدهکاران'],
-                    ['title' => 'سند دستی'],
+                    ['slug' => 'accounting-desk', 'title' => 'میز حسابداری', 'short' => 'نمای کلی حسابداری'],
+                    ['slug' => 'journal', 'title' => 'اسناد روزنامه', 'short' => 'اسناد حسابداری روز'],
+                    ['slug' => 'chart-of-accounts', 'title' => 'سرفصل حساب‌ها', 'short' => 'تعریف سرفصل‌ها'],
+                    ['slug' => 'ledger', 'title' => 'دفتر معین', 'short' => 'دفتر معین حساب‌ها'],
+                    ['slug' => 'trial-balance', 'title' => 'تراز آزمایشی', 'short' => 'تراز آزمایشی'],
+                    ['slug' => 'debtors', 'title' => 'بدهکاران', 'short' => 'لیست بدهکاران'],
+                    ['slug' => 'manual-voucher', 'title' => 'سند دستی', 'short' => 'ثبت سند دستی'],
                 ],
             ],
             [
                 'num' => '۱۲',
+                'slug' => 'reports',
                 'title' => 'گزارش‌ها',
+                'short' => 'عملکرد، صندوق، محل دستگاه و پیام‌ها',
                 'children' => [
-                    ['title' => 'عملکرد تعمیرکاران'],
-                    ['title' => 'گزارش مشتریان'],
-                    ['title' => 'کالای خرج‌شده'],
-                    ['title' => 'عملیات کارگاه'],
-                    ['title' => 'ارجاع / محل دستگاه'],
-                    ['title' => 'صندوق و دریافت‌ها'],
-                    ['title' => 'تأیید فیش بانکی'],
-                    ['title' => 'پیام مشتری'],
-                    ['title' => 'گزارش پیامک'],
+                    ['slug' => 'report-tech-performance', 'title' => 'عملکرد تعمیرکاران', 'short' => 'گزارش کار و کمیسیون تعمیرکار'],
+                    ['slug' => 'report-customers', 'title' => 'گزارش مشتریان', 'short' => 'گزارش مشتریان'],
+                    ['slug' => 'report-parts-used', 'title' => 'کالای خرج‌شده', 'short' => 'کالای مصرف‌شده در تعمیر'],
+                    ['slug' => 'report-workshop', 'title' => 'عملیات کارگاه', 'short' => 'خلاصه عملیات کارگاه'],
+                    ['slug' => 'report-device-location', 'title' => 'ارجاع / محل دستگاه', 'short' => 'محل فعلی دستگاه‌ها'],
+                    ['slug' => 'report-cash', 'title' => 'صندوق و دریافت‌ها', 'short' => 'صندوق و دریافت‌ها'],
+                    ['slug' => 'report-bank-receipt', 'title' => 'تأیید فیش بانکی', 'short' => 'تأیید فیش‌های بانکی'],
+                    ['slug' => 'report-customer-msg', 'title' => 'پیام مشتری', 'short' => 'پیام‌های مشتری'],
+                    ['slug' => 'report-sms', 'title' => 'گزارش پیامک', 'short' => 'گزارش پیامک‌ها'],
                 ],
             ],
             [
                 'num' => '۱۳',
+                'slug' => 'system-tools',
                 'title' => 'ابزارهای سیستم',
+                'short' => 'نگهداری و پشتیبان‌گیری',
                 'children' => [
-                    ['title' => 'نگهداری و بکاپ'],
+                    ['slug' => 'backup', 'title' => 'نگهداری و بکاپ', 'short' => 'پشتیبان و نگهداری سیستم'],
                 ],
             ],
             [
                 'num' => '۱۴',
+                'slug' => 'settings',
                 'title' => 'تنظیمات',
+                'short' => 'تنظیمات سیستم، دفتر روز و پروفایل',
                 'children' => [
-                    ['title' => 'تنظیمات سیستم'],
-                    ['title' => 'تنظیمات دفتر روز'],
-                    ['title' => 'پروفایل من'],
+                    ['slug' => 'settings-system', 'title' => 'تنظیمات سیستم', 'short' => 'تنظیمات کلی سیستم'],
+                    ['slug' => 'settings-daybook', 'title' => 'تنظیمات دفتر روز', 'short' => 'خدمات و تنظیمات دفتر روز'],
+                    ['slug' => 'settings-profile', 'title' => 'پروفایل من', 'short' => 'پروفایل کاربر واردشده'],
                 ],
             ],
+        ];
+    }
+
+    /** سازگاری با نام قبلی */
+    public static function staffMenuSample(): array
+    {
+        return static::staffMenuTree();
+    }
+
+    /**
+     * فهرست متنی «منوی کارتابل مشتری / پرتال»
+     *
+     * @return list<array{num:string,slug:string,title:string,short?:string,guide?:string,children?:list<array{slug:string,title:string,guide?:string,short?:string}>}>
+     */
+    public static function customerMenuTree(): array
+    {
+        return [
+            [
+                'num' => '۱',
+                'slug' => 'customer-track',
+                'title' => 'پیگیری سفارش / وضعیت قبض',
+                'short' => 'مشتری وضعیت تعمیر را از پرتال می‌بیند',
+            ],
+            [
+                'num' => '۲',
+                'slug' => 'customer-cost-link',
+                'title' => 'تأیید هزینه (لینک مشتری)',
+                'short' => 'مشاهده مبلغ و تأیید یا رد هزینه',
+                'guide' => 'cost-approval',
+            ],
+            [
+                'num' => '۳',
+                'slug' => 'customer-pay',
+                'title' => 'پرداخت',
+                'short' => 'پرداخت آنلاین یا ثبت فیش از سمت مشتری',
+            ],
+            [
+                'num' => '۴',
+                'slug' => 'customer-warranty',
+                'title' => 'گارانتی / وضعیت گارانتی',
+                'short' => 'پیگیری گارانتی دستگاه',
+            ],
+            [
+                'num' => '۵',
+                'slug' => 'customer-messages',
+                'title' => 'پیام‌ها',
+                'short' => 'پیام بین مشتری و تعمیرگاه',
+            ],
+            [
+                'num' => '۶',
+                'slug' => 'customer-profile',
+                'title' => 'پروفایل مشتری',
+                'short' => 'مشخصات و موبایل مشتری در پرتال',
+            ],
+        ];
+    }
+
+    /**
+     * پیدا کردن یک آیتم منو (کارکنان یا مشتری) با slug
+     *
+     * @return array{menu:string,slug:string,title:string,short:string,guide?:string,note?:string,children?:list<array{slug:string,title:string,guide?:string,short?:string}>,parent?:array{slug:string,title:string}}|null
+     */
+    public static function findMenuItem(string $slug): ?array
+    {
+        $slug = trim($slug);
+        if ($slug === '') {
+            return null;
+        }
+
+        foreach (['staff' => static::staffMenuTree(), 'customer' => static::customerMenuTree()] as $menu => $tree) {
+            foreach ($tree as $section) {
+                if (($section['slug'] ?? '') === $slug) {
+                    return array_merge($section, [
+                        'menu' => $menu,
+                        'short' => (string) ($section['short'] ?? $section['title']),
+                    ]);
+                }
+                foreach ($section['children'] ?? [] as $child) {
+                    if (($child['slug'] ?? '') === $slug) {
+                        return array_merge($child, [
+                            'menu' => $menu,
+                            'short' => (string) ($child['short'] ?? $child['title']),
+                            'parent' => [
+                                'slug' => (string) $section['slug'],
+                                'title' => (string) $section['title'],
+                            ],
+                        ]);
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * ساخت محتوای صفحه آموزش برای آیتم منو (اگر راهنمای کامل جدا نداشته باشد)
+     *
+     * @param  array<string,mixed>  $item
+     * @return array{title:string,short:string,body:string,aparat_url:string,is_ready:bool,children:list<array{slug:string,title:string,guide?:string,short?:string}>,menu:string,parent?:array{slug:string,title:string}}
+     */
+    public static function buildMenuItemPage(array $item): array
+    {
+        $title = (string) ($item['title'] ?? 'آموزش منو');
+        $short = (string) ($item['short'] ?? $title);
+        $children = is_array($item['children'] ?? null) ? $item['children'] : [];
+        $menu = (string) ($item['menu'] ?? 'staff');
+        $menuLabel = $menu === 'customer' ? 'منوی کارتابل مشتری' : 'منوی کارکنان';
+
+        if ($children !== []) {
+            $lines = [
+                $title.' چیست؟',
+                '',
+                $short.'. این بخش از '.$menuLabel.' شامل زیرمنوهای زیر است؛ روی هر کدام بزنید تا توضیح و ویدیوی آموزشی همان آیتم را ببینید.',
+                '',
+                'زیرمنوهای این بخش',
+                '',
+            ];
+            foreach ($children as $c) {
+                $lines[] = '• '.($c['title'] ?? '');
+            }
+            $lines[] = '';
+            $lines[] = 'متن کامل و لینک آپارات هر زیرمنو به‌تدریج تکمیل می‌شود؛ آیتم‌های آماده‌شده از قبل صفحه کامل دارند.';
+            $body = implode("\n", $lines);
+        } else {
+            $body = implode("\n", [
+                $title.' چیست؟',
+                '',
+                $short.'. این آیتم بخشی از '.$menuLabel.' در سایت مدیریت تعمیرکاران است.',
+                '',
+                'هدف این صفحه',
+                '',
+                'خریدار و تیم فروش دقیقاً ببینند هر منوی سیستم چه کاری می‌کند؛ ویدیوی آپارات و متن کامل آموزشی از ادمین همین بخش قابل تکمیل است.',
+                '',
+                'یک جمله خلاصه برای دمو:',
+                '',
+                '«'.$title.' یکی از آیتم‌های '.$menuLabel.' است؛ از فهرست منو باز می‌شود و آموزش متنی + ویدیو برای همان بخش نمایش داده می‌شود.»',
+            ]);
+        }
+
+        return [
+            'title' => $title,
+            'short' => $short,
+            'body' => $body,
+            'aparat_url' => '',
+            'is_ready' => false,
+            'children' => $children,
+            'menu' => $menu,
+            'parent' => $item['parent'] ?? null,
         ];
     }
 

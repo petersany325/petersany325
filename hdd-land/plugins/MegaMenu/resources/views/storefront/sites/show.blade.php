@@ -13,6 +13,7 @@
   $hasSections = ! empty($item['sections']) && is_array($item['sections']);
   $features = $item['features'] ?? [];
   $guides = $guides ?? [];
+  $isRepair = ($item['slug'] ?? '') === 'repair-shop';
 @endphp
 <section class="ws-page">
   <header class="ws-hero">
@@ -27,8 +28,10 @@
       <p class="ws-lead">{{ $item['tagline'] }}</p>
       <div class="ws-cta-row">
         <a class="ws-btn ws-btn--accent" href="{{ $contactUrl }}?subject={{ urlencode('درخواست دمو: '.$item['title']) }}">درخواست دمو و قیمت</a>
-        @if(!empty($guides))
-          <a class="ws-btn ws-btn--ghost" href="{{ url('/sites/repair-shop/staff-menu') }}">نمونه منوی کارکنان</a>
+        @if($isRepair)
+          <a class="ws-btn ws-btn--ghost" href="{{ url('/sites/repair-shop/staff-menu') }}">منوی کارکنان</a>
+          <a class="ws-btn ws-btn--ghost" href="{{ url('/sites/repair-shop/customer-menu') }}">منوی کارتابل مشتری</a>
+        @elseif(!empty($guides))
           <a class="ws-btn ws-btn--ghost" href="#ws-guides">کارتابل‌های اصلی</a>
         @else
           <a class="ws-btn ws-btn--ghost" href="#ws-features">{{ $hasSections ? 'جزئیات سیستم' : 'امکانات محصول' }}</a>
@@ -37,13 +40,29 @@
     </div>
   </header>
 
+  @if($isRepair)
+    <div class="ws-wrap ws-section" id="ws-menus">
+      <h2>دو منوی اصلی سیستم</h2>
+      <p class="ws-sub">یک سیستم، دو چهره: کارکنان داخل تعمیرگاه کار می‌کنند؛ مشتری از پرتال خودش پیگیری می‌کند. روی هر منو بزنید تا فهرست متنی و آموزش‌ها را ببینید.</p>
+      <div class="ws-menu-entries">
+        <a class="ws-menu-entry" href="{{ url('/sites/repair-shop/staff-menu') }}">
+          <strong>منوی کارکنان</strong>
+          <span>میز کار، پذیرش، ارجاع، تأیید هزینه، انبار، کارمندان، حسابداری، گزارش‌ها و …</span>
+          <em>مشاهده فهرست ←</em>
+        </a>
+        <a class="ws-menu-entry" href="{{ url('/sites/repair-shop/customer-menu') }}">
+          <strong>منوی کارتابل مشتری</strong>
+          <span>پیگیری قبض، تأیید هزینه، پرداخت، گارانتی، پیام‌ها و پروفایل</span>
+          <em>مشاهده فهرست ←</em>
+        </a>
+      </div>
+    </div>
+  @endif
+
   @if(!empty($guides))
     <div class="ws-wrap ws-section" id="ws-guides">
-      <h2>{{ $item['guides_heading'] ?? 'بخش‌های سیستم' }}</h2>
+      <h2>{{ $item['guides_heading'] ?? 'کارتابل‌های کلیدی' }}</h2>
       <p class="ws-sub">{{ $item['guides_sub'] ?? 'برای مطالعه کامل هر بخش را باز کنید.' }}</p>
-      <p class="ws-sub" style="margin-top:-.35rem">
-        <a href="{{ url('/sites/repair-shop/staff-menu') }}" style="color:var(--ws-accent);font-weight:700">مشاهده نمونه کامل منوی کارکنان ←</a>
-      </p>
       <div class="ws-guide-grid">
         @foreach($guides as $g)
           <a class="ws-guide-btn" href="{{ url('/sites/repair-shop/'.$g['slug']) }}">
@@ -103,15 +122,6 @@
         @endforeach
       </ul>
     @endif
-  </div>
-
-  <div class="ws-wrap ws-section">
-    <h2>آموزش منوها و ویدیو</h2>
-    <p class="ws-sub">برای هر کارتابل صفحه جدا با متن کامل دارید؛ لینک آپارات را از ادمین مگامنو تنظیم کنید.</p>
-    <div class="ws-soon">
-      <strong>ادمین:</strong>
-      تنظیمات اصلی مگامنو → بخش «راهنمای فروش سایت تعمیرکاران» → عنوان، متن و لینک آپارات هر کارتابل.
-    </div>
   </div>
 
   <div class="ws-wrap ws-section">

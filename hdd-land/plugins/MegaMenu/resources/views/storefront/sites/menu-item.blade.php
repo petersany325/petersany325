@@ -1,6 +1,6 @@
 @extends('layouts.storefront')
 
-@section('title', ($guide['title'] ?? 'راهنما').' | سایت مدیریت تعمیرکاران')
+@section('title', ($page['title'] ?? 'آموزش منو').' | سایت مدیریت تعمیرکاران')
 
 @section('content')
 @php
@@ -10,8 +10,7 @@
       $contactUrl = route('contact');
     }
   } catch (\Throwable $e) {}
-  $body = trim((string) ($guide['body'] ?? ''));
-  $blocks = \Plugins\MegaMenu\Plugin::repairGuideBodyBlocks($body);
+  $menuLabel = ($page['menu'] ?? '') === 'customer' ? 'منوی کارتابل مشتری' : 'منوی کارکنان';
 @endphp
 <section class="ws-page">
   <header class="ws-hero ws-hero--guide">
@@ -21,27 +20,29 @@
         <span>/</span>
         <a href="{{ url('/sites/repair-shop') }}">{{ $product['title'] ?? 'سایت مدیریت تعمیرکاران' }}</a>
         <span>/</span>
-        @if(!empty($menuBack))
-          <a href="{{ $menuBack }}">منوی کارکنان</a>
+        <a href="{{ $menuBack }}">{{ $menuLabel }}</a>
+        @if(!empty($page['parent']['title']))
           <span>/</span>
+          <a href="{{ url('/sites/repair-shop/m/'.$page['parent']['slug']) }}">{{ $page['parent']['title'] }}</a>
         @endif
-        <span>{{ $guide['title'] }}</span>
+        <span>/</span>
+        <span>{{ $page['title'] }}</span>
       </nav>
-      <p class="ws-kicker">کارتابل مدیریت</p>
-      <h1 class="ws-brand">{{ $guide['title'] }}</h1>
-      <p class="ws-lead">{{ $guide['short'] }}</p>
+      <p class="ws-kicker">{{ $menuLabel }}</p>
+      <h1 class="ws-brand">{{ $page['title'] }}</h1>
+      <p class="ws-lead">{{ $page['short'] }}</p>
     </div>
   </header>
 
   <div class="ws-wrap ws-section">
     @if($embedUrl)
       <div class="ws-video">
-        <iframe src="{{ $embedUrl }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="ویدیوی {{ $guide['title'] }}" loading="lazy"></iframe>
+        <iframe src="{{ $embedUrl }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="ویدیوی {{ $page['title'] }}" loading="lazy"></iframe>
       </div>
     @else
       <div class="ws-video ws-video--empty">
         <strong>ویدیوی آموزشی این بخش</strong>
-        <span>لینک آپارات هنوز در ادمین تنظیم نشده است.</span>
+        <span>لینک آپارات هنوز تنظیم نشده است.</span>
       </div>
     @endif
 
@@ -69,27 +70,26 @@
       @endforeach
     </article>
 
-    <div class="ws-guide-nav">
-      @if(!empty($menuBack))
-        <a class="ws-btn ws-btn--line" href="{{ $menuBack }}">{{ $menuBackLabel ?? '→ بازگشت به منوی کارکنان' }}</a>
-      @endif
-      <a class="ws-btn ws-btn--line" href="{{ url('/sites/repair-shop') }}">→ بازگشت به صفحه محصول</a>
-      <a class="ws-btn ws-btn--accent" href="{{ $contactUrl }}?subject={{ urlencode('دمو: '.$guide['title']) }}">درخواست دمو</a>
-    </div>
-  </div>
+    @if(!empty($page['children']))
+      <div class="ws-menu-children">
+        <h2 class="ws-guide-h">باز کردن زیرمنوها</h2>
+        <ul class="ws-outline__list">
+          @foreach($page['children'] as $child)
+            <li>
+              @if(!empty($child['guide']))
+                <a class="is-ready" href="{{ url('/sites/repair-shop/'.$child['guide']) }}">{{ $child['title'] }}</a>
+              @else
+                <a class="is-ready" href="{{ url('/sites/repair-shop/m/'.$child['slug']) }}">{{ $child['title'] }}</a>
+              @endif
+            </li>
+          @endforeach
+        </ul>
+      </div>
+    @endif
 
-  <div class="ws-wrap ws-section">
-    <h2>سایر کارتابل‌ها</h2>
-    <div class="ws-guide-grid">
-      @foreach($guides as $g)
-        @if($g['slug'] !== $guide['slug'])
-          <a class="ws-guide-btn" href="{{ url('/sites/repair-shop/'.$g['slug']) }}">
-            <strong>{{ $g['title'] }}</strong>
-            <span>{{ $g['short'] }}</span>
-            <em>مشاهده ←</em>
-          </a>
-        @endif
-      @endforeach
+    <div class="ws-guide-nav">
+      <a class="ws-btn ws-btn--line" href="{{ $menuBack }}">{{ $menuBackLabel }}</a>
+      <a class="ws-btn ws-btn--accent" href="{{ $contactUrl }}?subject={{ urlencode('دمو: '.$page['title']) }}">درخواست دمو</a>
     </div>
   </div>
 </section>
