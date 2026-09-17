@@ -484,7 +484,7 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
             </div>
             <div class="mm-field" style="grid-column:1/-1">
               <span>متن کامل صفحه</span>
-              <textarea name="repair_guides[{{ $slug }}][body]" rows="4" maxlength="20000">{{ $g['body'] }}</textarea>
+              <textarea name="repair_guides[{{ $slug }}][body]" rows="12" maxlength="20000">{{ $g['body'] }}</textarea>
             </div>
           </div>
           <p class="mm-hint" style="margin:.45rem 0 0">صفحه عمومی: <a href="{{ url('/sites/repair-shop/'.$slug) }}" target="_blank" rel="noopener" style="color:#f0c9a8">/sites/repair-shop/{{ $slug }}</a></p>

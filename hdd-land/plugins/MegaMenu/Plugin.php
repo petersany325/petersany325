@@ -282,8 +282,83 @@ class Plugin extends BasePlugin
             [
                 'slug' => 'referral',
                 'title' => 'کارتابل ارجاع',
-                'short' => 'دریافت/بازگشت دستگاه و دست تعمیر',
-                'body' => "کارتابل ارجاع هسته گردش دستگاه بین پذیرش و تعمیرکار است.\n\nاز این کارتابل، دریافت دستگاه توسط تعمیرکار، وضعیت دست تعمیر، و بازگشت دستگاه به پذیرش مدیریت می‌شود.\n\nتوضیحات کامل‌تر و ویدیوی آموزشی را می‌توانید از تنظیمات ادمین همین بخش تکمیل کنید.",
+                'short' => 'رسید دیجیتال جابه‌جایی دستگاه؛ تأیید دریافت، گزارش کار، بازگشت',
+                'body' => <<<'TXT'
+کارتابل ارجاع چیست؟
+
+کارتابل ارجاع، میز کنترل جابه‌جایی دستگاه داخل تعمیرگاه است. هر بار که هارد یا لپ‌تاپ از پذیرش به تعمیرکار می‌رود یا برمی‌گردد، باید در سیستم ثبت و تأیید شود — مثل رسید تحویل دستی، ولی دیجیتال و قابل پیگیری.
+
+هدف برای مشتری و مدیریت: دیگر کسی نگوید «نمی‌دانم دستگاه دست کیست»؛ هر انتقال با نام، زمان و تأیید گیرنده ثبت می‌شود.
+
+مشکل رایجی که این کارتابل حل می‌کند
+
+• دستگاه رفته تعمیر، ولی معلوم نیست کی گرفته
+• تعمیرکار می‌گوید «من نگرفتم»
+• هزینه اعلام شده قبل از اتمام کار
+• تحویل به مشتری در حالی که دستگاه هنوز روی میز تعمیر است
+• اختلاف بین پذیرش، تعمیرکار و حسابداری
+
+کارتابل ارجاع با قانون Chain of Custody این‌ها را قفل می‌کند: بدون تأیید و گزارش کار، هزینه و خروج جلو نمی‌رود.
+
+جریان کامل کار (از پذیرش تا برگشت)
+
+1. پذیرش دستگاه: قبض ساخته می‌شود؛ دستگاه هنوز نزد پذیرش است.
+2. ارجاع به تعمیرکار: منشی/پذیرش از روی قبض، تعمیرکار را انتخاب و ارجاع می‌زند. وضعیت می‌شود: در انتظار تأیید دریافت.
+3. تأیید در کارتابل ارجاع: تعمیرکار وارد کارتابل می‌شود و می‌بیند چه دستگاه‌هایی برایش آمده. دو دکمه دارد: «بله، دریافت کردم» و «خیر، دریافت نکردم». تا وقتی تأیید نکند، دستگاه رسماً «دست او» حساب نمی‌شود.
+4. دست تعمیرکار: بعد از تأیید، دستگاه در لیست دست تعمیر می‌آید. آمار زنده هم هست: چند تا در انتظار، چند تا دست تعمیر، تأیید/رد امروز.
+5. گزارش کار (اجباری): تعمیرکار باید روی همان قبض گزارش کار بنویسد. بدون گزارش کار، اعلام هزینه قفل است و بازگشت/تحویل کامل جلو نمی‌رود.
+6. ارجاع بازگشت به پذیرش: فقط همان تعمیرکاری که دستگاه نزد اوست می‌تواند بازگشت بزند. دوباره برای منشی/حسابدار تأیید دریافت می‌آید.
+7. تأیید بازگشت: پذیرش تأیید می‌کند دستگاه برگشته. از این لحظه مسیر اعلام هزینه / تسویه / تحویل باز می‌شود.
+
+داخل صفحه کارتابل چه چیزهایی می‌بینید؟
+
+• جستجو با شماره قبض / سریال / نام مشتری / موبایل
+• فیلتر نمایش: در انتظار تأیید، دست تعمیرکار، تأیید شده، رد شده، همه ارجاع‌ها
+• آمار بالای صفحه: در انتظار، تأیید امروز، رد امروز، دست تعمیر
+• لیست دستگاه‌های دست تعمیر + وضعیت گزارش کار
+• لینک به گزارش کامل ارجاع / محل دستگاه
+
+چه کسانی با آن کار می‌کنند؟
+
+• پذیرش / منشی: ارجاع به تعمیرکار، تأیید بازگشت، پیگیری محل دستگاه
+• تعمیرکار: تأیید دریافت، ثبت گزارش کار، درخواست بازگشت
+• حسابدار / مدیر: کنترل اینکه بدون گزارش و بازگشت، هزینه و خروج زده نشود
+
+هر نقش فقط کارتابل مربوط به خودش را می‌بیند (تعمیرکار معمولاً فقط ارجاع‌های خودش).
+
+قفل‌های هوشمند (نکته قوی فروش)
+
+سیستم جلوی این‌ها را می‌گیرد:
+
+• تحویل به مشتری وقتی دستگاه هنوز نزد تعمیرکار است
+• اعلام هزینه قبل از گزارش کار
+• ارجاع هم‌زمان تکراری روی یک قبض
+• بازگشت توسط کسی غیر از تعمیرکار نگهدارنده
+
+یعنی فرآیند تعمیرگاه اجباری و استاندارد می‌شود، نه سلیقه‌ای.
+
+روی قبض چه چیزی نشان داده می‌شود؟
+
+چک‌لیست وضعیت ارجاع:
+
+1. تأیید دریافت تعمیرکار
+2. ثبت گزارش کار
+3. تأیید بازگشت به پذیرش
+
+مدیر یک نگاه می‌فهمد کار کجای مسیر است.
+
+فایده برای صاحب تعمیرگاه
+
+• شفافیت کامل: دستگاه الان کجاست؟
+• کاهش گم‌شدن و اختلاف بین نیروها
+• نظم بین پذیرش ↔ تعمیر ↔ حسابداری
+• امکان گزارش عملکرد و محل دستگاه
+• اعتماد بیشتر مشتری به‌خاطر پیگیری دقیق سریال و قبض
+
+یک جمله خلاصه برای دمو:
+
+«کارتابل ارجاع، رسید دیجیتالی جابه‌جایی دستگاه داخل تعمیرگاه است؛ هر تحویل به تعمیرکار و هر برگشت به پذیرش باید تأیید شود، گزارش کار اجباری است، و تا این مسیر کامل نشود هزینه و خروج قفل می‌ماند.»
+TXT,
                 'aparat_url' => '',
                 'is_active' => true,
                 'sort' => 1,
@@ -346,7 +421,15 @@ class Plugin extends BasePlugin
             $merged['slug'] = $slug;
             $merged['title'] = mb_substr(trim((string) ($merged['title'] ?? $def['title'])), 0, 120) ?: $def['title'];
             $merged['short'] = mb_substr(trim((string) ($merged['short'] ?? $def['short'])), 0, 255);
-            $merged['body'] = trim((string) ($merged['body'] ?? $def['body']));
+            $body = trim((string) ($merged['body'] ?? $def['body']));
+            // اگر هنوز متن کوتاه/پلیس‌هولدر ادمین است، متن پیش‌فرض غنی‌تر را نشان بده
+            if ($body === '' || static::isRepairGuideBodyStub($body)) {
+                $body = $def['body'];
+            }
+            if ($merged['short'] === '' || static::isRepairGuideShortStub((string) $merged['short'], $slug)) {
+                $merged['short'] = $def['short'];
+            }
+            $merged['body'] = $body;
             $merged['aparat_url'] = mb_substr(trim((string) ($merged['aparat_url'] ?? '')), 0, 500);
             $merged['is_active'] = array_key_exists('is_active', $merged)
                 ? (bool) $merged['is_active']
@@ -372,6 +455,150 @@ class Plugin extends BasePlugin
         }
 
         return null;
+    }
+
+    /** آیا متن ذخیره‌شده هنوز پلیس‌هولدر کوتاه است؟ */
+    public static function isRepairGuideBodyStub(string $body): bool
+    {
+        $markers = [
+            'توضیحات کامل‌تر و ویدیوی آموزشی را می‌توانید از تنظیمات ادمین',
+            'متن کامل و لینک آپارات را از ادمین تنظیم کنید',
+            'توضیح کامل‌تر را در ادمین بنویسید و لینک آپارات را اضافه کنید',
+            'جزئیات و ویدیو را از تنظیمات ادمین تکمیل کنید',
+            'کارتابل ارجاع هسته گردش دستگاه بین پذیرش و تعمیرکار است',
+        ];
+        foreach ($markers as $m) {
+            if (mb_strpos($body, $m) !== false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function isRepairGuideShortStub(string $short, string $slug): bool
+    {
+        $legacy = [
+            'referral' => 'دریافت/بازگشت دستگاه و دست تعمیر',
+            'cost-approval' => 'تأیید جراحی/بازیابی و لینک‌ها',
+            'staff' => 'کارمندان، نقش و دسترسی',
+            'trainee' => 'کارآموزان و پرتال ورود',
+        ];
+
+        return isset($legacy[$slug]) && $short === $legacy[$slug];
+    }
+
+    /**
+     * پارس متن راهنما به بلوک‌های قابل رندر (عنوان، پاراگراف، لیست، نقل‌قول)
+     *
+     * @return list<array{type:string,text?:string,items?:list<string>}>
+     */
+    public static function repairGuideBodyBlocks(string $body): array
+    {
+        $body = str_replace(["\r\n", "\r"], "\n", trim($body));
+        if ($body === '') {
+            return [];
+        }
+
+        $chunks = preg_split("/\n{2,}/u", $body) ?: [];
+        $blocks = [];
+
+        foreach ($chunks as $chunk) {
+            $chunk = trim($chunk);
+            if ($chunk === '') {
+                continue;
+            }
+            $lines = preg_split("/\n/u", $chunk) ?: [];
+            $lines = array_values(array_filter(array_map('trim', $lines), static fn ($l) => $l !== ''));
+            if ($lines === []) {
+                continue;
+            }
+
+            $isBullet = static fn (string $l): bool => (bool) preg_match('/^[•\-]\s*/u', $l);
+            $isNumbered = static fn (string $l): bool => (bool) preg_match('/^\d+[\.\)]\s+/u', $l);
+
+            if (count(array_filter($lines, $isBullet)) === count($lines)) {
+                $blocks[] = [
+                    'type' => 'ul',
+                    'items' => array_map(static fn ($l) => preg_replace('/^[•\-]\s*/u', '', $l) ?? $l, $lines),
+                ];
+                continue;
+            }
+
+            if (count(array_filter($lines, $isNumbered)) === count($lines)) {
+                $blocks[] = [
+                    'type' => 'ol',
+                    'items' => array_map(static fn ($l) => preg_replace('/^\d+[\.\)]\s+/u', '', $l) ?? $l, $lines),
+                ];
+                continue;
+            }
+
+            $listStart = null;
+            foreach ($lines as $i => $l) {
+                if ($isBullet($l) || $isNumbered($l)) {
+                    $listStart = $i;
+                    break;
+                }
+            }
+            if ($listStart !== null && $listStart > 0) {
+                $intro = implode(' ', array_slice($lines, 0, $listStart));
+                if ($intro !== '') {
+                    if (static::looksLikeGuideHeading($intro)) {
+                        $blocks[] = ['type' => 'h2', 'text' => $intro];
+                    } else {
+                        $blocks[] = ['type' => 'p', 'text' => $intro];
+                    }
+                }
+                $rest = array_slice($lines, $listStart);
+                $ol = $isNumbered($rest[0]);
+                $blocks[] = [
+                    'type' => $ol ? 'ol' : 'ul',
+                    'items' => array_map(
+                        static fn ($l) => $ol
+                            ? (preg_replace('/^\d+[\.\)]\s+/u', '', $l) ?? $l)
+                            : (preg_replace('/^[•\-]\s*/u', '', $l) ?? $l),
+                        $rest
+                    ),
+                ];
+                continue;
+            }
+
+            if (count($lines) === 1) {
+                $line = $lines[0];
+                if (preg_match('/^[«"“]/u', $line)) {
+                    $blocks[] = ['type' => 'quote', 'text' => $line];
+                    continue;
+                }
+                if (static::looksLikeGuideHeading($line)) {
+                    $blocks[] = ['type' => 'h2', 'text' => $line];
+                    continue;
+                }
+            }
+
+            $blocks[] = ['type' => 'p', 'text' => implode("\n", $lines)];
+        }
+
+        return $blocks;
+    }
+
+    protected static function looksLikeGuideHeading(string $line): bool
+    {
+        $line = trim($line);
+        if ($line === '' || mb_strlen($line) > 90) {
+            return false;
+        }
+        if (preg_match('/[؟?]$/u', $line)) {
+            return true;
+        }
+        if (preg_match('/^[«"“]/u', $line)) {
+            return false;
+        }
+        // عنوان‌های کوتاه بدون نقطهٔ پایانی جمله
+        if (! preg_match('/[۔.]$/u', $line) && ! str_contains($line, '؛')) {
+            return true;
+        }
+
+        return false;
     }
 
     /** تبدیل لینک آپارات به آدرس embed */

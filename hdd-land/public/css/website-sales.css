@@ -160,10 +160,27 @@
   padding:2rem 1rem;
 }
 .ws-video--empty span{opacity:.8;font-size:.9rem}
-.ws-guide-body{display:grid;gap:.85rem;margin-bottom:1.4rem}
-.ws-guide-body p{
-  margin:0;color:var(--ws-muted);font-size:1rem;line-height:1.85;
-  background:#fff;border:1px solid var(--ws-line);border-radius:12px;padding:1rem 1.1rem;
+.ws-guide-body{display:grid;gap:1rem;margin-bottom:1.4rem;max-width:46rem}
+.ws-guide-body > p{
+  margin:0;color:var(--ws-muted);font-size:1.02rem;line-height:1.9;
+}
+.ws-guide-h{
+  margin:1.15rem 0 0;font-family:var(--ws-display,inherit);font-size:1.22rem;
+  font-weight:800;color:var(--ws-ink);line-height:1.45;
+}
+.ws-guide-h:first-child{margin-top:0}
+.ws-guide-list,.ws-guide-steps{
+  margin:0;padding:0 1.15rem 0 0;display:grid;gap:.55rem;
+  color:var(--ws-muted);font-size:1rem;line-height:1.75;
+}
+.ws-guide-list{list-style:disc}
+.ws-guide-steps{list-style:decimal;padding-right:1.35rem}
+.ws-guide-list li,.ws-guide-steps li{padding-right:.15rem}
+.ws-guide-list li::marker,.ws-guide-steps li::marker{color:var(--ws-accent)}
+.ws-guide-quote{
+  margin:0;padding:1.05rem 1.15rem;border-right:3px solid var(--ws-accent);
+  background:linear-gradient(120deg,#fff8f3,#eef6f5);
+  color:var(--ws-ink);font-size:1.05rem;line-height:1.85;font-weight:600;
 }
 .ws-guide-nav{display:flex;flex-wrap:wrap;gap:.6rem;margin-bottom:.5rem}
 .ws-btn--line{

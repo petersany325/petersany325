@@ -11,7 +11,7 @@
     }
   } catch (\Throwable $e) {}
   $body = trim((string) ($guide['body'] ?? ''));
-  $paras = preg_split("/\n{2,}/u", $body) ?: [];
+  $blocks = \Plugins\MegaMenu\Plugin::repairGuideBodyBlocks($body);
 @endphp
 <section class="ws-page">
   <header class="ws-hero ws-hero--guide">
@@ -41,13 +41,29 @@
       </div>
     @endif
 
-    <div class="ws-guide-body">
-      @foreach($paras as $p)
-        @if(trim($p) !== '')
-          <p>{{ $p }}</p>
+    <article class="ws-guide-body">
+      @foreach($blocks as $block)
+        @if(($block['type'] ?? '') === 'h2')
+          <h2 class="ws-guide-h">{{ $block['text'] }}</h2>
+        @elseif(($block['type'] ?? '') === 'ul')
+          <ul class="ws-guide-list">
+            @foreach(($block['items'] ?? []) as $item)
+              <li>{{ $item }}</li>
+            @endforeach
+          </ul>
+        @elseif(($block['type'] ?? '') === 'ol')
+          <ol class="ws-guide-steps">
+            @foreach(($block['items'] ?? []) as $item)
+              <li>{{ $item }}</li>
+            @endforeach
+          </ol>
+        @elseif(($block['type'] ?? '') === 'quote')
+          <blockquote class="ws-guide-quote">{{ $block['text'] }}</blockquote>
+        @elseif(($block['type'] ?? '') === 'p')
+          <p>{!! nl2br(e($block['text'] ?? '')) !!}</p>
         @endif
       @endforeach
-    </div>
+    </article>
 
     <div class="ws-guide-nav">
       <a class="ws-btn ws-btn--line" href="{{ url('/sites/repair-shop') }}">→ بازگشت به صفحه محصول</a>
