@@ -241,7 +241,11 @@ class vbdl_Db
 			('telegram_bot_enabled', '0'),
 			('telegram_bot_token', ''),
 			('telegram_bot_username', ''),
-			('telegram_admin_chat_id', '')",
+			('telegram_admin_chat_id', ''),
+			('ticket_autoreply_enabled', '1'),
+			('ticket_autoreply_subject', 'Welcome to SeDiv Support'),
+			('filemgr_admin_grant_only', '1'),
+			('post_upload_enabled', '1')",
 			"INSERT IGNORE INTO {$tp}vbdl_usergroup_perm
 			(usergroupid, can_view_section, can_download, can_upload, can_manage_own, admin_bypass)
 			VALUES (6, 1, 1, 1, 1, 1)",

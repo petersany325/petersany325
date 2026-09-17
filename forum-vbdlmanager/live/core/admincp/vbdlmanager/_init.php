@@ -204,14 +204,17 @@ function vbdl_admin_menu_items()
 {
 	return array(
 		'dashboard' => array('label' => 'Dashboard', 'desc' => 'Overview, KPIs and health'),
+		'licenserequests' => array('label' => 'License Requests', 'desc' => 'New license receipts + VIP SeDiv add'),
+		'licensetickets' => array('label' => 'Active License Tickets', 'desc' => 'VIP SeDiv .lic send + .src return'),
+		'ticketautoreply' => array('label' => 'Ticket Auto-Reply', 'desc' => 'English welcome reply for new support tickets'),
 		'files' => array('label' => 'Files', 'desc' => 'Upload, edit, permissions'),
 		'categories' => array('label' => 'Categories', 'desc' => 'Organize downloads + access mode'),
-		'grants' => array('label' => 'Access Grants', 'desc' => 'Admin grants for VIP / categories'),
-		'vipusers' => array('label' => 'VIP Users', 'desc' => 'Add VIP by username + counts'),
+		'grants' => array('label' => 'Access Grants', 'desc' => 'Admin grants for File Manager / VIP'),
+		'vipusers' => array('label' => 'VIP Users', 'desc' => 'VIP SeDiv + other VIP groups'),
 		'storage' => array('label' => 'Storage', 'desc' => 'Local host and S3 cloud'),
 		'access' => array('label' => 'User Access', 'desc' => 'Usergroup capability matrix'),
 		'logs' => array('label' => 'Logs', 'desc' => 'Audit trail and CSV export'),
-		'settings' => array('label' => 'Settings', 'desc' => 'Limits, modes, VIP contact'),
+		'settings' => array('label' => 'Settings', 'desc' => 'Limits, auto-reply, VIP contact'),
 		'tools' => array('label' => 'Tools', 'desc' => 'Repair schema, diagnostics'),
 	);
 }

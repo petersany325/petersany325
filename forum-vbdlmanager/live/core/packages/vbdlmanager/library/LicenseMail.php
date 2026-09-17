@@ -662,7 +662,8 @@ class vbdl_LicenseMail
 	}
 
 	/**
-	 * Attach a binary file (.lic / .src) under a PM ticket so MC lists it.
+	 * Attach a binary file (.lic / .src / receipt) under a PM ticket so MC lists it.
+	 * Prefers native vBulletin content_attach API; falls back to direct schema write.
 	 */
 	public function attachFileToTicket($parentId, $starterId, $ownerUserid, $filename, $bytes)
 	{
@@ -678,6 +679,122 @@ class vbdl_LicenseMail
 		{
 			$starterId = $parentId;
 		}
+
+		$native = $this->attachFileToTicketNative($parentId, $starterId, $ownerUserid, $filename, $bytes);
+		if (!empty($native['ok']))
+		{
+			return $native;
+		}
+
+		return $this->attachFileToTicketLegacy($parentId, $starterId, $ownerUserid, $filename, $bytes);
+	}
+
+	/**
+	 * Native vBulletin attach path (content_attach library/API).
+	 */
+	protected function attachFileToTicketNative($parentId, $starterId, $ownerUserid, $filename, $bytes)
+	{
+		try
+		{
+			if (!class_exists('vB_Library') && !class_exists('vB_Api'))
+			{
+				return array('error' => 'vB library unavailable');
+			}
+			$tmp = tempnam(sys_get_temp_dir(), 'vbdl');
+			if ($tmp === false)
+			{
+				return array('error' => 'temp file failed');
+			}
+			file_put_contents($tmp, $bytes);
+			$fileinfo = array(
+				'name' => $filename,
+				'size' => strlen($bytes),
+				'tmp_name' => $tmp,
+				'error' => 0,
+				'type' => 'application/octet-stream',
+			);
+			$result = null;
+			if (class_exists('vB_Library'))
+			{
+				$lib = vB_Library::instance('content_attach');
+				if ($lib && method_exists($lib, 'add'))
+				{
+					$data = array(
+						'parentid' => (int)$parentId,
+						'userid' => (int)$ownerUserid,
+						'filedata' => $fileinfo,
+						'filename' => $filename,
+					);
+					$result = $lib->add($data, array('bypassPerms' => true, 'skipFloodCheck' => true));
+				}
+				elseif ($lib && method_exists($lib, 'uploadAttachment'))
+				{
+					$result = $lib->uploadAttachment((int)$parentId, $fileinfo, array('bypassPerms' => true));
+				}
+			}
+			if ($result === null && class_exists('vB_Api'))
+			{
+				$api = vB_Api::instanceInternal('content_attach');
+				if ($api && method_exists($api, 'add'))
+				{
+					$result = $api->add(array(
+						'parentid' => (int)$parentId,
+						'filedata' => $fileinfo,
+						'filename' => $filename,
+					), array('bypassPerms' => true));
+				}
+			}
+			@unlink($tmp);
+			if ($result === null)
+			{
+				return array('error' => 'content_attach API missing');
+			}
+			if (is_array($result) && !empty($result['errors']))
+			{
+				return array('error' => 'content_attach failed: ' . json_encode($result['errors']));
+			}
+			$nodeid = 0;
+			$filedataid = 0;
+			if (is_numeric($result))
+			{
+				$nodeid = (int)$result;
+			}
+			elseif (is_array($result))
+			{
+				$nodeid = !empty($result['nodeid']) ? (int)$result['nodeid'] : 0;
+				$filedataid = !empty($result['filedataid']) ? (int)$result['filedataid'] : 0;
+			}
+			if ($nodeid < 1 && $filedataid < 1)
+			{
+				return array('error' => 'content_attach returned empty');
+			}
+			if ($filedataid < 1 && $nodeid > 0)
+			{
+				$res = $this->db->query('SELECT filedataid FROM ' . $this->prefix . 'attach WHERE nodeid=' . $nodeid . ' LIMIT 1');
+				if ($res && ($row = $res->fetch_assoc()))
+				{
+					$filedataid = (int)$row['filedataid'];
+				}
+			}
+			$this->clearNodeCaches(array($parentId, $nodeid));
+			return array(
+				'ok' => true,
+				'filedataid' => $filedataid,
+				'attach_nodeid' => $nodeid,
+				'via' => 'vbulletin_native',
+			);
+		}
+		catch (Throwable $e)
+		{
+			return array('error' => 'native attach exception: ' . $e->getMessage());
+		}
+	}
+
+	/**
+	 * Legacy direct filedata/node/attach writer (fallback).
+	 */
+	protected function attachFileToTicketLegacy($parentId, $starterId, $ownerUserid, $filename, $bytes)
+	{
 		$p = $this->prefix;
 		$now = time();
 		$hash = md5($bytes);
@@ -779,6 +896,7 @@ class vbdl_LicenseMail
 			'ok' => true,
 			'filedataid' => $filedataid,
 			'attach_nodeid' => $attachNode,
+			'via' => 'legacy',
 		);
 	}
 

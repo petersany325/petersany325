@@ -39,6 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
 		'license_imap_user',
 		'license_imap_pass',
 		'license_imap_flags',
+		'license_support_userid',
+		'ticket_autoreply_enabled',
+		'ticket_autoreply_userid',
+		'ticket_autoreply_watch_userids',
+		'ticket_autoreply_subject',
+		'ticket_autoreply_body',
+		'post_upload_enabled',
+		'filemgr_admin_grant_only',
 	);
 	foreach ($fields as $field)
 	{
@@ -204,6 +212,48 @@ echo '<p class="vbdl-muted">Legacy default activation email field kept for compa
 echo '<div class="vbdl-form-row"><label>Legacy activation email</label><input class="vbdl-input" name="license_activation_email" value="'
 	. vbdl_h(isset($s['license_activation_email']) ? $s['license_activation_email'] : '')
 	. '" placeholder="unused when SeDiv flow is active" /></div>';
+
+echo '<hr style="border:0;border-top:1px solid #d9e2ec;margin:20px 0" />';
+echo '<h3 style="margin:0 0 10px">Support ticket auto-reply (English)</h3>';
+echo '<p class="vbdl-muted">When a customer opens a <strong>new Message Center ticket</strong> to support/admin, the system posts an automatic English welcome reply. '
+	. 'License system tickets (<code>VBDL-LIC</code> / <code>VBDL-REQ</code>) are skipped. '
+	. 'Poll URL: <code>/vbdlmanager/pm_ticket_autoreply.php?key=INBOX_KEY&amp;do=poll</code> (same key as license inbox).</p>';
+echo '<div class="vbdl-form-row"><label>Support userid (ticket owner)</label><input class="vbdl-input" name="license_support_userid" value="'
+	. vbdl_h(isset($s['license_support_userid']) ? $s['license_support_userid'] : '1')
+	. '" placeholder="1" /></div>';
+$arOn = isset($s['ticket_autoreply_enabled']) ? $s['ticket_autoreply_enabled'] : '1';
+echo '<div class="vbdl-form-row"><label>Enable auto-reply</label><select class="vbdl-select" name="ticket_autoreply_enabled">'
+	. '<option value="1"' . ($arOn !== '0' ? ' selected' : '') . '>Yes</option>'
+	. '<option value="0"' . ($arOn === '0' ? ' selected' : '') . '>No</option></select></div>';
+echo '<div class="vbdl-form-row"><label>Extra watch userids</label><input class="vbdl-input" name="ticket_autoreply_watch_userids" value="'
+	. vbdl_h(isset($s['ticket_autoreply_watch_userids']) ? $s['ticket_autoreply_watch_userids'] : '')
+	. '" placeholder="optional comma-separated admin userids" /></div>';
+echo '<div class="vbdl-form-row"><label>Auto-reply subject</label><input class="vbdl-input" name="ticket_autoreply_subject" value="'
+	. vbdl_h(isset($s['ticket_autoreply_subject']) && $s['ticket_autoreply_subject'] !== '' ? $s['ticket_autoreply_subject'] : 'Welcome to SeDiv Support')
+	. '" /></div>';
+$arBodyDefault = "Welcome to the SeDiv Support Team at HDD Land Company.\n\n"
+	. "Thank you for contacting us. We have received your ticket and our support team will reply as soon as possible during business hours.\n\n"
+	. "For new license purchases, please use Message Center → License Request.\n"
+	. "For SeDiv VIP license activation, please use Message Center → active license sediv.\n\n"
+	. "Please keep this ticket for all follow-up messages.\n\n"
+	. "Best regards,\n"
+	. "HDD Land Company · SeDiv Support";
+echo '<div class="vbdl-form-row"><label>Auto-reply body (English)</label><textarea class="vbdl-input" name="ticket_autoreply_body" rows="8">'
+	. vbdl_h(isset($s['ticket_autoreply_body']) && $s['ticket_autoreply_body'] !== '' ? $s['ticket_autoreply_body'] : $arBodyDefault)
+	. '</textarea></div>';
+
+echo '<hr style="border:0;border-top:1px solid #d9e2ec;margin:20px 0" />';
+echo '<h3 style="margin:0 0 10px">File Manager / post upload (separate from tickets)</h3>';
+echo '<p class="vbdl-muted">Downloads Manager upload widget must <strong>never</strong> appear in Message Center ticket compose. '
+	. 'Entry is separate and requires administrator Access Grant (or full admin). VIP membership alone is not enough.</p>';
+$puOn = isset($s['post_upload_enabled']) ? $s['post_upload_enabled'] : '1';
+echo '<div class="vbdl-form-row"><label>Post-editor upload widget</label><select class="vbdl-select" name="post_upload_enabled">'
+	. '<option value="1"' . ($puOn !== '0' ? ' selected' : '') . '>Enabled on forum post editors only</option>'
+	. '<option value="0"' . ($puOn === '0' ? ' selected' : '') . '>Disabled everywhere</option></select></div>';
+$fgOnly = isset($s['filemgr_admin_grant_only']) ? $s['filemgr_admin_grant_only'] : '1';
+echo '<div class="vbdl-form-row"><label>File Manager access</label><select class="vbdl-select" name="filemgr_admin_grant_only">'
+	. '<option value="1"' . ($fgOnly !== '0' ? ' selected' : '') . '>Admin or Access Grant only (recommended)</option>'
+	. '<option value="0"' . ($fgOnly === '0' ? ' selected' : '') . '>Also allow usergroup upload matrix</option></select></div>';
 
 echo '<div class="vbdl-actions"><button class="vbdl-btn" type="submit">Save settings</button></div></form></div></div>';
 vbdl_admin_footer();

@@ -1,24 +1,25 @@
-<div class="vbdl-quickupload" data-vbdl-qu="1" style="margin:6px 0 10px;padding:8px 10px;border:1px solid #d1d1d1;border-radius:6px;background:#fafafa;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px">
+<div class="vbdl-quickupload" data-vbdl-qu="1" style="display:none;margin:6px 0 10px;padding:8px 10px;border:1px solid #d1d1d1;border-radius:6px;background:#fafafa;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px">
 	<label style="display:inline-flex;align-items:center;gap:6px;margin:0;color:#333;font-weight:600">Category
 		<select class="vbdl-qu-category" style="padding:5px 8px;border-radius:5px;border:1px solid #ccc;min-width:180px;font-weight:400">
 			<option value="">Loading...</option>
 		</select>
 	</label>
 	<label class="vbdl-qu-label" style="display:inline-flex;align-items:center;gap:6px;background:#0f6cbd;color:#fff;padding:6px 12px;border-radius:5px;cursor:pointer;font-weight:600;margin:0">
-		? Upload via Download Manager
+		Upload via Download Manager
 		<input type="file" class="vbdl-qu-file" style="display:none">
 	</label>
-	<span class="vbdl-qu-status" style="color:#666">Loading categories...</span>
+	<span class="vbdl-qu-status" style="color:#666">Checking access…</span>
 </div>
 <script>
 (function(){
 	function isMessageCenterPage() {
 		var u = String(location.pathname || '') + String(location.href || '');
 		u = u.toLowerCase();
-		if (u.indexOf('messagecenter') !== -1 || u.indexOf('pmchat') !== -1 || u.indexOf('privatemessage') !== -1 || u.indexOf('private-message') !== -1 || u.indexOf('/messenger') !== -1) {
+		if (u.indexOf('messagecenter') !== -1 || u.indexOf('pmchat') !== -1 || u.indexOf('privatemessage') !== -1 || u.indexOf('private-message') !== -1 || u.indexOf('/messenger') !== -1 || u.indexOf('sediv_') !== -1) {
 			return true;
 		}
 		if (document.querySelector('input[name="recipients"], #recipients, input[name="msgrecipients"], #msgrecipients')) return true;
+		if (document.querySelector('.b-messagecenter, #messagecenter, [data-ui="messagecenter"]')) return true;
 		return false;
 	}
 	function removeSelf() {
@@ -29,7 +30,7 @@
 	}
 	if (isMessageCenterPage()) {
 		removeSelf();
-		setInterval(removeSelf, 600);
+		setInterval(removeSelf, 500);
 		return;
 	}
 	function initHost(host) {
@@ -54,13 +55,11 @@
 			.then(function (data) {
 				var cats = (data && data.ok && data.categories) ? data.categories : [];
 				select.innerHTML = '';
-				if (!cats.length) {
-					select.innerHTML = '<option value="">No category available</option>';
-					status.textContent = 'No uploadable category for your account.';
-					label.style.opacity = '0.5';
-					fileInput.disabled = true;
+				if (!data || !data.ok || !cats.length) {
+					removeSelf();
 					return;
 				}
+				host.style.display = 'flex';
 				cats.forEach(function (c) {
 					var opt = document.createElement('option');
 					opt.value = String(c.categoryid);
@@ -69,10 +68,7 @@
 				});
 				status.textContent = 'Choose file to upload';
 			})
-			.catch(function () {
-				select.innerHTML = '<option value="">Could not load</option>';
-				status.textContent = 'Could not load categories.';
-			});
+			.catch(function () { removeSelf(); });
 		fileInput.addEventListener('change', function () {
 			var file = fileInput.files && fileInput.files[0];
 			if (!file) { return; }
@@ -105,7 +101,6 @@
 	} else {
 		boot();
 	}
-	// Also init immediately for the nearest host (template parse-time)
 	var cur = document.currentScript;
 	if (cur && cur.previousElementSibling && cur.previousElementSibling.classList && cur.previousElementSibling.classList.contains('vbdl-quickupload')) {
 		initHost(cur.previousElementSibling);

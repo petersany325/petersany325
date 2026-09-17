@@ -54,13 +54,24 @@ $do = isset($_REQUEST['do']) ? preg_replace('/[^a-z_]/', '', strtolower((string)
 
 if ((int)$repo->getSetting('post_upload_enabled', '1') !== 1)
 {
-	echo json_encode(array('ok' => false, 'error' => 'Post upload is disabled'));
+	echo json_encode(array('ok' => false, 'error' => 'Post upload is disabled', 'can_use_file_manager' => 0));
 	exit;
 }
 
 if ($userid < 1)
 {
-	echo json_encode(array('ok' => false, 'error' => 'Please sign in to upload'));
+	echo json_encode(array('ok' => false, 'error' => 'Please sign in to upload', 'can_use_file_manager' => 0));
+	exit;
+}
+
+$canFm = method_exists($acl, 'canUseFileManager') ? $acl->canUseFileManager($userinfo) : $acl->canUpload($userinfo);
+if (!$canFm)
+{
+	echo json_encode(array(
+		'ok' => false,
+		'error' => 'File Manager upload requires an administrator Access Grant. It is not available in Message Center tickets.',
+		'can_use_file_manager' => 0,
+	));
 	exit;
 }
 
@@ -76,7 +87,7 @@ if ($do === 'categories')
 			'access_mode' => !empty($c['access_mode']) ? $c['access_mode'] : 'free_open',
 		);
 	}
-	echo json_encode(array('ok' => true, 'categories' => $out));
+	echo json_encode(array('ok' => true, 'can_use_file_manager' => 1, 'categories' => $out));
 	exit;
 }
 

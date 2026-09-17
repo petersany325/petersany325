@@ -2,6 +2,8 @@
  * Message Center sidebar:
  * - "License Request" for all signed-in users (above active license)
  * - "active license sediv" for SeDiv VIP / staff
+ * - Strip File Manager widgets
+ * - Trigger support ticket auto-reply poll for own new tickets
  */
 (function () {
   if (window.__vbdlSedivMcNavInit) return;
@@ -18,6 +20,14 @@
 
   var ACTIVE_PAGE = '/vbdlmanager/sediv_active_license.php';
   var REQUEST_PAGE = '/vbdlmanager/sediv_license_request.php';
+
+  function stripFileManager() {
+    var sel = '#vbdl-post-upload-panel, .vbdl-post-upload, .vbdl-quickupload, [data-vbdl-qu="1"]';
+    var nodes = document.querySelectorAll(sel);
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i] && nodes[i].parentNode) nodes[i].parentNode.removeChild(nodes[i]);
+    }
+  }
 
   function findInsertPoint() {
     var sent = document.querySelector('.folder-item.sent-items')
@@ -54,6 +64,7 @@
   }
 
   function inject(cfg) {
+    stripFileManager();
     var after = findInsertPoint();
     if (!after || !after.parentElement) return;
 
@@ -89,8 +100,18 @@
     }
   }
 
+  function triggerAutoReply() {
+    // Logged-in users may poll their own recent tickets so welcome reply arrives quickly.
+    fetch('/vbdlmanager/pm_ticket_autoreply.php?do=poll_self', { credentials: 'same-origin' })
+      .catch(function () {});
+  }
+
   function boot() {
     ensureStyle();
+    stripFileManager();
+    setInterval(stripFileManager, 800);
+    triggerAutoReply();
+    setTimeout(triggerAutoReply, 4000);
     // Merge configs from both endpoints so request menu works for non-VIP.
     Promise.all([
       fetch('/vbdlmanager/pm_lic_request.php?do=config', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).catch(function () { return null; }),

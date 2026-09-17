@@ -55,28 +55,23 @@ class vbdlportal_Hooks
 
 	/**
 	 * Inject specialized Downloads upload menu on create/edit content pages.
-	 * Never on Message Center / private messages — upload access is only via
-	 * AdminCP Access Grants (per username or usergroup) for forum post editors.
+	 * Never on Message Center / private messages — File Manager is fully separate
+	 * and requires AdminCP Access Grant (VIP alone is not enough).
 	 */
 	private static function injectPostUploadMenu($html)
 	{
 		$uri = strtolower((string)($_SERVER['REQUEST_URI'] ?? ''));
 		$isMc = self::isMessageCenterUri($uri) || self::htmlLooksLikePrivateMessage($html);
+		$bust = '20260917fm1';
 
-		// Always strip leftover DM upload markup from Message Center / PM HTML.
+		// Always strip leftover DM / File Manager upload markup from Message Center / PM HTML.
 		if ($isMc)
 		{
-			// Remove all vbdl upload panels and widgets - improved patterns
-			$html = preg_replace('/<div[^>]*id=["\']vbdl-post-upload-panel["\'][^>]*>.*?<\\/div>/is', '', $html);
-			$html = preg_replace('/<div[^>]*class=["\'][^"\']*vbdl-post-upload[^"\']*["\'][^>]*>.*?<\\/div>/is', '', $html);
-			$html = preg_replace('/<div[^>]*class=["\'][^"\']*vbdl-quickupload[^"\']*["\'][^>]*>.*?<\\/div>/is', '', $html);
-			$html = preg_replace('/<div[^>]*data-vbdl-qu=["\'][^"\']*["\'][^>]*>.*?<\\/div>/is', '', $html);
-			// Remove any standalone quickupload widget HTML includes
-			$html = preg_replace('/<!--\\s*vbdl[\\s\\S]*?-->/',  '', $html);
-			// Still inject cleanup JS so SPA/late widgets are removed client-side.
+			$html = self::stripFileManagerMarkup($html);
+			// Cleanup JS only (no CSS panel) so SPA/late widgets are removed client-side.
 			if (stripos($html, 'post-upload.js') === false)
 			{
-				$assets = '<script defer src="/vbdlmanager/assets/post-upload.js?v=20260913mc3"></script>';
+				$assets = '<script defer src="/vbdlmanager/assets/post-upload.js?v=' . $bust . '"></script>';
 				if (stripos($html, '</body>') !== false)
 				{
 					return preg_replace('/<\\/body>/i', $assets . '</body>', $html, 1);
@@ -104,13 +99,26 @@ class vbdlportal_Hooks
 			return $html;
 		}
 		// Cache-bust so clients pick up skip/cleanup logic after deploys.
-		$assets = '<link rel="stylesheet" href="/vbdlmanager/assets/post-upload.css?v=20260913mc3" />'
-			. '<script defer src="/vbdlmanager/assets/post-upload.js?v=20260913mc3"></script>';
+		$assets = '<link rel="stylesheet" href="/vbdlmanager/assets/post-upload.css?v=' . $bust . '" />'
+			. '<script defer src="/vbdlmanager/assets/post-upload.js?v=' . $bust . '"></script>';
 		if (stripos($html, '</body>') !== false)
 		{
 			return preg_replace('/<\\/body>/i', $assets . '</body>', $html, 1);
 		}
 		return $html . $assets;
+	}
+
+	/**
+	 * Remove File Manager / Downloads Manager upload widgets from HTML.
+	 */
+	private static function stripFileManagerMarkup($html)
+	{
+		$html = preg_replace('/<div[^>]*id=["\']vbdl-post-upload-panel["\'][^>]*>.*?<\\/div>/is', '', $html);
+		$html = preg_replace('/<div[^>]*class=["\'][^"\']*vbdl-post-upload[^"\']*["\'][^>]*>.*?<\\/div>/is', '', $html);
+		$html = preg_replace('/<div[^>]*class=["\'][^"\']*vbdl-quickupload[^"\']*["\'][^>]*>.*?<\\/div>/is', '', $html);
+		$html = preg_replace('/<div[^>]*data-vbdl-qu=["\'][^"\']*["\'][^>]*>.*?<\\/div>/is', '', $html);
+		$html = preg_replace('/<!--\\s*vbdl[\\s\\S]*?-->/', '', $html);
+		return $html;
 	}
 
 	/**
@@ -125,11 +133,21 @@ class vbdlportal_Hooks
 		{
 			return $html;
 		}
-		if (stripos($html, 'sediv-mc-nav.js') !== false)
+		// Always strip File Manager widgets from MC before injecting nav.
+		$html = self::stripFileManagerMarkup($html);
+		$assets = '';
+		if (stripos($html, 'sediv-mc-nav.js') === false)
+		{
+			$assets .= '<script defer src="/vbdlmanager/assets/sediv-mc-nav.js?v=20260917fm1"></script>';
+		}
+		if (stripos($html, 'post-upload.js') === false)
+		{
+			$assets .= '<script defer src="/vbdlmanager/assets/post-upload.js?v=20260917fm1"></script>';
+		}
+		if ($assets === '')
 		{
 			return $html;
 		}
-		$assets = '<script defer src="/vbdlmanager/assets/sediv-mc-nav.js?v=20260916en1"></script>';
 		if (stripos($html, '</body>') !== false)
 		{
 			return preg_replace('/<\/body>/i', $assets . '</body>', $html, 1);

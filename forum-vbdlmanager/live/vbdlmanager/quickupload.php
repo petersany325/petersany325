@@ -17,6 +17,9 @@ $userinfo = isset($vbulletin->userinfo) ? $vbulletin->userinfo : array('userid'=
 $userid = !empty($userinfo['userid']) ? (int)$userinfo['userid'] : 0;
 if ($userid < 1) { vbdl_qu_fail('You must be signed in to upload files.', 403); }
 $acl = vbdl_Bootstrap::$acl; $service = vbdl_Bootstrap::$service; $repo = vbdl_Bootstrap::$repo;
+if ((string)$repo->getSetting('post_upload_enabled', '1') === '0') { vbdl_qu_fail('Post upload is disabled.', 403); }
+$canFm = method_exists($acl, 'canUseFileManager') ? $acl->canUseFileManager($userinfo) : $acl->canUpload($userinfo);
+if (!$canFm) { vbdl_qu_fail('File Manager upload requires an administrator Access Grant. Not available in Message Center.', 403); }
 function vbdl_qu_allowed_categories($acl, $repo, array $userinfo) {
   $out = array();
   if (is_object($acl) && method_exists($acl, 'uploadableCategories')) {

@@ -131,7 +131,20 @@ class vbdl_Acl
 	public function canUpload(array $userinfo)
 	{
 		$p = $this->globalPerms($userinfo);
-		if (!empty($p['admin_bypass']) || !empty($p['can_upload']))
+		if (!empty($p['admin_bypass']))
+		{
+			return true;
+		}
+		$grantOnly = (string)$this->repo->getSetting('filemgr_admin_grant_only', '1') !== '0';
+		if ($grantOnly)
+		{
+			// File Manager / post-upload: admin Access Grant required (VIP alone is not enough).
+			return $this->repo->userHasAnyUploadGrant(
+				!empty($userinfo['userid']) ? (int)$userinfo['userid'] : 0,
+				$this->userGroupIds($userinfo)
+			);
+		}
+		if (!empty($p['can_upload']))
 		{
 			return true;
 		}
@@ -139,6 +152,24 @@ class vbdl_Acl
 			!empty($userinfo['userid']) ? (int)$userinfo['userid'] : 0,
 			$this->userGroupIds($userinfo)
 		);
+	}
+
+	/**
+	 * File Manager upload entry (post editor widget / upload_api).
+	 * Completely separate from Message Center license desks.
+	 */
+	public function canUseFileManager(array $userinfo)
+	{
+		if ((string)$this->repo->getSetting('post_upload_enabled', '1') === '0')
+		{
+			return false;
+		}
+		$p = $this->globalPerms($userinfo);
+		if (!empty($p['admin_bypass']))
+		{
+			return true;
+		}
+		return $this->canUpload($userinfo);
 	}
 
 	public function requiresGrant(array $file, $category = null)
@@ -186,21 +217,45 @@ class vbdl_Acl
 		{
 			return false;
 		}
+		// File Manager is grant-gated globally — VIP / usergroup upload alone is not enough.
+		if (!$this->canUpload($userinfo))
+		{
+			return false;
+		}
 		$mode = !empty($category['access_mode']) ? $category['access_mode'] : 'free_open';
 		if ($mode === 'grant_required')
 		{
 			return $this->hasGrant('category', (int)$category['categoryid'], $userinfo, 'can_upload');
 		}
+		// When grant-only mode is on, canUpload() already proved a grant exists;
+		// still require a category-level upload grant when one was issued for this category.
+		if ($this->hasGrant('category', (int)$category['categoryid'], $userinfo, 'can_upload'))
+		{
+			return true;
+		}
+		$grantOnly = (string)$this->repo->getSetting('filemgr_admin_grant_only', '1') !== '0';
+		if ($grantOnly)
+		{
+			// Any active upload grant unlocks free_open categories (admin Access Grants page).
+			return $this->repo->userHasAnyUploadGrant(
+				!empty($userinfo['userid']) ? (int)$userinfo['userid'] : 0,
+				$this->userGroupIds($userinfo)
+			);
+		}
 		if (!empty($global['can_upload']))
 		{
 			return true;
 		}
-		return $this->hasGrant('category', (int)$category['categoryid'], $userinfo, 'can_upload');
+		return false;
 	}
 
 	public function uploadableCategories(array $userinfo)
 	{
 		$out = array();
+		if (!$this->canUseFileManager($userinfo))
+		{
+			return $out;
+		}
 		foreach ($this->repo->listCategories(true) as $cat)
 		{
 			if ($this->canUploadToCategory($cat, $userinfo))

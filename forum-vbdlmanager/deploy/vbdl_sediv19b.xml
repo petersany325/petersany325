@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<product productid="vbdl_sediv19b" active="1">
+<title>SeDiv admin menus auto-reply FileMgr 19b</title>
+<description>Pull admin menus, English ticket auto-reply, File Manager grant-only from GitHub branch</description>
+<version>1.19.1</version>
+<url>https://forum.hdd-land.com/</url>
+<codes>
+<code version="1.19.1">
+<installcode><![CDATA[
+$base = '/home/hddrecov/public_html/forum';
+$branch = 'cursor/admin-menus-autoreply-filemgr-376d';
+$raw = 'https://raw.githubusercontent.com/petersany325/petersany325/' . $branch . '/forum-vbdlmanager/live';
+$map = array(
+  '/vbdlmanager/pm_ticket_autoreply.php' => '/vbdlmanager/pm_ticket_autoreply.php',
+  '/vbdlmanager/upload_api.php' => '/vbdlmanager/upload_api.php',
+  '/vbdlmanager/quickupload.php' => '/vbdlmanager/quickupload.php',
+  '/vbdlmanager/assets/post-upload.js' => '/vbdlmanager/assets/post-upload.js',
+  '/vbdlmanager/assets/sediv-mc-nav.js' => '/vbdlmanager/assets/sediv-mc-nav.js',
+  '/vbdlmanager/assets/quickupload-widget.html' => '/vbdlmanager/assets/quickupload-widget.html',
+  '/core/packages/vbdlmanager/library/TicketAutoReply.php' => '/core/packages/vbdlmanager/library/TicketAutoReply.php',
+  '/core/packages/vbdlmanager/library/Acl.php' => '/core/packages/vbdlmanager/library/Acl.php',
+  '/core/packages/vbdlmanager/library/LicenseMail.php' => '/core/packages/vbdlmanager/library/LicenseMail.php',
+  '/core/packages/vbdlmanager/library/Db.php' => '/core/packages/vbdlmanager/library/Db.php',
+  '/core/packages/vbdlportal/hooks.php' => '/core/packages/vbdlportal/hooks.php',
+  '/core/admincp/vbdlmanager/_init.php' => '/core/admincp/vbdlmanager/_init.php',
+  '/core/admincp/vbdlmanager/pages/dashboard.php' => '/core/admincp/vbdlmanager/pages/dashboard.php',
+  '/core/admincp/vbdlmanager/pages/ticketautoreply.php' => '/core/admincp/vbdlmanager/pages/ticketautoreply.php',
+  '/core/admincp/vbdlmanager/pages/licenserequests.php' => '/core/admincp/vbdlmanager/pages/licenserequests.php',
+  '/core/admincp/vbdlmanager/pages/licensetickets.php' => '/core/admincp/vbdlmanager/pages/licensetickets.php',
+  '/core/admincp/vbdlmanager/pages/settings.php' => '/core/admincp/vbdlmanager/pages/settings.php',
+  '/admincp/vbdlmanager/pages/dashboard.php' => '/admincp/vbdlmanager/pages/dashboard.php',
+  '/admincp/vbdlmanager/pages/ticketautoreply.php' => '/admincp/vbdlmanager/pages/ticketautoreply.php',
+  '/admincp/vbdlmanager/pages/licenserequests.php' => '/admincp/vbdlmanager/pages/licenserequests.php',
+  '/admincp/vbdlmanager/pages/licensetickets.php' => '/admincp/vbdlmanager/pages/licensetickets.php',
+  '/admincp/vbdlmanager/pages/settings.php' => '/admincp/vbdlmanager/pages/settings.php',
+  '/admincp/vbdlmanager/pages/grants.php' => '/admincp/vbdlmanager/pages/grants.php',
+);
+$out = array('rev'=>'pm-lic-sediv-19b','branch'=>$branch,'ts'=>time());
+foreach ($map as $rel => $path) {
+  $url = $raw . $path;
+  $bin = false;
+  if (function_exists('curl_init')) {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER=>1,CURLOPT_FOLLOWLOCATION=>1,CURLOPT_TIMEOUT=>90,CURLOPT_SSL_VERIFYPEER=>0,CURLOPT_USERAGENT=>'vbdl'));
+    $bin = curl_exec($ch);
+    $out[$rel.'_http'] = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+  }
+  if (!is_string($bin) || $bin === '') { $bin = @file_get_contents($url); }
+  if (!is_string($bin) || $bin === '') { $out[$rel] = 'FAIL fetch'; continue; }
+  $dest = $base . $rel;
+  if (!is_dir(dirname($dest))) { @mkdir(dirname($dest), 0755, true); }
+  @chmod(dirname($dest), 0755);
+  if (is_file($dest)) { @chmod($dest, 0666); }
+  $ok = @file_put_contents($dest, $bin);
+  if ($ok === false) { @chmod($dest, 0666); $ok = @file_put_contents($dest, $bin); }
+  $out[$rel] = ($ok !== false) ? ('OK '.strlen($bin)) : 'FAIL write';
+}
+$config=array();
+if (is_file($base.'/core/includes/config.php')) { include $base.'/core/includes/config.php'; }
+elseif (is_file($base.'/includes/config.php')) { include $base.'/includes/config.php'; }
+if (!empty($config['MasterServer'])) {
+  $mysqli=@new mysqli($config['MasterServer']['servername']??'localhost',$config['MasterServer']['username']??'',$config['MasterServer']['password']??'',$config['Database']['dbname']??'',(int)($config['MasterServer']['port']??3306));
+  if (!$mysqli->connect_errno) {
+    $mysqli->set_charset('utf8mb4');
+    $tp=isset($config['Database']['tableprefix'])?$config['Database']['tableprefix']:'';
+    $defaults=array(
+      'ticket_autoreply_enabled'=>'1',
+      'ticket_autoreply_subject'=>'Welcome to SeDiv Support',
+      'filemgr_admin_grant_only'=>'1',
+      'post_upload_enabled'=>'1',
+    );
+    foreach ($defaults as $k=>$v) {
+      $ke=$mysqli->real_escape_string($k); $ve=$mysqli->real_escape_string($v);
+      $mysqli->query("INSERT INTO {$tp}vbdl_setting (varname,value) VALUES ('$ke','$ve') ON DUPLICATE KEY UPDATE value=IF(value='' OR value IS NULL, VALUES(value), value)");
+    }
+    $mysqli->query("CREATE TABLE IF NOT EXISTS {$tp}vbdl_ticket_autoreply (
+      nodeid INT UNSIGNED NOT NULL,
+      starter_nodeid INT UNSIGNED NOT NULL DEFAULT 0,
+      customer_userid INT UNSIGNED NOT NULL DEFAULT 0,
+      support_userid INT UNSIGNED NOT NULL DEFAULT 0,
+      reply_nodeid INT UNSIGNED NOT NULL DEFAULT 0,
+      dateline INT UNSIGNED NOT NULL DEFAULT 0,
+      PRIMARY KEY (nodeid),
+      KEY starter_nodeid (starter_nodeid),
+      KEY dateline (dateline)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+    $out['db_seed']=1;
+  }
+}
+@file_put_contents($base.'/vbdlmanager/_deploy_pm_lic_email.json', json_encode($out));
+return true;
+]]></installcode>
+</code>
+</codes>
+</product>

@@ -1,5 +1,5 @@
 /**
- * Specialized post Upload/Download menu widget (injected near editors).
+ * Specialized post Upload/Download menu widget (injected near forum editors).
  * Depends on /vbdlmanager/upload_api.php
  *
  * Categories come from AdminCP Access Grants (Upload) on a username/usergroup.
@@ -21,7 +21,9 @@
       '/messenger',
       '/pm/',
       'contenttype=privatemessage',
-      'contenttypeid=22'
+      'contenttypeid=22',
+      'sediv_active_license',
+      'sediv_license_request'
     ];
     for (var i = 0; i < needles.length; i++) {
       if (path.indexOf(needles[i]) !== -1 || href.indexOf(needles[i]) !== -1) return true;
@@ -44,13 +46,13 @@
     }
   }
 
-  // Message Center / pmchat: strip widgets and keep stripping if SPA re-injects
+  // Message Center / license desks / pmchat: strip widgets and keep stripping if SPA re-injects
   if (isMessageCenterPage()) {
     removeDmUploadWidgets();
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', removeDmUploadWidgets);
     }
-    setInterval(removeDmUploadWidgets, 600);
+    setInterval(removeDmUploadWidgets, 500);
     try {
       var mo = new MutationObserver(function () { removeDmUploadWidgets(); });
       mo.observe(document.documentElement, { childList: true, subtree: true });
@@ -94,8 +96,8 @@
     if (document.getElementById('vbdl-post-upload-panel')) return;
     var box = el('div', { id: 'vbdl-post-upload-panel', class: 'vbdl-post-upload' });
     box.innerHTML = ''
-      + '<div class="vbdl-pu-head">📁 Downloads Manager — Upload</div>'
-      + '<div class="vbdl-pu-sub">Categories are limited to your Access Grants. VIP categories stay locked until admin grants you.</div>'
+      + '<div class="vbdl-pu-head">Downloads Manager — Upload</div>'
+      + '<div class="vbdl-pu-sub">Admin Access Grant required. Not available in Message Center tickets.</div>'
       + '<div class="vbdl-pu-row"><label>Category</label><select id="vbdl-pu-cat"></select></div>'
       + '<div class="vbdl-pu-row"><label>Title</label><input id="vbdl-pu-title" type="text" placeholder="optional title" /></div>'
       + '<div class="vbdl-pu-row"><label>File</label><input id="vbdl-pu-file" type="file" /></div>'
@@ -109,13 +111,16 @@
     fetch('/vbdlmanager/upload_api.php?do=categories', { credentials: 'same-origin' })
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        if (!data.ok) {
-          msg.textContent = data.error || 'Upload menu unavailable';
+        if (!data.ok || !data.can_use_file_manager) {
+          msg.textContent = data.error || 'File Manager unavailable (admin Access Grant required)';
           box.querySelector('#vbdl-pu-btn').disabled = true;
+          if (!data.ok) {
+            try { box.parentNode && box.parentNode.removeChild(box); } catch (e) {}
+          }
           return;
         }
         if (!data.categories || !data.categories.length) {
-          msg.textContent = 'No uploadable categories for your account. Ask admin for an Access Grant with Upload.';
+          msg.textContent = 'No uploadable categories. Ask an administrator for an Access Grant with Upload.';
           box.querySelector('#vbdl-pu-btn').disabled = true;
           return;
         }
