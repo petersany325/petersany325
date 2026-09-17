@@ -54,6 +54,55 @@ class vbdl_Db
 		return null;
 	}
 
+	/**
+	 * Native mysqli for libraries that typehint mysqli (LicenseMail / TicketAutoReply).
+	 * @return mysqli|null
+	 */
+	public static function mysqli()
+	{
+		static $mysqli = null;
+		if ($mysqli instanceof mysqli)
+		{
+			return $mysqli;
+		}
+		$config = array();
+		$paths = array();
+		if (defined('DIR'))
+		{
+			$paths[] = DIR . '/includes/config.php';
+			$paths[] = DIR . '/../includes/config.php';
+		}
+		$paths[] = dirname(__FILE__) . '/../../../../includes/config.php';
+		$paths[] = dirname(__FILE__) . '/../../../../../includes/config.php';
+		$paths[] = '/home/hddrecov/public_html/forum/core/includes/config.php';
+		$paths[] = '/home/hddrecov/public_html/forum/includes/config.php';
+		foreach ($paths as $cfg)
+		{
+			if (is_file($cfg))
+			{
+				include $cfg;
+				break;
+			}
+		}
+		if (empty($config['MasterServer']))
+		{
+			return null;
+		}
+		$host = $config['MasterServer']['servername'] ?? 'localhost';
+		$port = !empty($config['MasterServer']['port']) ? (int)$config['MasterServer']['port'] : 3306;
+		$user = $config['MasterServer']['username'] ?? '';
+		$pass = $config['MasterServer']['password'] ?? '';
+		$dbn = $config['Database']['dbname'] ?? '';
+		$mysqli = @new mysqli($host, $user, $pass, $dbn, $port);
+		if ($mysqli->connect_errno)
+		{
+			$mysqli = null;
+			return null;
+		}
+		$mysqli->set_charset('utf8mb4');
+		return $mysqli;
+	}
+
 	public static function tablePrefix()
 	{
 		global $table_prefix, $vbulletin;

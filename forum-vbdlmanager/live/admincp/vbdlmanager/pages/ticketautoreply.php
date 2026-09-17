@@ -7,8 +7,13 @@ require_once vbdl_admin_paths()['package'] . '/library/Db.php';
 require_once vbdl_admin_paths()['package'] . '/library/LicenseMail.php';
 require_once vbdl_admin_paths()['package'] . '/library/TicketAutoReply.php';
 
-$db = vbdl_Db::connection();
+$db = vbdl_Db::mysqli();
 $tp = vbdl_Db::tablePrefix();
+if (!$db)
+{
+	print_cp_message('Database (mysqli) unavailable for Ticket Auto-Reply.');
+	exit;
+}
 $lm = new vbdl_LicenseMail($db, $tp, $repo, vbdl_Bootstrap::$acl);
 $ar = new vbdl_TicketAutoReply($db, $tp, $repo, $lm);
 

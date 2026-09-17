@@ -6,8 +6,13 @@ $repo = vbdl_Bootstrap::$repo;
 require_once vbdl_admin_paths()['package'] . '/library/Db.php';
 require_once vbdl_admin_paths()['package'] . '/library/LicenseMail.php';
 
-$db = vbdl_Db::connection();
+$db = vbdl_Db::mysqli();
 $tp = vbdl_Db::tablePrefix();
+if (!$db)
+{
+	print_cp_message('Database (mysqli) unavailable for Active License Tickets.');
+	exit;
+}
 $lm = new vbdl_LicenseMail($db, $tp, $repo, vbdl_Bootstrap::$acl);
 $rows = $lm->listAll(120);
 
