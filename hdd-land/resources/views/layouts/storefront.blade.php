@@ -19,7 +19,7 @@
     <title>@yield('title', \App\Models\Setting::getValue('shop_name', config('app.name', 'فروشگاه'))) </title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=81">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=82">
     <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=60">
     <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=21">
     <link rel="stylesheet" href="{{ asset('css/website-sales.css') }}?v=7">

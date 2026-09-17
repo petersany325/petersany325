@@ -59,7 +59,7 @@ class Plugin extends BasePlugin
             $decoded = $raw;
         }
 
-        return array_merge([
+        $out = array_merge([
             'nav_align' => 'right',
             'nav_style' => 'pills',
             'dropdown_size' => 'auto',
@@ -83,8 +83,8 @@ class Plugin extends BasePlugin
             'panel_contain' => true,
             'panel_width_mode' => 'shell', // shell = full nav/shell width, item = under trigger
             'font_family' => 'Estedad',
-            'nav_font_size' => 12,
-            'panel_font_size' => 12,
+            'nav_font_size' => 14,
+            'panel_font_size' => 13,
             'org_promo_enabled' => true,
             'org_promo_title' => 'پیشنهاد سازمانی',
             'org_promo_desc' => 'تأمین هارد و SSD برای کسب‌وکارها با گارانتی شفاف',
@@ -93,6 +93,20 @@ class Plugin extends BasePlugin
             'org_promo_image' => '/images/home/mega-promo.jpg',
             'repair_guides' => [],
         ], is_array($decoded) ? $decoded : []);
+
+        // فونت‌های خیلی ریز قدیمی را به اندازه خواناتر ارتقا بده
+        $navFs = (int) ($out['nav_font_size'] ?? 14);
+        $panelFs = (int) ($out['panel_font_size'] ?? 13);
+        if ($navFs > 0 && $navFs <= 12) {
+            $navFs = 14;
+        }
+        if ($panelFs > 0 && $panelFs <= 12) {
+            $panelFs = 13;
+        }
+        $out['nav_font_size'] = max(12, min(18, $navFs ?: 14));
+        $out['panel_font_size'] = max(12, min(16, $panelFs ?: 13));
+
+        return $out;
     }
 
     /** @return array<string, string> */
@@ -149,8 +163,8 @@ class Plugin extends BasePlugin
             'font_family' => array_key_exists((string) ($data['font_family'] ?? 'Estedad'), self::fonts())
                 ? (string) ($data['font_family'] ?? 'Estedad')
                 : 'Estedad',
-            'nav_font_size' => max(11, min(16, (int) ($data['nav_font_size'] ?? 12))),
-            'panel_font_size' => max(11, min(15, (int) ($data['panel_font_size'] ?? 12))),
+            'nav_font_size' => max(12, min(18, (int) ($data['nav_font_size'] ?? 14))),
+            'panel_font_size' => max(12, min(16, (int) ($data['panel_font_size'] ?? 13))),
         ]);
 
         // همیشه فیلدهای پیشنهاد سازمانی را از درخواست ذخیره کن (فرم یکپارچه / AJAX)

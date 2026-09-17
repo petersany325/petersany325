@@ -12,6 +12,7 @@
   --shadow: 0 8px 28px rgba(26, 29, 35, 0.06);
   --font: "Estedad", "Estedad Variable", Tahoma, sans-serif;
   --mega-font: var(--font);
+  --font-size: 16.5px;
 }
 
 * { box-sizing: border-box; }
@@ -19,10 +20,12 @@ html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  font-size: var(--font-size);
 }
 body {
   margin: 0;
   font-family: var(--font);
+  font-size: 1rem;
   font-optical-sizing: auto;
   font-variation-settings: "wght" 450;
   -webkit-font-smoothing: antialiased;
@@ -102,9 +105,9 @@ body.site-boxed .hl-navrow{
   body.site-boxed .hl-navrow .mega-nav-pro .mega-trigger,
   body.site-boxed .hl-navrow .hl-extra-nav a{
     color:#f4f6f8 !important;
-    font-size:.74rem;
+    font-size:var(--mega-nav-fs,14px) !important;
     font-weight:700;
-    padding:.42rem .55rem;
+    padding:.45rem .6rem;
     border-radius:3px;
     white-space:nowrap;
   }

@@ -353,13 +353,13 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
           </select>
         </div>
         <div class="mm-field">
-          <span id="mm-nav-fs-lab">اندازه فونت نوار: {{ $s['nav_font_size'] ?? 12 }}px</span>
-          <input type="range" name="nav_font_size" id="mm_nav_font_size" min="11" max="16" value="{{ $s['nav_font_size'] ?? 12 }}"
+          <span id="mm-nav-fs-lab">اندازه فونت نوار: {{ $s['nav_font_size'] ?? 14 }}px</span>
+          <input type="range" name="nav_font_size" id="mm_nav_font_size" min="12" max="18" value="{{ $s['nav_font_size'] ?? 14 }}"
                  oninput="document.getElementById('mm-nav-fs-lab').textContent='اندازه فونت نوار: '+this.value+'px'">
         </div>
         <div class="mm-field">
-          <span id="mm-panel-fs-lab">اندازه فونت پنل: {{ $s['panel_font_size'] ?? 12 }}px</span>
-          <input type="range" name="panel_font_size" id="mm_panel_font_size" min="11" max="15" value="{{ $s['panel_font_size'] ?? 12 }}"
+          <span id="mm-panel-fs-lab">اندازه فونت پنل: {{ $s['panel_font_size'] ?? 13 }}px</span>
+          <input type="range" name="panel_font_size" id="mm_panel_font_size" min="12" max="16" value="{{ $s['panel_font_size'] ?? 13 }}"
                  oninput="document.getElementById('mm-panel-fs-lab').textContent='اندازه فونت پنل: '+this.value+'px'">
         </div>
         <div class="mm-field" style="grid-column:1/-1">

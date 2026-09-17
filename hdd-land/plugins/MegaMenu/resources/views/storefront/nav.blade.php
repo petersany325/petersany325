@@ -39,8 +39,8 @@
   $panelContain = !isset($mm['panel_contain']) || !empty($mm['panel_contain']);
   $panelWidthMode = in_array(($mm['panel_width_mode'] ?? 'shell'), ['shell', 'item'], true) ? ($mm['panel_width_mode'] ?? 'shell') : 'shell';
   $fontFamily = trim((string) ($mm['font_family'] ?? 'Estedad'));
-  $navFontSize = max(11, min(16, (int) ($mm['nav_font_size'] ?? 12)));
-  $panelFontSize = max(11, min(15, (int) ($mm['panel_font_size'] ?? 12)));
+  $navFontSize = max(12, min(18, (int) ($mm['nav_font_size'] ?? 14)));
+  $panelFontSize = max(12, min(16, (int) ($mm['panel_font_size'] ?? 13)));
   $fontStack = $fontFamily !== ''
     ? "'{$fontFamily}', Vazirmatn, Tahoma, sans-serif"
     : 'Vazirmatn, Tahoma, sans-serif';
