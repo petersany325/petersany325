@@ -217,6 +217,43 @@
 .ws-hub-item__short{color:var(--ws-muted);font-size:.9rem}
 .ws-hub-item__go{color:var(--ws-accent);font-weight:700;font-size:.86rem;margin-top:.25rem}
 
+/* —— Staff menu outline sample —— */
+.ws-outline-note{
+  margin:0 0 1.25rem;padding:.85rem 1rem;border-right:3px solid var(--ws-accent);
+  background:linear-gradient(120deg,#fff8f3,#eef6f5);color:var(--ws-muted);line-height:1.7;
+}
+.ws-outline-note strong{color:var(--ws-accent)}
+.ws-outline{
+  display:grid;gap:1.15rem;max-width:40rem;margin-bottom:1.5rem;
+}
+.ws-outline__block{padding-bottom:.15rem}
+.ws-outline__head{
+  display:flex;align-items:baseline;gap:.4rem;flex-wrap:wrap;
+}
+.ws-outline__num{
+  font-weight:800;color:var(--ws-accent);font-variant-numeric:tabular-nums;min-width:1.6rem;
+}
+.ws-outline__title{
+  font-size:1.12rem;font-weight:800;color:var(--ws-ink);line-height:1.45;
+}
+a.ws-outline__title.is-ready{
+  color:var(--ws-accent-deep);text-decoration:underline;text-underline-offset:.18em;
+}
+a.ws-outline__title.is-ready:hover{color:var(--ws-accent)}
+.ws-outline__note-line{
+  margin:.25rem 0 0 2rem;color:var(--ws-muted);font-size:.9rem;line-height:1.55;
+}
+.ws-outline__list{
+  margin:.4rem 0 0;padding:0 1.85rem 0 0;list-style:disc;display:grid;gap:.28rem;
+  color:var(--ws-muted);font-size:.98rem;line-height:1.65;
+}
+.ws-outline__list li::marker{color:rgba(196,92,38,.55)}
+.ws-outline__list a.is-ready{
+  color:var(--ws-accent-deep);font-weight:700;text-decoration:underline;text-underline-offset:.15em;
+}
+.ws-outline__list a.is-ready:hover{color:var(--ws-accent)}
+.ws-outline__list span{color:var(--ws-muted)}
+
 @media (max-width:720px){
   .ws-features{grid-template-columns:1fr}
   .ws-guide-grid{grid-template-columns:1fr}

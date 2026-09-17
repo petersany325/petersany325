@@ -28,6 +28,7 @@
       <div class="ws-cta-row">
         <a class="ws-btn ws-btn--accent" href="{{ $contactUrl }}?subject={{ urlencode('درخواست دمو: '.$item['title']) }}">درخواست دمو و قیمت</a>
         @if(!empty($guides))
+          <a class="ws-btn ws-btn--ghost" href="{{ url('/sites/repair-shop/staff-menu') }}">نمونه منوی کارکنان</a>
           <a class="ws-btn ws-btn--ghost" href="#ws-guides">کارتابل‌های اصلی</a>
         @else
           <a class="ws-btn ws-btn--ghost" href="#ws-features">{{ $hasSections ? 'جزئیات سیستم' : 'امکانات محصول' }}</a>
@@ -40,6 +41,9 @@
     <div class="ws-wrap ws-section" id="ws-guides">
       <h2>{{ $item['guides_heading'] ?? 'بخش‌های سیستم' }}</h2>
       <p class="ws-sub">{{ $item['guides_sub'] ?? 'برای مطالعه کامل هر بخش را باز کنید.' }}</p>
+      <p class="ws-sub" style="margin-top:-.35rem">
+        <a href="{{ url('/sites/repair-shop/staff-menu') }}" style="color:var(--ws-accent);font-weight:700">مشاهده نمونه کامل منوی کارکنان ←</a>
+      </p>
       <div class="ws-guide-grid">
         @foreach($guides as $g)
           <a class="ws-guide-btn" href="{{ url('/sites/repair-shop/'.$g['slug']) }}">

@@ -57,4 +57,16 @@ class WebsiteSalesController
             'embedUrl' => $embed,
         ]);
     }
+
+    /** نمونهٔ نمایشی فهرست متنی منوی کارکنان */
+    public function staffMenu(): View
+    {
+        MegaMenuPlugin::syncWebsiteSalesMenu();
+
+        return view('mega-menu::storefront.sites.staff-menu', [
+            'product' => collect(MegaMenuPlugin::websiteSalesCatalog())->firstWhere('slug', 'repair-shop'),
+            'sections' => MegaMenuPlugin::staffMenuSample(),
+            'guides' => MegaMenuPlugin::repairShopGuides(true),
+        ]);
+    }
 }
