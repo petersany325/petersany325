@@ -129,6 +129,10 @@ class Plugin extends BasePlugin
             'drawer_shop_label' => 'فروشگاه',
             'drawer_shop_url' => '/app/shop',
             'drawer_shop_icon' => '▣',
+            'drawer_item_sites' => true,
+            'drawer_sites_label' => 'طراحی و فروش سایت',
+            'drawer_sites_url' => '/sites',
+            'drawer_sites_icon' => '◈',
             'drawer_item_cart' => true,
             'drawer_cart_label' => 'سبد خرید',
             'drawer_cart_url' => '/app/cart',
@@ -363,7 +367,7 @@ class Plugin extends BasePlugin
             'sync_menu_from_site', 'sync_quick_links_from_theme', 'sync_brand_from_site',
             'show_site_menu', 'show_footer', 'sync_footer_from_site',
             'drawer_menu_enabled', 'drawer_show_brand', 'drawer_show_full_site',
-            'drawer_item_home', 'drawer_item_shop', 'drawer_item_cart', 'drawer_item_account',
+            'drawer_item_home', 'drawer_item_shop', 'drawer_item_sites', 'drawer_item_cart', 'drawer_item_account',
             'drawer_item_track', 'drawer_item_warranty', 'drawer_item_support', 'drawer_item_contact',
             'smart_install', 'hide_install_when_installed', 'install_only_mobile',
         ], [
@@ -427,6 +431,9 @@ class Plugin extends BasePlugin
             'drawer_shop_label' => fn ($v) => $label($v, 30, 'فروشگاه'),
             'drawer_shop_url' => fn ($v) => $url($v, '/app/shop'),
             'drawer_shop_icon' => fn ($v) => $label($v, 8, '▣'),
+            'drawer_sites_label' => fn ($v) => $label($v, 40, 'طراحی و فروش سایت'),
+            'drawer_sites_url' => fn ($v) => $url($v, '/sites'),
+            'drawer_sites_icon' => fn ($v) => $label($v, 8, '◈'),
             'drawer_cart_label' => fn ($v) => $label($v, 30, 'سبد خرید'),
             'drawer_cart_url' => fn ($v) => $url($v, '/app/cart'),
             'drawer_cart_icon' => fn ($v) => $label($v, 8, '▢'),
@@ -471,7 +478,7 @@ class Plugin extends BasePlugin
             //
         }
 
-        $keys = ['home', 'shop', 'cart', 'account', 'track', 'warranty', 'support', 'contact'];
+        $keys = ['home', 'sites', 'shop', 'cart', 'account', 'track', 'warranty', 'support', 'contact'];
         $out = [];
         foreach ($keys as $key) {
             if (empty($s['drawer_item_'.$key])) {
@@ -485,6 +492,8 @@ class Plugin extends BasePlugin
             $children = [];
             if ($key === 'shop') {
                 $children = static::shopDrawerChildren();
+            } elseif ($key === 'sites') {
+                $children = static::sitesDrawerChildren();
             } elseif ($key === 'account') {
                 $children = static::accountDrawerChildren($s);
             } elseif ($key === 'warranty') {
@@ -532,6 +541,45 @@ class Plugin extends BasePlugin
         }
 
         return $out;
+    }
+
+    /**
+     * زیرمنوی «طراحی و فروش سایت» برای دراور موبایل وب‌اپ
+     *
+     * @return list<array{label:string,url:string}>
+     */
+    protected static function sitesDrawerChildren(): array
+    {
+        $children = [];
+        try {
+            if (class_exists(\Plugins\MegaMenu\Plugin::class)) {
+                \Plugins\MegaMenu\Plugin::syncWebsiteSalesMenu();
+                foreach (\Plugins\MegaMenu\Plugin::websiteSalesCatalog() as $item) {
+                    $title = trim((string) ($item['title'] ?? ''));
+                    $slug = trim((string) ($item['slug'] ?? ''));
+                    if ($title === '' || $slug === '') {
+                        continue;
+                    }
+                    $children[] = [
+                        'label' => $title,
+                        'url' => '/sites/'.$slug,
+                    ];
+                }
+            }
+        } catch (\Throwable) {
+            //
+        }
+
+        if ($children === []) {
+            $children = [
+                ['label' => 'سایت مدیریت تعمیرکاران', 'url' => '/sites/repair-shop'],
+                ['label' => 'سایت فروشگاهی', 'url' => '/sites/online-store'],
+                ['label' => 'سایت شرکتی', 'url' => '/sites/corporate'],
+                ['label' => 'سایت خدماتی / نوبت‌دهی', 'url' => '/sites/booking'],
+            ];
+        }
+
+        return $children;
     }
 
     /** @return list<array{label:string,url:string}> */

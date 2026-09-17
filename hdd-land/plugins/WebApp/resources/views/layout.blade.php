@@ -29,6 +29,7 @@
   $tab = $tab ?? 'home';
   $drawerIcons = [
     'home' => '⌂',
+    'sites' => '◈',
     'shop' => '▣',
     'cart' => '▢',
     'account' => '☺',
@@ -96,9 +97,17 @@
         $active = false;
         if ($key === 'home' && ($tab ?? '') === 'home') $active = true;
         if ($key === 'shop' && ($tab ?? '') === 'shop') $active = true;
+        if ($key === 'sites' && request()->is('sites', 'sites/*')) $active = true;
         if ($key === 'cart' && ($tab ?? '') === 'cart') $active = true;
         if ($key === 'account' && ($tab ?? '') === 'account') $active = true;
-        $openByDefault = $active && $hasKids;
+        // فروشگاه را پیش‌فرض باز نکن تا «طراحی و فروش سایت» دیده شود
+        $openByDefault = $active && $hasKids && $key !== 'shop';
+        if ($key === 'shop' && ($tab ?? '') === 'shop') $openByDefault = true;
+        $allLabel = match ($key) {
+          'warranty' => 'استعلام گارانتی',
+          'sites' => 'همه انواع سایت',
+          default => 'همهٔ '.$item['label'],
+        };
       @endphp
       @if($hasKids)
         <div class="wa-drawer-group {{ $openByDefault ? 'is-open' : '' }}" data-wa-sub>
@@ -108,7 +117,7 @@
             <em class="wa-drawer-caret" aria-hidden="true">▾</em>
           </button>
           <div class="wa-drawer-sub" @if(!$openByDefault) hidden @endif>
-            <a href="{{ $href }}" class="wa-drawer-sub-all">{{ $key === 'warranty' ? 'استعلام گارانتی' : 'همهٔ '.$item['label'] }}</a>
+            <a href="{{ $href }}" class="wa-drawer-sub-all">{{ $allLabel }}</a>
             @php $shownCompanyHead = false; @endphp
             @foreach($kids as $child)
               @php
