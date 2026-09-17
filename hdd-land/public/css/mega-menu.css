@@ -107,6 +107,23 @@
   padding:.45rem .7rem .2rem;font-size:.78rem;color:#94a3b8;margin:0;
 }
 .mega-panel.is-dropdown .mega-desc{display:none}
+.mega-panel.is-dropdown.mm-web-sales .mega-desc,
+.mega-panel.is-dropdown .mm-web-sales-item .mega-desc{
+  display:block;
+  color:#64748b;
+  font-size:.75rem;
+  font-weight:500;
+  margin-top:.15rem;
+  line-height:1.45;
+}
+.mega-panel.is-dropdown.mm-web-sales{
+  min-width:min(300px,92vw);
+  max-width:min(360px,94vw);
+  padding:.5rem;
+}
+.mega-panel.is-dropdown.mm-web-sales .mega-ico,
+.mega-panel.is-dropdown.mm-web-sales .mega-ico-img,
+.mega-panel.is-dropdown.mm-web-sales .mega-thumb{display:none}
 .mega-panel.is-dropdown .mega-thumb{width:28px;height:28px;border-radius:6px}
 .mega-nav-pro.dd-compact .mega-panel.is-dropdown{min-width:160px;max-width:220px}
 .mega-nav-pro.dd-medium .mega-panel.is-dropdown{min-width:220px;max-width:320px}

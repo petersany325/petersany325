@@ -43,7 +43,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '3.5.0';
+        return '3.6.0';
     }
 
     public const SETTINGS_KEY = 'mega_menu_settings';
@@ -257,12 +257,162 @@ class Plugin extends BasePlugin
 
     public function boot(): void
     {
-        if (! Cache::get('mega_menu_schema_342')) {
+        if (! Cache::get('mega_menu_schema_360')) {
             static::ensureSchema();
             static::fixLegacyTrackUrls();
-            Cache::put('mega_menu_schema_342', true, now()->addDay());
+            static::syncWebsiteSalesMenu();
+            Cache::put('mega_menu_schema_360', true, now()->addDay());
         }
         parent::boot();
+    }
+
+    /**
+     * کاتالوگ فروش انواع سایت — منوی متنی + صفحات پیشرفته
+     *
+     * @return array<int, array{slug:string,title:string,short:string,tagline:string,features:array<int,string>}>
+     */
+    public static function websiteSalesCatalog(): array
+    {
+        return [
+            [
+                'slug' => 'repair-shop',
+                'title' => 'سایت مدیریت تعمیرکاران',
+                'short' => 'نرم‌افزار تعمیرگاه + آموزش + سئو',
+                'tagline' => 'پذیرش تا فاکتور و پیامک مشتری — مخصوص تعمیرگاه موبایل، لپ‌تاپ و لوازم',
+                'features' => [
+                    'پذیرش و نوبت‌دهی دستگاه',
+                    'فاکتور اجرت و قطعات',
+                    'انبار قطعات و هشدار کسری',
+                    'پیامک وضعیت به مشتری',
+                    'گزارش سود و عملکرد تکنسین',
+                ],
+            ],
+            [
+                'slug' => 'online-store',
+                'title' => 'سایت فروشگاهی',
+                'short' => 'فروش آنلاین کالا',
+                'tagline' => 'فروشگاه اینترنتی با سبد خرید، درگاه پرداخت و مدیریت محصولات',
+                'features' => [
+                    'کاتالوگ و دسته‌بندی محصول',
+                    'سبد خرید و پرداخت آنلاین',
+                    'مدیریت موجودی و سفارش',
+                    'کد تخفیف و کمپین',
+                    'سئوی صفحات محصول',
+                ],
+            ],
+            [
+                'slug' => 'corporate',
+                'title' => 'سایت شرکتی',
+                'short' => 'معرفی شرکت و خدمات',
+                'tagline' => 'ویترین حرفه‌ای برند، خدمات و اعتمادسازی برای مشتریان سازمانی',
+                'features' => [
+                    'صفحات درباره ما و خدمات',
+                    'نمونه کار و پروژه‌ها',
+                    'فرم استعلام و تماس',
+                    'بلاگ و اخبار شرکت',
+                    'بهینه‌سازی سئو سازمانی',
+                ],
+            ],
+            [
+                'slug' => 'booking',
+                'title' => 'سایت خدماتی / نوبت‌دهی',
+                'short' => 'رزرو آنلاین خدمات',
+                'tagline' => 'نوبت‌دهی آنلاین برای کلینیک، آموزشگاه، خدمات حضوری و مشابه',
+                'features' => [
+                    'تقویم نوبت و ظرفیت',
+                    'ثبت‌نام و یادآوری پیامکی',
+                    'پروفایل خدمات و قیمت',
+                    'پنل اپراتور نوبت',
+                    'صفحات آموزشی سئو‌شده',
+                ],
+            ],
+        ];
+    }
+
+    /** منوی متنی «طراحی و فروش سایت» را می‌سازد/به‌روز می‌کند (بدون تبدیل به مگا) */
+    public static function syncWebsiteSalesMenu(): void
+    {
+        try {
+            if (! Schema::hasTable('mega_menu_items')) {
+                return;
+            }
+
+            $parent = MegaMenuItem::query()
+                ->whereNull('parent_id')
+                ->where(function ($q) {
+                    $q->where('css_class', 'like', '%mm-web-sales%')
+                        ->orWhere('title', 'طراحی و فروش سایت')
+                        ->orWhere('title', 'طراحی سایت');
+                })
+                ->orderByDesc('id')
+                ->first();
+
+            $parentAttrs = [
+                'title' => 'طراحی و فروش سایت',
+                'type' => 'link',
+                'url' => '/sites',
+                'is_mega' => false,
+                'is_active' => true,
+                'open_in_new' => false,
+                'description' => 'انواع سایت آماده برای فروش',
+                'css_class' => 'mm-web-sales',
+                'animation' => 'fade',
+                'effect' => 'shadow',
+                'panel_width' => 'normal',
+                'updated_at' => now(),
+            ];
+
+            if (! $parent) {
+                $maxSort = (int) MegaMenuItem::query()->whereNull('parent_id')->max('sort_order');
+                $parent = MegaMenuItem::query()->create(array_merge($parentAttrs, [
+                    'sort_order' => $maxSort + 1,
+                    'created_at' => now(),
+                ]));
+            } else {
+                $parent->fill($parentAttrs);
+                $parent->save();
+            }
+
+            $keepIds = [];
+            foreach (static::websiteSalesCatalog() as $i => $item) {
+                $child = MegaMenuItem::query()
+                    ->where('parent_id', $parent->id)
+                    ->where(function ($q) use ($item) {
+                        $q->where('url', '/sites/'.$item['slug'])
+                            ->orWhere('title', $item['title']);
+                    })
+                    ->first();
+
+                $attrs = [
+                    'parent_id' => $parent->id,
+                    'title' => $item['title'],
+                    'type' => 'link',
+                    'url' => '/sites/'.$item['slug'],
+                    'description' => $item['short'],
+                    'is_mega' => false,
+                    'is_active' => true,
+                    'sort_order' => $i + 1,
+                    'css_class' => 'mm-web-sales-item',
+                    'updated_at' => now(),
+                ];
+
+                if (! $child) {
+                    $child = MegaMenuItem::query()->create(array_merge($attrs, ['created_at' => now()]));
+                } else {
+                    $child->fill($attrs);
+                    $child->save();
+                }
+                $keepIds[] = (int) $child->id;
+            }
+
+            // زیر‌آیتم‌های قدیمی همین والد که دیگر در کاتالوگ نیستند (placeholder و …) را غیرفعال کن
+            MegaMenuItem::query()
+                ->where('parent_id', $parent->id)
+                ->whereNotIn('id', $keepIds)
+                ->update(['is_active' => false, 'updated_at' => now()]);
+        } catch (\Throwable) {
+            //
+        }
     }
 
     /** لینک قدیمی منو /orders/track را نگه می‌داریم؛ فقط مسیر خالی را درست می‌کنیم */

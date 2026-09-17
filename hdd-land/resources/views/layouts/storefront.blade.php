@@ -20,8 +20,9 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
     <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=80">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=58">
-    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=20">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=59">
+    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=21">
+    <link rel="stylesheet" href="{{ asset('css/website-sales.css') }}?v=1">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=5">
     <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=23">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))

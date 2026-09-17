@@ -61,11 +61,15 @@
       $style = $item->inlineStyle();
       $openMode = $item->open_mode ?: $defaultOpen;
       $titleKey = mb_strtolower($item->title ?? '');
-      $shopish = str_contains($titleKey, 'محصول') || str_contains($titleKey, 'فروشگاه');
+      // فقط محصولات/فروشگاه قطعات مگا می‌شوند — منوی «فروش سایت» متنی می‌ماند
+      $shopish = (str_contains($titleKey, 'محصول') || str_contains($titleKey, 'فروشگاه'))
+        && ! str_contains($titleKey, 'طراحی')
+        && ! str_contains($titleKey, 'سایت');
       $forceMega = (bool) $item->is_mega || ($shopish && $item->activeChildren->count() > 0);
-      $useGraphic = $forceMega || $panelLayout === 'graphic';
+      // مهم: layout گرافیکی سراسری نباید زیرمنوی متنی (is_mega=0) را تبدیل به مگا کند
+      $useGraphic = $forceMega && ($panelLayout === 'graphic' || $panelLayout === 'columns');
       $panelClass = $item->panelClasses();
-      if ($forceMega || $useGraphic) {
+      if ($forceMega) {
         if (in_array($panelLayout, ['cascade', 'list'], true) && ! $useGraphic) {
           $panelClass = trim(str_replace(['is-mega-panel', 'w-wide', 'w-full', 'w-normal'], '', $panelClass).' is-mega-panel w-normal');
         } else {

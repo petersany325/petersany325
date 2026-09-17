@@ -1,0 +1,133 @@
+/* Website sales pages + text-only nav dropdown */
+:root{
+  --ws-ink:#101820;
+  --ws-muted:#5a6a75;
+  --ws-paper:#f2efe9;
+  --ws-accent:#c45c26;
+  --ws-accent-deep:#8f3d12;
+  --ws-teal:#1f6f6a;
+  --ws-line:rgba(16,24,32,.12);
+}
+
+/* —— Text dropdown for «طراحی و فروش سایت» —— */
+.mega-panel.is-dropdown.mm-web-sales,
+.mega-panel.is-dropdown.mm-web-sales-panel{
+  min-width:min(300px,92vw);
+  max-width:min(360px,94vw);
+  padding:.5rem;
+}
+.mega-panel.is-dropdown.mm-web-sales .mega-desc,
+.mega-panel.is-dropdown .mm-web-sales-item .mega-desc{
+  display:block !important;
+  color:#64748b;
+  font-size:.75rem;
+  font-weight:500;
+  margin-top:.15rem;
+  line-height:1.45;
+}
+.mega-panel.is-dropdown.mm-web-sales .mega-ico,
+.mega-panel.is-dropdown.mm-web-sales .mega-ico-img,
+.mega-panel.is-dropdown.mm-web-sales .mega-thumb{
+  display:none !important;
+}
+.mega-panel.is-dropdown.mm-web-sales .mega-link,
+.mega-panel.is-dropdown.mm-web-sales .mega-sub{
+  padding:.72rem .85rem;
+  font-weight:700;
+}
+
+/* —— Sales pages —— */
+.ws-page{
+  background:var(--ws-paper);
+  color:var(--ws-ink);
+  padding-bottom:3rem;
+}
+.ws-wrap{
+  width:min(1080px,calc(100% - 2rem));
+  margin-inline:auto;
+}
+.ws-hero{
+  color:#fff;
+  padding:3.2rem 0 2.6rem;
+  background:
+    radial-gradient(640px 280px at 90% 0%, rgba(31,111,106,.4), transparent 55%),
+    linear-gradient(120deg,#152029 0%, #243047 48%, #3a2418 100%);
+}
+.ws-hero--hub{padding:2.8rem 0 2.2rem}
+.ws-crumbs{
+  display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;
+  font-size:.82rem;color:#9bb0bd;margin-bottom:.85rem;
+}
+.ws-crumbs a{color:#d7e2e8}
+.ws-crumbs a:hover{color:#fff}
+.ws-kicker{
+  margin:0 0 .45rem;font-size:.8rem;letter-spacing:.04em;
+  color:#f0b48a;font-weight:700;
+}
+.ws-brand{
+  margin:0 0 .75rem;
+  font-size:clamp(1.7rem,4vw,2.6rem);
+  line-height:1.15;letter-spacing:-.02em;
+}
+.ws-lead{
+  margin:0 0 1.25rem;max-width:46ch;color:#c5d2da;font-size:1.02rem;
+}
+.ws-cta-row{display:flex;flex-wrap:wrap;gap:.6rem}
+.ws-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  border-radius:999px;padding:.7rem 1.15rem;font-weight:700;font-size:.9rem;
+  border:0;text-decoration:none;
+}
+.ws-btn--accent{background:var(--ws-accent);color:#fff}
+.ws-btn--accent:hover{background:var(--ws-accent-deep);color:#fff}
+.ws-btn--ghost{
+  background:rgba(255,255,255,.1);color:#fff;
+  border:1px solid rgba(255,255,255,.2);
+}
+.ws-section{padding:2.4rem 0 0}
+.ws-section h2{
+  margin:0 0 .4rem;font-size:clamp(1.25rem,2.5vw,1.65rem);
+}
+.ws-sub{margin:0 0 1.1rem;color:var(--ws-muted);max-width:52ch}
+.ws-features{
+  list-style:none;margin:0;padding:0;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem;
+}
+.ws-features li{
+  background:#fff;border:1px solid var(--ws-line);border-radius:12px;
+  padding:.9rem 1rem;font-weight:650;
+}
+.ws-soon{
+  background:#fff;border:1px dashed rgba(196,92,38,.45);border-radius:14px;
+  padding:1.1rem 1.2rem;color:var(--ws-muted);
+}
+.ws-soon strong{color:var(--ws-accent)}
+.ws-related{display:flex;flex-wrap:wrap;gap:.5rem}
+.ws-related a{
+  background:#fff;border:1px solid var(--ws-line);border-radius:999px;
+  padding:.45rem .9rem;font-size:.88rem;font-weight:650;color:var(--ws-ink);
+  text-decoration:none;
+}
+.ws-related a:hover{border-color:rgba(196,92,38,.45);color:var(--ws-accent)}
+.ws-band{
+  margin-top:2rem;padding:1.6rem 1.4rem;border-radius:18px;color:#fff;
+  background:linear-gradient(120deg,#152029,#1f6f6a 55%,#8f3d12);
+  display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap;
+}
+.ws-band h2{margin:0 0 .3rem;font-size:1.25rem}
+.ws-band p{margin:0;color:#d7e4ea}
+.ws-hub-list{
+  display:grid;gap:.75rem;padding:1.5rem 0 0;
+}
+.ws-hub-item{
+  display:grid;gap:.2rem;padding:1.1rem 1.2rem;border-radius:14px;
+  background:#fff;border:1px solid var(--ws-line);text-decoration:none;color:inherit;
+}
+.ws-hub-item:hover{border-color:rgba(196,92,38,.4);background:#fff8f3}
+.ws-hub-item__title{font-weight:800;font-size:1.05rem}
+.ws-hub-item__short{color:var(--ws-muted);font-size:.9rem}
+.ws-hub-item__go{color:var(--ws-accent);font-weight:700;font-size:.86rem;margin-top:.25rem}
+
+@media (max-width:720px){
+  .ws-features{grid-template-columns:1fr}
+}

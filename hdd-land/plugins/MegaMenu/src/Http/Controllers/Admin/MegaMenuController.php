@@ -17,6 +17,7 @@ class MegaMenuController extends Controller
     {
         MegaMenuPlugin::ensureSchema();
         MegaMenuPlugin::seedDefaultsIfEmpty();
+        MegaMenuPlugin::syncWebsiteSalesMenu();
 
         $tree = MegaMenuItem::query()
             ->with(['children.children.children.children', 'category'])
