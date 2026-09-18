@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=83">
     <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=61">
     <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=22">
-    <link rel="stylesheet" href="{{ asset('css/website-sales.css') }}?v=7">
+    <link rel="stylesheet" href="{{ asset('css/website-sales.css') }}?v=8">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=5">
     <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=24">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
