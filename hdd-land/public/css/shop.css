@@ -10,7 +10,7 @@
   --ok: #0f7a4b;
   --radius: 16px;
   --shadow: 0 8px 28px rgba(26, 29, 35, 0.06);
-  --font: "Estedad", "Estedad Variable", Tahoma, sans-serif;
+  --font: "Vazirmatn", Tahoma, sans-serif;
   --mega-font: var(--font);
   --font-size: 16.5px;
 }
@@ -1273,7 +1273,7 @@ input:focus, select:focus, textarea:focus {
 /* ---- Brand PDP — dense, aligned, monitor-ready ---- */
 .hl-pdp{
   display:grid;gap:.85rem;
-  font-family:"Estedad","Vazirmatn",Tahoma,sans-serif;
+  font-family:"Vazirmatn",Tahoma,sans-serif;
   -webkit-font-smoothing:antialiased;
 }
 .hl-pdp-hero{
@@ -1560,7 +1560,7 @@ input:focus, select:focus, textarea:focus {
 @media (min-width:961px){
   body.site-boxed .mega-nav-pro{
     gap:.05rem;
-    font-family:"Estedad","Estedad Variable",Tahoma,sans-serif;
+    font-family:"Vazirmatn",Tahoma,sans-serif;
     -webkit-font-smoothing:antialiased;
   }
   body.site-boxed .mega-nav-pro .mega-trigger{

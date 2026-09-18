@@ -82,7 +82,7 @@ class Plugin extends BasePlugin
             // Keep mega panels inside the boxed site frame
             'panel_contain' => true,
             'panel_width_mode' => 'shell', // shell = full nav/shell width, item = under trigger
-            'font_family' => 'Estedad',
+            'font_family' => 'Vazirmatn',
             'nav_font_size' => 14,
             'panel_font_size' => 13,
             'org_promo_enabled' => true,
@@ -105,6 +105,9 @@ class Plugin extends BasePlugin
         }
         $out['nav_font_size'] = max(12, min(18, $navFs ?: 14));
         $out['panel_font_size'] = max(12, min(16, $panelFs ?: 13));
+        if (($out['font_family'] ?? '') === 'Estedad' || ($out['font_family'] ?? '') === '') {
+            $out['font_family'] = 'Vazirmatn';
+        }
 
         return $out;
     }
@@ -160,9 +163,9 @@ class Plugin extends BasePlugin
                 ? in_array((string) (is_array($data['panel_contain']) ? end($data['panel_contain']) : $data['panel_contain']), ['1', 'true', 'on', 'yes'], true)
                 : ! empty($current['panel_contain']),
             'panel_width_mode' => in_array(($data['panel_width_mode'] ?? ''), ['shell', 'item'], true) ? $data['panel_width_mode'] : 'shell',
-            'font_family' => array_key_exists((string) ($data['font_family'] ?? 'Estedad'), self::fonts())
-                ? (string) ($data['font_family'] ?? 'Estedad')
-                : 'Estedad',
+            'font_family' => array_key_exists((string) ($data['font_family'] ?? 'Vazirmatn'), self::fonts())
+                ? (string) ($data['font_family'] ?? 'Vazirmatn')
+                : 'Vazirmatn',
             'nav_font_size' => max(12, min(18, (int) ($data['nav_font_size'] ?? 14))),
             'panel_font_size' => max(12, min(16, (int) ($data['panel_font_size'] ?? 13))),
         ]);
@@ -1615,8 +1618,8 @@ TXT,
     public static function fonts(): array
     {
         return [
-            'Estedad' => 'استعداد (گرافیکی ریز — پیشنهادی)',
-            'Vazirmatn' => 'وزیرمتن',
+            'Vazirmatn' => 'وزیرمتن (پیش‌فرض سایت)',
+            'Estedad' => 'استعداد',
             'IRANSansX' => 'ایران‌سنس X',
             'Noto Sans Arabic' => 'Noto Sans Arabic',
             'Cairo' => 'Cairo',

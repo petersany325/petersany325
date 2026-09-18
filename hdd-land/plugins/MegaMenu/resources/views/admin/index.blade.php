@@ -348,7 +348,7 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
           <span>فونت گرافیکی منو</span>
           <select name="font_family" id="mm_font_family">
             @foreach(\Plugins\MegaMenu\Plugin::fonts() as $k=>$lab)
-              <option value="{{ $k }}" @selected(($s['font_family']??'Estedad')===$k)>{{ $lab }}</option>
+              <option value="{{ $k }}" @selected(($s['font_family']??'Vazirmatn')===$k)>{{ $lab }}</option>
             @endforeach
           </select>
         </div>

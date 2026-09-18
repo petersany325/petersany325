@@ -18,13 +18,15 @@
     @endif
     <title>@yield('title', \App\Models\Setting::getValue('shop_name', config('app.name', 'فروشگاه'))) </title>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=82">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=60">
-    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=21">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=83">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=61">
+    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=22">
     <link rel="stylesheet" href="{{ asset('css/website-sales.css') }}?v=7">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=5">
-    <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=23">
+    <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=24">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
     @endif

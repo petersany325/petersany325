@@ -38,7 +38,10 @@
   $panelPadding = max(8, min(48, (int) ($mm['panel_padding'] ?? 16)));
   $panelContain = !isset($mm['panel_contain']) || !empty($mm['panel_contain']);
   $panelWidthMode = in_array(($mm['panel_width_mode'] ?? 'shell'), ['shell', 'item'], true) ? ($mm['panel_width_mode'] ?? 'shell') : 'shell';
-  $fontFamily = trim((string) ($mm['font_family'] ?? 'Estedad'));
+  $fontFamily = trim((string) ($mm['font_family'] ?? 'Vazirmatn'));
+  if ($fontFamily === '' || $fontFamily === 'Estedad') {
+    $fontFamily = 'Vazirmatn';
+  }
   $navFontSize = max(12, min(18, (int) ($mm['nav_font_size'] ?? 14)));
   $panelFontSize = max(12, min(16, (int) ($mm['panel_font_size'] ?? 13)));
   $fontStack = $fontFamily !== ''
@@ -46,8 +49,8 @@
     : 'Vazirmatn, Tahoma, sans-serif';
 @endphp
 @if($menuTree->count())
-@if($fontFamily !== '' && ! in_array($fontFamily, ['Tahoma', 'Arial'], true))
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0/dist/font-face.css">
+@if($googleFontsUrl)
+  <link rel="stylesheet" href="{{ $googleFontsUrl }}">
 @endif
 <nav class="nav mega-nav mega-nav-pro nav-align-{{ $navAlign }} style-{{ $navStyle }} dd-{{ $ddSize }} panel-fx-{{ $panelFx }} panel-bg-{{ $panelBg }} layout-{{ $panelLayout }} {{ $panelContain ? 'mega-contain' : '' }} mega-width-{{ $panelWidthMode }}"
      data-mega-nav

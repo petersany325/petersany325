@@ -42,7 +42,7 @@ class HomePageConfig
             'hero_radius' => 0,
             'hero_pad_y' => 24,
             'hero_pad_x' => 8,
-            'hero_font' => 'Estedad',
+            'hero_font' => 'Vazirmatn',
             'hero_kicker_size' => 14,
             'hero_title_size' => 34,
             'hero_text_size' => 15,
@@ -158,7 +158,12 @@ class HomePageConfig
             $raw = json_decode($raw, true) ?: [];
         }
 
-        return array_merge(self::defaults(), is_array($raw) ? $raw : []);
+        $out = array_merge(self::defaults(), is_array($raw) ? $raw : []);
+        if (($out['hero_font'] ?? '') === 'Estedad' || ($out['hero_font'] ?? '') === '') {
+            $out['hero_font'] = 'Vazirmatn';
+        }
+
+        return $out;
     }
 
     public static function save(array $d): array
@@ -246,7 +251,7 @@ class HomePageConfig
         }
         $fonts = ['Estedad', 'Vazirmatn', 'IRANSansX', 'Dana', 'system-ui'];
         if (! in_array($s['hero_font'], $fonts, true)) {
-            $s['hero_font'] = 'Estedad';
+            $s['hero_font'] = 'Vazirmatn';
         }
         if (! in_array($s['hero_image_fit'], ['cover', 'contain'], true)) {
             $s['hero_image_fit'] = 'cover';

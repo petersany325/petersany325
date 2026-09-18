@@ -1,9 +1,9 @@
-/* Mega Menu Pro v3.4 — sharper Estedad type + RTL + global align */
+/* Mega Menu Pro v3.4 — Vazirmatn + RTL + global align */
 .mega-nav-pro{
   position:relative;z-index:80;gap:.28rem;flex-wrap:wrap;
   display:flex;align-items:center;justify-content:flex-start;
   direction:rtl;text-align:right;
-  font-family:var(--mega-font, "Estedad", "Estedad Variable", Tahoma, sans-serif);
+  font-family:var(--mega-font, "Vazirmatn", Tahoma, sans-serif);
   font-optical-sizing:auto;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
@@ -592,7 +592,7 @@
   min-height:360px;
   direction:rtl;
   text-align:right;
-  font-family:"Estedad","Estedad Variable",Tahoma,sans-serif;
+  font-family:"Vazirmatn",Tahoma,sans-serif;
   -webkit-font-smoothing:antialiased;
 }
 .mega-en-rail{
@@ -793,7 +793,7 @@ body.site-boxed .mega-panel.is-dropdown{
 .mega-nav-pro,
 .mega-nav-pro .mega-trigger,
 .mega-nav-pro .mega-panel{
-  font-family:var(--mega-font,"Estedad","Estedad Variable",Vazirmatn,Tahoma,sans-serif);
+  font-family:var(--mega-font,"Vazirmatn",Tahoma,sans-serif);
   -webkit-font-smoothing:antialiased;
 }
 .mega-nav-pro .mega-trigger{
