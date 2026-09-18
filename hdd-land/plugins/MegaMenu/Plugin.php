@@ -321,6 +321,17 @@ class Plugin extends BasePlugin
         }
 
         try {
+            $cd = base_path('plugins/ContactDesk/Plugin.php');
+            if (is_file($cd)) {
+                require_once $cd;
+                if (class_exists(\Plugins\ContactDesk\Plugin::class)) {
+                    \Plugins\ContactDesk\Plugin::ensureBooted();
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        try {
             \Illuminate\Support\Facades\Event::listen(
                 \Illuminate\Auth\Events\Login::class,
                 [static::class, 'preferStorefrontAfterAdminLogin']
