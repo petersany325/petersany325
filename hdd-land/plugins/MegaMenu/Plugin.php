@@ -299,6 +299,17 @@ class Plugin extends BasePlugin
         }
 
         try {
+            $ad = base_path('plugins/AboutDesk/Plugin.php');
+            if (is_file($ad)) {
+                require_once $ad;
+                if (class_exists(\Plugins\AboutDesk\Plugin::class)) {
+                    \Plugins\AboutDesk\Plugin::ensureBooted();
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        try {
             \Illuminate\Support\Facades\Event::listen(
                 \Illuminate\Auth\Events\Login::class,
                 [static::class, 'preferStorefrontAfterAdminLogin']
