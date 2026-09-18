@@ -1,0 +1,72 @@
+/* WordPress-style frontend admin bar — RTL, above boxed shell */
+html.has-hl-adminbar{margin-top:36px}
+html.has-hl-adminbar body.has-wa-tabbar{scroll-padding-top:36px}
+html.has-hl-adminbar .wa-top,
+html.has-hl-adminbar .site-header,
+html.has-hl-adminbar .hl-header{top:36px}
+
+.hl-adminbar{
+  position:fixed;top:0;left:0;right:0;z-index:100000;
+  height:36px;background:#1d2327;color:#f0f0f1;
+  font-family:"Vazirmatn",Tahoma,sans-serif;
+  font-size:13px;font-weight:650;
+  box-shadow:0 1px 0 rgba(255,255,255,.06);
+}
+.hl-adminbar__inner{
+  display:flex;align-items:stretch;gap:0;
+  width:min(1200px,100%);margin-inline:auto;
+  height:100%;padding:0 .35rem;
+}
+.hl-adminbar a,
+.hl-adminbar button{
+  display:inline-flex;align-items:center;gap:.35rem;
+  height:100%;padding:0 .7rem;
+  color:#f0f0f1;background:transparent;border:0;
+  text-decoration:none;font:inherit;cursor:pointer;white-space:nowrap;
+}
+.hl-adminbar a:hover,
+.hl-adminbar button:hover,
+.hl-adminbar__dd.is-open > button{
+  background:#2c3338;color:#fff;
+}
+.hl-adminbar__brand img{display:block;border-radius:3px}
+.hl-adminbar__brand span{font-weight:800;letter-spacing:.01em}
+.hl-adminbar__where{
+  display:inline-flex;align-items:center;
+  padding:0 .65rem;color:#a7aaad;font-size:12px;font-weight:600;
+  max-width:16ch;overflow:hidden;text-overflow:ellipsis;
+}
+.hl-adminbar__edit{
+  background:#c45c26 !important;color:#fff !important;font-weight:800;
+}
+.hl-adminbar__edit:hover{background:#a84b1c !important}
+.hl-adminbar__panel{font-weight:800}
+.hl-adminbar__grow{flex:1}
+.hl-adminbar__dd{position:relative}
+.hl-adminbar__menu{
+  position:absolute;top:100%;right:0;min-width:220px;
+  background:#2c3338;border:1px solid #3c434a;
+  box-shadow:0 8px 24px rgba(0,0,0,.28);
+  padding:.28rem 0;display:grid;
+}
+.hl-adminbar__menu--end{right:auto;left:0}
+.hl-adminbar__menu[hidden]{display:none}
+.hl-adminbar__menu a,
+.hl-adminbar__menu button{
+  display:flex;width:100%;height:auto;padding:.55rem .85rem;
+  text-align:right;font-weight:650;color:#f0f0f1;
+}
+.hl-adminbar__menu a:hover,
+.hl-adminbar__menu button:hover{background:#1d2327}
+.hl-adminbar__menu form{margin:0}
+
+@media (max-width:820px){
+  html.has-hl-adminbar{margin-top:44px}
+  html.has-hl-adminbar .wa-top,
+  html.has-hl-adminbar .site-header,
+  html.has-hl-adminbar .hl-header{top:44px}
+  .hl-adminbar{height:44px;font-size:12.5px}
+  .hl-adminbar__where,
+  .hl-adminbar__dd:not(.hl-adminbar__dd--user){display:none}
+  .hl-adminbar__edit{padding-inline:.8rem}
+}

@@ -1,5 +1,9 @@
+@php
+  $hlAdminBar = null;
+  try { $hlAdminBar = \App\Support\AdminToolbar::current(); } catch (\Throwable $e) {}
+@endphp
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" @if($hlAdminBar) class="has-hl-adminbar" @endif>
 <head><meta charset="utf-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -27,6 +31,9 @@
     <link rel="stylesheet" href="{{ asset('css/website-sales.css') }}?v=10">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=5">
     <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=24">
+    @if(!empty($hlAdminBar))
+      <link rel="stylesheet" href="{{ asset('css/admin-toolbar.css') }}?v=1">
+    @endif
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
     @endif
@@ -65,7 +72,8 @@
         }
     } catch (\Throwable $e) {}
 @endphp
-<body id="top" class="site-boxed{{ request()->boolean('theme_preview') ? ' theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}">
+<body id="top" class="site-boxed{{ request()->boolean('theme_preview') ? ' theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}{{ !empty($hlAdminBar) ? ' has-hl-adminbar' : '' }}">
+@include('partials.admin-toolbar')
 <div class="site-shell">
 <div class="topbar">
     <div class="container">

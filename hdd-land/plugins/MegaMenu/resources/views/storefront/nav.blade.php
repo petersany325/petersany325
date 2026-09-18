@@ -300,7 +300,10 @@
     <a class="mega-util" href="{{ route('cart.index') }}">سبد ({{ $cartCount }})</a>
     @auth
       @if(auth()->user()->isAdmin())
-        <a class="mega-util" href="{{ route('admin.dashboard') }}">پنل</a>
+        <a class="mega-util" href="{{ url('/admin?panel=1') }}">پنل مدیریت</a>
+        <a class="mega-util" href="{{ url('/admin/mega-menu') }}">ویرایش منو</a>
+      @elseif(method_exists(auth()->user(), 'hasStaffPermission') && auth()->user()->hasStaffPermission('site.mega_menu'))
+        <a class="mega-util" href="{{ url('/admin/mega-menu') }}">ویرایش منو</a>
       @else
         <a class="mega-util" href="{{ route('account.index') }}">حساب من</a>
       @endif
@@ -321,7 +324,10 @@
   <a href="{{ route('cart.index') }}">سبد ({{ $cartCount }})</a>
   @auth
     @if(auth()->user()->isAdmin())
-      <a href="{{ route('admin.dashboard') }}">پنل</a>
+      <a href="{{ url('/admin?panel=1') }}">پنل مدیریت</a>
+      <a href="{{ url('/admin/mega-menu') }}">ویرایش منو</a>
+    @elseif(method_exists(auth()->user(), 'hasStaffPermission') && auth()->user()->hasStaffPermission('site.mega_menu'))
+      <a href="{{ url('/admin/mega-menu') }}">ویرایش منو</a>
     @else
       <a href="{{ route('account.index') }}">حساب من</a>
     @endif

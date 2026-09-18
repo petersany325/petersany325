@@ -1,5 +1,9 @@
+@php
+  $hlAdminBar = null;
+  try { $hlAdminBar = \App\Support\AdminToolbar::current(); } catch (\Throwable $e) {}
+@endphp
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" @if($hlAdminBar) class="has-hl-adminbar" @endif>
 <head><meta charset="utf-8">
   
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -18,6 +22,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=24">
+  @if(!empty($hlAdminBar))
+    <link rel="stylesheet" href="{{ asset('css/admin-toolbar.css') }}?v=1">
+  @endif
 </head>
 @php
   $anim = !empty($s['animations']);
@@ -41,8 +48,9 @@
     'contact' => '☎',
   ];
 @endphp
-<body class="wa-body {{ $anim ? 'wa-anim' : '' }} {{ $compact ? 'wa-compact' : '' }} {{ $drawerOn ? 'has-wa-drawer' : '' }}"
+<body class="wa-body {{ $anim ? 'wa-anim' : '' }} {{ $compact ? 'wa-compact' : '' }} {{ $drawerOn ? 'has-wa-drawer' : '' }}{{ !empty($hlAdminBar) ? ' has-hl-adminbar' : '' }}"
   style="--wa-brand:{{ $s['theme_color'] ?? '#e23d12' }};--wa-bg:{{ $s['background_color'] ?? '#f4f6f9' }};--wa-surface:{{ $s['surface_color'] ?? '#ffffff' }};--wa-ink:{{ $s['text_color'] ?? '#1a1d23' }}">
+@include('partials.admin-toolbar')
 
 <header class="wa-top">
   <div class="wa-top-start">

@@ -336,6 +336,7 @@
 @endphp
 <div class="admin-topbar">
   <button type="button" class="adm-menu-btn" id="admMenuBtn" aria-label="منو">☰ منو</button>
+  <a href="{{ url('/') }}" class="adm-view-site" style="margin-inline-start:.6rem;color:#e2e8f0;font-weight:750;text-decoration:none;white-space:nowrap">مشاهده سایت ←</a>
   <div class="adm-top-user">
     <strong>{{ auth()->user()->name ?? 'مدیر' }}</strong>
     <form action="{{ url('/logout') }}" method="post">@csrf
