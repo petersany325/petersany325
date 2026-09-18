@@ -51,7 +51,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=85">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=86">
     <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=62">
     <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=22">
     <link rel="stylesheet" href="{{ asset('css/website-sales.css') }}?v=10">
