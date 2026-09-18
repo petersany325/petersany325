@@ -99,7 +99,9 @@
     } catch (\Throwable $e) {}
 @endphp
 <body id="top" class="site-boxed{{ request()->boolean('theme_preview') ? ' theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}{{ !empty($hlAdminBar) ? ' has-hl-adminbar' : '' }}">
+@if(view()->exists('partials.admin-toolbar'))
 @include('partials.admin-toolbar')
+@endif
 <div class="site-shell">
 <div class="topbar">
     <div class="container">
