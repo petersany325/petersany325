@@ -680,7 +680,7 @@ class Plugin extends BasePlugin
         $children = [
             ['label' => 'استعلام گارانتی', 'url' => '/serial-check', 'kind' => 'action'],
             ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials', 'kind' => 'action'],
-            ['label' => 'ثبت گارانتی', 'url' => '/serial-check', 'kind' => 'action'],
+            ['label' => 'ثبت گارانتی', 'url' => '/warranty-register', 'kind' => 'action'],
         ];
 
         try {

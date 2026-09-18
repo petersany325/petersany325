@@ -494,7 +494,7 @@ class SiteSync
                 'children' => [
                     ['label' => 'استعلام گارانتی', 'url' => '/serial-check'],
                     ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials'],
-                    ['label' => 'ثبت گارانتی', 'url' => '/serial-check'],
+                    ['label' => 'ثبت گارانتی', 'url' => '/warranty-register'],
                 ],
             ];
         }

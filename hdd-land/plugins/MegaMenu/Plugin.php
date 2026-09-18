@@ -288,6 +288,17 @@ class Plugin extends BasePlugin
         parent::boot();
 
         try {
+            $wd = base_path('plugins/WarrantyDesk/Plugin.php');
+            if (is_file($wd)) {
+                require_once $wd;
+                if (class_exists(\Plugins\WarrantyDesk\Plugin::class)) {
+                    \Plugins\WarrantyDesk\Plugin::ensureBooted();
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        try {
             \Illuminate\Support\Facades\Event::listen(
                 \Illuminate\Auth\Events\Login::class,
                 [static::class, 'preferStorefrontAfterAdminLogin']

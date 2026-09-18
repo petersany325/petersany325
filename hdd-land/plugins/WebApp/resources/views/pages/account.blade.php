@@ -39,6 +39,7 @@
     @endif
     <a href="{{ url('/account/serials') }}">سریال‌ها و گارانتی من <span>‹</span></a>
     <a href="{{ url('/serial-check') }}">استعلام گارانتی <span>‹</span></a>
+    <a href="{{ url('/warranty-register') }}">ثبت گارانتی <span>‹</span></a>
     <a href="{{ url('/account') }}">کارتابل کامل مشتری <span>‹</span></a>
     @if(!empty($s['account_show_full_site']))
       <a href="{{ url('/') }}" target="_blank" rel="noopener">نسخه کامل سایت <span>‹</span></a>
@@ -79,6 +80,7 @@
       <a href="{{ url('/orders/track') }}">پیگیری سفارش <span>‹</span></a>
     @endif
     <a href="{{ url('/serial-check') }}">استعلام گارانتی <span>‹</span></a>
+    <a href="{{ url('/warranty-register') }}">ثبت گارانتی <span>‹</span></a>
     <a href="{{ url('/contact') }}">تماس با ما <span>‹</span></a>
   </div>
 @endif

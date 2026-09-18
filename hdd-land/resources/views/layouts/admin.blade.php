@@ -75,13 +75,14 @@
     'sales' => [
       'title' => 'فروش، سریال و گارانتی',
       'icon' => '🏷️',
-      'open' => $is('serial-sales', 'serial-warranties', 'warranty-companies', 'reports') || request()->is('admin/products/*/serials') || (request()->is('admin/products/create') && (request()->boolean('with_serial') || request()->boolean('with_warranty'))),
+      'open' => $is('serial-sales', 'serial-warranties', 'warranty-companies', 'warranty-register', 'reports') || request()->is('admin/products/*/serials') || (request()->is('admin/products/create') && (request()->boolean('with_serial') || request()->boolean('with_warranty'))),
       'items' => [
         ['label' => 'لیست و ثبت سریال', 'href' => $u('serial-sales'), 'active' => $is('serial-sales') && ! $is('serial-warranties')],
         ['label' => 'ثبت سریع با بارکدخوان', 'href' => $u('serial-sales').'?tab=add', 'active' => $is('serial-sales') && $tab === 'add'],
         ['label' => 'محصول با گارانتی/سریال', 'href' => url('/admin/products/create?with_warranty=1&with_serial=1'), 'active' => request()->is('admin/products/create') && (request()->boolean('with_serial') || request()->boolean('with_warranty'))],
         ['label' => 'شرکت‌های گارانتی', 'href' => $u('warranty-companies'), 'active' => $is('warranty-companies')],
         ['label' => 'لیست گارانتی‌ها', 'href' => $u('serial-warranties'), 'active' => $is('serial-warranties')],
+        ['label' => 'ثبت گارانتی سازمانی', 'href' => $u('warranty-register'), 'active' => $is('warranty-register')],
         ['label' => 'گزارشات فروش', 'href' => $u('reports'), 'active' => $is('reports')],
         ['label' => 'فروش و کمیسیون کارمندان', 'href' => $u('staff/reports'), 'active' => $is('staff/reports')],
         ['label' => 'گزارش حسابداری فروش', 'href' => $u('accounting/reports'), 'active' => $is('accounting/reports')],
@@ -179,7 +180,7 @@
   $groups['shop'] = [
     'title' => 'کالا، انبار و سریال',
     'icon' => '▦',
-    'open' => $is('products', 'featured-products', 'categories', 'orders', 'media', 'serial-sales', 'serial-warranties', 'warranty-companies', 'reports') || request()->is('admin/products/*/serials') || str_contains($path, 'products/display-settings'),
+    'open' => $is('products', 'featured-products', 'categories', 'orders', 'media', 'serial-sales', 'serial-warranties', 'warranty-companies', 'warranty-register', 'reports') || request()->is('admin/products/*/serials') || str_contains($path, 'products/display-settings'),
     'items' => [
       ['icon'=>'▤','label'=>'مدیریت کالاها','href'=>$u('products'),'active'=>$is('products') && !$is('featured-products') && !request()->is('admin/products/create') && !request()->is('admin/products/*/serials') && !str_contains($path,'products/display-settings')],
       ['icon'=>'★','label'=>'محصولات ویژه','href'=>$u('featured-products'),'active'=>$is('featured-products')],
@@ -189,6 +190,7 @@
       ['icon'=>'≡','label'=>'لیست سریال‌ها','href'=>$u('serial-sales').'?tab=list','active'=>$is('serial-sales') && ($tab==='' || $tab==='list')],
       ['icon'=>'✓','label'=>'گارانتی‌ها','href'=>$u('serial-warranties'),'active'=>$is('serial-warranties')],
       ['icon'=>'◆','label'=>'شرکت‌های گارانتی','href'=>$u('warranty-companies'),'active'=>$is('warranty-companies')],
+      ['icon'=>'✎','label'=>'ثبت گارانتی سازمانی','href'=>$u('warranty-register'),'active'=>$is('warranty-register')],
       ['icon'=>'▥','label'=>'دسته‌بندی کالا','href'=>$u('categories'),'active'=>$is('categories') && !str_contains($path,'categories/settings')],
       ['icon'=>'▧','label'=>'کتابخانه تصاویر','href'=>$u('media'),'active'=>$is('media') && !str_contains($path,'media/settings')],
       ['icon'=>'▨','label'=>'سفارش‌ها','href'=>$u('orders'),'active'=>$is('orders')],

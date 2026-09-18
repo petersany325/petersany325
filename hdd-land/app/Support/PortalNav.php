@@ -41,7 +41,7 @@ class PortalNav
                 'children' => [
                     ['label' => 'استعلام گارانتی', 'url' => '/serial-check'],
                     ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials'],
-                    ['label' => 'ثبت گارانتی', 'url' => '/serial-check'],
+                    ['label' => 'ثبت گارانتی', 'url' => '/warranty-register'],
                 ],
             ],
             [
@@ -71,6 +71,7 @@ class PortalNav
                 'children' => [
                     ['label' => 'استعلام گارانتی', 'url' => '/serial-check'],
                     ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials'],
+                    ['label' => 'ثبت گارانتی', 'url' => '/warranty-register'],
                 ],
             ],
             [
@@ -120,6 +121,7 @@ class PortalNav
                     ['label' => 'تیکت پشتیبانی', 'url' => '/account/tickets', 'match' => 'account/tickets', 'icon' => '✉'],
                     ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials', 'match' => 'account/serials', 'icon' => '☰'],
                     ['label' => 'استعلام گارانتی', 'url' => '/serial-check', 'icon' => '⛨'],
+                    ['label' => 'ثبت گارانتی', 'url' => '/warranty-register', 'icon' => '✎'],
                     ['label' => 'تاریخچه چت هوشمند', 'url' => '/account/chat-history', 'match' => 'account/chat-history', 'icon' => '✦'],
                 ],
             ],
@@ -159,7 +161,8 @@ class PortalNav
             ['label' => 'گزارش کار و سود', 'href' => $u('reports'), 'show' => ! empty($perms['reports']), 'active' => str_contains($path, 'staff/reports')],
             ['label' => 'سفارش‌ها', 'href' => $u('orders'), 'show' => ! empty($perms['orders']) || ! empty($perms['sales']), 'active' => str_contains($path, 'staff/orders')],
             ['label' => 'محصولات', 'href' => $u('products'), 'show' => ! empty($perms['products.view']), 'active' => str_contains($path, 'staff/products')],
-            ['label' => 'سریال‌ها / گارانتی', 'href' => $u('serials'), 'show' => ! empty($perms['serials']) || ! empty($perms['sales']), 'active' => str_contains($path, 'staff/serials')],
+            ['label' => 'سریال‌ها / گارانتی', 'href' => $u('serials'), 'show' => ! empty($perms['serials']) || ! empty($perms['sales']), 'active' => str_contains($path, 'staff/serials') && ! str_contains($path, 'warranty-register')],
+            ['label' => 'ثبت گارانتی سازمانی', 'href' => url('/admin/warranty-register'), 'show' => ! empty($perms['serials']) || ! empty($perms['sales']), 'active' => str_contains($path, 'warranty-register')],
             ['label' => 'فروش قطعه', 'href' => $u('sell'), 'show' => ! empty($perms['sales']) || ! empty($perms['orders']) || ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/sell')],
             ['label' => 'پشتیبانی', 'href' => $u('tickets'), 'show' => ! empty($perms['support']), 'active' => str_contains($path, 'staff/tickets')],
             ['label' => 'حسابداری', 'href' => $u('accounting'), 'show' => ! empty($perms['accounting']), 'active' => str_contains($path, 'staff/accounting') && ! str_contains($path, 'staff/sell') && ! str_contains($path, 'staff/accounting/stock') && ! str_contains($path, 'staff/accounting/reports') && ! str_contains($path, 'staff/accounting/checks') && ! str_contains($path, 'staff/accounting/installments') && ! str_contains($path, 'staff/accounting/settings')],
