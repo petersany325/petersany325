@@ -208,6 +208,7 @@
                 <a href="{{ route('products.index') }}">محصولات</a>
                 <a href="{{ url('/app/shop') }}">وب‌اپ فروشگاه</a>
                 <a href="{{ url('/serial-check') }}">استعلام گارانتی</a>
+                <a href="{{ url('/warranty-register') }}">ثبت گارانتی</a>
                 <a href="{{ route('orders.track') }}">پیگیری سفارش</a>
                 @foreach($waQuick as $ql)
                   <a href="{{ url($ql['href']) }}">{{ $ql['label'] }}</a>

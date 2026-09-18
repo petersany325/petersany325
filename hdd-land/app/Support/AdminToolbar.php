@@ -150,6 +150,18 @@ class AdminToolbar
             return compact('label', 'primary', 'links');
         }
 
+        if ($path === 'warranty-register' || str_starts_with($path, 'warranty-register/')) {
+            $label = 'ثبت گارانتی';
+            if ($can('serials')) {
+                $primary = ['label' => 'ویرایش این صفحه', 'url' => url('/admin/warranty-register')];
+                $add(['label' => 'درخواست‌های پوشش', 'url' => url('/admin/warranty-register')]);
+                $add(['label' => 'لیست گارانتی‌ها', 'url' => url('/admin/serial-warranties')]);
+                $add(['label' => 'شرکت‌های گارانتی', 'url' => url('/admin/warranty-companies')]);
+            }
+
+            return compact('label', 'primary', 'links');
+        }
+
         if (in_array($path, ['contact', 'about', 'services', 'training', 'blog'], true)) {
             $label = match ($path) {
                 'contact' => 'تماس',

@@ -20,7 +20,7 @@ class FooterConfig
             'text' => '#f8fafc',
             'muted' => '#94a3b8',
             'column1_title' => 'فروشگاه',
-            'column1_links' => "محصولات|/products\nپیگیری سفارش|/orders/track\nاستعلام گارانتی|/serial-check",
+            'column1_links' => "محصولات|/products\nپیگیری سفارش|/orders/track\nاستعلام گارانتی|/serial-check\nثبت گارانتی|/warranty-register",
             'column2_title' => 'خدمات مشتریان',
             'column2_links' => "حساب کاربری|/account\nپشتیبانی|/account/tickets\nتماس با ما|/contact\nدرباره ما|/about",
             'social_links' => "اینستاگرام|#\nتلگرام|#\nواتساپ|#",
@@ -41,7 +41,13 @@ class FooterConfig
             $raw = json_decode($raw, true) ?: [];
         }
 
-        return array_merge(self::defaults(), is_array($raw) ? $raw : []);
+        $out = array_merge(self::defaults(), is_array($raw) ? $raw : []);
+        $links = (string) ($out['column1_links'] ?? '');
+        if ($links !== '' && ! str_contains($links, '/warranty-register')) {
+            $out['column1_links'] = rtrim($links)."\nثبت گارانتی|/warranty-register";
+        }
+
+        return $out;
     }
 
     public static function save(array $d): void
