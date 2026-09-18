@@ -23,6 +23,10 @@
 - `hamgap-bot/` — کد ربات
 - `hamgap-bot-design/` — دارایی‌های طراحی
 
+### ۳) ریموت‌دسکتاپ داخلی آموزش (`company-remote-desktop/`)
+- `company-remote-desktop/` — host + viewer به زبان C++ (ویندوز، LAN)
+- راهنما: [`company-remote-desktop/README.md`](company-remote-desktop/README.md)
+
 ## نام‌هایی که عمداً اینجا نیستند
 - **Windex / Windex WD** — حذف شده از این ریپو  
 - **WinFOF** — اینجا نیست  
