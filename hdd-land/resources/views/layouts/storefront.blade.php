@@ -1,5 +1,35 @@
+@php
+  $hlAdminBar = null;
+  try { $hlAdminBar = \App\Support\AdminToolbar::current(); } catch (\Throwable $e) {}
+  if (! $hlAdminBar && auth()->check()) {
+    $hlU = auth()->user();
+    $hlIsAdmin = method_exists($hlU, 'isAdmin') && $hlU->isAdmin();
+    $hlIsStaff = method_exists($hlU, 'isStaff') && $hlU->isStaff();
+    if ($hlIsAdmin || $hlIsStaff) {
+      $hlAdminBar = [
+        'user_name' => trim((string) ($hlU->name ?: $hlU->username ?: 'مدیر')),
+        'is_admin' => $hlIsAdmin,
+        'context_label' => 'سایت',
+        'primary' => ['label' => 'ویرایش این صفحه', 'url' => url($hlIsAdmin ? '/admin/hero-studio' : '/staff')],
+        'links' => [],
+        'design' => $hlIsAdmin || (method_exists($hlU, 'hasStaffPermission') && $hlU->hasStaffPermission('site.mega_menu'))
+          ? [
+              ['label' => 'بنر و هیرو', 'url' => url('/admin/hero-studio')],
+              ['label' => 'مگامنو', 'url' => url('/admin/mega-menu')],
+              ['label' => 'صفحه اول', 'url' => url('/admin/homepage-settings')],
+            ] : [],
+        'new' => $hlIsAdmin ? [['label' => 'محصول جدید', 'url' => url('/admin/products/create')]] : [],
+        'panel_url' => url($hlIsAdmin ? '/admin?panel=1' : '/staff'),
+        'panel_label' => $hlIsAdmin ? 'پنل مدیریت' : 'پنل کارمند',
+        'staff_url' => url('/staff'),
+        'account_url' => url('/account'),
+        'home_url' => url('/'),
+      ];
+    }
+  }
+@endphp
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" @if($hlAdminBar) class="has-hl-adminbar" @endif>
 <head><meta charset="utf-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -21,12 +51,15 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=83">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=84">
     <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=61">
     <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=22">
     <link rel="stylesheet" href="{{ asset('css/website-sales.css') }}?v=10">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=5">
     <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=24">
+    @if(!empty($hlAdminBar))
+      <link rel="stylesheet" href="{{ asset('css/admin-toolbar.css') }}?v=1">
+    @endif
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
     @endif
@@ -65,7 +98,10 @@
         }
     } catch (\Throwable $e) {}
 @endphp
-<body id="top" class="site-boxed{{ request()->boolean('theme_preview') ? ' theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}">
+<body id="top" class="site-boxed{{ request()->boolean('theme_preview') ? ' theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}{{ !empty($hlAdminBar) ? ' has-hl-adminbar' : '' }}">
+@if(view()->exists('partials.admin-toolbar'))
+@include('partials.admin-toolbar')
+@endif
 <div class="site-shell">
 <div class="topbar">
     <div class="container">
@@ -97,6 +133,12 @@
         <div class="hl-headbar__utils" aria-label="حساب و سبد">
           <a class="hdr-util" href="{{ url('/cart') }}">سبد خرید@if($cartCount>0)<i>{{ $cartCount }}</i>@endif</a>
           @auth
+            @if(!empty($hlAdminBar))
+              @if(!empty($hlAdminBar['primary']))
+                <a class="hdr-util hdr-util--edit" href="{{ $hlAdminBar['primary']['url'] }}">{{ $hlAdminBar['primary']['label'] }}</a>
+              @endif
+              <a class="hdr-util hdr-util--edit" href="{{ $hlAdminBar['panel_url'] }}">{{ $hlAdminBar['panel_label'] }}</a>
+            @endif
             <a class="hdr-util" href="{{ route('account.index') }}">حساب کاربری</a>
             <form action="{{ url('/logout') }}" method="post" class="hdr-logout">@csrf
               <button type="submit">خروج</button>

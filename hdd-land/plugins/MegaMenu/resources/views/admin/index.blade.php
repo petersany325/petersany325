@@ -450,7 +450,7 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
       </div>
     </div>
 
-    <div style="margin-top:1rem;padding-top:.85rem;border-top:1px solid rgba(255,255,255,.08)">
+    <div id="mm-repair-guides" style="margin-top:1rem;padding-top:.85rem;border-top:1px solid rgba(255,255,255,.08)">
       <div class="mm-sec-title" style="color:#fff;font-size:.92rem;margin-bottom:.45rem">راهنمای فروش سایت تعمیرکاران (کارتابل‌ها)</div>
       <p class="mm-hint" style="margin:0 0 .7rem">برای هر کارتابل عنوان، توضیح کوتاه، متن کامل صفحه و <b>لینک آپارات</b> را تنظیم کنید. آپلود فیلم فقط روی آپارات انجام می‌شود.</p>
       @php $repairGuides = \Plugins\MegaMenu\Plugin::repairShopGuides(false); @endphp

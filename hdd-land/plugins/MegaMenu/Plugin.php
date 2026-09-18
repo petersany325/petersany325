@@ -286,6 +286,37 @@ class Plugin extends BasePlugin
             Cache::put('mega_menu_schema_360', true, now()->addDay());
         }
         parent::boot();
+
+        try {
+            \Illuminate\Support\Facades\Event::listen(
+                \Illuminate\Auth\Events\Login::class,
+                [static::class, 'preferStorefrontAfterAdminLogin']
+            );
+            $router = app('router');
+            $web = $router->getMiddlewareGroups()['web'] ?? [];
+            if (! in_array(\App\Http\Middleware\PreferStorefrontAfterAdminLogin::class, $web, true)) {
+                $router->pushMiddlewareToGroup('web', \App\Http\Middleware\PreferStorefrontAfterAdminLogin::class);
+            }
+        } catch (\Throwable) {
+        }
+    }
+
+    public static function preferStorefrontAfterAdminLogin(object $event): void
+    {
+        $user = $event->user ?? null;
+        if (! $user || ! method_exists($user, 'isAdmin') || ! $user->isAdmin()) {
+            return;
+        }
+        session(['admin_land_on_site' => true]);
+        $intended = (string) session('url.intended', '');
+        $path = trim((string) (parse_url($intended, PHP_URL_PATH) ?: ''), '/');
+        $backend = $path === 'admin' || str_starts_with($path, 'admin/')
+            || $path === 'staff' || str_starts_with($path, 'staff/')
+            || in_array($path, ['login', 'register', 'account'], true)
+            || str_starts_with($path, 'account/');
+        if ($intended === '' || $backend) {
+            session(['url.intended' => url('/')]);
+        }
     }
 
     /**
