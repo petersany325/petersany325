@@ -15,7 +15,13 @@ class AdminToolbar
     {
         $request ??= request();
         $user = $request->user();
-        if (! $user || ! method_exists($user, 'isStaff') || ! $user->isStaff()) {
+        if (! $user) {
+            return null;
+        }
+
+        $isAdmin = method_exists($user, 'isAdmin') && $user->isAdmin();
+        $isStaff = method_exists($user, 'isStaff') && $user->isStaff();
+        if (! $isAdmin && ! $isStaff) {
             return null;
         }
 
@@ -23,8 +29,6 @@ class AdminToolbar
         if ($path === 'admin' || str_starts_with($path, 'admin/') || $path === 'staff' || str_starts_with($path, 'staff/')) {
             return null;
         }
-
-        $isAdmin = method_exists($user, 'isAdmin') && $user->isAdmin();
         $can = static fn (string $perm) => $isAdmin || $user->hasStaffPermission($perm);
 
         $ctx = static::context($request, $path, $can);
