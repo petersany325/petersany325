@@ -332,6 +332,17 @@ class Plugin extends BasePlugin
         }
 
         try {
+            $td = base_path('plugins/TrainingDesk/Plugin.php');
+            if (is_file($td)) {
+                require_once $td;
+                if (class_exists(\Plugins\TrainingDesk\Plugin::class)) {
+                    \Plugins\TrainingDesk\Plugin::ensureBooted();
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        try {
             \Illuminate\Support\Facades\Event::listen(
                 \Illuminate\Auth\Events\Login::class,
                 [static::class, 'preferStorefrontAfterAdminLogin']

@@ -787,6 +787,11 @@ body.site-boxed .mega-panel.is-dropdown{
     padding-top:.5rem;
     border-top:1px solid #e5e7eb;
   }
+  body.site-boxed .header-nav-wrap#headerNavWrap .hl-extra-nav .hl-dd{width:100%}
+  body.site-boxed .header-nav-wrap#headerNavWrap .hl-extra-nav .hl-dd__panel{
+    display:grid !important;position:static;min-width:0;padding:0 .15rem .35rem .85rem;
+    border:0;box-shadow:none;background:transparent
+  }
 }
 
 /* ===== MEGA CONTAIN + GRAPHIC TYPE (admin-driven) ===== */

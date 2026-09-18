@@ -51,8 +51,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=84">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=61">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=85">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=62">
     <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=22">
     <link rel="stylesheet" href="{{ asset('css/website-sales.css') }}?v=10">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=5">
@@ -159,7 +159,33 @@
             @include('mega-menu::storefront.nav')
             <nav class="hl-extra-nav" aria-label="صفحات شرکت">
               <a href="{{ url('/services') }}">خدمات سازمانی</a>
-              <a href="{{ url('/training') }}">آموزش</a>
+              @php
+                $trNav = [];
+                try {
+                  $td = base_path('plugins/TrainingDesk/Plugin.php');
+                  if (is_file($td)) {
+                    require_once $td;
+                    if (class_exists(\Plugins\TrainingDesk\Plugin::class)) {
+                      \Plugins\TrainingDesk\Plugin::ensureBooted();
+                    }
+                  }
+                  if (class_exists(\Plugins\TrainingDesk\src\Support\TrainingCopy::class)) {
+                    $trNav = \Plugins\TrainingDesk\src\Support\TrainingCopy::navItems();
+                  }
+                } catch (\Throwable) {
+                  $trNav = [];
+                }
+              @endphp
+              <div class="hl-dd">
+                <a class="hl-dd__btn" href="{{ url('/training') }}" aria-haspopup="true">آموزش</a>
+                @if($trNav)
+                  <div class="hl-dd__panel">
+                    @foreach($trNav as $trItem)
+                      <a href="{{ url($trItem['url']) }}">{{ $trItem['label'] }}</a>
+                    @endforeach
+                  </div>
+                @endif
+              </div>
               <a href="{{ url('/about') }}">درباره ما</a>
             </nav>
           </div>

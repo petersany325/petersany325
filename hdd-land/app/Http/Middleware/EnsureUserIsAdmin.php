@@ -75,6 +75,9 @@ class EnsureUserIsAdmin
         if ($path === 'admin/contact-page' || str_starts_with($path, 'admin/contact-page/')) {
             return 'site.page_builder';
         }
+        if ($path === 'admin/training-page' || str_starts_with($path, 'admin/training-page/')) {
+            return 'site.page_builder';
+        }
         if (
             $path === 'admin/corporate-home' || str_starts_with($path, 'admin/corporate-home/')
             || $path === 'admin/homepage-settings' || str_starts_with($path, 'admin/homepage-settings/')

@@ -94,6 +94,7 @@
             <span>© {{ now()->year }} {{ $ft['copyright'] }}</span>
             <div>
                 <a href="{{ url('/contact') }}">تماس</a>
+                <a href="{{ url('/training') }}">آموزش</a>
                 <a href="{{ url('/about') }}">درباره ما</a>
                 @if (!empty($ft['show_back_top']))
                     <a href="#top" aria-label="بازگشت به بالای صفحه">↑ بالا</a>
