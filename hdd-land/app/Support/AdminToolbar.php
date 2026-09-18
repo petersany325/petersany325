@@ -173,6 +173,9 @@ class AdminToolbar
             if ($path === 'about' && ($can('site.page_builder') || $can('site.homepage'))) {
                 $primary = ['label' => 'ویرایش این صفحه', 'url' => url('/admin/about-page')];
                 $add($can('site.page_builder') ? ['label' => 'صفحه‌ساز', 'url' => url('/admin/page-builder')] : null);
+            } elseif ($path === 'services' && ($can('site.page_builder') || $can('site.homepage'))) {
+                $primary = ['label' => 'ویرایش این صفحه', 'url' => url('/admin/services-page')];
+                $add($can('site.page_builder') ? ['label' => 'صفحه‌ساز', 'url' => url('/admin/page-builder')] : null);
             } else {
                 $page = static::findBuilderPage($path);
                 if ($page && $can('site.page_builder')) {

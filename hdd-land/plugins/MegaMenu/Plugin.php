@@ -310,6 +310,17 @@ class Plugin extends BasePlugin
         }
 
         try {
+            $sd = base_path('plugins/ServicesDesk/Plugin.php');
+            if (is_file($sd)) {
+                require_once $sd;
+                if (class_exists(\Plugins\ServicesDesk\Plugin::class)) {
+                    \Plugins\ServicesDesk\Plugin::ensureBooted();
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        try {
             \Illuminate\Support\Facades\Event::listen(
                 \Illuminate\Auth\Events\Login::class,
                 [static::class, 'preferStorefrontAfterAdminLogin']

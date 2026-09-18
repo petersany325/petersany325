@@ -132,11 +132,12 @@
     'theme' => [
       'title' => 'تنظیمات قالب',
       'icon' => '🎨',
-      'open' => $is('hero-studio', 'theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'homepage-settings', 'online-home', 'banner-settings', 'about-page'),
+      'open' => $is('hero-studio', 'theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'homepage-settings', 'online-home', 'banner-settings', 'about-page', 'services-page'),
       'items' => [
         ['label' => 'استودیو هیرو مدرن', 'href' => $u('hero-studio'), 'active' => $is('hero-studio', 'theme-builder', 'banner-settings')],
         ['label' => 'بلوک‌ها و محتوای صفحه اول', 'href' => $u('homepage-settings'), 'active' => $is('homepage-settings', 'online-home')],
         ['label' => 'صفحه درباره ما', 'href' => $u('about-page'), 'active' => $is('about-page')],
+        ['label' => 'صفحه خدمات سازمانی', 'href' => $u('services-page'), 'active' => $is('services-page')],
         ['label' => 'نصب / آپدیت قالب', 'href' => $u('theme-templates'), 'active' => $is('theme-templates')],
         ['label' => 'صفحه‌ساز Elementor', 'href' => $u('page-builder'), 'active' => $is('page-builder')],
         ['label' => 'مگامنو', 'href' => $u('mega-menu'), 'active' => $is('mega-menu')],
@@ -265,6 +266,7 @@
     if ($staffCan('site.page_builder')) {
       $themeItems[] = ['label' => 'صفحه‌ساز Elementor', 'href' => $u('page-builder'), 'active' => $is('page-builder')];
       $themeItems[] = ['label' => 'صفحه درباره ما', 'href' => $u('about-page'), 'active' => $is('about-page')];
+      $themeItems[] = ['label' => 'صفحه خدمات سازمانی', 'href' => $u('services-page'), 'active' => $is('services-page')];
     }
     if ($staffCan('site.mega_menu')) {
       $themeItems[] = ['label' => 'مگامنو', 'href' => $u('mega-menu'), 'active' => $is('mega-menu')];
@@ -276,7 +278,7 @@
       $groups['theme'] = [
         'title' => 'تنظیمات قالب',
         'icon' => '🎨',
-        'open' => $is('hero-studio', 'theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'homepage-settings', 'online-home', 'banner-settings', 'footer-settings', 'about-page'),
+        'open' => $is('hero-studio', 'theme-builder', 'theme-templates', 'page-builder', 'mega-menu', 'homepage-settings', 'online-home', 'banner-settings', 'footer-settings', 'about-page', 'services-page'),
         'items' => $themeItems,
       ];
     } else {
