@@ -5,7 +5,8 @@
 namespace crd {
 
 inline constexpr const char* kProductName = "Company Remote Desktop";
-inline constexpr const char* kProductVersion = "0.2.0";
+inline constexpr const char* kProductVersion = "0.3.0";
+inline constexpr const char* kDefaultHubHost = "hdd-land.com";
 inline constexpr std::uint16_t kProtocolVersion = 2;
 inline constexpr std::uint16_t kDefaultPort = 5938;
 inline constexpr int kIdDigits = 9;

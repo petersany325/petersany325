@@ -60,18 +60,19 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     crd::ViewerCli cli = crd::parse_viewer_cli(static_cast<int>(argv.size()), argv.data());
     crd::AppConfig file_cfg;
     if (crd::load_app_config(crd::default_config_path(), file_cfg)) {
-        if (cli.hub_host == "127.0.0.1") {
+        if (!cli.hub_from_cli) {
             cli.hub_host = file_cfg.hub_host;
         }
-        if (cli.port == crd::kDefaultPort) {
+        if (!cli.port_from_cli) {
             cli.port = file_cfg.hub_port;
         }
     }
     if (cli.show_help) {
         MessageBoxW(nullptr,
                     L"Company Remote Desktop — Viewer\n\n"
-                    L"viewer.exe [--id 123456789] [--hub 127.0.0.1] [--port 5938] [--password SECRET]\n\n"
-                    L"Connect by Agent ID through the company Hub.",
+                    L"viewer.exe [--id 123456789] [--password SECRET]\n"
+                    L"           [--hub hdd-land.com] [--port 5938]\n\n"
+                    L"Connect by Agent ID through the company Hub (hdd-land.com:5938).",
                     L"Viewer help", MB_OK | MB_ICONINFORMATION);
         CoUninitialize();
         return 0;

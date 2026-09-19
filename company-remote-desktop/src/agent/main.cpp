@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     cfg.fps = fps;
     if (help) {
         std::printf("Company Remote Desktop — Agent\n\n");
-        std::printf("  agent.exe [--hub 127.0.0.1] [--hub-port 5938] [--password SECRET]\n");
+        std::printf("  agent.exe [--hub hdd-land.com] [--hub-port 5938] [--password SECRET]\n");
         std::printf("            [--quality 62] [--fps 15] [--scale 100]\n\n");
         std::printf("Registers with the company Hub and shows a unique ID.\n");
         return 0;

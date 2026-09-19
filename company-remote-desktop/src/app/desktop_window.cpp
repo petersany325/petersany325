@@ -1,13 +1,16 @@
 #ifdef _WIN32
 
-#include "viewer/viewer_window.hpp"
+#include "app/desktop_window.hpp"
 
 #include "crd/log.hpp"
+#include "crd/util.hpp"
 #include "crd/version.hpp"
 #include "win/jpeg_wic.hpp"
 
+#include <algorithm>
 #include <commctrl.h>
 #include <cstdio>
+#include <cstring>
 #include <windowsx.h>
 
 #pragma comment(lib, "comctl32.lib")
@@ -17,14 +20,18 @@
 namespace crd {
 namespace {
 
-constexpr wchar_t kViewerClass[] = L"CrdViewerWindow";
-constexpr int kToolbarH = 44;
+constexpr wchar_t kClass[] = L"CrdDesktopWindow";
+constexpr int kToolbarH = 108;
 constexpr int kStatusH = 24;
 constexpr UINT WM_CRD_FRAME = WM_APP + 1;
 constexpr UINT WM_CRD_STATUS = WM_APP + 2;
-constexpr int IDC_ID = 1001;
-constexpr int IDC_PASS = 1003;
-constexpr int IDC_CONNECT = 1004;
+constexpr UINT kTimerId = 7;
+constexpr int IDC_COPY = 1101;
+constexpr int IDC_SAVE_PW = 1102;
+constexpr int IDC_REMOTE_ID = 1103;
+constexpr int IDC_REMOTE_PW = 1104;
+constexpr int IDC_CONNECT = 1105;
+constexpr int IDC_UNATTENDED = 1106;
 
 std::wstring utf8_to_wide(const std::string& s) {
     if (s.empty()) {
@@ -57,7 +64,9 @@ void set_edit(HWND hwnd, const std::string& s) { SetWindowTextW(hwnd, utf8_to_wi
 
 } // namespace
 
-int ViewerWindow::run(const ViewerCli& cli) {
+int DesktopWindow::run(AgentRuntime& runtime, AgentStats& stats, const ViewerCli& cli) {
+    runtime_ = &runtime;
+    stats_ = &stats;
     cli_ = cli;
     INITCOMMONCONTROLSEX icc{sizeof(icc), ICC_STANDARD_CLASSES};
     InitCommonControlsEx(&icc);
@@ -76,7 +85,7 @@ int ViewerWindow::run(const ViewerCli& cli) {
     return 0;
 }
 
-bool ViewerWindow::create() {
+bool DesktopWindow::create() {
     WNDCLASSEXW wc{};
     wc.cbSize = sizeof(wc);
     wc.style = CS_HREDRAW | CS_VREDRAW;
@@ -84,62 +93,78 @@ bool ViewerWindow::create() {
     wc.hInstance = GetModuleHandleW(nullptr);
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-    wc.lpszClassName = kViewerClass;
+    wc.lpszClassName = kClass;
     RegisterClassExW(&wc);
 
-    const std::wstring title = utf8_to_wide(std::string(kProductName) + " — Viewer");
-    hwnd_ = CreateWindowExW(0, kViewerClass, title.c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, CW_USEDEFAULT,
-                            CW_USEDEFAULT, 1280, 800, nullptr, nullptr, wc.hInstance, this);
+    hwnd_ = CreateWindowExW(0, kClass, utf8_to_wide(kProductName).c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 1280, 820, nullptr, nullptr, wc.hInstance, this);
     if (!hwnd_) {
         return false;
     }
 
-    auto make_edit = [&](int id, int x, int w, const wchar_t* text, bool password) {
-        DWORD style = WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL | ES_LEFT;
+    auto label = [&](const wchar_t* text, int x, int y, int w) {
+        HWND h = CreateWindowExW(0, L"STATIC", text, WS_CHILD | WS_VISIBLE, x, y, w, 18, hwnd_, nullptr, wc.hInstance,
+                                 nullptr);
+        SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
+        return h;
+    };
+    auto edit = [&](int id, int x, int y, int w, bool password, const wchar_t* text) {
+        DWORD style = WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL;
         if (password) {
             style |= ES_PASSWORD;
         }
-        HWND h = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", text, style, x, 8, w, 26, hwnd_,
+        HWND h = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", text, style, x, y, w, 24, hwnd_,
+                                 reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), wc.hInstance, nullptr);
+        SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
+        return h;
+    };
+    auto btn = [&](int id, int x, int y, int w, const wchar_t* text) {
+        HWND h = CreateWindowExW(0, L"BUTTON", text, WS_CHILD | WS_VISIBLE, x, y, w, 26, hwnd_,
                                  reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), wc.hInstance, nullptr);
         SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
         return h;
     };
 
-    CreateWindowExW(0, L"STATIC", L"Remote ID", WS_CHILD | WS_VISIBLE, 12, 12, 70, 20, hwnd_, nullptr, wc.hInstance,
-                    nullptr);
-    id_edit_ = make_edit(IDC_ID, 84, 160, L"", false);
-    CreateWindowExW(0, L"STATIC", L"Password", WS_CHILD | WS_VISIBLE, 256, 12, 64, 20, hwnd_, nullptr, wc.hInstance,
-                    nullptr);
-    pass_edit_ = make_edit(IDC_PASS, 322, 160, L"", true);
-    connect_btn_ = CreateWindowExW(0, L"BUTTON", L"Connect", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON, 500, 8, 110, 28,
+    label(L"This PC  (your ID — give this to the other person)", 12, 8, 420);
+    my_id_ = CreateWindowExW(0, L"STATIC", L"Connecting to Hub…", WS_CHILD | WS_VISIBLE, 12, 28, 280, 28, hwnd_, nullptr,
+                             wc.hInstance, nullptr);
+    SendMessageW(my_id_, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(SYSTEM_FONT)), TRUE);
+    copy_btn_ = btn(IDC_COPY, 300, 28, 80, L"Copy ID");
+    label(L"Unattended password", 400, 8, 140);
+    unattended_edit_ = edit(IDC_UNATTENDED, 400, 28, 150, true, L"");
+    save_pw_btn_ = btn(IDC_SAVE_PW, 556, 28, 110, L"Save password");
+
+    label(L"Remote ID", 12, 64, 70);
+    remote_id_edit_ = edit(IDC_REMOTE_ID, 84, 62, 160, false, L"");
+    label(L"Password", 256, 64, 70);
+    remote_pw_edit_ = edit(IDC_REMOTE_PW, 328, 62, 160, true, L"");
+    connect_btn_ = CreateWindowExW(0, L"BUTTON", L"Connect", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON, 500, 60, 110, 28,
                                    hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_CONNECT)), wc.hInstance,
                                    nullptr);
     SendMessageW(connect_btn_, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
 
-    status_ = CreateWindowExW(0, L"STATIC", L"Disconnected", WS_CHILD | WS_VISIBLE | SS_LEFT, 12, 0, 400, 20, hwnd_,
-                              nullptr, wc.hInstance, nullptr);
+    status_ = CreateWindowExW(0, L"STATIC", L"Starting…", WS_CHILD | WS_VISIBLE, 12, 0, 600, 20, hwnd_, nullptr,
+                              wc.hInstance, nullptr);
     SendMessageW(status_, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
 
+    if (runtime_) {
+        set_edit(unattended_edit_, runtime_->access_password());
+    }
     if (!cli_.target_id.empty()) {
-        set_edit(id_edit_, cli_.target_id);
-    }
-    if (cli_.hub_host.empty()) {
-        cli_.hub_host = kDefaultHubHost;
-    }
-    if (cli_.port == 0) {
-        cli_.port = kDefaultPort;
+        set_edit(remote_id_edit_, cli_.target_id);
     }
     if (!cli_.password.empty()) {
-        set_edit(pass_edit_, cli_.password);
+        set_edit(remote_pw_edit_, cli_.password);
     }
 
     layout_controls();
     ShowWindow(hwnd_, SW_SHOW);
     UpdateWindow(hwnd_);
+    SetTimer(hwnd_, kTimerId, 400, nullptr);
     return true;
 }
 
-void ViewerWindow::layout_controls() {
+void DesktopWindow::layout_controls() {
     RECT rc{};
     GetClientRect(hwnd_, &rc);
     if (status_) {
@@ -147,7 +172,7 @@ void ViewerWindow::layout_controls() {
     }
 }
 
-RECT ViewerWindow::view_rect() const {
+RECT DesktopWindow::view_rect() const {
     RECT rc{};
     GetClientRect(hwnd_, &rc);
     rc.top = kToolbarH;
@@ -158,28 +183,94 @@ RECT ViewerWindow::view_rect() const {
     return rc;
 }
 
-void ViewerWindow::set_status(const std::string& text) {
-    status_text_ = text;
-    if (hwnd_) {
+void DesktopWindow::set_status(const std::string& text) {
+    if (status_) {
         SetWindowTextW(status_, utf8_to_wide(text).c_str());
     }
 }
 
-void ViewerWindow::on_connect_clicked() {
+void DesktopWindow::refresh_my_id() {
+    if (!stats_ || !my_id_) {
+        return;
+    }
+    std::string id;
+    std::string err;
+    {
+        std::lock_guard<std::mutex> lock(stats_->mu);
+        id = stats_->id;
+        err = stats_->last_error;
+    }
+    std::string line;
+    if (!id.empty()) {
+        line = format_id(id);
+    } else if (!err.empty()) {
+        line = "Hub unreachable — retrying…";
+    } else {
+        line = "Connecting to Hub…";
+    }
+    SetWindowTextW(my_id_, utf8_to_wide(line).c_str());
+
+    if (!connected_.load()) {
+        if (stats_->in_session.load()) {
+            set_status("Someone is connected to this PC");
+        } else if (stats_->online.load()) {
+            set_status(std::string("Online at ") + kDefaultHubHost + " — ready to accept connections");
+        } else if (!err.empty()) {
+            set_status("Cannot reach Hub " + std::string(kDefaultHubHost) + ":" + std::to_string(kDefaultPort) + " — " +
+                       err + " (retrying)");
+        } else {
+            set_status(std::string("Connecting to Hub ") + kDefaultHubHost + "…");
+        }
+    }
+}
+
+void DesktopWindow::copy_id() {
+    if (!stats_) {
+        return;
+    }
+    std::string id;
+    {
+        std::lock_guard<std::mutex> lock(stats_->mu);
+        id = format_id(stats_->id);
+    }
+    if (id.empty()) {
+        return;
+    }
+    const std::wstring w = utf8_to_wide(id);
+    if (!OpenClipboard(hwnd_)) {
+        return;
+    }
+    EmptyClipboard();
+    HGLOBAL mem = GlobalAlloc(GMEM_MOVEABLE, (w.size() + 1) * sizeof(wchar_t));
+    if (mem) {
+        void* p = GlobalLock(mem);
+        if (p) {
+            std::memcpy(p, w.c_str(), (w.size() + 1) * sizeof(wchar_t));
+            GlobalUnlock(mem);
+            SetClipboardData(CF_UNICODETEXT, mem);
+        }
+    }
+    CloseClipboard();
+}
+
+void DesktopWindow::apply_password() {
+    if (runtime_) {
+        runtime_->set_access_password(edit_text(unattended_edit_));
+        set_status("Access password saved");
+    }
+}
+
+void DesktopWindow::on_connect_clicked() {
     if (connected_.load() || running_.load()) {
         stop_session();
         SetWindowTextW(connect_btn_, L"Connect");
-        set_status("Disconnected");
+        set_status("Disconnected from remote");
         return;
     }
-    cli_.target_id = edit_text(id_edit_);
-    if (cli_.hub_host.empty()) {
-        cli_.hub_host = kDefaultHubHost;
-    }
-    if (cli_.port == 0) {
-        cli_.port = kDefaultPort;
-    }
-    cli_.password = edit_text(pass_edit_);
+    cli_.target_id = edit_text(remote_id_edit_);
+    cli_.password = edit_text(remote_pw_edit_);
+    cli_.hub_host = kDefaultHubHost;
+    cli_.port = kDefaultPort;
     if (cli_.target_id.empty() || cli_.password.empty()) {
         set_status("Enter remote ID and password");
         return;
@@ -187,26 +278,24 @@ void ViewerWindow::on_connect_clicked() {
     start_session();
 }
 
-void ViewerWindow::start_session() {
+void DesktopWindow::start_session() {
     stop_session();
     running_.store(true);
     SetWindowTextW(connect_btn_, L"Disconnect");
-    set_status("Connecting to ID " + cli_.target_id + " via " + cli_.hub_host + " ...");
-    net_thread_ = std::thread(&ViewerWindow::net_loop, this);
+    set_status("Connecting to " + format_id(normalize_id(cli_.target_id)) + " …");
+    net_thread_ = std::thread(&DesktopWindow::net_loop, this);
 }
 
-void ViewerWindow::stop_session() {
+void DesktopWindow::stop_session() {
     running_.store(false);
     client_.disconnect();
     connected_.store(false);
-    if (net_thread_.joinable()) {
-        if (std::this_thread::get_id() != net_thread_.get_id()) {
-            net_thread_.join();
-        }
+    if (net_thread_.joinable() && std::this_thread::get_id() != net_thread_.get_id()) {
+        net_thread_.join();
     }
 }
 
-void ViewerWindow::net_loop() {
+void DesktopWindow::net_loop() {
     HelloServer info{};
     std::string err;
     if (!client_.connect_via_hub(cli_.hub_host, cli_.port, cli_.target_id, cli_.password, info, &err)) {
@@ -222,10 +311,10 @@ void ViewerWindow::net_loop() {
     remote_w_ = static_cast<int>(info.desktop_width);
     remote_h_ = static_cast<int>(info.desktop_height);
     if (hwnd_) {
-        auto* text = new std::string("Connected — " + std::to_string(remote_w_) + "x" + std::to_string(remote_h_));
+        auto* text = new std::string("Connected to " + format_id(normalize_id(cli_.target_id)) + " — " +
+                                     std::to_string(remote_w_) + "x" + std::to_string(remote_h_));
         PostMessageW(hwnd_, WM_CRD_STATUS, 1, reinterpret_cast<LPARAM>(text));
     }
-
     while (running_.load() && client_.connected()) {
         IncomingFrame incoming;
         if (!client_.poll(incoming, 50)) {
@@ -252,7 +341,6 @@ void ViewerWindow::net_loop() {
             }
         }
     }
-
     connected_.store(false);
     running_.store(false);
     if (hwnd_) {
@@ -261,7 +349,7 @@ void ViewerWindow::net_loop() {
     }
 }
 
-bool ViewerWindow::map_to_remote(int client_x, int client_y, int& rx, int& ry) const {
+bool DesktopWindow::map_to_remote(int client_x, int client_y, int& rx, int& ry) const {
     const RECT vr = view_rect();
     if (client_x < vr.left || client_y < vr.top || client_x >= vr.right || client_y >= vr.bottom) {
         return false;
@@ -286,22 +374,12 @@ bool ViewerWindow::map_to_remote(int client_x, int client_y, int& rx, int& ry) c
     }
     rx = (client_x - vr.left) * fw / vw;
     ry = (client_y - vr.top) * fh / vh;
-    if (rx < 0) {
-        rx = 0;
-    }
-    if (ry < 0) {
-        ry = 0;
-    }
-    if (rx >= fw) {
-        rx = fw - 1;
-    }
-    if (ry >= fh) {
-        ry = fh - 1;
-    }
+    rx = std::max(0, std::min(rx, fw - 1));
+    ry = std::max(0, std::min(ry, fh - 1));
     return true;
 }
 
-void ViewerWindow::forward_mouse(UINT msg, WPARAM wparam, LPARAM lparam) {
+void DesktopWindow::forward_mouse(UINT msg, WPARAM wparam, LPARAM lparam) {
     if (!connected_.load()) {
         return;
     }
@@ -314,12 +392,10 @@ void ViewerWindow::forward_mouse(UINT msg, WPARAM wparam, LPARAM lparam) {
     if (rx == 0 && ry == 0 && !map_to_remote(x, y, rx, ry) && msg != WM_MOUSEWHEEL) {
         return;
     }
-
     MouseEvent ev{};
     ev.x = static_cast<std::int16_t>(rx);
     ev.y = static_cast<std::int16_t>(ry);
     ev.flags = static_cast<std::uint8_t>(MouseFlags::Move);
-
     switch (msg) {
     case WM_LBUTTONDOWN:
         ev.flags |= static_cast<std::uint8_t>(MouseFlags::LeftDown);
@@ -352,12 +428,12 @@ void ViewerWindow::forward_mouse(UINT msg, WPARAM wparam, LPARAM lparam) {
     client_.send_mouse(ev);
 }
 
-void ViewerWindow::forward_key(UINT msg, WPARAM wparam, LPARAM lparam) {
+void DesktopWindow::forward_key(UINT msg, WPARAM wparam, LPARAM lparam) {
     if (!connected_.load()) {
         return;
     }
     const HWND focus = GetFocus();
-    if (focus == id_edit_ || focus == hub_edit_ || focus == port_edit_ || focus == pass_edit_) {
+    if (focus == remote_id_edit_ || focus == remote_pw_edit_ || focus == unattended_edit_) {
         return;
     }
     KeyEvent ev{};
@@ -367,10 +443,9 @@ void ViewerWindow::forward_key(UINT msg, WPARAM wparam, LPARAM lparam) {
     client_.send_key(ev);
 }
 
-void ViewerWindow::paint_remote(HDC hdc) {
+void DesktopWindow::paint_remote(HDC hdc) {
     RECT vr = view_rect();
     FillRect(hdc, &vr, reinterpret_cast<HBRUSH>(GetStockObject(DKGRAY_BRUSH)));
-
     std::vector<std::uint8_t> copy;
     int w = 0, h = 0;
     {
@@ -382,11 +457,10 @@ void ViewerWindow::paint_remote(HDC hdc) {
     if (copy.empty() || w <= 0 || h <= 0) {
         SetBkMode(hdc, TRANSPARENT);
         SetTextColor(hdc, RGB(220, 220, 220));
-        const wchar_t* hint = L"Connect to a training PC host to view the remote desktop.";
+        const wchar_t* hint = L"Enter a remote ID and password, then Connect. Your own ID is shown above.";
         DrawTextW(hdc, hint, -1, &vr, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
         return;
     }
-
     BITMAPINFO bmi{};
     bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
     bmi.bmiHeader.biWidth = w;
@@ -398,27 +472,37 @@ void ViewerWindow::paint_remote(HDC hdc) {
                   DIB_RGB_COLORS, SRCCOPY);
 }
 
-LRESULT CALLBACK ViewerWindow::wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
-    ViewerWindow* self = nullptr;
+LRESULT CALLBACK DesktopWindow::wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+    DesktopWindow* self = nullptr;
     if (msg == WM_NCCREATE) {
         auto* cs = reinterpret_cast<CREATESTRUCTW*>(lparam);
-        self = static_cast<ViewerWindow*>(cs->lpCreateParams);
+        self = static_cast<DesktopWindow*>(cs->lpCreateParams);
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
         self->hwnd_ = hwnd;
     } else {
-        self = reinterpret_cast<ViewerWindow*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+        self = reinterpret_cast<DesktopWindow*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
     }
     if (!self) {
         return DefWindowProcW(hwnd, msg, wparam, lparam);
     }
-
     switch (msg) {
     case WM_COMMAND:
         if (LOWORD(wparam) == IDC_CONNECT) {
             self->on_connect_clicked();
             return 0;
         }
+        if (LOWORD(wparam) == IDC_COPY) {
+            self->copy_id();
+            return 0;
+        }
+        if (LOWORD(wparam) == IDC_SAVE_PW) {
+            self->apply_password();
+            return 0;
+        }
         break;
+    case WM_TIMER:
+        self->refresh_my_id();
+        return 0;
     case WM_SIZE:
         self->layout_controls();
         return 0;
@@ -458,8 +542,6 @@ LRESULT CALLBACK ViewerWindow::wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
     case WM_MBUTTONDOWN:
     case WM_MBUTTONUP:
     case WM_MOUSEMOVE:
-        self->forward_mouse(msg, wparam, lparam);
-        return 0;
     case WM_MOUSEWHEEL:
         self->forward_mouse(msg, wparam, lparam);
         return 0;
@@ -473,6 +555,7 @@ LRESULT CALLBACK ViewerWindow::wnd_proc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         self->forward_key(msg, wparam, lparam);
         return 0;
     case WM_DESTROY:
+        KillTimer(hwnd, kTimerId);
         self->stop_session();
         PostQuitMessage(0);
         return 0;

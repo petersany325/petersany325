@@ -1,7 +1,9 @@
 #include "crd/byte_io.hpp"
+#include "crd/cli.hpp"
 #include "crd/protocol.hpp"
 #include "crd/sha256.hpp"
 #include "crd/util.hpp"
+#include "crd/version.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -116,6 +118,13 @@ int main() {
     }
     expect(crd::normalize_id("123 456 789") == "123456789", "normalize id");
     expect(crd::format_id("123456789") == "123 456 789", "format id");
+    expect(std::strcmp(crd::kDefaultHubHost, "hdd-land.com") == 0, "default hub host");
+    expect(crd::kDefaultPort == 5938, "default hub port");
+    expect(std::strcmp(crd::kProductVersion, "0.3.0") == 0, "product version 0.3.0");
+    {
+        crd::ViewerCli c;
+        expect(c.hub_host == "hdd-land.com" && c.port == 5938, "viewer cli defaults to production hub");
+    }
 
     if (g_failed) {
         std::printf("%d test(s) failed\n", g_failed);

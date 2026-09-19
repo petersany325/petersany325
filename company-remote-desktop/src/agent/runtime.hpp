@@ -11,7 +11,7 @@
 namespace crd {
 
 struct AgentConfig {
-    std::string hub_host = "127.0.0.1";
+    std::string hub_host = kDefaultHubHost;
     std::uint16_t hub_port = kDefaultPort;
     std::string identity_path;
     std::string access_password;

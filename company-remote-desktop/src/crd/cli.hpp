@@ -20,11 +20,13 @@ struct HostCli {
 };
 
 struct ViewerCli {
-    std::string hub_host = "127.0.0.1";
+    std::string hub_host = kDefaultHubHost;
     std::string target_id;
     std::uint16_t port = kDefaultPort;
     std::string password;
     bool show_help = false;
+    bool hub_from_cli = false;
+    bool port_from_cli = false;
 };
 
 inline bool parse_u16(const char* s, std::uint16_t& out) {
@@ -84,10 +86,12 @@ inline ViewerCli parse_viewer_cli(int argc, char** argv) {
             c.show_help = true;
         } else if ((arg_eq(argv[i], "--hub") || arg_eq(argv[i], "--host") || arg_eq(argv[i], "--ip")) && i + 1 < argc) {
             c.hub_host = argv[++i];
+            c.hub_from_cli = true;
         } else if ((arg_eq(argv[i], "--id") || arg_eq(argv[i], "--target")) && i + 1 < argc) {
             c.target_id = argv[++i];
         } else if ((arg_eq(argv[i], "--hub-port") || arg_eq(argv[i], "--port")) && i + 1 < argc) {
             parse_u16(argv[++i], c.port);
+            c.port_from_cli = true;
         } else if (arg_eq(argv[i], "--password") && i + 1 < argc) {
             c.password = argv[++i];
         }

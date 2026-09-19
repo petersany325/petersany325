@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(company_remote_desktop VERSION 0.2.0 LANGUAGES CXX)
+project(company_remote_desktop VERSION 0.3.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -66,11 +66,24 @@ if(WIN32)
     )
     target_link_libraries(viewer PRIVATE crd_protocol windowscodecs user32 gdi32 ole32 comctl32 shell32)
     target_include_directories(viewer PRIVATE ${CRD_PUBLIC_INC})
+
+    add_executable(CompanyRemoteDesktop WIN32
+        src/app/main.cpp
+        src/app/desktop_window.cpp
+        src/host/desktop_capture.cpp
+        src/host/input_inject.cpp
+        src/win/jpeg_wic.cpp
+    )
+    target_link_libraries(CompanyRemoteDesktop PRIVATE crd_protocol d3d11 dxgi windowscodecs user32 gdi32 ole32
+                          comctl32 shell32)
+    target_include_directories(CompanyRemoteDesktop PRIVATE ${CRD_PUBLIC_INC})
+
     if(MINGW)
         target_link_options(hub PRIVATE -static)
         target_link_options(agent PRIVATE -static)
         target_link_options(host PRIVATE -static)
         target_link_options(viewer PRIVATE -static -municode)
+        target_link_options(CompanyRemoteDesktop PRIVATE -static -municode)
     endif()
 else()
     add_executable(agent src/agent/main.cpp)

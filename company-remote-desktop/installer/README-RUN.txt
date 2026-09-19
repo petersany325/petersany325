@@ -1,20 +1,22 @@
-Company Remote Desktop 0.2.0 — AnyDesk-like IDs (company Hub)
+Company Remote Desktop 0.3.0
 
-1) Company server (or this PC for a demo):
-   hub.exe --bind 0.0.0.0 --port 5938 --data hub-state.db
+Hub is already set to hdd-land.com port 5938. You do not type a server address.
 
-   Firewall on the Hub server:
-   netsh advfirewall firewall add rule name="CRD Hub" dir=in action=allow protocol=TCP localport=5938
+1) Start CompanyRemoteDesktop.exe (or the Start Menu shortcut).
+   The app connects to the Hub and shows This PC ID (example 390 367 767).
+   If the Hub is unreachable it retries and shows that in the status bar.
 
-2) Training PC:
-   Edit config.json so hub_host is the Hub IP/hostname, then run agent.exe
-   First launch shows a new ID (example 390 367 767). Copy it. Set the access password.
+2) Set / save an unattended password on this PC. Give your ID + that password
+   to the other person.
 
-3) Instructor / trainee:
-   viewer.exe --id 390367767 --hub HUB_IP --port 5938 --password THE_ACCESS_PASSWORD
-   Or fill ID + Hub + password in the Viewer window.
+3) Enter their Remote ID + password and click Connect.
+   The Hub relays the session (screen + mouse/keyboard).
 
-You do not need the training PC LAN IP. The Hub relays the session.
+Optional separate apps in this folder:
+  agent.exe   — ID / unattended password only
+  viewer.exe  — connect to a remote ID only
 
-config.json example:
-  { "hub_host": "127.0.0.1", "hub_port": 5938 }
+config.json (already written):
+  { "hub_host": "hdd-land.com", "hub_port": 5938 }
+
+Server operators: see HUB-DEPLOY.md (Linux hub, systemd, firewall TCP 5938).

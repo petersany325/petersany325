@@ -2,37 +2,52 @@
 
 AnyDesk-like remote desktop for **company training PCs**, hosted entirely by you. No AnyDesk cloud.
 
-1. Run **Hub** on a company server (known host + port).
-2. Install **Agent** on each training PC. It registers with the Hub and gets a **unique ID**.
-3. Install **Viewer** on instructor/trainee PCs. Connect with **ID + password** — not the training PC’s LAN IP.
+Production Hub (baked into Agent, Viewer, Setup, and `config.json`):
 
-Windows is the primary Agent/Viewer target (DXGI capture, SendInput, WIC JPEG). The Hub is portable C++ (Windows and Linux).
+**`hdd-land.com` port `5938`**
+
+End users do not type a Hub address. They open one window, see **My ID**, and **Connect to ID**.
+
+1. Run **Hub** on the company server (`hdd-land.com`) — see [HUB-DEPLOY.md](HUB-DEPLOY.md).
+2. Install **Company Remote Desktop** on each PC. It auto-connects to the Hub and shows a unique ID.
+3. Enter the other person’s ID + password and connect. The Hub relays the session.
+
+Windows is the primary desktop target (DXGI capture, SendInput, WIC JPEG). The Hub is portable C++ (Linux x86_64 for production).
 
 ## Apps
 
 | Binary | Where | What |
 | --- | --- | --- |
-| `hub` | Company server | Issues IDs, remembers agents, relays one viewer session per agent |
-| `agent` (`host` is the same app) | Training PC | Shows ID, stays online, captures screen, injects input |
-| `viewer` | Instructor PC | Connects by ID through the Hub |
+| `hub` | Company server (`hdd-land.com`) | Issues IDs, remembers agents, relays one viewer session per agent |
+| `CompanyRemoteDesktop` | Each Windows PC | One window: My ID + Connect to ID (AnyDesk-style) |
+| `agent` | Optional | ID / unattended password only |
+| `viewer` | Optional | Connect to a remote ID only |
 
-CMake targets: `hub`, `agent`, `host`, `viewer`, `crd_protocol`, tests.
+CMake targets: `hub`, `CompanyRemoteDesktop`, `agent`, `host`, `viewer`, `crd_protocol`, tests.
 
-## AnyDesk-like steps
+## Use (Windows)
 
-1. **Server:** `hub.exe --bind 0.0.0.0 --port 5938 --data hub-state.db`  
-   Open inbound TCP **5938** on the server firewall.
-2. Put `config.json` next to Agent/Viewer (or pass `--hub` / `--hub-port`):
+1. Start `CompanyRemoteDesktop.exe`. Status shows **Connecting to Hub hdd-land.com…** then your ID (`390 367 767`).
+2. Save an unattended password. Share **ID + password** with the other person.
+3. Type their Remote ID + password. Click **Connect**.
 
-   ```json
-   { "hub_host": "hub.company.local", "hub_port": 5938 }
-   ```
+If the Hub is down, the ID area shows **Hub unreachable — retrying…** and the status bar names `hdd-land.com:5938`.
 
-3. **Training PC:** start `agent.exe`. First run talks to the Hub, receives an ID such as `390 367 767`, and shows it. Set/save an access password. The ID is stored under `%APPDATA%\CompanyRemoteDesktop\agent.json` and stays the same after reboot.
-4. **Instructor:** start `viewer.exe`, enter that ID, Hub address, and the access password. Click Connect.
-5. Remote screen + mouse/keyboard go through the Hub relay.
+`config.json` next to the exe (also the installer default):
 
-Default Hub for a laptop demo: `127.0.0.1:5938` (run Hub on the same PC).
+```json
+{ "hub_host": "hdd-land.com", "hub_port": 5938 }
+```
+
+Optional CLI override (IT only): `--hub` / `--hub-port`. Do not ship `127.0.0.1` as the production default.
+
+## Deploy Hub (Linux)
+
+See [HUB-DEPLOY.md](HUB-DEPLOY.md): bind `0.0.0.0:5938`, systemd unit, firewall TCP 5938.
+
+```bash
+./hub --bind 0.0.0.0 --port 5938 --data /var/lib/crd/hub-state.db
+```
 
 ## Build (MSVC)
 
@@ -50,23 +65,9 @@ cmake --build company-remote-desktop/build
 ctest --test-dir company-remote-desktop/build --output-on-failure
 ```
 
-## Run (Windows)
-
-```bat
-hub.exe --port 5938 --data hub-state.db
-agent.exe --hub 192.168.1.10 --hub-port 5938
-viewer.exe --id 390367767 --hub 192.168.1.10 --port 5938 --password TrainRoom1
-```
-
-Firewall on the **Hub server** (not each training PC):
-
-```bat
-netsh advfirewall firewall add rule name="CRD Hub" dir=in action=allow protocol=TCP localport=5938
-```
-
 ## Installer
 
-`CompanyRemoteDesktop-Setup-x64.exe` installs Agent + Viewer into Program Files and writes `config.json` (Hub host/port asked during setup). Deploy `hub.exe` on the server from the release zip.
+`CompanyRemoteDesktop-Setup-x64.exe` installs the combined app, writes `config.json` for **hdd-land.com:5938**, and does not ask for a Hub address.
 
 ## Protocol
 
@@ -76,4 +77,4 @@ See [PROTOCOL.md](PROTOCOL.md). Access passwords use SHA-256(nonce || password).
 
 - `test_protocol` — encoding, IDs, SHA-256
 - `test_loopback` — legacy direct host/viewer path
-- `test_hub_relay` — register → ID → viewer-by-ID → frame + input + busy + bad password
+- `test_hub_relay` — register → ID → viewer-by-ID → frame + input + busy + bad password (uses `127.0.0.1` locally)
