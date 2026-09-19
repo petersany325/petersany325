@@ -3,14 +3,6 @@
 declare(strict_types=1);
 
 require __DIR__ . '/bootstrap.php';
-if (!is_file(__DIR__ . '/views.php')) {
-    $viewsUrl = 'https://raw.githubusercontent.com/petersany325/petersany325/de06422b5616f3cfb8a9da229e6a74e4585affca/hdd-land/demo-portal/views.php';
-    $viewsBin = @file_get_contents($viewsUrl);
-    if (is_string($viewsBin) && $viewsBin !== '') {
-        @file_put_contents(__DIR__ . '/views.php', $viewsBin);
-    }
-}
-require __DIR__ . '/views.php';
 
 $cfg = load_config();
 $dbReady = false;
