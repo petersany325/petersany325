@@ -1,27 +1,40 @@
 # Company Remote Desktop
 
-Private LAN remote-desktop for internal training PCs. A trainee or instructor runs the **viewer**; the training machine runs the **host**. The host captures the primary display, streams JPEG frames, and injects mouse/keyboard from the single connected viewer.
+AnyDesk-like remote desktop for **company training PCs**, hosted entirely by you. No AnyDesk cloud.
 
-Windows is the primary (and only full) target. Capture uses **DXGI Desktop Duplication** with a **GDI BitBlt** fallback. Input uses **SendInput**. JPEG uses **Windows Imaging Component**. There is no proprietary RD SDK and no TLS in this MVP.
+1. Run **Hub** on a company server (known host + port).
+2. Install **Agent** on each training PC. It registers with the Hub and gets a **unique ID**.
+3. Install **Viewer** on instructor/trainee PCs. Connect with **ID + password** — not the training PC’s LAN IP.
 
-## Layout
+Windows is the primary Agent/Viewer target (DXGI capture, SendInput, WIC JPEG). The Hub is portable C++ (Windows and Linux).
 
-```
-company-remote-desktop/
-  CMakeLists.txt
-  PROTOCOL.md              Wire format (auth, frames, input)
-  src/crd/                 Shared protocol, TCP, SHA-256, session
-  src/host/                Host app (capture, inject, status window)
-  src/viewer/              Viewer app (Win32 UI + input forward)
-  src/win/                 WIC JPEG encode/decode
-  tests/                   Protocol + TCP loopback tests
-```
+## Apps
 
-CMake targets: `host`, `viewer` (Windows), `crd_protocol`, `test_protocol`, `test_loopback`.
+| Binary | Where | What |
+| --- | --- | --- |
+| `hub` | Company server | Issues IDs, remembers agents, relays one viewer session per agent |
+| `agent` (`host` is the same app) | Training PC | Shows ID, stays online, captures screen, injects input |
+| `viewer` | Instructor PC | Connects by ID through the Hub |
 
-## Build (MSVC / CMake)
+CMake targets: `hub`, `agent`, `host`, `viewer`, `crd_protocol`, tests.
 
-Needs Visual Studio 2019+ (or Build Tools) with the C++ desktop workload and the Windows 10/11 SDK. CMake 3.16+.
+## AnyDesk-like steps
+
+1. **Server:** `hub.exe --bind 0.0.0.0 --port 5938 --data hub-state.db`  
+   Open inbound TCP **5938** on the server firewall.
+2. Put `config.json` next to Agent/Viewer (or pass `--hub` / `--hub-port`):
+
+   ```json
+   { "hub_host": "hub.company.local", "hub_port": 5938 }
+   ```
+
+3. **Training PC:** start `agent.exe`. First run talks to the Hub, receives an ID such as `390 367 767`, and shows it. Set/save an access password. The ID is stored under `%APPDATA%\CompanyRemoteDesktop\agent.json` and stays the same after reboot.
+4. **Instructor:** start `viewer.exe`, enter that ID, Hub address, and the access password. Click Connect.
+5. Remote screen + mouse/keyboard go through the Hub relay.
+
+Default Hub for a laptop demo: `127.0.0.1:5938` (run Hub on the same PC).
+
+## Build (MSVC)
 
 ```bat
 cd company-remote-desktop
@@ -29,100 +42,38 @@ cmake -S . -B build -G "Visual Studio 17 2022" -A x64
 cmake --build build --config Release
 ```
 
-Binaries:
-
-```
-build\Release\host.exe
-build\Release\viewer.exe
-```
-
-Ninja + MSVC is also fine:
-
-```bat
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-```
-
-Optional Linux cross-compile of `host.exe` / `viewer.exe` (MinGW-w64, compile-check only):
+Linux (Hub + tests + headless agent):
 
 ```bash
-sudo apt-get install g++-mingw-w64-x86-64
-cmake -S company-remote-desktop -B company-remote-desktop/build-mingw \
-  -DCMAKE_TOOLCHAIN_FILE=company-remote-desktop/cmake/mingw-w64-x86_64.cmake \
-  -DCRD_BUILD_TESTS=OFF
-cmake --build company-remote-desktop/build-mingw
-```
-
-On Linux/macOS without a toolchain file, CMake builds `crd_protocol` and the tests only (`host` / `viewer` are `#ifdef _WIN32`).
-
-```bash
-cmake -S company-remote-desktop -B company-remote-desktop/build
+cmake -S company-remote-desktop -B company-remote-desktop/build -DCMAKE_CXX_COMPILER=g++
 cmake --build company-remote-desktop/build
 ctest --test-dir company-remote-desktop/build --output-on-failure
 ```
 
-## Run order
+## Run (Windows)
 
-1. **Training PC (host)** — log on as the interactive desktop user (not session 0 / a service).
+```bat
+hub.exe --port 5938 --data hub-state.db
+agent.exe --hub 192.168.1.10 --hub-port 5938
+viewer.exe --id 390367767 --hub 192.168.1.10 --port 5938 --password TrainRoom1
+```
 
-   ```bat
-   host.exe --port 5938 --password TrainRoom1 --quality 62 --fps 15
-   ```
+Firewall on the **Hub server** (not each training PC):
 
-   If `--password` is omitted, the host generates one and shows it in the status window and console.
+```bat
+netsh advfirewall firewall add rule name="CRD Hub" dir=in action=allow protocol=TCP localport=5938
+```
 
-2. **Windows Firewall** on the training PC — allow inbound TCP 5938 (or your port) from the LAN.
+## Installer
 
-   ```bat
-   netsh advfirewall firewall add rule name="Company Remote Desktop Host" dir=in action=allow protocol=TCP localport=5938
-   ```
+`CompanyRemoteDesktop-Setup-x64.exe` installs Agent + Viewer into Program Files and writes `config.json` (Hub host/port asked during setup). Deploy `hub.exe` on the server from the release zip.
 
-3. **Trainee / instructor PC (viewer)**
+## Protocol
 
-   ```bat
-   viewer.exe --host 192.168.1.40 --port 5938 --password TrainRoom1
-   ```
-
-   Or start `viewer.exe` with no args and fill Host / Port / Password, then **Connect**.
-
-4. Click the remote picture to focus it, then use mouse and keyboard. **Disconnect** (or close the window) ends the session cleanly.
-
-Only **one viewer** is accepted. A second connection is rejected as busy until the first disconnects.
-
-### Host flags
-
-| Flag | Default | Meaning |
-| --- | --- | --- |
-| `--port` | `5938` | TCP listen port |
-| `--bind` | `0.0.0.0` | Listen address |
-| `--password` | (random 8 chars) | Shared secret |
-| `--quality` | `62` | JPEG quality 1–100 |
-| `--fps` | `15` | Capture / send cap |
-| `--scale` | `100` | Downscale percent (e.g. `50` for slower LANs) |
-
-### Viewer flags
-
-| Flag | Default | Meaning |
-| --- | --- | --- |
-| `--host` / `--ip` | (UI) | Host IPv4 or name |
-| `--port` | `5938` | Host TCP port |
-| `--password` | (UI) | Shared secret |
-
-## Auth and protocol
-
-Challenge-response: `SHA-256(nonce || UTF-8 password)`. The password is never sent in the clear. The link is still **not encrypted** — treat this as an internal LAN tool. See [PROTOCOL.md](PROTOCOL.md) for framing, message IDs, mouse flags, and how to add H.264 or TLS later.
-
-## Notes and limits (MVP)
-
-- Primary monitor only. DXGI needs an interactive console session; locked screens / UAC secure desktop will stall or fall back.
-- `SendInput` cannot drive a higher-integrity window than the host process. Run the host at the same (or higher) integrity as the apps you need to control. Do not run it as a Windows service.
-- LAN first. TLS, IPv6, clipboard, file transfer, multi-monitor layout, mobile clients, and AD SSO are out of scope.
-- JPEG over TCP is the MVP codec. H.264 is a documented follow-up (`FRAME.codec = 2`).
+See [PROTOCOL.md](PROTOCOL.md). Access passwords use SHA-256(nonce || password). Device identity uses a Hub-issued secret. The Hub relays JPEG frames and input. TLS and NAT hole-punching are documented follow-ups.
 
 ## Tests
 
-```bat
-ctest --test-dir build -C Release --output-on-failure
-```
-
-`test_protocol` checks SHA-256, encoding, and endianness. `test_loopback` runs a real TCP host/viewer handshake, one JPEG payload, mouse/key delivery, busy reject, and bad-password reject (no DXGI required).
+- `test_protocol` — encoding, IDs, SHA-256
+- `test_loopback` — legacy direct host/viewer path
+- `test_hub_relay` — register → ID → viewer-by-ID → frame + input + busy + bad password

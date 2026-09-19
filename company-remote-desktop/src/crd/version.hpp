@@ -5,9 +5,12 @@
 namespace crd {
 
 inline constexpr const char* kProductName = "Company Remote Desktop";
-inline constexpr const char* kProductVersion = "0.1.0";
-inline constexpr std::uint16_t kProtocolVersion = 1;
+inline constexpr const char* kProductVersion = "0.2.0";
+inline constexpr std::uint16_t kProtocolVersion = 2;
 inline constexpr std::uint16_t kDefaultPort = 5938;
+inline constexpr int kIdDigits = 9;
+inline constexpr int kMaxIdBytes = 16;
+inline constexpr int kDeviceSecretBytes = 32;
 inline constexpr int kDefaultJpegQuality = 62; // 1..100
 inline constexpr int kDefaultFps = 15;
 inline constexpr int kMaxPasswordBytes = 128;

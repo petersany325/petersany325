@@ -83,6 +83,47 @@ bool encode_disconnect(std::vector<std::uint8_t>& payload, const DisconnectMsg& 
     return true;
 }
 
+bool encode_role_hello(std::vector<std::uint8_t>& payload, const RoleHello& m) {
+    if (m.id.size() > static_cast<std::size_t>(kMaxIdBytes)) {
+        return false;
+    }
+    payload.clear();
+    write_u16le(payload, m.proto_version);
+    write_u8(payload, static_cast<std::uint8_t>(m.role));
+    write_u8(payload, static_cast<std::uint8_t>(m.id.size()));
+    write_bytes(payload, m.id.data(), m.id.size());
+    return true;
+}
+
+bool encode_assign_id(std::vector<std::uint8_t>& payload, const AssignId& m) {
+    if (m.id.size() > static_cast<std::size_t>(kMaxIdBytes)) {
+        return false;
+    }
+    payload.clear();
+    write_u8(payload, static_cast<std::uint8_t>(m.id.size()));
+    write_bytes(payload, m.id.data(), m.id.size());
+    write_bytes(payload, m.secret, kDeviceSecretBytes);
+    return true;
+}
+
+bool encode_agent_login(std::vector<std::uint8_t>& payload, const AgentLogin& m) {
+    payload.assign(m.digest, m.digest + kSha256Bytes);
+    return true;
+}
+
+bool encode_session_incoming(std::vector<std::uint8_t>& payload) {
+    payload.clear();
+    write_u8(payload, 0);
+    return true;
+}
+
+bool encode_agent_ready(std::vector<std::uint8_t>& payload, const AgentReady& m) {
+    payload.clear();
+    write_u32le(payload, m.desktop_width);
+    write_u32le(payload, m.desktop_height);
+    return true;
+}
+
 bool decode_hello_client(const std::vector<std::uint8_t>& payload, HelloClient& m) {
     ByteReader r(payload);
     return r.u16le(m.proto_version) && r.u16le(m.flags) && expect_empty(r);
@@ -160,6 +201,44 @@ bool decode_disconnect(const std::vector<std::uint8_t>& payload, DisconnectMsg& 
     return true;
 }
 
+bool decode_role_hello(const std::vector<std::uint8_t>& payload, RoleHello& m) {
+    ByteReader r(payload);
+    std::uint8_t role = 0, id_len = 0;
+    if (!r.u16le(m.proto_version) || !r.u8(role) || !r.u8(id_len)) {
+        return false;
+    }
+    if (id_len > kMaxIdBytes || r.remaining() != id_len) {
+        return false;
+    }
+    m.role = static_cast<PeerRole>(role);
+    m.id.assign(reinterpret_cast<const char*>(r.remaining_data()), id_len);
+    return true;
+}
+
+bool decode_assign_id(const std::vector<std::uint8_t>& payload, AssignId& m) {
+    ByteReader r(payload);
+    std::uint8_t id_len = 0;
+    if (!r.u8(id_len) || id_len == 0 || id_len > kMaxIdBytes || r.remaining() != static_cast<std::size_t>(id_len) + kDeviceSecretBytes) {
+        return false;
+    }
+    m.id.assign(reinterpret_cast<const char*>(r.remaining_data()), id_len);
+    r.skip(id_len);
+    return r.bytes(m.secret, kDeviceSecretBytes);
+}
+
+bool decode_agent_login(const std::vector<std::uint8_t>& payload, AgentLogin& m) {
+    if (payload.size() != kSha256Bytes) {
+        return false;
+    }
+    std::memcpy(m.digest, payload.data(), kSha256Bytes);
+    return true;
+}
+
+bool decode_agent_ready(const std::vector<std::uint8_t>& payload, AgentReady& m) {
+    ByteReader r(payload);
+    return r.u32le(m.desktop_width) && r.u32le(m.desktop_height) && expect_empty(r);
+}
+
 FramedConnection::FramedConnection(TcpSocket sock) : sock_(std::move(sock)) {}
 
 bool FramedConnection::send(MsgType type, const std::vector<std::uint8_t>& payload) {
@@ -202,6 +281,10 @@ const char* auth_status_text(AuthStatus s) {
         return "host busy (one viewer only)";
     case AuthStatus::BadProtocol:
         return "protocol mismatch";
+    case AuthStatus::Offline:
+        return "agent offline";
+    case AuthStatus::UnknownId:
+        return "unknown ID";
     }
     return "unknown";
 }

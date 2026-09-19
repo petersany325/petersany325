@@ -20,6 +20,16 @@ enum class MsgType : std::uint8_t {
     Key = 0x21,
     Heartbeat = 0x30,
     Disconnect = 0x31,
+    RoleHello = 0x40,
+    AssignId = 0x41,
+    AgentLogin = 0x42,
+    SessionIncoming = 0x43,
+    AgentReady = 0x44,
+};
+
+enum class PeerRole : std::uint8_t {
+    Agent = 1,
+    Viewer = 2,
 };
 
 enum class AuthStatus : std::uint8_t {
@@ -27,6 +37,8 @@ enum class AuthStatus : std::uint8_t {
     BadPassword = 1,
     Busy = 2,
     BadProtocol = 3,
+    Offline = 4,
+    UnknownId = 5,
 };
 
 enum class DisconnectReason : std::uint8_t {
@@ -105,6 +117,26 @@ struct DisconnectMsg {
     DisconnectReason reason = DisconnectReason::User;
 };
 
+struct RoleHello {
+    std::uint16_t proto_version = kProtocolVersion;
+    PeerRole role = PeerRole::Viewer;
+    std::string id; // agent: saved ID (empty = first run); viewer: target ID
+};
+
+struct AssignId {
+    std::string id;
+    std::uint8_t secret[kDeviceSecretBytes]{};
+};
+
+struct AgentLogin {
+    std::uint8_t digest[kSha256Bytes]{};
+};
+
+struct AgentReady {
+    std::uint32_t desktop_width = 0;
+    std::uint32_t desktop_height = 0;
+};
+
 struct Message {
     MsgType type = MsgType::Heartbeat;
     std::vector<std::uint8_t> payload;
@@ -120,6 +152,11 @@ bool encode_mouse(std::vector<std::uint8_t>& payload, const MouseEvent& m);
 bool encode_key(std::vector<std::uint8_t>& payload, const KeyEvent& m);
 bool encode_heartbeat(std::vector<std::uint8_t>& payload, const Heartbeat& m);
 bool encode_disconnect(std::vector<std::uint8_t>& payload, const DisconnectMsg& m);
+bool encode_role_hello(std::vector<std::uint8_t>& payload, const RoleHello& m);
+bool encode_assign_id(std::vector<std::uint8_t>& payload, const AssignId& m);
+bool encode_agent_login(std::vector<std::uint8_t>& payload, const AgentLogin& m);
+bool encode_session_incoming(std::vector<std::uint8_t>& payload);
+bool encode_agent_ready(std::vector<std::uint8_t>& payload, const AgentReady& m);
 
 bool decode_hello_client(const std::vector<std::uint8_t>& payload, HelloClient& m);
 bool decode_hello_server(const std::vector<std::uint8_t>& payload, HelloServer& m);
@@ -131,6 +168,10 @@ bool decode_mouse(const std::vector<std::uint8_t>& payload, MouseEvent& m);
 bool decode_key(const std::vector<std::uint8_t>& payload, KeyEvent& m);
 bool decode_heartbeat(const std::vector<std::uint8_t>& payload, Heartbeat& m);
 bool decode_disconnect(const std::vector<std::uint8_t>& payload, DisconnectMsg& m);
+bool decode_role_hello(const std::vector<std::uint8_t>& payload, RoleHello& m);
+bool decode_assign_id(const std::vector<std::uint8_t>& payload, AssignId& m);
+bool decode_agent_login(const std::vector<std::uint8_t>& payload, AgentLogin& m);
+bool decode_agent_ready(const std::vector<std::uint8_t>& payload, AgentReady& m);
 
 class FramedConnection {
 public:

@@ -34,7 +34,8 @@ private:
     void set_status(const std::string& text);
 
     HWND hwnd_ = nullptr;
-    HWND host_edit_ = nullptr;
+    HWND id_edit_ = nullptr;
+    HWND hub_edit_ = nullptr;
     HWND port_edit_ = nullptr;
     HWND pass_edit_ = nullptr;
     HWND connect_btn_ = nullptr;

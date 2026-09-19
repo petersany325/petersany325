@@ -3,6 +3,7 @@
 #include "crd/log.hpp"
 #include "crd/random.hpp"
 #include "crd/sha256.hpp"
+#include "crd/util.hpp"
 
 #include <chrono>
 #include <cstring>
@@ -212,6 +213,100 @@ void HostServer::handle_session(FramedConnection& conn, TcpSocket& listener, std
             last_hb = t;
         }
     }
+}
+
+bool ViewerClient::connect_via_hub(const std::string& hub_host, std::uint16_t hub_port, const std::string& target_id,
+                                   const std::string& password, HelloServer& info, std::string* err) {
+    disconnect();
+    const std::string id = normalize_id(target_id);
+    if (!valid_id(id)) {
+        if (err) {
+            *err = "ID must be 9 digits";
+        }
+        return false;
+    }
+    TcpSocket sock = TcpSocket::connect_to(hub_host, hub_port, 8000, err);
+    if (!sock.valid()) {
+        return false;
+    }
+    conn_ = std::make_unique<FramedConnection>(std::move(sock));
+
+    RoleHello hello;
+    hello.proto_version = kProtocolVersion;
+    hello.role = PeerRole::Viewer;
+    hello.id = id;
+    if (!send_msg(*conn_, MsgType::RoleHello, encode_role_hello, hello)) {
+        if (err) {
+            *err = "failed to send ROLE_HELLO";
+        }
+        disconnect();
+        return false;
+    }
+
+    Message msg;
+    if (!conn_->recv(msg)) {
+        if (err) {
+            *err = "hub closed";
+        }
+        disconnect();
+        return false;
+    }
+    if (msg.type == MsgType::AuthResult) {
+        AuthResult ar{};
+        decode_auth_result(msg.payload, ar);
+        if (err) {
+            *err = auth_status_text(ar.status);
+        }
+        disconnect();
+        return false;
+    }
+    if (msg.type != MsgType::AuthChallenge) {
+        if (err) {
+            *err = "expected AUTH_CHALLENGE from agent";
+        }
+        disconnect();
+        return false;
+    }
+    AuthChallenge ch{};
+    if (!decode_auth_challenge(msg.payload, ch)) {
+        if (err) {
+            *err = "bad AUTH_CHALLENGE";
+        }
+        disconnect();
+        return false;
+    }
+    AuthResponse resp{};
+    auth_digest(ch.nonce, password, resp.digest);
+    if (!send_msg(*conn_, MsgType::AuthResponse, encode_auth_response, resp)) {
+        if (err) {
+            *err = "failed to send AUTH_RESPONSE";
+        }
+        disconnect();
+        return false;
+    }
+    if (!conn_->recv(msg) || msg.type != MsgType::AuthResult) {
+        if (err) {
+            *err = "expected AUTH_RESULT";
+        }
+        disconnect();
+        return false;
+    }
+    AuthResult ar{};
+    if (!decode_auth_result(msg.payload, ar) || ar.status != AuthStatus::Ok) {
+        if (err) {
+            *err = auth_status_text(ar.status);
+        }
+        disconnect();
+        return false;
+    }
+    if (!conn_->recv(msg) || msg.type != MsgType::HelloServer || !decode_hello_server(msg.payload, info)) {
+        if (err) {
+            *err = "invalid HELLO_SERVER";
+        }
+        disconnect();
+        return false;
+    }
+    return true;
 }
 
 bool ViewerClient::connect(const std::string& host, std::uint16_t port, const std::string& password, HelloServer& info,

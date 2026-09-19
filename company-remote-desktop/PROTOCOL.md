@@ -1,100 +1,97 @@
-# Company Remote Desktop — wire protocol (v1)
+# Company Remote Desktop — wire protocol (v2)
 
-LAN TCP, little-endian, no TLS in this MVP. One viewer per host.
+Company-hosted **Hub** (rendezvous + full TCP relay). Agents and Viewers connect to the Hub. LAN IP of the training PC is not required. No TLS in this MVP. Hole-punching is a follow-up; the Hub relays the session.
+
+Little-endian TCP frames, one viewer per agent.
 
 ## Framing
-
-Every message is:
 
 | Field | Size | Notes |
 | --- | --- | --- |
 | `payload_size` | `uint32le` | Bytes that follow (`type` + payload). Max 12 MiB. |
-| `type` | `uint8` | See table below. |
+| `type` | `uint8` | See table. |
 | `payload` | `payload_size - 1` | Type-specific. |
 
-`payload_size` is never zero.
+## Roles and IDs
+
+- **Agent ID**: 9 digits, shown as `123 456 789`. Issued by the Hub on first registration.
+- **Device secret**: 32 random bytes. Hub stores it; Agent persists it. Used only for Agent↔Hub login.
+- **Access password**: set on the Agent. Viewers prove it with SHA-256. Hub never sees the password.
+
+```
+device_login = SHA-256( nonce[16] || device_secret[32] )
+access_digest = SHA-256( nonce[16] || UTF-8(password) )
+```
 
 ## Message types
 
 | Type | ID | Direction | Payload |
 | --- | --- | --- | --- |
-| `HELLO_CLIENT` | `0x01` | viewer → host | `u16 version`, `u16 flags` |
-| `HELLO_SERVER` | `0x02` | host → viewer | `u16 version`, `u16 flags`, `u32 width`, `u32 height` |
-| `AUTH_CHALLENGE` | `0x03` | host → viewer | `u8 nonce[16]` |
-| `AUTH_RESPONSE` | `0x04` | viewer → host | `u8 sha256[32]` |
-| `AUTH_RESULT` | `0x05` | host → viewer | `u8 status` |
-| `FRAME` | `0x10` | host → viewer | `u32 w`, `u32 h`, `u32 seq`, `u8 codec`, `u32 nbytes`, `u8 jpeg[nbytes]` |
-| `MOUSE` | `0x20` | viewer → host | `u8 flags`, `i16 x`, `i16 y`, `i16 wheel` |
-| `KEY` | `0x21` | viewer → host | `u16 vk`, `u8 down`, `u8 extended` |
-| `HEARTBEAT` | `0x30` | either | `u32 tick_ms` |
+| `HELLO_CLIENT` | `0x01` | legacy LAN viewer→host | `u16 ver`, `u16 flags` |
+| `HELLO_SERVER` | `0x02` | agent→viewer (relayed) | `u16 ver`, `u16 flags`, `u32 w`, `u32 h` |
+| `AUTH_CHALLENGE` | `0x03` | hub→agent or agent→viewer | `u8 nonce[16]` |
+| `AUTH_RESPONSE` | `0x04` | viewer→agent (relayed) | `u8 sha256[32]` |
+| `AUTH_RESULT` | `0x05` | hub or agent | `u8 status` |
+| `FRAME` | `0x10` | agent→viewer | JPEG frame (same as v1) |
+| `MOUSE` | `0x20` | viewer→agent | `u8 flags`, `i16 x`, `i16 y`, `i16 wheel` |
+| `KEY` | `0x21` | viewer→agent | `u16 vk`, `u8 down`, `u8 ext` |
+| `HEARTBEAT` | `0x30` | agent↔hub, either side in session | `u32 tick_ms` |
 | `DISCONNECT` | `0x31` | either | `u8 reason` |
+| `ROLE_HELLO` | `0x40` | agent or viewer → hub | `u16 ver`, `u8 role`, `u8 id_len`, `id[]` |
+| `ASSIGN_ID` | `0x41` | hub→agent | `u8 id_len`, `id[]`, `u8 secret[32]` |
+| `AGENT_LOGIN` | `0x42` | agent→hub | `u8 device_login[32]` |
+| `SESSION_INCOMING` | `0x43` | hub→agent | `u8 reserved` |
+| `AGENT_READY` | `0x44` | agent→hub | `u32 w`, `u32 h` |
 
-`version` must be `1`. `flags` are reserved (send `0`).
+`role`: `1` = Agent, `2` = Viewer. `version` must be `2`.
 
-`HELLO_SERVER` width/height are the streamed frame size (after optional `--scale`).
+`AUTH_RESULT.status`: `0` ok, `1` bad password, `2` busy, `3` protocol, `4` offline, `5` unknown ID.
 
-## Auth (shared secret)
-
-Password is **not** sent on the wire.
-
-```
-digest = SHA-256( nonce[16] || UTF-8(password) )
-```
-
-`AUTH_RESULT.status`:
-
-| Value | Meaning |
-| --- | --- |
-| `0` | OK — host begins streaming |
-| `1` | Bad password |
-| `2` | Busy (another viewer is connected) |
-| `3` | Protocol mismatch |
-
-A second TCP client while a session is live is closed after `AUTH_RESULT=Busy` and `DISCONNECT`.
-
-## Session sequence
+## Agent register (first run)
 
 ```
-viewer                          host
-   |-- HELLO_CLIENT ----------->|
-   |<-- HELLO_SERVER -----------|
-   |<-- AUTH_CHALLENGE ---------|
-   |-- AUTH_RESPONSE ---------->|
-   |<-- AUTH_RESULT ------------|
-   |<-- FRAME / HEARTBEAT ------|
-   |-- MOUSE / KEY / HEARTBEAT >|
-   |-- DISCONNECT ------------->|
+agent                         hub
+  |-- ROLE_HELLO (role=agent, id empty) -->
+  |<-- ASSIGN_ID (id + device secret) -----
+  |   persist id + secret locally
+  |-- HEARTBEAT / wait for SESSION_INCOMING
 ```
 
-## Frames
+## Agent login (later starts)
 
-`codec = 1` is JPEG (WIC on Windows). `seq` increases per sent frame.
+```
+  |-- ROLE_HELLO (role=agent, saved id) -->
+  |<-- AUTH_CHALLENGE ---------------------
+  |-- AGENT_LOGIN (SHA-256(nonce||secret))
+  |<-- AUTH_RESULT ok ---------------------
+```
 
-Mouse `x,y` are in **frame pixels** (same space as `FRAME` / `HELLO_SERVER`). The host maps them onto the real primary desktop before `SendInput`.
+## Viewer session by ID (relay)
 
-Mouse `flags` bits:
+```
+viewer                        hub                         agent
+  |-- ROLE_HELLO (role=viewer, target id) ->|
+  |                                         |-- SESSION_INCOMING ------->|
+  |<-- AUTH_CHALLENGE (relayed) ------------|<-- AUTH_CHALLENGE ---------|
+  |-- AUTH_RESPONSE (access digest) ------->|-- AUTH_RESPONSE ---------->|
+  |<-- AUTH_RESULT -------------------------|<-- AUTH_RESULT ------------|
+  |<-- HELLO_SERVER ------------------------|<-- HELLO_SERVER -----------|
+  |<-- FRAME -------------------------------|<-- FRAME ------------------|
+  |-- MOUSE / KEY ------------------------->|-- MOUSE / KEY ------------>|
+```
 
-| Bit | Name |
-| --- | --- |
-| 0 | Move |
-| 1 | LeftDown |
-| 2 | LeftUp |
-| 3 | RightDown |
-| 4 | RightUp |
-| 5 | MiddleDown |
-| 6 | MiddleUp |
-| 7 | Wheel (`wheel` is Win32 wheel delta, typically ±120) |
+If the ID is unknown/offline/busy the Hub replies `AUTH_RESULT` immediately and does not start a relay.
 
-`KEY.vk` is a Windows virtual-key code. `extended` is 1 for extended keys (arrows, right Ctrl, etc.).
+## Frames and input
 
-`DISCONNECT.reason`: `0` user, `1` error, `2` busy, `3` shutdown.
+Unchanged from v1: JPEG `codec=1`, mouse in streamed-frame pixels, Windows VK codes. See the v1 notes in git history for bit flags.
 
-## Heartbeat
+## Persistence
 
-The host sends `HEARTBEAT` about every 2 seconds. The viewer may send them as well. There is no mandatory timeout in MVP; a dropped TCP connection ends the session.
+Hub writes `hub-state.db` (table file, `CRDH1` header): `id`, device secret, created, last_seen. Heartbeats update last_seen. An ID is **online** only while the Agent TCP connection is up.
 
-## Follow-ups (not in MVP)
+## Follow-ups
 
-- TLS 1.2+ (or QUIC) around the same messages
-- H.264 (`codec = 2`) instead of JPEG
-- IPv6, multi-monitor, clipboard, file transfer, AD SSO
+- TLS around the same messages
+- UDP/TCP hole-punching so media can skip the Hub
+- H.264 (`codec=2`), IPv6, clipboard, multi-monitor, AD SSO

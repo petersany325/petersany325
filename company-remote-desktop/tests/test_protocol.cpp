@@ -1,6 +1,7 @@
 #include "crd/byte_io.hpp"
 #include "crd/protocol.hpp"
 #include "crd/sha256.hpp"
+#include "crd/util.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -102,6 +103,19 @@ int main() {
         std::uint32_t v = 0;
         expect(r.u32le(v) && v == 0x01020304 && r.empty(), "u32le endian");
     }
+    {
+        crd::RoleHello in{};
+        in.proto_version = 2;
+        in.role = crd::PeerRole::Viewer;
+        in.id = "123456789";
+        crd::RoleHello out{};
+        std::vector<std::uint8_t> p;
+        expect(crd::encode_role_hello(p, in) && crd::decode_role_hello(p, out) && out.id == "123456789" &&
+                   out.role == crd::PeerRole::Viewer,
+               "role hello viewer id");
+    }
+    expect(crd::normalize_id("123 456 789") == "123456789", "normalize id");
+    expect(crd::format_id("123456789") == "123 456 789", "format id");
 
     if (g_failed) {
         std::printf("%d test(s) failed\n", g_failed);

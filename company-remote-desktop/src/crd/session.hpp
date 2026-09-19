@@ -70,6 +70,8 @@ class ViewerClient {
 public:
     bool connect(const std::string& host, std::uint16_t port, const std::string& password, HelloServer& info,
                  std::string* err);
+    bool connect_via_hub(const std::string& hub_host, std::uint16_t hub_port, const std::string& target_id,
+                         const std::string& password, HelloServer& info, std::string* err);
     bool poll(IncomingFrame& incoming, int timeout_ms);
     bool send_mouse(const MouseEvent& ev);
     bool send_key(const KeyEvent& ev);

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(company_remote_desktop VERSION 0.1.0 LANGUAGES CXX)
+project(company_remote_desktop VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,25 +22,40 @@ add_library(crd_protocol STATIC
     src/crd/tcp_socket.cpp
     src/crd/protocol.cpp
     src/crd/session.cpp
+    src/crd/util.cpp
+    src/crd/config.cpp
+    src/crd/identity.cpp
+    src/hub/store.cpp
+    src/hub/server.cpp
+    src/agent/runtime.cpp
 )
 target_include_directories(crd_protocol PUBLIC ${CRD_PUBLIC_INC})
 
 if(WIN32)
-    target_link_libraries(crd_protocol PUBLIC ws2_32 bcrypt)
+    target_link_libraries(crd_protocol PUBLIC ws2_32 bcrypt shell32)
 else()
     find_package(Threads REQUIRED)
     target_link_libraries(crd_protocol PUBLIC Threads::Threads)
 endif()
 
-# Host / viewer are real Windows apps (DXGI, WIC, SendInput, Win32).
+add_executable(hub src/hub/main.cpp)
+target_link_libraries(hub PRIVATE crd_protocol)
+target_include_directories(hub PRIVATE ${CRD_PUBLIC_INC})
+
 if(WIN32)
-    add_executable(host
-        src/host/main.cpp
+    set(AGENT_SOURCES
+        src/agent/main.cpp
+        src/agent/agent_window.cpp
         src/host/desktop_capture.cpp
         src/host/input_inject.cpp
-        src/host/host_window.cpp
         src/win/jpeg_wic.cpp
     )
+    add_executable(agent ${AGENT_SOURCES})
+    target_link_libraries(agent PRIVATE crd_protocol d3d11 dxgi windowscodecs user32 gdi32 ole32)
+    target_include_directories(agent PRIVATE ${CRD_PUBLIC_INC})
+
+    # Compatibility name used by older shortcuts.
+    add_executable(host ${AGENT_SOURCES})
     target_link_libraries(host PRIVATE crd_protocol d3d11 dxgi windowscodecs user32 gdi32 ole32)
     target_include_directories(host PRIVATE ${CRD_PUBLIC_INC})
 
@@ -52,10 +67,15 @@ if(WIN32)
     target_link_libraries(viewer PRIVATE crd_protocol windowscodecs user32 gdi32 ole32 comctl32 shell32)
     target_include_directories(viewer PRIVATE ${CRD_PUBLIC_INC})
     if(MINGW)
-        # Standalone Windows zip: no libgcc / libstdc++ / winpthread DLLs.
+        target_link_options(hub PRIVATE -static)
+        target_link_options(agent PRIVATE -static)
         target_link_options(host PRIVATE -static)
         target_link_options(viewer PRIVATE -static -municode)
     endif()
+else()
+    add_executable(agent src/agent/main.cpp)
+    target_link_libraries(agent PRIVATE crd_protocol)
+    target_include_directories(agent PRIVATE ${CRD_PUBLIC_INC})
 endif()
 
 if(CRD_BUILD_TESTS)
@@ -67,4 +87,8 @@ if(CRD_BUILD_TESTS)
     add_executable(test_loopback tests/test_loopback.cpp)
     target_link_libraries(test_loopback PRIVATE crd_protocol)
     add_test(NAME loopback COMMAND test_loopback)
+
+    add_executable(test_hub_relay tests/test_hub_relay.cpp)
+    target_link_libraries(test_hub_relay PRIVATE crd_protocol)
+    add_test(NAME hub_relay COMMAND test_hub_relay)
 endif()

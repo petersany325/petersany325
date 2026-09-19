@@ -122,4 +122,12 @@ void auth_digest(const std::uint8_t nonce[16], const std::string& password, std:
     sha256(buf.data(), buf.size(), out);
 }
 
+void device_login_digest(const std::uint8_t nonce[16], const std::uint8_t secret[32], std::uint8_t out[32]) {
+    std::vector<std::uint8_t> buf;
+    buf.resize(16 + 32);
+    std::memcpy(buf.data(), nonce, 16);
+    std::memcpy(buf.data() + 16, secret, 32);
+    sha256(buf.data(), buf.size(), out);
+}
+
 } // namespace crd

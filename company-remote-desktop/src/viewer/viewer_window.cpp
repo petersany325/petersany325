@@ -22,7 +22,8 @@ constexpr int kToolbarH = 44;
 constexpr int kStatusH = 24;
 constexpr UINT WM_CRD_FRAME = WM_APP + 1;
 constexpr UINT WM_CRD_STATUS = WM_APP + 2;
-constexpr int IDC_HOST = 1001;
+constexpr int IDC_ID = 1001;
+constexpr int IDC_HUB = 1005;
 constexpr int IDC_PORT = 1002;
 constexpr int IDC_PASS = 1003;
 constexpr int IDC_CONNECT = 1004;
@@ -65,7 +66,7 @@ int ViewerWindow::run(const ViewerCli& cli) {
     if (!create()) {
         return 1;
     }
-    if (!cli_.host.empty() && !cli_.password.empty()) {
+    if (!cli_.target_id.empty() && !cli_.password.empty()) {
         on_connect_clicked();
     }
     MSG msg{};
@@ -106,15 +107,17 @@ bool ViewerWindow::create() {
         return h;
     };
 
-    CreateWindowExW(0, L"STATIC", L"Host", WS_CHILD | WS_VISIBLE, 12, 12, 36, 20, hwnd_, nullptr, wc.hInstance, nullptr);
-    host_edit_ = make_edit(IDC_HOST, 50, 180, L"192.168.1.10", false);
-    CreateWindowExW(0, L"STATIC", L"Port", WS_CHILD | WS_VISIBLE, 240, 12, 32, 20, hwnd_, nullptr, wc.hInstance,
+    CreateWindowExW(0, L"STATIC", L"ID", WS_CHILD | WS_VISIBLE, 12, 12, 22, 20, hwnd_, nullptr, wc.hInstance, nullptr);
+    id_edit_ = make_edit(IDC_ID, 36, 130, L"123 456 789", false);
+    CreateWindowExW(0, L"STATIC", L"Hub", WS_CHILD | WS_VISIBLE, 176, 12, 32, 20, hwnd_, nullptr, wc.hInstance, nullptr);
+    hub_edit_ = make_edit(IDC_HUB, 210, 140, L"127.0.0.1", false);
+    CreateWindowExW(0, L"STATIC", L"Port", WS_CHILD | WS_VISIBLE, 358, 12, 32, 20, hwnd_, nullptr, wc.hInstance,
                     nullptr);
-    port_edit_ = make_edit(IDC_PORT, 274, 60, L"5938", false);
-    CreateWindowExW(0, L"STATIC", L"Password", WS_CHILD | WS_VISIBLE, 344, 12, 64, 20, hwnd_, nullptr, wc.hInstance,
+    port_edit_ = make_edit(IDC_PORT, 392, 56, L"5938", false);
+    CreateWindowExW(0, L"STATIC", L"Password", WS_CHILD | WS_VISIBLE, 456, 12, 64, 20, hwnd_, nullptr, wc.hInstance,
                     nullptr);
-    pass_edit_ = make_edit(IDC_PASS, 410, 160, L"", true);
-    connect_btn_ = CreateWindowExW(0, L"BUTTON", L"Connect", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON, 584, 8, 100, 28,
+    pass_edit_ = make_edit(IDC_PASS, 522, 140, L"", true);
+    connect_btn_ = CreateWindowExW(0, L"BUTTON", L"Connect", WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON, 672, 8, 100, 28,
                                    hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(IDC_CONNECT)), wc.hInstance,
                                    nullptr);
     SendMessageW(connect_btn_, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
@@ -123,8 +126,11 @@ bool ViewerWindow::create() {
                               nullptr, wc.hInstance, nullptr);
     SendMessageW(status_, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
 
-    if (!cli_.host.empty()) {
-        set_edit(host_edit_, cli_.host);
+    if (!cli_.target_id.empty()) {
+        set_edit(id_edit_, cli_.target_id);
+    }
+    if (!cli_.hub_host.empty()) {
+        set_edit(hub_edit_, cli_.hub_host);
     }
     set_edit(port_edit_, std::to_string(cli_.port));
     if (!cli_.password.empty()) {
@@ -170,12 +176,13 @@ void ViewerWindow::on_connect_clicked() {
         set_status("Disconnected");
         return;
     }
-    cli_.host = edit_text(host_edit_);
+    cli_.target_id = edit_text(id_edit_);
+    cli_.hub_host = edit_text(hub_edit_);
     const std::string port_s = edit_text(port_edit_);
     parse_u16(port_s.c_str(), cli_.port);
     cli_.password = edit_text(pass_edit_);
-    if (cli_.host.empty() || cli_.password.empty()) {
-        set_status("Enter host IP and password");
+    if (cli_.target_id.empty() || cli_.password.empty()) {
+        set_status("Enter remote ID and password");
         return;
     }
     start_session();
@@ -185,7 +192,7 @@ void ViewerWindow::start_session() {
     stop_session();
     running_.store(true);
     SetWindowTextW(connect_btn_, L"Disconnect");
-    set_status("Connecting to " + cli_.host + ":" + std::to_string(cli_.port) + " ...");
+    set_status("Connecting to ID " + cli_.target_id + " via " + cli_.hub_host + " ...");
     net_thread_ = std::thread(&ViewerWindow::net_loop, this);
 }
 
@@ -203,7 +210,7 @@ void ViewerWindow::stop_session() {
 void ViewerWindow::net_loop() {
     HelloServer info{};
     std::string err;
-    if (!client_.connect(cli_.host, cli_.port, cli_.password, info, &err)) {
+    if (!client_.connect_via_hub(cli_.hub_host, cli_.port, cli_.target_id, cli_.password, info, &err)) {
         running_.store(false);
         connected_.store(false);
         if (hwnd_) {
@@ -351,7 +358,7 @@ void ViewerWindow::forward_key(UINT msg, WPARAM wparam, LPARAM lparam) {
         return;
     }
     const HWND focus = GetFocus();
-    if (focus == host_edit_ || focus == port_edit_ || focus == pass_edit_) {
+    if (focus == id_edit_ || focus == hub_edit_ || focus == port_edit_ || focus == pass_edit_) {
         return;
     }
     KeyEvent ev{};

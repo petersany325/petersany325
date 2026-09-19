@@ -24,7 +24,7 @@
 - `hamgap-bot-design/` — دارایی‌های طراحی
 
 ### ۳) ریموت‌دسکتاپ داخلی آموزش (`company-remote-desktop/`)
-- `company-remote-desktop/` — host + viewer به زبان C++ (ویندوز، LAN)
+- `company-remote-desktop/` — Hub + Agent + Viewer (شناسه شبیه AnyDesk، سرور خود شرکت)
 - راهنما: [`company-remote-desktop/README.md`](company-remote-desktop/README.md)
 
 ## نام‌هایی که عمداً اینجا نیستند
