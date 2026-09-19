@@ -3,7 +3,8 @@
 @section('title', $course['title'].' | آکادمی سرزمین هارد')
 
 @section('content')
-<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=2">
+@php $priceUrl = url(trim((string) ($copy['cta_url'] ?? '')) ?: '/contact'); @endphp
 <article class="tr-page">
   <header class="tr-hero">
     <div class="tr-wrap">
@@ -54,7 +55,7 @@
                   <td>{{ $row['course'] }}</td>
                   <td>{{ $row['duration'] }}</td>
                   <td>{{ $row['level'] }}</td>
-                  <td class="tr-price">{{ $row['price'] }}</td>
+                  <td class="tr-price"><a href="{{ $priceUrl }}">{{ $row['price'] }}</a></td>
                 </tr>
               @endforeach
             </tbody>

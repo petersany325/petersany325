@@ -68,7 +68,7 @@
         <label>معرفی هیرو<textarea name="{{ $prefix }}_lead" rows="3">{{ $copy[$prefix.'_lead'] }}</textarea></label>
         <label>تعریف کامل دوره<textarea name="{{ $prefix }}_intro" rows="4">{{ $copy[$prefix.'_intro'] }}</textarea></label>
         <label>مخاطب<input name="{{ $prefix }}_audience" value="{{ $copy[$prefix.'_audience'] }}"></label>
-        <label>جدول دوره‌ها و هزینه <small>هر خط: برند|عنوان|مدت|سطح|هزینه</small>
+        <label>جدول دوره‌ها و هزینه <small>هر خط: برند|عنوان|مدت|سطح|تماس بگیرید — سلول هزینه به صفحه تماس لینک می‌شود</small>
           <textarea name="{{ $prefix }}_table" rows="8" dir="rtl">{{ $copy[$prefix.'_table'] }}</textarea>
         </label>
         <label>سیلابس (هر خط یک مورد)<textarea name="{{ $prefix }}_syllabus" rows="8">{{ $copy[$prefix.'_syllabus'] }}</textarea></label>
