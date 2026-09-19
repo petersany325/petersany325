@@ -1032,7 +1032,6 @@ SEC:تشخیص اولیه
 SYL:شناسایی Memberها، Disk Order، اندازه دیسک و Sector
 SYL:Level، Stripe / Block Size، Offset، Parity و Rotation
 SYL:Missing Disk
-SEC:گردش کار Recovery
 WFL:Identify
 WFL:Clone
 WFL:Analyze
@@ -1092,7 +1091,6 @@ SEC:خرابی‌ها
 SYL:NAS Not Booting، RAID Degraded، چند دیسک خراب
 SYL:Failed Rebuild، Metadata / File System خراب
 SYL:خرابی کنترلر یا Firmware
-SEC:گردش کار
 WFL:NAS
 WFL:Member Disks
 WFL:Imaging
@@ -1161,7 +1159,6 @@ SYL:فایل دیتابیس، Log و Transaction Log
 SEC:سناریوها
 SYL:دیتابیس حذف یا خراب، شکست RAID / Storage
 SYL:فایل مفقود، VM خراب، Snapshot شکست‌خورده
-SEC:گردش کار
 WFL:بازیابی Storage
 WFL:دیسک مجازی
 WFL:فایل‌سیستم
