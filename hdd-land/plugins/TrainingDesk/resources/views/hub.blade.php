@@ -3,7 +3,7 @@
 @section('title', $copy['hub_title'].' | سرزمین هارد')
 
 @section('content')
-<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=6">
 <article class="tr-page">
   <header class="tr-hero">
     <div class="tr-wrap">
@@ -34,7 +34,7 @@
       @foreach($courses as $i => $course)
         <article class="tr-card">
           <em>{{ str_pad((string) ($i + 1), 2, '0', STR_PAD_LEFT) }}</em>
-          <small>{{ $course['kicker'] }}</small>
+          <small dir="ltr">{{ $course['kicker'] }}</small>
           <h2>{{ $course['title'] }}</h2>
           <p>{{ $course['card'] }}</p>
           <div class="tr-meta">

@@ -3,7 +3,7 @@
 @section('title', $course['title'].' | آکادمی سرزمین هارد')
 
 @section('content')
-<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=5">
+<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=6">
 @php $priceUrl = url(trim((string) ($copy['cta_url'] ?? '')) ?: '/contact'); @endphp
 <article class="tr-page">
   <header class="tr-hero">
@@ -15,7 +15,7 @@
         <span>/</span>
         <span>{{ $course['title'] }}</span>
       </nav>
-      <p class="tr-kicker">{{ $course['kicker'] }}</p>
+      <p class="tr-kicker" dir="ltr">{{ $course['kicker'] }}</p>
       <h1>{{ $course['title'] }}</h1>
       <p class="tr-lead">{{ $course['lead'] }}</p>
       <div class="tr-meta tr-meta--hero">
@@ -72,7 +72,7 @@
               <em>{{ $mod['code'] }}</em>
               <span>
                 <strong>{{ $mod['title'] }}</strong>
-                @if($mod['en'] !== '')<small>{{ $mod['en'] }}</small>@endif
+                @if($mod['en'] !== '')<small dir="ltr">{{ $mod['en'] }}</small>@endif
               </span>
               <i>{{ trim($mod['level'].($mod['audience'] !== '' ? ' · '.$mod['audience'] : '')) }}</i>
             </summary>
@@ -128,7 +128,7 @@
               @foreach($course['table'] as $row)
                 <tr>
                   <th scope="row">{{ $row['brand'] }}</th>
-                  <td>{{ $row['course'] }}</td>
+                  <td dir="ltr">{{ $row['course'] }}</td>
                   <td>{{ $row['duration'] }}</td>
                   <td>{{ $row['level'] }}</td>
                   <td class="tr-price"><a href="{{ $priceUrl }}">{{ $row['price'] }}</a></td>
