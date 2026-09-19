@@ -8,7 +8,7 @@
 namespace crd {
 
 struct AppConfig {
-    std::string hub_host = "127.0.0.1";
+    std::string hub_host = kDefaultHubHost;
     std::uint16_t hub_port = kDefaultPort;
 };
 
