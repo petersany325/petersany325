@@ -52,7 +52,9 @@ if(WIN32)
     target_link_libraries(viewer PRIVATE crd_protocol windowscodecs user32 gdi32 ole32 comctl32 shell32)
     target_include_directories(viewer PRIVATE ${CRD_PUBLIC_INC})
     if(MINGW)
-        target_link_options(viewer PRIVATE -municode)
+        # Standalone Windows zip: no libgcc / libstdc++ / winpthread DLLs.
+        target_link_options(host PRIVATE -static)
+        target_link_options(viewer PRIVATE -static -municode)
     endif()
 endif()
 
