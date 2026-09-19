@@ -9,6 +9,7 @@
       <p class="ws-kicker">طراحی و فروش سایت</p>
       <h1 class="ws-brand">سایت آماده برای کسب‌وکار شما</h1>
       <p class="ws-lead">از منوی «طراحی و فروش سایت» نوع سایت را انتخاب کنید یا از فهرست زیر وارد صفحه تخصصی همان محصول شوید. جزئیات، امکانات و آموزش داخل همان صفحه است — نه داخل مگامنو.</p>
+      <p class="ws-lead"><a href="https://demo.hdd-land.ir" target="_blank" rel="noopener">دمو زنده چهار محصول — demo.hdd-land.ir</a></p>
     </div>
   </header>
 

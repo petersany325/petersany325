@@ -28,6 +28,7 @@
       <p class="ws-lead">{{ $item['tagline'] }}</p>
       <div class="ws-cta-row">
         <a class="ws-btn ws-btn--accent" href="{{ $contactUrl }}?subject={{ urlencode('درخواست دمو: '.$item['title']) }}">درخواست دمو و قیمت</a>
+        <a class="ws-btn ws-btn--ghost" href="https://demo.hdd-land.ir/?site={{ urlencode($item['slug']) }}" target="_blank" rel="noopener">ورود به دمو زنده</a>
         @if($isRepair)
           <a class="ws-btn ws-btn--ghost" href="{{ url('/sites/repair-shop/staff-menu') }}">منوی کارکنان</a>
           <a class="ws-btn ws-btn--ghost" href="{{ url('/sites/repair-shop/customer-menu') }}">منوی کارتابل مشتری</a>
