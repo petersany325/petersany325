@@ -5,6 +5,15 @@ declare(strict_types=1);
 const DEMO_PIN = '1234';
 const DEMO_SCHEMA_VERSION = '3';
 
+foreach ([
+    dirname(__DIR__) . '/public/_demo_boot.php',
+    dirname(__DIR__) . '/public/_wipe_boot.php',
+] as $leftover) {
+    if (is_file($leftover)) {
+        @unlink($leftover);
+    }
+}
+
 session_name('hl_demo');
 session_set_cookie_params([
     'lifetime' => 0,
