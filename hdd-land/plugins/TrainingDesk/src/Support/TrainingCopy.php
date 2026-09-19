@@ -66,6 +66,7 @@ class TrainingCopy
             'fix_path_title', 'fix_path', 'fix_modules', 'fix_special_title', 'fix_special', 'fix_special_lead', 'fix_tracks_title', 'fix_tracks', 'fix_mods_title',
             'rec_special_lead',
             'ssd_path_title', 'ssd_path', 'ssd_modules', 'ssd_special_title', 'ssd_special', 'ssd_special_lead', 'ssd_tracks_title', 'ssd_tracks', 'ssd_mods_title',
+            'srv_path_title', 'srv_path', 'srv_modules', 'srv_special_title', 'srv_special', 'srv_special_lead', 'srv_tracks_title', 'srv_tracks', 'srv_mods_title',
         ] as $k) {
             if (trim((string) ($out[$k] ?? '')) === '') {
                 $out[$k] = $d[$k] ?? '';
@@ -89,6 +90,14 @@ class TrainingCopy
             || ! str_contains((string) ($out['ssd_modules'] ?? ''), 'SEC:شناخت M.2 NVMe');
         if ($ssdStale) {
             foreach (array_keys(self::ssdDefaults()) as $k) {
+                $out[$k] = $d[$k];
+            }
+        }
+        $srvStale = str_contains((string) ($out['srv_table'] ?? ''), 'RAID کلاسیک')
+            || str_contains((string) ($out['srv_kicker'] ?? ''), 'آموزش سرور و استوریج')
+            || ! str_contains((string) ($out['srv_modules'] ?? ''), 'SEC:مبانی Storage');
+        if ($srvStale) {
+            foreach (array_keys(self::serverDefaults()) as $k) {
                 $out[$k] = $d[$k];
             }
         }
@@ -135,7 +144,7 @@ class TrainingCopy
                 $prefix.'_faq' => 1600,
                 $prefix.'_cta' => 60,
                 $prefix.'_path_title' => 80,
-                $prefix.'_path' => 900,
+                $prefix.'_path' => 1400,
                 $prefix.'_modules' => 32000,
                 $prefix.'_special_title' => 80,
                 $prefix.'_special' => 1400,
@@ -973,20 +982,231 @@ TXT;
     {
         return [
             'srv_on' => true,
-            'srv_kicker' => 'آموزش سرور و استوریج',
-            'srv_title' => 'بازیابی سرور، RAID و استوریج',
-            'srv_card' => 'RAID، NAS، SAN و استوریج سازمانی؛ بازسازی مجازی آرایه و کیس چنددیسکی.',
-            'srv_lead' => 'وقتی سرور، NAS یا استوریج سازمانی از کار می‌افتد، مسئله یک هارد نیست؛ مسئله آرایه، کنترلر و ترتیب دیسک‌هاست. این دوره برای کسی است که کیس چنددیسکی سازمانی می‌گیرد.',
-            'srv_intro' => 'آموزش سرور و استوریج در HDD Land روی RAID 0/1/5/6/10، leftover کنترلر، NASهای رایج و SAN/DAS سازمانی متمرکز است. کارآموز آرایه را مجازی بازسازی می‌کند، پاریتی را می‌سنجد، دیسک معیوب را جدا تصویر می‌گیرد و داده را بدون نوشتن روی رسانه اصلی استخراج می‌کند. این همان مسیری است که آزمایشگاه شرکت برای سازمان‌ها انجام می‌دهد.',
-            'srv_audience' => 'برای واحد IT، همکار آزمایشگاه، و فنی استوریج سازمانی.',
-            'srv_level' => 'پیشرفته',
-            'srv_duration' => '۳ تا ۹ روز',
-            'srv_prereq' => "آشنایی با RAID و مفهوم پاریتی\nترجیحاً دوره بازیابی هارد یا سابقه تصویرگیری\nدرک ریسک نوشتن روی آرایه زنده",
-            'srv_includes' => "کیس آموزشی RAID / NAS\nروش تصویرگیری دیسک‌به‌دیسک\nچک‌لیست leftover و ترتیب اعضا\nگواهی دوره سرور و استوریج\nنمونه گزارش برای تحویل به سازمان",
-            'srv_syllabus' => "تشخیص نوع آرایه و اشتباه‌های خطرناک (rebuild روی دیسک اشتباه)\nRAID 0/1/5/6/10: پاریتی، استرایپ و ترتیب اعضا\nLeftover کنترلر و متادیتای آرایه\nتصویرگیری جداگانه هر عضو قبل از هر نوشتن\nNAS: سناریوهای رایج سازمانی\nSAN / DAS و استوریج رک\nدیسک SAS سرور در کنار عضو SATA\nبازسازی مجازی و استخراج منطقی\nگزارش وضعیت برای مدیر IT و زنجیره تحویل",
-            'srv_table' => "RAID کلاسیک|RAID 0 / 1 / 5 / 6 / 10|۳ روز|پیشرفته|تماس بگیرید\nNAS|بازیابی NAS سازمانی|۳ روز|پیشرفته|تماس بگیرید\nSAN / DAS|استوریج سازمانی و SAN|۴ روز|حرفه‌ای|تماس بگیرید\nLeftover|متادیتا و leftover کنترلر|۳ روز|پیشرفته|تماس بگیرید\nSAS Server|هارد و آرایه سرور|۴ روز|پیشرفته|تماس بگیرید\nبسته جامع|سرور + RAID + استوریج|۹ روز|حرفه‌ای|تماس بگیرید",
-            'srv_faq' => "اگر سازمان rebuild زده باشد؟|بخشی از کیس‌ها بعد از rebuild بد قابل نجات نیستند. در دوره همین تصمیم‌گیری آموزش داده می‌شود.\nدوره برای فروشنده استوریج است؟|مخاطب اصلی فنی آزمایشگاه و IT است؛ فروشنده بدون پیش‌زمینه سخت‌افزاری توصیه نمی‌شود.\nهمراه با دوره هارد است؟|مکمل است. برای کیس ترکیبی معمولاً بازیابی هارد یا SSD را هم لازم دارید.",
-            'srv_cta' => 'ثبت‌نام سرور و استوریج',
+            'srv_kicker' => 'Server, RAID & Enterprise Storage Data Recovery',
+            'srv_title' => 'آکادمی بازیابی سرور، RAID و استوریج',
+            'srv_card' => 'مسیر ۱۲دوره‌ای جدا از HDD/SSD: بازسازی آرایه، NAS، SAN، VM و استوریج سازمانی.',
+            'srv_lead' => 'Professional Training in RAID Reconstruction, Server Recovery, NAS, SAN, Virtual Storage and Advanced Enterprise Data Recovery. این آکادمی از مسیر هارد و NVMe جداست؛ از مبانی Storage تا بازسازی آرایه و استوریج مدرن.',
+            'srv_intro' => 'هفت سطح به‌علاوه Master: مبانی Storage و RAID، بازسازی 0/1/5/6/10 و 50/60، کنترلر و leftover، سرور و NAS، SAN سازمانی، Storage Spaces / ZFS / Btrfs، دیسک مجازی، سپس دیتابیس و رمزگذاری. اصل ثابت: روی Original ننویسید، Rebuild نزنید، از هر Member ایمیج بگیرید و ترتیب دیسک و Metadata را حفظ کنید.',
+            'srv_audience' => 'برای آزمایشگاه بازیابی، واحد IT و فنی استوریج سازمانی که کیس چنددیسکی می‌گیرد.',
+            'srv_level' => 'هفت سطح + Master — RAID-101 تا RAID-401',
+            'srv_duration' => '۱۲ دوره آزمایشگاهی، جدا از HDD و NVMe',
+            'srv_prereq' => "آشنایی با ذخیره‌سازی و مفهوم RAID\nدرک ریسک نوشتن و Rebuild روی آرایه اصلی\nترجیحاً مبانی بازیابی یا تصویرگیری دیسک",
+            'srv_includes' => "کار روی آرایه و NAS آموزشی\nتصویرگیری جداگانه هر Member قبل از هر نوشتن\nچک‌لیست ترتیب دیسک، Stripe و leftover کنترلر\nگواهی هر کد دوره\nگزارش نمونه برای تحویل به سازمان",
+            'srv_syllabus' => "RAID-101 مبانی Storage و RAID\nRAID-201 بازیابی RAID\nRAID-202 پیشرفته 5 / 6 / 10\nRAID-203 کنترلر و سخت‌افزار\nRAID-204 NAS\nRAID-205 SAN و Enterprise\nRAID-206 سرور\nRAID-301 ZFS / Btrfs / Storage Spaces\nRAID-302 ماشین مجازی\nRAID-303 دیتابیس روی استوریج\nRAID-304 استوریج رمزگذاری‌شده\nRAID-401 کیس واقعی",
+            'srv_table' => "RAID-101|Storage & RAID Fundamentals|۳ روز|مقدماتی|تماس بگیرید\nRAID-201|RAID Data Recovery|۴ روز|متوسط|تماس بگیرید\nRAID-202|Advanced RAID 5/6/10 Recovery|۴ روز|پیشرفته|تماس بگیرید\nRAID-203|RAID Controller & Hardware Recovery|۳ روز|پیشرفته|تماس بگیرید\nRAID-204|NAS Data Recovery|۴ روز|پیشرفته|تماس بگیرید\nRAID-205|SAN & Enterprise Storage Recovery|۴ روز|تخصصی|تماس بگیرید\nRAID-206|Server Data Recovery|۴ روز|تخصصی|تماس بگیرید\nRAID-301|ZFS / Btrfs / Storage Spaces Recovery|۴ روز|پیشرفته|تماس بگیرید\nRAID-302|Virtual Machine & Virtual Disk Recovery|۴ روز|پیشرفته|تماس بگیرید\nRAID-303|Database Recovery from Storage Systems|۳ روز|تخصصی|تماس بگیرید\nRAID-304|Encrypted Storage Recovery|۳ روز|تخصصی|تماس بگیرید\nRAID-401|Advanced RAID & Storage Case Studies|۵ روز|Master|تماس بگیرید",
+            'srv_path_title' => 'مسیر حرفه‌ای آکادمی RAID و استوریج',
+            'srv_path' => "LEVEL 1 — FOUNDATION|مبانی|RAID-101 معماری Storage و سطوح RAID\nLEVEL 2 — RAID RECOVERY|بازسازی آرایه|RAID-201 تشخیص و بازسازی · RAID-202 پیشرفته 5/6/10 و 50/60\nLEVEL 3 — SERVER & NAS|سرور و NAS|RAID-203 کنترلر · RAID-204 NAS · RAID-206 سرور\nLEVEL 4 — ENTERPRISE STORAGE|استوریج سازمانی|RAID-205 SAN، Fabric، LUN و Storage Pool\nLEVEL 5 — MODERN STORAGE|استوریج مدرن|RAID-301 Storage Spaces · ZFS · Btrfs\nLEVEL 6 — VIRTUALIZATION|مجازی‌سازی|RAID-302 VMware · Hyper-V · VHD/VMDK\nLEVEL 7 — ADVANCED|پیشرفته|RAID-303 دیتابیس · RAID-304 رمزگذاری\nMASTER|کارگاه نهایی|RAID-401 کیس واقعی سرور و RAID",
+            'srv_mods_title' => 'سیلابس دوازده دوره',
+            'srv_modules' => self::serverModules(),
+            'srv_tracks_title' => 'مسیر کیس‌محور',
+            'srv_tracks' => "RAID کلاسیک|Identify → Clone → Analyze → Reconstruct → Verify → Extract\nRAID 5 / 6 / 10|Parity · Rotation · Missing Member · Degraded · Failed Rebuild\nکنترلر|HBA / SAS · Cache / BBU · Leftover · Foreign Config\nNAS|Synology · QNAP · WD · Netgear · Asustor · Buffalo · Drobo\nSAN / Enterprise|FC · iSCSI · LUN · Pool · Snapshot · Replication\nاستوریج مدرن|Storage Spaces · ZFS RAIDZ · Btrfs\nزنجیره ترکیبی|RAID → VM / VMFS → دیسک مجازی → فایل‌سیستم → دیتابیس",
+            'srv_special_title' => 'دوره‌های تخصصی بعدی',
+            'srv_special_lead' => 'این آکادمی از مسیر HDD و NVMe جداست. موضوع‌های خیلی خاص وقتی آماده باشند اضافه می‌شوند تا صفحه شلوغ نشود.',
+            'srv_special' => "Ceph / Distributed Storage\nTape / VTL Recovery\nObject Storage Recovery\nForensic Server Imaging\nCloud Block Volume Recovery",
+            'srv_faq' => "با دوره هارد یا NVMe یکی است؟|خیر. اینجا مسئله آرایه، کنترلر و استوریج چنددیسکی است؛ مکمل مسیر HDD و NVMe است نه جایگزین.\nاگر سازمان Rebuild زده باشد؟|بخشی از کیس‌ها بعد از Rebuild بد قابل نجات نیستند. در دوره همین تصمیم‌گیری آموزش داده می‌شود.\nروی دیسک اصلی می‌نویسیم؟|هرگز. اول Clone/Image از Memberها، بدون Rebuild روی Original، با ثبت ترتیب و Metadata.\nاز کدام دوره شروع کنم؟|RAID-101. ورود به 5/6/10، NAS و SAN بعد از تسلط تشخیص و تصویرگیری Member.\nگواهی می‌دهید؟|بله. برای هر کد دوره یا بسته مسیر، گواهی آکادمی HDD Land صادر می‌شود.",
+            'srv_cta' => 'ثبت‌نام آکادمی RAID و استوریج',
         ];
+    }
+
+    private static function serverModules(): string
+    {
+        return <<<'TXT'
+RAID-101|مبانی Storage و RAID|Storage & RAID Fundamentals|مقدماتی|ورود به آکادمی سرور و استوریج
+SEC:مبانی Storage
+SYL:DAS، NAS، SAN و Server / Enterprise Storage
+SYL:Local در برابر Shared Storage
+SYL:Direct Attached، Network Attached و Storage Area Network
+SEC:RAID چیست؟
+SYL:معماری RAID: Striping، Mirroring، Parity
+SYL:Block، Stripe، Chunk، Disk Order، Offset
+SYL:Rotation و توزیع Parity
+SEC:سطوح RAID
+SYL:JBOD، RAID 0، RAID 1، RAID 2 / 3 / 4
+SYL:RAID 5، RAID 6، RAID 10، RAID 01
+SYL:RAID 50 و RAID 60
+SYL:پیکربندی‌های غیرمعمول و Vendor-specific
+LAB:تشخیص Level، Stripe و ترتیب دیسک روی آرایه آموزشی
+---
+RAID-201|بازیابی RAID|RAID Data Recovery|متوسط|پس از RAID-101
+SEC:تشخیص اولیه
+SYL:شناسایی Memberها، Disk Order، اندازه دیسک و Sector
+SYL:Level، Stripe / Block Size، Offset، Parity و Rotation
+SYL:Missing Disk
+SEC:گردش کار Recovery
+WFL:Identify
+WFL:Clone
+WFL:Analyze
+WFL:Reconstruct
+WFL:Verify
+WFL:Extract
+SEC:مهم‌ترین اصل
+SYL:جلوگیری از Write و عدم Rebuild روی Original
+SYL:تهیه Clone/Image از هر Member و ثبت وضعیت هر دیسک
+SYL:حفظ Disk Order و Metadata
+SEC:ابزارهای تحلیلی
+SYL:Hex Analysis، Content Analysis، RAID Detection
+SYL:Parity Analysis و Entropy Analysis برای Level، Block Size، ترتیب و Missing Member
+LAB:تصویرگیری Memberها و بازسازی مجازی بدون نوشتن روی اصل
+---
+RAID-202|RAID 5 / 6 / 10 پیشرفته|Advanced RAID 5/6/10 Recovery|پیشرفته|کاملاً عملی — پس از RAID-201
+SEC:RAID 5
+SYL:Single / Distributed Parity، Stripe و Rotation
+SYL:Missing Member، یک یا چند دیسک خراب، Degraded
+SYL:Rebuild Failure و Reinitialized RAID
+SEC:RAID 6
+SYL:Dual Parity، P و Q، دو Member خراب
+SYL:Multiple Failure و تحلیل Rebuild
+SEC:RAID 10
+SYL:جفت Mirror، Stripe، Disk Order
+SYL:Missing Members، Multiple Failure، Rebuild
+SEC:RAID 50 / 60
+SYL:Nested RAID، چند گروه، تشخیص Group و Member Mapping
+SYL:استراتژی Recovery
+LAB:بازسازی RAID 5 با یک Member مفقود
+LAB:کیس RAID 6 دوخطا و RAID 10 با ترتیب نامشخص
+---
+RAID-203|کنترلر و سخت‌افزار RAID|RAID Controller & Hardware Recovery|پیشرفته|پس از تشخیص RAID
+SEC:سخت‌افزار
+SYL:RAID Controller، HBA، SAS / SATA Controller
+SYL:Cache، Battery / BBU، Flash-backed Cache و ماژول Cache
+SEC:خرابی کنترلر
+SYL:Controller Dead، Cache / Firmware Failure
+SYL:از دست رفتن Configuration، تعویض کنترلر، Foreign Configuration
+SEC:Metadata کنترلر
+SYL:محل Metadata، عضویت دیسک، اطلاعات آرایه
+SEC:کیس پیشرفته
+SYL:کنترلر مرده، Config گم‌شده، Foreign RAID
+SYL:کنترلر اشتباه و چند کنترلر خراب
+LAB:خواندن leftover و تصمیم Import / Reconstruct مجازی
+---
+RAID-204|بازیابی NAS|NAS Data Recovery|پیشرفته|پس از بازسازی RAID
+SEC:معماری NAS
+SYL:NAS مبتنی بر RAID، Embedded Linux، Firmware و Metadata
+SYL:چند آرایه روی یک دستگاه
+SEC:فایل‌سیستم
+SYL:EXT3 / EXT4، XFS، Btrfs، ZFS
+SEC:برندها
+SYL:Synology، QNAP، Western Digital، Netgear
+SYL:Asustor، Buffalo، Drobo
+SEC:خرابی‌ها
+SYL:NAS Not Booting، RAID Degraded، چند دیسک خراب
+SYL:Failed Rebuild، Metadata / File System خراب
+SYL:خرابی کنترلر یا Firmware
+SEC:گردش کار
+WFL:NAS
+WFL:Member Disks
+WFL:Imaging
+WFL:بازسازی RAID
+WFL:فایل‌سیستم
+WFL:استخراج داده
+LAB:خارج کردن دیسک‌های NAS و بازسازی بدون روشن کردن دستگاه اصلی
+---
+RAID-205|SAN و استوریج سازمانی|SAN & Enterprise Storage Recovery|تخصصی|پس از RAID و کنترلر
+SEC:SAN
+SYL:معماری SAN، Storage Fabric
+SYL:Fibre Channel، iSCSI، SAS Storage، Shared Storage
+SEC:استوریج سازمانی
+SYL:Storage Controller، Storage Pool، RAID Groups
+SYL:LUN، Volume، Thin Provisioning
+SYL:Snapshots، Replication، Storage Tiering
+SEC:بازیابی
+SYL:کنترلر استوریج خراب، LUN گم‌شده، Volume خراب
+SYL:RAID Group خراب، چند دیسک، فساد Metadata، شکست Pool
+LAB:تشخیص LUN / Pool و تصمیم تصویرگیری Member در برابر Volume
+---
+RAID-206|بازیابی سرور|Server Data Recovery|تخصصی|پس از کنترلر RAID
+SEC:سخت‌افزار سرور
+SYL:Motherboard، RAID Controller، HBA
+SYL:SAS، SATA، HDD، SSD، NVMe
+SYL:Backplane و Expander
+SEC:خرابی سرور
+SYL:Server Not Booting، RAID Not Detected
+SYL:چند دیسک خراب، کنترلر / Backplane / تغذیه
+SYL:Firmware و Config آرایه خراب
+SEC:بازیابی
+SYL:تشخیص سرور، استخراج دیسک، Imaging
+SYL:بازسازی RAID، فایل‌سیستم، VM و دیتابیس
+LAB:خارج کردن دیسک از سینی سرور و تصویرگیری قبل از روشن کردن کنترلر
+---
+RAID-301|ZFS / Btrfs / Storage Spaces|ZFS / Btrfs / Storage Spaces Recovery|پیشرفته|استوریج مدرن پس از RAID کلاسیک
+SEC:Windows Storage Spaces
+SYL:Storage Pool، Virtual Disk، Resiliency
+SYL:Parity، Mirror، Metadata و Recovery
+SEC:ZFS
+SYL:Pool، VDEV، RAIDZ / RAIDZ2 / RAIDZ3
+SYL:Dataset، Zvol، Metadata
+SEC:Btrfs
+SYL:معماری Btrfs، RAID، Chunk، Metadata
+SYL:Data Profiles و Recovery
+LAB:تشخیص Pool / VDEV و بازیابی بدون Import مخرب
+---
+RAID-302|ماشین مجازی و دیسک مجازی|Virtual Machine & Virtual Disk Recovery|پیشرفته|پس از بازسازی Storage
+SEC:دیسک مجازی
+SYL:VHD، VHDX، VMDK، QCOW2، RAW، IMG
+SEC:مجازی‌سازی
+SYL:VMware، Hyper-V، Proxmox، KVM
+SEC:بازیابی
+SYL:دیسک مجازی خراب، VM حذف‌شده، Snapshot شکسته
+SYL:VMDK مفقود، زنجیره Snapshot
+SYL:کیس ترکیبی RAID + VM و Storage + VM
+SEC:زنجیره‌های ترکیبی
+SYL:RAID → VMFS → VMDK → NTFS → Files
+SYL:RAID → Storage Pool → VM → Virtual Disk → Database
+LAB:باز کردن VMDK / VHDX از روی آرایه بازسازی‌شده
+---
+RAID-303|بازیابی دیتابیس از استوریج|Database Recovery from Storage Systems|تخصصی|پس از فایل‌سیستم یا VM
+SEC:ذخیره دیتابیس
+SYL:SQL Server، MySQL، PostgreSQL، Oracle
+SYL:فایل دیتابیس، Log و Transaction Log
+SEC:سناریوها
+SYL:دیتابیس حذف یا خراب، شکست RAID / Storage
+SYL:فایل مفقود، VM خراب، Snapshot شکست‌خورده
+SEC:گردش کار
+WFL:بازیابی Storage
+WFL:دیسک مجازی
+WFL:فایل‌سیستم
+WFL:فایل دیتابیس
+WFL:بازیابی دیتابیس
+LAB:استخراج MDF/LDF یا IBData از ایمیج آرایه
+---
+RAID-304|استوریج رمزگذاری‌شده|Encrypted Storage Recovery|تخصصی|مسیر Recovery را عوض می‌کند
+SEC:رمزگذاری
+SYL:BitLocker، FileVault
+SYL:Self-Encrypting و رمز سخت‌افزاری / نرم‌افزاری
+SYL:Encrypted RAID و Encrypted NAS
+SEC:بازیابی
+SYL:تشخیص Encryption و حفظ دیسک‌های اصلی
+SYL:مدیریت کلید و حفظ Metadata
+SYL:تحلیل Volume رمز و Recovery بعد از بازسازی RAID
+LAB:تشخیص BitLocker / SED قبل از هر Reconstruct مخرب
+---
+RAID-401|کارگاه کیس واقعی RAID و استوریج|Advanced RAID & Storage Case Studies|Master|پایان تئوری؛ Master Course
+SEC:کیس‌های عملی
+SYL:Case 01 — RAID 5 با یک HDD خراب
+SYL:Case 02 — RAID 5 با دو HDD خراب
+SYL:Case 03 — RAID 6 با چند Member مشکل‌دار
+SYL:Case 04 — RAID 10 با Disk Order نامشخص
+SYL:Case 05 — RAID Rebuild ناموفق
+SYL:Case 06 — RAID Reinitialized
+SYL:Case 07 — RAID Controller Failure
+SYL:Case 08 — Foreign Configuration
+SYL:Case 09 — NAS با چند Disk Failure
+SYL:Case 10 — NAS File System Corruption
+SYL:Case 11 — Server + RAID + VM
+SYL:Case 12 — RAID + VMware
+SYL:Case 13 — RAID + Database
+SYL:Case 14 — Encrypted RAID
+SYL:Case 15 — Storage Spaces
+SYL:Case 16 — ZFS RAIDZ
+SYL:Case 17 — Btrfs RAID
+SYL:Case 18 — SAN / Enterprise Storage
+WFL:Identify
+WFL:Clone
+WFL:Analyze
+WFL:Reconstruct
+WFL:Verify
+WFL:Extract
+LAB:حل کیس واقعی از پذیرش تا گزارش سازمانی
+TXT;
     }
 }
