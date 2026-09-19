@@ -65,6 +65,7 @@ class TrainingCopy
             'rec_path_title', 'rec_path', 'rec_modules', 'rec_special_title', 'rec_special', 'rec_mods_title',
             'fix_path_title', 'fix_path', 'fix_modules', 'fix_special_title', 'fix_special', 'fix_special_lead', 'fix_tracks_title', 'fix_tracks', 'fix_mods_title',
             'rec_special_lead',
+            'ssd_path_title', 'ssd_path', 'ssd_modules', 'ssd_special_title', 'ssd_special', 'ssd_special_lead', 'ssd_tracks_title', 'ssd_tracks', 'ssd_mods_title',
         ] as $k) {
             if (trim((string) ($out[$k] ?? '')) === '') {
                 $out[$k] = $d[$k] ?? '';
@@ -80,6 +81,14 @@ class TrainingCopy
             || ! str_contains((string) ($out['fix_modules'] ?? ''), 'SEC:معماری Seagate');
         if ($fixStale) {
             foreach (array_keys(self::repairDefaults()) as $k) {
+                $out[$k] = $d[$k];
+            }
+        }
+        $ssdStale = str_contains((string) ($out['ssd_table'] ?? ''), 'بازیابی SSD ساتا')
+            || str_contains((string) ($out['ssd_title'] ?? ''), 'بازیابی SSD، M.2')
+            || ! str_contains((string) ($out['ssd_modules'] ?? ''), 'SEC:شناخت M.2 NVMe');
+        if ($ssdStale) {
+            foreach (array_keys(self::ssdDefaults()) as $k) {
                 $out[$k] = $d[$k];
             }
         }
@@ -748,21 +757,215 @@ TXT;
     {
         return [
             'ssd_on' => true,
-            'ssd_kicker' => 'آموزش SSD / M.2 / NVMe',
-            'ssd_title' => 'بازیابی SSD، M.2 و NVMe',
-            'ssd_card' => 'کنترلر، مپینگ و XOR روی SSD ساتا، M.2 و NVMe؛ جدا از مسیر هارد مکانیکی.',
-            'ssd_lead' => 'بازیابی SSD و M.2 NVMe مسیر جداگانه‌ای از هارد مکانیکی است. اینجا هد و صفحه وجود ندارد؛ کار روی کنترلر، جدول مپینگ، XOR و فریمور است. HDD Land این دوره را هم در ایران و هم در کارگاه‌های خارج برگزار می‌کند.',
-            'ssd_intro' => 'SSD ساتا، ماژول M.2 و NVMe PCIe وقتی کنترلر قفل می‌شود، مپ خراب است یا فریمور آسیب دیده، با نرم‌افزار معمولی برنمی‌گردند. دوره روی خانواده‌های رایج Phison، Silicon Motion، Samsung و سناریوهای PCIe تمرکز دارد: تشخیص کنترلر، خواندن NAND در صورت پشتیبانی، مونتاژ XOR و استخراج منطقی. کارآموز یاد می‌گیرد چه کیسی قابل بازیابی آزمایشگاهی است و چه کیسی از نظر سخت‌افزاری بسته است.',
-            'ssd_audience' => 'برای آزمایشگاه بازیابی، تعمیرکار لپ‌تاپ/سرور و کسی که کیس SSD سازمانی می‌گیرد.',
-            'ssd_level' => 'متوسط تا پیشرفته',
-            'ssd_duration' => '۳ تا ۸ روز',
-            'ssd_prereq' => "گذراندن مبانی بازیابی یا سابقه کار آزمایشگاهی\nآشنایی با تفاوت SATA و NVMe\nدقت در کار روی برد چندلایه",
-            'ssd_includes' => "کار روی SSD / M.2 آموزشی\nچک‌لیست تشخیص کنترلر\nمرز کیس قابل بازیابی و غیرقابل\nگواهی پایان دوره SSD\nبه‌روزرسانی کوتاه بعد از دوره برای خانواده جدید",
-            'ssd_syllabus' => "معماری SSD: کنترلر، NAND، DRAM و جدول مپینگ\nتفاوت SATA SSD، M.2 SATA و NVMe PCIe\nتشخیص خانواده کنترلر و محدودیت هر نسل\nفریمور قفل‌شده، شناسه و حالت ایمن\nPhison و Silicon Motion: سناریوهای رایج آزمایشگاه\nSamsung NVMe و نکات اختصاصی\nXOR، مونتاژ صفحات و تصویرگیری\nآسیب فیزیکی برد و تصمیم تعویض کنترلر\nکیس سازمانی: لپ‌تاپ، سرور و استوریج فلش",
-            'ssd_table' => "SATA SSD|بازیابی SSD ساتا|۳ روز|متوسط|تماس بگیرید\nM.2 SATA|بازیابی ماژول M.2 ساتا|۳ روز|متوسط|تماس بگیرید\nNVMe PCIe|بازیابی NVMe / M.2 NVMe|۴ روز|پیشرفته|تماس بگیرید\nPhison / SM|کنترلر Phison و Silicon Motion|۴ روز|پیشرفته|تماس بگیرید\nSamsung|SSD و NVMe سامسونگ|۳ روز|پیشرفته|تماس بگیرید\nبسته جامع|SSD + M.2 + NVMe|۸ روز|حرفه‌ای|تماس بگیرید",
-            'ssd_faq' => "با نرم‌افزار کرک‌شده یکی است؟|خیر. مسیر آزمایشگاهی کنترلر و NAND است؛ ابزارهای عمومی کافی نیستند.\nهمه SSDها قابل بازیابی‌اند؟|خیر. بخشی از کنترلرها بسته یا رمزنگاری سخت‌افزاری دارند؛ در دوره همین مرز آموزش داده می‌شود.\nM.2 با NVMe فرق دارد؟|M.2 شکل فیزیکی است؛ روی آن هم SATA و هم NVMe می‌نشیند. دوره هر دو را جدا پوشش می‌دهد.",
-            'ssd_cta' => 'ثبت‌نام دوره SSD / NVMe',
+            'ssd_kicker' => 'M.2 NVMe SSD Repair & Data Recovery — Professional Training',
+            'ssd_title' => 'آکادمی تعمیر و بازیابی M.2 NVMe',
+            'ssd_card' => 'مسیر ۱۲دوره‌ای مستقل از SSD ساتا: تشخیص، PCB، Firmware، FTL، NAND و Chip-Off.',
+            'ssd_lead' => 'From NVMe Diagnostics and PCB Repair to Firmware, FTL, NAND Analysis, Imaging and Advanced Data Recovery. این آکادمی با SSD ساتا قاطی نمی‌شود؛ مسیر مهندسی M.2 NVMe است، نه آموزش کار با یک نرم‌افزار.',
+            'ssd_intro' => 'شش سطح از معماری M.2 و NVMe تا تشخیص PCIe، تعمیر PCB، کنترلر و فریمور، FTL، Imaging، رمزگذاری، NAND و Chip-Off، سپس کیس برند و Master. در NVMe مدرن اولویت اغلب حفظ کنترلر اصلی است؛ چون رمزگذاری سخت‌افزاری خواندن خام NAND را بی‌نتیجه می‌کند. آموزش بر اساس Controller + NAND + Firmware Revision است، نه فقط اسم برند.',
+            'ssd_audience' => 'برای آزمایشگاه بازیابی، تعمیرکار لپ‌تاپ و سرور، و فنی‌ای که کیس NVMe سازمانی می‌گیرد.',
+            'ssd_level' => 'شش سطح: Fundamentals تا Master',
+            'ssd_duration' => '۱۲ دوره آزمایشگاهی، مستقل از SSD ساتا',
+            'ssd_prereq' => "آشنایی با الکترونیک پایه\nآشنایی مقدماتی با SSD\nآشنایی با File System\nآشنایی با کار ابزارهای Data Recovery",
+            'ssd_includes' => "کار روی ماژول M.2 NVMe واقعی\nچک‌لیست تشخیص کنترلر، PCIe و ریل تغذیه\nکارگاه میکروهویه و ریورک BGA\nگواهی هر کد دوره\nگزارش کیس از تشخیص تا Imaging",
+            'ssd_syllabus' => "NVME-101 مبانی M.2 NVMe\nNVME-201 تشخیص تخصصی\nNVME-301 تعمیر PCB و الکترونیک\nNVME-302 کنترلر و فریمور\nNVME-303 پروتکل و فرمان‌ها\nNVME-401 FTL و Mapping\nNVME-402 بازیابی داده\nNVME-501 NAND Flash\nNVME-502 Chip-Off\nNVME-503 رمزگذاری و امنیت\nNVME-601 برند و کنترلر\nNVME-602 کیس واقعی",
+            'ssd_table' => "NVME-101|M.2 NVMe Fundamentals|۳ روز|مقدماتی تا متوسط|تماس بگیرید\nNVME-201|Professional NVMe Diagnostics|۳ روز|پیشرفته|تماس بگیرید\nNVME-301|NVMe Electronics & PCB Repair|۳ روز|تخصصی|تماس بگیرید\nNVME-302|NVMe Controller & Firmware|۴ روز|تخصصی|تماس بگیرید\nNVME-303|NVMe Protocol & Commands|۳ روز|تخصصی|تماس بگیرید\nNVME-401|NVMe FTL & Mapping|۴ روز|تخصصی|تماس بگیرید\nNVME-402|Professional NVMe Data Recovery|۴ روز|تخصصی|تماس بگیرید\nNVME-501|NAND Flash Recovery for NVMe|۴ روز|تخصصی|تماس بگیرید\nNVME-502|M.2 NVMe Chip-Off|۴ روز|تخصصی|تماس بگیرید\nNVME-503|NVMe Encryption & Security|۳ روز|تخصصی|تماس بگیرید\nNVME-601|M.2 NVMe Brands & Controllers|۴ روز|پیشرفته|تماس بگیرید\nNVME-602|Advanced M.2 NVMe Case Studies|۵ روز|Master|تماس بگیرید",
+            'ssd_path_title' => 'مسیر حرفه‌ای آکادمی NVMe',
+            'ssd_path' => "LEVEL 1 — FUNDAMENTALS|مبانی|NVME-101 معماری M.2، NVMe، قطعات SSD و NAND\nLEVEL 2 — DIAGNOSTICS|تشخیص|NVME-201 تشخیص NVMe، تحلیل PCIe، تغذیه و شناسایی کنترلر\nLEVEL 3 — REPAIR|تعمیر|NVME-301 PCB · 302 Firmware / Controller · 303 Protocol\nLEVEL 4 — DATA RECOVERY|بازیابی|NVME-401 FTL و Mapping · 402 Imaging و File System\nLEVEL 5 — ADVANCED|پیشرفته|NVME-501 NAND · 502 Chip-Off · 503 Encryption\nLEVEL 6 — MASTER|کارگاه نهایی|NVME-601 برند و کنترلر · 602 کیس واقعی",
+            'ssd_mods_title' => 'سیلابس دوازده دوره',
+            'ssd_modules' => self::ssdModules(),
+            'ssd_tracks_title' => 'مسیر کنترلر و برند',
+            'ssd_tracks' => "Phison|Identify → Firmware → FTL → Imaging → Cases\nSilicon Motion|Identify → Firmware → FTL → Imaging → Cases\nSamsung|Controller → NAND → Health → Firmware → Cases\nWD / SanDisk|Controller → NAND → Firmware → Cases\nMicron / Crucial|Controller → NAND → Firmware → Cases\nMarvell / Maxio|Identify → Firmware → Recovery\nIntel / Solidigm|Architecture → Controller → NAND → Firmware → Cases\nKingston / ADATA / XPG|Phison · SM · Maxio — شناسایی کنترلر، نه فقط برند",
+            'ssd_special_title' => 'دوره‌های تخصصی بعدی',
+            'ssd_special_lead' => 'این آکادمی فقط M.2 NVMe است. SSD ساتا و مسیرهای نزدیک جدا می‌مانند تا با پروتکل PCIe قاطی نشوند.',
+            'ssd_special' => "SATA SSD Repair & Data Recovery\nM.2 SATA (AHCI) Recovery\nUSB / Portable NVMe Enclosure\nEnterprise U.2 / U.3 NVMe\nForensic NVMe Imaging",
+            'ssd_faq' => "با SSD ساتا یکی است؟|خیر. M.2 شکل فیزیکی است؛ این آکادمی فقط پروتکل NVMe / PCIe است. ساتا دوره جدا می‌ماند.\nاین آموزش نرم‌افزار است؟|خیر. مسیر مهندسی است: تشخیص، PCB، کنترلر، فریمور، FTL، Imaging، رمزگذاری و در سطح پیشرفته NAND / Chip-Off.\nChip-Off همیشه جواب می‌دهد؟|خیر. در بسیاری از NVMeهای مدرن داده به کنترلر و کلید رمز وابسته است؛ اولویت اغلب احیای کنترلر اصلی است.\nآموزش برند است یا کنترلر؟|بر اساس Controller + NAND + Firmware Revision. یک برند در نسل‌های مختلف کنترلر متفاوت دارد.\nگواهی می‌دهید؟|بله. برای هر کد دوره یا بسته مسیر، گواهی آکادمی HDD Land صادر می‌شود.",
+            'ssd_cta' => 'ثبت‌نام آکادمی NVMe',
         ];
+    }
+
+    private static function ssdModules(): string
+    {
+        return <<<'TXT'
+NVME-101|مبانی M.2 NVMe|M.2 NVMe Fundamentals|مقدماتی تا متوسط|ورود به آکادمی NVMe
+SEC:شناخت M.2 NVMe
+SYL:M.2 چیست و تفاوت Form Factor با Protocol
+SYL:M.2 SATA در برابر M.2 NVMe
+SYL:M-Key / B-Key
+SYL:PCIe، x1 / x2 / x4 و نسل Gen3 / Gen4 / Gen5
+SYL:معماری NVMe: Controller، NAND Flash، DRAM
+SYL:SSD بدون DRAM و HMB
+SEC:ساختار SSD
+SYL:Controller، NAND، DRAM، PMIC، Crystal / Clock
+SYL:ریل تغذیه، Firmware، FTL
+SYL:Mapping Tables و Metadata
+LAB:شناسایی Key، نسل PCIe و نوع پروتکل چند ماژول
+---
+NVME-201|تشخیص تخصصی M.2 NVMe|Professional NVMe Diagnostics|پیشرفته|پس از NVME-101
+SEC:مراحل تشخیص
+SYL:بررسی ظاهری PCB، شناسایی Controller و NAND
+SYL:بررسی Power، ۳٫۳ ولت و ریل‌های تغذیه
+SYL:اتصال PCIe، BIOS / UEFI، Device Manager
+SYL:وضعیت NVMe Controller، Namespace، SMART / Health
+SYL:آیا درایو PCIe Enumeration می‌کند یا کنترلر اصلاً بالا نمی‌آید
+SEC:خرابی‌های متداول
+SYL:NVMe Not Detected، BIOS Not Detected، Windows Not Detected
+SYL:0 Capacity، Wrong Capacity، Read Only
+SYL:Slow Performance، Random Disconnect، Overheating
+SYL:Controller / Firmware / NAND Failure
+LAB:تفکیک عدم Enumeration از کنترلر مرده و کیس ظرفیت صفر
+---
+NVME-301|تعمیر الکترونیک و PCB|NVMe Electronics & PCB Repair|تخصصی|هویه و ابزار دقیق لازم است
+SEC:مدار تغذیه
+SYL:ورودی ۳٫۳ ولت، ولتاژ هسته کنترلر، NAND و DRAM
+SYL:PMIC، LDO، DC/DC و ترتیب روشن‌شدن (Power Sequencing)
+SEC:عیب‌یابی
+SYL:اتصال کوتاه، اضافه جریان، PMIC معیوب، قطعه سوخته
+SYL:محافظ TVS، خازن و سلف معیوب، نبود ولتاژ، جریان بیش از حد
+SEC:ابزار عملی
+SYL:مولتی‌متر، منبع آزمایشگاهی، اسیلوسکوپ
+SYL:دوربین حرارتی، میکروسکوپ، ایستگاه هوای گرم، میکروهویه
+SYL:در NVMe تعمیر برد و بازگرداندن کنترلر اصلی اغلب حیاتی است؛ مخصوصاً وقتی رمزگذاری به همان کنترلر وابسته باشد
+LAB:اندازه‌گیری ریل ۳٫۳ ولت و هسته کنترلر
+LAB:تعویض TVS / PMIC روی ماژول آموزشی
+---
+NVME-302|کنترلر و فریمور NVMe|NVMe Controller & Firmware|تخصصی|پس از تشخیص و ترجیحاً PCB
+SEC:کنترلر
+SYL:شناسایی کنترلر، خانواده، نسخه فریمور
+SYL:سازگاری NAND و تفاوت DRAM / DRAM-less
+SEC:خانواده‌های کنترلر — کیس‌محور
+SYL:Phison، Silicon Motion، Samsung
+SYL:SanDisk / WD، Micron، Marvell، Maxio
+SYL:Intel، SK hynix
+SEC:فریمور
+SYL:معماری فریمور، فساد، Panic و Recovery
+SYL:حالت Safe / Diagnostic و Initialization
+SYL:Backup و تحلیل فریمور
+LAB:شناسایی خانواده کنترلر و نسخه فریمور روی چند ماژول
+---
+NVME-303|پروتکل و فرمان‌های NVMe|NVMe Protocol & Commands|تخصصی|پس از مبانی NVMe
+SEC:معماری پروتکل
+SYL:NVMe Controller، Admin Queue، Submission / Completion Queue
+SYL:Namespace، Queue Depth، لینک PCIe و Enumeration
+SEC:فرمان‌ها
+SYL:Identify Controller / Namespace، Get Log Page
+SYL:Read، Write، Format، فرمان‌های Firmware، SMART / Health
+SEC:تشخیص با فرمان
+SYL:وضعیت کنترلر و Namespace، ظرفیت، Health
+SYL:Error Log، دما، Firmware Revision
+SYL:هدف این است که هنرجو وضعیت Controller و PCIe را بفهمد، نه فقط یک نرم‌افزار بازیابی را اجرا کند
+LAB:Identify، Log Page و خواندن SMART روی درایو زنده
+---
+NVME-401|لایه FTL و Mapping|NVMe FTL & Mapping|تخصصی|از مهم‌ترین دوره‌های مسیر
+SEC:Flash Translation Layer
+SYL:FTL، LBA و آدرس فیزیکی NAND
+SYL:Logical-to-Physical Mapping، جداول و Metadata
+SYL:Translation، Garbage Collection، Wear Leveling، Over Provisioning
+SEC:بازیابی Mapping
+SYL:فساد FTL، Mapping گم‌شده یا آسیب‌دیده
+SYL:بازیابی Metadata، بازسازی Mapping و داده منطقی
+SYL:خرابی FTL می‌تواند NAND را سالم بگذارد ولی دسترسی عادی را ببندد
+LAB:تشخیص کیس Mapping در برابر خرابی NAND
+---
+NVME-402|بازیابی داده NVMe|Professional NVMe Data Recovery|تخصصی|پس از FTL و تشخیص
+SEC:گردش کار Recovery
+WFL:تشخیص
+WFL:تحلیل کنترلر
+WFL:تحلیل فریمور
+WFL:تحلیل FTL
+WFL:حالت Recovery
+WFL:Imaging
+WFL:بازیابی فایل‌سیستم
+SEC:کیس‌ها
+SYL:Deleted Partition، RAW، File System خراب، Lost Partition
+SYL:Wrong Capacity، Read-Only
+SYL:Firmware / FTL / Namespace Failure، NVMe ناپایدار
+SEC:Imaging
+SYL:Sector-by-Sector، LBA Imaging، Read Retry
+SYL:Selective / Partial Imaging، مدیریت خطا، Verification
+LAB:Imaging ناپایدار و بازیابی فایل‌سیستم از ایمیج
+---
+NVME-501|بازیابی NAND برای NVMe|NAND Flash Recovery for NVMe|تخصصی|پس از FTL و Imaging
+SEC:معماری NAND
+SYL:سلول NAND: SLC، MLC، TLC، QLC و 3D NAND
+SYL:Page، Block، Plane، Die، Channel، CE
+SEC:شناسایی NAND
+SYL:NAND ID، سازنده، چگالی، Page / Block Size
+SYL:پیکربندی Plane و Die
+SEC:Raw NAND
+SYL:NAND Dump، Spare Area، ECC، XOR، Scrambling
+SYL:Interleaving، تبدیل Page / Block
+SYL:مدیریت Bad Block
+LAB:خواندن ID و تخمین سازماندهی صفحه / بلوک
+---
+NVME-502|Chip-Off ماژول M.2 NVMe|Advanced Chip-Off Recovery|تخصصی|ریورک BGA و سطح پیشرفته
+SEC:سخت‌افزار
+SYL:BGA NAND، جدا کردن، ریورک، تمیزکاری و خواندن
+SEC:پردازش دامپ
+SYL:Raw Dump، ECC، XOR، Scrambling، Interleave
+SYL:ترتیب Page / Block، Channel Mapping، CE Mapping
+SYL:بازسازی منطقی
+SEC:محدودیت مهم
+SYL:Chip-Off در NVMe مدرن همیشه راه‌حل مستقیم نیست
+SYL:رمزگذاری و وابستگی داده به کنترلر اغلب خواندن NAND را بی‌نتیجه می‌کند
+SYL:اولویت بسیاری از کیس‌ها حفظ و احیای Original Controller است
+LAB:ریورک آموزشی و تصمیم Chip-Off در برابر احیای کنترلر
+---
+NVME-503|رمزگذاری و امنیت NVMe|NVMe SSD Encryption Recovery|تخصصی|مسیر Recovery را عوض می‌کند
+SEC:موضوعات
+SYL:رمزگذاری SSD و رمز مبتنی بر کنترلر، AES
+SYL:Self-Encrypting Drive، TCG Opal، رمز سخت‌افزاری
+SYL:کلیدها، Secure Erase، Sanitize، Format
+SEC:استراتژی Recovery
+SYL:تشخیص Encryption و حفظ Original Controller
+SYL:جلوگیری از عملیات فریمور خطرناک
+SYL:بررسی امکان Technological Recovery، تعمیر کنترلر، Imaging پس از دسترسی
+LAB:تشخیص SED / Opal و ممنوعیت Format / Sanitize روی کیس مشتری
+---
+NVME-601|برندها و کنترلرهای M.2 NVMe|M.2 NVMe Brands & Controllers|پیشرفته|پس از فریمور و FTL — کیس‌محور
+SEC:اصل آموزش
+SYL:طراحی روی Controller + NAND + Firmware Revision، نه فقط اسم برند
+SEC:Samsung NVMe
+SYL:کنترلر، شناسایی NAND، Firmware، Health، تحلیل خرابی، کیس Recovery
+SEC:WD / SanDisk NVMe
+SYL:کنترلر، NAND، Firmware، تحلیل خرابی، کیس Recovery
+SEC:Seagate NVMe
+SYL:کنترلر، Firmware، NAND، کیس Recovery
+SEC:Kingston NVMe
+SYL:Phison، Silicon Motion، Maxio — شناسایی کنترلر و Recovery
+SEC:Crucial / Micron
+SYL:کنترلر، NAND، Firmware، Recovery
+SEC:Intel / Solidigm
+SYL:معماری NVMe، کنترلر، NAND، Firmware، Recovery
+SEC:ADATA / XPG
+SYL:شناسایی کنترلر، NAND، Firmware، Recovery
+LAB:شناسایی کنترلر چند برند و انتخاب مسیر Recovery
+---
+NVME-602|کارگاه کیس واقعی NVMe|Advanced M.2 NVMe Case Studies|Master|پایان تئوری؛ Master Class
+SEC:کیس‌های عملی
+SYL:Case 01 — NVMe کاملاً Dead
+SYL:Case 02 — در BIOS دیده نمی‌شود
+SYL:Case 03 — در BIOS هست ولی ظرفیت صفر است
+SYL:Case 04 — ظرفیت اشتباه
+SYL:Case 05 — Firmware Failure
+SYL:Case 06 — FTL / Mapping Failure
+SYL:Case 07 — Controller Failure
+SYL:Case 08 — PMIC / Power Failure
+SYL:Case 09 — NAND Failure
+SYL:Case 10 — Overheating
+SYL:Case 11 — Read-Only NVMe
+SYL:Case 12 — Encrypted NVMe
+SYL:Case 13 — File System خراب
+SYL:Case 14 — داده حذف‌شده
+SYL:Case 15 — Chip-Off NVMe
+WFL:تشخیص
+WFL:تحلیل کنترلر
+WFL:تحلیل فریمور
+WFL:تحلیل FTL
+WFL:حالت Recovery
+WFL:Imaging
+WFL:بازیابی فایل‌سیستم
+LAB:حل کیس واقعی از تشخیص تا تحویل در آزمایشگاه
+TXT;
     }
 
     /** @return array<string, mixed> */

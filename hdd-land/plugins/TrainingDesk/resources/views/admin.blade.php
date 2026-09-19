@@ -17,7 +17,7 @@
   $labels = [
     'rec' => 'بازیابی اطلاعات',
     'fix' => 'تعمیرات هارد دیسک',
-    'ssd' => 'SSD / M.2 / NVMe',
+    'ssd' => 'M.2 NVMe',
     'srv' => 'سرور و استوریج',
   ];
 @endphp
@@ -31,7 +31,7 @@
       ·
       <a href="{{ url('/training/hdd-repair') }}" target="_blank" rel="noopener">تعمیرات</a>
       ·
-      <a href="{{ url('/training/ssd-nvme') }}" target="_blank" rel="noopener">SSD</a>
+      <a href="{{ url('/training/ssd-nvme') }}" target="_blank" rel="noopener">NVMe</a>
       ·
       <a href="{{ url('/training/server-storage') }}" target="_blank" rel="noopener">سرور</a>
     </p>

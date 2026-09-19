@@ -56,7 +56,7 @@ class PortalNav
                     ['label' => 'آکادمی دوره‌ها', 'url' => '/training'],
                     ['label' => 'بازیابی اطلاعات', 'url' => '/training/data-recovery'],
                     ['label' => 'تعمیرات هارد دیسک', 'url' => '/training/hdd-repair'],
-                    ['label' => 'SSD / M.2 / NVMe', 'url' => '/training/ssd-nvme'],
+                    ['label' => 'تعمیر و بازیابی M.2 NVMe', 'url' => '/training/ssd-nvme'],
                     ['label' => 'سرور و استوریج', 'url' => '/training/server-storage'],
                 ],
             ],
