@@ -3,7 +3,7 @@
 @section('title', $course['title'].' | آکادمی سرزمین هارد')
 
 @section('content')
-<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=4">
 @php $priceUrl = url(trim((string) ($copy['cta_url'] ?? '')) ?: '/contact'); @endphp
 <article class="tr-page">
   <header class="tr-hero">
@@ -49,9 +49,23 @@
       </section>
     @endif
 
+    @if(!empty($course['tracks']))
+      <section class="tr-tracks" aria-labelledby="trTracks">
+        <h2 id="trTracks">{{ $course['tracks_title'] ?: 'مسیر برندمحور' }}</h2>
+        <ul>
+          @foreach($course['tracks'] as $track)
+            <li>
+              <strong>{{ $track['code'] }}</strong>
+              <span>{{ $track['title'] }}{{ $track['courses'] !== '' ? ' · '.$track['courses'] : '' }}</span>
+            </li>
+          @endforeach
+        </ul>
+      </section>
+    @endif
+
     @if(!empty($course['modules']))
       <section class="tr-mods" aria-labelledby="trMods">
-        <h2 id="trMods">سیلابس هشت دوره</h2>
+        <h2 id="trMods">{{ $course['mods_title'] ?: 'سیلابس دوره‌ها' }}</h2>
         @foreach($course['modules'] as $mod)
           <details class="tr-mod" @if($loop->first) open @endif>
             <summary>

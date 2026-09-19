@@ -76,6 +76,15 @@
 .tr-mod ul{margin:0;padding:0 1.1rem 0 0;display:grid;gap:.28rem}
 .tr-mod li{line-height:1.65}
 .tr-special .tr-note{margin:0 0 .7rem}
+.tr-tracks{margin:1.4rem 0}
+.tr-tracks h2{margin:0 0 .7rem;font-size:1.18rem}
+.tr-tracks ul{list-style:none;margin:0;padding:0;display:grid;gap:.45rem}
+.tr-tracks li{
+  background:#fff;border:1px solid rgba(16,24,32,.1);border-radius:12px;
+  padding:.65rem .85rem;display:grid;gap:.15rem
+}
+.tr-tracks strong{color:var(--tr-deep)}
+.tr-tracks span{color:#4b5b64;font-size:.92rem;line-height:1.65}
 .tr-syl ol{margin:0;padding:0 1.2rem 0 0;display:grid;gap:.45rem}
 .tr-syl li{line-height:1.75}
 .tr-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.9rem;margin:1.4rem 0}

@@ -72,12 +72,17 @@
           <textarea name="{{ $prefix }}_table" rows="8" dir="rtl">{{ $copy[$prefix.'_table'] }}</textarea>
         </label>
         <label>سیلابس خلاصه (هر خط یک مورد)<textarea name="{{ $prefix }}_syllabus" rows="6">{{ $copy[$prefix.'_syllabus'] }}</textarea></label>
-        <label>عنوان مسیر پنج‌سطحی<input name="{{ $prefix }}_path_title" value="{{ $copy[$prefix.'_path_title'] ?? '' }}"></label>
+        <label>عنوان سیلابس دوره‌ها<input name="{{ $prefix }}_mods_title" value="{{ $copy[$prefix.'_mods_title'] ?? '' }}"></label>
+        <label>عنوان مسیر<input name="{{ $prefix }}_path_title" value="{{ $copy[$prefix.'_path_title'] ?? '' }}"></label>
         <label>مسیر حرفه‌ای <small>هر خط: سطح|عنوان|دوره‌ها</small>
           <textarea name="{{ $prefix }}_path" rows="5">{{ $copy[$prefix.'_path'] ?? '' }}</textarea>
         </label>
         <label>سیلابس کامل دوره‌ها <small>بلوک‌ها با --- جدا می‌شوند. خط اول: کد|عنوان|English|سطح|مخاطب — سپس SYL:سرفصل و LAB:تمرین</small>
           <textarea name="{{ $prefix }}_modules" rows="14" dir="ltr">{{ $copy[$prefix.'_modules'] ?? '' }}</textarea>
+        </label>
+        <label>عنوان مسیر برند<input name="{{ $prefix }}_tracks_title" value="{{ $copy[$prefix.'_tracks_title'] ?? '' }}"></label>
+        <label>مسیر هر برند <small>هر خط: برند|Basic → Firmware → …</small>
+          <textarea name="{{ $prefix }}_tracks" rows="6">{{ $copy[$prefix.'_tracks'] ?? '' }}</textarea>
         </label>
         <label>عنوان تخصص‌های بعدی<input name="{{ $prefix }}_special_title" value="{{ $copy[$prefix.'_special_title'] ?? '' }}"></label>
         <label>دوره‌های تخصصی بعدی (هر خط یکی)<textarea name="{{ $prefix }}_special" rows="6">{{ $copy[$prefix.'_special'] ?? '' }}</textarea></label>
