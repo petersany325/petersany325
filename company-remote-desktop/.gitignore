@@ -1,6 +1,8 @@
 build/
 build-mingw/
 out/
+installer/payload/
+installer/*.exe
 .vs/
 CMakeUserPresets.json
 CMakeCache.txt
