@@ -56,6 +56,26 @@
 .tr-price a{color:var(--tr-deep);font-weight:800;text-decoration:none;border-bottom:1px dashed rgba(143,61,18,.35)}
 .tr-price a:hover{color:var(--tr-copper)}
 .tr-note{margin:.8rem 0 0;color:var(--tr-muted);font-size:.9rem;line-height:1.75}
+.tr-path,.tr-mods{margin:1.5rem 0}
+.tr-path h2,.tr-mods h2{margin:0 0 .75rem;font-size:1.18rem}
+.tr-path ol{list-style:none;margin:0;padding:0;display:grid;gap:.55rem}
+.tr-path li{
+  background:#fff;border:1px solid rgba(16,24,32,.1);border-radius:14px;
+  padding:.75rem .9rem;display:grid;gap:.15rem
+}
+.tr-path small{color:var(--tr-copper);font-weight:800}
+.tr-path strong{font-size:1.02rem}
+.tr-path span{color:#4b5b64;font-size:.9rem}
+.tr-mod{background:#fff;border:1px solid rgba(16,24,32,.1);border-radius:14px;padding:.85rem 1rem;margin-bottom:.55rem}
+.tr-mod summary{cursor:pointer;display:grid;grid-template-columns:auto 1fr;gap:.2rem .7rem;align-items:start}
+.tr-mod summary em{font-style:normal;color:var(--tr-copper);font-weight:800}
+.tr-mod summary strong{display:block}
+.tr-mod summary small{display:block;color:var(--tr-teal);font-weight:750}
+.tr-mod summary i{grid-column:2;font-style:normal;color:#5b6b75;font-size:.86rem}
+.tr-mod h3{margin:.85rem 0 .35rem;font-size:.92rem;color:var(--tr-deep)}
+.tr-mod ul{margin:0;padding:0 1.1rem 0 0;display:grid;gap:.28rem}
+.tr-mod li{line-height:1.65}
+.tr-special .tr-note{margin:0 0 .7rem}
 .tr-syl ol{margin:0;padding:0 1.2rem 0 0;display:grid;gap:.45rem}
 .tr-syl li{line-height:1.75}
 .tr-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.9rem;margin:1.4rem 0}

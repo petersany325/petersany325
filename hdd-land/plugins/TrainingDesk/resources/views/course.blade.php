@@ -3,7 +3,7 @@
 @section('title', $course['title'].' | آکادمی سرزمین هارد')
 
 @section('content')
-<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=3">
 @php $priceUrl = url(trim((string) ($copy['cta_url'] ?? '')) ?: '/contact'); @endphp
 <article class="tr-page">
   <header class="tr-hero">
@@ -34,6 +34,51 @@
       <p class="tr-who">{{ $course['audience'] }}</p>
     @endif
 
+    @if(!empty($course['path']))
+      <section class="tr-path" aria-labelledby="trPath">
+        <h2 id="trPath">{{ $course['path_title'] ?: 'مسیر حرفه‌ای' }}</h2>
+        <ol>
+          @foreach($course['path'] as $step)
+            <li>
+              <small>{{ $step['code'] }}</small>
+              <strong>{{ $step['title'] }}</strong>
+              @if($step['courses'] !== '')<span>{{ $step['courses'] }}</span>@endif
+            </li>
+          @endforeach
+        </ol>
+      </section>
+    @endif
+
+    @if(!empty($course['modules']))
+      <section class="tr-mods" aria-labelledby="trMods">
+        <h2 id="trMods">سیلابس هشت دوره</h2>
+        @foreach($course['modules'] as $mod)
+          <details class="tr-mod" @if($loop->first) open @endif>
+            <summary>
+              <em>{{ $mod['code'] }}</em>
+              <span>
+                <strong>{{ $mod['title'] }}</strong>
+                @if($mod['en'] !== '')<small>{{ $mod['en'] }}</small>@endif
+              </span>
+              <i>{{ trim($mod['level'].($mod['audience'] !== '' ? ' · '.$mod['audience'] : '')) }}</i>
+            </summary>
+            @if($mod['syllabus'])
+              <h3>سرفصل</h3>
+              <ul>
+                @foreach($mod['syllabus'] as $item)<li>{{ $item }}</li>@endforeach
+              </ul>
+            @endif
+            @if($mod['lab'])
+              <h3>کارگاه / تمرین</h3>
+              <ul>
+                @foreach($mod['lab'] as $item)<li>{{ $item }}</li>@endforeach
+              </ul>
+            @endif
+          </details>
+        @endforeach
+      </section>
+    @endif
+
     @if($course['table'])
       <section class="tr-table-wrap" aria-labelledby="trPrices">
         <h2 id="trPrices">دوره‌ها و هزینه</h2>
@@ -41,7 +86,7 @@
           <table class="tr-table">
             <thead>
               <tr>
-                <th>برند / مسیر</th>
+                <th>{{ !empty($course['modules']) ? 'کد' : 'برند / مسیر' }}</th>
                 <th>عنوان دوره</th>
                 <th>مدت</th>
                 <th>سطح</th>
@@ -67,7 +112,7 @@
       </section>
     @endif
 
-    @if($course['syllabus'])
+    @if($course['syllabus'] && empty($course['modules']))
       <section class="tr-syl" aria-labelledby="trSyl">
         <h2 id="trSyl">سیلابس کلاس</h2>
         <ol>
@@ -75,6 +120,16 @@
             <li>{{ $item }}</li>
           @endforeach
         </ol>
+      </section>
+    @endif
+
+    @if(!empty($course['special']))
+      <section class="tr-lab tr-special" aria-labelledby="trSpecial">
+        <h2 id="trSpecial">{{ $course['special_title'] ?: 'دوره‌های تخصصی بعدی' }}</h2>
+        <p class="tr-note">این‌ها مسیرهای جدا هستند و از ابتدا صفحه را شلوغ نمی‌کنند؛ وقتی آماده باشند به همین آکادمی اضافه می‌شوند.</p>
+        <ul>
+          @foreach($course['special'] as $item)<li>{{ $item }}</li>@endforeach
+        </ul>
       </section>
     @endif
 

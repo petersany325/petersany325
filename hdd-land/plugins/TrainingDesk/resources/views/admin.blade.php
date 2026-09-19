@@ -71,7 +71,16 @@
         <label>جدول دوره‌ها و هزینه <small>هر خط: برند|عنوان|مدت|سطح|تماس بگیرید — سلول هزینه به صفحه تماس لینک می‌شود</small>
           <textarea name="{{ $prefix }}_table" rows="8" dir="rtl">{{ $copy[$prefix.'_table'] }}</textarea>
         </label>
-        <label>سیلابس (هر خط یک مورد)<textarea name="{{ $prefix }}_syllabus" rows="8">{{ $copy[$prefix.'_syllabus'] }}</textarea></label>
+        <label>سیلابس خلاصه (هر خط یک مورد)<textarea name="{{ $prefix }}_syllabus" rows="6">{{ $copy[$prefix.'_syllabus'] }}</textarea></label>
+        <label>عنوان مسیر پنج‌سطحی<input name="{{ $prefix }}_path_title" value="{{ $copy[$prefix.'_path_title'] ?? '' }}"></label>
+        <label>مسیر حرفه‌ای <small>هر خط: سطح|عنوان|دوره‌ها</small>
+          <textarea name="{{ $prefix }}_path" rows="5">{{ $copy[$prefix.'_path'] ?? '' }}</textarea>
+        </label>
+        <label>سیلابس کامل دوره‌ها <small>بلوک‌ها با --- جدا می‌شوند. خط اول: کد|عنوان|English|سطح|مخاطب — سپس SYL:سرفصل و LAB:تمرین</small>
+          <textarea name="{{ $prefix }}_modules" rows="14" dir="ltr">{{ $copy[$prefix.'_modules'] ?? '' }}</textarea>
+        </label>
+        <label>عنوان تخصص‌های بعدی<input name="{{ $prefix }}_special_title" value="{{ $copy[$prefix.'_special_title'] ?? '' }}"></label>
+        <label>دوره‌های تخصصی بعدی (هر خط یکی)<textarea name="{{ $prefix }}_special" rows="6">{{ $copy[$prefix.'_special'] ?? '' }}</textarea></label>
         <div class="row">
           <label>پیش‌نیاز (هر خط یکی)<textarea name="{{ $prefix }}_prereq" rows="4">{{ $copy[$prefix.'_prereq'] }}</textarea></label>
           <label>شامل دوره (هر خط یکی)<textarea name="{{ $prefix }}_includes" rows="4">{{ $copy[$prefix.'_includes'] }}</textarea></label>
