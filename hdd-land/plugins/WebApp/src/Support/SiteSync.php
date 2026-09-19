@@ -498,6 +498,9 @@ class SiteSync
                 ],
             ];
         }
+        if (str_contains($label, 'قبض')) {
+            return ['url' => 'https://support.hdd-land.ir', 'children' => []];
+        }
         if (str_contains($label, 'پیگیری')) {
             return ['url' => '/orders/track', 'children' => []];
         }

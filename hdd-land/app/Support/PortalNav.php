@@ -33,7 +33,11 @@ class PortalNav
             [
                 'label' => 'پیگیری سفارش',
                 'url' => '/orders/track',
-                'children' => [],
+                'children' => [
+                    ['label' => 'پیگیری محصولات', 'url' => '/orders/track'],
+                    ['label' => 'پیگیری قبض', 'url' => 'https://support.hdd-land.ir'],
+                    ['label' => 'پیگیری گارانتی', 'url' => '/serial-check'],
+                ],
             ],
             [
                 'label' => 'گارانتی',
