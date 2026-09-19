@@ -162,12 +162,24 @@ class AdminToolbar
             return compact('label', 'primary', 'links');
         }
 
-        if (in_array($path, ['contact', 'about', 'services', 'training', 'blog'], true)) {
+        if ($path === 'training' || str_starts_with($path, 'training/')) {
+            $label = 'آموزش';
+            if ($can('site.page_builder') || $can('site.homepage')) {
+                $primary = ['label' => 'ویرایش آکادمی آموزش', 'url' => url('/admin/training-page')];
+                $add($can('site.page_builder') ? ['label' => 'صفحه‌ساز', 'url' => url('/admin/page-builder')] : null);
+            }
+            if ($can('site.mega_menu')) {
+                $add(['label' => 'لینک منو', 'url' => url('/admin/mega-menu')]);
+            }
+
+            return compact('label', 'primary', 'links');
+        }
+
+        if (in_array($path, ['contact', 'about', 'services', 'blog'], true)) {
             $label = match ($path) {
                 'contact' => 'تماس',
                 'about' => 'درباره ما',
                 'services' => 'خدمات',
-                'training' => 'آموزش',
                 default => 'صفحه',
             };
             if ($path === 'about' && ($can('site.page_builder') || $can('site.homepage'))) {

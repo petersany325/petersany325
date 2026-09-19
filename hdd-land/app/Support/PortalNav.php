@@ -33,7 +33,11 @@ class PortalNav
             [
                 'label' => 'پیگیری سفارش',
                 'url' => '/orders/track',
-                'children' => [],
+                'children' => [
+                    ['label' => 'پیگیری محصولات', 'url' => '/orders/track'],
+                    ['label' => 'پیگیری قبض', 'url' => 'https://support.hdd-land.ir'],
+                    ['label' => 'پیگیری گارانتی', 'url' => '/serial-check'],
+                ],
             ],
             [
                 'label' => 'گارانتی',
@@ -48,6 +52,17 @@ class PortalNav
                 'label' => 'پشتیبانی',
                 'url' => '/account/tickets',
                 'children' => [],
+            ],
+            [
+                'label' => 'آموزش',
+                'url' => '/training',
+                'children' => [
+                    ['label' => 'آکادمی دوره‌ها', 'url' => '/training'],
+                    ['label' => 'بازیابی اطلاعات', 'url' => '/training/data-recovery'],
+                    ['label' => 'تعمیرات هارد دیسک', 'url' => '/training/hdd-repair'],
+                    ['label' => 'تعمیر و بازیابی M.2 NVMe', 'url' => '/training/ssd-nvme'],
+                    ['label' => 'بازیابی سرور، RAID و استوریج', 'url' => '/training/server-storage'],
+                ],
             ],
             [
                 'label' => 'تماس با ما',

@@ -103,7 +103,8 @@ body.site-boxed .hl-navrow{
   }
   body.site-boxed .hl-navrow .mega-nav-pro .mega-item{flex:0 0 auto}
   body.site-boxed .hl-navrow .mega-nav-pro .mega-trigger,
-  body.site-boxed .hl-navrow .hl-extra-nav a{
+  body.site-boxed .hl-navrow .hl-extra-nav > a,
+  body.site-boxed .hl-navrow .hl-extra-nav .hl-dd__btn{
     color:#f4f6f8 !important;
     font-size:var(--mega-nav-fs,14px) !important;
     font-weight:700;
@@ -113,9 +114,25 @@ body.site-boxed .hl-navrow{
   }
   body.site-boxed .hl-navrow .mega-nav-pro .mega-item.is-open > .mega-trigger,
   body.site-boxed .hl-navrow .mega-nav-pro .mega-item.has-mega:hover > .mega-trigger,
-  body.site-boxed .hl-navrow .hl-extra-nav a:hover{
+  body.site-boxed .hl-navrow .hl-extra-nav > a:hover,
+  body.site-boxed .hl-navrow .hl-extra-nav .hl-dd__btn:hover{
     background:#e23d12 !important;
     color:#fff !important;
+  }
+  body.site-boxed .hl-navrow .hl-extra-nav .hl-dd__panel{
+    display:none;position:absolute;top:calc(100% + .35rem);right:0;z-index:80;
+    min-width:240px;padding:.4rem;border-radius:12px;background:#fff !important;
+    border:1px solid #e5e7eb;box-shadow:0 14px 30px rgba(15,23,42,.16)
+  }
+  body.site-boxed .hl-navrow .hl-extra-nav .hl-dd:hover .hl-dd__panel,
+  body.site-boxed .hl-navrow .hl-extra-nav .hl-dd:focus-within .hl-dd__panel{display:grid}
+  body.site-boxed .hl-navrow .hl-extra-nav .hl-dd__panel a{
+    color:#0f172a !important;background:transparent !important;
+    display:block !important;padding:.5rem .7rem !important;
+    border-radius:8px;white-space:normal;font-size:.84rem !important
+  }
+  body.site-boxed .hl-navrow .hl-extra-nav .hl-dd__panel a:hover{
+    background:#fff7f4 !important;color:#e23d12 !important
   }
   body.site-boxed .hl-navrow .mega-nav-pro .mega-caret{opacity:.85}
   body.site-boxed .hl-navrow .hl-extra-nav{
@@ -204,6 +221,15 @@ body.site-boxed .site-banner{
     color:#0f172a !important;
   }
   .header-nav-wrap .hl-extra-nav a:last-child{border-bottom:0}
+  .header-nav-wrap .hl-extra-nav .hl-dd,
+  .hl-extra-nav .hl-dd{width:100%}
+  .header-nav-wrap .hl-extra-nav .hl-dd__panel,
+  .hl-extra-nav .hl-dd__panel{
+    display:grid !important;position:static;min-width:0;padding:0 .15rem .35rem .9rem;
+    border:0;box-shadow:none;background:transparent
+  }
+  .header-nav-wrap .hl-extra-nav .hl-dd__panel a,
+  .hl-extra-nav .hl-dd__panel a{min-height:40px;font-size:.88rem !important;color:#475569 !important}
 }
 
 /* Legacy home chip menu — hidden on storefront (duplicates header mega-nav + categories). */
@@ -594,6 +620,15 @@ html.theme-preview .banner-place-tag{display:inline-flex}
   color:#64748b;font-size:.8rem;font-weight:700;text-decoration:none;
 }
 .hl-extra-nav a:hover{color:var(--brand)}
+.hl-extra-nav .hl-dd{position:relative}
+.hl-extra-nav .hl-dd__panel{
+  display:none;position:absolute;top:calc(100% + .25rem);right:0;z-index:40;
+  min-width:220px;padding:.4rem;border-radius:12px;background:#fff;
+  border:1px solid #e5e7eb;box-shadow:0 12px 28px rgba(15,23,42,.12)
+}
+.hl-extra-nav .hl-dd__panel a{display:block;padding:.45rem .65rem;border-radius:8px;font-size:.82rem}
+.hl-extra-nav .hl-dd:hover .hl-dd__panel,
+.hl-extra-nav .hl-dd:focus-within .hl-dd__panel{display:grid}
 .hl-searchbar{
   border-top:1px solid rgba(15,23,42,.06);
   background:linear-gradient(180deg,#fff,#f8fafc);
@@ -1525,6 +1560,15 @@ input:focus, select:focus, textarea:focus {
 }
 .hl-extra-nav a{color:#64748b;font-size:.8rem;font-weight:700;text-decoration:none}
 .hl-extra-nav a:hover{color:var(--brand,#e23d12)}
+.hl-extra-nav .hl-dd{position:relative}
+.hl-extra-nav .hl-dd__panel{
+  display:none;position:absolute;top:calc(100% + .25rem);right:0;z-index:40;
+  min-width:220px;padding:.4rem;border-radius:12px;background:#fff;
+  border:1px solid #e5e7eb;box-shadow:0 12px 28px rgba(15,23,42,.12)
+}
+.hl-extra-nav .hl-dd__panel a{display:block;padding:.45rem .65rem;border-radius:8px;font-size:.82rem}
+.hl-extra-nav .hl-dd:hover .hl-dd__panel,
+.hl-extra-nav .hl-dd:focus-within .hl-dd__panel{display:grid}
 .hl-searchbar{
   border-top:1px solid rgba(15,23,42,.06);
   background:linear-gradient(180deg,#fff,#f8fafc);

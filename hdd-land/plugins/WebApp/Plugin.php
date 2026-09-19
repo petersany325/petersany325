@@ -531,12 +531,28 @@ class Plugin extends BasePlugin
             if ($lab === '' || $href === '' || $href === '#') {
                 continue;
             }
+            $children = [];
+            $norm = rtrim($href, '/');
+            if ($norm === '/training' || str_ends_with($norm, '/training')) {
+                try {
+                    if (class_exists(\Plugins\TrainingDesk\src\Support\TrainingCopy::class)) {
+                        foreach (\Plugins\TrainingDesk\src\Support\TrainingCopy::navItems() as $item) {
+                            $children[] = [
+                                'label' => (string) ($item['label'] ?? ''),
+                                'url' => (string) ($item['url'] ?? ''),
+                            ];
+                        }
+                    }
+                } catch (\Throwable) {
+                    $children = [];
+                }
+            }
             $out[] = [
                 'key' => 'extra',
                 'label' => mb_substr($lab, 0, 40),
                 'url' => mb_substr($href, 0, 200),
                 'icon' => trim($ico) !== '' ? mb_substr(trim($ico), 0, 8) : '•',
-                'children' => [],
+                'children' => $children,
             ];
         }
 

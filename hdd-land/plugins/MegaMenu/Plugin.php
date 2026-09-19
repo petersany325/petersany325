@@ -285,6 +285,7 @@ class Plugin extends BasePlugin
             static::syncWebsiteSalesMenu();
             Cache::put('mega_menu_schema_360', true, now()->addDay());
         }
+        static::syncReceiptPortalUrl();
         parent::boot();
 
         try {
@@ -326,6 +327,17 @@ class Plugin extends BasePlugin
                 require_once $cd;
                 if (class_exists(\Plugins\ContactDesk\Plugin::class)) {
                     \Plugins\ContactDesk\Plugin::ensureBooted();
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        try {
+            $td = base_path('plugins/TrainingDesk/Plugin.php');
+            if (is_file($td)) {
+                require_once $td;
+                if (class_exists(\Plugins\TrainingDesk\Plugin::class)) {
+                    \Plugins\TrainingDesk\Plugin::ensureBooted();
                 }
             }
         } catch (\Throwable) {
@@ -1533,6 +1545,8 @@ TXT,
         }
     }
 
+    public const RECEIPT_PORTAL_URL = 'https://support.hdd-land.ir';
+
     /** لینک قدیمی منو /orders/track را نگه می‌داریم؛ فقط مسیر خالی را درست می‌کنیم */
     public static function fixLegacyTrackUrls(): void
     {
@@ -1540,9 +1554,10 @@ TXT,
             if (! Schema::hasTable('mega_menu_items')) {
                 return;
             }
-            // اگر آیتم پیگیری با URL اشتباه/خالی بود
+            // اگر آیتم پیگیری با URL اشتباه/خالی بود — قبض به پرتال جدا می‌رود
             \Illuminate\Support\Facades\DB::table('mega_menu_items')
                 ->where('title', 'like', '%پیگیری%')
+                ->where('title', 'not like', '%قبض%')
                 ->where(function ($q) {
                     $q->whereNull('url')
                         ->orWhere('url', '')
@@ -1551,6 +1566,26 @@ TXT,
                         ->orWhere('url', 'track-order');
                 })
                 ->update(['url' => '/orders/track', 'updated_at' => now()]);
+        } catch (\Throwable) {
+            //
+        }
+    }
+
+    /** منوی «پیگیری قبض» به سایت قبض support.hdd-land.ir */
+    public static function syncReceiptPortalUrl(): void
+    {
+        try {
+            if (! Schema::hasTable('mega_menu_items')) {
+                return;
+            }
+            $url = self::RECEIPT_PORTAL_URL;
+            \Illuminate\Support\Facades\DB::table('mega_menu_items')
+                ->where('title', 'like', '%قبض%')
+                ->where(function ($q) use ($url) {
+                    $q->whereNull('url')
+                        ->orWhere('url', '!=', $url);
+                })
+                ->update(['url' => $url, 'updated_at' => now()]);
         } catch (\Throwable) {
             //
         }
