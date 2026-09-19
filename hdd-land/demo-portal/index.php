@@ -42,7 +42,7 @@ function route_demo(array $parts, string $method, bool $dbReady, string $dbError
         return;
     }
 
-    if ($head === '') {
+    if ($head === '' || $head === 'index.php') {
         page_home();
         return;
     }
