@@ -3,7 +3,7 @@
 @section('title', $course['title'].' | آکادمی سرزمین هارد')
 
 @section('content')
-<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('css/training-page.css') }}?v=5">
 @php $priceUrl = url(trim((string) ($copy['cta_url'] ?? '')) ?: '/contact'); @endphp
 <article class="tr-page">
   <header class="tr-hero">
@@ -77,10 +77,27 @@
               <i>{{ trim($mod['level'].($mod['audience'] !== '' ? ' · '.$mod['audience'] : '')) }}</i>
             </summary>
             @if($mod['syllabus'])
-              <h3>سرفصل</h3>
-              <ul>
-                @foreach($mod['syllabus'] as $item)<li>{{ $item }}</li>@endforeach
-              </ul>
+              @php $openList = false; @endphp
+              @foreach($mod['syllabus'] as $item)
+                @php
+                  $isSec = is_array($item) && ($item['type'] ?? '') === 'sec';
+                  $text = is_array($item) ? (string) ($item['text'] ?? '') : (string) $item;
+                @endphp
+                @if($isSec)
+                  @if($openList)</ul>@php $openList = false; @endphp @endif
+                  <h3>{{ $text }}</h3>
+                @else
+                  @if(! $openList)<ul>@php $openList = true; @endphp @endif
+                  <li>{{ $text }}</li>
+                @endif
+              @endforeach
+              @if($openList)</ul>@endif
+            @endif
+            @if(!empty($mod['flow']))
+              <h3>گردش کار کیس</h3>
+              <ol class="tr-flow">
+                @foreach($mod['flow'] as $step)<li>{{ $step }}</li>@endforeach
+              </ol>
             @endif
             @if($mod['lab'])
               <h3>کارگاه / تمرین</h3>
@@ -140,7 +157,9 @@
     @if(!empty($course['special']))
       <section class="tr-lab tr-special" aria-labelledby="trSpecial">
         <h2 id="trSpecial">{{ $course['special_title'] ?: 'دوره‌های تخصصی بعدی' }}</h2>
-        <p class="tr-note">این‌ها مسیرهای جدا هستند و از ابتدا صفحه را شلوغ نمی‌کنند؛ وقتی آماده باشند به همین آکادمی اضافه می‌شوند.</p>
+        @if(trim((string) ($course['special_lead'] ?? '')) !== '')
+          <p class="tr-note">{{ $course['special_lead'] }}</p>
+        @endif
         <ul>
           @foreach($course['special'] as $item)<li>{{ $item }}</li>@endforeach
         </ul>

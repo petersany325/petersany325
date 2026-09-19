@@ -63,7 +63,8 @@ class TrainingCopy
         $d = self::defaults();
         foreach ([
             'rec_path_title', 'rec_path', 'rec_modules', 'rec_special_title', 'rec_special', 'rec_mods_title',
-            'fix_path_title', 'fix_path', 'fix_modules', 'fix_special_title', 'fix_special', 'fix_tracks_title', 'fix_tracks', 'fix_mods_title',
+            'fix_path_title', 'fix_path', 'fix_modules', 'fix_special_title', 'fix_special', 'fix_special_lead', 'fix_tracks_title', 'fix_tracks', 'fix_mods_title',
+            'rec_special_lead',
         ] as $k) {
             if (trim((string) ($out[$k] ?? '')) === '') {
                 $out[$k] = $d[$k] ?? '';
@@ -74,8 +75,11 @@ class TrainingCopy
                 $out[$k] = $d[$k];
             }
         }
-        if (str_contains((string) ($out['fix_table'] ?? ''), 'تعمیر برد و هد WD')) {
-            foreach (['fix_table', 'fix_lead', 'fix_intro', 'fix_card', 'fix_level', 'fix_duration', 'fix_prereq', 'fix_includes', 'fix_syllabus', 'fix_faq', 'fix_audience', 'fix_kicker', 'fix_title'] as $k) {
+        $fixStale = str_contains((string) ($out['fix_table'] ?? ''), 'تعمیر برد و هد WD')
+            || str_contains((string) ($out['fix_title'] ?? ''), 'تعمیر تخصصی')
+            || ! str_contains((string) ($out['fix_modules'] ?? ''), 'SEC:معماری Seagate');
+        if ($fixStale) {
+            foreach (array_keys(self::repairDefaults()) as $k) {
                 $out[$k] = $d[$k];
             }
         }
@@ -123,9 +127,10 @@ class TrainingCopy
                 $prefix.'_cta' => 60,
                 $prefix.'_path_title' => 80,
                 $prefix.'_path' => 900,
-                $prefix.'_modules' => 20000,
+                $prefix.'_modules' => 32000,
                 $prefix.'_special_title' => 80,
                 $prefix.'_special' => 1400,
+                $prefix.'_special_lead' => 400,
                 $prefix.'_tracks_title' => 80,
                 $prefix.'_tracks' => 1200,
                 $prefix.'_mods_title' => 80,
@@ -181,6 +186,7 @@ class TrainingCopy
             'modules' => self::modules((string) ($copy[$prefix.'_modules'] ?? '')),
             'special_title' => (string) ($copy[$prefix.'_special_title'] ?? ''),
             'special' => self::lines((string) ($copy[$prefix.'_special'] ?? '')),
+            'special_lead' => (string) ($copy[$prefix.'_special_lead'] ?? ''),
             'mods_title' => (string) ($copy[$prefix.'_mods_title'] ?? ''),
             'tracks_title' => (string) ($copy[$prefix.'_tracks_title'] ?? ''),
             'tracks' => self::path((string) ($copy[$prefix.'_tracks'] ?? '')),
@@ -268,7 +274,7 @@ class TrainingCopy
         return $out;
     }
 
-    /** @return list<array{code:string,title:string,en:string,level:string,audience:string,syllabus:list<string>,lab:list<string>}> */
+    /** @return list<array{code:string,title:string,en:string,level:string,audience:string,syllabus:list<array{type:string,text:string}>,lab:list<string>,flow:list<string>}> */
     public static function modules(string $raw): array
     {
         $out = [];
@@ -284,12 +290,17 @@ class TrainingCopy
             }
             $syl = [];
             $lab = [];
+            $flow = [];
             foreach ($lines as $line) {
                 $line = trim((string) $line);
-                if (str_starts_with($line, 'SYL:')) {
-                    $syl[] = trim(substr($line, 4));
+                if (str_starts_with($line, 'SEC:')) {
+                    $syl[] = ['type' => 'sec', 'text' => trim(substr($line, 4))];
+                } elseif (str_starts_with($line, 'SYL:')) {
+                    $syl[] = ['type' => 'item', 'text' => trim(substr($line, 4))];
                 } elseif (str_starts_with($line, 'LAB:')) {
                     $lab[] = trim(substr($line, 4));
+                } elseif (str_starts_with($line, 'WFL:')) {
+                    $flow[] = trim(substr($line, 4));
                 }
             }
             $out[] = [
@@ -300,6 +311,7 @@ class TrainingCopy
                 'audience' => $head[4] ?? '',
                 'syllabus' => $syl,
                 'lab' => $lab,
+                'flow' => $flow,
             ];
         }
 
@@ -344,6 +356,7 @@ class TrainingCopy
             'rec_path' => "LEVEL 1 — FOUNDATION|مبانی|01 مبانی بازیابی · 02 Logical Recovery\nLEVEL 2 — HDD ENGINEERING|مهندسی هارد|03 سخت‌افزار و تشخیص · 04 فریمور و Service Area\nLEVEL 3 — PROFESSIONAL RECOVERY|بازیابی حرفه‌ای|05 Imaging و استخراج داده\nLEVEL 4 — VENDOR SPECIALIZATION|تخصص برند|06 Western Digital · 07 Seagate\nLEVEL 5 — MASTER|کارگاه نهایی|08 کیس‌های واقعی از پذیرش تا تحویل",
             'rec_modules' => self::recoveryModules(),
             'rec_special_title' => 'دوره‌های تخصصی بعدی',
+            'rec_special_lead' => 'این‌ها مسیرهای جدا هستند و از ابتدا صفحه را شلوغ نمی‌کنند؛ وقتی آماده باشند به همین آکادمی اضافه می‌شوند.',
             'rec_special' => "Toshiba HDD Data Recovery\nHitachi / HGST Data Recovery\nSamsung HDD Data Recovery\nSSD / NVMe Data Recovery\nUSB HDD Data Recovery\nFlash / NAND / Monolith\nRAID Data Recovery\nForensic Data Recovery\nATA Shell و تحلیل ROM / Translator\nCleanroom & Mechanical Recovery",
             'rec_faq' => "این آموزش کار با یک نرم‌افزار است؟|خیر. مسیر مهندسی است: مبانی، تشخیص، Logical، سخت‌افزار، SA، Imaging، برند و کیس واقعی.\nباید هر ۸ دوره را پشت سر هم گرفت؟|مسیر پیشنهادی همین ترتیب است. ورود به سطح بالاتر بعد از تسلط سطح قبل توصیه می‌شود.\nچرا فقط WD و Seagate جدا هستند؟|این دو برند محور اصلی کیس‌ها و آموزش‌های تخصصی صنعت‌اند. توشیبا، هیتاچی، سامسونگ، SSD و RAID به‌عنوان Specialized بعدی می‌آیند تا صفحه شلوغ نشود.\nگواهی می‌دهید؟|بله. برای هر دوره یا بسته مسیر، گواهی آکادمی HDD Land صادر می‌شود.",
             'rec_cta' => 'ثبت‌نام مسیر بازیابی',
@@ -465,26 +478,27 @@ TXT;
         return [
             'fix_on' => true,
             'fix_kicker' => 'HDD LAND Professional HDD Repair Academy',
-            'fix_title' => 'آکادمی تعمیر هارد دیسک',
-            'fix_card' => 'تعمیر و بازیابی HDD بر اساس برند، سطح فنی و نوع خرابی؛ نه آموزش یک نرم‌افزار.',
-            'fix_lead' => 'سرفصل‌ها روی Hardware، Firmware، Service Area، Imaging و سپس برندهاست: Seagate، WD، Toshiba، Hitachi/HGST، Samsung، Fujitsu و External. صفحه تبلیغ ابزار نیست؛ مسیر مهندسی تعمیر و بازیابی است.',
-            'fix_intro' => 'هر برند مسیر خودش را دارد: Basic → Firmware → SA / ROM / Terminal → کیس پیشرفته. SeDiv و ابزار آزمایشگاه داخل همان دوره برند معرفی می‌شوند، نه به‌جای سیلابس. تخصص PCB، مکانیک، Imaging و کارگاه کیس واقعی بعد از مبانی می‌آید.',
-            'fix_audience' => 'برای تعمیرکار هارد، آزمایشگاه بازیابی، و فنی‌ای که می‌خواهد برندبه‌برند کیس بگیرد.',
+            'fix_title' => 'آکادمی حرفه‌ای تعمیر هارد دیسک',
+            'fix_card' => 'سیلابس برند + سطح فنی + نوع خرابی؛ نه آموزش کار با یک نرم‌افزار.',
+            'fix_lead' => 'اگر هدف دوره‌های تخصصی تعمیر و بازیابی HDD است، سرفصل‌ها باید روی برند، سطح فنی و نوع خرابی باشد؛ نه فقط آموزش نرم‌افزار. مسیر با Hardware، Firmware، Service Area و Imaging شروع می‌شود و سپس Seagate، Western Digital، Toshiba، Hitachi/HGST، Samsung، Fujitsu و External جدا پوشش داده می‌شوند.',
+            'fix_intro' => 'هر برند مسیر خودش را دارد: Basic → Firmware → Terminal / ROM / SA → کیس پیشرفته. SeDiv و ابزار آزمایشگاه داخل همان دوره برند معرفی می‌شوند تا صفحه تبدیل به تبلیغ نرم‌افزار نشود. تخصص PCB، مکانیک Head و Platter، Imaging مشترک و کارگاه کیس واقعی بعد از مبانی می‌آید. هارد اکسترنال دوره جداست؛ چون Bridge، رمزنگاری و برد USB مسیر Recovery را عوض می‌کند.',
+            'fix_audience' => 'برای تعمیرکار هارد، آزمایشگاه بازیابی، و فنی‌ای که می‌خواهد برندبه‌برند کیس واقعی بگیرد.',
             'fix_level' => 'HDD-101 تا HDD-401 — مقدماتی تا Master',
             'fix_duration' => '۱۳ دوره آزمایشگاهی، برند و تخصص جدا',
             'fix_prereq' => "HDD-101 پیش‌نیاز ورود به دوره‌های برند است\nمهارت کار با هویه و ESD برای PCB و مکانیک\nاتاق تمیز برای Head / Platter\nدوره Imaging برای همه برندها مشترک است",
-            'fix_includes' => "کار روی Patient و Donor واقعی\nPC-3000، Data Extractor، SeDiv و ابزار تشخیص\nچک‌لیست Donor، ROM و PCB\nگواهی هر کد دوره\nگزارش کیس از تشخیص تا Imaging",
-            'fix_syllabus' => "HDD-101 مبانی و تشخیص\nHDD-201 تا 207 برندها و External\nHDD-301 فریمور و Service Area\nHDD-302 تعمیر PCB\nHDD-303 مکانیک Head / Platter\nHDD-304 Imaging حرفه‌ای\nHDD-401 کیس واقعی",
+            'fix_includes' => "کار روی Patient و Donor واقعی\nPC-3000، Data Extractor، SeDiv و ابزار تشخیص آزمایشگاه\nچک‌لیست Donor، ROM و PCB\nگواهی هر کد دوره\nگزارش کیس از تشخیص تا Imaging",
+            'fix_syllabus' => "HDD-101 مبانی و تشخیص حرفه‌ای\nHDD-201 تا 207 برندها و External\nHDD-301 فریمور و Service Area\nHDD-302 تعمیر PCB\nHDD-303 مکانیک Head / Platter\nHDD-304 Imaging حرفه‌ای\nHDD-401 کیس واقعی",
             'fix_table' => "HDD-101|HDD Fundamentals & Diagnostics|۳ روز|مقدماتی|تماس بگیرید\nHDD-201|Seagate HDD Repair & Recovery|۴ روز|پیشرفته|تماس بگیرید\nHDD-202|Western Digital HDD Repair & Recovery|۴ روز|پیشرفته|تماس بگیرید\nHDD-203|Toshiba HDD Repair & Recovery|۳ روز|پیشرفته|تماس بگیرید\nHDD-204|Hitachi / HGST HDD Repair & Recovery|۳ روز|پیشرفته|تماس بگیرید\nHDD-205|Samsung HDD Repair & Recovery|۳ روز|پیشرفته|تماس بگیرید\nHDD-206|Fujitsu HDD Repair & Recovery|۳ روز|پیشرفته|تماس بگیرید\nHDD-207|External HDD Repair & Data Recovery|۳ روز|پیشرفته|تماس بگیرید\nHDD-301|HDD Firmware & Service Area|۴ روز|تخصصی|تماس بگیرید\nHDD-302|HDD PCB & Electronics Repair|۳ روز|تخصصی|تماس بگیرید\nHDD-303|Head / Platter / Mechanical Recovery|۴ روز|تخصصی|تماس بگیرید\nHDD-304|Professional HDD Imaging|۴ روز|تخصصی|تماس بگیرید\nHDD-401|Advanced HDD Case Studies|۵ روز|Master|تماس بگیرید",
-            'fix_path_title' => 'مسیر اصلی آکادمی تعمیر',
-            'fix_path' => "HDD-100|Foundation|HDD-101 مبانی و تشخیص حرفه‌ای\nHDD-200|Brand Repair|201 Seagate · 202 WD · 203 Toshiba · 204 Hitachi/HGST · 205 Samsung · 206 Fujitsu · 207 External\nHDD-300|Specialized Engineering|301 Firmware/SA · 302 PCB · 303 Mechanical · 304 Imaging\nHDD-400|Master|401 کیس واقعی از پذیرش تا Imaging",
-            'fix_mods_title' => 'سیلابس دوره‌های تعمیر',
+            'fix_path_title' => 'مسیر اصلی دوره‌ها',
+            'fix_path' => "HDD-100|Foundation — مبانی|HDD-101 مبانی هارد و تشخیص حرفه‌ای\nHDD-200|Brand Repair — تعمیر برند|201 Seagate · 202 Western Digital · 203 Toshiba · 204 Hitachi/HGST · 205 Samsung · 206 Fujitsu · 207 External\nHDD-300|Specialized — مهندسی تخصصی|301 Firmware و Service Area · 302 PCB · 303 Mechanical · 304 Imaging\nHDD-400|Master — کارگاه نهایی|401 کیس واقعی از پذیرش تا Verification",
+            'fix_mods_title' => 'سیلابس کامل دوره‌ها',
             'fix_modules' => self::repairModules(),
             'fix_tracks_title' => 'مسیر برندمحور',
             'fix_tracks' => "Seagate|Basic → Firmware → Terminal → Rosewood → Advanced Cases\nWestern Digital|Basic → Firmware → ROM → SA → CMR/SMR → Advanced Cases\nToshiba|Basic → Firmware → SA → ARM → Advanced Cases\nHitachi / HGST|Basic → Firmware → SA → Adaptive → Enterprise → Advanced Cases\nSamsung|Basic → Firmware → SA → Hardware → Advanced Cases\nFujitsu|Basic → Firmware → Hardware → Advanced Cases\nExternal HDD|USB → Bridge → Native USB → Encryption → Firmware → Imaging → Recovery",
-            'fix_special_title' => 'بعداً صفحه مستقل هر برند',
-            'fix_special' => "Overview + Level + Full Syllabus\nPractical Cases + Required Tools\nPrerequisites + Certificate\nمعرفی SeDiv داخل همان برند، نه به‌جای سیلابس",
-            'fix_faq' => "این آموزش نرم‌افزار است؟|خیر. سیلابس روی برند، نوع خرابی و سطح فنی است؛ ابزار داخل همان دوره معرفی می‌شود.\nبا دوره بازیابی یکی است؟|مکمل است. اینجا تعمیر و پایدارسازی رسانه است؛ آکادمی بازیابی مسیر جدا دارد.\nاز کدام دوره شروع کنم؟|HDD-101. برندها بعد از تشخیص، تخصص‌های ۳۰۰ بعد از برند یا موازی با آن.\nاتاق تمیز لازم است؟|برای HDD-303 بله. PCB و Imaging محیط آزمایشگاهی جدا دارند.",
+            'fix_special_title' => 'صفحه مستقل هر برند (مرحله بعد)',
+            'fix_special_lead' => 'برای هر برند صفحه جدا با نمای کلی دوره، سطح، سیلابس کامل، کیس عملی، ابزار لازم، پیش‌نیاز و گواهی می‌سازیم. SeDiv داخل همان برند معرفی می‌شود؛ این صفحه تبلیغ نرم‌افزار نیست.',
+            'fix_special' => "Seagate — Overview، سطح، سیلابس، کیس، ابزار، پیش‌نیاز، گواهی\nWestern Digital — Overview، سطح، سیلابس، کیس، ابزار، پیش‌نیاز، گواهی\nToshiba — Overview، سطح، سیلابس، کیس، ابزار، پیش‌نیاز، گواهی\nHitachi / HGST — Overview، سطح، سیلابس، کیس، ابزار، پیش‌نیاز، گواهی\nSamsung — Overview، سطح، سیلابس، کیس، ابزار، پیش‌نیاز، گواهی\nFujitsu — Overview، سطح، سیلابس، کیس، ابزار، پیش‌نیاز، گواهی\nExternal HDD — Overview، سطح، سیلابس، کیس، ابزار، پیش‌نیاز، گواهی",
+            'fix_faq' => "این آموزش نرم‌افزار است؟|خیر. سیلابس روی برند، نوع خرابی و سطح فنی است. ابزار آزمایشگاه داخل همان دوره معرفی می‌شود، نه به‌جای سرفصل.\nبا آکادمی بازیابی یکی است؟|مکمل است. اینجا تعمیر، پایدارسازی و برندمحور است؛ بازیابی مسیر جدا دارد.\nاز کدام دوره شروع کنم؟|HDD-101. دوره‌های برند بعد از تشخیص، تخصص‌های ۳۰۰ بعد از برند یا موازی با آن.\nچرا External جدا است؟|هارد اکسترنال فقط یک HDD داخل قاب نیست. USB Bridge، رمزنگاری و برد اصلی مسیر Recovery را عوض می‌کند.\nاتاق تمیز لازم است؟|برای HDD-303 بله. PCB و Imaging محیط آزمایشگاهی جدا دارند.",
             'fix_cta' => 'ثبت‌نام آکادمی تعمیر',
         ];
     }
@@ -493,114 +507,239 @@ TXT;
     {
         return <<<'TXT'
 HDD-101|مبانی هارد و تشخیص حرفه‌ای|HDD Fundamentals & Professional Diagnostics|مقدماتی|ورود به آکادمی تعمیر
-SYL:ساختار داخلی: Platter، Head، Head Stack، Spindle، VCM، Preamp، PCB
+SEC:مبانی هارد دیسک
+SYL:ساختار داخلی HDD: Platter، Head، Head Stack Assembly
+SYL:Spindle Motor، VCM، Preamp، PCB
 SYL:ROM، RAM، Service Area، User Area
 SYL:Sector، Track، Cylinder، LBA، Zone
 SYL:P-List / G-List و Adaptive Data
-SYL:Logical / Firmware / PCB / Mechanical / Head / Media / Power / Interface Failure
-SYL:علائم: Not Detected، 0 LBA، Wrong Capacity، BSY، Slow Response
-SYL:Clicking، No Spin، Spin Down، Bad Sectors، Read Instability، SMART
-SYL:BIOS/UEFI، ATA Identification، SMART، Terminal
-SYL:PC-3000 / Data Extractor، SeDiv و ابزار تشخیص تخصصی
+SEC:تشخیص نوع خرابی
+SYL:Logical Failure
+SYL:Firmware Failure
+SYL:PCB Failure
+SYL:Mechanical Failure
+SYL:Head Failure
+SYL:Media Damage
+SYL:Power Failure
+SYL:Interface Failure
+SEC:علائم خرابی
+SYL:HDD Not Detected، 0 LBA، Wrong Capacity، BSY
+SYL:Slow Response، Clicking، No Spin، Spin Down
+SYL:Bad Sectors، Read Instability، SMART Errors
+SEC:ابزارهای تشخیص
+SYL:BIOS / UEFI، ATA Identification، SMART، Terminal
+SYL:ابزار تشخیص حرفه‌ای: PC-3000 / Data Extractor، SeDiv و سایر ابزار آزمایشگاه
+LAB:تشخیص نوع خرابی چند هارد واقعی
+LAB:بررسی SMART، ظرفیت، LBA و وضعیت اسپین
 ---
 HDD-201|تعمیر و بازیابی Seagate|Seagate HDD Repair & Data Recovery|پیشرفته|پس از HDD-101 — شامل Maxtor
-SYL:خانواده‌های Seagate، نسل فریمور، معماری F3
-SYL:ROM، RAM، System Area، Firmware Modules، Adaptive، Translator، Head Map
-SYL:Initialization Process و تشخیص فریمور
-SYL:تحلیل / Backup / Repair ماژول و دسترسی SA
+SEC:معماری Seagate
+SYL:شناخت خانواده‌های Seagate و نسل‌های Firmware
+SYL:معماری F3، ROM، RAM، System Area
+SYL:Firmware Modules، Adaptive Data، Translator، Head Map
+SYL:Initialization Process و تحلیل علت خرابی
+SEC:فریمور
+SYL:Firmware Diagnosis، تحلیل / Backup / Repair ماژول
+SYL:دسترسی Service Area
 SYL:مشکلات Translator، ROM و Adaptive
-SYL:Terminal، Serial، ATA Commands، Diagnostic Modes
-SYL:کیس BSY، 0 LBA، Slow Responding، Wrong Capacity
-SYL:Firmware / Bad Sector / Head / PCB / ROM / SA Failure
-SYL:Rosewood: معماری، SMR، Head، Slow، USB/SATA، Imaging Strategy
+SEC:ترمینال و فرمان‌ها
+SYL:اتصال Terminal و ارتباط سریال
+SYL:ATA Commands، Diagnostic Modes، بررسی وضعیت HDD
+SYL:تحلیل پاسخ‌های Firmware
+SEC:خرابی‌های متداول
+SYL:BSY، 0 LBA، Slow Responding، Wrong Capacity
+SYL:Firmware Corruption، Bad Sector
+SYL:Head / PCB / ROM / SA Failure
+SEC:Seagate Rosewood
+SYL:معماری Rosewood، خانواده‌ها و SMR
+SYL:ساختار Firmware، مشکلات Head و Slow
+SYL:معماری USB/SATA و استراتژی Imaging
+LAB:اتصال ترمینال، پشتیبان ماژول و تشخیص F3
+LAB:استراتژی Imaging برای کیس Rosewood / SMR
 ---
 HDD-202|تعمیر و بازیابی Western Digital|Western Digital HDD Repair & Data Recovery|پیشرفته|پس از HDD-101 — SMR بخش مستقل
-SYL:WD Families، ROM، RAM، Service Area، Modules، Adaptive، Translator، Head Map
-SYL:تحلیل / Backup / Repair ماژول، SA Access، ROM Analysis
-SYL:0 LBA، BSY، Slow، Wrong Capacity، Clicking، Head / Bad Sector
-SYL:SA / ROM / Translator Problems
-SYL:CMR در برابر SMR: معماری، Recovery، Imaging، رفتار فریمور، Head
-SYL:شناسایی PCB، سازگاری، انتقال ROM، ریل تغذیه
+SEC:معماری WD
+SYL:خانواده‌های WD، ROM، RAM، Service Area
+SYL:Firmware Modules، Adaptive Data، Translator، Head Map، Initialization
+SEC:فریمور WD
+SYL:تحلیل / Backup / Repair ماژول و دسترسی SA
+SYL:تحلیل ROM، Adaptive Data، Translator و فساد فریمور
+SEC:خرابی‌های متداول
+SYL:0 LBA، BSY، Slow Responding، Wrong Capacity، Clicking
+SYL:مشکلات Head، Bad Sector، SA، ROM و Translator
+SEC:WD CMR / SMR
+SYL:تفاوت معماری CMR و SMR
+SYL:Recovery و Imaging روی SMR، رفتار فریمور و مشکلات Head
+SEC:برد WD
+SYL:شناسایی PCB، سازگاری، انتقال ROM
+SYL:تشخیص الکترونیک و مشکلات ریل تغذیه
+LAB:تشخیص خانواده WD، پشتیبان SA و کیس SMR
+LAB:شناسایی PCB و تصمیم انتقال ROM
 ---
 HDD-203|تعمیر و بازیابی Toshiba|Toshiba HDD Repair & Recovery|پیشرفته|پس از HDD-101
-SYL:خانواده‌های Toshiba: 2.5” / 3.5”، لپ‌تاپ، دسکتاپ، USB
+SEC:معماری Toshiba
+SYL:خانواده‌های Toshiba: ۲٫۵ اینچ / ۳٫۵ اینچ، لپ‌تاپ، دسکتاپ، USB
 SYL:ROM، Firmware، Service Area، Adaptive Data
-SYL:ساختار ماژول، SA Access، Backup، Translator، Defect Management
-SYL:No Detection، 0 LBA، Wrong Capacity، Slow، Bad Sector، Clicking
-SYL:Head / PCB / Firmware Failure
-SYL:Toshiba ARM: معماری، SA، Adaptive، استراتژی Recovery
+SEC:فریمور
+SYL:ساختار ماژول، دسترسی SA، Backup و تحلیل ماژول
+SYL:Translator و Defect Management
+SEC:خرابی‌های متداول
+SYL:No Detection، 0 LBA، Wrong Capacity، Slow HDD
+SYL:Bad Sector، Clicking، Head / PCB / Firmware Failure
+SEC:Toshiba ARM
+SYL:معماری ARM، ساختار Firmware، Service Area و Adaptive
+SYL:استراتژی Recovery روی خانواده‌های ARM
+LAB:تشخیص خانواده Toshiba و دسترسی SA
 ---
 HDD-204|تعمیر و بازیابی Hitachi / HGST|Hitachi / HGST HDD Repair & Recovery|پیشرفته|پس از HDD-101 — شامل Enterprise
-SYL:خانواده‌های Hitachi و HGST: Desktop، Laptop، Enterprise، SATA، SAS
-SYL:ROM، SA، Firmware، Adaptive Data
-SYL:Defect Management، P-List / G-List، Adaptive Parameters
-SYL:0 LBA، Wrong Capacity، Slow، Firmware / Head / Media / PCB / SA
-SYL:معماری Enterprise، SAS در برابر SATA، محیط RAID، Imaging ظرفیت بالا
+SEC:معماری Hitachi / HGST
+SYL:خانواده‌های Hitachi و HGST: Desktop، Laptop، Enterprise
+SYL:SATA و SAS، ROM، SA، Firmware، Adaptive Data
+SEC:فریمور
+SYL:ساختار ماژول، Service Area، Defect Management
+SYL:P-List / G-List، Adaptive Parameters، Backup و تحلیل فریمور
+SEC:خرابی‌های متداول
+SYL:0 LBA، Wrong Capacity، Slow Response
+SYL:Firmware / Head / Media / PCB / SA Failure
+SEC:Enterprise / HGST
+SYL:معماری هارد سازمانی، تفاوت SAS و SATA
+SYL:محیط RAID، ظرفیت بالا و Imaging حرفه‌ای
+LAB:تشخیص خانواده HGST و کار روی Defect List
 ---
 HDD-205|تعمیر و بازیابی Samsung|Samsung HDD Repair & Recovery|پیشرفته|پس از HDD-101
-SYL:خانواده‌های Samsung 2.5” / 3.5”: ROM، Firmware، SA، Adaptive
-SYL:تحلیل ماژول، SA Access، Backup / Repair، Defect Lists
-SYL:تشخیص PCB، Motor، Head، Preamp، ROM و انتخاب Donor
-SYL:No Detection، 0 LBA، Bad Sector، Slow، Clicking
+SEC:معماری Samsung
+SYL:خانواده‌های Samsung ۲٫۵ اینچ / ۳٫۵ اینچ
+SYL:ROM، Firmware، Service Area، Adaptive Data
+SEC:فریمور
+SYL:تحلیل ماژول، دسترسی SA، Backup / Repair
+SYL:Adaptive Data و Defect Lists
+SEC:سخت‌افزار
+SYL:تشخیص PCB، Motor، Head، Preamp، ROM
+SYL:انتخاب Donor
+SEC:کیس‌های متداول
+SYL:No Detection، 0 LBA، Bad Sector، Slow HDD، Clicking
 SYL:Firmware / Head / PCB Failure
+LAB:تشخیص PCB و انتخاب Donor برای Samsung
 ---
 HDD-206|تعمیر و بازیابی Fujitsu|Fujitsu HDD Repair & Recovery|پیشرفته|پس از HDD-101 — شامل نسل Legacy
-SYL:خانواده‌های Fujitsu 2.5” / 3.5” و معماری Legacy
-SYL:ROM، Firmware، SA، Adaptive
-SYL:PCB، Head، Spindle، Preamp، Motor، Donor
-SYL:ساختار SA، ماژول‌ها، Defect Management، تشخیص فریمور
+SEC:معماری Fujitsu
+SYL:خانواده‌های Fujitsu ۲٫۵ اینچ / ۳٫۵ اینچ
+SYL:معماری Legacy، ROM، Firmware، Service Area، Adaptive Data
+SEC:سخت‌افزار
+SYL:PCB، Head، Spindle، Preamp، Motor
+SYL:انتخاب Donor
+SEC:فریمور
+SYL:ساختار SA، ماژول‌ها، Defect Management
+SYL:تشخیص فریمور و روند Recovery
+SEC:کیس‌های متداول
 SYL:No Detection، Wrong Capacity، Bad Sector
 SYL:Firmware / Head / PCB / Mechanical Failure
+LAB:کیس Legacy Fujitsu و تطبیق Donor
 ---
 HDD-207|تعمیر هارد اکسترنال|External HDD Repair & Data Recovery|پیشرفته|جدا از هارد داخلی — Bridge و رمزنگاری مسیر را عوض می‌کند
-SYL:USB HDD، USB-SATA Bridge، USB-PCB، Native USB، SATA داخل قاب
-SYL:کنترلر Bridge، تغذیه USB، 5V / 12V
-SYL:WD / Seagate / Toshiba / Samsung / Hitachi External
+SEC:معماری External HDD
+SYL:USB HDD، پل USB-SATA، USB-PCB
+SYL:درایو Native USB در برابر هارد SATA داخل قاب
+SYL:کنترلر Bridge، تغذیه USB، ۵ ولت / ۱۲ ولت
+SEC:برندها
+SYL:WD External، Seagate External، Toshiba External
+SYL:Samsung External، Hitachi External و سایر قاب‌ها
+SEC:مشکلات متداول
 SYL:USB Not Detected، Detected but No Data، Wrong Capacity، RAW
-SYL:CRC / I/O Error، Slow USB، Disconnect، Power، Bridge Failure
-SYL:رمزنگاری سخت‌افزاری وابسته به Bridge — نگهداری PCB و برد USB اصلی
-SYL:تشخیص Bridge در برابر HDD، دسترسی مستقیم SATA در موارد مناسب
-SYL:Imaging، File System Recovery، Data Extraction
+SYL:CRC Error، I/O Error، Slow USB، Disconnect / Reconnect
+SYL:مشکلات تغذیه و خرابی Bridge
+SEC:رمزنگاری
+SYL:رمزنگاری USB، سخت‌افزاری و وابسته به Bridge
+SYL:اهمیت نگهداری PCB اصلی و برد USB اورجینال
+SYL:بازیابی Native USB
+SEC:استراتژی Recovery
+SYL:تشخیص Bridge در برابر HDD و بررسی PCB
+SYL:دسترسی مستقیم SATA فقط در موارد مناسب
+SYL:Imaging، بازیابی فایل‌سیستم و استخراج داده
+LAB:تشخیص Bridge، تصمیم SATA مستقیم و نگهداری برد اصلی
 ---
 HDD-301|فریمور و Service Area|HDD Firmware & Service Area|تخصصی|پس از مبانی؛ مکمل دوره‌های برند
-SYL:معماری Firmware، MCU، ROM، RAM، SA / System Area
-SYL:Modules، Adaptive، Translator، Head Map
-SYL:Read / Write / Compare / Backup ماژول
-SYL:Terminal، UART، Diagnostic / Boot Mode
-SYL:Corruption، Missing Module، 0 LBA، BSY، ERR، Init
-SYL:ROM Backup / Transfer / Compatibility
-SYL:معرفی SeDiv و ابزار SA داخل همان کیس برند
+SEC:معماری فریمور
+SYL:MCU، ROM، RAM، Service Area / System Area
+SYL:Modules، Adaptive Data، Translator، Head Map
+SEC:کار روی ماژول
+SYL:خواندن، نوشتن، مقایسه و Backup ماژول
+SYL:دسترسی SA و تشخیص فساد ماژول
+SEC:ترمینال
+SYL:UART، Diagnostic Mode، Boot Mode
+SYL:کیس Corruption، Missing Module، 0 LBA، BSY، ERR، Init
+SEC:ROM
+SYL:Backup، Transfer و سازگاری ROM
+SYL:معرفی SeDiv و ابزار SA داخل همان کیس برند — نه به‌جای سیلابس
+LAB:پشتیبان SA، مقایسه ماژول و کار ترمینال
 ---
 HDD-302|تعمیر الکترونیک PCB|Professional HDD PCB Repair|تخصصی|هویه و ابزار دقیق لازم است
-SYL:معماری PCB: ریل 5V / 12V، TVS، Fuse، رگولاتور
-SYL:Motor Controller، MCU، رابط Preamp
+SEC:الکترونیک برد
+SYL:معماری PCB، ریل ۵ ولت و ۱۲ ولت
+SYL:دیود TVS، فیوز، رگولاتور ولتاژ
+SYL:کنترلر موتور، MCU، رابط Preamp
+SEC:عیب‌یابی
 SYL:اتصال کوتاه، قطعه سوخته، اضافه ولتاژ، پلاریته معکوس
 SYL:No Power، No Spin، PCB Not Detected
-SYL:ROM Backup / Transfer، Adaptive، انتخاب Donor PCB
-SYL:مولتی‌متر، اسیلوسکوپ، منبع آزمایشگاهی، میکروسکوپ، ریورک
+SEC:ROM
+SYL:Backup و Transfer ROM، Adaptive Data
+SYL:انتخاب Donor PCB و سازگاری
+SEC:ابزار
+SYL:مولتی‌متر، اسیلوسکوپ، منبع آزمایشگاهی
+SYL:میکروسکوپ و تجهیزات هویه / ریورک
+LAB:اندازه‌گیری ریل تغذیه و تعویض TVS / فیوز
+LAB:انتقال ROM روی Donor سازگار
 ---
 HDD-303|بازیابی مکانیکی Head و Platter|Professional Head & Platter Recovery|تخصصی|اتاق تمیز الزامی
-SYL:HDA، Platter، Head Stack، VCM، Spindle، Preamp، Ramp، Parking
-SYL:Head Crash، Stiction، Head / Spindle / Motor Failure
-SYL:خراش، آلودگی، آسیب سطح
-SYL:Donor: Model، Family، Firmware، Date Code، Head / PCB / Preamp / مکانیک
-LAB:باز کردن HDA، بازرسی و تعویض Head / Head Stack
-LAB:کار روی Spindle، جابه‌جایی Platter، محیط تمیز، تشخیص بعد از تعمیر
+SEC:ساختار مکانیکی
+SYL:HDA، Platter، Head Stack، VCM
+SYL:Spindle، Preamp، Ramp، سیستم پارک هد
+SEC:خرابی مکانیکی
+SYL:Head Crash، Head Stiction، Head Failure
+SYL:خرابی Spindle / Motor، آسیب Platter، خراش، آلودگی
+SEC:انتخاب Donor
+SYL:Model، Family، Firmware، سازگاری Head
+SYL:Date Code، PCB، Preamp، سازگاری مکانیکی
+SEC:کار عملی
+SYL:باز کردن HDA، بازرسی و تعویض Head / Head Stack
+SYL:کار روی Spindle، جابه‌جایی Platter، محیط تمیز
+SYL:تشخیص بعد از تعمیر
+LAB:باز کردن کنترل‌شده HDA و تعویض Head Stack
+LAB:جابه‌جایی Platter و تست پایداری بعد از تعمیر
 ---
 HDD-304|Imaging حرفه‌ای|Advanced Imaging & Data Extraction|تخصصی|مشترک برای تمام برندها
-SYL:Sector-by-Sector، Read Instability، Bad / Weak / Slow Sector
-SYL:Head Instability، Retry، Timeout، Skip، Multi-pass، Reverse، Selective
-SYL:Head Map، Head-by-Head، Disable هد معیوب، اولویت Recovery
-SYL:Raw / File System Recovery، Image Mount، Partial Image
-SYL:Verification و استخراج فایل — Data Extractor بخش عملی اصلی است
+SEC:Imaging
+SYL:Sector-by-Sector Imaging
+SYL:Read Instability، Bad Sector، Weak Sector، Slow Sector
+SYL:Head Instability، Read Retry، Timeout، Skip Strategy
+SYL:Multi-pass، Reverse Imaging، Selective Imaging
+SEC:Imaging مبتنی بر Head
+SYL:Head Map، Head-by-Head Imaging
+SYL:غیرفعال کردن هد معیوب، Imaging انتخابی، اولویت Recovery
+SEC:استخراج داده
+SYL:Raw Recovery، File System Recovery
+SYL:Image Mount، Partial Image، Verification، استخراج فایل
+LAB:Imaging چندمرحله‌ای و Head-by-Head روی رسانه ناپایدار
+LAB:ماونت ایمیج و استخراج فایل با Data Extractor
 ---
 HDD-401|کارگاه کیس واقعی|Advanced HDD Case Studies|Master|پایان تئوری؛ شروع کیس مشتری
-SYL:Workflow: پذیرش → تشخیص → سخت‌افزار → فریمور → استراتژی → Backup → پایدارسازی → Imaging → Recovery → Verification
-SYL:Dead / No Spin / Clicking / 0 LBA / BSY / Slow / Wrong Capacity
-SYL:Firmware / SA / ROM / PCB / Head Failure
-SYL:Bad Sector، Media Damage، SMR Recovery
-SYL:External / USB / Encrypted External
-LAB:کیس واقعی از تشخیص تا تحویل در آزمایشگاه
+SEC:کیس‌های عملی
+SYL:Dead HDD، No Spin، Clicking HDD
+SYL:0 LBA، BSY، Slow HDD، Wrong Capacity
+SYL:Firmware Corruption، SA Failure، ROM Failure
+SYL:PCB Failure، Head Failure، Bad Sector، Media Damage
+SYL:SMR Recovery، External HDD، USB HDD، Encrypted External
+WFL:پذیرش کیس مشتری
+WFL:تشخیص اولیه
+WFL:تحلیل سخت‌افزار
+WFL:تحلیل فریمور
+WFL:استراتژی Recovery
+WFL:Backup
+WFL:تعمیر / پایدارسازی
+WFL:Imaging حرفه‌ای
+WFL:بازیابی فایل
+WFL:Verification
+LAB:حل کیس واقعی از پذیرش تا تحویل در آزمایشگاه
 TXT;
     }
 

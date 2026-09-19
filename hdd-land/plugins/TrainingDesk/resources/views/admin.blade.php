@@ -77,7 +77,7 @@
         <label>مسیر حرفه‌ای <small>هر خط: سطح|عنوان|دوره‌ها</small>
           <textarea name="{{ $prefix }}_path" rows="5">{{ $copy[$prefix.'_path'] ?? '' }}</textarea>
         </label>
-        <label>سیلابس کامل دوره‌ها <small>بلوک‌ها با --- جدا می‌شوند. خط اول: کد|عنوان|English|سطح|مخاطب — سپس SYL:سرفصل و LAB:تمرین</small>
+        <label>سیلابس کامل دوره‌ها <small>بلوک‌ها با --- جدا می‌شوند. خط اول: کد|عنوان|English|سطح|مخاطب — سپس SEC:عنوان بخش، SYL:سرفصل، LAB:تمرین، WFL:گام گردش‌کار</small>
           <textarea name="{{ $prefix }}_modules" rows="14" dir="ltr">{{ $copy[$prefix.'_modules'] ?? '' }}</textarea>
         </label>
         <label>عنوان مسیر برند<input name="{{ $prefix }}_tracks_title" value="{{ $copy[$prefix.'_tracks_title'] ?? '' }}"></label>
@@ -85,6 +85,7 @@
           <textarea name="{{ $prefix }}_tracks" rows="6">{{ $copy[$prefix.'_tracks'] ?? '' }}</textarea>
         </label>
         <label>عنوان تخصص‌های بعدی<input name="{{ $prefix }}_special_title" value="{{ $copy[$prefix.'_special_title'] ?? '' }}"></label>
+        <label>یادداشت تخصص‌های بعدی<textarea name="{{ $prefix }}_special_lead" rows="2">{{ $copy[$prefix.'_special_lead'] ?? '' }}</textarea></label>
         <label>دوره‌های تخصصی بعدی (هر خط یکی)<textarea name="{{ $prefix }}_special" rows="6">{{ $copy[$prefix.'_special'] ?? '' }}</textarea></label>
         <div class="row">
           <label>پیش‌نیاز (هر خط یکی)<textarea name="{{ $prefix }}_prereq" rows="4">{{ $copy[$prefix.'_prereq'] }}</textarea></label>
