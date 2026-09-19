@@ -7,6 +7,7 @@
 #include "crd/log.hpp"
 #include "crd/platform.hpp"
 #include "crd/tcp_socket.hpp"
+#include "crd/util.hpp"
 #include "host/desktop_capture.hpp"
 #include "host/input_inject.hpp"
 
