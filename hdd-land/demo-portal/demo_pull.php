@@ -18,6 +18,7 @@ if (strlen($sha) !== 40) {
 $map = [
     'index.php' => 'hdd-land/demo-portal/index.php',
     'bootstrap.php' => 'hdd-land/demo-portal/bootstrap.php',
+    'views.php' => 'hdd-land/demo-portal/views.php',
     '.htaccess' => 'hdd-land/demo-portal/.htaccess',
     'robots.txt' => 'hdd-land/demo-portal/robots.txt',
     'config.sample.php' => 'hdd-land/demo-portal/config.sample.php',
