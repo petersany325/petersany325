@@ -8,7 +8,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Plugins\Accounting\Plugin;
+use Plugins\Accounting\src\Support\AccCommerce;
 use Plugins\Accounting\src\Support\AccEngine;
+use Plugins\Accounting\src\Support\AccMath;
 
 class InstallmentController extends Controller
 {
@@ -57,10 +59,15 @@ class InstallmentController extends Controller
             : collect();
         $user = $row->user_id ? DB::table('users')->where('id', $row->user_id)->first() : null;
 
+        $invoice = ! empty($row->document_id)
+            ? DB::table('acc_documents')->where('id', $row->document_id)->first()
+            : null;
+
         return view('accounting::admin.installment-show', [
             'row' => $row,
             'schedules' => $schedules,
             'user' => $user,
+            'invoice' => $invoice,
             'statuses' => AccEngine::INSTALLMENT_STATUSES,
         ]);
     }
@@ -72,8 +79,8 @@ class InstallmentController extends Controller
         $price = (int) preg_replace('/\D+/', '', (string) $request->input('product_price', 0));
         $down = (int) preg_replace('/\D+/', '', (string) $request->input('down_payment', 0));
         $months = max(1, min(36, (int) $request->input('months', 3)));
-        $remain = max(0, $price - $down);
-        $monthly = $months > 0 ? (int) ceil($remain / $months) : 0;
+        $plan = AccMath::installmentPlan($price, $down, $months);
+        $monthly = (int) $plan['monthly'];
         $name = trim((string) $request->input('customer_name', ''));
         $title = trim((string) $request->input('product_title', ''));
         if ($name === '' || $title === '' || $price <= 0) {
@@ -92,7 +99,7 @@ class InstallmentController extends Controller
             'down_payment' => $down,
             'months' => $months,
             'monthly_amount' => $monthly,
-            'total_amount' => $down + ($monthly * $months),
+            'total_amount' => (int) $plan['total'],
             'status' => 'pending',
             'ticket_id' => null,
             'approved_by' => null,
@@ -126,11 +133,13 @@ class InstallmentController extends Controller
             if ($request->filled('monthly_amount')) {
                 $monthly = (int) preg_replace('/\D+/', '', (string) $request->input('monthly_amount'));
                 $data['monthly_amount'] = $monthly;
-                $data['total_amount'] = (int) $row->down_payment + ($monthly * $months);
+                $data['total_amount'] = (int) $row->product_price;
             }
             AccEngine::buildInstallmentSchedule($id, $months, $monthly);
-            if ($status === 'approved') {
-                // keep approved until staff activates
+            $fresh = (object) array_merge((array) $row, $data);
+            $docId = AccCommerce::saleFromInstallment($fresh, true);
+            if ($docId && Schema::hasColumn('acc_installment_requests', 'document_id')) {
+                $data['document_id'] = $docId;
             }
         }
 

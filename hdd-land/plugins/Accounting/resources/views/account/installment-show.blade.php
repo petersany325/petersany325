@@ -25,6 +25,9 @@
   @if($row->admin_note)
     <div class="meta" style="margin-top:.5rem">پاسخ فروشگاه: {{ $row->admin_note }}</div>
   @endif
+  @if(!empty($invoice))
+    <div style="margin-top:.7rem"><a href="{{ route('account.invoices.show', $invoice->id) }}">فاکتور فروش {{ $invoice->number }}</a></div>
+  @endif
   @if($row->ticket_id)
     <div style="margin-top:.7rem"><a href="{{ url('/account/tickets') }}">مشاهده تیکت پشتیبانی #{{ $row->ticket_id }}</a></div>
   @else

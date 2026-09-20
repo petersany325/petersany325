@@ -5,6 +5,7 @@ namespace Plugins\Accounting;
 use App\Support\BasePlugin;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Plugins\Accounting\src\Support\AccCommerce;
 
 class Plugin extends BasePlugin
 {
@@ -20,12 +21,12 @@ class Plugin extends BasePlugin
 
     public function description(): string
     {
-        return 'فاکتور خرید/فروش با سریال، پیش‌فاکتور، سند دستی، بانک، انبار چندگانه، هزینه، حقوق و گزارش‌ها';
+        return 'یک حقیقت فروش: سفارش فروشگاه، فاکتور، اقساط و موجودی کالا روی یک سند حسابداری';
     }
 
     public function version(): string
     {
-        return '1.2.2';
+        return '1.3.0';
     }
 
     public function isCore(): bool
@@ -38,6 +39,7 @@ class Plugin extends BasePlugin
         static::loadClasses();
         static::ensureSchema();
         static::seedDefaults();
+        AccCommerce::boot();
         parent::boot();
     }
 
@@ -46,6 +48,9 @@ class Plugin extends BasePlugin
     {
         $base = __DIR__.DIRECTORY_SEPARATOR.'src';
         $files = [
+            $base.'/Support/AccMath.php',
+            $base.'/Support/AccCommerce.php',
+            $base.'/Support/AccountingLedger.php',
             $base.'/Support/AccEngine.php',
             $base.'/Http/Controllers/Admin/HubController.php',
             $base.'/Http/Controllers/Admin/ReportController.php',
@@ -300,7 +305,27 @@ class Plugin extends BasePlugin
                     $t->timestamps();
                 });
             }
+            static::ensureColumn('acc_documents', 'order_id', function ($t) {
+                $t->unsignedBigInteger('order_id')->nullable()->index();
+            });
+            static::ensureColumn('acc_documents', 'source', function ($t) {
+                $t->string('source', 24)->nullable()->index();
+            });
+            static::ensureColumn('acc_installment_requests', 'document_id', function ($t) {
+                $t->unsignedBigInteger('document_id')->nullable()->index();
+            });
+            static::ensureColumn('acc_installment_requests', 'order_id', function ($t) {
+                $t->unsignedBigInteger('order_id')->nullable()->index();
+            });
         } catch (\Throwable) {
+        }
+    }
+
+    /** @param  callable(\Illuminate\Database\Schema\Blueprint):void  $add */
+    protected static function ensureColumn(string $table, string $column, callable $add): void
+    {
+        if (Schema::hasTable($table) && ! Schema::hasColumn($table, $column)) {
+            Schema::table($table, $add);
         }
     }
 

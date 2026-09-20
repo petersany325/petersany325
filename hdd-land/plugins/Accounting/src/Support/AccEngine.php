@@ -80,7 +80,7 @@ class AccEngine
     public static function createDocument(array $data, array $lines = []): int
     {
         $type = (string) ($data['type'] ?? 'sale');
-        $id = (int) DB::table('acc_documents')->insertGetId([
+        $row = [
             'number' => $data['number'] ?? self::nextNumber($type),
             'type' => $type,
             'status' => $data['status'] ?? 'draft',
@@ -104,7 +104,19 @@ class AccEngine
             'created_by' => $data['created_by'] ?? Auth::id(),
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+        if (Schema::hasColumn('acc_documents', 'order_id')) {
+            $row['order_id'] = $data['order_id'] ?? null;
+        }
+        if (Schema::hasColumn('acc_documents', 'source')) {
+            $row['source'] = $data['source'] ?? null;
+        }
+        try {
+            $id = (int) DB::table('acc_documents')->insertGetId($row);
+        } catch (\Throwable $e) {
+            $row['number'] = self::nextNumber($type).'-'.substr((string) time(), -3);
+            $id = (int) DB::table('acc_documents')->insertGetId($row);
+        }
 
         foreach ($lines as $line) {
             $qty = (float) ($line['qty'] ?? 1);
@@ -179,6 +191,7 @@ class AccEngine
                 }
             }
         }
+        AccCommerce::applyCatalogStock($doc, $lines, 1);
     }
 
     public static function adjustStock(int $warehouseId, int $productId, float $qtyDelta, int $unitCost = 0): void
@@ -261,6 +274,7 @@ class AccEngine
             'related_id' => $newId,
             'updated_at' => now(),
         ]);
+        self::issueDocument($newId);
 
         return $newId;
     }
@@ -341,20 +355,42 @@ class AccEngine
         return sprintf('INS-%s-%04d', $stamp, $last + 1);
     }
 
-    /** Build monthly schedule rows after approval. */
+    /** Build monthly schedule rows after approval. Paid/waived rows are kept. */
     public static function buildInstallmentSchedule(int $requestId, int $months, int $monthlyAmount, ?string $startDate = null): void
     {
         if (! Schema::hasTable('acc_installment_schedules') || $months < 1) {
             return;
         }
-        DB::table('acc_installment_schedules')->where('request_id', $requestId)->delete();
+        $req = Schema::hasTable('acc_installment_requests')
+            ? DB::table('acc_installment_requests')->where('id', $requestId)->first()
+            : null;
+        $plan = $req
+            ? AccMath::installmentPlan((int) $req->product_price, (int) $req->down_payment, max(1, (int) $req->months))
+            : ['amounts' => array_fill(0, $months, $monthlyAmount)];
+        $amounts = $plan['amounts'] ?? array_fill(0, $months, $monthlyAmount);
+        if ($monthlyAmount > 0 && ! $req) {
+            $amounts = array_fill(0, $months, $monthlyAmount);
+        }
+
+        $kept = DB::table('acc_installment_schedules')
+            ->where('request_id', $requestId)
+            ->whereIn('status', ['paid', 'waived'])
+            ->pluck('id', 'installment_no');
+        DB::table('acc_installment_schedules')
+            ->where('request_id', $requestId)
+            ->whereNotIn('status', ['paid', 'waived'])
+            ->delete();
+
         $start = $startDate ? \Carbon\Carbon::parse($startDate) : now()->addMonth()->startOfMonth();
         for ($i = 1; $i <= $months; $i++) {
+            if ($kept->has($i)) {
+                continue;
+            }
             DB::table('acc_installment_schedules')->insert([
                 'request_id' => $requestId,
                 'installment_no' => $i,
                 'due_date' => $start->copy()->addMonths($i - 1)->toDateString(),
-                'amount' => $monthlyAmount,
+                'amount' => (int) ($amounts[$i - 1] ?? $monthlyAmount),
                 'status' => 'pending',
                 'paid_at' => null,
                 'paid_amount' => 0,
@@ -472,6 +508,7 @@ class AccEngine
                     }
                 }
             }
+            AccCommerce::applyCatalogStock($doc, $lines, -1);
         }
         DB::table('acc_documents')->where('id', $id)->update([
             'status' => 'cancelled',

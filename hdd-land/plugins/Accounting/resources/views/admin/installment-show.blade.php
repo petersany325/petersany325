@@ -23,6 +23,9 @@
   <p><strong>کالا:</strong> {{ $row->product_title }}</p>
   <p><strong>موبایل:</strong> {{ $row->customer_mobile ?: '—' }} · <strong>کد ملی:</strong> {{ $row->customer_national_id ?: '—' }}</p>
   @if($user)<p><strong>کاربر سیستم:</strong> {{ $user->name }} (#{{ $user->id }})</p>@endif
+  @if(!empty($invoice))
+    <p><strong>فاکتور فروش:</strong> <a href="{{ route('admin.accounting.doc', $invoice->id) }}">{{ $invoice->number }}</a> — {{ $invoice->status }}</p>
+  @endif
   @if($row->ticket_id)<p><strong>تیکت:</strong> #{{ $row->ticket_id }}</p>@endif
   @if($row->customer_note)<p><strong>یادداشت مشتری:</strong> {{ $row->customer_note }}</p>@endif
 </div></div>

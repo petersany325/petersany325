@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Plugins\Accounting\Plugin;
+use Plugins\Accounting\src\Support\AccCommerce;
 use Plugins\Accounting\src\Support\AccEngine;
 
 class HubController extends Controller
@@ -20,11 +21,23 @@ class HubController extends Controller
 
     public function hub()
     {
+        $synced = AccCommerce::syncPendingShopOrders(25);
+
         return view('accounting::admin.hub', [
             'stats' => AccEngine::dashboardStats(),
             'types' => AccEngine::TYPES,
             'recent' => DB::table('acc_documents')->orderByDesc('id')->limit(12)->get(),
+            'synced' => $synced,
         ]);
+    }
+
+    public function syncShop()
+    {
+        $n = AccCommerce::syncPendingShopOrders(80);
+
+        return back()->with('success', $n > 0
+            ? $n.' سفارش فروشگاه با فاکتور حسابداری هم‌خوان شد.'
+            : 'سفارش جدیدی برای همگام‌سازی نبود.');
     }
 
     public function docs(Request $request)
@@ -64,6 +77,8 @@ class HubController extends Controller
             'accounts' => DB::table('acc_accounts')->where('is_active', 1)->orderBy('code')->get(),
             'categories' => DB::table('acc_expense_categories')->where('is_active', 1)->orderBy('name')->get(),
             'staff' => $this->staffOptions(),
+            'products' => AccCommerce::catalogProducts('', 120),
+            'customers' => AccCommerce::customers('', 120),
             'doc' => null,
             'lines' => [],
             'number' => AccEngine::nextNumber($type),
@@ -84,23 +99,41 @@ class HubController extends Controller
         $serials = (array) $request->input('line_serials', []);
         $sides = (array) $request->input('line_side', []);
         $accountIds = (array) $request->input('line_account_id', []);
+        $productIds = (array) $request->input('line_product_id', []);
 
         $lines = [];
         $subtotal = 0;
         foreach ($titles as $i => $title) {
             $title = trim((string) $title);
-            if ($title === '') {
-                continue;
-            }
+            $productId = (int) ($productIds[$i] ?? 0) ?: null;
+            $sku = null;
             $qty = (float) str_replace(',', '', (string) ($qtys[$i] ?? 1));
             $price = (int) str_replace(',', '', (string) ($prices[$i] ?? 0));
             $cost = (int) str_replace(',', '', (string) ($costs[$i] ?? 0));
+            if ($productId && Schema::hasTable('products')) {
+                $p = DB::table('products')->where('id', $productId)->first();
+                if ($p) {
+                    $title = $title !== '' ? $title : (string) ($p->name ?? '');
+                    $sku = $p->sku ?? null;
+                    if ($price <= 0) {
+                        $price = (int) ($p->price ?? 0);
+                    }
+                    if ($cost <= 0) {
+                        $cost = (int) ($p->cost_price ?? 0);
+                    }
+                }
+            }
+            if ($title === '') {
+                continue;
+            }
             $lineTotal = (int) round($qty * $price);
             $subtotal += $lineTotal;
             $snRaw = (string) ($serials[$i] ?? '');
             $snList = preg_split('/[\s,;]+/u', $snRaw, -1, PREG_SPLIT_NO_EMPTY) ?: [];
             $lines[] = [
+                'product_id' => $productId,
                 'title' => $title,
+                'sku' => $sku,
                 'qty' => $qty,
                 'unit_price' => $price,
                 'unit_cost' => $cost,
@@ -134,12 +167,19 @@ class HubController extends Controller
         $rate = (float) $request->input('commission_rate', 0);
         $commission = (int) round($total * $rate / 100);
 
+        $partyUserId = $request->filled('party_user_id') ? (int) $request->input('party_user_id') : null;
+        $partyName = trim((string) $request->input('party_name', ''));
+        if ($partyUserId && $partyName === '') {
+            $partyName = AccCommerce::userName($partyUserId) ?: $partyName;
+        }
+
         $id = AccEngine::createDocument([
             'type' => $type,
             'status' => $request->boolean('issue_now') ? 'draft' : 'draft',
             'doc_date' => $request->input('doc_date') ?: now()->toDateString(),
-            'party_name' => $request->input('party_name'),
-            'party_user_id' => $request->input('party_user_id') ?: null,
+            'party_name' => $partyName !== '' ? $partyName : null,
+            'party_user_id' => $partyUserId,
+            'source' => 'manual',
             'warehouse_id' => $request->input('warehouse_id') ?: null,
             'warehouse_to_id' => $request->input('warehouse_to_id') ?: null,
             'bank_id' => $request->input('bank_id') ?: null,
@@ -169,7 +209,12 @@ class HubController extends Controller
         $lines = DB::table('acc_document_lines')->where('document_id', $id)->get();
         $serials = DB::table('acc_document_serials')->where('document_id', $id)->get();
 
-        return view('accounting::admin.doc-show', compact('doc', 'lines', 'serials') + [
+        $order = null;
+        if (! empty($doc->order_id) && Schema::hasTable('orders')) {
+            $order = DB::table('orders')->where('id', $doc->order_id)->first();
+        }
+
+        return view('accounting::admin.doc-show', compact('doc', 'lines', 'serials', 'order') + [
             'types' => AccEngine::TYPES,
         ]);
     }
@@ -256,13 +301,17 @@ class HubController extends Controller
         $balances = DB::table('acc_stock_balances as b')
             ->leftJoin('acc_warehouses as w', 'w.id', '=', 'b.warehouse_id')
             ->orderBy('w.name')
-            ->select('b.*', 'w.name as warehouse_name', 'w.code as warehouse_code')
-            ->limit(200)
-            ->get();
+            ->select('b.*', 'w.name as warehouse_name', 'w.code as warehouse_code');
+        if (Schema::hasTable('products')) {
+            $balances->leftJoin('products as p', 'p.id', '=', 'b.product_id')
+                ->addSelect(DB::raw('COALESCE(p.name, CONCAT("کالا #", b.product_id)) as product_name'));
+        }
+        $balances = $balances->limit(200)->get();
 
         return view('accounting::admin.stock', [
             'balances' => $balances,
             'warehouses' => DB::table('acc_warehouses')->where('is_active', 1)->get(),
+            'products' => AccCommerce::catalogProducts('', 120),
             'moves' => DB::table('acc_documents')->whereIn('type', ['stock_in', 'stock_out', 'transfer'])->orderByDesc('id')->limit(40)->get(),
         ]);
     }
@@ -276,6 +325,18 @@ class HubController extends Controller
         $title = trim((string) $request->input('title', 'کالا'));
         $qty = (float) str_replace(',', '', (string) $request->input('qty', 1));
         $cost = (int) str_replace(',', '', (string) $request->input('unit_cost', 0));
+        $productId = $request->filled('product_id') ? (int) $request->input('product_id') : null;
+        if ($productId && Schema::hasTable('products')) {
+            $p = DB::table('products')->where('id', $productId)->first();
+            if ($p) {
+                if ($title === '' || $title === 'کالا') {
+                    $title = (string) ($p->name ?? $title);
+                }
+                if ($cost <= 0) {
+                    $cost = (int) ($p->cost_price ?? 0);
+                }
+            }
+        }
         if ($title === '' || $qty <= 0) {
             return back()->with('error', 'نام کالا و تعداد الزامی است.');
         }
@@ -296,7 +357,7 @@ class HubController extends Controller
             'unit_price' => $cost,
             'unit_cost' => $cost,
             'line_total' => (int) round($qty * $cost),
-            'product_id' => $request->input('product_id') ?: null,
+            'product_id' => $productId,
             'serials' => $serials,
         ]]);
         if ($request->boolean('issue_now', true)) {

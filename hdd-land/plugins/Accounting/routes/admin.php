@@ -8,6 +8,7 @@ use Plugins\Accounting\src\Http\Controllers\Admin\ReportController;
 
 Route::prefix('accounting')->name('accounting.')->group(function () {
     Route::get('/', [HubController::class, 'hub'])->name('hub');
+    Route::post('/sync-shop', [HubController::class, 'syncShop'])->name('sync-shop');
 
     Route::get('/docs', [HubController::class, 'docs'])->name('docs');
     Route::get('/docs/create', [HubController::class, 'createDoc'])->name('docs.create');

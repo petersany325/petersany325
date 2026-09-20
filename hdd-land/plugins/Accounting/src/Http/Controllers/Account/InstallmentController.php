@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Plugins\Accounting\Plugin;
 use Plugins\Accounting\src\Support\AccEngine;
+use Plugins\Accounting\src\Support\AccMath;
 
 class InstallmentController extends Controller
 {
@@ -97,8 +98,8 @@ class InstallmentController extends Controller
             return back()->withInput()->with('error', 'کالا و قیمت را مشخص کنید.');
         }
 
-        $remain = max(0, $price - $down);
-        $monthly = (int) ceil($remain / $months);
+        $plan = AccMath::installmentPlan($price, $down, $months);
+        $monthly = (int) $plan['monthly'];
         $number = AccEngine::nextInstallmentNumber();
         $name = trim((string) ($user->name ?? $user->full_name ?? 'مشتری'));
         $mobile = trim((string) ($user->mobile ?? $request->input('customer_mobile', '')));
@@ -126,7 +127,7 @@ class InstallmentController extends Controller
             'down_payment' => $down,
             'months' => $months,
             'monthly_amount' => $monthly,
-            'total_amount' => $down + ($monthly * $months),
+            'total_amount' => (int) $plan['total'],
             'status' => 'pending',
             'ticket_id' => $ticketId,
             'approved_by' => null,
@@ -154,10 +155,14 @@ class InstallmentController extends Controller
         $schedules = Schema::hasTable('acc_installment_schedules')
             ? DB::table('acc_installment_schedules')->where('request_id', $id)->orderBy('installment_no')->get()
             : collect();
+        $invoice = ! empty($row->document_id)
+            ? DB::table('acc_documents')->where('id', $row->document_id)->first()
+            : null;
 
         return view('accounting::account.installment-show', [
             'row' => $row,
             'schedules' => $schedules,
+            'invoice' => $invoice,
             'statuses' => AccEngine::INSTALLMENT_STATUSES,
         ]);
     }

@@ -35,7 +35,10 @@
   </div>
 </div>
 <div class="grid">
-  <div class="card"><h3>طرف حساب</h3><div class="v" style="font-size:1rem">{{ $doc->party_name ?: '—' }}</div></div>
+  <div class="card"><h3>طرف حساب</h3><div class="v" style="font-size:1rem">{{ $doc->party_name ?: '—' }}</div>
+    @if(!empty($doc->party_user_id))<div class="s">کاربر #{{ $doc->party_user_id }}</div>@endif
+    @if(!empty($order))<div class="s">سفارش فروشگاه #{{ $order->id }} — {{ $order->status }}</div>@endif
+  </div>
   <div class="card"><h3>جمع جزء</h3><div class="v">{{ $m($doc->subtotal) }}</div></div>
   <div class="card"><h3>تخفیف / مالیات</h3><div class="v" style="font-size:1rem">{{ $m($doc->discount) }} / {{ $m($doc->tax) }}</div></div>
   <div class="card"><h3>مبلغ نهایی</h3><div class="v">{{ $m($doc->total) }}</div>
@@ -48,7 +51,8 @@
   <tbody>
   @foreach($lines as $l)
     <tr>
-      <td>{{ $l->title }}@if($l->sku)<div style="color:var(--muted);font-size:.8rem">{{ $l->sku }}</div>@endif</td>
+      <td>{{ $l->title }}@if($l->sku)<div style="color:var(--muted);font-size:.8rem">{{ $l->sku }}</div>@endif
+        @if(!empty($l->product_id))<div style="color:var(--muted);font-size:.8rem">کالا #{{ $l->product_id }}</div>@endif</td>
       <td>{{ $l->qty }}</td>
       <td>{{ $m($l->unit_price) }}</td>
       <td>{{ $m($l->line_total) }}</td>

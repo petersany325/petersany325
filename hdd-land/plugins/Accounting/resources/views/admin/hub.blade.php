@@ -5,13 +5,16 @@
 <div class="top">
   <div>
     <h1>میز حسابداری مدرن</h1>
-    <p>فاکتور خرید/فروش با سریال، چک، اقساط، انبار چندگانه، حقوق و گزارش‌های فیلتردار</p>
+    <p>یک حقیقت فروش: سفارش فروشگاه، فاکتور، اقساط و موجودی کالا روی یک سند</p>
   </div>
   <div class="actions">
     <a class="btn" href="{{ route('admin.accounting.docs.create',['type'=>'sale']) }}">فروش + سریال</a>
     <a class="btn g" href="{{ route('admin.accounting.docs.create',['type'=>'purchase']) }}">خرید</a>
     <a class="btn w" href="{{ route('admin.accounting.checks') }}">چک‌ها</a>
     <a class="btn o" href="{{ route('admin.accounting.installments') }}">اقساط</a>
+    <form method="post" action="{{ route('admin.accounting.sync-shop') }}">@csrf
+      <button class="btn g" type="submit">همگام‌سازی سفارش‌های فروشگاه</button>
+    </form>
   </div>
 </div>
 <div class="grid">

@@ -67,7 +67,8 @@ class ReportController extends Controller
         $staffId = (int) $request->get('staff_id', 0);
 
         $q = DB::table('acc_documents as d')
-            ->leftJoin('users as u', 'u.id', '=', 'd.staff_id')
+            ->leftJoin('staff_members as sm', 'sm.id', '=', 'd.staff_id')
+            ->leftJoin('users as u', 'u.id', '=', 'sm.user_id')
             ->leftJoin('acc_warehouses as w', 'w.id', '=', 'd.warehouse_id')
             ->where('d.type', $type)
             ->where('d.status', 'issued')
@@ -75,7 +76,9 @@ class ReportController extends Controller
             ->select([
                 'd.id', 'd.number', 'd.doc_date', 'd.party_name', 'd.party_user_id',
                 'd.subtotal', 'd.discount', 'd.tax', 'd.total',
-                'd.commission_amount', 'd.staff_id', 'u.name as staff_name', 'w.name as warehouse_name',
+                'd.commission_amount', 'd.staff_id',
+                DB::raw('COALESCE(sm.name, u.name) as staff_name'),
+                'w.name as warehouse_name',
             ]);
 
         if ($docNo !== '') {
@@ -121,7 +124,8 @@ class ReportController extends Controller
         $staffId = (int) $request->get('staff_id', 0);
 
         $q = DB::table('acc_documents as d')
-            ->leftJoin('users as u', 'u.id', '=', 'd.staff_id')
+            ->leftJoin('staff_members as sm', 'sm.id', '=', 'd.staff_id')
+            ->leftJoin('users as u', 'u.id', '=', 'sm.user_id')
             ->where('d.type', 'sale')
             ->where('d.status', 'issued')
             ->whereBetween('d.doc_date', [$from, $to])
@@ -130,8 +134,8 @@ class ReportController extends Controller
             $q->where('d.staff_id', $staffId);
         }
 
-        $rows = $q->selectRaw('d.staff_id, COALESCE(u.name, CONCAT("#", d.staff_id)) as staff_name, COUNT(*) as docs_count, SUM(d.total) as sales_total, SUM(d.commission_amount) as commission_total, SUM(d.total - d.commission_amount) as profit_est')
-            ->groupBy('d.staff_id', 'u.name')
+        $rows = $q->selectRaw('d.staff_id, COALESCE(sm.name, u.name, CONCAT("#", d.staff_id)) as staff_name, COUNT(*) as docs_count, SUM(d.total) as sales_total, SUM(d.commission_amount) as commission_total, SUM(d.total - d.commission_amount) as profit_est')
+            ->groupBy('d.staff_id', 'sm.name', 'u.name')
             ->orderByDesc('sales_total')
             ->get();
 
@@ -369,6 +373,10 @@ class ReportController extends Controller
 
     private function staffOptions()
     {
+        if (Schema::hasTable('staff_members')) {
+            return DB::table('staff_members')->where('is_active', 1)->orderBy('name')->get(['id', 'name', 'role']);
+        }
+
         return DB::table('users')
             ->whereIn('role', ['admin', 'staff', 'seller', 'warehouse'])
             ->orderBy('name')

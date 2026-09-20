@@ -13,17 +13,27 @@
   <div class="panel"><div class="bd">
     <div class="row">
       <label>تاریخ سند<input type="date" name="doc_date" value="{{ now()->toDateString() }}"></label>
-      <label>طرف حساب<input name="party_name" value="{{ old('party_name') }}" placeholder="مشتری / تأمین‌کننده"></label>
+      <label>طرف حساب (متن)<input name="party_name" value="{{ old('party_name') }}" placeholder="اگر مشتری سیستم نیست"></label>
     </div>
     <div class="row">
+      <label>مشتری ثبت‌نام‌شده
+        <select name="party_user_id">
+          <option value="">— انتخاب از کاربران فروشگاه —</option>
+          @foreach(($customers ?? []) as $c)
+            <option value="{{ $c->id }}" @selected((string)old('party_user_id')===(string)$c->id)>{{ $c->name }}@if(!empty($c->mobile)) — {{ $c->mobile }}@elseif(!empty($c->phone)) — {{ $c->phone }}@endif</option>
+          @endforeach
+        </select>
+      </label>
       <label>انبار
         <select name="warehouse_id">
           <option value="">—</option>
           @foreach($warehouses as $w)
-            <option value="{{ $w->id }}">{{ $w->name }} ({{ $w->code }})</option>
+            <option value="{{ $w->id }}" @selected($w->is_default ?? false)>{{ $w->name }} ({{ $w->code }})</option>
           @endforeach
         </select>
       </label>
+    </div>
+    <div class="row">
       @if($type==='transfer')
         <label>انبار مقصد
           <select name="warehouse_to_id">
@@ -70,13 +80,21 @@
       @for($i=0;$i<3;$i++)
         <div class="line" style="display:grid;gap:.55rem;margin-bottom:.8rem;padding-bottom:.8rem;border-bottom:1px dashed var(--line)">
           <div class="row">
-            <label>عنوان<input name="line_title[]" placeholder="نام کالا / شرح"></label>
-            <label>تعداد<input name="line_qty[]" value="1"></label>
+            <label>کالای فروشگاه
+              <select name="line_product_id[]" class="acc-product">
+                <option value="">— خدمت / عنوان آزاد —</option>
+                @foreach(($products ?? []) as $p)
+                  <option value="{{ $p->id }}" data-price="{{ (int)($p->price ?? 0) }}" data-cost="{{ (int)($p->cost_price ?? 0) }}" data-name="{{ $p->name }}">{{ $p->name }}@if(!empty($p->sku)) ({{ $p->sku }})@endif</option>
+                @endforeach
+              </select>
+            </label>
+            <label>عنوان<input name="line_title[]" placeholder="اگر کالا انتخاب شود پر می‌شود"></label>
           </div>
           <div class="row">
+            <label>تعداد<input name="line_qty[]" value="1"></label>
             <label>فی (تومان)<input name="line_price[]" value="0"></label>
-            <label>بهای تمام‌شده<input name="line_cost[]" value="0"></label>
           </div>
+          <label>بهای تمام‌شده<input name="line_cost[]" value="0"></label>
           <label>سریال‌ها (ویرگول یا خط جدید)<textarea name="line_serials[]" rows="2" placeholder="SN1, SN2"></textarea></label>
           @if($type==='voucher')
             <div class="row">
@@ -122,7 +140,21 @@ document.getElementById('acc-add-line')?.addEventListener('click',()=>{
     if(el.name?.includes('qty')) el.value='1';
     else if(el.type!=='hidden') el.value='';
   });
+  c.querySelectorAll('select').forEach(el=>{ el.selectedIndex=0; });
   box.appendChild(c);
+});
+document.getElementById('acc-lines')?.addEventListener('change',(e)=>{
+  const sel=e.target.closest('select.acc-product');
+  if(!sel) return;
+  const line=sel.closest('.line');
+  const opt=sel.options[sel.selectedIndex];
+  if(!line||!opt||!opt.value) return;
+  const title=line.querySelector('input[name="line_title[]"]');
+  const price=line.querySelector('input[name="line_price[]"]');
+  const cost=line.querySelector('input[name="line_cost[]"]');
+  if(title && !title.value) title.value=opt.dataset.name||'';
+  if(price && (!price.value || price.value==='0')) price.value=opt.dataset.price||'0';
+  if(cost && (!cost.value || cost.value==='0')) cost.value=opt.dataset.cost||'0';
 });
 </script>
 @endpush

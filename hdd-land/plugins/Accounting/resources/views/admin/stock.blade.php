@@ -32,11 +32,21 @@
     </label>
   </div>
   <div class="row">
+    <label>کالای فروشگاه
+      <select name="product_id">
+        <option value="">— یا عنوان آزاد —</option>
+        @foreach(($products ?? []) as $p)
+          <option value="{{ $p->id }}">{{ $p->name }}@if(!empty($p->sku)) ({{ $p->sku }})@endif</option>
+        @endforeach
+      </select>
+    </label>
     <label>نام کالا<input name="title" required></label>
-    <label>تعداد<input name="qty" value="1" required></label>
   </div>
   <div class="row">
+    <label>تعداد<input name="qty" value="1" required></label>
     <label>بهای واحد<input name="unit_cost" value="0"></label>
+  </div>
+  <div class="row">
     <label>طرف / مرجع<input name="party_name"></label>
   </div>
   <label>سریال‌ها<textarea name="serials" rows="2" placeholder="SN1, SN2"></textarea></label>
@@ -52,7 +62,7 @@
   @forelse($balances as $b)
     <tr>
       <td>{{ $b->warehouse_name }} ({{ $b->warehouse_code }})</td>
-      <td>#{{ $b->product_id }}</td>
+      <td>{{ $b->product_name ?? ('#'.$b->product_id) }}</td>
       <td>{{ $b->qty }}</td>
       <td>{{ $money($b->avg_cost) }}</td>
     </tr>
