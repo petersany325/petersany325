@@ -363,6 +363,10 @@ class AccCommerce
     /** Apply or reverse products.stock + product_serials for an issued/cancelled document. */
     public static function applyCatalogStock(object $doc, $lines, int $direction): void
     {
+        // Shop checkout / staff-sell already moved products.stock for source=shop.
+        if ((string) ($doc->source ?? '') === 'shop') {
+            return;
+        }
         $sign = AccMath::catalogStockSign((string) $doc->type) * $direction;
         if ($sign === 0) {
             return;
