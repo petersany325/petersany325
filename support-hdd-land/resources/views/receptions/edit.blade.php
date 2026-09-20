@@ -19,7 +19,11 @@
 
     <div class="panel" style="margin-bottom:10px;" id="edit-customer-panel"
          data-suggest-url="{{ route('customers.suggest') }}">
-        <h3 style="margin:0 0 8px;">مشتری</h3>
+        <h3 style="margin:0 0 4px;">مشتری</h3>
+        <p class="muted" style="margin:0 0 8px;font-size:11.5px;">
+            اگر فقط نام همین قبض اشتباه است، همین‌جا اصلاح کنید — قبض‌های دیگر همان مشتری عوض نمی‌شوند.
+            برای تغییر نام روی <strong>همه</strong> قبض‌ها از منوی مشتریان / پرونده مشتری استفاده کنید.
+        </p>
         <div class="accept-row accept-row-3">
             <div style="position:relative;">
                 <label>نام</label>

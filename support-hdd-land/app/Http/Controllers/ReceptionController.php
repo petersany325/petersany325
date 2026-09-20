@@ -534,7 +534,8 @@ class ReceptionController extends Controller
             'sms_note' => ['nullable', 'string', 'max:300'],
         ]));
 
-        $customer = $this->resolveCustomer($data);
+        $previousCustomerId = (int) $reception->customer_id;
+        $customer = $this->resolveCustomerForTicketEdit($reception, $data);
 
         if (! empty($data['brand_model'])) {
             $converted = $this->toAsciiEnglish((string) $data['brand_model']);
@@ -628,6 +629,9 @@ class ReceptionController extends Controller
         );
 
         $flash = 'قبض ذخیره شد.';
+        if ((int) $customer->id !== $previousCustomerId) {
+            $flash .= ' نام/موبایل این قبض از پرونده مشترک جدا شد تا قبض‌های دیگر همان مشتری عوض نشوند.';
+        }
         if ($request->boolean('send_sms', true)) {
             $sms = $smsNotifications->sendOnTicketUpdated(
                 $reception->fresh(['customer', 'faultType', 'technician']),
@@ -1566,14 +1570,95 @@ class ReceptionController extends Controller
         ];
     }
 
+    /**
+     * ویرایش قبض نباید نام/موبایل پروندهٔ مشترک مشتری را عوض کند
+     * و همهٔ قبض‌های هم‌پرونده را عوض کند.
+     *
+     * اگر نام یا موبایل عوض شود و این مشتری قبض دیگری هم داشته باشد،
+     * برای همین قبض یک پروندهٔ مشتری جدید ساخته می‌شود تا بقیه دست نخورند.
+     *
+     * @param  array<string,mixed>  $data
+     */
+    private function resolveCustomerForTicketEdit(Reception $reception, array $data): Customer
+    {
+        $current = Customer::query()->findOrFail((int) $reception->customer_id);
+        $this->assertCustomerModelNotBlacklisted($current);
+
+        $phone = $this->normalizePhone((string) ($data['customer_phone'] ?? ''));
+        if ($phone === '' || strlen($phone) < 10) {
+            throw ValidationException::withMessages([
+                'customer_phone' => 'شماره موبایل معتبر نیست.',
+            ]);
+        }
+
+        $name = trim((string) ($data['customer_name'] ?? ''));
+        if ($name === '') {
+            throw ValidationException::withMessages([
+                'customer_name' => 'نام مشتری الزامی است.',
+            ]);
+        }
+
+        $payload = [
+            'name' => $name,
+            'phone' => $phone,
+            'alias' => $data['alias'] ?? null,
+            'gender' => $data['gender'] ?? null,
+            'national_code' => $data['national_code'] ?? null,
+            'job' => $data['job'] ?? null,
+            'address' => $data['address'] ?? null,
+            'referral_source_id' => $data['referral_source_id'] ?? null,
+        ];
+
+        $byPhone = $this->findCustomerByPhone($phone);
+
+        // موبایل متعلق به مشتری دیگری است → فقط همین قبض را به او وصل کن؛ نامش را ندزد.
+        if ($byPhone && (int) $byPhone->id !== (int) $current->id) {
+            $this->assertCustomerModelNotBlacklisted($byPhone);
+
+            return $byPhone;
+        }
+
+        $nameChanged = mb_strtolower(trim((string) $current->name)) !== mb_strtolower($name);
+        $phoneChanged = $this->normalizePhone((string) $current->phone) !== $phone;
+        $otherTickets = Reception::query()
+            ->where('customer_id', $current->id)
+            ->where('id', '!=', $reception->id)
+            ->exists();
+
+        // تغییر هویت روی مشتری چندقبضه → پرونده جدید فقط برای همین قبض
+        if ($otherTickets && ($nameChanged || $phoneChanged)) {
+            return Customer::query()->create([
+                'name' => $name,
+                'phone' => $phone,
+                'alias' => $payload['alias'] ?: null,
+                'gender' => $payload['gender'] ?: null,
+                'national_code' => $payload['national_code'] ?: null,
+                'job' => $payload['job'] ?: null,
+                'address' => $payload['address'] ?: null,
+                'referral_source_id' => $payload['referral_source_id'] ?: null,
+            ]);
+        }
+
+        // فقط همین قبض، یا بدون تغییر نام/موبایل → پرونده فعلی را به‌روز کن
+        $updates = array_filter($payload, fn ($v) => $v !== null && $v !== '');
+        if ($updates !== []) {
+            $current->update($updates);
+        }
+
+        return $current->fresh();
+    }
+
     private function resolveCustomer(array $data): Customer
     {
         $customerId = $data['customer_id'] ?? null;
-        $phone = $data['customer_phone'] ?? '';
+        $phone = $this->normalizePhone((string) ($data['customer_phone'] ?? ''));
+        if ($phone === '') {
+            $phone = (string) ($data['customer_phone'] ?? '');
+        }
 
         $payload = [
-            'name' => $data['customer_name'] ?? null,
-            'phone' => $phone,
+            'name' => isset($data['customer_name']) ? trim((string) $data['customer_name']) : null,
+            'phone' => $phone !== '' ? $phone : null,
             'alias' => $data['alias'] ?? null,
             'gender' => $data['gender'] ?? null,
             'national_code' => $data['national_code'] ?? null,
@@ -1585,35 +1670,67 @@ class ReceptionController extends Controller
         if ($customerId) {
             $customer = Customer::findOrFail($customerId);
             $this->assertCustomerModelNotBlacklisted($customer);
-            $updates = array_filter($payload, fn ($v) => $v !== null && $v !== '');
-            if ($updates) {
-                $customer->update($updates);
-            }
+            $this->mergeCustomerPayload($customer, $payload, overwriteName: true);
 
             return $customer->fresh();
         }
 
-        $existing = $this->findCustomerByPhone($phone);
+        $existing = $phone !== '' ? $this->findCustomerByPhone($phone) : null;
         if ($existing) {
             $this->assertCustomerModelNotBlacklisted($existing);
-            $updates = array_filter($payload, fn ($v) => $v !== null && $v !== '');
-            if ($updates) {
-                $existing->update($updates);
-            }
+            // موبایل مشترک/خانوادگی: نام موجود را با نام تایپ‌شده در پذیرش جدید بازنویسی نکن.
+            $this->mergeCustomerPayload($existing, $payload, overwriteName: false);
 
             return $existing->fresh();
         }
 
         return Customer::create([
-            'name' => $data['customer_name'],
+            'name' => $payload['name'] ?: 'مشتری',
             'phone' => $phone,
-            'alias' => $data['alias'] ?? null,
-            'gender' => $data['gender'] ?? null,
-            'national_code' => $data['national_code'] ?? null,
-            'job' => $data['job'] ?? null,
-            'address' => $data['address'] ?? null,
-            'referral_source_id' => $data['referral_source_id'] ?? null,
+            'alias' => $payload['alias'] ?? null,
+            'gender' => $payload['gender'] ?? null,
+            'national_code' => $payload['national_code'] ?? null,
+            'job' => $payload['job'] ?? null,
+            'address' => $payload['address'] ?? null,
+            'referral_source_id' => $payload['referral_source_id'] ?? null,
         ]);
+    }
+
+    /**
+     * @param  array<string,mixed>  $payload
+     */
+    private function mergeCustomerPayload(Customer $customer, array $payload, bool $overwriteName = false): void
+    {
+        $updates = [];
+        foreach ($payload as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            if ($key === 'name') {
+                $current = trim((string) $customer->name);
+                if ($current === '' || $overwriteName) {
+                    $updates['name'] = $value;
+                }
+                continue;
+            }
+
+            if ($key === 'phone') {
+                $normalized = $this->normalizePhone((string) $value) ?: (string) $value;
+                $owner = $this->findCustomerByPhone($normalized);
+                if ($owner && (int) $owner->id !== (int) $customer->id) {
+                    continue;
+                }
+                $updates['phone'] = $normalized;
+                continue;
+            }
+
+            $updates[$key] = $value;
+        }
+
+        if ($updates !== []) {
+            $customer->update($updates);
+        }
     }
 
     private function findCustomerByPhone(string $phone): ?Customer
