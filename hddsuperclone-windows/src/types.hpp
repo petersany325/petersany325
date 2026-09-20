@@ -61,6 +61,10 @@ enum class IoMode {
     Generic,          // overlapped ReadFile / pread
     AtaPassthrough,   // IOCTL_ATA_PASS_THROUGH / SG_IO ATA-16
     ScsiPassthrough,  // SCSI READ(16)/READ(10)
+    DirectAhci,       // ATA_PASS_THROUGH_DIRECT + DMA + reset-on-timeout (user-mode)
+    DirectIde,        // ATA PIO taskfile (no DMA)
+    UsbDirect,        // USB BOT / USB SCSI pass-through
+    RebuildAssist,    // READ FPDMA QUEUED + NCQ error log
 };
 
 enum class TargetKind {
@@ -130,6 +134,11 @@ struct CloneSettings {
     bool export_ddrescue = false;
     std::string ddrescue_map;
     int log_update_seconds = kLogUpdateSeconds;
+    bool rebuild_assist = false;
+    bool virtual_disk_dest = false;
+    bool relay_on_error = false;
+    std::string relay_path;
+    int relay_channel = 1;
 };
 
 struct MapRegion {
@@ -197,8 +206,14 @@ inline const char* io_mode_name(IoMode m) {
         case IoMode::Generic: return "Generic (block I/O)";
         case IoMode::AtaPassthrough: return "ATA pass-through";
         case IoMode::ScsiPassthrough: return "SCSI pass-through";
+        case IoMode::DirectAhci: return "Direct AHCI (pass-through DIRECT + reset)";
+        case IoMode::DirectIde: return "Direct IDE (ATA PIO)";
+        case IoMode::UsbDirect: return "USB-direct (BOT / USB SCSI)";
+        case IoMode::RebuildAssist: return "Rebuild Assist / FPDMA";
         default: return "Unknown";
     }
 }
+
+inline constexpr int kIoModeCount = 8;
 
 }  // namespace hsc

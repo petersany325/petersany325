@@ -196,5 +196,14 @@ std::string native_save_file(const char* title, const char* filter) {
     return {};
 }
 
+std::string application_dir() {
+    char buf[MAX_PATH]{};
+    GetModuleFileNameA(nullptr, buf, MAX_PATH);
+    std::string p = buf;
+    auto sl = p.find_last_of("\\/");
+    if (sl != std::string::npos) p.resize(sl);
+    return p;
+}
+
 }  // namespace hsc
 #endif

@@ -15,5 +15,6 @@ void platform_poll();
 void* platform_native_window();
 std::string native_open_file(const char* title, const char* filter);
 std::string native_save_file(const char* title, const char* filter);
+std::string application_dir();
 
 }  // namespace hsc

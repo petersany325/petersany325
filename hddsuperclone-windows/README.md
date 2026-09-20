@@ -4,6 +4,8 @@ Native Windows port of [HDDSuperClone](https://github.com/thesourcerer8/hddsuper
 
 Upstream: <https://github.com/thesourcerer8/hddsuperclone> · original site: <http://www.hddsuperclone.com/>
 
+Install with **HDDSuperClone-Windows-Setup.exe** (NSIS). It installs to `Program Files\HDDSuperClone`, adds Start Menu + desktop shortcuts, requires Administrator, and registers Add/Remove Programs.
+
 ## What this port does
 
 - Lists physical disks (`\\.\PhysicalDriveN` on Windows, `/dev/sd*` / NVMe on Linux)
@@ -15,28 +17,25 @@ Upstream: <https://github.com/thesourcerer8/hddsuperclone> · original site: <ht
   - Trim, divide, scrape, optional retries
 - HDDSuperClone-compatible **progress log** (resume after stop/crash; `.bak` kept)
 - Optional ddrescue map export
-- ATA pass-through (`IOCTL_ATA_PASS_THROUGH` / SG_IO ATA-16)
-- SCSI pass-through (`IOCTL_SCSI_PASS_THROUGH_DIRECT` / SG_IO READ(16))
-- Generic overlapped `ReadFile` / `WriteFile` with timeouts
 - Administrator elevation manifest (`requireAdministrator`)
 - Safety: never writes until a destination is chosen; extra typed confirmation (`OVERWRITE BOOT DISK`) before touching the Windows/system boot disk; source and destination cannot be the same device
 
-## What is not ported (Linux-only in the original)
+## Recovery methods (Windows)
 
-These need a kernel-mode storage driver, libusb direct mode, or hardware that this user-mode port cannot provide:
+| Method | Windows path | Notes |
+| --- | --- | --- |
+| Generic | Overlapped `ReadFile` / `WriteFile` | Works on any disk or image |
+| ATA pass-through | `IOCTL_ATA_PASS_THROUGH` | `READ DMA EXT` 0x25, PIO 0x24 fallback |
+| SCSI pass-through | `IOCTL_SCSI_PASS_THROUGH_DIRECT` | `READ(16)` |
+| Direct AHCI | `IOCTL_ATA_PASS_THROUGH_DIRECT` + DMA + `DEVICE RESET` 0x08 | Closest user-mode equivalent of Linux AHCI MMIO. A signed kernel driver is required for true HBA MMIO; see `driver/hscahci/README.md`. |
+| Direct IDE | ATA PIO taskfile 0x24 | No DMA |
+| USB-direct | SCSI BOT via USBSTOR; WinUSB BOT if the device is bound to WinUSB (Zadig) | Original libusb bypass of USBD is not possible while USBSTOR owns the device |
+| Rebuild Assist / FPDMA | `READ FPDMA QUEUED` 0x60, NCQ log 0x10, enable log 0x15 | Error LBA splits the chunk (prefix finished, LBA marked bad) |
+| Virtual disk | Windows Virtual Disk API (`CreateVirtualDisk` VHDX + attach) or sparse image | Original `hddscbd` kernel module is Linux-only |
+| USB relay | dcttech HID `16C0:05DF` (`HidD_SetFeature`) | Power-cycle on read error |
+| HDDSuperTool scripts | Interpreter subset + original `scripts/` | `echo`, `seti`/`sets`, `if`, `ata28cmd`/`ata48cmd`, `printbuffer`, resets, `include` |
 
-| Original feature | Status |
-| --- | --- |
-| Direct AHCI / OSCDriver | Not ported (would need a Windows kernel driver) |
-| Direct IDE / MMIO | Not ported |
-| USB mass-storage direct mode (libusb, bypass USBD) | Not ported |
-| Virtual disk driver (`hddscbd`) | Not ported |
-| USB relay power-cycle | Not ported |
-| Rebuild Assist / NCQ error log / FPDMA | Not ported |
-| HDDSuperTool script engine | Not ported |
-| GTK3 Glade UI | Replaced with a native ImGui GUI (Win32+DX11 / GLFW) |
-
-On a dying SATA disk attached to an AHCI controller, **a Linux live USB of HDDSuperClone / OpenSuperClone is still the stronger tool** because Direct AHCI can timeout and reset the controller independently of Windows storage drivers. This Windows build is the right tool when you must run on Windows and can use ATA/SCSI pass-through or generic block I/O.
+On a dying SATA disk, **a Linux live USB of HDDSuperClone / OpenSuperClone is still stronger** when you need controller MMIO timeouts independent of StorAHCI. This Windows build is the right tool when you must run on Windows.
 
 ## Build on Windows (MSVC)
 
@@ -47,22 +46,19 @@ cmake --build build --config Release
 
 Run `build\Release\hddsuperclone-windows.exe` **as Administrator**.
 
-## Build on Windows (MinGW)
-
-```bat
-cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
-cmake --build build
-```
-
 ## Cross-compile from Linux (MinGW-w64)
 
 ```bash
-sudo apt install g++-mingw-w64-x86-64 cmake
+sudo apt install g++-mingw-w64-x86-64 cmake nsis
 cmake -S . -B build-win -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64.cmake
 cmake --build build-win
+makensis -DEXE_PATH=build-win/hddsuperclone-windows.exe \
+         -DSRC_DIR=. \
+         -DOUT_FILE=HDDSuperClone-Windows-Setup.exe \
+         installer/hddsuperclone.nsi
 ```
 
-The GUI needs DirectX 11 at runtime (Windows 7+ with DX11). `--cli` does not need a GPU.
+The GUI is a Windows-subsystem PE64 (no leftover console window). `--cli` and `--script` attach a console. DirectX 11 is required for the GUI (Windows 7+).
 
 ## Build and run on Linux (GUI preview / tests)
 
@@ -72,11 +68,9 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ./build/hsc_engine_tests
 ./build/hddsuperclone-windows
-# clone two images without the GUI:
 ./build/hddsuperclone-windows --cli --source src.img --dest dst.img --log clone.log --source-file --dest-file --mode generic
+./build/hddsuperclone-windows --script scripts/ata_identify_device --source src.img --source-file
 ```
-
-Physical disk access on Linux still requires root.
 
 ## Safety
 

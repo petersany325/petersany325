@@ -1,4 +1,6 @@
 #include "clone_engine.hpp"
+#include "usb_relay.hpp"
+#include "virtual_disk.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -70,15 +72,48 @@ bool CloneEngine::prepare(const std::string& source, bool source_is_file,
         error = "Cannot open source: " + (source.empty() ? std::string("(empty)") : last_os_error());
         return false;
     }
-    dest_ = open_disk(dest, true, dest_is_file);
+
+    DiskInfo info;
+    source_->identify(info);
+
+    std::string dest_actual = dest;
+    bool dest_file = dest_is_file;
+    if (settings_.virtual_disk_dest) {
+        uint64_t sz = source_->size_bytes();
+        if (sz == 0) sz = 1024ull * 1024ull;
+        std::string verr;
+        if (!create_virtual_disk(dest_actual, sz, verr)) {
+            error = "Virtual disk create failed: " + verr;
+            source_.reset();
+            return false;
+        }
+        std::string mounted;
+        if (attach_virtual_disk(dest_actual, mounted, verr) && mounted.rfind("\\\\.\\PhysicalDrive", 0) == 0) {
+            dest_actual = mounted;
+            dest_file = false;
+            log_line("Attached virtual disk as " + dest_actual);
+        } else {
+            dest_file = true;
+            log_line("Virtual disk image at " + dest_actual + (verr.empty() ? "" : (" (" + verr + ")")));
+        }
+    }
+
+    dest_ = open_disk(dest_actual, true, dest_file);
     if (!dest_ || !dest_->is_open()) {
         error = "Cannot open destination for write: " + last_os_error();
         source_.reset();
         return false;
     }
+    dest_path_ = dest_actual;
 
-    DiskInfo info;
-    source_->identify(info);
+    if (settings_.io_mode == IoMode::RebuildAssist || settings_.rebuild_assist) {
+        std::string ra_err;
+        if (source_->enable_rebuild_assist(ra_err)) {
+            log_line("Rebuild Assist enabled (WRITE LOG EXT 0x15)");
+        } else {
+            log_line("Rebuild Assist enable skipped: " + ra_err);
+        }
+    }
     uint32_t ss = source_->sector_size() ? source_->sector_size() : settings_.sector_size;
     settings_.sector_size = static_cast<int>(ss);
     uint64_t src_sectors = source_->size_bytes() / ss;
@@ -143,10 +178,12 @@ bool CloneEngine::prepare(const std::string& source, bool source_is_file,
 }
 
 IoMode CloneEngine::resolved_mode() const {
+    if (settings_.rebuild_assist) return IoMode::RebuildAssist;
     if (settings_.io_mode != IoMode::Auto) return settings_.io_mode;
     DiskInfo info;
     if (source_) {
         source_->identify(info);
+        if (info.bus == "USB") return IoMode::UsbDirect;
         if (info.ata_identify_ok) return IoMode::AtaPassthrough;
         if (info.scsi_inquiry_ok) return IoMode::ScsiPassthrough;
     }
@@ -197,6 +234,38 @@ bool CloneEngine::read_write_chunk(uint64_t map_pos, int sectors, bool skip_on_e
         log_.map.change_chunk(map_pos, static_cast<uint64_t>(sectors), kFinished, kStatusMask);
         if (skip_on_error && slow && settings_.skip_enabled) {
             skip_.on_skip(map_pos, false, true);
+        }
+        return true;
+    }
+
+    if (settings_.relay_on_error && !settings_.relay_path.empty()) {
+        std::string e;
+        log_line("USB relay power-cycle on read error at LBA " + std::to_string(src_lba));
+        if (!relay_power_cycle(settings_.relay_path, settings_.relay_channel, 2000, 1000, e)) {
+            log_line("Relay cycle failed: " + e);
+        }
+    }
+
+    if (rr.ata_lba >= src_lba && rr.ata_lba < src_lba + static_cast<uint64_t>(sectors)) {
+        uint64_t err_off = rr.ata_lba - src_lba;
+        if (err_off > 0 && static_cast<uint64_t>(rr.sectors_transferred) >= err_off) {
+            IoResult wr = dest_->write_sectors(dest_lba, static_cast<uint32_t>(err_off), buffer_.data(),
+                                                static_cast<int>(settings_.read_timeout_ms));
+            if (!wr.ok) {
+                result = CloneResult::DestError;
+                log_line("Write error at LBA " + std::to_string(dest_lba) + ": " + wr.message);
+                return false;
+            }
+            log_.map.change_chunk(map_pos, err_off, kFinished, kStatusMask);
+        } else if (err_off > 0) {
+            log_.map.change_chunk(map_pos, err_off, fail_status, kStatusMask);
+        }
+        log_.map.change_chunk(map_pos + err_off, 1, kBad, kStatusMask);
+        uint64_t rem = static_cast<uint64_t>(sectors) - err_off - 1;
+        if (rem > 0) log_.map.change_chunk(map_pos + err_off + 1, rem, fail_status, kStatusMask);
+        log_line("Rebuild Assist / NCQ: error LBA " + std::to_string(rr.ata_lba) + " marked bad");
+        if (skip_on_error && settings_.skip_enabled) {
+            skip_.on_skip(map_pos + err_off, false, slow || rr.timeout);
         }
         return true;
     }

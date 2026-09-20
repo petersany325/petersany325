@@ -4,6 +4,8 @@
 #include "disk_io.hpp"
 #include "platform.hpp"
 #include "safety.hpp"
+#include "script_engine.hpp"
+#include "usb_relay.hpp"
 
 #include "imgui.h"
 
@@ -43,6 +45,13 @@ struct AppState {
     bool refresh_needed = true;
     char image_filter_src[1024] = {};
     char image_filter_dst[1024] = {};
+    std::vector<RelayInfo> relays;
+    int relay_index = -1;
+    char script_dir[1024] = {};
+    std::vector<std::string> scripts;
+    int script_index = 0;
+    std::string script_output;
+    bool script_running = false;
 };
 
 void join_worker(AppState& a) {
@@ -93,6 +102,7 @@ void start_clone(AppState& a, bool confirmed) {
     join_worker(a);
 
     a.settings.io_mode = static_cast<IoMode>(a.io_mode);
+    a.settings.rebuild_assist = (a.settings.io_mode == IoMode::RebuildAssist) || a.settings.rebuild_assist;
     SafetyRequest req;
     req.source_path = a.source_path;
     req.dest_path = a.dest_path;
@@ -190,12 +200,17 @@ void draw_disk_table(AppState& a) {
 int run_gui(int argc, char** argv) {
     (void)argc;
     (void)argv;
-    if (!platform_init("HDDSuperClone for Windows", 1280, 820)) {
+    if (!platform_init("HDDSuperClone for Windows", 1320, 920)) {
         std::fprintf(stderr, "Failed to create window\n");
         return 1;
     }
 
     AppState a;
+    {
+        std::string sd = application_dir() + "/scripts";
+        std::snprintf(a.script_dir, sizeof(a.script_dir), "%s", sd.c_str());
+        a.scripts = list_scripts(sd);
+    }
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
     ImGuiStyle& style = ImGui::GetStyle();
@@ -252,7 +267,12 @@ int run_gui(int argc, char** argv) {
             if (ImGui::BeginMenu("Help")) {
                 ImGui::TextUnformatted("HDDSuperClone Windows port 2.4.0-windows");
                 ImGui::TextUnformatted("Based on Scott Dwyer's HDDSuperClone (GPL-2).");
-                ImGui::TextUnformatted("Direct AHCI, USB-direct, virtual disk, and USB relay are not ported.");
+                ImGui::Separator();
+                ImGui::TextUnformatted("Recovery methods on this build:");
+                ImGui::TextUnformatted("  Generic, ATA/SCSI pass-through, Direct AHCI (user-mode DIRECT+reset),");
+                ImGui::TextUnformatted("  Direct IDE (PIO), USB-direct (BOT/SCSI), Rebuild Assist/FPDMA,");
+                ImGui::TextUnformatted("  VHDX virtual disk, USB HID relay, HDDSuperTool scripts.");
+                ImGui::TextWrapped("True kernel AHCI MMIO still needs a signed Windows driver; see driver/hscahci.");
                 ImGui::EndMenu();
             }
             ImGui::EndMenuBar();
@@ -295,11 +315,92 @@ int run_gui(int argc, char** argv) {
         ImGui::SetNextItemWidth(-1);
         ImGui::InputText("##log", a.log_path, sizeof(a.log_path));
 
-        const char* modes[] = {"Auto-detect", "Generic (block I/O)", "ATA pass-through",
-                                "SCSI pass-through"};
-        ImGui::TextUnformatted("I/O mode");
-        ImGui::SetNextItemWidth(280);
+        const char* modes[] = {
+            "Auto-detect",
+            "Generic (block I/O)",
+            "ATA pass-through",
+            "SCSI pass-through",
+            "Direct AHCI (pass-through DIRECT + reset)",
+            "Direct IDE (ATA PIO)",
+            "USB-direct (BOT / USB SCSI)",
+            "Rebuild Assist / FPDMA",
+        };
+        ImGui::TextUnformatted("Recovery / I/O mode");
+        ImGui::SetNextItemWidth(420);
         ImGui::Combo("##iomode", &a.io_mode, modes, IM_ARRAYSIZE(modes));
+        ImGui::SameLine();
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip(
+                "Direct AHCI uses IOCTL_ATA_PASS_THROUGH_DIRECT + DEVICE RESET.\n"
+                "Kernel MMIO AHCI (Linux hscahci) is not loadable unsigned on 64-bit Windows.\n"
+                "USB-direct uses SCSI BOT; WinUSB after Zadig talks to the device without USBSTOR.\n"
+                "Rebuild Assist issues READ FPDMA QUEUED and splits on NCQ error LBA.");
+        }
+
+        if (ImGui::CollapsingHeader("Advanced recovery (relay, virtual disk, scripts)",
+                                    ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Checkbox("Rebuild Assist (enable log 0x15 + FPDMA)", &a.settings.rebuild_assist);
+            ImGui::SameLine();
+            ImGui::Checkbox("Virtual disk destination (VHDX / sparse image)", &a.settings.virtual_disk_dest);
+            ImGui::Checkbox("USB relay power-cycle on read error", &a.settings.relay_on_error);
+            ImGui::SameLine();
+            if (ImGui::Button("Scan USB relays")) {
+                a.relays = enumerate_relays();
+                if (!a.relays.empty()) {
+                    a.relay_index = 0;
+                    a.settings.relay_path = a.relays[0].path;
+                }
+            }
+            if (!a.relays.empty()) {
+                std::vector<const char*> names;
+                for (auto& r : a.relays) names.push_back(r.name.empty() ? r.path.c_str() : r.name.c_str());
+                ImGui::SetNextItemWidth(360);
+                if (ImGui::Combo("Relay", &a.relay_index, names.data(), static_cast<int>(names.size()))) {
+                    if (a.relay_index >= 0 && a.relay_index < static_cast<int>(a.relays.size()))
+                        a.settings.relay_path = a.relays[static_cast<size_t>(a.relay_index)].path;
+                }
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(80);
+                ImGui::InputInt("Ch", &a.settings.relay_channel);
+                if (a.settings.relay_channel < 0) a.settings.relay_channel = 0;
+                if (a.settings.relay_channel > 8) a.settings.relay_channel = 8;
+            } else {
+                ImGui::TextDisabled("No dcttech HID relay (16C0:05DF) found.");
+            }
+
+            ImGui::Separator();
+            ImGui::TextUnformatted("HDDSuperTool scripts");
+            ImGui::SetNextItemWidth(-180);
+            ImGui::InputText("##scriptdir", a.script_dir, sizeof(a.script_dir));
+            ImGui::SameLine();
+            if (ImGui::Button("Reload scripts")) a.scripts = list_scripts(a.script_dir);
+            if (!a.scripts.empty()) {
+                std::vector<const char*> sn;
+                for (auto& s : a.scripts) sn.push_back(s.c_str());
+                ImGui::SetNextItemWidth(360);
+                ImGui::Combo("##script", &a.script_index, sn.data(), static_cast<int>(sn.size()));
+                ImGui::SameLine();
+                if (ImGui::Button("Run script") && !a.running) {
+                    ScriptEngine se;
+                    se.set_script_dir(a.script_dir);
+                    auto src = open_disk(a.source_path, false, a.source_is_file);
+                    if (src) se.set_disk(src.get());
+                    std::string path = std::string(a.script_dir) + "/" +
+                                       a.scripts[static_cast<size_t>(a.script_index)];
+                    auto sr = se.run_file(path);
+                    a.script_output = sr.output;
+                    a.status_message = sr.ok ? "Script finished." : "Script ended with errors.";
+                }
+            } else {
+                ImGui::TextDisabled("No scripts in that folder (installer copies scripts/ next to the exe).");
+            }
+            if (!a.script_output.empty()) {
+                ImGui::BeginChild("scriptout", ImVec2(0, 90), true);
+                ImGui::TextUnformatted(a.script_output.c_str());
+                ImGui::EndChild();
+            }
+        }
 
         bool p1 = !a.settings.no_phase1, p2 = !a.settings.no_phase2, p3 = !a.settings.no_phase3,
              p4 = !a.settings.no_phase4, tr = !a.settings.no_trim, sc = !a.settings.no_scrape;

@@ -1,4 +1,5 @@
 #include "disk_io.hpp"
+#include "usb_direct.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -144,6 +145,7 @@ public:
                 r.message = "injected bad sector";
                 r.sense_key = 0x03;
                 r.asc = 0x11;
+                r.ata_lba = lba + i;
                 return r;
             }
         }
@@ -386,6 +388,88 @@ public:
         return r;
     }
 
+    IoResult ata_read_direct(uint64_t lba, uint32_t count, void* buffer, int timeout_ms, uint8_t cmd,
+                             bool dma) {
+        IoResult r;
+        const uint32_t bytes = count * sector_size_;
+        ATA_PASS_THROUGH_DIRECT aptd{};
+        aptd.Length = sizeof(aptd);
+        aptd.AtaFlags = ATA_FLAGS_DRDY_REQUIRED | ATA_FLAGS_DATA_IN | ATA_FLAGS_48BIT_COMMAND;
+        if (dma) aptd.AtaFlags |= ATA_FLAGS_USE_DMA;
+        aptd.DataTransferLength = bytes;
+        aptd.TimeOutValue = static_cast<ULONG>(std::max(1, (timeout_ms + 999) / 1000));
+        aptd.DataBuffer = buffer;
+        uint8_t* tf = aptd.CurrentTaskFile;
+        uint8_t* ptf = aptd.PreviousTaskFile;
+        tf[1] = static_cast<uint8_t>(count & 0xff);
+        tf[2] = static_cast<uint8_t>(lba & 0xff);
+        tf[3] = static_cast<uint8_t>((lba >> 8) & 0xff);
+        tf[4] = static_cast<uint8_t>((lba >> 16) & 0xff);
+        tf[5] = 0x40;
+        tf[6] = cmd;
+        ptf[1] = static_cast<uint8_t>((count >> 8) & 0xff);
+        ptf[2] = static_cast<uint8_t>((lba >> 24) & 0xff);
+        ptf[3] = static_cast<uint8_t>((lba >> 32) & 0xff);
+        ptf[4] = static_cast<uint8_t>((lba >> 40) & 0xff);
+        DWORD br = 0;
+        if (!DeviceIoControl(handle_, IOCTL_ATA_PASS_THROUGH_DIRECT, &aptd, sizeof(aptd), &aptd,
+                             sizeof(aptd), &br, nullptr)) {
+            r.host_error = static_cast<int>(GetLastError());
+            r.message = last_os_error();
+            r.ata_status = tf[6];
+            r.ata_error = tf[0];
+            return r;
+        }
+        r.ata_error = tf[0];
+        r.ata_status = tf[6];
+        if (r.ata_status & 0x01) {
+            r.message = "ATA DIRECT error";
+            return r;
+        }
+        r.ok = true;
+        r.sectors_transferred = static_cast<int>(count);
+        return r;
+    }
+
+    IoResult ata_fpdma_read(uint64_t lba, uint32_t count, void* buffer, int timeout_ms) {
+        IoResult r;
+        const uint32_t bytes = count * sector_size_;
+        ATA_PASS_THROUGH_DIRECT aptd{};
+        aptd.Length = sizeof(aptd);
+        aptd.AtaFlags = ATA_FLAGS_DRDY_REQUIRED | ATA_FLAGS_DATA_IN | ATA_FLAGS_48BIT_COMMAND |
+                        ATA_FLAGS_USE_DMA;
+        aptd.DataTransferLength = bytes;
+        aptd.TimeOutValue = static_cast<ULONG>(std::max(1, (timeout_ms + 999) / 1000));
+        aptd.DataBuffer = buffer;
+        uint8_t* tf = aptd.CurrentTaskFile;
+        uint8_t* ptf = aptd.PreviousTaskFile;
+        // READ FPDMA QUEUED 0x60: Feature = sector count, Count bits 7:3 = NCQ tag 0
+        tf[0] = static_cast<uint8_t>(count & 0xff);  // feature low = count
+        tf[1] = 0;                                    // NCQ tag 0
+        tf[2] = static_cast<uint8_t>(lba & 0xff);
+        tf[3] = static_cast<uint8_t>((lba >> 8) & 0xff);
+        tf[4] = static_cast<uint8_t>((lba >> 16) & 0xff);
+        tf[5] = 0x40;
+        tf[6] = 0x60;
+        ptf[0] = static_cast<uint8_t>((count >> 8) & 0xff);
+        ptf[2] = static_cast<uint8_t>((lba >> 24) & 0xff);
+        ptf[3] = static_cast<uint8_t>((lba >> 32) & 0xff);
+        ptf[4] = static_cast<uint8_t>((lba >> 40) & 0xff);
+        DWORD br = 0;
+        if (!DeviceIoControl(handle_, IOCTL_ATA_PASS_THROUGH_DIRECT, &aptd, sizeof(aptd), &aptd,
+                             sizeof(aptd), &br, nullptr) ||
+            (tf[6] & 0x01)) {
+            r.host_error = static_cast<int>(GetLastError());
+            r.message = "READ FPDMA QUEUED failed";
+            r.ata_status = tf[6];
+            r.ata_error = tf[0];
+            return r;
+        }
+        r.ok = true;
+        r.sectors_transferred = static_cast<int>(count);
+        return r;
+    }
+
     IoResult scsi_read(uint64_t lba, uint32_t count, void* buffer, int timeout_ms) {
         IoResult r;
         const uint32_t bytes = count * sector_size_;
@@ -489,10 +573,207 @@ public:
             }
             return r;
         }
-        if (mode == IoMode::ScsiPassthrough) {
+        if (mode == IoMode::ScsiPassthrough || mode == IoMode::UsbDirect) {
             return scsi_read(lba, count, buffer, timeout_ms);
         }
+        if (mode == IoMode::DirectIde) {
+            // PIO READ SECTORS EXT 0x24
+            IoResult r;
+            const uint32_t bytes = count * sector_size_;
+            std::vector<uint8_t> pkt(sizeof(ATA_PASS_THROUGH_EX) + bytes);
+            auto* apt = reinterpret_cast<ATA_PASS_THROUGH_EX*>(pkt.data());
+            std::memset(pkt.data(), 0, pkt.size());
+            apt->Length = sizeof(ATA_PASS_THROUGH_EX);
+            apt->AtaFlags = ATA_FLAGS_DRDY_REQUIRED | ATA_FLAGS_DATA_IN | ATA_FLAGS_48BIT_COMMAND;
+            apt->DataTransferLength = bytes;
+            apt->TimeOutValue = static_cast<ULONG>(std::max(1, (timeout_ms + 999) / 1000));
+            apt->DataBufferOffset = sizeof(ATA_PASS_THROUGH_EX);
+            uint8_t* tf = apt->CurrentTaskFile;
+            uint8_t* ptf = apt->PreviousTaskFile;
+            tf[1] = static_cast<uint8_t>(count & 0xff);
+            tf[2] = static_cast<uint8_t>(lba & 0xff);
+            tf[3] = static_cast<uint8_t>((lba >> 8) & 0xff);
+            tf[4] = static_cast<uint8_t>((lba >> 16) & 0xff);
+            tf[5] = 0x40;
+            tf[6] = 0x24;
+            ptf[1] = static_cast<uint8_t>((count >> 8) & 0xff);
+            ptf[2] = static_cast<uint8_t>((lba >> 24) & 0xff);
+            ptf[3] = static_cast<uint8_t>((lba >> 32) & 0xff);
+            ptf[4] = static_cast<uint8_t>((lba >> 40) & 0xff);
+            DWORD br = 0;
+            if (DeviceIoControl(handle_, IOCTL_ATA_PASS_THROUGH, apt, static_cast<DWORD>(pkt.size()), apt,
+                                 static_cast<DWORD>(pkt.size()), &br, nullptr) &&
+                !(tf[6] & 0x01)) {
+                std::memcpy(buffer, pkt.data() + sizeof(ATA_PASS_THROUGH_EX), bytes);
+                r.ok = true;
+                r.sectors_transferred = static_cast<int>(count);
+                return r;
+            }
+            r.message = last_os_error();
+            r.ata_status = tf[6];
+            r.ata_error = tf[0];
+            return r;
+        }
+        if (mode == IoMode::DirectAhci || mode == IoMode::RebuildAssist) {
+            IoResult r;
+            if (mode == IoMode::RebuildAssist) {
+                r = ata_fpdma_read(lba, count, buffer, timeout_ms);
+                if (!r.ok) r = ata_read_direct(lba, count, buffer, timeout_ms, 0x25, true);
+            } else {
+                r = ata_read_direct(lba, count, buffer, timeout_ms, 0x25, true);
+            }
+            if (!r.ok && timeout_ms > 0) {
+                (void)device_reset(timeout_ms);
+            }
+            if (!r.ok) {
+                uint8_t log[512]{};
+                if (read_log_ext(0x10, log, 512, timeout_ms).ok) {
+                    uint64_t elba = 0;
+                    for (int i = 0; i < 6; ++i) elba |= static_cast<uint64_t>(log[8 + i]) << (8 * i);
+                    r.ata_lba = elba;
+                }
+            }
+            if (r.ok) return r;
+            if (mode == IoMode::DirectAhci) {
+                return read_sectors(lba, count, buffer, IoMode::DirectIde, timeout_ms);
+            }
+            return r;
+        }
         return generic_rw(lba, count, buffer, false, timeout_ms);
+    }
+
+    IoResult device_reset(int timeout_ms) override {
+        IoResult r;
+        std::vector<uint8_t> pkt(sizeof(ATA_PASS_THROUGH_EX));
+        auto* apt = reinterpret_cast<ATA_PASS_THROUGH_EX*>(pkt.data());
+        std::memset(pkt.data(), 0, pkt.size());
+        apt->Length = sizeof(ATA_PASS_THROUGH_EX);
+        apt->AtaFlags = ATA_FLAGS_DRDY_REQUIRED;
+        apt->TimeOutValue = static_cast<ULONG>(std::max(1, (timeout_ms + 999) / 1000));
+        apt->CurrentTaskFile[6] = 0x08;  // DEVICE RESET
+        DWORD br = 0;
+        if (!DeviceIoControl(handle_, IOCTL_ATA_PASS_THROUGH, apt, static_cast<DWORD>(pkt.size()), apt,
+                             static_cast<DWORD>(pkt.size()), &br, nullptr)) {
+            r.message = last_os_error();
+            return r;
+        }
+        r.ok = true;
+        return r;
+    }
+
+    IoResult read_log_ext(uint8_t log_addr, void* buf, uint32_t bytes, int timeout_ms) override {
+        IoResult r;
+        if (bytes < 512) bytes = 512;
+        std::vector<uint8_t> pkt(sizeof(ATA_PASS_THROUGH_EX) + bytes);
+        auto* apt = reinterpret_cast<ATA_PASS_THROUGH_EX*>(pkt.data());
+        std::memset(pkt.data(), 0, pkt.size());
+        apt->Length = sizeof(ATA_PASS_THROUGH_EX);
+        apt->AtaFlags = ATA_FLAGS_DRDY_REQUIRED | ATA_FLAGS_DATA_IN | ATA_FLAGS_48BIT_COMMAND;
+        apt->DataTransferLength = bytes;
+        apt->TimeOutValue = static_cast<ULONG>(std::max(1, (timeout_ms + 999) / 1000));
+        apt->DataBufferOffset = sizeof(ATA_PASS_THROUGH_EX);
+        uint8_t* tf = apt->CurrentTaskFile;
+        uint8_t* ptf = apt->PreviousTaskFile;
+        tf[1] = 1;          // sector count
+        tf[2] = log_addr;   // LBA 7:0 = log address (0x10 NCQ, 0x15 rebuild assist)
+        tf[5] = 0x40;
+        tf[6] = 0x2F;       // READ LOG EXT
+        ptf[1] = 0;
+        DWORD br = 0;
+        if (!DeviceIoControl(handle_, IOCTL_ATA_PASS_THROUGH, apt, static_cast<DWORD>(pkt.size()), apt,
+                             static_cast<DWORD>(pkt.size()), &br, nullptr) ||
+            (tf[6] & 0x01)) {
+            r.message = "READ LOG EXT failed";
+            r.ata_status = tf[6];
+            r.ata_error = tf[0];
+            return r;
+        }
+        std::memcpy(buf, pkt.data() + sizeof(ATA_PASS_THROUGH_EX), bytes);
+        r.ok = true;
+        return r;
+    }
+
+    IoResult write_log_ext(uint8_t log_addr, const void* buf, uint32_t bytes, int timeout_ms) override {
+        IoResult r;
+        if (bytes < 512) bytes = 512;
+        std::vector<uint8_t> pkt(sizeof(ATA_PASS_THROUGH_EX) + bytes);
+        auto* apt = reinterpret_cast<ATA_PASS_THROUGH_EX*>(pkt.data());
+        std::memset(pkt.data(), 0, pkt.size());
+        apt->Length = sizeof(ATA_PASS_THROUGH_EX);
+        apt->AtaFlags = ATA_FLAGS_DRDY_REQUIRED | ATA_FLAGS_DATA_OUT | ATA_FLAGS_48BIT_COMMAND;
+        apt->DataTransferLength = bytes;
+        apt->TimeOutValue = static_cast<ULONG>(std::max(1, (timeout_ms + 999) / 1000));
+        apt->DataBufferOffset = sizeof(ATA_PASS_THROUGH_EX);
+        std::memcpy(pkt.data() + sizeof(ATA_PASS_THROUGH_EX), buf, bytes);
+        uint8_t* tf = apt->CurrentTaskFile;
+        uint8_t* ptf = apt->PreviousTaskFile;
+        tf[1] = 1;
+        tf[2] = log_addr;
+        tf[5] = 0x40;
+        tf[6] = 0x3F;  // WRITE LOG EXT
+        ptf[1] = 0;
+        DWORD br = 0;
+        if (!DeviceIoControl(handle_, IOCTL_ATA_PASS_THROUGH, apt, static_cast<DWORD>(pkt.size()), apt,
+                             static_cast<DWORD>(pkt.size()), &br, nullptr) ||
+            (tf[6] & 0x01)) {
+            r.message = "WRITE LOG EXT failed";
+            r.ata_status = tf[6];
+            r.ata_error = tf[0];
+            return r;
+        }
+        r.ok = true;
+        return r;
+    }
+
+    IoResult send_ata(const AtaTaskfile& cmd, void* buffer, uint32_t bytes, int timeout_ms) override {
+        IoResult r;
+        std::vector<uint8_t> pkt(sizeof(ATA_PASS_THROUGH_EX) + (bytes ? bytes : 0));
+        auto* apt = reinterpret_cast<ATA_PASS_THROUGH_EX*>(pkt.data());
+        std::memset(pkt.data(), 0, pkt.size());
+        apt->Length = sizeof(ATA_PASS_THROUGH_EX);
+        apt->AtaFlags = ATA_FLAGS_DRDY_REQUIRED;
+        if (cmd.data_in) apt->AtaFlags |= ATA_FLAGS_DATA_IN;
+        if (cmd.data_out) apt->AtaFlags |= ATA_FLAGS_DATA_OUT;
+        if (cmd.ext48) apt->AtaFlags |= ATA_FLAGS_48BIT_COMMAND;
+        if (cmd.dma) apt->AtaFlags |= ATA_FLAGS_USE_DMA;
+        apt->DataTransferLength = bytes;
+        apt->TimeOutValue = static_cast<ULONG>(std::max(1, (timeout_ms + 999) / 1000));
+        apt->DataBufferOffset = bytes ? sizeof(ATA_PASS_THROUGH_EX) : 0;
+        if (cmd.data_out && buffer && bytes)
+            std::memcpy(pkt.data() + sizeof(ATA_PASS_THROUGH_EX), buffer, bytes);
+        uint8_t* tf = apt->CurrentTaskFile;
+        uint8_t* ptf = apt->PreviousTaskFile;
+        tf[0] = cmd.feature;
+        tf[1] = static_cast<uint8_t>(cmd.count & 0xff);
+        tf[2] = static_cast<uint8_t>(cmd.lba & 0xff);
+        tf[3] = static_cast<uint8_t>((cmd.lba >> 8) & 0xff);
+        tf[4] = static_cast<uint8_t>((cmd.lba >> 16) & 0xff);
+        tf[5] = cmd.device;
+        tf[6] = cmd.command;
+        ptf[1] = static_cast<uint8_t>((cmd.count >> 8) & 0xff);
+        ptf[2] = static_cast<uint8_t>((cmd.lba >> 24) & 0xff);
+        ptf[3] = static_cast<uint8_t>((cmd.lba >> 32) & 0xff);
+        ptf[4] = static_cast<uint8_t>((cmd.lba >> 40) & 0xff);
+        DWORD br = 0;
+        if (!DeviceIoControl(handle_, IOCTL_ATA_PASS_THROUGH, apt, static_cast<DWORD>(pkt.size()), apt,
+                             static_cast<DWORD>(pkt.size()), &br, nullptr)) {
+            r.host_error = static_cast<int>(GetLastError());
+            r.message = last_os_error();
+            r.ata_status = tf[6];
+            r.ata_error = tf[0];
+            return r;
+        }
+        r.ata_error = tf[0];
+        r.ata_status = tf[6];
+        if (r.ata_status & 0x01) {
+            r.message = "ATA error";
+            return r;
+        }
+        if (cmd.data_in && buffer && bytes)
+            std::memcpy(buffer, pkt.data() + sizeof(ATA_PASS_THROUGH_EX), bytes);
+        r.ok = true;
+        r.sectors_transferred = sector_size_ ? static_cast<int>(bytes / sector_size_) : 0;
+        return r;
     }
 
     IoResult write_sectors(uint64_t lba, uint32_t count, const void* buffer, int timeout_ms) override {
@@ -667,23 +948,33 @@ public:
         return r;
     }
 
-    IoResult ata_read(uint64_t lba, uint32_t count, void* buffer, int timeout_ms) {
+    IoResult ata_cmd(uint8_t command, uint64_t lba, uint32_t count, void* buffer, uint32_t bytes,
+                     int timeout_ms, bool dma, bool data_in, bool data_out, uint8_t feature = 0) {
         uint8_t cdb[16]{};
-        cdb[0] = 0x85;  // ATA PASS-THROUGH(16)
-        cdb[1] = (4 << 1) | 0x01;  // PIO data-in, extend
-        cdb[2] = (1 << 3) | (1 << 2) | 0x2;  // ck_cond, t_dir=from, byte_block, t_length=sector count
+        cdb[0] = 0x85;
+        int proto = dma ? 6 : (data_in ? 4 : (data_out ? 5 : 3));
+        if (command == 0x60) proto = 12;  // FPDMA
+        cdb[1] = static_cast<uint8_t>((proto << 1) | 0x01);
+        uint8_t t_dir = data_in ? 1 : 0;
+        cdb[2] = static_cast<uint8_t>((1 << 3) | (t_dir << 2) | (bytes ? 0x2 : 0));
+        cdb[3] = static_cast<uint8_t>((lba >> 40) & 0xff);
+        cdb[4] = feature;
+        cdb[5] = static_cast<uint8_t>((count >> 8) & 0xff);
         cdb[6] = static_cast<uint8_t>(count & 0xff);
+        cdb[7] = static_cast<uint8_t>((count >> 8) & 0xff);
         cdb[8] = static_cast<uint8_t>(lba & 0xff);
+        cdb[9] = static_cast<uint8_t>((lba >> 24) & 0xff);
         cdb[10] = static_cast<uint8_t>((lba >> 8) & 0xff);
+        cdb[11] = static_cast<uint8_t>((lba >> 32) & 0xff);
         cdb[12] = static_cast<uint8_t>((lba >> 16) & 0xff);
         cdb[13] = 0x40;
-        cdb[14] = 0x25;  // READ DMA EXT — many stacks translate; PIO READ EXT 0x24 as fallback
-        cdb[7] = static_cast<uint8_t>((count >> 8) & 0xff);
-        cdb[9] = static_cast<uint8_t>((lba >> 24) & 0xff);
-        cdb[11] = static_cast<uint8_t>((lba >> 32) & 0xff);
-        cdb[3] = static_cast<uint8_t>((lba >> 40) & 0xff);
-        cdb[14] = 0x24;  // READ SECTORS EXT
-        return sg_io(cdb, 16, buffer, count * sector_size_, SG_DXFER_FROM_DEV, timeout_ms);
+        cdb[14] = command;
+        int dx = data_out ? SG_DXFER_TO_DEV : (data_in ? SG_DXFER_FROM_DEV : SG_DXFER_NONE);
+        return sg_io(cdb, 16, buffer, bytes, dx, timeout_ms);
+    }
+
+    IoResult ata_read(uint64_t lba, uint32_t count, void* buffer, int timeout_ms) {
+        return ata_cmd(0x24, lba, count, buffer, count * sector_size_, timeout_ms, false, true, false);
     }
 
     IoResult scsi_read(uint64_t lba, uint32_t count, void* buffer, int timeout_ms) {
@@ -709,9 +1000,88 @@ public:
                           int timeout_ms) override {
 #ifdef __linux__
         if (mode == IoMode::AtaPassthrough) return ata_read(lba, count, buffer, timeout_ms);
-        if (mode == IoMode::ScsiPassthrough) return scsi_read(lba, count, buffer, timeout_ms);
+        if (mode == IoMode::ScsiPassthrough || mode == IoMode::UsbDirect)
+            return scsi_read(lba, count, buffer, timeout_ms);
+        if (mode == IoMode::DirectIde)
+            return ata_cmd(0x24, lba, count, buffer, count * sector_size_, timeout_ms, false, true, false);
+        if (mode == IoMode::DirectAhci) {
+            IoResult r = ata_cmd(0x25, lba, count, buffer, count * sector_size_, timeout_ms, true, true, false);
+            if (!r.ok) (void)device_reset(timeout_ms);
+            if (!r.ok) r = ata_cmd(0x24, lba, count, buffer, count * sector_size_, timeout_ms, false, true, false);
+            return r;
+        }
+        if (mode == IoMode::RebuildAssist) {
+            IoResult r = ata_cmd(0x60, lba, count, buffer, count * sector_size_, timeout_ms, true, true, false);
+            if (!r.ok) r = ata_cmd(0x25, lba, count, buffer, count * sector_size_, timeout_ms, true, true, false);
+            if (!r.ok) {
+                (void)device_reset(timeout_ms);
+                uint8_t log[512]{};
+                if (read_log_ext(0x10, log, 512, timeout_ms).ok) {
+                    uint64_t elba = 0;
+                    for (int i = 0; i < 6; ++i) elba |= static_cast<uint64_t>(log[8 + i]) << (8 * i);
+                    r.ata_lba = elba;
+                }
+            }
+            return r;
+        }
 #endif
         return generic_rw(lba, count, buffer, false, timeout_ms);
+    }
+
+    IoResult device_reset(int timeout_ms) override {
+#ifdef __linux__
+        return ata_cmd(0x08, 0, 0, nullptr, 0, timeout_ms, false, false, false);
+#else
+        (void)timeout_ms;
+        IoResult r;
+        r.message = "device reset not available";
+        return r;
+#endif
+    }
+
+    IoResult read_log_ext(uint8_t log_addr, void* buf, uint32_t bytes, int timeout_ms) override {
+#ifdef __linux__
+        if (bytes < 512) bytes = 512;
+        return ata_cmd(0x2F, log_addr, 1, buf, bytes, timeout_ms, false, true, false);
+#else
+        (void)log_addr;
+        (void)buf;
+        (void)bytes;
+        (void)timeout_ms;
+        IoResult r;
+        r.message = "READ LOG EXT not available";
+        return r;
+#endif
+    }
+
+    IoResult write_log_ext(uint8_t log_addr, const void* buf, uint32_t bytes, int timeout_ms) override {
+#ifdef __linux__
+        if (bytes < 512) bytes = 512;
+        return ata_cmd(0x3F, log_addr, 1, const_cast<void*>(buf), bytes, timeout_ms, false, false, true);
+#else
+        (void)log_addr;
+        (void)buf;
+        (void)bytes;
+        (void)timeout_ms;
+        IoResult r;
+        r.message = "WRITE LOG EXT not available";
+        return r;
+#endif
+    }
+
+    IoResult send_ata(const AtaTaskfile& tf, void* buffer, uint32_t bytes, int timeout_ms) override {
+#ifdef __linux__
+        return ata_cmd(tf.command, tf.lba, tf.count, buffer, bytes, timeout_ms, tf.dma, tf.data_in,
+                       tf.data_out, tf.feature);
+#else
+        (void)tf;
+        (void)buffer;
+        (void)bytes;
+        (void)timeout_ms;
+        IoResult r;
+        r.message = "ATA taskfile not available";
+        return r;
+#endif
     }
 
     IoResult write_sectors(uint64_t lba, uint32_t count, const void* buffer, int timeout_ms) override {
@@ -816,6 +1186,9 @@ std::string last_os_error() {
 }
 
 std::unique_ptr<DiskSession> open_disk(const std::string& path, bool write, bool is_file) {
+    if (looks_like_winusb_path(path)) {
+        if (auto s = open_winusb_bot(path, write)) return s;
+    }
     if (is_file || looks_like_image_file(path)) {
         auto s = std::make_unique<FileSession>(path, write, std::unordered_set<uint64_t>{});
         if (!s->open()) return nullptr;
@@ -904,6 +1277,16 @@ std::vector<DiskInfo> enumerate_disks() {
         info.is_system_disk = info.is_boot_disk;
         if (info.size_bytes == 0) info.size_bytes = s->size_bytes();
         disks.push_back(info);
+    }
+    for (auto& u : enumerate_winusb_disks()) {
+        bool dup = false;
+        for (const auto& d : disks) {
+            if (d.path == u.path) {
+                dup = true;
+                break;
+            }
+        }
+        if (!dup) disks.push_back(u);
     }
 #else
     DIR* d = opendir("/sys/block");

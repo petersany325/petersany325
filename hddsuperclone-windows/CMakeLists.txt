@@ -6,9 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
   add_compile_options(/W3 /utf-8 /D_CRT_SECURE_NO_WARNINGS)
-  add_definitions(-DUNICODE -D_UNICODE)
+  add_definitions(-DUNICODE -D_UNICODE -D_WIN32_WINNT=0x0A00)
 else()
   add_compile_options(-Wall -Wextra -Wno-unused-parameter)
+  if(WIN32)
+    add_definitions(-D_WIN32_WINNT=0x0A00)
+  endif()
 endif()
 
 set(HSC_ENGINE_SRC
@@ -18,13 +21,17 @@ set(HSC_ENGINE_SRC
   src/progress_log.cpp
   src/clone_engine.cpp
   src/safety.cpp
+  src/usb_relay.cpp
+  src/virtual_disk.cpp
+  src/script_engine.cpp
+  src/usb_direct.cpp
 )
 
 add_library(hsc_engine STATIC ${HSC_ENGINE_SRC})
 target_include_directories(hsc_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(WIN32)
-  target_link_libraries(hsc_engine PUBLIC setupapi)
+  target_link_libraries(hsc_engine PUBLIC setupapi hid virtdisk winusb ole32)
   set_source_files_properties(resources/app.rc PROPERTIES
     COMPILE_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/resources")
 endif()
@@ -74,11 +81,10 @@ if(WIN32)
     gdi32 comdlg32 ole32 uuid shell32 user32
   )
   if(MSVC)
-    target_link_options(hddsuperclone-windows PRIVATE /MANIFEST:NO)
-    # Keep a console so --cli works from cmd.exe; GUI still opens a window.
+    target_link_options(hddsuperclone-windows PRIVATE /MANIFEST:NO /SUBSYSTEM:WINDOWS)
   else()
-    # MinGW: ship a single .exe without libgcc/libstdc++ DLLs.
-    target_link_options(hddsuperclone-windows PRIVATE -static-libgcc -static-libstdc++)
+    # GUI subsystem (no leftover console window) + single static exe.
+    target_link_options(hddsuperclone-windows PRIVATE -mwindows -static-libgcc -static-libstdc++)
   endif()
 else()
   find_package(PkgConfig REQUIRED)
@@ -86,6 +92,12 @@ else()
   target_include_directories(hddsuperclone-windows PRIVATE ${GLFW_INCLUDE_DIRS})
   target_link_libraries(hddsuperclone-windows PRIVATE ${GLFW_LIBRARIES} GL pthread dl)
 endif()
+
+add_custom_command(TARGET hddsuperclone-windows POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${CMAKE_CURRENT_SOURCE_DIR}/scripts
+          $<TARGET_FILE_DIR:hddsuperclone-windows>/scripts
+  COMMENT "Copy HDDSuperTool scripts next to the executable")
 
 add_executable(hsc_engine_tests tests/engine_test.cpp)
 target_link_libraries(hsc_engine_tests PRIVATE hsc_engine)
@@ -95,4 +107,5 @@ enable_testing()
 add_test(NAME engine COMMAND hsc_engine_tests)
 
 install(TARGETS hddsuperclone-windows RUNTIME DESTINATION bin)
+install(DIRECTORY scripts DESTINATION share/hddsuperclone-windows)
 install(FILES README.md LICENSE DESTINATION share/doc/hddsuperclone-windows)

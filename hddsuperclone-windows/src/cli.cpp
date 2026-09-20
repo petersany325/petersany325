@@ -1,7 +1,11 @@
 #include "app.hpp"
 
 #include "clone_engine.hpp"
+#include "disk_io.hpp"
 #include "safety.hpp"
+#include "script_engine.hpp"
+#include "usb_relay.hpp"
+#include "virtual_disk.hpp"
 
 #include <cstdlib>
 #include <cstdio>
@@ -19,9 +23,12 @@ void usage() {
                  "Usage:\n"
                  "  hddsuperclone-windows                 # GUI\n"
                  "  hddsuperclone-windows --cli --source SRC --dest DST --log FILE [options]\n"
+                 "  hddsuperclone-windows --script FILE [--source SRC]\n"
                  "Options:\n"
-                 "  --mode auto|generic|ata|scsi\n"
+                 "  --mode auto|generic|ata|scsi|ahci|ide|usb|fpdma\n"
                  "  --cluster N --retries N --skip-kib N\n"
+                 "  --rebuild-assist --virtual-disk\n"
+                 "  --relay PATH --relay-channel N --relay-on-error\n"
                  "  --inject-bad LBA[,LBA...]   (image files only, testing)\n"
                  "  --confirm-boot-overwrite     (required if dest is the boot disk)\n"
                  "  --source-file --dest-file\n");
@@ -32,13 +39,17 @@ IoMode parse_mode(const char* s) {
     if (std::strcmp(s, "generic") == 0) return IoMode::Generic;
     if (std::strcmp(s, "ata") == 0) return IoMode::AtaPassthrough;
     if (std::strcmp(s, "scsi") == 0) return IoMode::ScsiPassthrough;
+    if (std::strcmp(s, "ahci") == 0) return IoMode::DirectAhci;
+    if (std::strcmp(s, "ide") == 0) return IoMode::DirectIde;
+    if (std::strcmp(s, "usb") == 0) return IoMode::UsbDirect;
+    if (std::strcmp(s, "fpdma") == 0 || std::strcmp(s, "rebuild") == 0) return IoMode::RebuildAssist;
     return IoMode::Auto;
 }
 
 }  // namespace
 
 int run_cli(int argc, char** argv) {
-    std::string source, dest, log;
+    std::string source, dest, log, script;
     bool source_file = false, dest_file = false;
     CloneSettings s;
     std::vector<uint64_t> bad;
@@ -65,6 +76,12 @@ int run_cli(int argc, char** argv) {
         } else if (a == "--source-file") source_file = true;
         else if (a == "--dest-file") dest_file = true;
         else if (a == "--confirm-boot-overwrite") boot = "OVERWRITE BOOT DISK";
+        else if (a == "--rebuild-assist") s.rebuild_assist = true;
+        else if (a == "--virtual-disk") s.virtual_disk_dest = true;
+        else if (a == "--relay") s.relay_path = next();
+        else if (a == "--relay-channel") s.relay_channel = std::atoi(next());
+        else if (a == "--relay-on-error") s.relay_on_error = true;
+        else if (a == "--script") script = next();
         else if (a == "--inject-bad") {
             std::string list = next();
             size_t p = 0;
@@ -83,6 +100,21 @@ int run_cli(int argc, char** argv) {
             return 2;
         }
     }
+
+    if (!script.empty()) {
+        ScriptEngine se;
+        auto slash = script.find_last_of("/\\");
+        if (slash != std::string::npos) se.set_script_dir(script.substr(0, slash));
+        std::unique_ptr<DiskSession> disk;
+        if (!source.empty()) {
+            disk = open_disk(source, false, source_file);
+            if (disk) se.set_disk(disk.get());
+        }
+        auto r = se.run_file(script);
+        std::fputs(r.output.c_str(), stdout);
+        return r.ok ? 0 : 1;
+    }
+
     if (source.empty() || dest.empty()) {
         usage();
         return 2;
@@ -96,12 +128,13 @@ int run_cli(int argc, char** argv) {
     }
     CloneResult r = eng.run();
     auto p = eng.progress();
-    std::printf("result=%d finished=%llu bad=%llu nontried=%llu phase=%s\n",
+    std::printf("result=%d finished=%llu bad=%llu nontried=%llu phase=%s mode=%s\n",
                 static_cast<int>(r),
                 static_cast<unsigned long long>(p.stats.finished_sectors),
                 static_cast<unsigned long long>(p.stats.bad_sectors),
                 static_cast<unsigned long long>(p.stats.nontried_sectors),
-                p.phase_name.c_str());
+                p.phase_name.c_str(),
+                io_mode_name(s.io_mode));
     return r == CloneResult::Ok ? 0 : 1;
 }
 

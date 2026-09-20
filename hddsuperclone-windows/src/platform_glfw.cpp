@@ -10,6 +10,7 @@
 #ifdef __linux__
 #include <cstdio>
 #include <array>
+#include <unistd.h>
 #endif
 
 namespace hsc {
@@ -91,5 +92,19 @@ std::string native_save_file(const char* title, const char*) {
 std::string native_open_file(const char*, const char*) { return {}; }
 std::string native_save_file(const char*, const char*) { return {}; }
 #endif
+
+std::string application_dir() {
+#ifdef __linux__
+    char buf[4096]{};
+    ssize_t n = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+    if (n > 0) {
+        std::string p(buf, static_cast<size_t>(n));
+        auto sl = p.find_last_of('/');
+        if (sl != std::string::npos) p.resize(sl);
+        return p;
+    }
+#endif
+    return ".";
+}
 
 }  // namespace hsc
