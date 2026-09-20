@@ -73,7 +73,10 @@ class InstallmentController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless(Schema::hasTable('acc_installment_requests'), 404);
+        Plugin::ensureSchema();
+        if (! Schema::hasTable('acc_installment_requests')) {
+            return back()->withInput()->with('error', 'ثبت اقساط الان در دسترس نیست. چند لحظه بعد دوباره تلاش کنید.');
+        }
         $user = Auth::user();
         $uid = (int) Auth::id();
 
@@ -144,7 +147,7 @@ class InstallmentController extends Controller
             $msg .= ' برای پیگیری می‌توانید از بخش تیکت پشتیبانی هم پیام بگذارید.';
         }
 
-        return redirect()->route('account.installments.show', $id)->with('success', $msg);
+        return redirect()->to(url('/account/installments/'.$id))->with('success', $msg);
     }
 
     public function show(int $id)

@@ -34,6 +34,30 @@ class Plugin extends BasePlugin
         return true;
     }
 
+    public function boot(): void
+    {
+        parent::boot();
+        $this->bootCustomerInstallments();
+    }
+
+    /**
+     * Keep customer «اقساط» alive even when Accounting plugin boot is skipped.
+     */
+    protected function bootCustomerInstallments(): void
+    {
+        $routes = dirname(__DIR__).DIRECTORY_SEPARATOR.'Accounting'.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Support'.DIRECTORY_SEPARATOR.'AccRoutes.php';
+        if (! is_file($routes)) {
+            return;
+        }
+        try {
+            require_once $routes;
+            if (class_exists(\Plugins\Accounting\src\Support\AccRoutes::class)) {
+                \Plugins\Accounting\src\Support\AccRoutes::registerCustomer();
+            }
+        } catch (\Throwable) {
+        }
+    }
+
     /** @return array<string,mixed> */
     public static function defaults(): array
     {

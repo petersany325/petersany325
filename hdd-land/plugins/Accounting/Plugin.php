@@ -6,6 +6,7 @@ use App\Support\BasePlugin;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Plugins\Accounting\src\Support\AccCommerce;
+use Plugins\Accounting\src\Support\AccRoutes;
 
 class Plugin extends BasePlugin
 {
@@ -39,7 +40,14 @@ class Plugin extends BasePlugin
         static::loadClasses();
         static::ensureSchema();
         static::seedDefaults();
-        AccCommerce::boot();
+        try {
+            AccCommerce::boot();
+        } catch (\Throwable) {
+        }
+        try {
+            AccRoutes::registerCustomer();
+        } catch (\Throwable) {
+        }
         parent::boot();
     }
 
@@ -50,6 +58,7 @@ class Plugin extends BasePlugin
         $files = [
             $base.'/Support/AccMath.php',
             $base.'/Support/AccCommerce.php',
+            $base.'/Support/AccRoutes.php',
             $base.'/Support/AccountingLedger.php',
             $base.'/Support/AccEngine.php',
             $base.'/Http/Controllers/Admin/HubController.php',

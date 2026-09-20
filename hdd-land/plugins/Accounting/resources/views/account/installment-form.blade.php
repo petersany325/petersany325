@@ -3,19 +3,19 @@
 @section('content')
 <header>
   <h1>فرم درخواست اقساط</h1>
-  <a href="{{ route('account.installments') }}">بازگشت</a>
+  <a href="{{ url('/account/installments') }}">بازگشت</a>
 </header>
 @if(session('error'))<div class="card" style="border-color:#b42318;color:#b42318">{{ session('error') }}</div>@endif
 
 <div class="card">
-  <form method="get" action="{{ route('account.installments.create') }}" style="display:flex;gap:.5rem;margin-bottom:1rem">
+  <form method="get" action="{{ url('/account/installments/create') }}" style="display:flex;gap:.5rem;margin-bottom:1rem">
     <input name="q" value="{{ $q }}" placeholder="جستجوی کالا" style="flex:1;border:1px solid var(--line);border-radius:12px;padding:.6rem;font:inherit">
     <button type="submit" style="border:0;border-radius:12px;padding:.6rem .9rem;background:var(--brand);color:#fff;font:inherit">جستجو</button>
   </form>
   @if($products->isNotEmpty())
     <div style="display:grid;gap:.45rem;margin-bottom:1rem;max-height:220px;overflow:auto">
       @foreach($products as $p)
-        <a href="{{ route('account.installments.create', ['product_id'=>$p->id,'q'=>$q]) }}" style="display:flex;justify-content:space-between;padding:.55rem .7rem;border:1px solid var(--line);border-radius:12px;text-decoration:none;color:inherit;{{ isset($selected) && (int)$selected->id===(int)$p->id ? 'background:#e8f3f2' : '' }}">
+        <a href="{{ url('/account/installments/create?product_id='.$p->id.'&q='.urlencode((string)$q)) }}" style="display:flex;justify-content:space-between;padding:.55rem .7rem;border:1px solid var(--line);border-radius:12px;text-decoration:none;color:inherit;{{ isset($selected) && (int)$selected->id===(int)$p->id ? 'background:#e8f3f2' : '' }}">
           <span>{{ $p->name }}@if(!empty($p->sku)) <small style="color:var(--muted)">({{ $p->sku }})</small>@endif</span>
           <strong>{{ number_format((int)($p->price ?? 0)) }}</strong>
         </a>
@@ -25,7 +25,7 @@
 </div>
 
 <div class="card">
-  <form method="post" action="{{ route('account.installments.store') }}">
+  <form method="post" action="{{ url('/account/installments') }}">
     @csrf
     <input type="hidden" name="product_id" value="{{ $selected->id ?? old('product_id') }}">
     <label style="display:grid;gap:.3rem;margin-bottom:.75rem;font-size:.85rem;color:var(--muted)">عنوان کالا
