@@ -197,10 +197,12 @@ int main() {
         if (hsc::kIoModeCount != 8 && hsc::kIoModeCount != 9) return fail("io mode count");
         if (std::strstr(hsc::job_mode_name(hsc::JobMode::DiskToDisk), "Disk-to-disk") == nullptr)
             return fail("job disk");
-        if (std::strstr(hsc::job_mode_name(hsc::JobMode::ImageOntoDrive), "Image onto") == nullptr)
+        if (std::strstr(hsc::job_mode_name(hsc::JobMode::ImageOntoDrive), "Image onto Image HDD") == nullptr)
             return fail("job image");
         if (std::strstr(hsc::job_mode_name(hsc::JobMode::FileRecovery), "File recovery") == nullptr)
             return fail("job files");
+        if (std::strstr(hsc::job_mode_name(hsc::JobMode::RestoreImageToDisk), "Restore image") == nullptr)
+            return fail("job restore");
     }
 
     // --- file recovery: FAT16 file + JPEG carving ---

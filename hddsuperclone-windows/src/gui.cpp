@@ -33,6 +33,7 @@ struct AppState {
     char dest_path[1024] = {};
     char image_file[1024] = {};
     char dest_folder[1024] = {};
+    char image_save_as[1024] = {};
     char log_path[1024] = "clone.progress.log";
     char boot_confirm[64] = {};
     CloneSettings settings;
@@ -43,7 +44,7 @@ struct AppState {
     std::unique_ptr<std::thread> scan_worker;
     CloneResult last_result = CloneResult::Ok;
     std::string status_message =
-        "Click Start scan, then tick the HDD/USB devices to recover. Choose the job type before writing.";
+        "Start scan, then TICK the damaged disk (source). Pick dest / Image HDD separately. Ticks are never the dest.";
     bool show_confirm = false;
     bool show_boot_confirm = false;
     bool running = false;
@@ -143,84 +144,171 @@ struct PendingJob {
     bool dest_is_boot = false;
 };
 
+std::string disk_stem(const DiskInfo& d) {
+    return sanitize_stem(d.model.empty() ? d.path : d.model);
+}
+
+bool path_is_raw_disk(const std::string& p) {
+    if (p.rfind("\\\\.\\PhysicalDrive", 0) == 0) return true;
+    if (p.rfind("/dev/", 0) == 0) return true;
+    return false;
+}
+
+bool dest_conflicts_source(const AppState& a, const std::string& dest) {
+    if (dest.empty()) return false;
+    for (int i : checked_indices(a)) {
+        if (a.disks[static_cast<size_t>(i)].path == dest) return true;
+    }
+    return false;
+}
+
+std::string image_output_dir(const AppState& a, std::string& err) {
+    namespace fs = std::filesystem;
+    if (a.dest_folder[0]) {
+        if (path_is_raw_disk(a.dest_folder)) {
+            err = "Image HDD must be a folder or .img file on the healthy disk, not the raw disk path. "
+                  "Choose a folder on that HDD, or use Disk-to-disk to clone onto the dest disk.";
+            return {};
+        }
+        return a.dest_folder;
+    }
+    if (a.dest_path[0] && !a.dest_is_file) {
+        if (path_is_raw_disk(a.dest_path)) {
+            err = "Image HDD (destination) stores a .img file. Click 'Choose folder on Image HDD' "
+                  "(or pick an .img path). For a full clone onto that disk, use Disk-to-disk.";
+            return {};
+        }
+        fs::path base = a.dest_path;
+        if (fs::is_directory(base) || (!fs::exists(base) && base.extension().empty())) return base.string();
+    }
+    if (a.dest_path[0] && a.dest_is_file) return {};  // single file, not a dir
+    err = "Choose the Image HDD folder (destination) where .img/.dd files will be written.";
+    return {};
+}
+
 std::vector<PendingJob> build_jobs(AppState& a, std::string& err) {
     std::vector<PendingJob> jobs;
     auto checked = checked_indices(a);
     auto mode = static_cast<JobMode>(a.job_mode);
     if (!a.scanned) {
-        err = "Start scan first, then tick the HDD/USB devices to use.";
+        err = "Start scan first, then tick the damaged disk(s) (source).";
         return {};
     }
-    if (mode == JobMode::ImageOntoDrive) {
+
+    if (mode == JobMode::RestoreImageToDisk) {
         if (a.image_file[0] == 0) {
-            err = "Choose the disk image file to write onto the hard drive.";
+            err = "Choose the .img/.dd file to restore onto the dest disk.";
             return {};
         }
-        if (checked.empty()) {
-            err = "After the scan, tick the HDD/USB drive(s) that should receive the image.";
+        if (a.dest_path[0] == 0 || a.dest_is_file) {
+            err = "Set dest HDD (the healthy disk that will be overwritten by the image).";
             return {};
         }
-        for (int i : checked) {
-            PendingJob j;
-            j.mode = mode;
-            j.source = a.image_file;
-            j.source_is_file = true;
-            j.dest = a.disks[static_cast<size_t>(i)].path;
-            j.dest_is_file = false;
-            j.dest_is_boot = a.disks[static_cast<size_t>(i)].is_boot_disk;
-            jobs.push_back(j);
-        }
-        return jobs;
-    }
-    if (checked.empty()) {
-        err = "After the scan, tick one or more HDD/USB devices to recover.";
-        return {};
-    }
-    if (mode == JobMode::FileRecovery) {
-        if (a.dest_folder[0] == 0) {
-            err = "Choose a destination folder for recovered files.";
+        if (std::strcmp(a.dest_path, a.image_file) == 0) {
+            err = "Source image and dest disk cannot be the same path.";
             return {};
         }
-        for (int i : checked) {
-            PendingJob j;
-            j.mode = mode;
-            j.source = a.disks[static_cast<size_t>(i)].path;
-            j.source_is_file = false;
-            std::string stem = sanitize_stem(a.disks[static_cast<size_t>(i)].model.empty()
-                                                 ? a.disks[static_cast<size_t>(i)].path
-                                                 : a.disks[static_cast<size_t>(i)].model);
-            j.dest = std::string(a.dest_folder) + "/" + stem;
-            j.dest_is_folder = true;
-            jobs.push_back(j);
-        }
-        return jobs;
-    }
-    // Disk-to-disk
-    if (a.dest_path[0] == 0) {
-        err = "Choose a destination disk (or a folder of .img files if several sources are ticked).";
-        return {};
-    }
-    if (checked.size() == 1 && !a.dest_is_file) {
         PendingJob j;
         j.mode = mode;
-        j.source = a.disks[static_cast<size_t>(checked[0])].path;
+        j.source = a.image_file;
+        j.source_is_file = true;
         j.dest = a.dest_path;
         j.dest_is_file = false;
         if (auto* d = selected(a, a.dest_index)) j.dest_is_boot = d->is_boot_disk;
         jobs.push_back(j);
         return jobs;
     }
-    // Several sources: one sector image per disk in the destination folder / path.
+
+    if (checked.empty()) {
+        err = "After the scan, tick the damaged disk(s) (source) you recover FROM.";
+        return {};
+    }
+    if (a.dest_index >= 0) {
+        for (int i : checked) {
+            if (i == a.dest_index) {
+                err = "Dest / Image HDD cannot also be ticked as a damaged source. Untick that row.";
+                return {};
+            }
+        }
+    }
+
+    if (mode == JobMode::FileRecovery) {
+        if (a.dest_folder[0] == 0) {
+            err = "Choose a folder for recovered files (not the damaged disk).";
+            return {};
+        }
+        for (int i : checked) {
+            PendingJob j;
+            j.mode = mode;
+            j.source = a.disks[static_cast<size_t>(i)].path;
+            j.source_is_file = a.disks[static_cast<size_t>(i)].bus == "File";
+            std::string stem = disk_stem(a.disks[static_cast<size_t>(i)]);
+            j.dest = (std::filesystem::path(a.dest_folder) / stem).string();
+            j.dest_is_folder = true;
+            jobs.push_back(j);
+        }
+        return jobs;
+    }
+
+    if (mode == JobMode::ImageOntoDrive) {
+        namespace fs = std::filesystem;
+        if (a.image_save_as[0] && checked.size() == 1) {
+            if (path_is_raw_disk(a.image_save_as) || dest_conflicts_source(a, a.image_save_as)) {
+                err = "Choose a .img file path on the healthy Image HDD, not the damaged source disk.";
+                return {};
+            }
+            PendingJob j;
+            j.mode = mode;
+            j.source = a.disks[static_cast<size_t>(checked[0])].path;
+            j.source_is_file = a.disks[static_cast<size_t>(checked[0])].bus == "File";
+            j.dest = a.image_save_as;
+            j.dest_is_file = true;
+            jobs.push_back(j);
+            return jobs;
+        }
+        std::string dir = image_output_dir(a, err);
+        if (dir.empty()) return {};
+        for (int i : checked) {
+            PendingJob j;
+            j.mode = mode;
+            j.source = a.disks[static_cast<size_t>(i)].path;
+            j.source_is_file = a.disks[static_cast<size_t>(i)].bus == "File";
+            j.dest = (fs::path(dir) / (disk_stem(a.disks[static_cast<size_t>(i)]) + ".img")).string();
+            j.dest_is_file = true;
+            jobs.push_back(j);
+        }
+        return jobs;
+    }
+
+    // Disk-to-disk: ticked = damaged source; dest_path = healthy dest HDD (or .img file).
+    if (a.dest_path[0] == 0) {
+        err = "Set dest HDD / copy disk (healthy destination), or choose an image file/folder.";
+        return {};
+    }
+    if (dest_conflicts_source(a, a.dest_path)) {
+        err = "Dest HDD cannot be the same as a ticked damaged source.";
+        return {};
+    }
+    if (checked.size() == 1 && !a.dest_is_file) {
+        PendingJob j;
+        j.mode = mode;
+        j.source = a.disks[static_cast<size_t>(checked[0])].path;
+        j.source_is_file = a.disks[static_cast<size_t>(checked[0])].bus == "File";
+        j.dest = a.dest_path;
+        j.dest_is_file = false;
+        if (auto* d = selected(a, a.dest_index)) j.dest_is_boot = d->is_boot_disk;
+        jobs.push_back(j);
+        return jobs;
+    }
     for (int i : checked) {
         PendingJob j;
         j.mode = mode;
         j.source = a.disks[static_cast<size_t>(i)].path;
-        std::string stem = sanitize_stem(a.disks[static_cast<size_t>(i)].model.empty()
-                                             ? a.disks[static_cast<size_t>(i)].path
-                                             : a.disks[static_cast<size_t>(i)].model);
+        j.source_is_file = a.disks[static_cast<size_t>(i)].bus == "File";
+        std::string stem = disk_stem(a.disks[static_cast<size_t>(i)]);
         if (a.dest_is_file || checked.size() > 1) {
             namespace fs = std::filesystem;
-            fs::path base = a.dest_path;
+            fs::path base = a.dest_path[0] ? a.dest_path : a.dest_folder;
             if (a.dest_is_file && checked.size() == 1) {
                 j.dest = a.dest_path;
             } else {
@@ -318,6 +406,19 @@ void start_clone(AppState& a, bool confirmed) {
     });
 }
 
+void set_dest_disk(AppState& a, int i, bool image_hdd) {
+    a.dest_index = i;
+    a.dest_is_file = false;
+    std::snprintf(a.dest_path, sizeof(a.dest_path), "%s", a.disks[static_cast<size_t>(i)].path.c_str());
+    if (i < static_cast<int>(a.recover_checked.size())) a.recover_checked[static_cast<size_t>(i)] = 0;
+    if (image_hdd) {
+        a.status_message =
+            "Image HDD (destination) set. Now choose a folder on that healthy disk for the .img file(s).";
+    } else {
+        a.status_message = "Dest HDD / copy disk (healthy destination) set. Ticks stay on the damaged source.";
+    }
+}
+
 void draw_disk_table(AppState& a) {
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12f, 0.45f, 0.55f, 1));
     if (ImGui::Button(a.scanning ? "Scanning..." : "Start scan", ImVec2(160, 36))) {
@@ -326,6 +427,7 @@ void draw_disk_table(AppState& a) {
             a.scanned = false;
             a.disks.clear();
             a.recover_checked.clear();
+            a.dest_index = -1;
             a.scan_worker = std::make_unique<std::thread>([&a]() {
                 auto disks = enumerate_disks();
                 a.disks = std::move(disks);
@@ -334,7 +436,7 @@ void draw_disk_table(AppState& a) {
                 a.scanned = true;
                 a.status_message = a.disks.empty()
                                        ? "Scan finished - no disks found. Run as Administrator and try again."
-                                       : "Scan finished. Tick one or more HDD/USB devices to recover.";
+                                       : "Scan finished. TICK damaged disk (source). Use Set dest / Set image HDD for the healthy disk.";
             });
         }
     }
@@ -347,8 +449,8 @@ void draw_disk_table(AppState& a) {
         ImGui::TextUnformatted("Elevated: physical disks can be opened.");
     }
     if (!a.scanned && !a.scanning) {
-        ImGui::TextWrapped("Scan first. You choose which discovered HDD/USB devices to recover after the scan "
-                           "completes - not before.");
+        ImGui::TextWrapped("Scan first. After the scan, tick Damaged disk (source) you recover FROM. "
+                           "The healthy dest / Image HDD is a separate button - ticks never mean destination.");
         return;
     }
     if (a.scanning) {
@@ -357,17 +459,28 @@ void draw_disk_table(AppState& a) {
     }
 
     auto mode = static_cast<JobMode>(a.job_mode);
-    const char* check_hdr = (mode == JobMode::ImageOntoDrive) ? "Write image here" : "Recover this device";
+    ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.25f, 1),
+                       "TICK = Damaged disk (source)  -  recover FROM this HDD/USB");
+    ImGui::SameLine();
+    if (mode == JobMode::ImageOntoDrive)
+        ImGui::TextColored(ImVec4(0.4f, 0.85f, 0.5f, 1), "   |   Set image HDD = healthy destination for .img files");
+    else if (mode == JobMode::FileRecovery)
+        ImGui::TextColored(ImVec4(0.4f, 0.85f, 0.5f, 1), "   |   Destination is a folder (below), not a tick");
+    else if (mode == JobMode::RestoreImageToDisk)
+        ImGui::TextColored(ImVec4(0.4f, 0.85f, 0.5f, 1), "   |   Set dest HDD = disk that the .img will overwrite");
+    else
+        ImGui::TextColored(ImVec4(0.4f, 0.85f, 0.5f, 1), "   |   Set dest HDD = Dest HDD / copy disk (healthy)");
+
     if (ImGui::BeginTable("disks", 7,
                            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY,
-                           ImVec2(0, 170))) {
-        ImGui::TableSetupColumn(check_hdr, ImGuiTableColumnFlags_WidthFixed, 140);
+                           ImVec2(0, 190))) {
+        ImGui::TableSetupColumn("Damaged disk (source)", ImGuiTableColumnFlags_WidthFixed, 210);
         ImGui::TableSetupColumn("Path");
         ImGui::TableSetupColumn("Model");
         ImGui::TableSetupColumn("Bus");
         ImGui::TableSetupColumn("Size");
         ImGui::TableSetupColumn("Boot");
-        ImGui::TableSetupColumn("Dest disk");
+        ImGui::TableSetupColumn("Healthy dest / Image HDD", ImGuiTableColumnFlags_WidthFixed, 220);
         ImGui::TableHeadersRow();
         for (int i = 0; i < static_cast<int>(a.disks.size()); ++i) {
             const auto& d = a.disks[static_cast<size_t>(i)];
@@ -377,9 +490,16 @@ void draw_disk_table(AppState& a) {
             ImGui::TableSetColumnIndex(0);
             ImGui::PushID(i);
             bool on = a.recover_checked[static_cast<size_t>(i)] != 0;
-            if (ImGui::Checkbox("##rec", &on)) a.recover_checked[static_cast<size_t>(i)] = on ? 1 : 0;
+            if (ImGui::Checkbox("##rec", &on)) {
+                a.recover_checked[static_cast<size_t>(i)] = on ? 1 : 0;
+                if (on && a.dest_index == i) {
+                    a.dest_index = -1;
+                    a.dest_path[0] = 0;
+                }
+            }
             ImGui::SameLine();
-            ImGui::TextUnformatted(on ? "Yes" : "");
+            if (on)
+                ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.25f, 1), "SOURCE");
             ImGui::TableSetColumnIndex(1);
             ImGui::TextUnformatted(d.path.c_str());
             ImGui::TableSetColumnIndex(2);
@@ -391,22 +511,37 @@ void draw_disk_table(AppState& a) {
             ImGui::TableSetColumnIndex(5);
             if (d.is_boot_disk) ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "BOOT");
             ImGui::TableSetColumnIndex(6);
-            if (mode == JobMode::DiskToDisk) {
-                if (ImGui::SmallButton("Set dest")) {
-                    a.dest_index = i;
-                    a.dest_is_file = false;
-                    std::snprintf(a.dest_path, sizeof(a.dest_path), "%s", d.path.c_str());
-                }
+            if (a.dest_index == i) {
+                if (mode == JobMode::ImageOntoDrive)
+                    ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1), "IMAGE HDD");
+                else
+                    ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1), "DEST HDD");
+                ImGui::SameLine();
+            }
+            if (mode == JobMode::FileRecovery) {
+                ImGui::TextDisabled("use folder below");
+            } else if (mode == JobMode::ImageOntoDrive) {
+                if (ImGui::SmallButton("Set image HDD")) set_dest_disk(a, i, true);
+            } else if (mode == JobMode::RestoreImageToDisk) {
+                if (ImGui::SmallButton("Set dest HDD")) set_dest_disk(a, i, false);
+            } else {
+                if (ImGui::SmallButton("Set dest HDD")) set_dest_disk(a, i, false);
             }
             ImGui::PopID();
         }
         ImGui::EndTable();
     }
     int nchk = static_cast<int>(checked_indices(a).size());
-    ImGui::Text("Selected after scan: %d device(s)", nchk);
+    ImGui::Text("Damaged source(s) ticked: %d", nchk);
+    if (a.dest_index >= 0 && selected(a, a.dest_index)) {
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1), "  |  %s: %s",
+                           (mode == JobMode::ImageOntoDrive) ? "Image HDD" : "Dest HDD",
+                           a.disks[static_cast<size_t>(a.dest_index)].path.c_str());
+    }
     ImGui::SameLine();
-    if (ImGui::SmallButton("Add image file to this list...")) {
-        auto f = native_open_file("Add image as a recoverable device", "Images\0*.img;*.dd;*.bin\0All\0*.*\0");
+    if (ImGui::SmallButton("Add image file as damaged source...")) {
+        auto f = native_open_file("Add image as a damaged source (recover FROM)", "Images\0*.img;*.dd;*.bin\0All\0*.*\0");
         if (!f.empty()) {
             DiskInfo info;
             info.path = f;
@@ -509,48 +644,93 @@ int run_gui(int argc, char** argv) {
         }
 
         ImGui::TextUnformatted("Sector-level clone / recovery of failing disks.");
+        ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.35f, 1),
+                           "Damaged disk (source) = TICK after scan.  Dest / Image HDD = healthy disk you write TO.");
         ImGui::Separator();
 
         ImGui::Text("What is this job?");
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 8));
-        if (ImGui::RadioButton("Disk-to-disk  -  clone source disk onto destination disk", a.job_mode == 0))
+        if (ImGui::RadioButton("Disk-to-disk  -  clone damaged source onto dest HDD / copy disk", a.job_mode == 0))
             a.job_mode = 0;
-        if (ImGui::RadioButton("Image onto a hard drive  -  write a disk image file onto a selected HDD",
+        if (ImGui::RadioButton("Image onto Image HDD  -  save .img/.dd OF the damaged disk onto a healthy HDD",
                                a.job_mode == 1))
             a.job_mode = 1;
-        if (ImGui::RadioButton("File recovery only  -  recover files, not a full sector clone", a.job_mode == 2))
+        if (ImGui::RadioButton("File recovery only  -  recover files from damaged disk into a folder",
+                               a.job_mode == 2))
             a.job_mode = 2;
+        if (ImGui::RadioButton("Restore image to dest disk  -  write an existing .img ONTO a physical disk (overwrite)",
+                               a.job_mode == 3))
+            a.job_mode = 3;
         ImGui::PopStyleVar();
         {
             auto mode = static_cast<JobMode>(a.job_mode);
             if (mode == JobMode::DiskToDisk)
-                ImGui::TextWrapped("Tick source HDD/USB after the scan, then pick a destination disk. Several "
-                                   "sources become one .img file per disk in the destination folder.");
+                ImGui::TextWrapped("TICK the damaged HDD/USB (source). Then Set dest HDD (healthy copy disk). "
+                                   "Several damaged sources become one .img file per disk in a dest folder.");
             else if (mode == JobMode::ImageOntoDrive)
-                ImGui::TextWrapped("Choose the .img/.dd file, then tick the HDD/USB that should be overwritten "
-                                   "with that image.");
+                ImGui::TextWrapped("TICK the damaged HDD/USB (source). Then Set image HDD (healthy) and choose a "
+                                   "folder on it. This CREATES a .img of the damaged disk; it does not restore an image.");
+            else if (mode == JobMode::RestoreImageToDisk)
+                ImGui::TextWrapped("Choose an existing .img/.dd file, then Set dest HDD. That dest disk is overwritten. "
+                                   "Ticks are not used. This is restore, not imaging the damaged disk.");
             else
-                ImGui::TextWrapped("Tick source HDD/USB after the scan. Files are copied into a folder (FAT/NTFS "
-                                   "walk + signature carving). No full-disk overwrite.");
+                ImGui::TextWrapped("TICK the damaged HDD/USB (source). Choose a folder for recovered files. "
+                                   "FAT/NTFS walk + signature carving. No full-disk overwrite.");
         }
         ImGui::Separator();
         draw_disk_table(a);
 
         ImGui::Separator();
-        ImGui::Text("Destination / copy target  [%s]", job_mode_name(static_cast<JobMode>(a.job_mode)));
         {
             auto mode = static_cast<JobMode>(a.job_mode);
+            if (mode == JobMode::ImageOntoDrive)
+                ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1),
+                                   "Image HDD (destination)  -  healthy disk / folder that RECEIVES the .img file");
+            else if (mode == JobMode::FileRecovery)
+                ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1),
+                                   "Recovered-files folder (destination)  -  not the damaged disk");
+            else if (mode == JobMode::RestoreImageToDisk)
+                ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1),
+                                   "Dest HDD (overwrite)  -  physical disk that receives the restored image");
+            else
+                ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1),
+                                   "Dest HDD / copy disk (destination)  -  healthy disk you clone ONTO");
+            ImGui::TextDisabled("%s", job_mode_name(mode));
             if (mode == JobMode::ImageOntoDrive) {
-                ImGui::TextUnformatted("Disk image file (source)");
-                ImGui::SetNextItemWidth(-220);
+                ImGui::TextUnformatted("Folder on Image HDD (stores .img of the damaged source)");
+                ImGui::SetNextItemWidth(-280);
+                ImGui::InputText("##imgfolder", a.dest_folder, sizeof(a.dest_folder));
+                ImGui::SameLine();
+                if (ImGui::Button("Choose folder on Image HDD...")) {
+                    auto f = native_pick_folder("Folder on the healthy Image HDD for .img files");
+                    if (!f.empty()) {
+                        std::snprintf(a.dest_folder, sizeof(a.dest_folder), "%s", f.c_str());
+                        a.dest_is_file = false;
+                    }
+                }
+                ImGui::TextUnformatted("Or save as a single .img file");
+                ImGui::SetNextItemWidth(-280);
+                ImGui::InputText("##imgfile", a.image_save_as, sizeof(a.image_save_as));
+                ImGui::SameLine();
+                if (ImGui::Button("Choose .img file path...")) {
+                    auto f = native_save_file("Save image of damaged disk", "Images\0*.img;*.dd\0All\0*.*\0");
+                    if (!f.empty()) std::snprintf(a.image_save_as, sizeof(a.image_save_as), "%s", f.c_str());
+                }
+                ImGui::TextDisabled("Ticks above = damaged source. Set image HDD marks which healthy disk you meant.");
+            } else if (mode == JobMode::RestoreImageToDisk) {
+                ImGui::TextUnformatted("Existing image file (source to restore FROM)");
+                ImGui::SetNextItemWidth(-280);
                 ImGui::InputText("##img", a.image_file, sizeof(a.image_file));
                 ImGui::SameLine();
-                if (ImGui::Button("Choose image file...")) {
-                    auto f = native_open_file("Disk image to write onto the HDD",
+                if (ImGui::Button("Choose .img to restore...")) {
+                    auto f = native_open_file("Image file to write onto dest HDD",
                                               "Images\0*.img;*.dd;*.bin;*.vhd;*.vhdx\0All\0*.*\0");
                     if (!f.empty()) std::snprintf(a.image_file, sizeof(a.image_file), "%s", f.c_str());
                 }
-                ImGui::TextDisabled("Destination drive(s) are the devices ticked in the scan list above.");
+                ImGui::TextUnformatted("Dest HDD that will be overwritten");
+                ImGui::SetNextItemWidth(-1);
+                ImGui::InputText("##dst", a.dest_path, sizeof(a.dest_path));
+                ImGui::TextDisabled("Use Set dest HDD in the table. This overwrites that physical disk.");
             } else if (mode == JobMode::FileRecovery) {
                 ImGui::TextUnformatted("Folder for recovered files");
                 ImGui::SetNextItemWidth(-220);
@@ -561,7 +741,7 @@ int run_gui(int argc, char** argv) {
                     if (!f.empty()) std::snprintf(a.dest_folder, sizeof(a.dest_folder), "%s", f.c_str());
                 }
             } else {
-                ImGui::TextUnformatted("Destination disk (WRITES HERE)");
+                ImGui::TextUnformatted("Dest HDD / copy disk (WRITES HERE)");
                 ImGui::SetNextItemWidth(-1);
                 ImGui::InputText("##dst", a.dest_path, sizeof(a.dest_path));
                 if (ImGui::Button("Destination image file / folder...")) {
@@ -727,10 +907,10 @@ int run_gui(int argc, char** argv) {
 
         if (!a.running) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.55f, 0.25f, 1));
-            const char* go = "Start job";
+            const char* go = "Start disk clone";
             if (static_cast<JobMode>(a.job_mode) == JobMode::FileRecovery) go = "Start file recovery";
-            else if (static_cast<JobMode>(a.job_mode) == JobMode::ImageOntoDrive) go = "Write image onto drive";
-            else go = "Start disk clone";
+            else if (static_cast<JobMode>(a.job_mode) == JobMode::ImageOntoDrive) go = "Save image of damaged disk";
+            else if (static_cast<JobMode>(a.job_mode) == JobMode::RestoreImageToDisk) go = "Restore image onto dest disk";
             if (ImGui::Button(go, ImVec2(240, 36))) start_clone(a, false);
             ImGui::PopStyleColor();
         } else {
@@ -766,8 +946,8 @@ int run_gui(int argc, char** argv) {
         }
         if (ImGui::BeginPopupModal("Confirm overwrite", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
             ImGui::TextWrapped("%s",
-                               "This will write to the destination(s) for the selected job "
-                               "(disk clone, image restore, or file recovery). There is no undo.");
+                               "This will write to the destination (dest HDD, Image HDD folder, or restore target). "
+                               "The ticked row is the damaged source. There is no undo.");
             if (ImGui::Button("Yes, start the job", ImVec2(220, 0))) {
                 ImGui::CloseCurrentPopup();
                 start_clone(a, true);

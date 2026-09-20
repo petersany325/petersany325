@@ -8,11 +8,12 @@ Install with **HDDSuperClone-Windows-Setup.exe** (NSIS). It installs to `Program
 
 ## What this port does
 
-- **Start scan**, then tick one or more discovered HDD/USB devices to recover (multi-select after the scan, not before)
-- Three explicit jobs:
-  - **Disk-to-disk** — sector clone source disk onto a destination disk (several sources become one `.img` per disk)
-  - **Image onto a hard drive** — write a `.img`/`.dd` file onto the ticked HDD
-  - **File recovery only** — copy files into a folder (FAT/NTFS walk + JPEG/PNG/PDF/ZIP carving), not a full-disk overwrite
+- **Start scan**, then tick **Damaged disk (source)** (HDD/USB you recover FROM). Ticks never mean destination.
+- Four explicit jobs:
+  - **Disk-to-disk** — clone the ticked damaged source onto **Dest HDD / copy disk** (Set dest HDD)
+  - **Image onto Image HDD** — create a `.img`/`.dd` **of** the ticked damaged disk and save it on the healthy **Image HDD** (folder or file). This is not restore.
+  - **File recovery only** — ticked damaged source; folder for recovered files (FAT/NTFS walk + JPEG/PNG/PDF/ZIP carving)
+  - **Restore image to dest disk** — write an **existing** `.img` onto a physical dest disk (overwrite). Separate mode, not the default imaging job.
 - Sector-by-sector copy with the original multi-pass strategy:
   - Phase 1 forward with adaptive skip
   - Phase 2 reverse with adaptive skip

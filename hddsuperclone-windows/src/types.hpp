@@ -73,11 +73,12 @@ enum class TargetKind {
     ImageFile,
 };
 
-// What the user asked the job to do. Shown as three exclusive choices in the GUI.
+// What the user asked the job to do. Ticks are always the damaged source.
 enum class JobMode {
-    DiskToDisk = 0,     // clone source disk onto destination disk
-    ImageOntoDrive,     // write a disk image file onto a selected HDD
-    FileRecovery,       // recover files into a folder (not a full sector clone)
+    DiskToDisk = 0,      // clone damaged source onto dest HDD (copy disk)
+    ImageOntoDrive,      // save .img/.dd of damaged disk onto Image HDD
+    FileRecovery,        // recover files from damaged disk into a folder
+    RestoreImageToDisk,  // write an existing .img onto a physical dest disk
 };
 
 enum class CloneResult {
@@ -225,10 +226,16 @@ inline constexpr int kIoModeCount = 8;
 
 inline const char* job_mode_name(JobMode m) {
     switch (m) {
-        case JobMode::DiskToDisk: return "Disk-to-disk (clone source disk onto destination disk)";
-        case JobMode::ImageOntoDrive: return "Image onto a hard drive (write a disk image onto a selected HDD)";
-        case JobMode::FileRecovery: return "File recovery only (recover files, not a full sector clone)";
-        default: return "Unknown";
+        case JobMode::DiskToDisk:
+            return "Disk-to-disk (clone damaged source onto dest HDD)";
+        case JobMode::ImageOntoDrive:
+            return "Image onto Image HDD (save .img of damaged disk)";
+        case JobMode::FileRecovery:
+            return "File recovery only (recover files, not a full sector clone)";
+        case JobMode::RestoreImageToDisk:
+            return "Restore image to dest disk (overwrite dest with an .img file)";
+        default:
+            return "Unknown";
     }
 }
 
