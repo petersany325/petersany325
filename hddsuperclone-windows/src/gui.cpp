@@ -2,6 +2,7 @@
 
 #include "clone_engine.hpp"
 #include "disk_io.hpp"
+#include "file_recovery.hpp"
 #include "platform.hpp"
 #include "safety.hpp"
 #include "script_engine.hpp"
@@ -10,10 +11,13 @@
 #include "imgui.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -23,41 +27,73 @@ namespace {
 
 struct AppState {
     std::vector<DiskInfo> disks;
-    int source_index = -1;
+    std::vector<char> recover_checked;  // one per scanned device (not vector<bool>)
     int dest_index = -1;
-    bool source_is_file = false;
     bool dest_is_file = false;
-    char source_path[1024] = {};
     char dest_path[1024] = {};
+    char image_file[1024] = {};
+    char dest_folder[1024] = {};
     char log_path[1024] = "clone.progress.log";
-    char domain_path[1024] = {};
-    char ddrescue_path[1024] = {};
     char boot_confirm[64] = {};
     CloneSettings settings;
     int io_mode = 0;
+    int job_mode = 0;  // JobMode
     CloneEngine engine;
     std::unique_ptr<std::thread> worker;
+    std::unique_ptr<std::thread> scan_worker;
     CloneResult last_result = CloneResult::Ok;
-    std::string status_message = "Select a source disk, then a destination. Nothing is written until you start.";
+    std::string status_message =
+        "Click Start scan, then tick the HDD/USB devices to recover. Choose the job type before writing.";
     bool show_confirm = false;
     bool show_boot_confirm = false;
     bool running = false;
-    bool refresh_needed = true;
-    char image_filter_src[1024] = {};
-    char image_filter_dst[1024] = {};
+    bool scanned = false;
+    bool scanning = false;
+    std::atomic<bool> stop_job{false};
+    int queue_index = 0;
+    int queue_total = 0;
+    std::vector<std::string> job_log;
+    std::mutex log_mu;
     std::vector<RelayInfo> relays;
     int relay_index = -1;
     char script_dir[1024] = {};
     std::vector<std::string> scripts;
     int script_index = 0;
     std::string script_output;
-    bool script_running = false;
 };
+
+void append_job_log(AppState& a, const std::string& s) {
+    std::lock_guard<std::mutex> g(a.log_mu);
+    a.job_log.push_back(s);
+    if (a.job_log.size() > 400) a.job_log.erase(a.job_log.begin(), a.job_log.begin() + 80);
+}
+
+std::string sanitize_stem(std::string s) {
+    for (char& c : s) {
+        if (c < 32 || std::strchr("<>:\"/\\|?*", c)) c = '_';
+    }
+    if (s.empty()) s = "disk";
+    return s;
+}
+
+std::vector<int> checked_indices(const AppState& a) {
+    std::vector<int> out;
+    for (int i = 0; i < static_cast<int>(a.disks.size()); ++i) {
+        if (i < static_cast<int>(a.recover_checked.size()) && a.recover_checked[static_cast<size_t>(i)])
+            out.push_back(i);
+    }
+    return out;
+}
 
 void join_worker(AppState& a) {
     if (a.worker && a.worker->joinable()) a.worker->join();
     a.worker.reset();
     a.running = false;
+}
+
+void join_scan(AppState& a) {
+    if (a.scan_worker && a.scan_worker->joinable()) a.scan_worker->join();
+    a.scan_worker.reset();
 }
 
 ImU32 status_color(uint64_t st) {
@@ -97,101 +133,291 @@ const DiskInfo* selected(const AppState& a, int idx) {
     return &a.disks[static_cast<size_t>(idx)];
 }
 
+struct PendingJob {
+    JobMode mode = JobMode::DiskToDisk;
+    std::string source;
+    bool source_is_file = false;
+    std::string dest;
+    bool dest_is_file = false;
+    bool dest_is_folder = false;
+    bool dest_is_boot = false;
+};
+
+std::vector<PendingJob> build_jobs(AppState& a, std::string& err) {
+    std::vector<PendingJob> jobs;
+    auto checked = checked_indices(a);
+    auto mode = static_cast<JobMode>(a.job_mode);
+    if (!a.scanned) {
+        err = "Start scan first, then tick the HDD/USB devices to use.";
+        return {};
+    }
+    if (mode == JobMode::ImageOntoDrive) {
+        if (a.image_file[0] == 0) {
+            err = "Choose the disk image file to write onto the hard drive.";
+            return {};
+        }
+        if (checked.empty()) {
+            err = "After the scan, tick the HDD/USB drive(s) that should receive the image.";
+            return {};
+        }
+        for (int i : checked) {
+            PendingJob j;
+            j.mode = mode;
+            j.source = a.image_file;
+            j.source_is_file = true;
+            j.dest = a.disks[static_cast<size_t>(i)].path;
+            j.dest_is_file = false;
+            j.dest_is_boot = a.disks[static_cast<size_t>(i)].is_boot_disk;
+            jobs.push_back(j);
+        }
+        return jobs;
+    }
+    if (checked.empty()) {
+        err = "After the scan, tick one or more HDD/USB devices to recover.";
+        return {};
+    }
+    if (mode == JobMode::FileRecovery) {
+        if (a.dest_folder[0] == 0) {
+            err = "Choose a destination folder for recovered files.";
+            return {};
+        }
+        for (int i : checked) {
+            PendingJob j;
+            j.mode = mode;
+            j.source = a.disks[static_cast<size_t>(i)].path;
+            j.source_is_file = false;
+            std::string stem = sanitize_stem(a.disks[static_cast<size_t>(i)].model.empty()
+                                                 ? a.disks[static_cast<size_t>(i)].path
+                                                 : a.disks[static_cast<size_t>(i)].model);
+            j.dest = std::string(a.dest_folder) + "/" + stem;
+            j.dest_is_folder = true;
+            jobs.push_back(j);
+        }
+        return jobs;
+    }
+    // Disk-to-disk
+    if (a.dest_path[0] == 0) {
+        err = "Choose a destination disk (or a folder of .img files if several sources are ticked).";
+        return {};
+    }
+    if (checked.size() == 1 && !a.dest_is_file) {
+        PendingJob j;
+        j.mode = mode;
+        j.source = a.disks[static_cast<size_t>(checked[0])].path;
+        j.dest = a.dest_path;
+        j.dest_is_file = false;
+        if (auto* d = selected(a, a.dest_index)) j.dest_is_boot = d->is_boot_disk;
+        jobs.push_back(j);
+        return jobs;
+    }
+    // Several sources: one sector image per disk in the destination folder / path.
+    for (int i : checked) {
+        PendingJob j;
+        j.mode = mode;
+        j.source = a.disks[static_cast<size_t>(i)].path;
+        std::string stem = sanitize_stem(a.disks[static_cast<size_t>(i)].model.empty()
+                                             ? a.disks[static_cast<size_t>(i)].path
+                                             : a.disks[static_cast<size_t>(i)].model);
+        if (a.dest_is_file || checked.size() > 1) {
+            namespace fs = std::filesystem;
+            fs::path base = a.dest_path;
+            if (a.dest_is_file && checked.size() == 1) {
+                j.dest = a.dest_path;
+            } else {
+                fs::path dir = fs::is_directory(base) ? base : base.parent_path();
+                if (dir.empty()) dir = base;
+                j.dest = (dir / (stem + ".img")).string();
+            }
+            j.dest_is_file = true;
+        } else {
+            j.dest = a.dest_path;
+            j.dest_is_file = false;
+            if (auto* d = selected(a, a.dest_index)) j.dest_is_boot = d->is_boot_disk;
+        }
+        jobs.push_back(j);
+    }
+    return jobs;
+}
+
 void start_clone(AppState& a, bool confirmed) {
     if (a.running) return;
     join_worker(a);
 
     a.settings.io_mode = static_cast<IoMode>(a.io_mode);
     a.settings.rebuild_assist = (a.settings.io_mode == IoMode::RebuildAssist) || a.settings.rebuild_assist;
-    SafetyRequest req;
-    req.source_path = a.source_path;
-    req.dest_path = a.dest_path;
-    req.source_is_file = a.source_is_file;
-    req.dest_is_file = a.dest_is_file;
-    if (auto* d = selected(a, a.dest_index)) req.dest_is_boot_disk = d->is_boot_disk;
-    req.typed_confirmation = a.boot_confirm;
-    auto chk = check_clone_safety(req);
-    if (!chk.ok) {
-        if (chk.needs_boot_confirm) {
-            a.show_boot_confirm = true;
+
+    std::string err;
+    auto jobs = build_jobs(a, err);
+    if (jobs.empty()) {
+        a.status_message = err;
+        return;
+    }
+
+    for (auto& j : jobs) {
+        SafetyRequest req;
+        req.source_path = j.source;
+        req.dest_path = j.dest;
+        req.source_is_file = j.source_is_file;
+        req.dest_is_file = j.dest_is_file;
+        req.dest_is_folder = j.dest_is_folder;
+        req.dest_is_boot_disk = j.dest_is_boot;
+        req.typed_confirmation = a.boot_confirm;
+        auto chk = check_clone_safety(req);
+        if (!chk.ok) {
+            if (chk.needs_boot_confirm) {
+                a.show_boot_confirm = true;
+                a.status_message = chk.message;
+                return;
+            }
             a.status_message = chk.message;
             return;
         }
-        a.status_message = chk.message;
-        return;
     }
     if (!confirmed) {
         a.show_confirm = true;
         return;
     }
 
-    std::string err;
-    if (!a.engine.prepare(a.source_path, a.source_is_file, a.dest_path, a.dest_is_file, a.log_path,
-                           a.settings, a.boot_confirm, err)) {
-        a.status_message = err;
-        return;
-    }
+    a.stop_job = false;
     a.running = true;
-                a.status_message = "Cloning...";
-    a.worker = std::make_unique<std::thread>([&a]() {
-        a.last_result = a.engine.run();
+    a.queue_total = static_cast<int>(jobs.size());
+    a.queue_index = 0;
+    a.status_message = "Running " + std::to_string(jobs.size()) + " job(s)...";
+    a.worker = std::make_unique<std::thread>([jobs, &a]() {
+        a.last_result = CloneResult::Ok;
+        for (size_t n = 0; n < jobs.size() && !a.stop_job.load(); ++n) {
+            a.queue_index = static_cast<int>(n + 1);
+            const auto& j = jobs[n];
+            append_job_log(a, std::string("=== ") + job_mode_name(j.mode) + " ===");
+            append_job_log(a, "Source: " + j.source);
+            append_job_log(a, "Dest: " + j.dest);
+            if (j.mode == JobMode::FileRecovery) {
+                auto src = open_disk(j.source, false, j.source_is_file);
+                if (!src) {
+                    a.last_result = CloneResult::SourceError;
+                    append_job_log(a, "Cannot open source");
+                    break;
+                }
+                auto st = recover_files(*src, j.dest, &a.stop_job, [&a](const std::string& m) { append_job_log(a, m); });
+                a.status_message = st.message;
+                if (!st.ok && st.files_written == 0) a.last_result = CloneResult::SourceError;
+                continue;
+            }
+            std::string e;
+            if (!a.engine.prepare(j.source, j.source_is_file, j.dest, j.dest_is_file, a.log_path, a.settings,
+                                  a.boot_confirm, e)) {
+                a.last_result = CloneResult::SafetyAbort;
+                a.status_message = e;
+                append_job_log(a, e);
+                break;
+            }
+            a.last_result = a.engine.run();
+            if (a.last_result != CloneResult::Ok && a.last_result != CloneResult::Stopped) break;
+        }
         a.running = false;
     });
 }
 
 void draw_disk_table(AppState& a) {
-    if (ImGui::Button("Refresh disks")) a.refresh_needed = true;
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.12f, 0.45f, 0.55f, 1));
+    if (ImGui::Button(a.scanning ? "Scanning..." : "Start scan", ImVec2(160, 36))) {
+        if (!a.scanning && !a.running) {
+            a.scanning = true;
+            a.scanned = false;
+            a.disks.clear();
+            a.recover_checked.clear();
+            a.scan_worker = std::make_unique<std::thread>([&a]() {
+                auto disks = enumerate_disks();
+                a.disks = std::move(disks);
+                a.recover_checked.assign(a.disks.size(), 0);
+                a.scanning = false;
+                a.scanned = true;
+                a.status_message = a.disks.empty()
+                                       ? "Scan finished - no disks found. Run as Administrator and try again."
+                                       : "Scan finished. Tick one or more HDD/USB devices to recover.";
+            });
+        }
+    }
+    ImGui::PopStyleColor();
     ImGui::SameLine();
     if (!is_elevated()) {
         ImGui::TextColored(ImVec4(1, 0.55f, 0.2f, 1),
-                            "Not running as administrator/root — physical disks may be missing.");
+                            "Not running as administrator/root - physical disks may be missing.");
     } else {
         ImGui::TextUnformatted("Elevated: physical disks can be opened.");
     }
+    if (!a.scanned && !a.scanning) {
+        ImGui::TextWrapped("Scan first. You choose which discovered HDD/USB devices to recover after the scan "
+                           "completes - not before.");
+        return;
+    }
+    if (a.scanning) {
+        ImGui::TextUnformatted("Scanning disks (PhysicalDrive / USB / SCSI)...");
+        return;
+    }
 
+    auto mode = static_cast<JobMode>(a.job_mode);
+    const char* check_hdr = (mode == JobMode::ImageOntoDrive) ? "Write image here" : "Recover this device";
     if (ImGui::BeginTable("disks", 7,
                            ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY,
-                           ImVec2(0, 180))) {
+                           ImVec2(0, 170))) {
+        ImGui::TableSetupColumn(check_hdr, ImGuiTableColumnFlags_WidthFixed, 140);
         ImGui::TableSetupColumn("Path");
         ImGui::TableSetupColumn("Model");
-        ImGui::TableSetupColumn("Serial");
         ImGui::TableSetupColumn("Bus");
         ImGui::TableSetupColumn("Size");
         ImGui::TableSetupColumn("Boot");
-        ImGui::TableSetupColumn("Choose");
+        ImGui::TableSetupColumn("Dest disk");
         ImGui::TableHeadersRow();
         for (int i = 0; i < static_cast<int>(a.disks.size()); ++i) {
             const auto& d = a.disks[static_cast<size_t>(i)];
+            if (static_cast<int>(a.recover_checked.size()) < static_cast<int>(a.disks.size()))
+                a.recover_checked.resize(a.disks.size(), 0);
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex(0);
-            ImGui::TextUnformatted(d.path.c_str());
+            ImGui::PushID(i);
+            bool on = a.recover_checked[static_cast<size_t>(i)] != 0;
+            if (ImGui::Checkbox("##rec", &on)) a.recover_checked[static_cast<size_t>(i)] = on ? 1 : 0;
+            ImGui::SameLine();
+            ImGui::TextUnformatted(on ? "Yes" : "");
             ImGui::TableSetColumnIndex(1);
-            ImGui::TextUnformatted(d.model.c_str());
+            ImGui::TextUnformatted(d.path.c_str());
             ImGui::TableSetColumnIndex(2);
-            ImGui::TextUnformatted(d.serial.c_str());
+            ImGui::TextUnformatted(d.model.c_str());
             ImGui::TableSetColumnIndex(3);
             ImGui::TextUnformatted(d.bus.c_str());
             ImGui::TableSetColumnIndex(4);
             ImGui::TextUnformatted(format_bytes(d.size_bytes).c_str());
             ImGui::TableSetColumnIndex(5);
             if (d.is_boot_disk) ImGui::TextColored(ImVec4(1, 0.3f, 0.3f, 1), "BOOT");
-            else ImGui::TextUnformatted("");
             ImGui::TableSetColumnIndex(6);
-            ImGui::PushID(i);
-            if (ImGui::SmallButton("Source")) {
-                a.source_index = i;
-                a.source_is_file = false;
-                std::snprintf(a.source_path, sizeof(a.source_path), "%s", d.path.c_str());
-            }
-            ImGui::SameLine();
-            if (ImGui::SmallButton("Dest")) {
-                a.dest_index = i;
-                a.dest_is_file = false;
-                std::snprintf(a.dest_path, sizeof(a.dest_path), "%s", d.path.c_str());
+            if (mode == JobMode::DiskToDisk) {
+                if (ImGui::SmallButton("Set dest")) {
+                    a.dest_index = i;
+                    a.dest_is_file = false;
+                    std::snprintf(a.dest_path, sizeof(a.dest_path), "%s", d.path.c_str());
+                }
             }
             ImGui::PopID();
         }
         ImGui::EndTable();
+    }
+    int nchk = static_cast<int>(checked_indices(a).size());
+    ImGui::Text("Selected after scan: %d device(s)", nchk);
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Add image file to this list...")) {
+        auto f = native_open_file("Add image as a recoverable device", "Images\0*.img;*.dd;*.bin\0All\0*.*\0");
+        if (!f.empty()) {
+            DiskInfo info;
+            info.path = f;
+            info.display_name = f;
+            info.model = "Image file";
+            info.bus = "File";
+            auto s = open_disk(f, false, true);
+            if (s) info.size_bytes = s->size_bytes();
+            a.disks.push_back(info);
+            a.recover_checked.push_back(0);
+        }
     }
 }
 
@@ -200,7 +426,7 @@ void draw_disk_table(AppState& a) {
 int run_gui(int argc, char** argv) {
     (void)argc;
     (void)argv;
-    if (!platform_init("HDDSuperClone for Windows", 1320, 920)) {
+    if (!platform_init("HDDSuperClone for Windows", 1400, 980)) {
         std::fprintf(stderr, "Failed to create window\n");
         return 1;
     }
@@ -222,16 +448,18 @@ int run_gui(int argc, char** argv) {
 
     while (!platform_should_close()) {
         platform_poll();
-        if (a.refresh_needed) {
-            a.disks = enumerate_disks();
-            a.refresh_needed = false;
+        if (a.scan_worker && !a.scanning && a.scan_worker->joinable()) {
+            a.scan_worker->join();
+            a.scan_worker.reset();
         }
         if (a.worker && !a.running && a.worker->joinable()) {
             a.worker->join();
             a.worker.reset();
             auto p = a.engine.progress();
-            if (a.last_result == CloneResult::Ok && p.finished) {
-                a.status_message = "Clone finished.";
+            if (a.last_result == CloneResult::Ok && (p.finished || static_cast<JobMode>(a.job_mode) == JobMode::FileRecovery)) {
+                a.status_message = (static_cast<JobMode>(a.job_mode) == JobMode::FileRecovery)
+                                       ? "File recovery finished."
+                                       : "Clone finished.";
             } else if (a.last_result == CloneResult::Stopped) {
                 a.status_message = "Stopped. Resume by starting again with the same progress log.";
             } else {
@@ -259,7 +487,9 @@ int run_gui(int argc, char** argv) {
                 }
                 if (ImGui::MenuItem("Quit")) {
                     a.engine.request_stop();
+                    a.stop_job = true;
                     join_worker(a);
+                    join_scan(a);
                     break;
                 }
                 ImGui::EndMenu();
@@ -278,37 +508,71 @@ int run_gui(int argc, char** argv) {
             ImGui::EndMenuBar();
         }
 
-        ImGui::TextUnformatted("Sector-level clone / recovery of failing disks -- not a file copy utility.");
+        ImGui::TextUnformatted("Sector-level clone / recovery of failing disks.");
+        ImGui::Separator();
+
+        ImGui::Text("What is this job?");
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 8));
+        if (ImGui::RadioButton("Disk-to-disk  -  clone source disk onto destination disk", a.job_mode == 0))
+            a.job_mode = 0;
+        if (ImGui::RadioButton("Image onto a hard drive  -  write a disk image file onto a selected HDD",
+                               a.job_mode == 1))
+            a.job_mode = 1;
+        if (ImGui::RadioButton("File recovery only  -  recover files, not a full sector clone", a.job_mode == 2))
+            a.job_mode = 2;
+        ImGui::PopStyleVar();
+        {
+            auto mode = static_cast<JobMode>(a.job_mode);
+            if (mode == JobMode::DiskToDisk)
+                ImGui::TextWrapped("Tick source HDD/USB after the scan, then pick a destination disk. Several "
+                                   "sources become one .img file per disk in the destination folder.");
+            else if (mode == JobMode::ImageOntoDrive)
+                ImGui::TextWrapped("Choose the .img/.dd file, then tick the HDD/USB that should be overwritten "
+                                   "with that image.");
+            else
+                ImGui::TextWrapped("Tick source HDD/USB after the scan. Files are copied into a folder (FAT/NTFS "
+                                   "walk + signature carving). No full-disk overwrite.");
+        }
         ImGui::Separator();
         draw_disk_table(a);
 
         ImGui::Separator();
-        if (ImGui::BeginTable("pick", 2, ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchSame)) {
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("Source (read only)");
-            ImGui::SetNextItemWidth(-1);
-            ImGui::InputText("##src", a.source_path, sizeof(a.source_path));
-            if (ImGui::Button("Source image file...")) {
-                auto f = native_open_file("Source image", "Images\0*.img;*.dd;*.bin\0All\0*.*\0");
-                if (!f.empty()) {
-                    std::snprintf(a.source_path, sizeof(a.source_path), "%s", f.c_str());
-                    a.source_is_file = true;
-                    a.source_index = -1;
+        ImGui::Text("Destination / copy target  [%s]", job_mode_name(static_cast<JobMode>(a.job_mode)));
+        {
+            auto mode = static_cast<JobMode>(a.job_mode);
+            if (mode == JobMode::ImageOntoDrive) {
+                ImGui::TextUnformatted("Disk image file (source)");
+                ImGui::SetNextItemWidth(-220);
+                ImGui::InputText("##img", a.image_file, sizeof(a.image_file));
+                ImGui::SameLine();
+                if (ImGui::Button("Choose image file...")) {
+                    auto f = native_open_file("Disk image to write onto the HDD",
+                                              "Images\0*.img;*.dd;*.bin;*.vhd;*.vhdx\0All\0*.*\0");
+                    if (!f.empty()) std::snprintf(a.image_file, sizeof(a.image_file), "%s", f.c_str());
+                }
+                ImGui::TextDisabled("Destination drive(s) are the devices ticked in the scan list above.");
+            } else if (mode == JobMode::FileRecovery) {
+                ImGui::TextUnformatted("Folder for recovered files");
+                ImGui::SetNextItemWidth(-220);
+                ImGui::InputText("##folder", a.dest_folder, sizeof(a.dest_folder));
+                ImGui::SameLine();
+                if (ImGui::Button("Choose folder...")) {
+                    auto f = native_pick_folder("Recovered files folder");
+                    if (!f.empty()) std::snprintf(a.dest_folder, sizeof(a.dest_folder), "%s", f.c_str());
+                }
+            } else {
+                ImGui::TextUnformatted("Destination disk (WRITES HERE)");
+                ImGui::SetNextItemWidth(-1);
+                ImGui::InputText("##dst", a.dest_path, sizeof(a.dest_path));
+                if (ImGui::Button("Destination image file / folder...")) {
+                    auto f = native_save_file("Destination image (or type a folder path)", "Images\0*.img;*.dd\0All\0*.*\0");
+                    if (!f.empty()) {
+                        std::snprintf(a.dest_path, sizeof(a.dest_path), "%s", f.c_str());
+                        a.dest_is_file = true;
+                        a.dest_index = -1;
+                    }
                 }
             }
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted("Destination (WRITES HERE)");
-            ImGui::SetNextItemWidth(-1);
-            ImGui::InputText("##dst", a.dest_path, sizeof(a.dest_path));
-            if (ImGui::Button("Destination image file...")) {
-                auto f = native_save_file("Destination image", "Images\0*.img;*.dd\0All\0*.*\0");
-                if (!f.empty()) {
-                    std::snprintf(a.dest_path, sizeof(a.dest_path), "%s", f.c_str());
-                    a.dest_is_file = true;
-                    a.dest_index = -1;
-                }
-            }
-            ImGui::EndTable();
         }
 
         ImGui::TextUnformatted("Progress log (resume)");
@@ -338,8 +602,7 @@ int run_gui(int argc, char** argv) {
                 "Rebuild Assist issues READ FPDMA QUEUED and splits on NCQ error LBA.");
         }
 
-        if (ImGui::CollapsingHeader("Advanced recovery (relay, virtual disk, scripts)",
-                                    ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader("Advanced recovery (relay, virtual disk, scripts)")) {
             ImGui::Checkbox("Rebuild Assist (enable log 0x15 + FPDMA)", &a.settings.rebuild_assist);
             ImGui::SameLine();
             ImGui::Checkbox("Virtual disk destination (VHDX / sparse image)", &a.settings.virtual_disk_dest);
@@ -384,7 +647,10 @@ int run_gui(int argc, char** argv) {
                 if (ImGui::Button("Run script") && !a.running) {
                     ScriptEngine se;
                     se.set_script_dir(a.script_dir);
-                    auto src = open_disk(a.source_path, false, a.source_is_file);
+                    std::unique_ptr<DiskSession> src;
+                    auto checked = checked_indices(a);
+                    if (!checked.empty())
+                        src = open_disk(a.disks[static_cast<size_t>(checked[0])].path, false, false);
                     if (src) se.set_disk(src.get());
                     std::string path = std::string(a.script_dir) + "/" +
                                        a.scripts[static_cast<size_t>(a.script_index)];
@@ -461,7 +727,11 @@ int run_gui(int argc, char** argv) {
 
         if (!a.running) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.55f, 0.25f, 1));
-            if (ImGui::Button("Start clone", ImVec2(180, 36))) start_clone(a, false);
+            const char* go = "Start job";
+            if (static_cast<JobMode>(a.job_mode) == JobMode::FileRecovery) go = "Start file recovery";
+            else if (static_cast<JobMode>(a.job_mode) == JobMode::ImageOntoDrive) go = "Write image onto drive";
+            else go = "Start disk clone";
+            if (ImGui::Button(go, ImVec2(240, 36))) start_clone(a, false);
             ImGui::PopStyleColor();
         } else {
             if (ImGui::Button(prog.paused ? "Resume" : "Pause", ImVec2(120, 36))) {
@@ -469,13 +739,22 @@ int run_gui(int argc, char** argv) {
             }
             ImGui::SameLine();
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.65f, 0.18f, 0.18f, 1));
-            if (ImGui::Button("Stop", ImVec2(120, 36))) a.engine.request_stop();
+            if (ImGui::Button("Stop", ImVec2(120, 36))) {
+                a.stop_job = true;
+                a.engine.request_stop();
+            }
             ImGui::PopStyleColor();
+            ImGui::SameLine();
+            ImGui::Text("Job %d / %d", a.queue_index, a.queue_total);
         }
 
         ImGui::TextWrapped("%s", a.status_message.c_str());
 
-        ImGui::BeginChild("log", ImVec2(0, 140), true);
+        ImGui::BeginChild("log", ImVec2(0, 120), true);
+        {
+            std::lock_guard<std::mutex> g(a.log_mu);
+            for (const auto& ln : a.job_log) ImGui::TextUnformatted(ln.c_str());
+        }
         auto lines = a.engine.log_snapshot();
         for (const auto& ln : lines) ImGui::TextUnformatted(ln.c_str());
         if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 8) ImGui::SetScrollHereY(1.0f);
@@ -486,11 +765,10 @@ int run_gui(int argc, char** argv) {
             a.show_confirm = false;
         }
         if (ImGui::BeginPopupModal("Confirm overwrite", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::TextWrapped(
-                "This will overwrite EVERY SECTOR of:\n\n%s\n\nfrom source:\n%s\n\n"
-                "There is no undo. Continue?",
-                a.dest_path, a.source_path);
-            if (ImGui::Button("Yes, write destination", ImVec2(220, 0))) {
+            ImGui::TextWrapped("%s",
+                               "This will write to the destination(s) for the selected job "
+                               "(disk clone, image restore, or file recovery). There is no undo.");
+            if (ImGui::Button("Yes, start the job", ImVec2(220, 0))) {
                 ImGui::CloseCurrentPopup();
                 start_clone(a, true);
             }
@@ -524,7 +802,9 @@ int run_gui(int argc, char** argv) {
     }
 
     a.engine.request_stop();
+    a.stop_job = true;
     join_worker(a);
+    join_scan(a);
     platform_shutdown();
     return 0;
 }

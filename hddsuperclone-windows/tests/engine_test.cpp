@@ -1,4 +1,5 @@
 #include "clone_engine.hpp"
+#include "file_recovery.hpp"
 #include "progress_log.hpp"
 #include "safety.hpp"
 #include "script_engine.hpp"
@@ -6,6 +7,7 @@
 #include "usb_relay.hpp"
 #include "virtual_disk.hpp"
 
+#include <atomic>
 #include <cassert>
 #include <cstdio>
 #include <cstring>
@@ -193,6 +195,94 @@ int main() {
         if (std::strcmp(hsc::io_mode_name(hsc::IoMode::RebuildAssist), "Unknown") == 0)
             return fail("fpdma name");
         if (hsc::kIoModeCount != 8 && hsc::kIoModeCount != 9) return fail("io mode count");
+        if (std::strstr(hsc::job_mode_name(hsc::JobMode::DiskToDisk), "Disk-to-disk") == nullptr)
+            return fail("job disk");
+        if (std::strstr(hsc::job_mode_name(hsc::JobMode::ImageOntoDrive), "Image onto") == nullptr)
+            return fail("job image");
+        if (std::strstr(hsc::job_mode_name(hsc::JobMode::FileRecovery), "File recovery") == nullptr)
+            return fail("job files");
+    }
+
+    // --- file recovery: FAT16 file + JPEG carving ---
+    {
+        auto fatp = (tmp / "fat16.img").string();
+        std::vector<uint8_t> img(64 * 512, 0);
+        img[0] = 0xEB;
+        img[1] = 0x3C;
+        img[2] = 0x90;
+        std::memcpy(img.data() + 3, "MSDOS5.0", 8);
+        img[11] = 0x00;
+        img[12] = 0x02;  // 512
+        img[13] = 1;     // spc
+        img[14] = 1;
+        img[15] = 0;  // reserved
+        img[16] = 2;  // fats
+        img[17] = 16;
+        img[18] = 0;  // 16 root entries
+        img[19] = 64;
+        img[20] = 0;  // total 64 sectors
+        img[21] = 0xF8;
+        img[22] = 1;
+        img[23] = 0;  // fat size 1
+        img[24] = 0x20;
+        img[25] = 0;
+        img[26] = 2;
+        img[27] = 0;
+        img[510] = 0x55;
+        img[511] = 0xAA;
+        // FAT1 at LBA 1
+        img[512] = 0xF8;
+        img[513] = 0xFF;
+        img[514] = 0xFF;
+        img[515] = 0xFF;
+        img[516] = 0xFF;
+        img[517] = 0xFF;  // cluster 2 EOF
+        // FAT2 at LBA 2 (copy)
+        std::memcpy(img.data() + 1024, img.data() + 512, 512);
+        // Root at LBA 3: HELLO.TXT cluster 2 size 5
+        uint8_t* ent = img.data() + 3 * 512;
+        std::memcpy(ent, "HELLO   TXT", 11);
+        ent[26] = 2;
+        ent[27] = 0;
+        ent[28] = 5;
+        // cluster 2 at data_lba = 3 + 1 = 4
+        std::memcpy(img.data() + 4 * 512, "hello", 5);
+        // JPEG at LBA 20
+        size_t jp = 20 * 512;
+        img[jp] = 0xFF;
+        img[jp + 1] = 0xD8;
+        img[jp + 2] = 0xFF;
+        img[jp + 3] = 0xE0;
+        img[jp + 4] = 0xFF;
+        img[jp + 5] = 0xD9;
+        {
+            std::ofstream o(fatp, std::ios::binary);
+            o.write(reinterpret_cast<char*>(img.data()), static_cast<std::streamsize>(img.size()));
+        }
+        if (!hsc::looks_like_fat_boot(img.data())) return fail("fat boot detect");
+        auto sess = hsc::open_disk(fatp, false, true);
+        if (!sess) return fail("open fat img");
+        auto outdir = (tmp / "recovered").string();
+        std::atomic<bool> stop{false};
+        auto st = hsc::recover_files(*sess, outdir, &stop, nullptr);
+        if (st.files_written < 1) return fail("file recovery wrote nothing");
+        bool saw_hello = fs::exists(fs::path(outdir) / "HELLO.TXT") || fs::exists(fs::path(outdir) / "hello.txt");
+        bool saw_jpg = false;
+        for (auto& p : fs::recursive_directory_iterator(outdir)) {
+            if (p.path().extension() == ".jpg") saw_jpg = true;
+        }
+        if (!saw_hello) return fail("fat HELLO.TXT missing");
+        if (!saw_jpg) return fail("carved jpeg missing");
+    }
+
+    // --- folder dest safety ---
+    {
+        hsc::SafetyRequest r;
+        r.source_path = "s";
+        r.dest_path = "/tmp/out";
+        r.dest_is_folder = true;
+        auto a = hsc::check_clone_safety(r);
+        if (!a.ok) return fail("folder dest safety");
     }
 
     std::printf("engine tests passed\n");

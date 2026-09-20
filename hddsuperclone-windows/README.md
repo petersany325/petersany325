@@ -8,8 +8,11 @@ Install with **HDDSuperClone-Windows-Setup.exe** (NSIS). It installs to `Program
 
 ## What this port does
 
-- Lists physical disks (`\\.\PhysicalDriveN` on Windows, `/dev/sd*` / NVMe on Linux)
-- Source and destination pickers (disk or image file)
+- **Start scan**, then tick one or more discovered HDD/USB devices to recover (multi-select after the scan, not before)
+- Three explicit jobs:
+  - **Disk-to-disk** — sector clone source disk onto a destination disk (several sources become one `.img` per disk)
+  - **Image onto a hard drive** — write a `.img`/`.dd` file onto the ticked HDD
+  - **File recovery only** — copy files into a folder (FAT/NTFS walk + JPEG/PNG/PDF/ZIP carving), not a full-disk overwrite
 - Sector-by-sector copy with the original multi-pass strategy:
   - Phase 1 forward with adaptive skip
   - Phase 2 reverse with adaptive skip

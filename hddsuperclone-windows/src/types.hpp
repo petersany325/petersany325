@@ -73,6 +73,13 @@ enum class TargetKind {
     ImageFile,
 };
 
+// What the user asked the job to do. Shown as three exclusive choices in the GUI.
+enum class JobMode {
+    DiskToDisk = 0,     // clone source disk onto destination disk
+    ImageOntoDrive,     // write a disk image file onto a selected HDD
+    FileRecovery,       // recover files into a folder (not a full sector clone)
+};
+
 enum class CloneResult {
     Ok = 0,
     Stopped,
@@ -215,5 +222,14 @@ inline const char* io_mode_name(IoMode m) {
 }
 
 inline constexpr int kIoModeCount = 8;
+
+inline const char* job_mode_name(JobMode m) {
+    switch (m) {
+        case JobMode::DiskToDisk: return "Disk-to-disk (clone source disk onto destination disk)";
+        case JobMode::ImageOntoDrive: return "Image onto a hard drive (write a disk image onto a selected HDD)";
+        case JobMode::FileRecovery: return "File recovery only (recover files, not a full sector clone)";
+        default: return "Unknown";
+    }
+}
 
 }  // namespace hsc

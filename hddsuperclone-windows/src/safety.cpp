@@ -37,6 +37,11 @@ SafetyResult check_clone_safety(const SafetyRequest& req) {
                     "destination is chosen explicitly.";
         return r;
     }
+    if (req.dest_is_folder) {
+        r.ok = true;
+        r.message = "Safety checks passed (folder destination)";
+        return r;
+    }
     if (normalize_path(req.source_path) == normalize_path(req.dest_path)) {
         r.message = "Source and destination are the same device. Refusing to clone.";
         return r;

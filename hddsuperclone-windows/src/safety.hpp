@@ -13,6 +13,7 @@ struct SafetyRequest {
     bool dest_is_file = false;
     bool dest_is_boot_disk = false;
     std::string typed_confirmation;  // must be OVERWRITE BOOT DISK for boot dest
+    bool dest_is_folder = false;     // file-recovery destination
 };
 
 struct SafetyResult {

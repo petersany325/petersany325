@@ -88,9 +88,14 @@ std::string native_save_file(const char* title, const char*) {
     std::string extra = std::string("--save --confirm-overwrite --title=\"") + title + "\"";
     return zenity(extra.c_str());
 }
+std::string native_pick_folder(const char* title) {
+    std::string extra = std::string("--directory --title=\"") + title + "\"";
+    return zenity(extra.c_str());
+}
 #else
 std::string native_open_file(const char*, const char*) { return {}; }
 std::string native_save_file(const char*, const char*) { return {}; }
+std::string native_pick_folder(const char*) { return {}; }
 #endif
 
 std::string application_dir() {

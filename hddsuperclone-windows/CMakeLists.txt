@@ -25,6 +25,7 @@ set(HSC_ENGINE_SRC
   src/virtual_disk.cpp
   src/script_engine.cpp
   src/usb_direct.cpp
+  src/file_recovery.cpp
 )
 
 add_library(hsc_engine STATIC ${HSC_ENGINE_SRC})

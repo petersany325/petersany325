@@ -9,6 +9,8 @@
 #endif
 #include <windows.h>
 #include <commdlg.h>
+#include <shlobj.h>
+#include <objbase.h>
 #include <d3d11.h>
 #include <tchar.h>
 
@@ -194,6 +196,20 @@ std::string native_save_file(const char* title, const char* filter) {
     ofn.Flags = OFN_OVERWRITEPROMPT;
     if (GetSaveFileNameA(&ofn)) return file;
     return {};
+}
+
+std::string native_pick_folder(const char* title) {
+    CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
+    BROWSEINFOA bi{};
+    bi.hwndOwner = g_hwnd;
+    bi.lpszTitle = title ? title : "Choose folder";
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+    PIDLIST_ABSOLUTE pidl = SHBrowseForFolderA(&bi);
+    if (!pidl) return {};
+    char path[MAX_PATH]{};
+    BOOL ok = SHGetPathFromIDListA(pidl, path);
+    CoTaskMemFree(pidl);
+    return ok ? std::string(path) : std::string{};
 }
 
 std::string application_dir() {
