@@ -4,7 +4,7 @@
 @php $money = fn($n) => number_format((int)$n).' تومان'; @endphp
 <div class="top">
   <div><h1>لیست حقوق {{ $run->period }}</h1><p>وضعیت: {{ $run->status }} · خالص کل {{ $money($run->total_net) }}</p></div>
-  <a class="btn g" href="{{ route('admin.accounting.payroll') }}">بازگشت</a>
+  <a class="btn g" href="{{ url('/admin/accounting/payroll') }}">بازگشت</a>
 </div>
 <div class="panel"><div class="bd" style="padding:0">
 <table>

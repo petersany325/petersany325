@@ -29,16 +29,16 @@
     <tr>
       <td><strong>{{ $link['label'] }}</strong></td>
       <td>{{ $link['desc'] }}</td>
-      <td><a class="btn g" href="{{ route($link['route'], ['from'=>$from,'to'=>$to]) }}">باز کردن</a></td>
+      <td><a class="btn g" href="{{ url($link['href'].'?from='.$from.'&to='.$to) }}">باز کردن</a></td>
     </tr>
   @endforeach
   </tbody>
 </table>
 </div></div>
 <div class="chips">
-  <a href="{{ route('admin.accounting.checks') }}">مدیریت چک‌ها</a>
-  <a href="{{ route('admin.accounting.installments') }}">اقساط مشتریان</a>
-  <a href="{{ route('admin.accounting.warehouses') }}">انبار چندگانه</a>
-  <a href="{{ route('admin.accounting.docs') }}">اسناد مالی</a>
+  <a href="{{ url('/admin/accounting/checks') }}">مدیریت چک‌ها</a>
+  <a href="{{ url('/admin/accounting/installments') }}">اقساط مشتریان</a>
+  <a href="{{ url('/admin/accounting/warehouses') }}">انبار چندگانه</a>
+  <a href="{{ url('/admin/accounting/docs') }}">اسناد مالی</a>
 </div>
 @endsection

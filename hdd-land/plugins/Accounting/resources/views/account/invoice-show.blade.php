@@ -3,13 +3,15 @@
 @section('content')
 <header>
   <h1>{{ $doc->number }}</h1>
-  <a href="{{ route('account.invoices') }}">لیست</a>
+  <a href="{{ url('/account/invoices') }}">لیست</a>
 </header>
 <div class="card">
   <div class="row">
     <div>
       <strong>{{ $types[$doc->type] ?? $doc->type }}</strong>
-      <div class="meta">{{ $doc->doc_date }} · {{ $doc->status }}</div>
+      <div class="meta">{{ $doc->doc_date }} · {{ $doc->status }}
+        @if(!empty($order)) · سفارش #{{ $order->id }}@endif
+      </div>
     </div>
     <div class="price">{{ number_format((int)$doc->total) }} تومان</div>
   </div>

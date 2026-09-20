@@ -3,7 +3,7 @@
 @section('content')
 @php $m = fn($n) => number_format((int)$n).' تومان'; @endphp
 <div class="top"><div><h1>گزارش انبارها با تفکیک</h1><p>موجودی و ارزش هر انبار</p></div>
-  <div class="actions"><a class="btn g" href="{{ route('admin.accounting.warehouses') }}">تعریف انبار</a></div></div>
+  <div class="actions"><a class="btn g" href="{{ url('/admin/accounting/warehouses') }}">تعریف انبار</a></div></div>
 <form method="get" class="form" style="margin-bottom:1rem">
   <div class="row">
     <label>انبار

@@ -10,10 +10,10 @@
   <div class="acc-card"><h3>پیش‌فاکتور باز</h3><div class="val">{{ (int)($stats['proforma_open'] ?? 0) }}</div></div>
 </div>
 <div class="acc-links">
-  <a href="{{ route('staff.accounting.docs', ['type'=>'sale']) }}">فروش</a>
-  <a href="{{ route('staff.accounting.docs', ['type'=>'purchase']) }}">خرید</a>
-  <a href="{{ route('staff.accounting.stock') }}">انبار</a>
-  <a href="{{ route('staff.accounting.reports') }}">گزارش</a>
+  <a href="{{ url('/staff/accounting/docs?type=sale') }}">فروش</a>
+  <a href="{{ url('/staff/accounting/docs?type=purchase') }}">خرید</a>
+  <a href="{{ url('/staff/accounting/stock') }}">انبار</a>
+  <a href="{{ url('/staff/accounting/reports') }}">گزارش</a>
 </div>
 <div class="acc-panel"><div class="hd"><strong>آخرین اسناد</strong></div><div class="bd" style="padding:0">
 <table class="acc-table">
@@ -25,7 +25,7 @@
       <td>{{ $types[$d->type] ?? $d->type }}</td>
       <td>{{ $money($d->total) }}</td>
       <td><span class="acc-badge {{ $d->status }}">{{ $d->status }}</span></td>
-      <td><a href="{{ route('staff.accounting.doc', $d->id) }}">باز</a></td>
+      <td><a href="{{ url('/staff/accounting/docs/'.$d->id) }}">باز</a></td>
     </tr>
   @endforeach
   </tbody>

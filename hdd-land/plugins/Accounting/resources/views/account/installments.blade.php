@@ -3,12 +3,12 @@
 @section('content')
 <header>
   <h1>درخواست‌های اقساط</h1>
-  <a href="{{ route('account.installments.create') }}">درخواست جدید</a>
+  <a href="{{ url('/account/installments/create') }}">درخواست جدید</a>
 </header>
 @if(session('success'))<div class="card" style="border-color:#1f7a4c;color:#1f7a4c">{{ session('success') }}</div>@endif
 @if(session('error'))<div class="card" style="border-color:#b42318;color:#b42318">{{ session('error') }}</div>@endif
 @forelse($items as $r)
-  <a class="card" href="{{ route('account.installments.show', $r->id) }}" style="display:block;color:inherit;text-decoration:none">
+  <a class="card" href="{{ url('/account/installments/'.$r->id) }}" style="display:block;color:inherit;text-decoration:none">
     <div class="row">
       <div>
         <strong>{{ $r->number }}</strong>

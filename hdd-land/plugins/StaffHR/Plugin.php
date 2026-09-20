@@ -621,6 +621,9 @@ if (! class_exists(StaffReports::class, false)) {
                     $upd['sold_by_user_id'] = $uid;
                 }
                 \Illuminate\Support\Facades\DB::table('orders')->where('id', $orderId)->update($upd);
+                if (class_exists(\Plugins\Accounting\src\Support\AccCommerce::class)) {
+                    \Plugins\Accounting\src\Support\AccCommerce::syncOrder($orderId);
+                }
             } catch (\Throwable) {
                 //
             }

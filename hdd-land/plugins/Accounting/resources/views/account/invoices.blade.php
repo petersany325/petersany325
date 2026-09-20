@@ -6,7 +6,7 @@
   <a href="{{ url('/app/account') }}">بازگشت</a>
 </header>
 @forelse($docs as $d)
-  <a class="card" href="{{ route('account.invoices.show', $d->id) }}" style="display:block;color:inherit;text-decoration:none">
+  <a class="card" href="{{ url('/account/invoices/'.$d->id) }}" style="display:block;color:inherit;text-decoration:none">
     <div class="row">
       <div>
         <strong>{{ $d->number }}</strong>

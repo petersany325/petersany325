@@ -4,7 +4,7 @@
 @php $m = fn($n) => number_format((int)$n).' تومان'; @endphp
 <header>
   <h1>{{ $row->number }}</h1>
-  <a href="{{ route('account.installments') }}">بازگشت</a>
+  <a href="{{ url('/account/installments') }}">بازگشت</a>
 </header>
 @if(session('success'))<div class="card" style="border-color:#1f7a4c;color:#1f7a4c">{{ session('success') }}</div>@endif
 
@@ -24,6 +24,9 @@
   @endif
   @if($row->admin_note)
     <div class="meta" style="margin-top:.5rem">پاسخ فروشگاه: {{ $row->admin_note }}</div>
+  @endif
+  @if(!empty($invoice))
+    <div style="margin-top:.7rem"><a href="{{ url('/account/invoices/'.$invoice->id) }}">فاکتور فروش {{ $invoice->number }}</a></div>
   @endif
   @if($row->ticket_id)
     <div style="margin-top:.7rem"><a href="{{ url('/account/tickets') }}">مشاهده تیکت پشتیبانی #{{ $row->ticket_id }}</a></div>

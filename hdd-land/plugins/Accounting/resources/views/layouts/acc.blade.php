@@ -60,52 +60,52 @@
 @php $portal = $portal ?? 'admin'; @endphp
 <div class="shell">
   <aside class="side">
-    <a class="brand" href="{{ $portal==='staff' ? route('staff.accounting.hub') : route('admin.accounting.hub') }}">
+    <a class="brand" href="{{ $portal==='staff' ? url('/staff/accounting') : url('/admin/accounting') }}">
       <div class="m">◈</div>
       <div><strong>حسابداری HDD Land</strong><span>{{ $portal==='staff' ? 'پنل کارمند' : 'مدیریت مالی' }}</span></div>
     </a>
     <nav class="nav">
       @if($portal==='admin')
         <div class="g">عملیات</div>
-        <a class="{{ request()->routeIs('admin.accounting.hub')?'on':'' }}" href="{{ route('admin.accounting.hub') }}">میز کار</a>
-        <a class="{{ request()->routeIs('admin.accounting.docs*')||request()->routeIs('admin.accounting.doc')?'on':'' }}" href="{{ route('admin.accounting.docs') }}">اسناد مالی</a>
-        <a href="{{ route('admin.accounting.docs.create',['type'=>'sale']) }}">فاکتور فروش + سریال</a>
-        <a href="{{ route('admin.accounting.docs.create',['type'=>'purchase']) }}">فاکتور خرید + سریال</a>
-        <a href="{{ route('admin.accounting.docs.create',['type'=>'proforma']) }}">پیش‌فاکتور</a>
-        <a href="{{ route('admin.accounting.docs.create',['type'=>'voucher']) }}">سند دستی</a>
+        <a class="{{ request()->is('admin/accounting')?'on':'' }}" href="{{ url('/admin/accounting') }}">میز کار</a>
+        <a class="{{ request()->is('admin/accounting/docs*')?'on':'' }}" href="{{ url('/admin/accounting/docs') }}">اسناد مالی</a>
+        <a href="{{ url('/admin/accounting/docs/create?type=sale') }}">فاکتور فروش + سریال</a>
+        <a href="{{ url('/admin/accounting/docs/create?type=purchase') }}">فاکتور خرید + سریال</a>
+        <a href="{{ url('/admin/accounting/docs/create?type=proforma') }}">پیش‌فاکتور</a>
+        <a href="{{ url('/admin/accounting/docs/create?type=voucher') }}">سند دستی</a>
         <div class="g">انبار و بانک</div>
-        <a class="{{ request()->routeIs('admin.accounting.warehouses')?'on':'' }}" href="{{ route('admin.accounting.warehouses') }}">تعریف انبار چندگانه</a>
-        <a class="{{ request()->routeIs('admin.accounting.stock')?'on':'' }}" href="{{ route('admin.accounting.stock') }}">رسید / حواله / انتقال</a>
-        <a class="{{ request()->routeIs('admin.accounting.banks')?'on':'' }}" href="{{ route('admin.accounting.banks') }}">تعریف بانک</a>
+        <a class="{{ request()->is('admin/accounting/warehouses')?'on':'' }}" href="{{ url('/admin/accounting/warehouses') }}">تعریف انبار چندگانه</a>
+        <a class="{{ request()->is('admin/accounting/stock')?'on':'' }}" href="{{ url('/admin/accounting/stock') }}">رسید / حواله / انتقال</a>
+        <a class="{{ request()->is('admin/accounting/banks')?'on':'' }}" href="{{ url('/admin/accounting/banks') }}">تعریف بانک</a>
         <div class="g">هزینه و پرسنل</div>
-        <a class="{{ request()->routeIs('admin.accounting.expenses')?'on':'' }}" href="{{ route('admin.accounting.expenses') }}">هزینه‌ها</a>
-        <a class="{{ request()->routeIs('admin.accounting.payroll*')?'on':'' }}" href="{{ route('admin.accounting.payroll') }}">حقوق و دستمزد</a>
-        <a class="{{ request()->routeIs('admin.accounting.commissions')?'on':'' }}" href="{{ route('admin.accounting.commissions') }}">درصد فروشندگان</a>
+        <a class="{{ request()->is('admin/accounting/expenses')?'on':'' }}" href="{{ url('/admin/accounting/expenses') }}">هزینه‌ها</a>
+        <a class="{{ request()->is('admin/accounting/payroll*')?'on':'' }}" href="{{ url('/admin/accounting/payroll') }}">حقوق و دستمزد</a>
+        <a class="{{ request()->is('admin/accounting/commissions')?'on':'' }}" href="{{ url('/admin/accounting/commissions') }}">درصد فروشندگان</a>
         <div class="g">چک و اقساط</div>
-        <a class="{{ request()->routeIs('admin.accounting.checks*')?'on':'' }}" href="{{ route('admin.accounting.checks') }}">چک‌ها (پرداختی/دریافتی)</a>
-        <a class="{{ request()->routeIs('admin.accounting.installments*')?'on':'' }}" href="{{ route('admin.accounting.installments') }}">اقساط مشتریان</a>
+        <a class="{{ request()->is('admin/accounting/checks*')?'on':'' }}" href="{{ url('/admin/accounting/checks') }}">چک‌ها (پرداختی/دریافتی)</a>
+        <a class="{{ request()->is('admin/accounting/installments*')?'on':'' }}" href="{{ url('/admin/accounting/installments') }}">اقساط مشتریان</a>
         <div class="g">تنظیمات و گزارش</div>
-        <a class="{{ request()->routeIs('admin.accounting.settings*')?'on':'' }}" href="{{ route('admin.accounting.settings') }}">تنظیمات (دسته/حساب)</a>
-        <a class="{{ request()->routeIs('admin.accounting.reports')||request()->routeIs('admin.accounting.reports.*')?'on':'' }}" href="{{ route('admin.accounting.reports') }}">مرکز گزارش‌ها</a>
-        <a href="{{ route('admin.accounting.reports.sales') }}">گزارش فروش/خرید + شماره فاکتور</a>
-        <a href="{{ route('admin.accounting.reports.staff') }}">گزارش کارمندان و سود</a>
-        <a href="{{ route('admin.accounting.reports.payroll') }}">گزارش حقوق و مزایا</a>
-        <a href="{{ route('admin.accounting.reports.vouchers') }}">گزارش سند حسابداری</a>
-        <a href="{{ route('admin.accounting.reports.warehouse') }}">گزارش انبارها با تفکیک</a>
-        <a href="{{ route('admin.accounting.reports.customers') }}">گزارش مشتریان</a>
-        <a href="{{ route('admin.accounting.reports.checks') }}">گزارش چک‌ها</a>
-        <a href="{{ route('admin.accounting.reports.installments') }}">گزارش اقساط</a>
+        <a class="{{ request()->is('admin/accounting/settings*')?'on':'' }}" href="{{ url('/admin/accounting/settings') }}">تنظیمات (دسته/حساب)</a>
+        <a class="{{ request()->is('admin/accounting/reports*')?'on':'' }}" href="{{ url('/admin/accounting/reports') }}">مرکز گزارش‌ها</a>
+        <a href="{{ url('/admin/accounting/reports/sales') }}">گزارش فروش/خرید + شماره فاکتور</a>
+        <a href="{{ url('/admin/accounting/reports/staff') }}">گزارش کارمندان و سود</a>
+        <a href="{{ url('/admin/accounting/reports/payroll') }}">گزارش حقوق و مزایا</a>
+        <a href="{{ url('/admin/accounting/reports/vouchers') }}">گزارش سند حسابداری</a>
+        <a href="{{ url('/admin/accounting/reports/warehouse') }}">گزارش انبارها با تفکیک</a>
+        <a href="{{ url('/admin/accounting/reports/customers') }}">گزارش مشتریان</a>
+        <a href="{{ url('/admin/accounting/reports/checks') }}">گزارش چک‌ها</a>
+        <a href="{{ url('/admin/accounting/reports/installments') }}">گزارش اقساط</a>
         <a href="{{ url('/admin') }}">بازگشت ادمین</a>
       @else
         <div class="g">کارمند</div>
-        <a class="{{ request()->routeIs('staff.accounting.hub')?'on':'' }}" href="{{ route('staff.accounting.hub') }}">میز کار</a>
-        <a href="{{ route('staff.accounting.docs') }}">اسناد</a>
-        <a href="{{ route('staff.accounting.stock') }}">انبار</a>
-        <a href="{{ route('staff.accounting.reports') }}">گزارش</a>
-        <a href="{{ route('staff.accounting.checks') }}">چک‌ها</a>
-        <a href="{{ route('staff.accounting.installments') }}">اقساط</a>
-        <a href="{{ route('staff.accounting.settings') }}">تنظیمات حسابداری</a>
-        <a href="{{ route('staff.accounting.admin') }}">حسابداری ادمین (موبایل)</a>
+        <a class="{{ request()->is('staff/accounting')?'on':'' }}" href="{{ url('/staff/accounting') }}">میز کار</a>
+        <a href="{{ url('/staff/accounting/docs') }}">اسناد</a>
+        <a href="{{ url('/staff/accounting/stock') }}">انبار</a>
+        <a href="{{ url('/staff/accounting/reports') }}">گزارش</a>
+        <a href="{{ url('/staff/accounting/checks') }}">چک‌ها</a>
+        <a href="{{ url('/staff/accounting/installments') }}">اقساط</a>
+        <a href="{{ url('/staff/accounting/settings') }}">تنظیمات حسابداری</a>
+        <a href="{{ url('/staff/accounting/admin-hub') }}">حسابداری ادمین (موبایل)</a>
         <a href="{{ url('/staff') }}">پنل کارمند</a>
       @endif
     </nav>
@@ -113,21 +113,21 @@
   <main class="main">
     <div class="mnav">
       @if($portal==='admin')
-        <a href="{{ route('admin.accounting.hub') }}">میز</a>
-        <a href="{{ route('admin.accounting.docs') }}">اسناد</a>
-        <a href="{{ route('admin.accounting.stock') }}">انبار</a>
-        <a href="{{ route('admin.accounting.checks') }}">چک</a>
-        <a href="{{ route('admin.accounting.installments') }}">اقساط</a>
-        <a href="{{ route('admin.accounting.reports') }}">گزارش</a>
-        <a href="{{ route('admin.accounting.settings') }}">تنظیمات</a>
+        <a href="{{ url('/admin/accounting') }}">میز</a>
+        <a href="{{ url('/admin/accounting/docs') }}">اسناد</a>
+        <a href="{{ url('/admin/accounting/stock') }}">انبار</a>
+        <a href="{{ url('/admin/accounting/checks') }}">چک</a>
+        <a href="{{ url('/admin/accounting/installments') }}">اقساط</a>
+        <a href="{{ url('/admin/accounting/reports') }}">گزارش</a>
+        <a href="{{ url('/admin/accounting/settings') }}">تنظیمات</a>
       @else
-        <a href="{{ route('staff.accounting.hub') }}">میز</a>
-        <a href="{{ route('staff.accounting.docs') }}">اسناد</a>
-        <a href="{{ route('staff.accounting.stock') }}">انبار</a>
-        <a href="{{ route('staff.accounting.checks') }}">چک</a>
-        <a href="{{ route('staff.accounting.installments') }}">اقساط</a>
-        <a href="{{ route('staff.accounting.reports') }}">گزارش</a>
-        <a href="{{ route('staff.accounting.settings') }}">تنظیمات</a>
+        <a href="{{ url('/staff/accounting') }}">میز</a>
+        <a href="{{ url('/staff/accounting/docs') }}">اسناد</a>
+        <a href="{{ url('/staff/accounting/stock') }}">انبار</a>
+        <a href="{{ url('/staff/accounting/checks') }}">چک</a>
+        <a href="{{ url('/staff/accounting/installments') }}">اقساط</a>
+        <a href="{{ url('/staff/accounting/reports') }}">گزارش</a>
+        <a href="{{ url('/staff/accounting/settings') }}">تنظیمات</a>
       @endif
     </div>
     @if(session('success'))<div class="flash ok">{{ session('success') }}</div>@endif

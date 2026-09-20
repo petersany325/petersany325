@@ -3,7 +3,7 @@
 @section('content')
 @php $m = fn($n) => number_format((int)$n).' تومان'; @endphp
 <div class="top"><div><h1>گزارش اقساط مشتریان</h1><p>درخواست‌های اقساطی و وضعیت بررسی</p></div>
-  <div class="actions"><a class="btn" href="{{ route('admin.accounting.installments') }}">مدیریت اقساط</a></div></div>
+  <div class="actions"><a class="btn" href="{{ url('/admin/accounting/installments') }}">مدیریت اقساط</a></div></div>
 <form method="get" class="form" style="margin-bottom:1rem">
   <div class="row">
     <label>وضعیت
@@ -29,7 +29,7 @@
       <td>{{ $r->months }}</td>
       <td>{{ $m($r->monthly_amount) }}</td>
       <td><span class="badge">{{ $statuses[$r->status] ?? $r->status }}</span></td>
-      <td><a href="{{ route('admin.accounting.installments.show',$r->id) }}">جزئیات</a></td>
+      <td><a href="{{ url('/admin/accounting/installments/'.$r->id) }}">جزئیات</a></td>
     </tr>
   @empty
     <tr><td colspan="7">درخواستی نیست.</td></tr>

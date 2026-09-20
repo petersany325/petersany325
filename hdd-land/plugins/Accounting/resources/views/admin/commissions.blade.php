@@ -15,7 +15,7 @@
       <td>{{ $money($r->sales) }}</td>
       <td>{{ $money($r->commission) }}</td>
       <td>
-        <form method="post" action="{{ route('admin.accounting.commissions.update', $r->id) }}" style="display:flex;gap:.4rem;align-items:center">
+        <form method="post" action="{{ url('/admin/accounting/commissions/'.$r->id) }}" style="display:flex;gap:.4rem;align-items:center">
           @csrf
           <input name="commission_rate" type="number" step="0.01" min="0" max="100" value="{{ $r->rate }}" style="width:90px;border:1px solid var(--line);border-radius:10px;padding:.4rem">
           <button class="btn" type="submit">ذخیره</button>

@@ -4,7 +4,7 @@
 @php $m = fn($n) => number_format((int)$n).' تومان'; @endphp
 <div class="top">
   <div><h1>اسناد مالی</h1><p>خرید، فروش، پیش‌فاکتور، سند دستی و حرکات انبار</p></div>
-  <a class="btn" href="{{ route('admin.accounting.docs.create',['type'=>$type ?: 'sale']) }}">سند جدید</a>
+  <a class="btn" href="{{ url('/admin/accounting/docs/create?type='.($type ?: 'sale')) }}">سند جدید</a>
 </div>
 <form method="get" class="form" style="margin-bottom:1rem">
   <div class="row">
@@ -31,7 +31,7 @@
       <td>{{ $d->party_name ?: '—' }}</td>
       <td>{{ $m($d->total) }}</td>
       <td><span class="badge {{ $d->status }}">{{ $d->status }}</span></td>
-      <td><a href="{{ route('admin.accounting.doc',$d->id) }}">باز</a></td>
+      <td><a href="{{ url('/admin/accounting/docs/'.$d->id) }}">باز</a></td>
     </tr>
   @empty
     <tr><td colspan="7">موردی نیست.</td></tr>

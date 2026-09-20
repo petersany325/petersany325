@@ -3,7 +3,7 @@
 @section('content')
 @php $m = fn($n) => number_format((int)$n).' تومان'; @endphp
 <div class="top"><div><h1>گزارش چک‌ها</h1><p>پرداختی، دریافتی، برگشتی، تحویل و وصول</p></div>
-  <div class="actions"><a class="btn" href="{{ route('admin.accounting.checks') }}">مدیریت چک</a></div></div>
+  <div class="actions"><a class="btn" href="{{ url('/admin/accounting/checks') }}">مدیریت چک</a></div></div>
 <form method="get" class="form" style="margin-bottom:1rem">
   <div class="row">
     <label>از سررسید<input type="date" name="from" value="{{ $from }}"></label>

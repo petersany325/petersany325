@@ -132,6 +132,7 @@
     </form>
   @endif
 
+  <a class="wa-btn wa-btn-ghost wa-btn-block wa-btn-lg" href="{{ url('/account/installments/create?product_id='.(int)$p->id) }}" style="margin-top:.55rem">خرید اقساطی این کالا</a>
   <a class="wa-btn wa-btn-ghost wa-btn-block wa-btn-lg" href="{{ url('/serial-check') }}" style="margin-top:.55rem">استعلام گارانتی سریال</a>
   @auth
     <a class="wa-btn wa-btn-ghost wa-btn-block wa-btn-lg" href="{{ url('/account/serials') }}">سریال‌های من در کارتابل</a>

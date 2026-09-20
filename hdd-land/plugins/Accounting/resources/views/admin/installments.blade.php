@@ -8,7 +8,7 @@
     <p>{{ $pending }} درخواست در انتظار بررسی</p>
   </div>
   <div class="actions">
-    <a class="btn g" href="{{ route('admin.accounting.reports.installments') }}">گزارش اقساط</a>
+    <a class="btn g" href="{{ url('/admin/accounting/reports/installments') }}">گزارش اقساط</a>
   </div>
 </div>
 
@@ -28,7 +28,7 @@
 </form>
 
 <div class="panel"><div class="hd"><strong>ثبت دستی درخواست</strong></div><div class="bd">
-<form method="post" action="{{ route('admin.accounting.installments.store') }}" class="form">@csrf
+<form method="post" action="{{ url('/admin/accounting/installments') }}" class="form">@csrf
   <div class="row">
     <label>نام مشتری<input name="customer_name" required></label>
     <label>موبایل<input name="customer_mobile"></label>
@@ -65,7 +65,7 @@
       <td>{{ $r->months }}</td>
       <td>{{ $m($r->monthly_amount) }}</td>
       <td><span class="badge">{{ $statuses[$r->status] ?? $r->status }}</span></td>
-      <td><a href="{{ route('admin.accounting.installments.show', $r->id) }}">جزئیات</a></td>
+      <td><a href="{{ url('/admin/accounting/installments/'.$r->id) }}">جزئیات</a></td>
     </tr>
   @empty
     <tr><td colspan="7">درخواستی نیست.</td></tr>

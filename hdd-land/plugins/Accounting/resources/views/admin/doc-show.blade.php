@@ -9,33 +9,36 @@
   </div>
   <div class="actions">
     @if($doc->status==='draft')
-      <form method="post" action="{{ route('admin.accounting.doc.issue',$doc->id) }}">@csrf
+      <form method="post" action="{{ url('/admin/accounting/docs/'.$doc->id.'/issue') }}">@csrf
         <button class="btn o" type="submit">صدور سند</button>
       </form>
-      <form method="post" action="{{ route('admin.accounting.doc.delete.post',$doc->id) }}" onsubmit="return confirm('حذف قطعی پیش‌نویس؟')">@csrf
+      <form method="post" action="{{ url('/admin/accounting/docs/'.$doc->id.'/delete') }}" onsubmit="return confirm('حذف قطعی پیش‌نویس؟')">@csrf
         <button class="btn g" type="submit">حذف</button>
       </form>
     @endif
     @if(in_array($doc->status, ['draft','issued'], true))
-      <form method="post" action="{{ route('admin.accounting.doc.cancel',$doc->id) }}" onsubmit="return confirm('ابطال سند؟')">@csrf
+      <form method="post" action="{{ url('/admin/accounting/docs/'.$doc->id.'/cancel') }}" onsubmit="return confirm('ابطال سند؟')">@csrf
         <button class="btn w" type="submit">ابطال</button>
       </form>
     @endif
     @if($doc->status==='cancelled')
-      <form method="post" action="{{ route('admin.accounting.doc.delete.post',$doc->id) }}" onsubmit="return confirm('حذف قطعی؟')">@csrf
+      <form method="post" action="{{ url('/admin/accounting/docs/'.$doc->id.'/delete') }}" onsubmit="return confirm('حذف قطعی؟')">@csrf
         <button class="btn g" type="submit">حذف قطعی</button>
       </form>
     @endif
     @if($doc->type==='proforma' && $doc->status!=='converted' && $doc->status!=='cancelled')
-      <form method="post" action="{{ route('admin.accounting.doc.convert',$doc->id) }}">@csrf
+      <form method="post" action="{{ url('/admin/accounting/docs/'.$doc->id.'/convert') }}">@csrf
         <button class="btn w" type="submit">تبدیل به فاکتور فروش</button>
       </form>
     @endif
-    <a class="btn g" href="{{ route('admin.accounting.docs') }}">لیست</a>
+    <a class="btn g" href="{{ url('/admin/accounting/docs') }}">لیست</a>
   </div>
 </div>
 <div class="grid">
-  <div class="card"><h3>طرف حساب</h3><div class="v" style="font-size:1rem">{{ $doc->party_name ?: '—' }}</div></div>
+  <div class="card"><h3>طرف حساب</h3><div class="v" style="font-size:1rem">{{ $doc->party_name ?: '—' }}</div>
+    @if(!empty($doc->party_user_id))<div class="s">کاربر #{{ $doc->party_user_id }}</div>@endif
+    @if(!empty($order))<div class="s">سفارش فروشگاه #{{ $order->id }} — {{ $order->status }}</div>@endif
+  </div>
   <div class="card"><h3>جمع جزء</h3><div class="v">{{ $m($doc->subtotal) }}</div></div>
   <div class="card"><h3>تخفیف / مالیات</h3><div class="v" style="font-size:1rem">{{ $m($doc->discount) }} / {{ $m($doc->tax) }}</div></div>
   <div class="card"><h3>مبلغ نهایی</h3><div class="v">{{ $m($doc->total) }}</div>
@@ -48,7 +51,8 @@
   <tbody>
   @foreach($lines as $l)
     <tr>
-      <td>{{ $l->title }}@if($l->sku)<div style="color:var(--muted);font-size:.8rem">{{ $l->sku }}</div>@endif</td>
+      <td>{{ $l->title }}@if($l->sku)<div style="color:var(--muted);font-size:.8rem">{{ $l->sku }}</div>@endif
+        @if(!empty($l->product_id))<div style="color:var(--muted);font-size:.8rem">کالا #{{ $l->product_id }}</div>@endif</td>
       <td>{{ $l->qty }}</td>
       <td>{{ $m($l->unit_price) }}</td>
       <td>{{ $m($l->line_total) }}</td>

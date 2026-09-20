@@ -3,7 +3,7 @@
 @section('content')
 @php $m = fn($n) => number_format((int)$n).' تومان'; @endphp
 <div class="top"><div><h1>گزارش مشتریان</h1><p>جمع خرید و تعداد فاکتور هر مشتری</p></div>
-  <div class="actions"><a class="btn g" href="{{ route('admin.accounting.reports') }}">مرکز گزارش</a></div></div>
+  <div class="actions"><a class="btn g" href="{{ url('/admin/accounting/reports') }}">مرکز گزارش</a></div></div>
 <form method="get" class="form" style="margin-bottom:1rem">
   <div class="row">
     <label>از تاریخ<input type="date" name="from" value="{{ $from }}"></label>

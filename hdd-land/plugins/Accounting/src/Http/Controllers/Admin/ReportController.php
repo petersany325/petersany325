@@ -13,7 +13,10 @@ class ReportController extends Controller
 {
     public function __construct()
     {
-        Plugin::ensureSchema();
+        try {
+            Plugin::ensureSchema();
+        } catch (\Throwable) {
+        }
     }
 
     public function hub(Request $request)
@@ -45,14 +48,14 @@ class ReportController extends Controller
                 'warehouses' => (int) DB::table('acc_warehouses')->where('is_active', true)->count(),
             ],
             'links' => [
-                ['route' => 'admin.accounting.reports.sales', 'label' => 'فروش و خرید', 'desc' => 'فیلتر تاریخ، شماره فاکتور، طرف حساب، انبار، فروشنده'],
-                ['route' => 'admin.accounting.reports.staff', 'label' => 'کارمندان و فروشندگان', 'desc' => 'فروش و سود/کمیسیون هر کارمند'],
-                ['route' => 'admin.accounting.reports.payroll', 'label' => 'حقوق و مزایا', 'desc' => 'فیش‌ها و خالص پرداختی'],
-                ['route' => 'admin.accounting.reports.vouchers', 'label' => 'اسناد حسابداری', 'desc' => 'سند دستی و هزینه با شماره سند'],
-                ['route' => 'admin.accounting.reports.warehouse', 'label' => 'انبارها با تفکیک', 'desc' => 'موجودی و ارزش هر انبار'],
-                ['route' => 'admin.accounting.reports.customers', 'label' => 'مشتریان', 'desc' => 'جمع خرید هر مشتری'],
-                ['route' => 'admin.accounting.reports.checks', 'label' => 'چک‌ها', 'desc' => 'پرداختی، دریافتی، برگشتی، تحویل'],
-                ['route' => 'admin.accounting.reports.installments', 'label' => 'اقساط', 'desc' => 'درخواست‌های اقساطی مشتریان'],
+                ['href' => '/admin/accounting/reports/sales', 'label' => 'فروش و خرید', 'desc' => 'فیلتر تاریخ، شماره فاکتور، طرف حساب، انبار، فروشنده'],
+                ['href' => '/admin/accounting/reports/staff', 'label' => 'کارمندان و فروشندگان', 'desc' => 'فروش و سود/کمیسیون هر کارمند'],
+                ['href' => '/admin/accounting/reports/payroll', 'label' => 'حقوق و مزایا', 'desc' => 'فیش‌ها و خالص پرداختی'],
+                ['href' => '/admin/accounting/reports/vouchers', 'label' => 'اسناد حسابداری', 'desc' => 'سند دستی و هزینه با شماره سند'],
+                ['href' => '/admin/accounting/reports/warehouse', 'label' => 'انبارها با تفکیک', 'desc' => 'موجودی و ارزش هر انبار'],
+                ['href' => '/admin/accounting/reports/customers', 'label' => 'مشتریان', 'desc' => 'جمع خرید هر مشتری'],
+                ['href' => '/admin/accounting/reports/checks', 'label' => 'چک‌ها', 'desc' => 'پرداختی، دریافتی، برگشتی، تحویل'],
+                ['href' => '/admin/accounting/reports/installments', 'label' => 'اقساط', 'desc' => 'درخواست‌های اقساطی مشتریان'],
             ],
         ]);
     }
@@ -67,7 +70,8 @@ class ReportController extends Controller
         $staffId = (int) $request->get('staff_id', 0);
 
         $q = DB::table('acc_documents as d')
-            ->leftJoin('users as u', 'u.id', '=', 'd.staff_id')
+            ->leftJoin('staff_members as sm', 'sm.id', '=', 'd.staff_id')
+            ->leftJoin('users as u', 'u.id', '=', 'sm.user_id')
             ->leftJoin('acc_warehouses as w', 'w.id', '=', 'd.warehouse_id')
             ->where('d.type', $type)
             ->where('d.status', 'issued')
@@ -75,7 +79,9 @@ class ReportController extends Controller
             ->select([
                 'd.id', 'd.number', 'd.doc_date', 'd.party_name', 'd.party_user_id',
                 'd.subtotal', 'd.discount', 'd.tax', 'd.total',
-                'd.commission_amount', 'd.staff_id', 'u.name as staff_name', 'w.name as warehouse_name',
+                'd.commission_amount', 'd.staff_id',
+                DB::raw('COALESCE(sm.name, u.name) as staff_name'),
+                'w.name as warehouse_name',
             ]);
 
         if ($docNo !== '') {
@@ -121,7 +127,8 @@ class ReportController extends Controller
         $staffId = (int) $request->get('staff_id', 0);
 
         $q = DB::table('acc_documents as d')
-            ->leftJoin('users as u', 'u.id', '=', 'd.staff_id')
+            ->leftJoin('staff_members as sm', 'sm.id', '=', 'd.staff_id')
+            ->leftJoin('users as u', 'u.id', '=', 'sm.user_id')
             ->where('d.type', 'sale')
             ->where('d.status', 'issued')
             ->whereBetween('d.doc_date', [$from, $to])
@@ -130,8 +137,8 @@ class ReportController extends Controller
             $q->where('d.staff_id', $staffId);
         }
 
-        $rows = $q->selectRaw('d.staff_id, COALESCE(u.name, CONCAT("#", d.staff_id)) as staff_name, COUNT(*) as docs_count, SUM(d.total) as sales_total, SUM(d.commission_amount) as commission_total, SUM(d.total - d.commission_amount) as profit_est')
-            ->groupBy('d.staff_id', 'u.name')
+        $rows = $q->selectRaw('d.staff_id, COALESCE(sm.name, u.name, CONCAT("#", d.staff_id)) as staff_name, COUNT(*) as docs_count, SUM(d.total) as sales_total, SUM(d.commission_amount) as commission_total, SUM(d.total - d.commission_amount) as profit_est')
+            ->groupBy('d.staff_id', 'sm.name', 'u.name')
             ->orderByDesc('sales_total')
             ->get();
 
@@ -345,7 +352,7 @@ class ReportController extends Controller
         $status = trim((string) $request->get('status', ''));
         $q = DB::table('acc_installment_requests as r')
             ->leftJoin('users as u', 'u.id', '=', 'r.user_id')
-            ->select(['r.*', 'u.name as user_name', 'u.email as user_email']);
+            ->select(array_merge(['r.*'], AccEngine::userAliasColumns('u')));
         if ($status !== '') {
             $q->where('r.status', $status);
         }
@@ -369,9 +376,17 @@ class ReportController extends Controller
 
     private function staffOptions()
     {
-        return DB::table('users')
-            ->whereIn('role', ['admin', 'staff', 'seller', 'warehouse'])
-            ->orderBy('name')
-            ->get(['id', 'name', 'role']);
+        if (Schema::hasTable('staff_members')) {
+            return DB::table('staff_members')->where('is_active', 1)->orderBy('name')->get(['id', 'name', 'role']);
+        }
+
+        $users = DB::table('users')->orderBy('name');
+        $cols = ['id', 'name'];
+        if (Schema::hasColumn('users', 'role')) {
+            $users->whereIn('role', ['admin', 'staff', 'seller', 'warehouse']);
+            $cols[] = 'role';
+        }
+
+        return $users->get($cols);
     }
 }
