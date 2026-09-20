@@ -4,10 +4,10 @@
 @php $money = fn($n) => number_format((int)$n); @endphp
 <div class="top">
   <div><h1>حواله، رسید و موجودی</h1><p>حرکت کالا بین انبارها با سریال</p></div>
-  <a class="btn" href="{{ route('admin.accounting.warehouses') }}">مدیریت انبارها</a>
+  <a class="btn" href="{{ url('/admin/accounting/warehouses') }}">مدیریت انبارها</a>
 </div>
 <div class="panel"><div class="hd"><strong>ثبت حرکت</strong></div><div class="bd">
-<form method="post" action="{{ route('admin.accounting.stock.store') }}" class="form">@csrf
+<form method="post" action="{{ url('/admin/accounting/stock') }}" class="form">@csrf
   <div class="row">
     <label>نوع
       <select name="type">
@@ -82,7 +82,7 @@
       <td>{{ $m->type }}</td>
       <td>{{ $m->doc_date }}</td>
       <td><span class="badge {{ $m->status }}">{{ $m->status }}</span></td>
-      <td><a href="{{ route('admin.accounting.doc', $m->id) }}">باز</a></td>
+      <td><a href="{{ url('/admin/accounting/docs/'.$m->id) }}">باز</a></td>
     </tr>
   @endforeach
   </tbody>

@@ -8,7 +8,7 @@
     <p>پرداختی، دریافتی، برگشتی، تحویل و وصول</p>
   </div>
   <div class="actions">
-    <a class="btn g" href="{{ route('admin.accounting.reports.checks') }}">گزارش چک</a>
+    <a class="btn g" href="{{ url('/admin/accounting/reports/checks') }}">گزارش چک</a>
   </div>
 </div>
 
@@ -48,7 +48,7 @@
 </form>
 
 <div class="panel"><div class="hd"><strong>ثبت چک جدید</strong></div><div class="bd">
-<form method="post" action="{{ route('admin.accounting.checks.store') }}" class="form">@csrf
+<form method="post" action="{{ url('/admin/accounting/checks') }}" class="form">@csrf
   <div class="row">
     <label>شماره چک<input name="number" placeholder="خالی = خودکار"></label>
     <label>جهت
@@ -96,7 +96,7 @@
 
 <div class="panel"><div class="hd"><strong>لیست چک‌ها</strong></div><div class="bd" style="padding:0">
 @forelse($items as $c)
-<form method="post" action="{{ route('admin.accounting.checks.update', $c->id) }}" class="form" style="padding:.85rem;border-bottom:1px solid var(--line)">
+<form method="post" action="{{ url('/admin/accounting/checks/'.$c->id.'/update') }}" class="form" style="padding:.85rem;border-bottom:1px solid var(--line)">
   @csrf
   <div class="row">
     <label>شماره<input name="number" value="{{ $c->number }}"></label>
@@ -129,9 +129,9 @@
   <div class="actions">
     <button class="btn" type="submit">ذخیره</button>
     @foreach(['received'=>'وصول','paid'=>'پرداخت','returned'=>'برگشت','delivered'=>'تحویل','bounced'=>'برگشت‌خورده'] as $st=>$lab)
-      <button class="btn g" type="submit" formaction="{{ route('admin.accounting.checks.status', $c->id) }}" name="status" value="{{ $st }}">{{ $lab }}</button>
+      <button class="btn g" type="submit" formaction="{{ url('/admin/accounting/checks/'.$c->id.'/status') }}" name="status" value="{{ $st }}">{{ $lab }}</button>
     @endforeach
-    <button class="btn g" type="submit" formaction="{{ route('admin.accounting.checks.delete', $c->id) }}" onclick="return confirm('حذف شود؟')">حذف</button>
+    <button class="btn g" type="submit" formaction="{{ url('/admin/accounting/checks/'.$c->id.'/delete') }}" onclick="return confirm('حذف شود؟')">حذف</button>
   </div>
 </form>
 @empty

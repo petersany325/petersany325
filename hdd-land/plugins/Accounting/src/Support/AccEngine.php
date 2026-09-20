@@ -326,9 +326,27 @@ class AccEngine
             'sales_total' => $sum('sale'),
             'purchase_total' => $sum('purchase'),
             'expense_total' => $sum('expense'),
-            'proforma_open' => (int) (DB::table('acc_documents')->where('type', 'proforma')->whereIn('status', ['draft', 'issued'])->count() ?? 0),
-            'warehouses' => (int) (DB::table('acc_warehouses')->where('is_active', 1)->count() ?? 0),
-            'banks' => (int) (DB::table('acc_banks')->where('is_active', 1)->count() ?? 0),
+            'proforma_open' => (int) (function () {
+                try {
+                    return DB::table('acc_documents')->where('type', 'proforma')->whereIn('status', ['draft', 'issued'])->count();
+                } catch (\Throwable) {
+                    return 0;
+                }
+            })(),
+            'warehouses' => (int) (function () {
+                try {
+                    return Schema::hasTable('acc_warehouses') ? DB::table('acc_warehouses')->where('is_active', 1)->count() : 0;
+                } catch (\Throwable) {
+                    return 0;
+                }
+            })(),
+            'banks' => (int) (function () {
+                try {
+                    return Schema::hasTable('acc_banks') ? DB::table('acc_banks')->where('is_active', 1)->count() : 0;
+                } catch (\Throwable) {
+                    return 0;
+                }
+            })(),
             'docs' => [
                 'sale' => $count('sale'),
                 'purchase' => $count('purchase'),

@@ -15,18 +15,32 @@ class HubController extends Controller
 {
     public function __construct()
     {
-        Plugin::ensureSchema();
-        Plugin::seedDefaults();
+        try {
+            Plugin::ensureSchema();
+            Plugin::seedDefaults();
+        } catch (\Throwable) {
+        }
     }
 
     public function hub()
     {
-        $synced = AccCommerce::syncPendingShopOrders(25);
+        $synced = 0;
+        try {
+            $synced = AccCommerce::syncPendingShopOrders(25);
+        } catch (\Throwable) {
+        }
+        $recent = collect();
+        try {
+            if (Schema::hasTable('acc_documents')) {
+                $recent = DB::table('acc_documents')->orderByDesc('id')->limit(12)->get();
+            }
+        } catch (\Throwable) {
+        }
 
         return view('accounting::admin.hub', [
             'stats' => AccEngine::dashboardStats(),
             'types' => AccEngine::TYPES,
-            'recent' => DB::table('acc_documents')->orderByDesc('id')->limit(12)->get(),
+            'recent' => $recent,
             'synced' => $synced,
         ]);
     }

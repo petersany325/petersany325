@@ -7,7 +7,7 @@
     <p>شماره پیشنهادی: <strong>{{ $number }}</strong> — سریال هر قلم را در همان سطر وارد کنید</p>
   </div>
 </div>
-<form method="post" action="{{ route('admin.accounting.docs.store') }}" class="form">
+<form method="post" action="{{ url('/admin/accounting/docs') }}" class="form">
   @csrf
   <input type="hidden" name="type" value="{{ $type }}">
   <div class="panel"><div class="bd">
@@ -124,7 +124,7 @@
     <label class="check"><input type="checkbox" name="issue_now" value="1" checked> صدور فوری و به‌روزرسانی موجودی</label>
     <div class="actions">
       <button class="btn" type="submit">ذخیره سند</button>
-      <a class="btn g" href="{{ route('admin.accounting.docs') }}">انصراف</a>
+      <a class="btn g" href="{{ url('/admin/accounting/docs') }}">انصراف</a>
     </div>
   </div></div>
 </form>

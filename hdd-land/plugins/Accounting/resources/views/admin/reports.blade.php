@@ -28,15 +28,15 @@
       <td>{{ $m($row['total']) }}</td>
       <td>
         @if(in_array($row['key'], ['sale','purchase','proforma','voucher','expense'], true))
-          <a href="{{ route('admin.accounting.docs',['type'=>$row['key']]) }}">اسناد</a>
+          <a href="{{ url('/admin/accounting/docs?type='.$row['key']) }}">اسناد</a>
         @elseif($row['key']==='stock' || $row['key']==='warehouses')
-          <a href="{{ route('admin.accounting.stock') }}">انبار</a>
+          <a href="{{ url('/admin/accounting/stock') }}">انبار</a>
         @elseif($row['key']==='banks')
-          <a href="{{ route('admin.accounting.banks') }}">بانک</a>
+          <a href="{{ url('/admin/accounting/banks') }}">بانک</a>
         @elseif($row['key']==='payroll')
-          <a href="{{ route('admin.accounting.payroll') }}">حقوق</a>
+          <a href="{{ url('/admin/accounting/payroll') }}">حقوق</a>
         @elseif($row['key']==='commission')
-          <a href="{{ route('admin.accounting.commissions') }}">کمیسیون</a>
+          <a href="{{ url('/admin/accounting/commissions') }}">کمیسیون</a>
         @endif
       </td>
     </tr>

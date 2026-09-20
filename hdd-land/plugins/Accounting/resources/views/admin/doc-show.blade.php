@@ -9,29 +9,29 @@
   </div>
   <div class="actions">
     @if($doc->status==='draft')
-      <form method="post" action="{{ route('admin.accounting.doc.issue',$doc->id) }}">@csrf
+      <form method="post" action="{{ url('/admin/accounting/docs/'.$doc->id.'/issue') }}">@csrf
         <button class="btn o" type="submit">صدور سند</button>
       </form>
-      <form method="post" action="{{ route('admin.accounting.doc.delete.post',$doc->id) }}" onsubmit="return confirm('حذف قطعی پیش‌نویس؟')">@csrf
+      <form method="post" action="{{ url('/admin/accounting/docs/'.$doc->id.'/delete') }}" onsubmit="return confirm('حذف قطعی پیش‌نویس؟')">@csrf
         <button class="btn g" type="submit">حذف</button>
       </form>
     @endif
     @if(in_array($doc->status, ['draft','issued'], true))
-      <form method="post" action="{{ route('admin.accounting.doc.cancel',$doc->id) }}" onsubmit="return confirm('ابطال سند؟')">@csrf
+      <form method="post" action="{{ url('/admin/accounting/docs/'.$doc->id.'/cancel') }}" onsubmit="return confirm('ابطال سند؟')">@csrf
         <button class="btn w" type="submit">ابطال</button>
       </form>
     @endif
     @if($doc->status==='cancelled')
-      <form method="post" action="{{ route('admin.accounting.doc.delete.post',$doc->id) }}" onsubmit="return confirm('حذف قطعی؟')">@csrf
+      <form method="post" action="{{ url('/admin/accounting/docs/'.$doc->id.'/delete') }}" onsubmit="return confirm('حذف قطعی؟')">@csrf
         <button class="btn g" type="submit">حذف قطعی</button>
       </form>
     @endif
     @if($doc->type==='proforma' && $doc->status!=='converted' && $doc->status!=='cancelled')
-      <form method="post" action="{{ route('admin.accounting.doc.convert',$doc->id) }}">@csrf
+      <form method="post" action="{{ url('/admin/accounting/docs/'.$doc->id.'/convert') }}">@csrf
         <button class="btn w" type="submit">تبدیل به فاکتور فروش</button>
       </form>
     @endif
-    <a class="btn g" href="{{ route('admin.accounting.docs') }}">لیست</a>
+    <a class="btn g" href="{{ url('/admin/accounting/docs') }}">لیست</a>
   </div>
 </div>
 <div class="grid">

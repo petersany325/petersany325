@@ -48,14 +48,14 @@ class ReportController extends Controller
                 'warehouses' => (int) DB::table('acc_warehouses')->where('is_active', true)->count(),
             ],
             'links' => [
-                ['route' => 'admin.accounting.reports.sales', 'label' => 'فروش و خرید', 'desc' => 'فیلتر تاریخ، شماره فاکتور، طرف حساب، انبار، فروشنده'],
-                ['route' => 'admin.accounting.reports.staff', 'label' => 'کارمندان و فروشندگان', 'desc' => 'فروش و سود/کمیسیون هر کارمند'],
-                ['route' => 'admin.accounting.reports.payroll', 'label' => 'حقوق و مزایا', 'desc' => 'فیش‌ها و خالص پرداختی'],
-                ['route' => 'admin.accounting.reports.vouchers', 'label' => 'اسناد حسابداری', 'desc' => 'سند دستی و هزینه با شماره سند'],
-                ['route' => 'admin.accounting.reports.warehouse', 'label' => 'انبارها با تفکیک', 'desc' => 'موجودی و ارزش هر انبار'],
-                ['route' => 'admin.accounting.reports.customers', 'label' => 'مشتریان', 'desc' => 'جمع خرید هر مشتری'],
-                ['route' => 'admin.accounting.reports.checks', 'label' => 'چک‌ها', 'desc' => 'پرداختی، دریافتی، برگشتی، تحویل'],
-                ['route' => 'admin.accounting.reports.installments', 'label' => 'اقساط', 'desc' => 'درخواست‌های اقساطی مشتریان'],
+                ['href' => '/admin/accounting/reports/sales', 'label' => 'فروش و خرید', 'desc' => 'فیلتر تاریخ، شماره فاکتور، طرف حساب، انبار، فروشنده'],
+                ['href' => '/admin/accounting/reports/staff', 'label' => 'کارمندان و فروشندگان', 'desc' => 'فروش و سود/کمیسیون هر کارمند'],
+                ['href' => '/admin/accounting/reports/payroll', 'label' => 'حقوق و مزایا', 'desc' => 'فیش‌ها و خالص پرداختی'],
+                ['href' => '/admin/accounting/reports/vouchers', 'label' => 'اسناد حسابداری', 'desc' => 'سند دستی و هزینه با شماره سند'],
+                ['href' => '/admin/accounting/reports/warehouse', 'label' => 'انبارها با تفکیک', 'desc' => 'موجودی و ارزش هر انبار'],
+                ['href' => '/admin/accounting/reports/customers', 'label' => 'مشتریان', 'desc' => 'جمع خرید هر مشتری'],
+                ['href' => '/admin/accounting/reports/checks', 'label' => 'چک‌ها', 'desc' => 'پرداختی، دریافتی، برگشتی، تحویل'],
+                ['href' => '/admin/accounting/reports/installments', 'label' => 'اقساط', 'desc' => 'درخواست‌های اقساطی مشتریان'],
             ],
         ]);
     }

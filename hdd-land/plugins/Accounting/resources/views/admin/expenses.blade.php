@@ -4,7 +4,7 @@
 @php $money = fn($n) => number_format((int)$n).' تومان'; @endphp
 <div class="top"><div><h1>تعریف و ثبت هزینه‌ها</h1><p>هزینه‌های عملیاتی با دسته و بانک پرداخت</p></div></div>
 <div class="panel"><div class="hd"><strong>هزینه جدید</strong></div><div class="bd">
-<form method="post" action="{{ route('admin.accounting.expenses.store') }}" class="form">@csrf
+<form method="post" action="{{ url('/admin/accounting/expenses') }}" class="form">@csrf
   <div class="row">
     <label>عنوان<input name="title" required placeholder="اجاره / تبلیغات / ..."></label>
     <label>مبلغ (تومان)<input name="amount" required></label>
@@ -38,7 +38,7 @@
   <tbody>
   @forelse($items as $e)
     <tr>
-      <td><a href="{{ route('admin.accounting.doc', $e->id) }}">{{ $e->number }}</a></td>
+      <td><a href="{{ url('/admin/accounting/docs/'.$e->id) }}">{{ $e->number }}</a></td>
       <td>{{ $e->party_name }}</td>
       <td>{{ $e->doc_date }}</td>
       <td>{{ $money($e->total) }}</td>

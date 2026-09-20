@@ -4,9 +4,9 @@
 @php $money = fn($n) => number_format((int)$n).' تومان'; @endphp
 <div class="acc-top"><div><h1>اسناد مالی</h1></div></div>
 <div class="acc-links">
-  <a href="{{ route('staff.accounting.docs') }}">همه</a>
+  <a href="{{ url('/staff/accounting/docs') }}">همه</a>
   @foreach($types as $k=>$v)
-    <a href="{{ route('staff.accounting.docs', ['type'=>$k]) }}">{{ $v }}</a>
+    <a href="{{ url('/staff/accounting/docs?type='.$k) }}">{{ $v }}</a>
   @endforeach
 </div>
 <div class="acc-panel"><div class="bd" style="padding:0">
@@ -19,7 +19,7 @@
       <td>{{ $types[$d->type] ?? $d->type }}</td>
       <td>{{ $d->party_name ?: '—' }}</td>
       <td>{{ $money($d->total) }}</td>
-      <td><a href="{{ route('staff.accounting.doc', $d->id) }}">جزئیات</a></td>
+      <td><a href="{{ url('/staff/accounting/docs/'.$d->id) }}">جزئیات</a></td>
     </tr>
   @endforeach
   </tbody>

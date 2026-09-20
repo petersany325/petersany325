@@ -3,7 +3,7 @@
 @section('content')
 <div class="top"><div><h1>تعریف و مدیریت بانک</h1><p>افزودن، ویرایش و حذف حساب‌های بانکی</p></div></div>
 <div class="panel"><div class="hd"><strong>حساب بانکی جدید</strong></div><div class="bd">
-<form method="post" action="{{ route('admin.accounting.banks.store') }}" class="form">@csrf
+<form method="post" action="{{ url('/admin/accounting/banks') }}" class="form">@csrf
   <div class="row">
     <label>نام بانک<input name="name" required></label>
     <label>شعبه<input name="branch"></label>
@@ -22,7 +22,7 @@
 </div></div>
 <div class="panel"><div class="hd"><strong>حساب‌های بانکی</strong></div><div class="bd" style="padding:0">
 @foreach($items as $b)
-<form method="post" action="{{ route('admin.accounting.banks.update.post',$b->id) }}" class="form" style="padding:.75rem;border-bottom:1px solid var(--line)">
+<form method="post" action="{{ url('/admin/accounting/banks/'.$b->id.'/update') }}" class="form" style="padding:.75rem;border-bottom:1px solid var(--line)">
   @csrf
   <div class="row">
     <label>نام بانک<input name="name" value="{{ $b->name }}" required></label>
@@ -42,7 +42,7 @@
   </div>
   <div class="actions">
     <button class="btn" type="submit">ذخیره</button>
-    <button class="btn g" type="submit" formaction="{{ route('admin.accounting.banks.delete.post',$b->id) }}" onclick="return confirm('حذف/غیرفعال شود؟')">حذف</button>
+    <button class="btn g" type="submit" formaction="{{ url('/admin/accounting/banks/'.$b->id.'/delete') }}" onclick="return confirm('حذف/غیرفعال شود؟')">حذف</button>
   </div>
 </form>
 @endforeach

@@ -3,7 +3,7 @@
 @section('content')
 @php $m = fn($n) => number_format((int)$n).' تومان'; @endphp
 <div class="top"><div><h1>گزارش سند حسابداری</h1><p>سند دستی و هزینه با فیلتر شماره</p></div>
-  <div class="actions"><a class="btn g" href="{{ route('admin.accounting.reports') }}">مرکز گزارش</a></div></div>
+  <div class="actions"><a class="btn g" href="{{ url('/admin/accounting/reports') }}">مرکز گزارش</a></div></div>
 <form method="get" class="form" style="margin-bottom:1rem">
   <div class="row">
     <label>از تاریخ<input type="date" name="from" value="{{ $from }}"></label>
@@ -37,7 +37,7 @@
       <td>{{ \Illuminate\Support\Str::limit($r->notes ?? $r->party_name, 40) }}</td>
       <td>{{ $r->staff_name ?: '—' }}</td>
       <td>{{ $m($r->total) }}</td>
-      <td><a href="{{ route('admin.accounting.doc',$r->id) }}">مشاهده</a></td>
+      <td><a href="{{ url('/admin/accounting/docs/'.$r->id) }}">مشاهده</a></td>
     </tr>
   @empty
     <tr><td colspan="7">موردی نیست.</td></tr>

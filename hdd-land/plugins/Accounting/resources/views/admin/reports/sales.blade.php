@@ -8,7 +8,7 @@
     <p>فیلتر تاریخ، شماره فاکتور، طرف حساب، انبار و فروشنده</p>
   </div>
   <div class="actions">
-    <a class="btn g" href="{{ route('admin.accounting.reports') }}">مرکز گزارش</a>
+    <a class="btn g" href="{{ url('/admin/accounting/reports') }}">مرکز گزارش</a>
   </div>
 </div>
 <form method="get" class="form panel" style="padding:1rem;margin-bottom:1rem">
@@ -66,7 +66,7 @@
       <td>{{ $r->warehouse_name ?: '—' }}</td>
       <td>{{ $r->staff_name ?: '—' }}</td>
       <td>{{ $m($r->total) }}</td>
-      <td><a href="{{ route('admin.accounting.doc',$r->id) }}">مشاهده</a></td>
+      <td><a href="{{ url('/admin/accounting/docs/'.$r->id) }}">مشاهده</a></td>
     </tr>
   @empty
     <tr><td colspan="7">موردی با این فیلتر نیست.</td></tr>

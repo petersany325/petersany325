@@ -263,26 +263,33 @@ class AccCommerce
         if (! Schema::hasTable('orders') || ! Schema::hasTable('acc_documents')) {
             return 0;
         }
-        $q = DB::table('orders')->orderByDesc('id')->limit($limit * 3);
-        $count = 0;
-        foreach ($q->get() as $order) {
-            if ($count >= $limit) {
-                break;
+        try {
+            $q = DB::table('orders')->orderByDesc('id')->limit($limit * 3);
+            $count = 0;
+            foreach ($q->get() as $order) {
+                if ($count >= $limit) {
+                    break;
+                }
+                $status = (string) ($order->status ?? '');
+                if (! AccMath::orderLooksPaid($status) && ! AccMath::orderLooksCancelled($status)) {
+                    continue;
+                }
+                $existing = self::findSaleForOrder((int) $order->id);
+                if ($existing && (string) $existing->status === 'issued' && AccMath::orderLooksPaid($status)) {
+                    continue;
+                }
+                try {
+                    if (self::syncOrder((int) $order->id)) {
+                        $count++;
+                    }
+                } catch (\Throwable) {
+                }
             }
-            $status = (string) ($order->status ?? '');
-            if (! AccMath::orderLooksPaid($status) && ! AccMath::orderLooksCancelled($status)) {
-                continue;
-            }
-            $existing = self::findSaleForOrder((int) $order->id);
-            if ($existing && (string) $existing->status === 'issued' && AccMath::orderLooksPaid($status)) {
-                continue;
-            }
-            if (self::syncOrder((int) $order->id) ) {
-                $count++;
-            }
-        }
 
-        return $count;
+            return $count;
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     public static function saleFromInstallment(object $row, bool $issue = true): ?int

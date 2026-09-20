@@ -3,7 +3,7 @@
 @section('content')
 @php $money = fn($n) => number_format((int)$n).' تومان'; @endphp
 <div class="acc-top"><div><h1>{{ $doc->number }}</h1><p>{{ $types[$doc->type] ?? $doc->type }} · {{ $doc->status }}</p></div>
-<a class="acc-btn ghost" href="{{ route('staff.accounting.docs') }}">بازگشت</a></div>
+<a class="acc-btn ghost" href="{{ url('/staff/accounting/docs') }}">بازگشت</a></div>
 <div class="acc-card" style="margin-bottom:1rem"><h3>مبلغ</h3><div class="val">{{ $money($doc->total) }}</div><div class="sub">{{ $doc->party_name }}</div></div>
 <div class="acc-panel"><div class="bd" style="padding:0">
 <table class="acc-table">

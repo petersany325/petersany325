@@ -3,7 +3,7 @@
 @section('content')
 <header>
   <h1>{{ $doc->number }}</h1>
-  <a href="{{ route('account.invoices') }}">لیست</a>
+  <a href="{{ url('/account/invoices') }}">لیست</a>
 </header>
 <div class="card">
   <div class="row">
