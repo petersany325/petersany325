@@ -13,7 +13,10 @@ class ReportController extends Controller
 {
     public function __construct()
     {
-        Plugin::ensureSchema();
+        try {
+            Plugin::ensureSchema();
+        } catch (\Throwable) {
+        }
     }
 
     public function hub(Request $request)
@@ -349,7 +352,7 @@ class ReportController extends Controller
         $status = trim((string) $request->get('status', ''));
         $q = DB::table('acc_installment_requests as r')
             ->leftJoin('users as u', 'u.id', '=', 'r.user_id')
-            ->select(['r.*', 'u.name as user_name', 'u.email as user_email']);
+            ->select(array_merge(['r.*'], AccEngine::userAliasColumns('u')));
         if ($status !== '') {
             $q->where('r.status', $status);
         }
@@ -377,9 +380,13 @@ class ReportController extends Controller
             return DB::table('staff_members')->where('is_active', 1)->orderBy('name')->get(['id', 'name', 'role']);
         }
 
-        return DB::table('users')
-            ->whereIn('role', ['admin', 'staff', 'seller', 'warehouse'])
-            ->orderBy('name')
-            ->get(['id', 'name', 'role']);
+        $users = DB::table('users')->orderBy('name');
+        $cols = ['id', 'name'];
+        if (Schema::hasColumn('users', 'role')) {
+            $users->whereIn('role', ['admin', 'staff', 'seller', 'warehouse']);
+            $cols[] = 'role';
+        }
+
+        return $users->get($cols);
     }
 }

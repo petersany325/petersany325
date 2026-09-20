@@ -22,8 +22,10 @@ class AccRoutes
         }
         self::$customer = true;
 
+        $plugin = dirname(__DIR__, 2).DIRECTORY_SEPARATOR.'Plugin.php';
         $base = dirname(__DIR__, 2).DIRECTORY_SEPARATOR.'src';
         foreach ([
+            $plugin,
             $base.'/Support/AccMath.php',
             $base.'/Support/AccEngine.php',
             $base.'/Support/AccCommerce.php',
@@ -41,6 +43,8 @@ class AccRoutes
         if (! class_exists(InstallmentController::class)) {
             return;
         }
+
+        self::registerViews();
 
         Route::middleware(['web', 'auth'])->group(function () {
             Route::prefix('account')->name('account.')->group(function () {
@@ -96,5 +100,18 @@ class AccRoutes
                 Route::get($path, $show)->whereNumber('id');
             }
         });
+    }
+
+    public static function registerViews(): void
+    {
+        $views = dirname(__DIR__, 2).DIRECTORY_SEPARATOR.'resources'.DIRECTORY_SEPARATOR.'views';
+        if (! is_dir($views)) {
+            return;
+        }
+        try {
+            \Illuminate\Support\Facades\View::addNamespace('accounting', $views);
+            \Illuminate\Support\Facades\View::addNamespace('Accounting', $views);
+        } catch (\Throwable) {
+        }
     }
 }

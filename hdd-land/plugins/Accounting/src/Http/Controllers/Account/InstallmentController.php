@@ -15,7 +15,10 @@ class InstallmentController extends Controller
 {
     public function __construct()
     {
-        Plugin::ensureSchema();
+        try {
+            Plugin::ensureSchema();
+        } catch (\Throwable) {
+        }
     }
 
     public function index()

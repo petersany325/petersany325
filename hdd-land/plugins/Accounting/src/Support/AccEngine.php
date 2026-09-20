@@ -45,6 +45,31 @@ class AccEngine
         'cancelled' => 'لغو',
     ];
 
+    /**
+     * Live shops do not always have users.mobile / users.email.
+     *
+     * @return list<string>
+     */
+    public static function userAliasColumns(string $alias = 'u'): array
+    {
+        if (! Schema::hasTable('users')) {
+            return [];
+        }
+        $out = [];
+        foreach ([
+            'name' => 'user_name',
+            'email' => 'user_email',
+            'mobile' => 'user_mobile',
+            'phone' => 'user_phone',
+        ] as $col => $as) {
+            if (Schema::hasColumn('users', $col)) {
+                $out[] = $alias.'.'.$col.' as '.$as;
+            }
+        }
+
+        return $out;
+    }
+
     public static function nextNumber(string $type): string
     {
         $prefix = match ($type) {

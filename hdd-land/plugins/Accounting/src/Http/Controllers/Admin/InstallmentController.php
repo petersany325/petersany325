@@ -16,7 +16,10 @@ class InstallmentController extends Controller
 {
     public function __construct()
     {
-        Plugin::ensureSchema();
+        try {
+            Plugin::ensureSchema();
+        } catch (\Throwable) {
+        }
     }
 
     public function index(Request $request)
@@ -27,7 +30,7 @@ class InstallmentController extends Controller
         $q = trim((string) $request->get('q', ''));
         $query = DB::table('acc_installment_requests as r')
             ->leftJoin('users as u', 'u.id', '=', 'r.user_id')
-            ->select(['r.*', 'u.name as user_name', 'u.email as user_email', 'u.mobile as user_mobile'])
+            ->select(array_merge(['r.*'], AccEngine::userAliasColumns('u')))
             ->orderByDesc('r.id');
         if ($status !== '' && isset(AccEngine::INSTALLMENT_STATUSES[$status])) {
             $query->where('r.status', $status);
