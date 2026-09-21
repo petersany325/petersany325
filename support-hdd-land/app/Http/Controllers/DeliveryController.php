@@ -34,10 +34,7 @@ class DeliveryController extends Controller
         if ($customerId > 0) {
             $customer = Customer::query()->find($customerId);
         } elseif (strlen($phone) >= 10) {
-            $customer = Customer::query()
-                ->where('phone', 'like', '%'.substr($phone, -10).'%')
-                ->orderByDesc('id')
-                ->first();
+            $customer = Customer::findByPhone($phone);
         }
 
         if (! $customer) {

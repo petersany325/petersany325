@@ -277,12 +277,25 @@ class ReceptionController extends Controller
             ]);
         }
 
+        $typedName = trim((string) $data['customer_name']);
+        $phone = $data['customer_phone'];
+
         $customer = null;
         if (! empty($data['customer_id'])) {
             $customer = Customer::find($data['customer_id']);
         }
+
+        $byPhone = $this->findCustomerByPhone($phone);
+
+        // انتخاب با id ولی موبایل متعلق به دیگری است → خطا در همان فرم
+        if ($customer && $byPhone && (int) $byPhone->id !== (int) $customer->id) {
+            throw ValidationException::withMessages([
+                'customer_phone' => 'این موبایل متعلق به مشتری دیگری است ('.$byPhone->displayName().'). ذخیره با نام اشتباه انجام نشد.',
+            ]);
+        }
+
         if (! $customer) {
-            $customer = $this->findCustomerByPhone($data['customer_phone']);
+            $customer = $byPhone;
         }
 
         if ($customer && $customer->is_blacklisted) {
@@ -291,9 +304,20 @@ class ReceptionController extends Controller
             ]);
         }
 
+        // موبایل موجود با نام متفاوت → نام کسی را بازنویسی نکن؛ خطا در همان گزینه
+        if ($customer) {
+            $existingName = mb_strtolower(trim((string) $customer->name));
+            $newName = mb_strtolower($typedName);
+            if ($existingName !== '' && $newName !== '' && $existingName !== $newName) {
+                throw ValidationException::withMessages([
+                    'customer_name' => 'این موبایل قبلاً برای «'.$customer->displayName().'» ثبت شده. نام او را از اینجا عوض نکنید؛ از پرونده همان مشتری ویرایش کنید یا موبایل درست را وارد کنید.',
+                ]);
+            }
+        }
+
         $payload = [
-            'name' => $data['customer_name'],
-            'phone' => $data['customer_phone'],
+            'name' => $typedName,
+            'phone' => $phone,
             'alias' => $data['alias'] ?? null,
             'gender' => $data['gender'] ?? null,
             'national_code' => $data['national_code'] ?? null,
@@ -303,8 +327,10 @@ class ReceptionController extends Controller
         ];
 
         if ($customer) {
-            $customer->update($payload);
+            // فقط فیلدهای خالی را پر کن؛ هویت موجود را بازنویسی نکن
+            $this->mergeCustomerPayload($customer, $payload, overwriteName: false);
             $created = false;
+            $customer = $customer->fresh();
         } else {
             $customer = Customer::create($payload);
             $created = true;
@@ -532,10 +558,11 @@ class ReceptionController extends Controller
             'pickup_phone' => ['nullable', 'string', 'max:20'],
             'send_sms' => ['nullable', 'boolean'],
             'sms_note' => ['nullable', 'string', 'max:300'],
+            'split_this_ticket' => ['nullable', 'boolean'],
         ]));
 
         $previousCustomerId = (int) $reception->customer_id;
-        $customer = $this->resolveCustomerForTicketEdit($reception, $data);
+        $customer = $this->resolveCustomerForTicketEdit($reception, $data, $request->boolean('split_this_ticket'));
 
         if (! empty($data['brand_model'])) {
             $converted = $this->toAsciiEnglish((string) $data['brand_model']);
@@ -612,6 +639,12 @@ class ReceptionController extends Controller
                 : $reception->pickup_phone,
         ])->save();
 
+        if ((int) $customer->id !== $previousCustomerId) {
+            Payment::query()
+                ->where('reception_id', $reception->id)
+                ->update(['customer_id' => $customer->id]);
+        }
+
         $reception->recalculateTotals();
         try {
             app(AccountingService::class)->syncReceptionRevenue($reception->fresh());
@@ -630,7 +663,7 @@ class ReceptionController extends Controller
 
         $flash = 'قبض ذخیره شد.';
         if ((int) $customer->id !== $previousCustomerId) {
-            $flash .= ' نام/موبایل این قبض از پرونده مشترک جدا شد تا قبض‌های دیگر همان مشتری عوض نشوند.';
+            $flash .= ' این قبض از پرونده مشترک جدا شد؛ قبض‌های دیگر همان مشتری تغییر نکردند.';
         }
         if ($request->boolean('send_sms', true)) {
             $sms = $smsNotifications->sendOnTicketUpdated(
@@ -1097,6 +1130,7 @@ class ReceptionController extends Controller
             }
 
             $payment->update([
+                'customer_id' => $reception->customer_id,
                 'type' => $data['type'],
                 'method' => $data['method'],
                 'amount' => $amount,
@@ -1571,15 +1605,14 @@ class ReceptionController extends Controller
     }
 
     /**
-     * ویرایش قبض نباید نام/موبایل پروندهٔ مشترک مشتری را عوض کند
-     * و همهٔ قبض‌های هم‌پرونده را عوض کند.
-     *
-     * اگر نام یا موبایل عوض شود و این مشتری قبض دیگری هم داشته باشد،
-     * برای همین قبض یک پروندهٔ مشتری جدید ساخته می‌شود تا بقیه دست نخورند.
+     * ویرایش هویت مشتری روی یک قبض — fail-closed:
+     * - هرگز قبض را بی‌صدا به مشتری دیگر وصل نکن
+     * - هرگز بدون تأیید صریح مشتری جدید نساز
+     * - تداخل موبایل/نام مشترک → ValidationException روی همان فرم
      *
      * @param  array<string,mixed>  $data
      */
-    private function resolveCustomerForTicketEdit(Reception $reception, array $data): Customer
+    private function resolveCustomerForTicketEdit(Reception $reception, array $data, bool $splitThisTicket = false): Customer
     {
         $current = Customer::query()->findOrFail((int) $reception->customer_id);
         $this->assertCustomerModelNotBlacklisted($current);
@@ -1598,6 +1631,20 @@ class ReceptionController extends Controller
             ]);
         }
 
+        $byPhone = $this->findCustomerByPhone($phone);
+        if ($byPhone && (int) $byPhone->id !== (int) $current->id) {
+            throw ValidationException::withMessages([
+                'customer_phone' => 'این موبایل متعلق به «'.$byPhone->displayName().'» است. ذخیره با نام اشتباه انجام نشد — موبایل را اصلاح کنید یا از پرونده همان مشتری ویرایش کنید.',
+            ]);
+        }
+
+        $nameChanged = mb_strtolower(trim((string) $current->name)) !== mb_strtolower($name);
+        $phoneChanged = $this->normalizePhone((string) $current->phone) !== $phone;
+        $otherTickets = Reception::query()
+            ->where('customer_id', $current->id)
+            ->where('id', '!=', $reception->id)
+            ->exists();
+
         $payload = [
             'name' => $name,
             'phone' => $phone,
@@ -1609,24 +1656,14 @@ class ReceptionController extends Controller
             'referral_source_id' => $data['referral_source_id'] ?? null,
         ];
 
-        $byPhone = $this->findCustomerByPhone($phone);
-
-        // موبایل متعلق به مشتری دیگری است → فقط همین قبض را به او وصل کن؛ نامش را ندزد.
-        if ($byPhone && (int) $byPhone->id !== (int) $current->id) {
-            $this->assertCustomerModelNotBlacklisted($byPhone);
-
-            return $byPhone;
+        // تغییر نام/موبایل روی مشتری چندقبضه بدون تأیید → خطا (نه ذخیره روی همه، نه ساخت بی‌صدا)
+        if ($otherTickets && ($nameChanged || $phoneChanged) && ! $splitThisTicket) {
+            throw ValidationException::withMessages([
+                'customer_name' => 'این مشتری چند قبض دارد. ذخیره نام/موبایل اینجا همه قبض‌ها را عوض می‌کند. برای تغییر همه از منوی مشتریان استفاده کنید؛ برای جدا کردن فقط همین قبض گزینه «جدا کردن فقط این قبض» را بزنید.',
+            ]);
         }
 
-        $nameChanged = mb_strtolower(trim((string) $current->name)) !== mb_strtolower($name);
-        $phoneChanged = $this->normalizePhone((string) $current->phone) !== $phone;
-        $otherTickets = Reception::query()
-            ->where('customer_id', $current->id)
-            ->where('id', '!=', $reception->id)
-            ->exists();
-
-        // تغییر هویت روی مشتری چندقبضه → پرونده جدید فقط برای همین قبض
-        if ($otherTickets && ($nameChanged || $phoneChanged)) {
+        if ($otherTickets && ($nameChanged || $phoneChanged) && $splitThisTicket) {
             return Customer::query()->create([
                 'name' => $name,
                 'phone' => $phone,
@@ -1639,7 +1676,7 @@ class ReceptionController extends Controller
             ]);
         }
 
-        // فقط همین قبض، یا بدون تغییر نام/موبایل → پرونده فعلی را به‌روز کن
+        // فقط همین قبض یا بدون تغییر هویت → پرونده فعلی همان صفحه
         $updates = array_filter($payload, fn ($v) => $v !== null && $v !== '');
         if ($updates !== []) {
             $current->update($updates);
@@ -1670,7 +1707,16 @@ class ReceptionController extends Controller
         if ($customerId) {
             $customer = Customer::findOrFail($customerId);
             $this->assertCustomerModelNotBlacklisted($customer);
-            $this->mergeCustomerPayload($customer, $payload, overwriteName: true);
+            if ($phone !== '') {
+                $owner = $this->findCustomerByPhone($phone);
+                if ($owner && (int) $owner->id !== (int) $customer->id) {
+                    throw ValidationException::withMessages([
+                        'customer_phone' => 'این موبایل متعلق به «'.$owner->displayName().'» است. ذخیره با نام اشتباه انجام نشد.',
+                    ]);
+                }
+            }
+            // پذیرش جدید با انتخاب موجود: فقط فیلدهای خالی را پر کن؛ نام را ندزد
+            $this->mergeCustomerPayload($customer, $payload, overwriteName: false);
 
             return $customer->fresh();
         }
@@ -1678,7 +1724,13 @@ class ReceptionController extends Controller
         $existing = $phone !== '' ? $this->findCustomerByPhone($phone) : null;
         if ($existing) {
             $this->assertCustomerModelNotBlacklisted($existing);
-            // موبایل مشترک/خانوادگی: نام موجود را با نام تایپ‌شده در پذیرش جدید بازنویسی نکن.
+            $typed = trim((string) ($payload['name'] ?? ''));
+            $existingName = mb_strtolower(trim((string) $existing->name));
+            if ($typed !== '' && $existingName !== '' && $existingName !== mb_strtolower($typed)) {
+                throw ValidationException::withMessages([
+                    'customer_name' => 'این موبایل برای «'.$existing->displayName().'» ثبت شده. برای استفاده از همان مشتری، نام را مطابق پرونده انتخاب کنید یا از پیشنهاد موبایل استفاده کنید.',
+                ]);
+            }
             $this->mergeCustomerPayload($existing, $payload, overwriteName: false);
 
             return $existing->fresh();
@@ -1719,13 +1771,18 @@ class ReceptionController extends Controller
                 $normalized = $this->normalizePhone((string) $value) ?: (string) $value;
                 $owner = $this->findCustomerByPhone($normalized);
                 if ($owner && (int) $owner->id !== (int) $customer->id) {
-                    continue;
+                    throw ValidationException::withMessages([
+                        'customer_phone' => 'این موبایل متعلق به «'.$owner->displayName().'» است. ذخیره با نام اشتباه انجام نشد.',
+                    ]);
                 }
                 $updates['phone'] = $normalized;
                 continue;
             }
 
-            $updates[$key] = $value;
+            $currentVal = $customer->{$key} ?? null;
+            if ($currentVal === null || $currentVal === '') {
+                $updates[$key] = $value;
+            }
         }
 
         if ($updates !== []) {
@@ -1733,23 +1790,26 @@ class ReceptionController extends Controller
         }
     }
 
+    /**
+     * تطبیق هویت با موبایل — فقط قالب‌های نرمال‌شده دقیق (بدون LIKE فازی).
+     */
     private function findCustomerByPhone(string $phone): ?Customer
     {
         if ($phone === '') {
             return null;
         }
 
-        return Customer::query()
-            ->where(function ($q) use ($phone) {
-                $q->where('phone', $phone)
-                    ->orWhere('phone', ltrim($phone, '0'))
-                    ->orWhere('phone', '0'.ltrim($phone, '0'));
+        $digits = ltrim($phone, '0');
+        $candidates = array_values(array_unique(array_filter([
+            $phone,
+            $digits,
+            '0'.$digits,
+            '98'.$digits,
+            '+98'.$digits,
+        ])));
 
-                $tail = substr($phone, -10);
-                if ($tail !== '') {
-                    $q->orWhere('phone', 'like', '%'.$tail);
-                }
-            })
+        return Customer::query()
+            ->whereIn('phone', $candidates)
             ->orderByDesc('id')
             ->first();
     }
