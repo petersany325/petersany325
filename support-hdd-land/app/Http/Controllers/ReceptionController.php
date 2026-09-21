@@ -639,6 +639,12 @@ class ReceptionController extends Controller
                 : $reception->pickup_phone,
         ])->save();
 
+        if ((int) $customer->id !== $previousCustomerId) {
+            Payment::query()
+                ->where('reception_id', $reception->id)
+                ->update(['customer_id' => $customer->id]);
+        }
+
         $reception->recalculateTotals();
         try {
             app(AccountingService::class)->syncReceptionRevenue($reception->fresh());
@@ -658,9 +664,6 @@ class ReceptionController extends Controller
         $flash = 'قبض ذخیره شد.';
         if ((int) $customer->id !== $previousCustomerId) {
             $flash .= ' این قبض از پرونده مشترک جدا شد؛ قبض‌های دیگر همان مشتری تغییر نکردند.';
-            Payment::query()
-                ->where('reception_id', $reception->id)
-                ->update(['customer_id' => $customer->id]);
         }
         if ($request->boolean('send_sms', true)) {
             $sms = $smsNotifications->sendOnTicketUpdated(
