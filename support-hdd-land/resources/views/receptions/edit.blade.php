@@ -17,18 +17,17 @@
     @method('PUT')
     <input type="hidden" name="customer_id" value="{{ old('customer_id', $c->id) }}">
 
-    <div class="panel" style="margin-bottom:10px;" id="edit-customer-panel"
-         data-suggest-url="{{ route('customers.suggest') }}">
+    <div class="panel" style="margin-bottom:10px;" id="edit-customer-panel">
         <h3 style="margin:0 0 4px;">مشتری</h3>
         <p class="muted" style="margin:0 0 8px;font-size:11.5px;">
-            اگر فقط نام همین قبض اشتباه است، همین‌جا اصلاح کنید — قبض‌های دیگر همان مشتری عوض نمی‌شوند.
-            برای تغییر نام روی <strong>همه</strong> قبض‌ها از منوی مشتریان / پرونده مشتری استفاده کنید.
+            ویرایش فقط روی <strong>همین قبض</strong> اعمال می‌شود. اگر موبایل متعلق به شخص دیگری باشد یا مشتری چند قبض داشته باشد، ذخیره نمی‌شود و خطا همین‌جا نمایش داده می‌شود.
+            برای تغییر نام روی <strong>همه</strong> قبض‌ها از منوی مشتریان استفاده کنید.
         </p>
         <div class="accept-row accept-row-3">
-            <div style="position:relative;">
+            <div>
                 <label>نام</label>
-                <input type="text" name="customer_name" id="edit-customer-name" value="{{ old('customer_name', $c->name) }}" required autocomplete="off" placeholder="نام را بنویسید — پیشنهاد از بانک…">
-                <div class="customer-pick-list" id="edit-customer-pick" hidden></div>
+                <input type="text" name="customer_name" id="edit-customer-name" value="{{ old('customer_name', $c->name) }}" required autocomplete="off">
+                @error('customer_name')<div class="field-error" style="color:#b91c1c;font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
             </div>
             <div>
                 <label>اسم مستعار</label>
@@ -46,6 +45,7 @@
             <div>
                 <label>موبایل</label>
                 <input type="text" name="customer_phone" id="edit-customer-phone" value="{{ old('customer_phone', $c->phone) }}" dir="ltr" style="text-align:left;" required data-ascii-en>
+                @error('customer_phone')<div class="field-error" style="color:#b91c1c;font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
             </div>
             <div>
                 <label>کد ملی</label>
@@ -67,6 +67,13 @@
             <div style="grid-column:1/-1;">
                 <label>آدرس</label>
                 <input type="text" name="address" value="{{ old('address', $c->address) }}">
+            </div>
+            <div style="grid-column:1/-1;margin-top:4px;">
+                <label style="display:flex;align-items:flex-start;gap:8px;font-weight:500;cursor:pointer;">
+                    <input type="checkbox" name="split_this_ticket" value="1" @checked(old('split_this_ticket')) style="margin-top:3px;">
+                    <span>جدا کردن فقط این قبض — اگر این مشتری چند قبض دارد و فقط نام/موبایل <strong>همین قبض</strong> باید عوض شود (قبض‌های دیگر دست نخورند).</span>
+                </label>
+                @error('split_this_ticket')<div class="field-error" style="color:#b91c1c;font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
             </div>
         </div>
     </div>
@@ -259,76 +266,3 @@
     </div>
 </form>
 @endsection
-
-@push('scripts')
-<script>
-(function () {
-    var panel = document.getElementById('edit-customer-panel');
-    if (!panel) return;
-    var url = panel.getAttribute('data-suggest-url') || '';
-    var nameInput = document.getElementById('edit-customer-name');
-    var phoneInput = document.getElementById('edit-customer-phone');
-    var idInput = panel.closest('form') && panel.closest('form').querySelector('input[name="customer_id"]');
-    var pick = document.getElementById('edit-customer-pick');
-    var timer = null;
-    var seq = 0;
-    function clearPick() { if (!pick) return; pick.innerHTML = ''; pick.hidden = true; }
-    function selectCustomer(c) {
-        if (!c) return;
-        if (idInput) idInput.value = c.id || '';
-        if (nameInput) nameInput.value = c.display_name || c.name || '';
-        if (phoneInput && c.phone) phoneInput.value = c.phone;
-        clearPick();
-    }
-    function render(list) {
-        if (!pick) return;
-        pick.innerHTML = '';
-        if (!list.length) {
-            pick.hidden = false;
-            var e = document.createElement('div');
-            e.className = 'customer-pick-empty';
-            e.textContent = 'نتیجه‌ای نیست.';
-            pick.appendChild(e);
-            return;
-        }
-        list.forEach(function (c) {
-            var btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'customer-pick-item';
-            var name = document.createElement('span');
-            name.className = 'customer-pick-name';
-            name.textContent = c.display_name || c.name || '—';
-            var meta = document.createElement('span');
-            meta.className = 'customer-pick-meta';
-            meta.textContent = [c.phone, c.visits != null ? (c.visits + ' قبض') : '', c.is_blacklisted ? 'لیست سیاه' : ''].filter(Boolean).join(' · ');
-            btn.appendChild(name);
-            btn.appendChild(meta);
-            btn.addEventListener('click', function () { selectCustomer(c); });
-            pick.appendChild(btn);
-        });
-        pick.hidden = false;
-    }
-    function run() {
-        var q = (nameInput.value || '').trim();
-        if (q.length < 1) { clearPick(); return; }
-        var s = ++seq;
-        fetch(url + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (s !== seq) return;
-                render((data && data.customers) || []);
-            })
-            .catch(function () {});
-    }
-    if (nameInput) {
-        nameInput.addEventListener('input', function () {
-            if (timer) clearTimeout(timer);
-            timer = setTimeout(run, 220);
-        });
-    }
-    document.addEventListener('click', function (e) {
-        if (pick && !pick.contains(e.target) && e.target !== nameInput) clearPick();
-    });
-})();
-</script>
-@endpush

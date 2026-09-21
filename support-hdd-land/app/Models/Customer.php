@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -83,6 +82,9 @@ class Customer extends Model
         return (int) app(\App\Services\CustomerDebtService::class)->totalOpen($this);
     }
 
+    /**
+     * تطبیق هویت با موبایل — فقط قالب‌های دقیق (بدون LIKE فازی).
+     */
     public static function findByPhone(?string $phone): ?self
     {
         $phone = User::normalizePhone($phone);
@@ -90,20 +92,17 @@ class Customer extends Model
             return null;
         }
 
-        $tail = substr($phone, -10);
+        $digits = ltrim($phone, '0');
+        $candidates = array_values(array_unique(array_filter([
+            $phone,
+            $digits,
+            '0'.$digits,
+            '98'.$digits,
+            '+98'.$digits,
+        ])));
 
         return static::query()
-            ->where(function (Builder $q) use ($phone, $tail) {
-                $q->where('phone', $phone)
-                    ->orWhere('phone', ltrim($phone, '0'))
-                    ->orWhere('phone', '0'.ltrim($phone, '0'))
-                    ->orWhere('phone', '98'.ltrim($phone, '0'))
-                    ->orWhere('phone', '+98'.ltrim($phone, '0'));
-
-                if ($tail !== '') {
-                    $q->orWhere('phone', 'like', '%'.$tail);
-                }
-            })
+            ->whereIn('phone', $candidates)
             ->orderByDesc('id')
             ->first();
     }
