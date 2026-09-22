@@ -6,13 +6,23 @@
 @section('content')
 @include('accounting._nav', [
     'accTitle' => 'تراز آزمایشی',
-    'accSub' => 'جمع بدهکار و بستانکار حساب‌ها',
+    'accSub' => ($mode ?? 'balance') === 'activity'
+        ? 'تراز گردش دوره — جمع بدهکار/بستانکار ردیف‌ها'
+        : 'تراز مانده تا تاریخ — هر حساب در ستون ماهیت خودش',
 ])
 
 <div class="acc-desk">
-    <form method="GET" action="{{ route('accounting.trial') }}" class="acc-period" style="margin-bottom:10px;">
-        @include('partials.jalali-date', ['name' => 'from', 'value' => $from])
-        <span class="acc-period-sep">تا</span>
+    <form method="GET" action="{{ route('accounting.trial') }}" class="acc-period" style="margin-bottom:10px;flex-wrap:wrap;">
+        <select name="mode">
+            <option value="balance" @selected(($mode ?? 'balance') === 'balance')>مانده تا تاریخ (استاندارد)</option>
+            <option value="activity" @selected(($mode ?? '') === 'activity')>گردش دوره</option>
+        </select>
+        @if(($mode ?? '') === 'activity')
+            @include('partials.jalali-date', ['name' => 'from', 'value' => $from])
+            <span class="acc-period-sep">تا</span>
+        @else
+            <span class="acc-period-sep">تا تاریخ</span>
+        @endif
         @include('partials.jalali-date', ['name' => 'to', 'value' => $to])
         <button class="btn btn-sm btn-primary" type="submit">اعمال</button>
     </form>
@@ -48,6 +58,11 @@
                 </tfoot>
             </table>
         </div>
+        @if($sumD !== $sumC)
+            <p class="alert alert-error" style="margin-top:10px;">تراز نامتوازن است (بدهکار ≠ بستانکار). اسناد را با «بازسازی» یا بررسی سند دستی کنترل کنید.</p>
+        @else
+            <p class="muted" style="margin-top:10px;">تراز متوازن است.</p>
+        @endif
     </section>
 </div>
 @endsection

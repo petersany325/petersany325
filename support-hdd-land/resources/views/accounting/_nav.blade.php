@@ -1,6 +1,6 @@
 @php
     $accTitle = $accTitle ?? 'حسابداری';
-    $accSub = $accSub ?? 'سیستم مالی دوطرفه تعمیرگاه';
+    $accSub = $accSub ?? 'سیستم مالی دوطرفه — دریافت از بدهکار مانده ۱۲۱۰ را کم می‌کند';
     $accShowPeriod = $accShowPeriod ?? false;
     $accNav = [
         ['route' => 'accounting.index', 'label' => 'میز کار', 'icon' => '⌂', 'tone' => 'teal', 'match' => 'accounting.index'],

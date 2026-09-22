@@ -22,7 +22,19 @@
                     —
                 @endif
             </div></div>
-            <div><span class="muted">منبع</span><div>{{ $entry->source_type }} #{{ $entry->source_id }}</div></div>
+            <div><span class="muted">منبع</span><div>
+                @php
+                    $src = match ($entry->source_type) {
+                        'payment' => 'پرداخت / دریافت',
+                        'reception_revenue' => 'شناسایی درآمد قبض',
+                        'reception_part' => 'مصرف قطعه',
+                        'manual' => 'سند دستی',
+                        'stock' => 'انبار',
+                        default => ($entry->source_type ?: '—'),
+                    };
+                @endphp
+                {{ $src }}@if($entry->source_id) #{{ $entry->source_id }}@endif
+            </div></div>
             <div><span class="muted">ثبت‌کننده</span><div>{{ $entry->creator?->name ?: 'سیستم' }}</div></div>
         </div>
         <div class="table-wrap">

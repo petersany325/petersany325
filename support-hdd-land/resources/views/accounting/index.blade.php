@@ -13,19 +13,19 @@
 <div class="acc-desk">
     <div class="acc-kpi-grid">
         <div class="acc-kpi tone-teal">
-            <span class="acc-kpi-label">خزانه دوره</span>
+            <span class="acc-kpi-label">مانده خزانه</span>
             <strong class="acc-kpi-value">{{ number_format($treasury) }}</strong>
-            <span class="acc-kpi-foot">صندوق {{ number_format($cash) }} · کارت {{ number_format($card) }}</span>
+            <span class="acc-kpi-foot">تا {{ jalali_date($to) }} — صندوق {{ number_format($cash) }} · کارت {{ number_format($card) }}</span>
         </div>
         <div class="acc-kpi tone-blue">
             <span class="acc-kpi-label">درآمد دوره</span>
             <strong class="acc-kpi-value">{{ number_format($incomeTotal) }}</strong>
-            <span class="acc-kpi-foot">خدمات + قطعات + پذیرش</span>
+            <span class="acc-kpi-foot">خدمات + قطعات + پذیرش · ورودی نقدی {{ number_format($cashIn ?? 0) }}</span>
         </div>
         <div class="acc-kpi tone-rose">
-            <span class="acc-kpi-label">بدهکاران</span>
+            <span class="acc-kpi-label">بدهکاران (۱۲۱۰)</span>
             <strong class="acc-kpi-value">{{ number_format($receivable) }}</strong>
-            <span class="acc-kpi-foot">مانده حساب مشتریان</span>
+            <span class="acc-kpi-foot">مانده حساب دریافتنی تا پایان بازه</span>
         </div>
         <div class="acc-kpi tone-amber">
             <span class="acc-kpi-label">سود ناخالص تقریبی</span>
