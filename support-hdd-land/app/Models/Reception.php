@@ -66,6 +66,17 @@ class Reception extends Model
         return $this->belongsTo(Partner::class);
     }
 
+    /** شماره قبض قابل‌نمایش در گزارش‌ها (ticket_no وگرنه receipt_no). */
+    public function ticketLabel(): string
+    {
+        $ticket = trim((string) $this->ticket_no);
+        if ($ticket !== '') {
+            return $ticket;
+        }
+
+        return trim((string) $this->receipt_no);
+    }
+
     public function partnerReferredTo(): BelongsTo
     {
         return $this->belongsTo(Partner::class, 'partner_referred_to_id');

@@ -12,7 +12,10 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Ensure ticket_label() exists even if helpers.php opcache is stale after overlay.
+        if (! function_exists('ticket_label')) {
+            require_once app_path('helpers_ticket.php');
+        }
     }
 
     public function boot(): void

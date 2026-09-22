@@ -591,7 +591,11 @@ class ReportController extends Controller
                     $c->paid_sum = $paid;
                     $c->debt_sum = max(0, $billed - $paid);
                     $c->recent_tickets = $c->receptions
-                        ->map(fn ($r) => ticket_label($r))
+                        ->map(function ($r) {
+                            $t = trim((string) ($r->ticket_no ?: ''));
+
+                            return $t !== '' ? $t : trim((string) ($r->receipt_no ?: ''));
+                        })
                         ->filter()
                         ->values()
                         ->all();
