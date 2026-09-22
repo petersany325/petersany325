@@ -9,14 +9,17 @@ use App\Models\JournalLine;
 use App\Models\Payment;
 use App\Models\Reception;
 use App\Services\AccountingService;
+use App\Services\CustomerDebtService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class AccountingController extends Controller
 {
-    public function __construct(private AccountingService $accounting)
-    {
+    public function __construct(
+        private AccountingService $accounting,
+        private CustomerDebtService $debts,
+    ) {
     }
 
     /** @return array{0:string,1:string} */
@@ -273,37 +276,104 @@ class AccountingController extends Controller
         $mode = (string) $request->get('mode', 'receipt'); // receipt|general
 
         $debtors = $this->debtorOptions();
-        $openTickets = Reception::query()
-            ->with('customer:id,name,phone')
-            ->whereColumn('total_amount', '>', 'paid_amount')
-            ->whereIn('status', ['delivered', 'ready', 'repairing', 'waiting_part', 'received', 'unrepairable'])
-            ->orderByDesc('id')
-            ->limit(200)
-            ->get()
-            ->filter(fn (Reception $r) => $r->remainingAmount() > 0)
-            ->values()
-            ->map(fn (Reception $r) => [
-                'id' => $r->id,
-                'customer_id' => $r->customer_id,
-                'ticket_no' => $r->ticket_no,
-                'remaining' => $r->remainingAmount(),
-                'label' => $r->ticket_no.' — مانده '.number_format($r->remainingAmount()).' تومان',
-            ]);
-
         $preCustomer = $preCustomerId ? Customer::find($preCustomerId) : null;
         $preBalance = $preCustomerId ? $this->accounting->customerReceivableBalance($preCustomerId) : 0;
+        $preDebt = $preCustomer
+            ? $this->ticketDebtPayload($this->debts->openTickets($preCustomer, 80), $preCustomer, $preBalance)
+            : $this->emptyTicketDebtPayload();
 
         return view('accounting.manual', [
             'accounts' => Account::where('is_active', true)->orderBy('sort_order')->orderBy('code')->get(),
             'debtors' => $debtors,
-            'openTickets' => $openTickets,
             'mode' => in_array($mode, ['receipt', 'general'], true) ? $mode : 'receipt',
             'preCustomerId' => $preCustomerId,
             'preReceptionId' => $preReceptionId,
             'preCustomer' => $preCustomer,
             'preBalance' => $preBalance,
+            'preDebt' => $preDebt,
+            'customerSuggestUrl' => route('customers.suggest'),
+            'debtTicketsUrl' => url('/accounting/manual/tickets'),
             'methods' => Payment::METHODS,
         ]);
+    }
+
+    /**
+     * JSON: جستجوی آنلاین مشتری/قبض مانده‌دار برای سند دستی دریافت از بدهکار.
+     * قبض تسویه‌شده (مانده صفر) برنمی‌گردد؛ قبض جزئی پرداخت‌شده با مبلغ پرداخت و مانده می‌آید.
+     */
+    public function searchDebtTickets(Request $request)
+    {
+        $customerId = $request->filled('customer_id') ? (int) $request->input('customer_id') : null;
+        $q = trim((string) $request->query('q', ''));
+        if (function_exists('normalize_receipt_search_query')) {
+            $q = normalize_receipt_search_query($q);
+        }
+
+        if ($customerId) {
+            $customer = Customer::query()->findOrFail($customerId);
+            $tickets = $this->debts->openTickets($customer, 80);
+            $ledger = $this->accounting->customerReceivableBalance($customerId);
+
+            return response()->json($this->ticketDebtPayload($tickets, $customer, $ledger));
+        }
+
+        if (mb_strlen($q) < 2) {
+            return response()->json($this->emptyTicketDebtPayload([
+                'message' => 'حداقل ۲ حرف از نام مشتری یا شماره قبض وارد کنید.',
+            ]));
+        }
+
+        $digits = preg_replace('/\D+/', '', $q) ?? '';
+        $qUpper = mb_strtoupper($q);
+
+        $rows = Reception::query()
+            ->with('customer:id,name,phone')
+            ->where('status', '!=', 'cancelled')
+            ->whereColumn('total_amount', '>', 'paid_amount')
+            ->where(function ($inner) use ($q, $qUpper, $digits) {
+                $inner->where('ticket_no', 'like', $q.'%')
+                    ->orWhere('receipt_no', 'like', $q.'%')
+                    ->orWhere('serial_number', 'like', $qUpper.'%')
+                    ->orWhereHas('customer', function ($c) use ($q, $digits) {
+                        $c->where('name', 'like', '%'.$q.'%');
+                        if (strlen($digits) >= 3) {
+                            $c->orWhere('phone', 'like', '%'.$digits.'%');
+                        }
+                    });
+            })
+            ->orderByDesc('id')
+            ->limit(40)
+            ->get()
+            ->filter(fn (Reception $r) => $r->remainingAmount() > 0)
+            ->values();
+
+        if ($rows->isEmpty()) {
+            return response()->json($this->emptyTicketDebtPayload([
+                'message' => 'قبض مانده‌داری با این جستجو پیدا نشد.',
+                'q' => $q,
+            ]));
+        }
+
+        // اگر همه نتایج یک مشتری باشند، خلاصه کامل همان مشتری را برگردان.
+        $customerIds = $rows->pluck('customer_id')->unique()->filter()->values();
+        if ($customerIds->count() === 1) {
+            $customer = Customer::query()->find((int) $customerIds->first());
+            if ($customer) {
+                $all = $this->debts->openTickets($customer, 80);
+                $ledger = $this->accounting->customerReceivableBalance((int) $customer->id);
+                $payload = $this->ticketDebtPayload($all, $customer, $ledger);
+                $payload['matched_reception_id'] = (int) ($rows->first()?->id ?? 0);
+                $payload['q'] = $q;
+
+                return response()->json($payload);
+            }
+        }
+
+        $payload = $this->ticketDebtPayload($rows, null, null);
+        $payload['q'] = $q;
+        $payload['message'] = 'چند مشتری پیدا شد — یکی از قبض‌ها را انتخاب کنید تا مشتری قفل شود.';
+
+        return response()->json($payload);
     }
 
     public function storeManual(Request $request)
@@ -351,9 +421,27 @@ class AccountingController extends Controller
             );
         });
 
+        $remainAfter = $reception
+            ? $reception->fresh()?->remainingAmount()
+            : null;
+        $msg = 'سند دریافت از بدهکار ثبت شد و از حساب مشتری کسر گردید.';
+        if ($reception) {
+            $ticket = $reception->ticket_no ?: $reception->receipt_no;
+            if ($remainAfter !== null && $remainAfter <= 0) {
+                $msg .= ' قبض '.$ticket.' کاملاً تسویه شد و از لیست مانده‌دار حذف می‌شود.';
+            } elseif ($remainAfter !== null) {
+                $msg .= ' قبض '.$ticket.' جزئی پرداخت شد؛ مانده '.number_format($remainAfter).' تومان هنوز در جستجو می‌آید.';
+            }
+        }
+
         return redirect()
-            ->route('accounting.show', $entry)
-            ->with('success', 'سند دریافت از بدهکار ثبت شد و از حساب مشتری کسر گردید.');
+            ->route('accounting.manual', [
+                'mode' => 'receipt',
+                'customer_id' => $customer->id,
+                'reception_id' => ($remainAfter !== null && $remainAfter > 0) ? $reception?->id : null,
+            ])
+            ->with('success', $msg)
+            ->with('journal_url', route('accounting.show', $entry));
     }
 
     private function storeGeneralManual(Request $request)
@@ -420,6 +508,107 @@ class AccountingController extends Controller
         $stats = $this->accounting->rebuildFromHistory();
 
         return back()->with('success', "بازسازی اسناد: درآمد {$stats['revenue']} / پرداخت {$stats['payments']} / قطعه {$stats['parts']}");
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Reception>  $tickets
+     * @return array{
+     *   ok:bool,
+     *   count:int,
+     *   total_remaining:int,
+     *   total_paid:int,
+     *   numbers:list<string>,
+     *   summary:string,
+     *   tickets:list<array<string,mixed>>,
+     *   customer:?array{id:int,name:string,phone:?string},
+     *   ledger_balance:?int,
+     *   matched_reception_id:?int,
+     *   message?:string,
+     *   q?:string
+     * }
+     */
+    private function ticketDebtPayload($tickets, ?Customer $customer, ?int $ledgerBalance): array
+    {
+        $mapped = $tickets->map(function (Reception $r) {
+            $paid = (int) $r->paid_amount;
+            $total = (int) $r->total_amount;
+            $remaining = $r->remainingAmount();
+            $no = $r->ticket_no ?: $r->receipt_no ?: ('#'.$r->id);
+            if ($paid > 0) {
+                $label = $no.' — پرداخت‌شده '.number_format($paid)
+                    .' · مانده '.number_format($remaining)
+                    .' از '.number_format($total).' تومان';
+            } else {
+                $label = $no.' — مانده '.number_format($remaining).' تومان';
+            }
+
+            return [
+                'id' => $r->id,
+                'customer_id' => $r->customer_id,
+                'customer_name' => $r->customer?->name,
+                'customer_phone' => $r->customer?->phone,
+                'ticket_no' => $r->ticket_no,
+                'receipt_no' => $r->receipt_no,
+                'total' => $total,
+                'paid' => $paid,
+                'remaining' => $remaining,
+                'label' => $label,
+            ];
+        })->values();
+
+        $numbers = $mapped
+            ->map(fn ($t) => $t['ticket_no'] ?: $t['receipt_no'])
+            ->filter()
+            ->values()
+            ->all();
+        $count = $mapped->count();
+        $totalRemaining = (int) $mapped->sum('remaining');
+        $totalPaid = (int) $mapped->sum('paid');
+
+        if ($count === 0) {
+            $summary = 'قبض مانده‌داری برای این مشتری نیست.';
+        } else {
+            $summary = $count.' قبض مانده‌دار'
+                .' ('.implode('، ', $numbers).')'
+                .' — جمع مانده '.number_format($totalRemaining).' تومان';
+            if ($totalPaid > 0) {
+                $summary .= ' · تا الان پرداخت‌شده روی این قبض‌ها: '.number_format($totalPaid).' تومان';
+            }
+        }
+
+        return [
+            'ok' => true,
+            'count' => $count,
+            'total_remaining' => $totalRemaining,
+            'total_paid' => $totalPaid,
+            'numbers' => $numbers,
+            'summary' => $summary,
+            'tickets' => $mapped->all(),
+            'customer' => $customer ? [
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'phone' => $customer->phone,
+            ] : null,
+            'ledger_balance' => $ledgerBalance,
+            'matched_reception_id' => null,
+        ];
+    }
+
+    /** @param  array<string,mixed>  $extra */
+    private function emptyTicketDebtPayload(array $extra = []): array
+    {
+        return array_merge([
+            'ok' => true,
+            'count' => 0,
+            'total_remaining' => 0,
+            'total_paid' => 0,
+            'numbers' => [],
+            'summary' => 'هنوز مشتری یا قبض انتخاب نشده.',
+            'tickets' => [],
+            'customer' => null,
+            'ledger_balance' => null,
+            'matched_reception_id' => null,
+        ], $extra);
     }
 
     /** @return list<array{id:int,name:string,phone:?string,balance:int}> */
