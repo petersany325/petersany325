@@ -35,6 +35,7 @@
                 <tr>
                     <th>تاریخ</th>
                     <th>سند</th>
+                    <th>شماره قبض</th>
                     <th>شرح</th>
                     <th>مشتری</th>
                     <th>بدهکار</th>
@@ -44,7 +45,7 @@
                 </thead>
                 <tbody>
                 <tr style="background:#f8fafc;">
-                    <td colspan="4"><strong>مانده ابتدای دوره</strong></td>
+                    <td colspan="5"><strong>مانده ابتدای دوره</strong></td>
                     <td class="acc-num">—</td>
                     <td class="acc-num">—</td>
                     <td class="acc-num"><strong>{{ number_format($opening ?? 0) }}</strong></td>
@@ -58,6 +59,7 @@
                                 <a class="acc-link" href="{{ route('accounting.show', $line->entry) }}">{{ $line->entry->entry_no }}</a>
                             @endif
                         </td>
+                        <td>@include('partials.ticket-cell', ['reception' => $line->entry?->reception])</td>
                         <td>{{ $line->memo ?: ($line->entry?->description ?: '—') }}</td>
                         <td>{{ $line->entry?->customer?->name ?: '—' }}</td>
                         <td class="acc-num">{{ $line->debit ? number_format($line->debit) : '—' }}</td>
@@ -65,7 +67,7 @@
                         <td class="acc-num">{{ number_format($row['balance']) }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="7">ردیفی در این بازه نیست.</td></tr>
+                    <tr><td colspan="8">ردیفی در این بازه نیست.</td></tr>
                 @endforelse
                 </tbody>
             </table>

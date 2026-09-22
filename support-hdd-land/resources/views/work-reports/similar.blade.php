@@ -9,7 +9,7 @@
     <p class="lead">ایراد/مدل مشابه با قبض‌های قبلی — برای استفاده از تجربیات گذشته</p>
     <div class="table-wrap">
         <table class="data">
-            <thead><tr><th>تاریخ</th><th>قبض</th><th>مدل</th><th>نویسنده</th><th>شرح</th></tr></thead>
+            <thead><tr><th>تاریخ</th><th>شماره قبض</th><th>مدل</th><th>نویسنده</th><th>شرح</th></tr></thead>
             <tbody>
             @forelse($similar as $r)
                 <tr>

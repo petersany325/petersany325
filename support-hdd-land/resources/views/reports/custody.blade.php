@@ -83,7 +83,7 @@
         <h3 style="margin-top:0;">ارجاع‌های در انتظار تأیید</h3>
         <div class="table-wrap">
             <table class="compact-table">
-                <thead><tr><th>قبض</th><th>سریال</th><th>نوع</th><th>به</th></tr></thead>
+                <thead><tr><th>شماره قبض</th><th>سریال</th><th>نوع</th><th>به</th></tr></thead>
                 <tbody>
                 @forelse($pendingRows as $h)
                     <tr>
@@ -105,7 +105,7 @@
     <h3 style="margin-top:0;">هارد دیسک‌های دست تعمیر (فعلی)</h3>
     <div class="table-wrap">
         <table class="compact-table">
-            <thead><tr><th>قبض</th><th>مشتری</th><th>تعمیرکار</th><th>وضعیت</th><th>سریال</th></tr></thead>
+            <thead><tr><th>شماره قبض</th><th>مشتری</th><th>تعمیرکار</th><th>وضعیت</th><th>سریال</th></tr></thead>
             <tbody>
             @forelse($inHand as $row)
                 <tr>
@@ -128,7 +128,7 @@
     <h3 style="margin-top:0;">تاریخچه ارجاع دوره</h3>
     <div class="table-wrap">
         <table class="compact-table">
-            <thead><tr><th>قبض</th><th>سریال</th><th>نوع</th><th>وضعیت</th><th>تعمیرکار</th><th>زمان</th></tr></thead>
+            <thead><tr><th>شماره قبض</th><th>سریال</th><th>نوع</th><th>وضعیت</th><th>تعمیرکار</th><th>زمان</th></tr></thead>
             <tbody>
             @foreach($historyRows as $h)
                 <tr>

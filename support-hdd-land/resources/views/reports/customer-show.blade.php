@@ -62,7 +62,7 @@
         <table class="compact-table">
             <thead>
             <tr>
-                <th>قبض</th>
+                <th>شماره قبض</th>
                 <th>شروع</th>
                 <th>کالا / سریال</th>
                 <th>تعمیرکار</th>
@@ -77,7 +77,7 @@
             <tbody>
             @forelse($receptions as $r)
                 <tr>
-                    <td><a href="{{ route('receptions.show', $r) }}">{{ $r->ticket_no }}</a></td>
+                    <td>@include('partials.ticket-cell', ['reception' => $r])</td>
                     <td>{{ jalali_like($r->received_at ?: $r->created_at) }}</td>
                     <td>
                         {{ $r->product_name ?: '—' }}
@@ -104,12 +104,12 @@
         <h3 style="margin-top:0;">پرداخت‌ها</h3>
         <div class="table-wrap">
             <table class="compact-table">
-                <thead><tr><th>زمان</th><th>قبض</th><th>نوع</th><th>روش</th><th>مبلغ</th></tr></thead>
+                <thead><tr><th>زمان</th><th>شماره قبض</th><th>نوع</th><th>روش</th><th>مبلغ</th></tr></thead>
                 <tbody>
                 @forelse($payments as $p)
                     <tr>
                         <td>{{ jalali_like($p->paid_at) }}</td>
-                        <td>{{ $p->reception?->ticket_no ?: '—' }}</td>
+                        <td>@include('partials.ticket-cell', ['reception' => $p->reception])</td>
                         <td>{{ $p->typeLabel() }}</td>
                         <td>{{ $p->methodLabel() }}</td>
                         <td>{{ toman((int) $p->amount) }}</td>
@@ -125,11 +125,12 @@
         <h3 style="margin-top:0;">پیام‌ها و پیامک</h3>
         <div class="table-wrap">
             <table class="compact-table">
-                <thead><tr><th>زمان</th><th>نوع</th><th>متن</th></tr></thead>
+                <thead><tr><th>زمان</th><th>شماره قبض</th><th>نوع</th><th>متن</th></tr></thead>
                 <tbody>
                 @foreach($messages as $m)
                     <tr>
                         <td>{{ jalali_like($m->created_at) }}</td>
+                        <td>@include('partials.ticket-cell', ['reception' => $m->reception])</td>
                         <td>پیام کارتابل ({{ $m->priorityLabel() }})</td>
                         <td>{{ \Illuminate\Support\Str::limit($m->body, 90) }}</td>
                     </tr>
@@ -137,12 +138,13 @@
                 @foreach($smsLogs as $s)
                     <tr>
                         <td>{{ jalali_like($s->created_at) }}</td>
+                        <td>@include('partials.ticket-cell', ['reception' => $s->reception])</td>
                         <td>SMS {{ $s->ok ? 'موفق' : 'ناموفق' }}</td>
                         <td>{{ \Illuminate\Support\Str::limit($s->message, 90) }}</td>
                     </tr>
                 @endforeach
                 @if($messages->isEmpty() && $smsLogs->isEmpty())
-                    <tr><td colspan="3">پیام/پیامکی نیست.</td></tr>
+                    <tr><td colspan="4">پیام/پیامکی نیست.</td></tr>
                 @endif
                 </tbody>
             </table>

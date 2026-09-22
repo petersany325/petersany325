@@ -82,7 +82,7 @@
     <h3 style="margin-top:10px;font-size:12.5px;">تاریخچه قبض‌ها</h3>
     <div class="table-wrap">
         <table class="data">
-            <thead><tr><th>شماره</th><th>کالا</th><th>وضعیت</th><th>تسویه</th><th>مانده</th><th>تاریخ</th><th></th></tr></thead>
+            <thead><tr><th>شماره قبض</th><th>کالا</th><th>وضعیت</th><th>تسویه</th><th>مانده</th><th>تاریخ</th><th></th></tr></thead>
             <tbody>
             @forelse($customer->receptions as $item)
                 @php
@@ -90,7 +90,7 @@
                     $fin = $item->financeStatus();
                 @endphp
                 <tr>
-                    <td><a href="{{ route('receptions.show', $item) }}">{{ $item->ticket_no }}</a></td>
+                    <td>@include('partials.ticket-cell', ['reception' => $item])</td>
                     <td>{{ $item->product_name }}</td>
                     <td>
                         <span class="badge badge-{{ $item->status }}">{{ $item->statusLabel() }}</span>

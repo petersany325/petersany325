@@ -15,7 +15,7 @@
 <button class="no-print" onclick="window.print()">چاپ</button>
 <h2>گزارش شرح کارها @if($q) — جستجو: {{ $q }}@endif</h2>
 <table>
-    <thead><tr><th>تاریخ</th><th>قبض</th><th>نویسنده</th><th>سطح</th><th>خلاصه</th><th>جزئیات</th></tr></thead>
+    <thead><tr><th>تاریخ</th><th>شماره قبض</th><th>نویسنده</th><th>سطح</th><th>خلاصه</th><th>جزئیات</th></tr></thead>
     <tbody>
     @foreach($reports as $r)
         <tr>

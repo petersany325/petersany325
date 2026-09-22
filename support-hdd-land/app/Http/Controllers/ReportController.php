@@ -568,13 +568,18 @@ class ReportController extends Controller
         if ($q !== '') {
             $searchResults = Customer::query()
                 ->with('referralSource')
+                ->with(['receptions' => fn ($r) => $r->latest('id')->limit(3)->select('id', 'customer_id', 'ticket_no', 'receipt_no')])
                 ->withCount('receptions')
                 ->withSum('receptions', 'total_amount')
                 ->withSum('receptions', 'paid_amount')
                 ->where(function ($w) use ($q) {
                     $w->where('name', 'like', "%{$q}%")
                         ->orWhere('phone', 'like', "%{$q}%")
-                        ->orWhere('national_code', 'like', "%{$q}%");
+                        ->orWhere('national_code', 'like', "%{$q}%")
+                        ->orWhereHas('receptions', function ($r) use ($q) {
+                            $r->where('ticket_no', 'like', "%{$q}%")
+                                ->orWhere('receipt_no', 'like', "%{$q}%");
+                        });
                 })
                 ->orderBy('name')
                 ->limit(40)
@@ -585,6 +590,11 @@ class ReportController extends Controller
                     $c->billed_sum = $billed;
                     $c->paid_sum = $paid;
                     $c->debt_sum = max(0, $billed - $paid);
+                    $c->recent_tickets = $c->receptions
+                        ->map(fn ($r) => ticket_label($r))
+                        ->filter()
+                        ->values()
+                        ->all();
 
                     return $c;
                 });
@@ -684,6 +694,7 @@ class ReportController extends Controller
             ->get();
 
         $smsLogs = SmsLog::query()
+            ->with('reception')
             ->where('customer_id', $customer->id)
             ->latest('id')
             ->limit(20)

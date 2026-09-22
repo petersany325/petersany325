@@ -57,7 +57,7 @@
         <table class="compact-table">
             <thead>
             <tr>
-                <th>قبض</th>
+                <th>شماره قبض</th>
                 <th>مشتری</th>
                 <th>شروع</th>
                 <th>وضعیت</th>
@@ -92,7 +92,7 @@
         <h3 style="margin-top:0;">هاردهای دست تعمیر (الان)</h3>
         <div class="table-wrap">
             <table class="compact-table">
-                <thead><tr><th>قبض</th><th>مشتری</th><th>سریال</th><th>وضعیت</th></tr></thead>
+                <thead><tr><th>شماره قبض</th><th>مشتری</th><th>سریال</th><th>وضعیت</th></tr></thead>
                 <tbody>
                 @forelse($inHand as $r)
                     <tr>

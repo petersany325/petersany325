@@ -62,7 +62,7 @@ class InstallmentReportController extends Controller
         $totals['remain'] = max(0, $totals['scheduled'] - $totals['paid']);
 
         $payments = InstallmentPayment::query()
-            ->with(['plan.customer', 'item'])
+            ->with(['plan.customer', 'plan.reception', 'item'])
             ->when($customerId > 0, fn ($q) => $q->whereHas('plan', fn ($p) => $p->where('customer_id', $customerId)))
             ->when($from, fn ($q) => $q->whereDate('paid_at', '>=', $from))
             ->when($to, fn ($q) => $q->whereDate('paid_at', '<=', $to))
