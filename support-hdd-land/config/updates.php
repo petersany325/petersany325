@@ -8,7 +8,7 @@ return [
     | پس از نصب موفق آپدیت، نسخه واقعی در storage/app/installed_version.json
     | ذخیره می‌شود و بر این مقدار اولویت دارد.
     */
-    'version' => env('APP_UPDATE_VERSION', '1.3.15'),
+    'version' => env('APP_UPDATE_VERSION', '1.3.17'),
 
     'channel' => env('APP_UPDATE_CHANNEL', 'stable'),
 
