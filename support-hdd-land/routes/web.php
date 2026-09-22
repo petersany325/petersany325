@@ -394,6 +394,18 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/technicians/{technician}', [ReportController::class, 'technicianShow'])
         ->middleware(EnsurePermission::class.':reports.technicians')
         ->name('reports.technicians.show');
+    Route::get('reports/staff-monthly', [\App\Http\Controllers\StaffMonthlyReportController::class, 'index'])
+        ->middleware(EnsurePermission::class.':reports.staff_monthly')
+        ->name('reports.staff-monthly');
+    Route::post('reports/staff-monthly/notify-all', [\App\Http\Controllers\StaffMonthlyReportController::class, 'notifyAll'])
+        ->middleware(EnsurePermission::class.':reports.staff_monthly')
+        ->name('reports.staff-monthly.notify-all');
+    Route::get('reports/staff-monthly/{user}', [\App\Http\Controllers\StaffMonthlyReportController::class, 'show'])
+        ->middleware(EnsurePermission::class.':reports.staff_monthly')
+        ->name('reports.staff-monthly.show');
+    Route::post('reports/staff-monthly/{user}/notify', [\App\Http\Controllers\StaffMonthlyReportController::class, 'notify'])
+        ->middleware(EnsurePermission::class.':reports.staff_monthly')
+        ->name('reports.staff-monthly.notify');
     Route::get('reports/customers', [ReportController::class, 'customers'])
         ->middleware(EnsurePermission::class.':reports.customers')
         ->name('reports.customers');
