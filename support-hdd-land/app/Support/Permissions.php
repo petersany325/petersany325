@@ -27,6 +27,7 @@ class Permissions
         'reports.custody' => 'گزارش ارجاع / محل دستگاه',
         'reports.payments' => 'گزارش صندوق و دریافت‌ها',
         'reports.technicians' => 'گزارش عملکرد تعمیرکاران',
+        'reports.staff_monthly' => 'گزارش ماهانه کارکنان (مدیر)',
         'reports.customers' => 'گزارش کاربران',
         'reports.parts' => 'گزارش کالای خرج‌شده',
         'reports.sms' => 'گزارش پیامک',
