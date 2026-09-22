@@ -292,7 +292,7 @@ class AccountingController extends Controller
             'preBalance' => $preBalance,
             'preDebt' => $preDebt,
             'customerSuggestUrl' => route('customers.suggest'),
-            'debtTicketsUrl' => route('accounting.manual.tickets'),
+            'debtTicketsUrl' => url('/accounting/manual/tickets'),
             'methods' => Payment::METHODS,
         ]);
     }
