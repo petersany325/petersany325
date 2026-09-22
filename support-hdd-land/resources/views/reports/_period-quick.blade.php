@@ -1,6 +1,10 @@
 @php
     $periodLabels = \App\Support\ReportSettings::periodLabels();
-    $quick = ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 'this_year', 'last_30'];
+    // Only show periods that ReportSettings actually defines (labels + jalali_period_range).
+    $quick = array_values(array_filter(
+        ['today', 'yesterday', 'this_week', 'last_week', 'this_month', 'last_month', 'this_year', 'last_30'],
+        fn ($key) => isset($periodLabels[$key])
+    ));
 @endphp
 <div class="actions no-print" style="margin:0 0 10px;flex-wrap:wrap;">
     @foreach($quick as $key)
