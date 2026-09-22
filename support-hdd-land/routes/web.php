@@ -440,6 +440,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/trial-balance', [AccountingController::class, 'trialBalance'])->name('trial');
         Route::get('/receivables', [AccountingController::class, 'receivables'])->name('receivables');
         Route::get('/manual', [AccountingController::class, 'manualForm'])->name('manual');
+        Route::get('/manual/tickets', [AccountingController::class, 'searchDebtTickets'])->name('manual.tickets');
         Route::post('/manual', [AccountingController::class, 'storeManual'])->name('manual.store');
         Route::post('/rebuild', [AccountingController::class, 'rebuild'])->name('rebuild');
     });

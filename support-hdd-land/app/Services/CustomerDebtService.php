@@ -25,6 +25,7 @@ class CustomerDebtService
     public function openTickets(Customer $customer, int $limit = 50): Collection
     {
         return $customer->receptions()
+            ->with(['customer:id,name,phone'])
             ->withCount('parts')
             ->where('status', '!=', 'cancelled')
             ->whereColumn('total_amount', '>', 'paid_amount')

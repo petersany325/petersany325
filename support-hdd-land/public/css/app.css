@@ -1318,6 +1318,7 @@ html[data-ui-mode="mobile"] .staff-drawer:not([hidden]) .staff-tab-more{color:#f
 .acc-panel{border:1px solid #c5ccd6;border-radius:3px;background:#fff;padding:10px}
 .acc-panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .acc-panel-head h3{margin:0;font-size:13px}
+.acc-debt-summary{border:1px solid #c5ccd6;border-radius:3px;background:linear-gradient(180deg,#f8fffc,#eef8f5);padding:10px 12px;font-size:12.5px;line-height:1.7;min-height:42px}
 .acc-num{font-variant-numeric:tabular-nums;font-weight:700}
 .acc-link{font-weight:700}
 @media (max-width:900px){.acc-panels{grid-template-columns:1fr}}

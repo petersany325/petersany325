@@ -11,7 +11,10 @@
 
 @php
     $mode = old('mode', $mode ?? 'receipt');
-    $ticketJson = ($openTickets ?? collect())->values()->toJson(JSON_UNESCAPED_UNICODE);
+    $preDebtJson = json_encode($preDebt ?? [
+        'ok' => true, 'count' => 0, 'tickets' => [], 'summary' => '', 'numbers' => [],
+        'total_remaining' => 0, 'total_paid' => 0, 'customer' => null, 'ledger_balance' => null,
+    ], JSON_UNESCAPED_UNICODE);
 @endphp
 
 <div class="acc-desk">
@@ -28,56 +31,70 @@
             <a class="btn btn-ghost" href="{{ route('accounting.receivables') }}">فهرست بدهکاران</a>
         </div>
         <p class="muted" style="margin:10px 0 0;font-size:12px;line-height:1.7;">
-            طبق حسابداری دوطرفه: وقتی مشتری بدهکار پول می‌دهد،
-            <strong>صندوق/بانک بدهکار</strong> و <strong>حساب دریافتنی (۱۲۱۰) بستانکار</strong> می‌شود تا مانده همان شخص کم شود.
-            اگر قبض انتخاب شود، پرداخت روی قبض هم ثبت می‌گردد.
+            مشتری یا شماره قبض را آنلاین جستجو کنید. قبض‌های مانده‌دار با شماره نشان داده می‌شوند؛
+            بعد از تسویه کامل از لیست حذف می‌شوند و اگر بخشی پرداخت شده باشد،
+            «پرداخت‌شده / مانده» تا صفر شدن نمایش داده می‌شود.
         </p>
     </section>
+
+    @if(session('success'))
+        <div class="alert alert-success">
+            {{ session('success') }}
+            @if(session('journal_url'))
+                — <a href="{{ session('journal_url') }}">مشاهده سند</a>
+            @endif
+        </div>
+    @endif
 
     @if($errors->any())
         <div class="alert alert-error">{{ $errors->first() }}</div>
     @endif
 
     @if($mode === 'receipt')
-        <section class="acc-panel">
+        <section class="acc-panel" id="acc-receipt-desk"
+                 data-customers-url="{{ $customerSuggestUrl }}"
+                 data-tickets-url="{{ $debtTicketsUrl }}">
             <header class="acc-panel-head"><h3>ثبت دریافت از بدهکار</h3></header>
             <form method="POST" action="{{ route('accounting.manual.store') }}" id="acc-receipt-form">
                 @csrf
                 <input type="hidden" name="mode" value="receipt">
+                <input type="hidden" name="customer_id" id="acc-customer-id"
+                       value="{{ old('customer_id', $preCustomerId) }}" required>
 
-                <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
-                    <div>
-                        <label>مشتری بدهکار *</label>
-                        <select name="customer_id" id="acc-customer" required>
-                            <option value="">— انتخاب مشتری —</option>
-                            @foreach($debtors as $d)
-                                <option value="{{ $d['id'] }}"
-                                    data-balance="{{ $d['balance'] }}"
-                                    @selected((string) old('customer_id', $preCustomerId) === (string) $d['id'])>
-                                    {{ $d['name'] }}
-                                    @if($d['phone']) — {{ $d['phone'] }} @endif
-                                    (مانده {{ number_format($d['balance']) }})
-                                </option>
-                            @endforeach
-                            @if($preCustomer && collect($debtors)->where('id', $preCustomer->id)->isEmpty())
-                                <option value="{{ $preCustomer->id }}" selected data-balance="{{ $preBalance }}">
-                                    {{ $preCustomer->name }} @if($preCustomer->phone) — {{ $preCustomer->phone }} @endif
-                                    (مانده {{ number_format($preBalance) }})
-                                </option>
-                            @endif
-                        </select>
+                <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
+                    <div style="position:relative;">
+                        <label>جستجوی مشتری *</label>
+                        <input type="search" id="acc-customer-q" autocomplete="off"
+                               value="{{ old('customer_label', $preCustomer?->name) }}"
+                               placeholder="نام یا موبایل مشتری…" required>
+                        <div class="customer-pick-list" id="acc-customer-pick" hidden></div>
                         <p class="muted" id="acc-balance-hint" style="margin:6px 0 0;font-size:11.5px;">
                             @if($preBalance)
                                 مانده دفتر ۱۲۱۰ این مشتری: {{ number_format($preBalance) }} تومان
+                            @elseif($preCustomer)
+                                مشتری انتخاب شد — در حال بارگذاری قبض‌های مانده‌دار…
                             @endif
                         </p>
                     </div>
                     <div>
-                        <label>قبض مرتبط (اختیاری)</label>
-                        <select name="reception_id" id="acc-reception">
+                        <label>جستجوی قبض آنلاین</label>
+                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <input type="search" id="acc-ticket-q" autocomplete="off" dir="ltr"
+                                   style="flex:1;min-width:140px;text-align:left;"
+                                   placeholder="SH-… / شماره قبض / سریال">
+                            <button type="button" class="btn btn-secondary" id="acc-ticket-search-btn">جستجو</button>
+                        </div>
+                        <p class="muted" style="margin:6px 0 0;font-size:11.5px;">مستقیم از دیتابیس؛ فقط قبض‌های مانده‌دار.</p>
+                    </div>
+                    <div style="grid-column:1/-1;">
+                        <label>قبض‌های مانده‌دار</label>
+                        <div id="acc-ticket-summary" class="acc-debt-summary">
+                            {{ $preDebt['summary'] ?? 'هنوز مشتری یا قبض انتخاب نشده.' }}
+                        </div>
+                        <select name="reception_id" id="acc-reception" style="margin-top:8px;">
                             <option value="">— بدون قبض (فقط دفتر مشتری) —</option>
                         </select>
-                        <p class="muted" style="margin:6px 0 0;font-size:11.5px;">با انتخاب قبض، مانده همان قبض هم تسویه می‌شود.</p>
+                        <p class="muted" id="acc-ticket-detail" style="margin:6px 0 0;font-size:11.5px;"></p>
                     </div>
                     <div>
                         <label>مبلغ دریافتی (تومان) *</label>
@@ -181,52 +198,249 @@
 </div>
 
 @if($mode === 'receipt')
+@push('scripts')
 <script>
 (function () {
-    const tickets = {!! $ticketJson !!};
-    const customerEl = document.getElementById('acc-customer');
-    const receptionEl = document.getElementById('acc-reception');
-    const amountEl = document.getElementById('acc-amount');
-    const hintEl = document.getElementById('acc-balance-hint');
-    const preReception = @json(old('reception_id', $preReceptionId));
+    var desk = document.getElementById('acc-receipt-desk');
+    if (!desk) return;
+    var customersUrl = desk.getAttribute('data-customers-url');
+    var ticketsUrl = desk.getAttribute('data-tickets-url');
+    var customerIdEl = document.getElementById('acc-customer-id');
+    var customerQ = document.getElementById('acc-customer-q');
+    var pickList = document.getElementById('acc-customer-pick');
+    var ticketQ = document.getElementById('acc-ticket-q');
+    var ticketSearchBtn = document.getElementById('acc-ticket-search-btn');
+    var receptionEl = document.getElementById('acc-reception');
+    var summaryEl = document.getElementById('acc-ticket-summary');
+    var detailEl = document.getElementById('acc-ticket-detail');
+    var amountEl = document.getElementById('acc-amount');
+    var hintEl = document.getElementById('acc-balance-hint');
+    var preReception = @json(old('reception_id', $preReceptionId));
+    var initialDebt = {!! $preDebtJson !!};
+    var ticketsCache = [];
+    var nameTimer = null;
+    var ticketTimer = null;
+    var nameSeq = 0;
 
     function fmt(n) {
-        try { return Number(n).toLocaleString('en-US'); } catch (e) { return String(n); }
+        try { return Number(n || 0).toLocaleString('en-US'); } catch (e) { return String(n); }
     }
 
-    function refreshTickets() {
-        const cid = customerEl.value;
-        const bal = customerEl.selectedOptions[0]?.getAttribute('data-balance');
-        if (hintEl) {
-            hintEl.textContent = bal
-                ? ('مانده دفتر ۱۲۱۰ این مشتری: ' + fmt(bal) + ' تومان')
-                : '';
+    function clearPick() {
+        if (!pickList) return;
+        pickList.innerHTML = '';
+        pickList.hidden = true;
+    }
+
+    function setHint(text) {
+        if (hintEl) hintEl.textContent = text || '';
+    }
+
+    function setSummary(text) {
+        if (summaryEl) summaryEl.textContent = text || '';
+    }
+
+    function applyDebtPayload(data, preferReceptionId) {
+        data = data || {};
+        ticketsCache = data.tickets || [];
+        setSummary(data.summary || 'قبض مانده‌داری نیست.');
+        if (data.customer && data.customer.id) {
+            customerIdEl.value = data.customer.id;
+            if (customerQ && (!customerQ.value || data.customer.name)) {
+                customerQ.value = data.customer.name + (data.customer.phone ? (' — ' + data.customer.phone) : '');
+            }
         }
-        const keep = receptionEl.value || preReception || '';
+        if (typeof data.ledger_balance === 'number' && data.ledger_balance !== null) {
+            setHint('مانده دفتر ۱۲۱۰ این مشتری: ' + fmt(data.ledger_balance) + ' تومان');
+        } else if (data.customer) {
+            setHint('مشتری انتخاب شد — ' + (data.count || 0) + ' قبض مانده‌دار');
+        }
+
+        var keep = preferReceptionId || data.matched_reception_id || receptionEl.value || preReception || '';
         receptionEl.innerHTML = '<option value="">— بدون قبض (فقط دفتر مشتری) —</option>';
-        tickets.filter(t => String(t.customer_id) === String(cid)).forEach(t => {
-            const opt = document.createElement('option');
+        ticketsCache.forEach(function (t) {
+            var opt = document.createElement('option');
             opt.value = t.id;
             opt.textContent = t.label;
             opt.dataset.remaining = t.remaining;
+            opt.dataset.paid = t.paid;
+            opt.dataset.total = t.total;
+            opt.dataset.ticket = t.ticket_no || t.receipt_no || '';
+            opt.dataset.customerId = t.customer_id || '';
             if (String(keep) === String(t.id)) opt.selected = true;
             receptionEl.appendChild(opt);
         });
-        maybeFillAmount();
+        updateTicketDetail();
+        maybeFillAmount(true);
     }
 
-    function maybeFillAmount() {
-        const opt = receptionEl.selectedOptions[0];
-        const rem = opt && opt.dataset.remaining ? parseInt(opt.dataset.remaining, 10) : 0;
-        if (rem > 0 && amountEl && !amountEl.value) {
+    function updateTicketDetail() {
+        var opt = receptionEl.selectedOptions[0];
+        if (!detailEl) return;
+        if (!opt || !opt.value) {
+            detailEl.textContent = ticketsCache.length
+                ? 'یک قبض را انتخاب کنید تا مانده همان قبض تسویه شود؛ بعد از تسویه کامل از لیست حذف می‌شود.'
+                : '';
+            return;
+        }
+        var paid = parseInt(opt.dataset.paid || '0', 10);
+        var rem = parseInt(opt.dataset.remaining || '0', 10);
+        var total = parseInt(opt.dataset.total || '0', 10);
+        var bits = ['قبض ' + (opt.dataset.ticket || opt.value)];
+        if (paid > 0) bits.push('قبلاً پرداخت‌شده ' + fmt(paid) + ' تومان');
+        bits.push('مانده فعلی ' + fmt(rem) + ' از ' + fmt(total) + ' تومان');
+        detailEl.textContent = bits.join(' · ');
+    }
+
+    function maybeFillAmount(force) {
+        var opt = receptionEl.selectedOptions[0];
+        var rem = opt && opt.dataset.remaining ? parseInt(opt.dataset.remaining, 10) : 0;
+        if (rem > 0 && amountEl && (force || !amountEl.value)) {
             amountEl.value = rem;
         }
     }
 
-    customerEl?.addEventListener('change', refreshTickets);
-    receptionEl?.addEventListener('change', maybeFillAmount);
-    refreshTickets();
+    function loadTicketsForCustomer(customerId, preferReceptionId) {
+        if (!ticketsUrl || !customerId) return;
+        setSummary('در حال بارگذاری قبض‌های مانده‌دار…');
+        fetch(ticketsUrl + '?customer_id=' + encodeURIComponent(customerId), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            applyDebtPayload(data, preferReceptionId);
+        }).catch(function () {
+            setSummary('خطا در بارگذاری قبض‌ها.');
+        });
+    }
+
+    function searchTicketsOnline() {
+        if (!ticketsUrl || !ticketQ) return;
+        var q = (ticketQ.value || '').trim();
+        if (q.length < 2) {
+            setSummary('حداقل ۲ حرف از شماره قبض یا نام وارد کنید.');
+            return;
+        }
+        setSummary('در حال جستجوی آنلاین قبض…');
+        fetch(ticketsUrl + '?q=' + encodeURIComponent(q), {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (data && data.message && !(data.tickets && data.tickets.length)) {
+                setSummary(data.message);
+            }
+            applyDebtPayload(data, data && data.matched_reception_id);
+        }).catch(function () {
+            setSummary('خطا در جستجوی قبض.');
+        });
+    }
+
+    function selectCustomer(c) {
+        if (!c) return;
+        customerIdEl.value = c.id || '';
+        customerQ.value = (c.display_name || c.name || '') + (c.phone ? (' — ' + c.phone) : '');
+        clearPick();
+        loadTicketsForCustomer(c.id, preReception);
+    }
+
+    function renderPick(list, q) {
+        if (!pickList) return;
+        pickList.innerHTML = '';
+        if (!list || !list.length) {
+            pickList.hidden = false;
+            var empty = document.createElement('div');
+            empty.className = 'customer-pick-empty';
+            empty.textContent = q ? 'مشتری پیدا نشد.' : 'نام را بنویسید.';
+            pickList.appendChild(empty);
+            return;
+        }
+        list.forEach(function (c) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'customer-pick-item';
+            var name = document.createElement('span');
+            name.className = 'customer-pick-name';
+            name.textContent = c.display_name || c.name || 'بدون نام';
+            var meta = document.createElement('span');
+            meta.className = 'customer-pick-meta';
+            var bits = [];
+            if (c.phone) bits.push(c.phone);
+            if (typeof c.visits !== 'undefined') bits.push(c.visits + ' مراجعه');
+            meta.textContent = bits.join(' · ') || '—';
+            btn.appendChild(name);
+            btn.appendChild(meta);
+            btn.addEventListener('click', function () { selectCustomer(c); });
+            pickList.appendChild(btn);
+        });
+        pickList.hidden = false;
+    }
+
+    function searchCustomers() {
+        if (!customersUrl || !customerQ) return;
+        var q = (customerQ.value || '').trim();
+        if (q.length < 1) { clearPick(); return; }
+        var seq = ++nameSeq;
+        fetch(customersUrl + '?q=' + encodeURIComponent(q), {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        }).then(function (r) { return r.json(); }).then(function (data) {
+            if (seq !== nameSeq) return;
+            renderPick((data && data.customers) || [], q);
+        }).catch(function () {});
+    }
+
+    customerQ?.addEventListener('input', function () {
+        customerIdEl.value = '';
+        if (nameTimer) clearTimeout(nameTimer);
+        nameTimer = setTimeout(searchCustomers, 220);
+    });
+    customerQ?.addEventListener('focus', function () {
+        if ((customerQ.value || '').trim().length >= 1) searchCustomers();
+    });
+    document.addEventListener('click', function (e) {
+        if (pickList && !pickList.contains(e.target) && e.target !== customerQ) clearPick();
+    });
+
+    ticketSearchBtn?.addEventListener('click', searchTicketsOnline);
+    ticketQ?.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); searchTicketsOnline(); }
+    });
+    ticketQ?.addEventListener('input', function () {
+        if (ticketTimer) clearTimeout(ticketTimer);
+        ticketTimer = setTimeout(function () {
+            if ((ticketQ.value || '').trim().length >= 2) searchTicketsOnline();
+        }, 350);
+    });
+
+    receptionEl?.addEventListener('change', function () {
+        var opt = receptionEl.selectedOptions[0];
+        if (opt && opt.dataset.customerId) {
+            var cid = String(opt.dataset.customerId);
+            if (String(customerIdEl.value) !== cid) {
+                customerIdEl.value = cid;
+                loadTicketsForCustomer(cid, opt.value);
+                return;
+            }
+        }
+        updateTicketDetail();
+        maybeFillAmount(true);
+    });
+
+    document.getElementById('acc-receipt-form')?.addEventListener('submit', function (e) {
+        if (!customerIdEl.value) {
+            e.preventDefault();
+            alert('ابتدا مشتری را از جستجو انتخاب کنید.');
+            customerQ?.focus();
+        }
+    });
+
+    // Initial: preload from server when customer_id is in URL / old input
+    if (initialDebt && (initialDebt.tickets || []).length) {
+        applyDebtPayload(initialDebt, preReception);
+    } else if (customerIdEl.value) {
+        loadTicketsForCustomer(customerIdEl.value, preReception);
+    }
 })();
 </script>
+@endpush
 @endif
 @endsection
