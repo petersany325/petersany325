@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DailyLogCategory;
 use App\Models\DailyLogEntry;
+use App\Models\Reception;
 use App\Models\User;
 use App\Support\DailyLogSettings;
 use Carbon\Carbon;
@@ -27,7 +28,7 @@ class DailyLogController extends Controller
         $employee = User::query()->findOrFail($employeeId);
 
         $entries = DailyLogEntry::query()
-            ->with(['category', 'creator'])
+            ->with(['category', 'creator', 'reception.customer'])
             ->where('user_id', $employee->id)
             ->whereDate('work_date', $date->toDateString())
             ->orderByDesc('id')
@@ -42,6 +43,7 @@ class DailyLogController extends Controller
             'count' => $entries->count(),
             'quantity' => (int) $entries->sum(fn ($e) => (int) ($e->quantity ?? 0)),
             'minutes' => (int) $entries->sum(fn ($e) => (int) ($e->minutes ?? 0)),
+            'with_ticket' => $entries->whereNotNull('reception_id')->count(),
         ];
 
         return view('daily-logs.index', [
@@ -52,12 +54,78 @@ class DailyLogController extends Controller
             'employees' => $employees,
             'canManage' => $canManage,
             'summary' => $summary,
+            'ticketSearchUrl' => \Illuminate\Support\Facades\Route::has('daily-logs.tickets')
+                ? route('daily-logs.tickets')
+                : url('/daily-logs/tickets'),
+            'workHints' => [
+                'تعویض قطعه',
+                'تشخیص ایراد',
+                'تست نهایی',
+                'نصب قطعه',
+                'تمیزکاری برد',
+                'هماهنگی با مشتری',
+            ],
             'settings' => [
                 'require_note' => DailyLogSettings::requireNote(),
                 'show_quantity' => DailyLogSettings::showQuantity(),
                 'allow_past_days' => DailyLogSettings::allowPastDays(),
                 'editable' => $this->dateIsEditable($date, $canManage),
             ],
+        ]);
+    }
+
+    /** JSON: جستجوی قبض برای ثبت در دفتر روز (کارمند / کارآموز). */
+    public function searchTickets(Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
+        if (function_exists('normalize_receipt_search_query')) {
+            $q = normalize_receipt_search_query($q);
+        }
+        if (mb_strlen($q) < 2) {
+            return response()->json(['ok' => true, 'count' => 0, 'tickets' => []]);
+        }
+
+        $digits = preg_replace('/\D+/', '', $q) ?? '';
+        $qUpper = mb_strtoupper($q);
+
+        $rows = Reception::query()
+            ->with(['customer:id,name,phone'])
+            ->where(function ($inner) use ($q, $qUpper, $digits) {
+                $inner->where('ticket_no', 'like', $q.'%')
+                    ->orWhere('receipt_no', 'like', $q.'%')
+                    ->orWhere('serial_number', 'like', $qUpper.'%')
+                    ->orWhere('product_name', 'like', '%'.$q.'%')
+                    ->orWhere('model', 'like', '%'.$q.'%')
+                    ->orWhereHas('customer', function ($c) use ($q, $digits) {
+                        $c->where('name', 'like', '%'.$q.'%');
+                        if (strlen($digits) >= 3) {
+                            $c->orWhere('phone', 'like', '%'.$digits.'%');
+                        }
+                    });
+            })
+            ->orderByDesc('id')
+            ->limit(20)
+            ->get(['id', 'ticket_no', 'receipt_no', 'serial_number', 'product_name', 'brand', 'model', 'status', 'customer_id']);
+
+        $statusLabels = Reception::availableStatuses();
+
+        return response()->json([
+            'ok' => true,
+            'count' => $rows->count(),
+            'tickets' => $rows->map(fn (Reception $r) => [
+                'id' => $r->id,
+                'ticket_no' => $r->ticket_no,
+                'receipt_no' => $r->receipt_no,
+                'serial' => $r->serial_number,
+                'product' => trim(($r->brand ? $r->brand.' ' : '').($r->model ?: $r->product_name ?: '')),
+                'customer' => $r->customer?->name,
+                'phone' => $r->customer?->phone,
+                'status' => $r->status,
+                'status_label' => $statusLabels[$r->status] ?? $r->status,
+                'label' => ($r->ticket_no ?: $r->receipt_no)
+                    .' — '.($r->customer?->name ?: 'بدون مشتری')
+                    .' — '.($r->serial_number ?: 'بدون سریال'),
+            ])->values(),
         ]);
     }
 
@@ -72,44 +140,68 @@ class DailyLogController extends Controller
         }
 
         $employeeId = $request->filled('user_id') ? (int) $request->input('user_id') : null;
+        $categoryId = $request->filled('category_id') ? (int) $request->input('category_id') : null;
+        $role = (string) $request->input('role', '');
+        $onlyTickets = $request->boolean('only_tickets');
 
-        $query = DailyLogEntry::query()
-            ->with(['user', 'category'])
-            ->whereDate('work_date', '>=', $from->toDateString())
-            ->whereDate('work_date', '<=', $to->toDateString())
-            ->orderByDesc('work_date')
-            ->orderByDesc('id');
-
-        if ($employeeId) {
-            $query->where('user_id', $employeeId);
-        }
-
-        $entries = $query->paginate(40)->withQueryString();
-
-        $byEmployee = DailyLogEntry::query()
-            ->selectRaw('user_id, COUNT(*) as cnt, COALESCE(SUM(quantity),0) as qty')
+        $base = DailyLogEntry::query()
             ->whereDate('work_date', '>=', $from->toDateString())
             ->whereDate('work_date', '<=', $to->toDateString())
             ->when($employeeId, fn ($q) => $q->where('user_id', $employeeId))
+            ->when($categoryId, fn ($q) => $q->where('daily_log_category_id', $categoryId))
+            ->when($onlyTickets, fn ($q) => $q->whereNotNull('reception_id'))
+            ->when($role !== '', function ($q) use ($role) {
+                $q->whereHas('user', fn ($u) => $u->where('role', $role));
+            });
+
+        $entries = (clone $base)
+            ->with(['user', 'category', 'reception.customer'])
+            ->orderByDesc('work_date')
+            ->orderByDesc('id')
+            ->paginate(40)
+            ->withQueryString();
+
+        $byEmployee = (clone $base)
+            ->selectRaw('user_id, COUNT(*) as cnt, COALESCE(SUM(quantity),0) as qty, COALESCE(SUM(minutes),0) as mins, SUM(CASE WHEN reception_id IS NOT NULL THEN 1 ELSE 0 END) as tickets')
             ->groupBy('user_id')
             ->get();
 
         $usersById = User::query()
             ->whereIn('id', $byEmployee->pluck('user_id')->filter()->all())
-            ->get()
+            ->get(['id', 'name', 'role'])
             ->keyBy('id');
 
         foreach ($byEmployee as $row) {
             $row->setRelation('user', $usersById->get($row->user_id));
         }
+        $byEmployee = $byEmployee->sortByDesc('cnt')->values();
+
+        $byCategory = (clone $base)
+            ->selectRaw("COALESCE(category_name, 'آزاد') as cat, COUNT(*) as cnt, COALESCE(SUM(quantity),0) as qty, COALESCE(SUM(minutes),0) as mins")
+            ->groupBy('cat')
+            ->orderByDesc('cnt')
+            ->get();
+
+        $totals = [
+            'count' => (int) (clone $base)->count(),
+            'quantity' => (int) (clone $base)->sum('quantity'),
+            'minutes' => (int) (clone $base)->sum('minutes'),
+            'tickets' => (int) (clone $base)->whereNotNull('reception_id')->count(),
+        ];
 
         return view('daily-logs.report', [
             'from' => $from,
             'to' => $to,
             'entries' => $entries,
             'byEmployee' => $byEmployee,
-            'employees' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'byCategory' => $byCategory,
+            'totals' => $totals,
+            'employees' => User::query()->where('is_active', true)->orderBy('name')->get(['id', 'name', 'role']),
+            'categories' => DailyLogCategory::query()->ordered()->get(['id', 'name']),
             'employeeId' => $employeeId,
+            'categoryId' => $categoryId,
+            'role' => $role,
+            'onlyTickets' => $onlyTickets,
         ]);
     }
 
@@ -131,15 +223,18 @@ class DailyLogController extends Controller
             $category = DailyLogCategory::query()->active()->findOrFail($data['daily_log_category_id']);
         }
 
+        $reception = $this->resolveReception($data['reception_id'] ?? null, $category);
+
         $title = trim((string) ($data['title'] ?? ''));
         if ($title === '') {
-            $title = $category?->name ?: 'رویداد روزانه';
+            $title = $this->defaultTitle($category, $reception);
         }
 
         DailyLogEntry::create([
             'user_id' => $employeeId,
             'work_date' => $date->toDateString(),
             'daily_log_category_id' => $category?->id,
+            'reception_id' => $reception?->id,
             'category_name' => $category?->name,
             'title' => $title,
             'body' => $data['body'] ?? null,
@@ -150,7 +245,7 @@ class DailyLogController extends Controller
 
         return redirect()
             ->route('daily-logs.index', ['date' => $date->toDateString(), 'user_id' => $employeeId])
-            ->with('success', 'رویداد در دفتر روز ثبت شد.');
+            ->with('success', 'رویداد در دفتر روز ثبت شد.'.($reception ? ' (قبض '.$reception->ticket_no.')' : ''));
     }
 
     public function update(Request $request, DailyLogEntry $dailyLog)
@@ -170,13 +265,16 @@ class DailyLogController extends Controller
             $category = DailyLogCategory::query()->find($data['daily_log_category_id']);
         }
 
+        $reception = $this->resolveReception($data['reception_id'] ?? null, $category, false);
+
         $title = trim((string) ($data['title'] ?? ''));
         if ($title === '') {
-            $title = $category?->name ?: ($dailyLog->category_name ?: 'رویداد روزانه');
+            $title = $this->defaultTitle($category, $reception) ?: ($dailyLog->category_name ?: 'رویداد روزانه');
         }
 
         $dailyLog->update([
             'daily_log_category_id' => $category?->id,
+            'reception_id' => $reception?->id ?? $dailyLog->reception_id,
             'category_name' => $category?->name ?? $dailyLog->category_name,
             'title' => $title,
             'body' => $data['body'] ?? null,
@@ -250,6 +348,7 @@ class DailyLogController extends Controller
             'mark' => ['nullable', 'string', 'max:8'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'ask_quantity' => ['nullable'],
+            'requires_receipt' => ['nullable'],
             'is_active' => ['nullable'],
         ]);
 
@@ -259,6 +358,7 @@ class DailyLogController extends Controller
             'mark' => $data['mark'] ?: '•',
             'sort_order' => (int) ($data['sort_order'] ?? 100),
             'ask_quantity' => $request->boolean('ask_quantity'),
+            'requires_receipt' => $request->boolean('requires_receipt'),
             'is_active' => $request->boolean('is_active', true),
         ]);
 
@@ -275,6 +375,7 @@ class DailyLogController extends Controller
             'mark' => ['nullable', 'string', 'max:8'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:9999'],
             'ask_quantity' => ['nullable'],
+            'requires_receipt' => ['nullable'],
             'is_active' => ['nullable'],
         ]);
 
@@ -284,6 +385,7 @@ class DailyLogController extends Controller
             'mark' => $data['mark'] ?: '•',
             'sort_order' => (int) ($data['sort_order'] ?? $category->sort_order),
             'ask_quantity' => $request->boolean('ask_quantity'),
+            'requires_receipt' => $request->boolean('requires_receipt'),
             'is_active' => $request->boolean('is_active'),
         ]);
 
@@ -302,6 +404,7 @@ class DailyLogController extends Controller
     {
         $rules = [
             'daily_log_category_id' => ['nullable', 'integer', Rule::exists('daily_log_categories', 'id')],
+            'reception_id' => ['nullable', 'integer', Rule::exists('receptions', 'id')],
             'title' => ['nullable', 'string', 'max:180'],
             'body' => ['nullable', 'string', 'max:2000'],
             'quantity' => ['nullable', 'integer', 'min:1', 'max:9999'],
@@ -316,7 +419,37 @@ class DailyLogController extends Controller
 
         return $request->validate($rules, [
             'body.required' => 'توضیح رویداد الزامی است.',
+            'reception_id.exists' => 'قبض انتخاب‌شده معتبر نیست.',
         ]);
+    }
+
+    private function resolveReception(mixed $receptionId, ?DailyLogCategory $category, bool $requiredIfNeeded = true): ?Reception
+    {
+        $reception = null;
+        if ($receptionId) {
+            $reception = Reception::query()->find($receptionId);
+        }
+
+        $needs = $category && $category->needsReceipt();
+        if ($needs && $requiredIfNeeded && ! $reception) {
+            throw ValidationException::withMessages([
+                'reception_id' => 'برای «'.($category->name).'» باید قبض را جستجو و انتخاب کنید.',
+            ]);
+        }
+
+        return $reception;
+    }
+
+    private function defaultTitle(?DailyLogCategory $category, ?Reception $reception): string
+    {
+        if ($reception) {
+            $ticket = $reception->ticket_no ?: $reception->receipt_no;
+            $cat = $category?->name ?: 'کار روی قبض';
+
+            return $cat.' — '.$ticket;
+        }
+
+        return $category?->name ?: 'رویداد روزانه';
     }
 
     private function resolveDate(mixed $value, ?Carbon $fallback = null): Carbon

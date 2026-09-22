@@ -69,6 +69,9 @@
                 @include('partials.toggle', ['name' => 'ask_quantity', 'label' => 'درخواست تعداد', 'checked' => false])
             </div>
             <div>
+                @include('partials.toggle', ['name' => 'requires_receipt', 'label' => 'جستجوی قبض الزامی', 'checked' => false])
+            </div>
+            <div>
                 @include('partials.toggle', ['name' => 'is_active', 'label' => 'فعال', 'checked' => true])
             </div>
             <div class="actions" style="margin:0;">
@@ -102,6 +105,9 @@
                     </div>
                     <div>
                         @include('partials.toggle', ['name' => 'ask_quantity', 'label' => 'تعداد', 'checked' => $cat->ask_quantity])
+                    </div>
+                    <div>
+                        @include('partials.toggle', ['name' => 'requires_receipt', 'label' => 'جستجوی قبض', 'checked' => $cat->requires_receipt || $cat->needsReceipt()])
                     </div>
                     <div>
                         @include('partials.toggle', ['name' => 'is_active', 'label' => 'فعال', 'checked' => $cat->is_active])
