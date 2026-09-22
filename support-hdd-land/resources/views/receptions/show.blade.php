@@ -737,23 +737,85 @@
             <div class="table-wrap">
                 <table>
                     <thead>
-                    <tr><th>قطعه</th><th>تعداد</th><th>فی</th><th>جمع</th><th>تاریخ</th></tr>
+                    <tr><th>قطعه</th><th>تعداد</th><th>فی</th><th>جمع</th><th>تاریخ</th><th>عملیات</th></tr>
                     </thead>
                     <tbody>
                     @forelse($reception->parts as $part)
                         <tr>
-                            <td>{{ $part->part_name }}</td>
+                            <td>
+                                {{ $part->part_name }}
+                                @if($part->part_id)
+                                    <div class="muted" style="font-size:11px;">از انبار</div>
+                                @endif
+                            </td>
                             <td>{{ $part->quantity }}</td>
                             <td>{{ toman($part->unit_price) }}</td>
                             <td>{{ toman($part->total_price) }}</td>
                             <td>{{ jalali_date($part->used_at) }}</td>
+                            <td style="white-space:nowrap;">
+                                @if($reception->canEditParts())
+                                    <button type="button" class="btn btn-ghost" style="padding:4px 8px;font-size:11px;" data-open-modal="#part-edit-{{ $part->id }}">ویرایش</button>
+                                    <form method="POST" action="{{ route('receptions.parts.destroy', [$reception, $part]) }}" style="display:inline;" data-confirm="این قطعه حذف شود؟ موجودی انبار (در صورت مصرف از انبار) و مانده قبض به‌روز می‌شود.">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button class="btn btn-danger" type="submit" style="padding:4px 8px;font-size:11px;">حذف</button>
+                                    </form>
+                                @else
+                                    <span class="muted" style="font-size:11px;">قفل</span>
+                                @endif
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="5">قطعه‌ای ثبت نشده.</td></tr>
+                        <tr><td colspan="6">قطعه‌ای ثبت نشده.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
             </div>
+
+            @foreach($reception->parts as $part)
+                @if($reception->canEditParts())
+                <div class="app-modal" id="part-edit-{{ $part->id }}" hidden>
+                    <div class="app-modal-dialog" role="dialog" aria-modal="true">
+                        <div class="app-modal-head">
+                            <strong>ویرایش قطعه — {{ $part->part_name }}</strong>
+                            <button type="button" class="app-modal-close" data-close-modal aria-label="بستن">×</button>
+                        </div>
+                        <div class="app-modal-body">
+                            <form method="POST" action="{{ route('receptions.parts.update', [$reception, $part]) }}">
+                                @csrf
+                                @method('PUT')
+                                <div class="form-grid" style="grid-template-columns:1fr;">
+                                    <div>
+                                        <label>نام قطعه</label>
+                                        <input type="text" name="part_name" value="{{ old('part_name', $part->part_name) }}" required>
+                                        @error('part_name')<div class="field-error" style="color:#b91c1c;font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div>
+                                        <label>تعداد</label>
+                                        <input type="number" name="quantity" min="1" value="{{ old('quantity', $part->quantity) }}" required>
+                                        @error('quantity')<div class="field-error" style="color:#b91c1c;font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div>
+                                        <label>فی (تومان)</label>
+                                        <input type="number" name="unit_price" min="0" value="{{ old('unit_price', $part->unit_price) }}" required>
+                                        @error('unit_price')<div class="field-error" style="color:#b91c1c;font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
+                                    </div>
+                                    <div>
+                                        <label>تاریخ مصرف</label>
+                                        @include('partials.jalali-date', ['name' => 'used_at', 'value' => old('used_at', jalali_input($part->used_at))])
+                                    </div>
+                                </div>
+                                <div class="actions" style="margin-top:12px;">
+                                    <button class="btn btn-primary" type="submit">ذخیره تغییرات</button>
+                                    <button type="button" class="btn btn-ghost" data-close-modal>انصراف</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                @endif
+            @endforeach
+
             @if($reception->canEditParts())
             <form method="POST" action="{{ route('receptions.parts', $reception) }}" style="margin-top:1rem;">
                 @csrf

@@ -1013,6 +1013,139 @@ class ReceptionController extends Controller
         return back()->with('success', $msg);
     }
 
+    public function updatePart(Request $request, Reception $reception, ReceptionPart $receptionPart)
+    {
+        abort_unless((int) $receptionPart->reception_id === (int) $reception->id, 404);
+
+        if (! $reception->canEditParts()) {
+            return back()->withErrors(['part' => 'قبض تحویل‌شده قابل ویرایش قطعه نیست. ابتدا لغو تحویل بزنید.']);
+        }
+
+        merge_jalali_dates($request, ['used_at']);
+
+        $data = $request->validate([
+            'part_name' => ['required', 'string', 'max:120'],
+            'quantity' => ['required', 'integer', 'min:1'],
+            'unit_price' => ['required', 'integer', 'min:0'],
+            'used_at' => ['nullable', 'date'],
+        ]);
+
+        DB::transaction(function () use ($data, $reception, $receptionPart) {
+            $part = $receptionPart;
+            $oldQty = (int) $part->quantity;
+            $newQty = (int) $data['quantity'];
+            $unitPrice = (int) $data['unit_price'];
+
+            // قطعه انباری: اختلاف تعداد را روی موجودی اعمال کن
+            if ($part->part_id) {
+                $stockPart = Part::lockForUpdate()->find($part->part_id);
+                if ($stockPart) {
+                    $delta = $newQty - $oldQty;
+                    if ($delta > 0 && $stockPart->stock < $delta) {
+                        throw ValidationException::withMessages([
+                            'quantity' => 'موجودی قطعه کافی نیست (موجودی: '.$stockPart->stock.').',
+                        ]);
+                    }
+                    if ($delta !== 0) {
+                        $stockPart->stock -= $delta;
+                        $stockPart->usage_count = max(0, (int) $stockPart->usage_count + $delta);
+                        $stockPart->save();
+
+                        StockMovement::create([
+                            'doc_no' => StockMovement::nextDocNo($delta > 0 ? 'OUT' : 'IN'),
+                            'part_id' => $stockPart->id,
+                            'warehouse_id' => $stockPart->warehouse_id,
+                            'reception_id' => $reception->id,
+                            'user_id' => Auth::id(),
+                            'type' => $delta > 0 ? 'out' : 'in',
+                            'doc_type' => $delta > 0 ? 'consumption' : 'return',
+                            'quantity' => -1 * $delta,
+                            'unit_cost' => (int) $stockPart->purchase_price,
+                            'total_cost' => abs($delta) * (int) $stockPart->purchase_price,
+                            'stock_after' => $stockPart->stock,
+                            'note' => ($delta > 0 ? 'اصلاح مصرف' : 'برگشت اصلاح مصرف').' — قبض '.$reception->ticket_no,
+                        ]);
+                    }
+                }
+            }
+
+            $part->update([
+                'part_name' => trim((string) $data['part_name']),
+                'quantity' => $newQty,
+                'unit_price' => $unitPrice,
+                'total_price' => $unitPrice * $newQty,
+                'used_at' => $data['used_at'] ?? $part->used_at,
+            ]);
+
+            $reception->recalculateTotals();
+
+            try {
+                $acc = app(AccountingService::class);
+                $acc->voidReceptionPart($part);
+                $acc->postReceptionPart($part->fresh(['part', 'reception']));
+                $acc->syncReceptionRevenue($reception->fresh());
+            } catch (\Throwable) {
+            }
+        });
+
+        return back()->with('success', 'قطعه ویرایش شد و مانده قبض به‌روز شد.');
+    }
+
+    public function destroyPart(Reception $reception, ReceptionPart $receptionPart)
+    {
+        abort_unless((int) $receptionPart->reception_id === (int) $reception->id, 404);
+
+        if (! $reception->canEditParts()) {
+            return back()->withErrors(['part' => 'قبض تحویل‌شده قابل ویرایش قطعه نیست. ابتدا لغو تحویل بزنید.']);
+        }
+
+        $label = $receptionPart->part_name;
+
+        DB::transaction(function () use ($reception, $receptionPart) {
+            $part = $receptionPart;
+            // برگشت موجودی انبار در صورت مصرف از انبار
+            if ($part->part_id) {
+                $stockPart = Part::lockForUpdate()->find($part->part_id);
+                if ($stockPart) {
+                    $qty = (int) $part->quantity;
+                    $stockPart->stock += $qty;
+                    $stockPart->usage_count = max(0, (int) $stockPart->usage_count - $qty);
+                    $stockPart->save();
+
+                    StockMovement::create([
+                        'doc_no' => StockMovement::nextDocNo('IN'),
+                        'part_id' => $stockPart->id,
+                        'warehouse_id' => $stockPart->warehouse_id,
+                        'reception_id' => $reception->id,
+                        'user_id' => Auth::id(),
+                        'type' => 'in',
+                        'doc_type' => 'return',
+                        'quantity' => $qty,
+                        'unit_cost' => (int) $stockPart->purchase_price,
+                        'total_cost' => $qty * (int) $stockPart->purchase_price,
+                        'stock_after' => $stockPart->stock,
+                        'note' => 'برگشت مصرف از قبض '.$reception->ticket_no,
+                    ]);
+                }
+            }
+
+            try {
+                app(AccountingService::class)->voidReceptionPart($part);
+            } catch (\Throwable) {
+            }
+
+            $part->delete();
+            $reception->recalculateTotals();
+
+            try {
+                app(AccountingService::class)->syncReceptionRevenue($reception->fresh());
+            } catch (\Throwable) {
+            }
+        });
+
+        return back()->with('success', 'قطعه «'.$label.'» حذف شد و مانده قبض به‌روز شد.');
+    }
+
     public function addPayment(Request $request, Reception $reception)
     {
         $data = $request->validate([

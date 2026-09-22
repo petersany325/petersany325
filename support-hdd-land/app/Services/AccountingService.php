@@ -161,6 +161,20 @@ class AccountingService
         $entry->forceDelete();
     }
 
+    /** Remove accounting journal tied to a reception part (edit/delete). */
+    public function voidReceptionPart(ReceptionPart $part): void
+    {
+        $entry = JournalEntry::query()
+            ->where('source_type', 'reception_part')
+            ->where('source_id', $part->id)
+            ->first();
+        if (! $entry) {
+            return;
+        }
+        $entry->lines()->delete();
+        $entry->forceDelete();
+    }
+
     public function postReceptionPart(ReceptionPart $part): ?JournalEntry
     {
         $part->loadMissing(['reception', 'part']);
