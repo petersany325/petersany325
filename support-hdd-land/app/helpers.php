@@ -461,3 +461,71 @@ if (! function_exists('shop_office_phone')) {
         return '01144447220';
     }
 }
+
+if (! function_exists('ascii_digits')) {
+    /** Convert Persian/Arabic digits to ASCII 0-9. */
+    function ascii_digits(?string $value): string
+    {
+        $value = (string) $value;
+        $map = [
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4',
+            '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9',
+        ];
+
+        return strtr($value, $map);
+    }
+}
+
+if (! function_exists('normalize_receipt_search_query')) {
+    /**
+     * Normalize staff receipt search: digits-only → {receiptPrefix}{digits}.
+     * Leaves name/phone/serial/SH-… queries unchanged.
+     */
+    function normalize_receipt_search_query(?string $q): string
+    {
+        $q = trim(ascii_digits((string) $q));
+        $prefix = 'R';
+        try {
+            if (class_exists(\App\Models\Reception::class)) {
+                $prefix = \App\Models\Reception::receiptPrefix();
+            }
+        } catch (\Throwable) {
+        }
+
+        if ($q === '' || strcasecmp($q, $prefix) === 0) {
+            return '';
+        }
+
+        $escaped = preg_quote($prefix, '/');
+        if (preg_match('/^'.$escaped.'(.*)$/i', $q, $m)) {
+            $rest = preg_replace('/\s+/', '', (string) ($m[1] ?? ''));
+
+            return $rest === '' ? '' : $prefix.$rest;
+        }
+
+        // Legacy T-20N typed by staff on installs that migrated prefixes.
+        if (preg_match('/^t-20n(.*)$/i', $q, $m)) {
+            $rest = preg_replace('/\s+/', '', (string) ($m[1] ?? ''));
+
+            return $rest === '' ? '' : 'T-20N'.$rest;
+        }
+
+        $digits = preg_replace('/\D+/', '', $q) ?? '';
+        if ($digits !== '' && $digits === preg_replace('/\s+/', '', $q)) {
+            // Keep Iranian mobile numbers as phone search, not receipt suffix.
+            if (preg_match('/^(0?9\d{8,10}|98\d{10}|989\d{9})$/', $digits)
+                || preg_match('/^09\d{5,}$/', $digits)
+                || (str_starts_with($digits, '9') && strlen($digits) >= 9 && strlen($digits) <= 12)) {
+                return $digits;
+            }
+
+            if (preg_match('/^\d{3,}$/', $digits)) {
+                return $prefix.$digits;
+            }
+        }
+
+        return $q;
+    }
+}
