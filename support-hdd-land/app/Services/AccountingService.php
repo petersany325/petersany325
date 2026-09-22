@@ -286,9 +286,98 @@ class AccountingService
     /**
      * @param  list<array{0:string,1:int,2:int,3?:string}>  $lines  [code, debit, credit, memo]
      */
-    public function createManual(string $description, array $lines, ?string $date = null, ?int $customerId = null): JournalEntry
+    public function createManual(string $description, array $lines, ?string $date = null, ?int $customerId = null, ?Reception $reception = null): JournalEntry
     {
-        return $this->writeEntry(null, 'manual', null, $description, null, $lines, $customerId, $date);
+        return $this->writeEntry(null, 'manual', null, $description, $reception, $lines, $customerId, $date);
+    }
+
+    /**
+     * دریافت از بدهکار (استاندارد): بدهکار صندوق/بانک — بستانکار دریافتنی ۱۲۱۰.
+     * اگر قبض انتخاب شود، پرداخت عملیاتی هم ثبت می‌شود تا مانده قبض و دفتر هم‌تراز بمانند.
+     */
+    public function postDebtReceipt(
+        \App\Models\Customer $customer,
+        int $amount,
+        string $method,
+        ?Reception $reception = null,
+        ?string $date = null,
+        ?string $note = null,
+    ): JournalEntry {
+        $amount = abs($amount);
+        if ($amount <= 0) {
+            throw ValidationException::withMessages(['amount' => 'مبلغ دریافت باید بزرگ‌تر از صفر باشد.']);
+        }
+
+        $method = in_array($method, ['cash', 'card', 'transfer'], true) ? $method : 'cash';
+        $cashCode = $this->methodAccountCode($method);
+        $date = $date ?: now()->toDateString();
+        $methodLabel = Payment::METHODS[$method] ?? $method;
+
+        if ($reception) {
+            if ((int) $reception->customer_id !== (int) $customer->id) {
+                throw ValidationException::withMessages(['reception_id' => 'قبض انتخاب‌شده متعلق به این مشتری نیست.']);
+            }
+
+            $remain = $reception->remainingAmount();
+            if ($remain > 0 && $amount > $remain) {
+                throw ValidationException::withMessages([
+                    'amount' => 'مبلغ از مانده قبض ('.number_format($remain).' تومان) بیشتر است.',
+                ]);
+            }
+
+            $type = ($remain > 0 && $amount >= $remain) ? 'final' : 'partial';
+            $payment = Payment::create([
+                'reception_id' => $reception->id,
+                'customer_id' => $customer->id,
+                'received_by' => Auth::id(),
+                'type' => $type,
+                'method' => $method,
+                'amount' => $amount,
+                'note' => $note ?: ('دریافت از بدهکار — سند دستی'),
+                'paid_at' => $date.' '.now()->format('H:i:s'),
+            ]);
+            $reception->recalculateTotals();
+
+            $entry = $this->postPayment($payment->fresh(['reception', 'customer']));
+            if (! $entry) {
+                throw ValidationException::withMessages(['amount' => 'ثبت سند دریافت ناموفق بود.']);
+            }
+
+            return $entry;
+        }
+
+        $desc = 'دریافت از بدهکار: '.$customer->name
+            .' — '.$methodLabel
+            .' — '.number_format($amount).' تومان';
+        if ($note) {
+            $desc .= ' — '.$note;
+        }
+
+        $lines = [
+            [$cashCode, $amount, 0, 'دریافت '.$methodLabel.' از '.$customer->name],
+            [self::RECEIVABLE, 0, $amount, 'کاهش حساب دریافتنی مشتری'],
+        ];
+
+        return $this->createManual($desc, $lines, $date, $customer->id);
+    }
+
+    /** مانده حساب دریافتنی یک مشتری از دفتر (بدهکار − بستانکار روی ۱۲۱۰). */
+    public function customerReceivableBalance(int $customerId): int
+    {
+        $account = Account::byCode(self::RECEIVABLE);
+        if (! $account) {
+            return 0;
+        }
+
+        $row = JournalLine::query()
+            ->selectRaw('COALESCE(SUM(journal_lines.debit),0) as d, COALESCE(SUM(journal_lines.credit),0) as c')
+            ->join('journal_entries', 'journal_entries.id', '=', 'journal_lines.journal_entry_id')
+            ->whereNull('journal_entries.deleted_at')
+            ->where('journal_lines.account_id', $account->id)
+            ->where('journal_entries.customer_id', $customerId)
+            ->first();
+
+        return (int) ($row->d ?? 0) - (int) ($row->c ?? 0);
     }
 
     /**

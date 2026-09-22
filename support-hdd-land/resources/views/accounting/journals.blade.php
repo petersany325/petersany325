@@ -14,7 +14,7 @@
         @include('partials.jalali-date', ['name' => 'from', 'value' => $from])
         <span class="acc-period-sep">تا</span>
         @include('partials.jalali-date', ['name' => 'to', 'value' => $to])
-        <input type="search" name="q" value="{{ $q }}" placeholder="شماره سند / قبض / شرح" style="min-width:160px;">
+        <input type="search" name="q" value="{{ $q }}" placeholder="شماره سند / قبض / مشتری / شرح" style="min-width:160px;">
         <button class="btn btn-sm btn-primary" type="submit">اعمال</button>
     </form>
     <section class="acc-panel">

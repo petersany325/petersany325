@@ -48,7 +48,12 @@ class CustomerController extends Controller
     {
         $user = $request->user();
         abort_unless(
-            $user && ($user->canAccess('customers') || $user->canAccess('receptions') || $user->canAccess('handoffs')),
+            $user && (
+                $user->canAccess('customers')
+                || $user->canAccess('receptions')
+                || $user->canAccess('handoffs')
+                || $user->canAccess('reports.accounting')
+            ),
             403
         );
 

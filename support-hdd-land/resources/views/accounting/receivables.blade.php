@@ -59,7 +59,8 @@
                             <td class="acc-num" style="color:#b42318;font-weight:800;">{{ number_format($row['balance']) }}</td>
                             <td>
                                 @if($row['customer'])
-                                    <a class="btn btn-ghost btn-sm" href="{{ route('accounting.ledger', ['account' => '1210', 'q' => $row['customer']->id]) }}">دفتر</a>
+                                    <a class="btn btn-primary btn-sm" href="{{ route('accounting.manual', ['mode' => 'receipt', 'customer_id' => $row['customer']->id]) }}">ثبت دریافت</a>
+                                    <a class="btn btn-ghost btn-sm" href="{{ route('accounting.ledger', ['account' => '1210', 'customer_id' => $row['customer']->id]) }}">دفتر</a>
                                     <a class="btn btn-ghost btn-sm" href="{{ route('installments.create', ['customer_id' => $row['customer']->id]) }}">اقساط</a>
                                 @endif
                             </td>
@@ -107,7 +108,8 @@
                             <td class="acc-num" style="color:#b42318;font-weight:800;">{{ number_format($rx->remainingAmount()) }}</td>
                             <td>{{ $rx->settlement_note ?: ($rx->settlement_mode === 'credit' ? 'نسیه' : '—') }}</td>
                             <td>
-                                <a class="btn btn-primary btn-sm" href="{{ route('receptions.show', $rx) }}#rx-collect">ثبت دریافت</a>
+                                <a class="btn btn-primary btn-sm" href="{{ route('accounting.manual', ['mode' => 'receipt', 'customer_id' => $rx->customer_id, 'reception_id' => $rx->id]) }}">ثبت دریافت</a>
+                                <a class="btn btn-ghost btn-sm" href="{{ route('receptions.show', $rx) }}#rx-collect">از قبض</a>
                             </td>
                         </tr>
                     @empty
