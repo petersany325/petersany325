@@ -1369,6 +1369,12 @@ class ReceptionController extends Controller
         if ($reception->isDelivered()) {
             return back()->with('error', 'این قبض قبلاً تحویل شده است.');
         }
+        if ($reception->blocksCustomerExitForPartner()) {
+            return back()->with('error', 'این قبض هنوز نزد همکار شبکه است. تا برگشت از نماینده، خروج/تحویل مشتری قفل است.');
+        }
+        if ($reception->isPartnerSecondary()) {
+            return back()->with('error', 'قبض ثانویه همکار فقط برای حسابداری/ردیابی است؛ خروج مشتری از قبض اولیه انجام می‌شود.');
+        }
 
         $data = $request->validate([
             'settlement_mode' => ['required', Rule::in(array_keys(ReceptionSettlementService::MODES))],

@@ -31,8 +31,12 @@ class PartnerReferralController extends Controller
         $q = trim((string) $request->input('q', ''));
 
         $base = Reception::query()
-            ->with(['customer', 'partner', 'partnerReferredTo', 'technician'])
-            ->whereNotNull('partner_flow');
+            ->with(['customer', 'partner', 'partnerReferredTo', 'technician', 'partnerSecondaries'])
+            ->whereNotNull('partner_flow')
+            ->where(function ($q) {
+                $q->whereNull('partner_receipt_role')
+                    ->orWhere('partner_receipt_role', '!=', Reception::PARTNER_ROLE_SECONDARY);
+            });
 
         if ($q !== '') {
             $base->where(function ($inner) use ($q) {
@@ -93,6 +97,123 @@ class PartnerReferralController extends Controller
             'partners' => Partner::query()->where('is_active', true)->orderBy('name')->get(),
             'pull' => $pull,
         ]);
+    }
+
+    /** Step 1–2 wizard: search receipt first, then pick partner. */
+    public function sendWizard(Request $request): View
+    {
+        $this->network->syncPeers();
+
+        $q = trim((string) $request->input('q', ''));
+        $partnerQ = trim((string) $request->input('partner_q', ''));
+        $receptionId = (int) $request->input('reception_id', 0);
+        $selected = $receptionId > 0
+            ? Reception::query()->with('customer')->find($receptionId)
+            : null;
+
+        if ($selected && ! $this->receptionIsReferable($selected)) {
+            $selected = null;
+            $receptionId = 0;
+        }
+
+        $receptions = collect();
+        if (! $selected) {
+            $query = Reception::query()
+                ->with('customer')
+                ->whereNotIn('status', ['delivered', 'cancelled'])
+                ->where(function ($inner) {
+                    $inner->whereNull('partner_flow')
+                        ->orWhere(function ($o) {
+                            $o->where('partner_flow', Reception::PARTNER_FLOW_OUTBOUND)
+                                ->whereIn('partner_approval_status', ['rejected', 'returned', 'returned_to_origin']);
+                        });
+                });
+            if ($q !== '') {
+                $query->where(function ($inner) use ($q) {
+                    $inner->where('receipt_no', 'like', '%'.$q.'%')
+                        ->orWhere('ticket_no', 'like', '%'.$q.'%')
+                        ->orWhere('serial_number', 'like', '%'.$q.'%')
+                        ->orWhere('product_name', 'like', '%'.$q.'%')
+                        ->orWhere('brand', 'like', '%'.$q.'%')
+                        ->orWhere('model', 'like', '%'.$q.'%')
+                        ->orWhereHas('customer', function ($c) use ($q) {
+                            $c->where('name', 'like', '%'.$q.'%')
+                                ->orWhere('phone', 'like', '%'.$q.'%')
+                                ->orWhere('alias', 'like', '%'.$q.'%');
+                        });
+                });
+            }
+            $receptions = $query->latest('id')->limit($q !== '' ? 100 : 60)->get();
+        }
+
+        $partners = collect();
+        if ($selected) {
+            $pq = Partner::query()->where('is_active', true)->orderBy('org_name')->orderBy('name');
+            if ($partnerQ !== '') {
+                $pq->where(function ($inner) use ($partnerQ) {
+                    $inner->where('org_name', 'like', '%'.$partnerQ.'%')
+                        ->orWhere('shop_name', 'like', '%'.$partnerQ.'%')
+                        ->orWhere('name', 'like', '%'.$partnerQ.'%')
+                        ->orWhere('address', 'like', '%'.$partnerQ.'%')
+                        ->orWhere('domain', 'like', '%'.$partnerQ.'%')
+                        ->orWhere('phone', 'like', '%'.$partnerQ.'%');
+                });
+            }
+            $partners = $pq->limit(200)->get();
+        }
+
+        return view('partners.send', [
+            'q' => $q,
+            'partnerQ' => $partnerQ,
+            'receptions' => $receptions,
+            'selected' => $selected,
+            'partners' => $partners,
+            'step' => $selected ? 2 : 1,
+        ]);
+    }
+
+    public function sendRefer(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'reception_id' => ['required', 'exists:receptions,id'],
+            'partner_id' => ['required', 'exists:partners,id'],
+            'note' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $reception = Reception::query()->findOrFail((int) $data['reception_id']);
+        $partner = Partner::query()->findOrFail((int) $data['partner_id']);
+
+        if (! $this->receptionIsReferable($reception)) {
+            return back()->with('error', 'این قبض قابل ارجاع نیست.')->withInput();
+        }
+        if (! $partner->is_active) {
+            return back()->with('error', 'این همکار غیرفعال است.')->withInput();
+        }
+
+        $result = $this->network->sendReferral($reception, $partner, $data['note'] ?? null);
+        if (! ($result['ok'] ?? false)) {
+            return back()->with('error', $result['message'])->withInput();
+        }
+
+        return redirect()
+            ->route('partners.cartable', ['tab' => 'outbound'])
+            ->with('success', $result['message']);
+    }
+
+    private function receptionIsReferable(Reception $reception): bool
+    {
+        if (in_array($reception->status, ['delivered', 'cancelled'], true)) {
+            return false;
+        }
+        if ($reception->isPartnerInbound()) {
+            return false;
+        }
+        if ($reception->partner_flow === Reception::PARTNER_FLOW_OUTBOUND
+            && ! in_array((string) $reception->partner_approval_status, ['rejected', 'returned', 'returned_to_origin'], true)) {
+            return false;
+        }
+
+        return true;
     }
 
     public function report(Request $request): View
@@ -294,6 +415,9 @@ class PartnerReferralController extends Controller
         // Origin shop: mark local outbound as physically returned / ready for customer exit.
         if ($reception->partner_flow === Reception::PARTNER_FLOW_OUTBOUND
             || $reception->partner_flow === Reception::PARTNER_FLOW_RETURNED) {
+            if ($reception->blocksCustomerExitForPartner()) {
+                return back()->with('error', 'تا برگشت از نماینده مقصد، خروج مشتری قفل است.');
+            }
             $reception->update([
                 'partner_flow' => Reception::PARTNER_FLOW_RETURNED,
                 'partner_returned_at' => now(),

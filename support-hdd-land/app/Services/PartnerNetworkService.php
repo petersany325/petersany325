@@ -303,6 +303,7 @@ class PartnerNetworkService
                 'customer_id' => $customer->id,
                 'partner_id' => $partner->id,
                 'partner_flow' => Reception::PARTNER_FLOW_INBOUND,
+                'partner_receipt_role' => Reception::PARTNER_ROLE_PRIMARY,
                 'partner_peer_receipt_no' => $peerReceipt !== '' ? $peerReceipt : null,
                 'partner_end_customer_note' => $origin['note'] ?? null,
                 'partner_approval_status' => 'pending',
@@ -339,13 +340,13 @@ class PartnerNetworkService
 
     /**
      * Secretary confirms part arrived + details match.
-     * Peer receipt stays; this shop keeps/issues its own distinct receipt number.
+     * Creates: (1) primary ops receipt for this shop, (2) secondary accounting receipt for origin partner.
      *
      * @return array{ok:bool,message:string}
      */
     public function approveInbound(Reception $reception): array
     {
-        if ($reception->partner_approval_status !== 'pending') {
+        if ($reception->partner_approval_status !== 'pending' || $reception->isPartnerSecondary()) {
             return ['ok' => false, 'message' => 'این قبض در انتظار تأیید شبکه نیست.'];
         }
 
@@ -377,23 +378,110 @@ class PartnerNetworkService
             }
         }
 
-        // On confirm: keep peer receipt, finalize this shop's own receipt, start internal flow.
+        // On confirm: finalize primary ops receipt for this shop and enter repair cycle.
         $reception->update([
             'receipt_no' => $local,
             'partner_peer_receipt_no' => $peer,
+            'partner_receipt_role' => Reception::PARTNER_ROLE_PRIMARY,
             'partner_approval_status' => 'approved',
             'status' => 'received',
             'received_at' => $reception->received_at ?: now(),
         ]);
         $this->decideRemote($reception, true);
 
-        return ['ok' => true, 'message' => 'تأیید شد. قبض نماینده «'.$peer.'» نگه داشته شد و قبض این مجموعه «'.$local.'» ثبت شد. ادامه تعمیر طبق روند داخلی.'];
+        $secondaryNo = null;
+        try {
+            $secondary = $this->ensureSecondaryPartnerReceipt($reception->fresh(['partner', 'customer']), $peer);
+            $secondaryNo = $secondary?->receipt_no;
+        } catch (Throwable $e) {
+            Log::warning('partner_secondary_receipt_failed', [
+                'reception_id' => $reception->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $msg = 'تأیید شد. قبض اولیه این مجموعه «'.$local.'» و قبض مبدأ نماینده «'.$peer.'» ثبت شد.';
+        if ($secondaryNo) {
+            $msg .= ' قبض ثانویه حسابداری همکار «'.$secondaryNo.'» ساخته شد.';
+        }
+        $msg .= ' ادامه تعمیر طبق روند داخلی؛ برگشت فقط بعد از هزینه + حسابداری/خروج.';
+
+        return ['ok' => true, 'message' => $msg];
+    }
+
+    /**
+     * Secondary receipt: accounting/tracking row for the sending partner shop (not for technician cartable).
+     */
+    private function ensureSecondaryPartnerReceipt(Reception $primary, string $peerReceiptNo): ?Reception
+    {
+        if (! $primary->partner_id) {
+            return null;
+        }
+        $existing = Reception::query()
+            ->where('partner_primary_reception_id', $primary->id)
+            ->where('partner_receipt_role', Reception::PARTNER_ROLE_SECONDARY)
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $partner = $primary->partner;
+        if (! $partner) {
+            return null;
+        }
+        $partnerCustomer = $partner->ensureCustomer();
+
+        $secReceipt = Reception::nextReceiptNo();
+        $guard = 0;
+        while (
+            ($this->sameReceiptNo($secReceipt, $peerReceiptNo)
+                || $this->sameReceiptNo($secReceipt, (string) $primary->receipt_no))
+            && $guard < 30
+        ) {
+            $secReceipt = $this->bumpReceiptCandidate($secReceipt);
+            $guard++;
+        }
+
+        return Reception::query()->create([
+            'ticket_no' => Reception::nextTicketNo(),
+            'receipt_no' => $secReceipt,
+            'customer_id' => $partnerCustomer->id,
+            'partner_id' => $partner->id,
+            'partner_flow' => Reception::PARTNER_FLOW_INBOUND,
+            'partner_receipt_role' => Reception::PARTNER_ROLE_SECONDARY,
+            'partner_primary_reception_id' => $primary->id,
+            'partner_peer_receipt_no' => $peerReceiptNo !== '' ? $peerReceiptNo : $primary->receipt_no,
+            'partner_end_customer_note' => 'قبض ثانویه برای همکار مبدأ — متصل به قبض اولیه '.$primary->receipt_no,
+            'partner_approval_status' => 'approved',
+            'partner_network_ref' => $primary->partner_network_ref
+                ? ((string) $primary->partner_network_ref).'#secondary'
+                : null,
+            'partner_payload' => $primary->partner_payload,
+            'product_name' => $primary->product_name,
+            'brand' => $primary->brand,
+            'model' => $primary->model,
+            'serial_number' => $primary->serial_number,
+            'lock_code' => $primary->lock_code,
+            'accessories' => $primary->accessories,
+            'appearance_notes' => $primary->appearance_notes,
+            'reported_fault' => $primary->reported_fault,
+            'hdd_capacity' => $primary->hdd_capacity,
+            'estimated_cost' => $primary->estimated_cost,
+            'admission_type' => $primary->admission_type,
+            'service_type' => $primary->service_type,
+            'repair_type' => $primary->repair_type,
+            'referrer' => 'قبض ثانویه شبکه — همکار '.$partner->displayName(),
+            'status' => 'received',
+            'custody' => 'front_desk',
+            'created_by' => auth()->id(),
+            'received_at' => now(),
+        ]);
     }
 
     /** @return array{ok:bool,message:string} */
     public function rejectInbound(Reception $reception, string $reason = ''): array
     {
-        if ($reception->partner_approval_status !== 'pending') {
+        if ($reception->partner_approval_status !== 'pending' || $reception->isPartnerSecondary()) {
             return ['ok' => false, 'message' => 'این قبض در انتظار تأیید شبکه نیست.'];
         }
         $reception->update([
@@ -408,17 +496,14 @@ class PartnerNetworkService
     }
 
     /**
-     * After repair/pricing/SMS: return device/receipt workflow to originating colleague for exit to customer.
+     * After repair + cost + SMS + accounting/exit readiness: return workflow to originating colleague.
      *
      * @return array{ok:bool,message:string}
      */
     public function returnToOrigin(Reception $reception): array
     {
-        if (! $reception->isPartnerInbound() || $reception->partner_approval_status !== 'approved') {
-            return ['ok' => false, 'message' => 'فقط قبض ورودی تأییدشده را می‌توان به همکار مبدأ برگرداند.'];
-        }
-        if (in_array($reception->status, ['cancelled', 'delivered'], true)) {
-            return ['ok' => false, 'message' => 'این قبض قابل برگشت شبکه نیست.'];
+        if ($reason = $reception->partnerReturnBlockReason()) {
+            return ['ok' => false, 'message' => $reason];
         }
 
         $reception->update([
@@ -426,6 +511,16 @@ class PartnerNetworkService
             'partner_returned_at' => now(),
             'status' => 'ready',
         ]);
+
+        Reception::query()
+            ->where('partner_primary_reception_id', $reception->id)
+            ->where('partner_receipt_role', Reception::PARTNER_ROLE_SECONDARY)
+            ->update([
+                'partner_approval_status' => 'returned_to_origin',
+                'partner_returned_at' => now(),
+                'status' => 'ready',
+            ]);
+
         $this->notifyReturned($reception);
 
         return ['ok' => true, 'message' => 'ارجاع برگشت به همکار مبدأ ثبت شد. مبدأ می‌تواند خروج/تحویل به مشتری را انجام دهد.'];
