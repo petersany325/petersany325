@@ -27,7 +27,7 @@
         </div>
     </section>
 
-    <form method="GET" class="panel daybook-toolbar" style="display:flex;flex-wrap:wrap;gap:8px;align-items:end;">
+    <form method="GET" class="panel daybook-toolbar daybook-report-filters">
         <div>
             <label>از تاریخ</label>
             @include('partials.jalali-date', ['name' => 'from', 'value' => $from])
@@ -66,13 +66,15 @@
                 @endforeach
             </select>
         </div>
-        <div>
-            <label style="display:flex;gap:6px;align-items:center;">
+        <div class="daybook-check-field">
+            <label style="display:flex;gap:6px;align-items:center;min-height:34px;">
                 <input type="checkbox" name="only_tickets" value="1" @checked($onlyTickets)>
                 فقط رویدادهای دارای قبض
             </label>
         </div>
-        <button class="btn btn-primary" type="submit">اعمال فیلتر</button>
+        <div class="daybook-filter-actions">
+            <button class="btn btn-primary" type="submit">اعمال فیلتر</button>
+        </div>
     </form>
 
     <div class="daybook-stats" style="margin-bottom:10px;">
