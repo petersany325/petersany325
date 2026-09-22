@@ -92,18 +92,19 @@
         <header class="acc-panel-head"><h3>آخرین دریافت‌های اقساط</h3></header>
         <div class="table-wrap">
             <table class="compact-table acc-table">
-                <thead><tr><th>تاریخ</th><th>مشتری</th><th>قسط</th><th>مبلغ</th><th>روش</th></tr></thead>
+                <thead><tr><th>تاریخ</th><th>شماره قبض</th><th>مشتری</th><th>قسط</th><th>مبلغ</th><th>روش</th></tr></thead>
                 <tbody>
                 @forelse($payments as $p)
                     <tr>
                         <td dir="ltr">{{ jalali_like($p->paid_at) }}</td>
+                        <td>@include('partials.ticket-cell', ['reception' => $p->plan?->reception])</td>
                         <td>{{ $p->plan?->customer?->displayName() ?? '—' }}</td>
                         <td>#{{ $p->installment_plan_id }} / {{ $p->item?->sequence }}</td>
                         <td class="acc-num">{{ number_format($p->amount) }}</td>
                         <td>{{ $p->methodLabel() }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="5">پرداختی نیست.</td></tr>
+                    <tr><td colspan="6">پرداختی نیست.</td></tr>
                 @endforelse
                 </tbody>
             </table>

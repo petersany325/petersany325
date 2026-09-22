@@ -24,6 +24,7 @@
                 <tr>
                     <th>نام</th>
                     <th>موبایل</th>
+                    <th>شماره قبض</th>
                     <th>آدرس</th>
                     <th>تعداد قبض</th>
                     <th>پرداخت‌شده</th>
@@ -36,6 +37,13 @@
                     <tr>
                         <td><strong>{{ $c->name }}</strong></td>
                         <td dir="ltr">{{ $c->phone }}</td>
+                        <td dir="ltr" style="font-size:11.5px;">
+                            @forelse(($c->recent_tickets ?? []) as $tn)
+                                <div>{{ $tn }}</div>
+                            @empty
+                                —
+                            @endforelse
+                        </td>
                         <td>{{ \Illuminate\Support\Str::limit($c->address, 40) ?: '—' }}</td>
                         <td>{{ $c->receptions_count }}</td>
                         <td>{{ toman((int) ($c->paid_sum ?? 0)) }}</td>
@@ -43,7 +51,7 @@
                         <td><a class="btn btn-primary" href="{{ route('reports.customers.show', $c) }}">پرونده کامل</a></td>
                     </tr>
                 @empty
-                    <tr><td colspan="7">مشتری با این عبارت پیدا نشد.</td></tr>
+                    <tr><td colspan="8">مشتری با این عبارت پیدا نشد.</td></tr>
                 @endforelse
                 </tbody>
             </table>

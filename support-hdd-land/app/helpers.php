@@ -529,3 +529,22 @@ if (! function_exists('normalize_receipt_search_query')) {
         return $q;
     }
 }
+
+if (! function_exists('ticket_label')) {
+    /**
+     * شماره قبض قابل‌نمایش: ticket_no ترجیح دارد، وگرنه receipt_no.
+     */
+    function ticket_label(mixed $reception): string
+    {
+        if (! $reception) {
+            return '';
+        }
+        $ticket = trim((string) ($reception->ticket_no ?? ''));
+        if ($ticket !== '') {
+            return $ticket;
+        }
+
+        return trim((string) ($reception->receipt_no ?? ''));
+    }
+}
+

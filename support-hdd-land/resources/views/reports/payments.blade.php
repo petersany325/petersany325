@@ -47,11 +47,11 @@
         <h3 style="margin-top:0;">بیشترین مانده بدهکار</h3>
         <div class="table-wrap">
             <table class="compact-table">
-                <thead><tr><th>قبض</th><th>مشتری</th><th>مانده</th></tr></thead>
+                <thead><tr><th>شماره قبض</th><th>مشتری</th><th>مانده</th></tr></thead>
                 <tbody>
                 @forelse($receivables as $r)
                     <tr>
-                        <td><a href="{{ route('receptions.show', $r) }}">{{ $r->ticket_no }}</a></td>
+                        <td>@include('partials.ticket-cell', ['reception' => $r])</td>
                         <td>
                             {{ $r->customer?->name }}
                             @if($r->customer && auth()->user()->canAccess('reports.customers'))
@@ -73,17 +73,18 @@
     <h3 style="margin-top:0;">آخرین دریافت‌ها</h3>
     <div class="table-wrap">
         <table class="compact-table">
-            <thead><tr><th>زمان</th><th>مشتری</th><th>روش</th><th>مبلغ</th></tr></thead>
+            <thead><tr><th>زمان</th><th>شماره قبض</th><th>مشتری</th><th>روش</th><th>مبلغ</th></tr></thead>
             <tbody>
             @forelse($recent as $p)
                 <tr>
                     <td>{{ jalali_like($p->paid_at) }}</td>
+                    <td>@include('partials.ticket-cell', ['reception' => $p->reception])</td>
                     <td>{{ $p->customer?->name }}</td>
                     <td>{{ $p->methodLabel() }}</td>
                     <td>{{ toman((int) $p->amount) }}</td>
                 </tr>
             @empty
-                <tr><td colspan="4">—</td></tr>
+                <tr><td colspan="5">—</td></tr>
             @endforelse
             </tbody>
         </table>

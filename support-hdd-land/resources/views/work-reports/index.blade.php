@@ -25,7 +25,7 @@
     </form>
     <div class="table-wrap">
         <table class="data">
-            <thead><tr><th>تاریخ</th><th>قبض</th><th>نویسنده</th><th>سطح</th><th>خلاصه</th><th></th></tr></thead>
+            <thead><tr><th>تاریخ</th><th>شماره قبض</th><th>نویسنده</th><th>سطح</th><th>خلاصه</th><th></th></tr></thead>
             <tbody>
             @forelse($reports as $r)
                 <tr>

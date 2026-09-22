@@ -3,7 +3,7 @@
         <thead>
         <tr>
             <th>تاریخ</th>
-            <th>قبض</th>
+            <th>شماره قبض</th>
             <th>مشتری</th>
             <th>کالا / سریال</th>
             <th>خدمات</th>
@@ -24,7 +24,7 @@
             @endphp
             <tr>
                 <td dir="ltr">{{ jalali_like($when) }}</td>
-                <td>{{ $r->ticket_no }}</td>
+                <td>@include('partials.ticket-cell', ['reception' => $r])</td>
                 <td>
                     {{ $r->customer?->name ?: '—' }}
                     <div class="muted" dir="ltr" style="font-size:10px;">{{ $r->customer?->phone }}</div>

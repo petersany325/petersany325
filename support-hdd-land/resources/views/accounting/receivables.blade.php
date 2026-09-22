@@ -81,7 +81,7 @@
                 <table class="compact-table acc-table">
                     <thead>
                     <tr>
-                        <th>قبض</th>
+                        <th>شماره قبض</th>
                         <th>مشتری</th>
                         <th>تحویل</th>
                         <th>جمع</th>

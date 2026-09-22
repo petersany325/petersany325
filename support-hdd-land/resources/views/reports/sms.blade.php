@@ -78,7 +78,7 @@
                 <tr>
                     <th>زمان</th>
                     <th>نتیجه</th>
-                    <th>قبض</th>
+                    <th>شماره قبض</th>
                     <th>مخاطب</th>
                     <th>موبایل</th>
                     <th>نوع / وضعیت</th>
@@ -156,7 +156,7 @@
             <h3 style="margin-top:0;">آخرین ناموفق‌ها</h3>
             <div class="table-wrap">
                 <table class="compact-table">
-                    <thead><tr><th>زمان</th><th>موبایل</th><th>قبض</th><th>پاسخ پنل</th></tr></thead>
+                    <thead><tr><th>زمان</th><th>موبایل</th><th>شماره قبض</th><th>پاسخ پنل</th></tr></thead>
                     <tbody>
                     @forelse($fails as $f)
                         <tr>
@@ -190,7 +190,7 @@
             <table class="compact-table">
                 <thead>
                     <tr>
-                        <th>قبض</th>
+                        <th>شماره قبض</th>
                         <th>مشتری</th>
                         <th>مبلغ</th>
                         <th>وضعیت</th>

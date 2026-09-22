@@ -49,17 +49,18 @@
             </header>
             <div class="table-wrap">
                 <table class="compact-table acc-table">
-                    <thead><tr><th>شماره</th><th>تاریخ</th><th>شرح</th><th>مبلغ</th></tr></thead>
+                    <thead><tr><th>شماره</th><th>تاریخ</th><th>شماره قبض</th><th>شرح</th><th>مبلغ</th></tr></thead>
                     <tbody>
                     @forelse($recentEntries as $e)
                         <tr>
                             <td><a class="acc-link" href="{{ route('accounting.show', $e) }}">{{ $e->entry_no }}</a></td>
                             <td>{{ jalali_date($e->entry_date) }}</td>
+                            <td>@include('partials.ticket-cell', ['reception' => $e->reception])</td>
                             <td>{{ \Illuminate\Support\Str::limit($e->description, 42) }}</td>
                             <td class="acc-num">{{ number_format($e->total_amount) }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="4">سندی نیست — بازسازی یا ثبت پرداخت کنید.</td></tr>
+                        <tr><td colspan="5">سندی نیست — بازسازی یا ثبت پرداخت کنید.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -72,12 +73,12 @@
             </header>
             <div class="table-wrap">
                 <table class="compact-table acc-table">
-                    <thead><tr><th>تاریخ</th><th>قبض</th><th>روش</th><th>مبلغ</th></tr></thead>
+                    <thead><tr><th>تاریخ</th><th>شماره قبض</th><th>روش</th><th>مبلغ</th></tr></thead>
                     <tbody>
                     @forelse($payments as $payment)
                         <tr>
                             <td>{{ jalali_like($payment->paid_at) }}</td>
-                            <td>{{ $payment->reception?->ticket_no }}</td>
+                            <td>@include('partials.ticket-cell', ['reception' => $payment->reception])</td>
                             <td><span class="acc-chip">{{ $payment->methodLabel() }}</span></td>
                             <td class="acc-num">{{ toman($payment->amount) }}</td>
                         </tr>
