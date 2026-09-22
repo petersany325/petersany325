@@ -6,16 +6,19 @@
 
 @section('content')
 <section class="panel" style="margin-bottom:12px;background:#f3f7ff;border-color:#b7c8e8;">
-    <strong>منطق شبکه:</strong>
+    <strong>منطق شبکه (کامل):</strong>
     <ol class="muted" style="margin:6px 0 0;padding-right:18px;line-height:1.8;">
-        <li>همکار اول با شماره قبض خودش ارجاع می‌دهد.</li>
-        <li>اینجا مشخصات قطعه/قبض را می‌بینید و تا ورود قطعه در وضعیت «منتظر قطعه» می‌ماند.</li>
-        <li>بعد از ورود قطعه: <b>تأیید</b> (قبض نماینده می‌ماند + قبض جدید این مجموعه؛ شماره‌ها نباید یکسان باشند) یا <b>رد</b> در صورت ناهماهنگی.</li>
-        <li>تعمیر، قیمت و پیامک طبق سیستم داخلی؛ سپس ارجاع برگشت به همکار اول و خروج.</li>
+        <li>اول قبض را سرچ/انتخاب کنید، بعد نماینده را سرچ و ارجاع بزنید.</li>
+        <li>در مقصد، قبض تا ورود قطعه در «منتظر تأیید منشی» می‌ماند.</li>
+        <li>بعد تأیید: <b>قبض اولیه</b> این مجموعه برای تعمیر + <b>قبض ثانویه</b> حسابداری برای نماینده مبدأ.</li>
+        <li>تعمیر → SMS → هزینه → حسابداری/تسویه و آماده‌سازی خروج؛ <b>سپس</b> ارجاع برگشت به همکار اول.</li>
     </ol>
     @if(!empty($pull['message']))
         <p class="muted" style="margin:8px 0 0;">{{ $pull['message'] }}</p>
     @endif
+    <div class="actions" style="margin-top:10px;flex-wrap:wrap;">
+        <a class="btn btn-primary" href="{{ route('partners.send') }}">ارجاع قبض جدید (سرچ قبض → نماینده)</a>
+    </div>
 </section>
 
 <section class="panel handoff-toolbar">
@@ -58,7 +61,7 @@
         <table class="compact-table">
             <thead>
             <tr>
-                <th>قبض این مجموعه</th>
+                <th>قبض اولیه این مجموعه</th>
                 <th>قبض نماینده مبدأ</th>
                 <th>همکار</th>
                 <th>مشتری</th>
@@ -74,6 +77,9 @@
                     <td>
                         <a href="{{ route('receptions.show', $r) }}">{{ $r->receipt_no ?: $r->ticket_no }}</a>
                         <div class="muted">{{ $r->ticket_no }}</div>
+                        @if($r->partnerSecondaries && $r->partnerSecondaries->isNotEmpty())
+                            <div class="muted" style="font-size:10px;">ثانویه: {{ $r->partnerSecondaries->pluck('receipt_no')->filter()->implode('، ') }}</div>
+                        @endif
                     </td>
                     <td dir="ltr"><strong>{{ $r->partner_peer_receipt_no ?: '—' }}</strong></td>
                     <td>
@@ -108,17 +114,26 @@
                                 <button class="btn btn-danger" type="submit">رد قبض</button>
                             </form>
                         @endif
-                        @if($r->partner_flow === 'inbound' && $r->partner_approval_status === 'approved' && in_array($r->status, ['ready', 'unrepairable', 'repairing', 'waiting_part', 'received'], true))
-                            <form method="POST" action="{{ route('partners.mark-returned', $r) }}" onsubmit="return confirm('ارجاع برگشت به همکار اول ثبت شود؟');">
-                                @csrf
-                                <button class="btn btn-secondary" type="submit">ارجاع برگشت به همکار اول</button>
-                            </form>
+                        @if($r->partner_flow === 'inbound' && $r->partner_approval_status === 'approved')
+                            @if($r->canReturnToPartner())
+                                <form method="POST" action="{{ route('partners.mark-returned', $r) }}" onsubmit="return confirm('ارجاع برگشت به همکار اول ثبت شود؟');">
+                                    @csrf
+                                    <button class="btn btn-secondary" type="submit">ارجاع برگشت به همکار اول</button>
+                                </form>
+                            @else
+                                <span class="muted" style="font-size:10.5px;max-width:180px;display:inline-block;">{{ $r->partnerReturnBlockReason() }}</span>
+                            @endif
                         @endif
                         @if($r->partner_flow === 'outbound' || ($r->partner_flow === 'returned' && in_array($r->partner_approval_status, ['returned', 'rejected'], true)))
                             <form method="POST" action="{{ route('partners.mark-returned', $r) }}">
                                 @csrf
-                                <button class="btn btn-primary" type="submit">آماده خروج مشتری</button>
+                                <button class="btn btn-primary" type="submit" @disabled($r->blocksCustomerExitForPartner())>
+                                    آماده خروج مشتری
+                                </button>
                             </form>
+                            @if($r->blocksCustomerExitForPartner())
+                                <span class="muted" style="font-size:10.5px;">تا برگشت از مقصد، خروج مشتری قفل است.</span>
+                            @endif
                         @endif
                     </td>
                 </tr>

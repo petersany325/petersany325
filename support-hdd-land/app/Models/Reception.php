@@ -13,7 +13,8 @@ class Reception extends Model
 
     protected $fillable = [
         'ticket_no', 'receipt_no', 'batch_code', 'delivery_batch_id', 'account_code', 'admission_type', 'service_type', 'repair_type',
-        'customer_id', 'partner_id', 'partner_flow', 'partner_peer_receipt_no', 'partner_end_customer_note',
+        'customer_id', 'partner_id', 'partner_flow', 'partner_receipt_role', 'partner_primary_reception_id',
+        'partner_peer_receipt_no', 'partner_end_customer_note',
         'partner_referred_to_id', 'partner_referred_at', 'partner_returned_at',
         'partner_approval_status', 'partner_network_ref', 'partner_reject_reason', 'partner_payload',
         'technician_id', 'custody_technician_id', 'fault_type_id', 'created_by',
@@ -61,9 +62,22 @@ class Reception extends Model
     public const PARTNER_FLOW_OUTBOUND = 'outbound';
     public const PARTNER_FLOW_RETURNED = 'returned';
 
+    public const PARTNER_ROLE_PRIMARY = 'primary';
+    public const PARTNER_ROLE_SECONDARY = 'secondary';
+
     public function partner(): BelongsTo
     {
         return $this->belongsTo(Partner::class);
+    }
+
+    public function partnerPrimary(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'partner_primary_reception_id');
+    }
+
+    public function partnerSecondaries(): HasMany
+    {
+        return $this->hasMany(self::class, 'partner_primary_reception_id');
     }
 
     /** شماره قبض قابل‌نمایش در گزارش‌ها (ticket_no وگرنه receipt_no). */
@@ -94,14 +108,99 @@ class Reception extends Model
 
     public function isPartnerPendingApproval(): bool
     {
-        return $this->isPartnerInbound() && $this->partner_approval_status === 'pending';
+        return $this->isPartnerInbound()
+            && $this->partner_approval_status === 'pending'
+            && ! $this->isPartnerSecondary();
+    }
+
+    public function isPartnerPrimary(): bool
+    {
+        return ($this->partner_receipt_role ?: self::PARTNER_ROLE_PRIMARY) === self::PARTNER_ROLE_PRIMARY;
+    }
+
+    public function isPartnerSecondary(): bool
+    {
+        return $this->partner_receipt_role === self::PARTNER_ROLE_SECONDARY;
+    }
+
+    /**
+     * Destination shop may return device to origin partner only after:
+     * repair finished (ready/unrepairable), cost decided, accounting settled, desk custody.
+     */
+    public function canReturnToPartner(): bool
+    {
+        if (! $this->isPartnerInbound() || $this->partner_approval_status !== 'approved') {
+            return false;
+        }
+        if ($this->isPartnerSecondary()) {
+            return false;
+        }
+        if (! in_array($this->status, ['ready', 'unrepairable'], true)) {
+            return false;
+        }
+        if (! $this->hasCostDecision()) {
+            return false;
+        }
+        $settled = $this->settled_at
+            || $this->remainingAmount() <= 0
+            || in_array((string) $this->settlement_mode, ['credit', 'waive'], true);
+        if (! $settled) {
+            return false;
+        }
+        if (in_array((string) ($this->custody ?? 'front_desk'), ['with_technician', 'returning'], true)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /** Origin shop must not deliver to end-customer while device is still at partner. */
+    public function blocksCustomerExitForPartner(): bool
+    {
+        if (! $this->isPartnerOutbound()) {
+            return false;
+        }
+
+        return ! in_array((string) $this->partner_approval_status, ['returned', 'rejected', 'returned_to_origin'], true);
+    }
+
+    public function partnerReturnBlockReason(): ?string
+    {
+        if ($this->canReturnToPartner()) {
+            return null;
+        }
+        if (! $this->isPartnerInbound() || $this->partner_approval_status !== 'approved') {
+            return 'فقط قبض ورودی تأییدشده قابل برگشت به همکار است.';
+        }
+        if ($this->isPartnerSecondary()) {
+            return 'برگشت فقط از قبض اولیه تعمیر انجام می‌شود.';
+        }
+        if (! in_array($this->status, ['ready', 'unrepairable'], true)) {
+            return 'اول چرخه تعمیر را تمام کنید (آماده تحویل / غیرقابل تعمیر).';
+        }
+        if (! $this->hasCostDecision()) {
+            return 'اول هزینه را مشخص/تأیید کنید و پیامک هزینه را بفرستید.';
+        }
+        $settled = $this->settled_at
+            || $this->remainingAmount() <= 0
+            || in_array((string) $this->settlement_mode, ['credit', 'waive'], true);
+        if (! $settled) {
+            return 'اول حسابداری/تسویه (یا نسیه/بخشش) را ثبت کنید؛ سپس ارجاع برگشت.';
+        }
+        if (in_array((string) ($this->custody ?? 'front_desk'), ['with_technician', 'returning'], true)) {
+            return 'دستگاه هنوز نزد تعمیرکار است — اول به پذیرش برگردانید.';
+        }
+
+        return 'شرایط برگشت به همکار کامل نیست.';
     }
 
     public function partnerApprovalLabel(): string
     {
         return match ($this->partner_approval_status) {
             'pending' => 'منتظر قطعه / تأیید منشی',
-            'approved' => 'تأیید شده — قبض این مجموعه',
+            'approved' => $this->isPartnerSecondary()
+                ? 'قبض ثانویه همکار مبدأ'
+                : 'تأیید شده — قبض اولیه این مجموعه',
             'rejected' => 'رد شده / برگشت به مبدأ',
             'sent' => 'ارسال‌شده / منتظر مقصد',
             'accepted' => 'مقصد تأیید کرد',

@@ -7,7 +7,7 @@
 @section('content')
 <section class="panel" style="margin-bottom:12px;background:#f3f7ff;border-color:#b7c8e8;">
     <strong>شبکه داخلی همکاران</strong>
-    <p class="muted" style="margin:6px 0 0;">فهرست از لایسنس‌های فعال با عضویت شبکه (ON) همگام می‌شود. در جستجو فقط <b>اسم مجموعه</b> و <b>آدرس</b> دیده می‌شود؛ سریال لایسنس مشتری به همکار نشان داده نمی‌شود.</p>
+    <p class="muted" style="margin:6px 0 0;">فهرست از لایسنس‌های فعال با عضویت شبکه (ON) همگام می‌شود. برای ارجاع کامل از مسیر <b>سرچ قبض → انتخاب نماینده</b> استفاده کنید.</p>
     @if(!empty($hubIdentity['org_name']))
         <div style="margin-top:10px;padding:10px 12px;background:#fff;border:1px dashed #b7c8e8;border-radius:8px;">
             <div class="muted" style="font-size:12px;">هویت مجموعه شما در شبکه</div>
@@ -23,6 +23,10 @@
     @if(!empty($sync['message']))
         <p class="muted" style="margin:8px 0 0;">آخرین همگام‌سازی: {{ $sync['message'] }}</p>
     @endif
+    <div class="actions" style="margin-top:10px;flex-wrap:wrap;">
+        <a class="btn btn-primary" href="{{ route('partners.send') }}">ارجاع قبض (سرچ قبض → نماینده)</a>
+        <a class="btn btn-secondary" href="{{ route('partners.cartable', ['tab' => 'pending']) }}">کارتابل ارجاع نماینده</a>
+    </div>
 </section>
 
 <section class="panel">
@@ -34,7 +38,6 @@
         <div class="actions" style="margin:0;flex-wrap:wrap;">
             <button class="btn btn-primary" type="submit">جستجو</button>
             <a class="btn btn-ghost" href="{{ route('partners.index') }}">پاک</a>
-            <a class="btn btn-primary" href="{{ route('partners.cartable', ['tab' => 'pending']) }}">کارتابل ارجاع نماینده</a>
         </div>
     </form>
     <form method="POST" action="{{ route('partners.sync') }}" style="margin-top:10px;">
@@ -66,7 +69,8 @@
                     <td>{{ $p->is_active ? 'فعال در شبکه' : 'غیرفعال' }}</td>
                     <td class="actions">
                         @if($p->is_active)
-                            <a class="btn btn-primary" href="{{ route('partners.refer-form', $p) }}">انتخاب</a>
+                            <a class="btn btn-primary" href="{{ route('partners.send') }}">ارجاع از سرچ قبض</a>
+                            <a class="btn btn-ghost" href="{{ route('partners.refer-form', $p) }}">انتخاب مستقیم</a>
                         @endif
                         <a class="btn btn-ghost" href="{{ route('partners.edit', $p) }}">یادداشت</a>
                     </td>

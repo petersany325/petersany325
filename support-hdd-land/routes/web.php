@@ -279,6 +279,8 @@ Route::middleware('auth')->group(function () {
         Route::post('partners/{partner}/refer', [PartnerReferralController::class, 'referSend'])->name('partners.refer-send');
 
         Route::get('partner-referrals', [PartnerReferralController::class, 'cartable'])->name('partners.cartable');
+        Route::get('partner-referrals/send', [PartnerReferralController::class, 'sendWizard'])->name('partners.send');
+        Route::post('partner-referrals/send', [PartnerReferralController::class, 'sendRefer'])->name('partners.send.refer');
         Route::get('partner-referrals/report', [PartnerReferralController::class, 'report'])->name('partners.report');
         Route::post('partner-referrals/pull', [PartnerReferralController::class, 'pull'])->name('partners.pull');
         Route::get('partner-referrals/intake', [PartnerReferralController::class, 'createInbound'])->name('partners.intake');

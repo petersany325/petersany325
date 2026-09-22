@@ -57,7 +57,8 @@ class NavMenu
                 'any_of' => ['handoffs', 'partners'],
                 'children' => [
                     ['label' => 'کارتابل ارجاع', 'route' => 'handoffs.index', 'match' => 'handoffs.index', 'hint' => 'جستجو، تأیید دریافت، دست تعمیر', 'mark' => 'ک', 'permission' => 'handoffs'],
-                    ['label' => 'کارتابل ارجاع نماینده', 'route' => 'partners.cartable', 'match' => 'partners.cartable|partners.intake*|partners.pull|partners.report', 'hint' => 'تأیید/رد قبض شبکه همکاران', 'mark' => 'نم', 'permission' => 'partners'],
+                    ['label' => 'کارتابل ارجاع نماینده', 'route' => 'partners.cartable', 'match' => 'partners.cartable|partners.intake*|partners.pull|partners.report|partners.send*', 'hint' => 'تأیید/رد قبض شبکه همکاران', 'mark' => 'نم', 'permission' => 'partners'],
+                    ['label' => 'ارجاع قبض به نماینده', 'route' => 'partners.send', 'match' => 'partners.send*', 'hint' => 'سرچ قبض → انتخاب نماینده', 'mark' => 'ارج', 'permission' => 'partners'],
                     ['label' => 'گزارش ارجاع / محل', 'route' => 'reports.custody', 'match' => 'reports.custody', 'hint' => 'گزارش سریال و قبض', 'mark' => 'گ', 'permission' => 'reports.custody'],
                 ],
             ],
@@ -66,10 +67,11 @@ class NavMenu
                 'label' => 'نمایندگان',
                 'permission' => 'partners',
                 'route' => 'partners.index',
-                'match' => 'partners.index|partners.create|partners.edit|partners.store|partners.update|partners.sync|partners.report',
+                'match' => 'partners.index|partners.create|partners.edit|partners.store|partners.update|partners.sync|partners.report|partners.send*|partners.refer*',
                 'mark' => 'ه',
                 'hint' => 'همکاران لایسنس‌دار فعال (شبکه داخلی)',
                 'children' => [
+                    ['label' => 'ارجاع قبض به نماینده', 'route' => 'partners.send', 'match' => 'partners.send*', 'hint' => 'سرچ قبض → نماینده', 'mark' => 'ارج'],
                     ['label' => 'فهرست همکاران شبکه', 'route' => 'partners.index', 'match' => 'partners.index|partners.edit|partners.sync', 'hint' => 'همگام از لایسنس‌های فعال', 'mark' => 'ف'],
                     ['label' => 'کارتابل ارجاع نماینده', 'route' => 'partners.cartable', 'match' => 'partners.cartable*', 'hint' => 'تأیید یا رد قبض ارجاعی', 'mark' => 'ک'],
                     ['label' => 'گزارش ارجاع شبکه', 'route' => 'partners.report', 'match' => 'partners.report', 'hint' => 'قبض مبدأ/مقصد و وضعیت', 'mark' => 'گ'],

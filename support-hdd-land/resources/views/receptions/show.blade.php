@@ -173,19 +173,29 @@
                             <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'pending']) }}">کارتابل</a>
                         </div>
                     @elseif($reception->partner_flow === 'inbound')
-                        <p class="muted" style="margin:0 0 8px;">قبض ورودی شبکه از <strong>{{ $reception->partner?->displayName() }}</strong>
+                        <p class="muted" style="margin:0 0 8px;">
+                            @if($reception->isPartnerSecondary())
+                                قبض ثانویه حسابداری برای همکار مبدأ
+                                · متصل به قبض اولیه #{{ $reception->partner_primary_reception_id }}
+                            @else
+                                قبض اولیه ورودی شبکه از <strong>{{ $reception->partner?->displayName() }}</strong>
+                            @endif
                             · قبض نماینده: <span dir="ltr">{{ $reception->partner_peer_receipt_no }}</span>
                             · قبض این مجموعه: <span dir="ltr">{{ $reception->receipt_no }}</span>
                             · {{ $reception->partnerApprovalLabel() }}
                         </p>
-                        <p class="muted" style="margin:0 0 8px;">بعد از تأیید، تعمیر/قیمت/پیامک طبق سیستم داخلی است. در پایان «ارجاع برگشت به همکار اول» بزنید.</p>
-                        <div class="actions">
+                        <p class="muted" style="margin:0 0 8px;">بعد از تأیید: تعمیر → SMS → هزینه → حسابداری/تسویه و آماده‌سازی خروج؛ سپس ارجاع برگشت به همکار اول.</p>
+                        <div class="actions" style="flex-wrap:wrap;">
                             <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'inbound']) }}">کارتابل</a>
-                            @if($reception->partner_approval_status === 'approved')
-                                <form method="POST" action="{{ route('partners.mark-returned', $reception) }}" onsubmit="return confirm('برگشت به همکار اول؟');">
-                                    @csrf
-                                    <button class="btn btn-primary" type="submit">ارجاع برگشت به همکار اول / خروج</button>
-                                </form>
+                            @if($reception->partner_approval_status === 'approved' && $reception->isPartnerPrimary())
+                                @if($reception->canReturnToPartner())
+                                    <form method="POST" action="{{ route('partners.mark-returned', $reception) }}" onsubmit="return confirm('برگشت به همکار اول؟');">
+                                        @csrf
+                                        <button class="btn btn-primary" type="submit">ارجاع برگشت به همکار اول</button>
+                                    </form>
+                                @else
+                                    <span class="muted" style="font-size:11px;">{{ $reception->partnerReturnBlockReason() }}</span>
+                                @endif
                             @endif
                         </div>
                     @elseif($reception->partner_flow === 'outbound' || $reception->partner_flow === 'returned')
@@ -198,19 +208,27 @@
                             <strong>{{ $reception->partnerReferredTo?->displayName() }}</strong>
                             · {{ $reception->partnerApprovalLabel() }}
                         </p>
-                        <div class="actions">
-                            <form method="POST" action="{{ route('partners.mark-returned', $reception) }}">
-                                @csrf
-                                <button class="btn btn-secondary" type="submit">آماده خروج / تحویل به مشتری</button>
-                            </form>
+                        <div class="actions" style="flex-wrap:wrap;">
+                            @if($reception->blocksCustomerExitForPartner())
+                                <span class="muted" style="font-size:11px;">تا برگشت از نماینده، خروج مشتری قفل است.</span>
+                            @else
+                                <form method="POST" action="{{ route('partners.mark-returned', $reception) }}">
+                                    @csrf
+                                    <button class="btn btn-secondary" type="submit">آماده خروج / تحویل به مشتری</button>
+                                </form>
+                            @endif
                             <a class="btn btn-ghost" href="{{ route('partners.cartable', ['tab' => 'outbound']) }}">کارتابل</a>
                             <a class="btn btn-ghost" href="{{ route('partners.report') }}">گزارش</a>
+                            <a class="btn btn-ghost" href="{{ route('partners.send') }}">ارجاع قبض جدید</a>
                         </div>
                     @else
+                        <div class="actions" style="margin-bottom:8px;">
+                            <a class="btn btn-primary" href="{{ route('partners.send', ['reception_id' => $reception->id]) }}">ارجاع این قبض به نماینده (سرچ نماینده)</a>
+                        </div>
                         <form method="POST" action="{{ route('partners.refer-out', $reception) }}" class="form-grid" style="grid-template-columns:1fr 1fr auto;align-items:end;">
                             @csrf
                             <div>
-                                <label>ارجاع به همکار شبکه (با همین شماره قبض)</label>
+                                <label>ارجاع سریع به همکار شبکه (با همین شماره قبض)</label>
                                 <select name="partner_id" required>
                                     <option value="">— انتخاب همکار لایسنس‌دار —</option>
                                     @foreach(($partners ?? []) as $p)
@@ -232,7 +250,7 @@
                             </div>
                             <button class="btn btn-secondary" type="submit">ارسال ارجاع شبکه</button>
                         </form>
-                        <p class="muted" style="margin:8px 0 0;">شماره قبض شما (<span dir="ltr">{{ $reception->receipt_no }}</span>) برای مقصد به‌عنوان قبض مبدأ می‌ماند؛ مقصد قبض جداگانه خودش را می‌زند.</p>
+                        <p class="muted" style="margin:8px 0 0;">شماره قبض شما (<span dir="ltr">{{ $reception->receipt_no }}</span>) برای مقصد به‌عنوان قبض مبدأ می‌ماند؛ مقصد قبض اولیه جداگانه + قبض ثانویه همکار می‌سازد.</p>
                     @endif
                 </div>
             @endif
