@@ -232,6 +232,8 @@ Route::middleware('auth')->group(function () {
         Route::get('receptions/{reception}/history', [ReceptionController::class, 'history'])->name('receptions.history');
         Route::post('receptions/{reception}/status', [ReceptionController::class, 'updateStatus'])->name('receptions.status');
         Route::post('receptions/{reception}/parts', [ReceptionController::class, 'addPart'])->name('receptions.parts');
+        Route::put('receptions/{reception}/parts/{receptionPart}', [ReceptionController::class, 'updatePart'])->name('receptions.parts.update');
+        Route::delete('receptions/{reception}/parts/{receptionPart}', [ReceptionController::class, 'destroyPart'])->name('receptions.parts.destroy');
         Route::post('receptions/{reception}/payments', [ReceptionController::class, 'addPayment'])->name('receptions.payments');
         Route::put('receptions/{reception}/payments/{payment}', [ReceptionController::class, 'updatePayment'])->name('receptions.payments.update');
         Route::delete('receptions/{reception}/payments/{payment}', [ReceptionController::class, 'destroyPayment'])->name('receptions.payments.destroy');
