@@ -71,7 +71,8 @@
                     <span class="shortcut-icon">{{ $card['mark'] }}</span>
                     <span class="shortcut-text">
                         <strong>{{ $card['label'] }}</strong>
-                        <small>{{ $card['hint'] }}</small>
+                        <small class="shortcut-hint-full">{{ $card['hint'] }}</small>
+                        <small class="shortcut-hint-short">{{ $card['short_hint'] !== '' ? $card['short_hint'] : $card['hint'] }}</small>
                     </span>
                 </a>
             @endforeach

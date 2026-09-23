@@ -418,14 +418,19 @@ class NavMenu
             if (empty($group['route'])) {
                 continue;
             }
-            $hint = $group['hint'];
-            if ($group['children']) {
-                $hint = collect($group['children'])->pluck('label')->implode(' · ');
+            $hint = (string) ($group['hint'] ?? '');
+            $childCount = is_array($group['children'] ?? null) ? count($group['children']) : 0;
+            // روی دسکتاپ زیر‌منوها را خلاصه نشان بده؛ روی موبایل فقط توضیح کوتاه گروه
+            // (متن بلند ··· باعث overflow افقی گرید می‌شد)
+            if ($childCount > 0) {
+                $labels = collect($group['children'])->pluck('label')->filter()->take(4)->implode(' · ');
+                $hint = $labels !== '' ? $labels.($childCount > 4 ? ' …' : '') : $hint;
             }
             $cards[] = [
                 'label' => $group['label'],
                 'route' => $group['route'],
                 'hint' => $hint,
+                'short_hint' => (string) ($group['hint'] ?? ''),
                 'mark' => $group['mark'],
                 'group' => $group['label'],
                 'tone' => self::tone($group['key']),
@@ -493,9 +498,9 @@ class NavMenu
     public static function mobilePrimary(User $user, ?array $groups = null): array
     {
         $groups = collect($groups ?? self::forUser($user))->keyBy('key');
-        // کارتابل تعمیرکار (handoffs) و شرح کار باید روی موبایل در دسترس باشند.
+        // میز / پذیرش / دفتر روز / ارجاع — اولویت موبایل کارمند
         $order = [
-            'home', 'handoffs', 'reception', 'work', 'daily_logs', 'notifications',
+            'home', 'reception', 'daily_logs', 'handoffs', 'work', 'notifications',
             'customers', 'sms', 'parts', 'cost_approvals', 'accounting', 'reports',
         ];
 

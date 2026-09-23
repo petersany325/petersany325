@@ -1128,12 +1128,9 @@ html[data-ui-mode="mobile"] .desktop-only{display:none!important}
 html[data-ui-mode="mobile"] .caption-full{display:none}
 html[data-ui-mode="mobile"] .caption-short{display:inline}
 html[data-ui-mode="mobile"] .caption-user-name{display:none}
-html[data-ui-mode="mobile"] body{background:#eef1f5}
+html[data-ui-mode="mobile"] body{background:#eef1f5;overflow-x:hidden}
 html[data-ui-mode="mobile"] .app-shell{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 html[data-ui-mode="mobile"] .app-toolbar{position:sticky;top:0;z-index:20;border-bottom:1px solid #9aa5b5}
-html[data-ui-mode="mobile"] .app-workspace{padding:8px}
-html[data-ui-mode="mobile"] .win-frame{border:0;box-shadow:none;background:transparent}
-html[data-ui-mode="mobile"] .win-body{padding:0;background:transparent}
 html[data-ui-mode="mobile"] .table-wrap{border-radius:6px}
 html[data-ui-mode="mobile"] .panel{border-radius:8px}
 html[data-ui-mode="mobile"] .login-page{padding:12px;padding-bottom:24px}
@@ -1272,20 +1269,103 @@ html[data-ui-mode="mobile"] .staff-drawer:not([hidden]) .staff-tab-more{color:#f
   .daybook-hint-chip{font-size:10.5px;padding:5px 7px}
 }
 
-html[data-ui-mode="mobile"] .daybook{gap:8px}
-html[data-ui-mode="mobile"] .daybook-hero{padding:10px 12px}
+/* --- Staff mobile: shell + all menus fit viewport --- */
+html[data-ui-mode="mobile"] .app-shell{overflow-x:hidden;max-width:100vw}
+html[data-ui-mode="mobile"] .app-workspace{padding:8px;overflow-x:hidden;max-width:100%}
+html[data-ui-mode="mobile"] .win-frame{
+  border:0;box-shadow:none;background:transparent;
+  overflow:visible;min-height:0;max-width:100%;
+}
+html[data-ui-mode="mobile"] .win-body{padding:0;background:transparent;overflow:visible;max-width:100%}
+html[data-ui-mode="mobile"] .panel{max-width:100%;box-sizing:border-box}
+html[data-ui-mode="mobile"] .actions{flex-wrap:wrap;gap:6px}
+html[data-ui-mode="mobile"] .actions .btn{flex:1 1 auto;justify-content:center;text-align:center}
+html[data-ui-mode="mobile"] .stats,
+html[data-ui-mode="mobile"] .stats-compact{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:6px;max-width:100%;
+}
+html[data-ui-mode="mobile"] .stats .stat,
+html[data-ui-mode="mobile"] .stats-compact .stat{min-width:0;overflow-wrap:anywhere}
+html[data-ui-mode="mobile"] .form-grid,
+html[data-ui-mode="mobile"] .split-2{grid-template-columns:1fr;max-width:100%}
+html[data-ui-mode="mobile"] input,
+html[data-ui-mode="mobile"] select,
+html[data-ui-mode="mobile"] textarea{max-width:100%;box-sizing:border-box}
+html[data-ui-mode="mobile"] .table-wrap{max-width:100%;-webkit-overflow-scrolling:touch}
+
+/* Dashboard shortcut menus — no horizontal clip */
+html[data-ui-mode="mobile"] .shortcut-desk{gap:10px;max-width:100%;overflow-x:hidden}
+html[data-ui-mode="mobile"] .shortcut-section{max-width:100%}
+html[data-ui-mode="mobile"] .shortcut-grid,
+html[data-ui-mode="mobile"] .shortcut-grid-sm{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;max-width:100%;
+}
+html[data-ui-mode="mobile"] .shortcut-card{
+  min-width:0;width:100%;max-width:100%;
+  align-items:flex-start;padding:10px 9px;min-height:56px;
+  border-radius:10px;box-sizing:border-box;
+}
+html[data-ui-mode="mobile"] .shortcut-icon{width:28px;height:28px;border-radius:8px;flex:0 0 auto;font-size:11px}
+html[data-ui-mode="mobile"] .shortcut-text{min-width:0;flex:1}
+html[data-ui-mode="mobile"] .shortcut-text strong{font-size:12.5px;line-height:1.35;overflow-wrap:anywhere}
+html[data-ui-mode="mobile"] .shortcut-hint-full{display:none!important}
+html[data-ui-mode="mobile"] .shortcut-hint-short{
+  display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+  overflow:hidden;font-size:10.5px;line-height:1.35;overflow-wrap:anywhere;
+}
+.shortcut-hint-short{display:none}
+html[data-ui-mode="desktop"] .shortcut-hint-short{display:none!important}
+html[data-ui-mode="desktop"] .shortcut-hint-full{display:block}
+
+html[data-ui-mode="mobile"] .daybook{gap:8px;max-width:100%;overflow-x:hidden}
+html[data-ui-mode="mobile"] .daybook-hero{padding:12px;border-radius:12px;flex-direction:column;align-items:stretch}
+html[data-ui-mode="mobile"] .daybook-hero h2{font-size:17px}
+html[data-ui-mode="mobile"] .daybook-hero-actions{width:100%;display:flex;gap:6px}
+html[data-ui-mode="mobile"] .daybook-hero-actions .btn{flex:1 1 0;justify-content:center;text-align:center;min-height:36px}
+html[data-ui-mode="mobile"] .daybook-toolbar.panel,
+html[data-ui-mode="mobile"] .daybook .panel{padding:12px;border-radius:12px;max-width:100%;box-sizing:border-box}
 html[data-ui-mode="mobile"] .daybook-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
-html[data-ui-mode="mobile"] .daybook-stats > div{padding:8px;border-radius:8px}
+html[data-ui-mode="mobile"] .daybook-stats > div{padding:8px;border-radius:8px;min-width:0}
 html[data-ui-mode="mobile"] .daybook-stats strong{font-size:13px;overflow-wrap:anywhere}
 html[data-ui-mode="mobile"] .daybook-cats{grid-template-columns:1fr 1fr;gap:6px}
-html[data-ui-mode="mobile"] .daybook-cat{border-radius:8px;padding:10px 8px;min-height:64px}
-html[data-ui-mode="mobile"] .daybook-report-filters{grid-template-columns:1fr 1fr}
+html[data-ui-mode="mobile"] .daybook-cat{border-radius:10px;padding:10px 8px;min-height:64px;min-width:0}
+html[data-ui-mode="mobile"] .daybook-filters{flex-direction:column;align-items:stretch;gap:10px}
+html[data-ui-mode="mobile"] .daybook-nav{
+  width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px;align-items:end;
+}
+html[data-ui-mode="mobile"] .daybook-nav .btn{white-space:nowrap}
+html[data-ui-mode="mobile"] .daybook-report-filters{
+  grid-template-columns:1fr;gap:10px;align-items:stretch;
+}
+html[data-ui-mode="mobile"] .daybook-report-filters > div{min-width:0;max-width:100%}
+html[data-ui-mode="mobile"] .daybook-report-filters label{display:block;margin-bottom:4px;font-size:12px;font-weight:700}
 html[data-ui-mode="mobile"] .daybook-report-filters select,
 html[data-ui-mode="mobile"] .daybook-report-filters input,
 html[data-ui-mode="mobile"] .daybook-filters select,
-html[data-ui-mode="mobile"] .daybook-filters input{min-height:34px;width:100%;box-sizing:border-box}
-html[data-ui-mode="mobile"] .daybook .panel{padding:10px}
-html[data-ui-mode="mobile"] .daybook .table-wrap{margin-inline:-2px;border-radius:8px}
+html[data-ui-mode="mobile"] .daybook-filters input{
+  min-height:38px;width:100%;max-width:100%;box-sizing:border-box;border-radius:8px;
+}
+html[data-ui-mode="mobile"] .daybook-check-field{
+  grid-column:1/-1;padding:8px 10px;border:1px solid #d9dee6;border-radius:8px;background:#f8fafc;
+}
+html[data-ui-mode="mobile"] .daybook-check-field label{
+  display:flex!important;gap:8px;align-items:flex-start;margin:0;font-weight:600;line-height:1.45;
+}
+html[data-ui-mode="mobile"] .daybook-check-field input[type=checkbox]{
+  width:18px;height:18px;min-height:18px;flex:0 0 auto;margin-top:2px;
+}
+html[data-ui-mode="mobile"] .daybook-filter-actions{grid-column:1/-1;display:flex;gap:6px}
+html[data-ui-mode="mobile"] .daybook-filter-actions .btn{flex:1 1 auto;min-height:40px;justify-content:center}
+html[data-ui-mode="mobile"] .daybook .table-wrap{margin-inline:0;border-radius:8px;max-width:100%}
+html[data-ui-mode="mobile"] .daybook-ticket-panel{border-radius:10px;padding:12px}
+html[data-ui-mode="mobile"] .daybook-ticket-search{flex-direction:column}
+html[data-ui-mode="mobile"] .daybook-ticket-search .btn{width:100%;min-height:38px}
+html[data-ui-mode="mobile"] .daybook-entry{border-radius:10px;padding:10px}
+html[data-ui-mode="mobile"] .daybook-entry > form{width:100%;margin:0}
+html[data-ui-mode="mobile"] .daybook-entry > form .btn{width:100%}
+
 html[data-ui-mode="mobile"] .staff-drawer-mode{gap:4px}
 html[data-ui-mode="mobile"] .staff-drawer-mode .btn{padding:5px 8px;min-height:30px;font-size:11px}
 html[data-ui-mode="mobile"] .staff-drawer-item{padding:10px;gap:8px;align-items:flex-start}
@@ -1293,13 +1373,31 @@ html[data-ui-mode="mobile"] .staff-drawer-item > span:last-child{min-width:0;fle
 html[data-ui-mode="mobile"] .staff-drawer-item strong{font-size:13px;line-height:1.35;overflow-wrap:anywhere}
 html[data-ui-mode="mobile"] .staff-drawer-item small{line-height:1.35;overflow-wrap:anywhere}
 html[data-ui-mode="mobile"] .staff-drawer-group-title{font-size:11.5px;padding:8px 10px}
+html[data-ui-mode="mobile"] .staff-tabbar{
+  gap:2px;padding:6px 4px calc(8px + env(safe-area-inset-bottom,0px));
+}
 html[data-ui-mode="mobile"] .staff-tabbar a,
-html[data-ui-mode="mobile"] .staff-tab-more{min-width:0;max-width:none;flex:1 1 0;padding:7px 4px}
-html[data-ui-mode="mobile"] .staff-tabbar small{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-html[data-ui-mode="mobile"] .staff-tab-mark{width:30px;height:26px}
+html[data-ui-mode="mobile"] .staff-tab-more{
+  min-width:0;max-width:none;flex:1 1 0;padding:6px 2px;border-radius:10px;
+}
+html[data-ui-mode="mobile"] .staff-tabbar small{
+  font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;
+}
+html[data-ui-mode="mobile"] .staff-tab-mark{width:28px;height:24px;border-radius:7px;font-size:11px}
+html[data-ui-mode="mobile"] .staff-more-btn{min-height:34px;border-radius:8px;font-weight:700}
+
 @media (max-width:560px){
   html[data-ui-mode="mobile"] .daybook-cats{grid-template-columns:1fr}
-  html[data-ui-mode="mobile"] .daybook-report-filters{grid-template-columns:1fr}
+  html[data-ui-mode="mobile"] .daybook-nav{grid-template-columns:1fr 1fr;gap:6px}
+  html[data-ui-mode="mobile"] .daybook-nav > *:nth-child(2){grid-column:1/-1}
+  html[data-ui-mode="mobile"] .shortcut-grid,
+  html[data-ui-mode="mobile"] .shortcut-grid-sm{gap:6px}
+}
+
+/* Narrow phones: still keep 2-col menus when possible */
+@media (max-width:360px){
+  html[data-ui-mode="mobile"] .shortcut-grid,
+  html[data-ui-mode="mobile"] .shortcut-grid-sm{grid-template-columns:1fr}
 }
 
 /* ===== Warehouse / accounting-style inventory ===== */
