@@ -38,6 +38,7 @@ struct AppState {
     char image_file[1024] = {};
     char dest_folder[1024] = {};
     char image_save_as[1024] = {};
+    char add_image_path[1024] = {};
     char log_path[1024] = "clone.progress.log";
     char boot_confirm[64] = {};
     CloneSettings settings;
@@ -805,16 +806,38 @@ void draw_disk_table(AppState& a) {
     if (ImGui::SmallButton("Add image file as damaged source...")) {
         auto f = native_open_file("Add image as a damaged source (recover FROM)", "Images\0*.img;*.dd;*.bin\0All\0*.*\0");
         if (!f.empty()) {
+            std::snprintf(a.add_image_path, sizeof(a.add_image_path), "%s", f.c_str());
+        }
+        if (a.add_image_path[0]) {
+            std::string path = a.add_image_path;
             DiskInfo info;
-            info.path = f;
-            info.display_name = f;
+            info.path = path;
+            info.display_name = path;
             info.model = "Image file";
             info.bus = "File";
-            auto s = open_disk(f, false, true);
+            auto s = open_disk(path, false, true);
             if (s) info.size_bytes = s->size_bytes();
             a.disks.push_back(info);
-            a.recover_checked.push_back(0);
+            a.recover_checked.push_back(1);
+            a.status_message = "Added image as damaged source: " + path;
         }
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(420);
+    ImGui::InputTextWithHint("##addimg", "or type /path/to/disk.img", a.add_image_path, sizeof(a.add_image_path));
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Add path") && a.add_image_path[0]) {
+        std::string path = a.add_image_path;
+        DiskInfo info;
+        info.path = path;
+        info.display_name = path;
+        info.model = "Image file";
+        info.bus = "File";
+        auto s = open_disk(path, false, true);
+        if (s) info.size_bytes = s->size_bytes();
+        a.disks.push_back(info);
+        a.recover_checked.push_back(1);
+        a.status_message = "Added image as damaged source: " + path;
     }
 }
 
