@@ -1,0 +1,90 @@
+# HDDSuperClone for Windows
+
+Native Windows port of [HDDSuperClone](https://github.com/thesourcerer8/hddsuperclone) (Scott Dwyer, GPL-2). This is a **sector-level clone / recovery** tool for failing disks — not a file copy utility.
+
+Upstream: <https://github.com/thesourcerer8/hddsuperclone> · original site: <http://www.hddsuperclone.com/>
+
+Install with **HDDSuperClone-Windows-Setup.exe** (NSIS). It installs to `Program Files\HDDSuperClone`, adds Start Menu + desktop shortcuts, requires Administrator, and registers Add/Remove Programs.
+
+## What this port does
+
+- **Start scan**, then tick **Damaged disk (source)** (HDD/USB you recover FROM). Ticks never mean destination.
+- Four explicit jobs:
+  - **Disk-to-disk** — clone the ticked damaged source onto **Dest HDD / copy disk** (Set dest HDD)
+  - **Image onto Image HDD** — create a `.img`/`.dd` **of** the ticked damaged disk and save it on the healthy **Image HDD** (folder or file). This is not restore.
+  - **File recovery only** — ticked damaged source; folder for recovered files. Walks **NTFS `$MFT`** (FILE records, `FILE_NAME`, `$STANDARD_INFORMATION`, resident + non-resident `$DATA` runlists, `$MFTMirr`, deleted vs in-use) or FAT, then signature carving as fallback. The File recovery panel loads an MFT table/tree so you can pick records.
+  - **Grep scan** — dedicated **Scan / Recover → Grep scan** menu (and on-screen job) that greps the ticked damaged HDD/USB for a data-driven magic-byte table (`carve_signatures.txt`: photos, video, audio, documents, archives, databases, mail, executables). Choose categories, pick a folder, watch hits; writes `carved/carved_NNNN.ext`. Types with no reliable magic are listed as skip (txt, sql, mpeg-ts, TIFF-based RAW, ZIP-wrapped OOXML, …).
+  - **Restore image to dest disk** — write an **existing** `.img` onto a physical dest disk (overwrite). Separate mode, not the default imaging job.
+- Sector-by-sector copy with the original multi-pass strategy:
+  - Phase 1 forward with adaptive skip
+  - Phase 2 reverse with adaptive skip
+  - Phase 3 / 4 forward without skip
+  - Trim, divide, scrape, optional retries
+- HDDSuperClone-compatible **progress log** (resume after stop/crash; `.bak` kept)
+- Optional ddrescue map export
+- Administrator elevation manifest (`requireAdministrator`)
+- Safety: never writes until a destination is chosen; extra typed confirmation (`OVERWRITE BOOT DISK`) before touching the Windows/system boot disk; source and destination cannot be the same device
+
+## Recovery methods (Windows)
+
+| Method | Windows path | Notes |
+| --- | --- | --- |
+| Generic | Overlapped `ReadFile` / `WriteFile` | Works on any disk or image |
+| ATA pass-through | `IOCTL_ATA_PASS_THROUGH` | `READ DMA EXT` 0x25, PIO 0x24 fallback |
+| SCSI pass-through | `IOCTL_SCSI_PASS_THROUGH_DIRECT` | `READ(16)` |
+| Direct AHCI | `IOCTL_ATA_PASS_THROUGH_DIRECT` + DMA + `DEVICE RESET` 0x08 | Closest user-mode equivalent of Linux AHCI MMIO. A signed kernel driver is required for true HBA MMIO; see `driver/hscahci/README.md`. |
+| Direct IDE | ATA PIO taskfile 0x24 | No DMA |
+| USB-direct | SCSI BOT via USBSTOR; WinUSB BOT if the device is bound to WinUSB (Zadig) | Original libusb bypass of USBD is not possible while USBSTOR owns the device |
+| Rebuild Assist / FPDMA | `READ FPDMA QUEUED` 0x60, NCQ log 0x10, enable log 0x15 | Error LBA splits the chunk (prefix finished, LBA marked bad) |
+| Virtual disk | Windows Virtual Disk API (`CreateVirtualDisk` VHDX + attach) or sparse image | Original `hddscbd` kernel module is Linux-only |
+| USB relay | dcttech HID `16C0:05DF` (`HidD_SetFeature`) | Power-cycle on read error |
+| HDDSuperTool scripts | Interpreter subset + original `scripts/` | `echo`, `seti`/`sets`, `if`, `ata28cmd`/`ata48cmd`, `printbuffer`, resets, `include` |
+
+On a dying SATA disk, **a Linux live USB of HDDSuperClone / OpenSuperClone is still stronger** when you need controller MMIO timeouts independent of StorAHCI. This Windows build is the right tool when you must run on Windows.
+
+## Build on Windows (MSVC)
+
+```bat
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Release
+```
+
+Run `build\Release\hddsuperclone-windows.exe` **as Administrator**.
+
+## Cross-compile from Linux (MinGW-w64)
+
+```bash
+sudo apt install g++-mingw-w64-x86-64 cmake nsis
+cmake -S . -B build-win -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64.cmake
+cmake --build build-win
+makensis -DEXE_PATH=build-win/hddsuperclone-windows.exe \
+         -DSRC_DIR=. \
+         -DOUT_FILE=HDDSuperClone-Windows-Setup.exe \
+         installer/hddsuperclone.nsi
+```
+
+The GUI is a Windows-subsystem PE64 (no leftover console window). `--cli` and `--script` attach a console. DirectX 11 is required for the GUI (Windows 7+).
+
+## Build and run on Linux (GUI preview / tests)
+
+```bash
+sudo apt install g++ cmake libglfw3-dev libgl1-mesa-dev
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/hsc_engine_tests
+./build/hddsuperclone-windows
+./build/hddsuperclone-windows --cli --source src.img --dest dst.img --log clone.log --source-file --dest-file --mode generic
+./build/hddsuperclone-windows --script scripts/ata_identify_device --source src.img --source-file
+```
+
+## Safety
+
+1. Refresh the disk list first. Nothing is opened for write until Start.
+2. Choose source (read-only) and destination explicitly.
+3. Confirm the overwrite dialog.
+4. If the destination is the boot/system disk, type `OVERWRITE BOOT DISK`.
+5. Always keep a progress log on a **third** drive (not source, not dest).
+
+## License
+
+GPL-2, same as HDDSuperClone. See `LICENSE`. Dear ImGui is MIT (`third_party/imgui/LICENSE.txt`).

@@ -23,7 +23,11 @@
 - `hamgap-bot/` — کد ربات
 - `hamgap-bot-design/` — دارایی‌های طراحی
 
-## نام‌هایی که عمداً اینجا نیستند
+### ۳) HDDSuperClone برای ویندوز (`hddsuperclone-windows/`)
+- `hddsuperclone-windows/` — پورت بومی ویندوز از [HDDSuperClone](https://github.com/thesourcerer8/hddsuperclone) برای کلون/ریکاوری سکتوری دیسک‌های خراب
+- ساخت: `cmake` + MSVC یا MinGW؛ راهنما در [`hddsuperclone-windows/README.md`](hddsuperclone-windows/README.md)
+
+
 - **Windex / Windex WD** — حذف شده از این ریپو  
 - **WinFOF** — اینجا نیست  
 - **SASDEX** — اینجا نیست  
