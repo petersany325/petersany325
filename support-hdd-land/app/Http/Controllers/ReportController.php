@@ -527,6 +527,25 @@ class ReportController extends Controller
             ->orderByDesc('qty')
             ->get();
 
+        $topCustomers = Reception::query()
+            ->select(
+                'customer_id',
+                DB::raw('COUNT(*) as visits'),
+                DB::raw('SUM(total_amount) as billed'),
+                DB::raw('SUM(paid_amount) as paid'),
+                DB::raw('MAX(COALESCE(received_at, created_at)) as last_visit')
+            )
+            ->where('technician_id', $technician->id)
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to)
+            ->whereNotNull('customer_id')
+            ->groupBy('customer_id')
+            ->orderByDesc('visits')
+            ->orderByDesc('billed')
+            ->limit(20)
+            ->with('customer')
+            ->get();
+
         $handoffs = DeviceHandoff::query()
             ->where('to_technician_id', $technician->id)
             ->whereDate('created_at', '>=', $from)
@@ -554,7 +573,7 @@ class ReportController extends Controller
 
         return view('reports.technician-show', compact(
             'technician', 'from', 'to', 'jobs', 'delivered', 'laborSum', 'partsSum',
-            'commissionSum', 'inHand', 'partsUsed', 'handoffs', 'byStatus', 'statusLabels',
+            'commissionSum', 'inHand', 'partsUsed', 'topCustomers', 'handoffs', 'byStatus', 'statusLabels',
             'chartStatusLabels', 'chartStatusValues', 'daily', 'avgDays'
         ));
     }
@@ -731,20 +750,152 @@ class ReportController extends Controller
         [$from, $to] = $this->range($request);
 
         $rows = ReceptionPart::query()
-            ->select('part_name', DB::raw('SUM(quantity) as qty'), DB::raw('SUM(total_price) as amount'))
-            ->whereDate('used_at', '>=', $from)
-            ->whereDate('used_at', '<=', $to)
-            ->groupBy('part_name')
+            ->leftJoin('parts', 'parts.id', '=', 'reception_parts.part_id')
+            ->select(
+                'reception_parts.part_name',
+                DB::raw('SUM(reception_parts.quantity) as qty'),
+                DB::raw('SUM(reception_parts.total_price) as sale_amount'),
+                DB::raw('SUM(reception_parts.quantity * COALESCE(parts.purchase_price, 0)) as purchase_cost')
+            )
+            ->whereDate('reception_parts.used_at', '>=', $from)
+            ->whereDate('reception_parts.used_at', '<=', $to)
+            ->groupBy('reception_parts.part_name')
             ->orderByDesc('qty')
-            ->get();
+            ->get()
+            ->map(function ($row) {
+                $sale = (int) ($row->sale_amount ?? 0);
+                $buy = (int) ($row->purchase_cost ?? 0);
+                $row->profit = $sale - $buy;
+                $row->amount = $sale; // سازگاری با قالب قبلی
+
+                return $row;
+            });
+
+        $totals = [
+            'qty' => (int) $rows->sum('qty'),
+            'sale' => (int) $rows->sum('sale_amount'),
+            'purchase' => (int) $rows->sum('purchase_cost'),
+            'profit' => (int) $rows->sum('profit'),
+        ];
 
         return view('reports.parts-used', [
             'rows' => $rows,
+            'totals' => $totals,
             'from' => $from,
             'to' => $to,
             'chartPartLabels' => $rows->take(10)->pluck('part_name')->values()->all(),
             'chartPartValues' => $rows->take(10)->pluck('qty')->map(fn ($v) => (int) $v)->values()->all(),
         ]);
+    }
+
+    /** بیلان قطعه تعمیر: فروش − بهای خرید مصرف‌شده */
+    public function partsBilans(Request $request): View
+    {
+        [$from, $to] = $this->range($request);
+        $techId = (int) $request->get('technician_id', 0);
+
+        $query = ReceptionPart::query()
+            ->leftJoin('parts', 'parts.id', '=', 'reception_parts.part_id')
+            ->leftJoin('receptions', 'receptions.id', '=', 'reception_parts.reception_id')
+            ->leftJoin('technicians', 'technicians.id', '=', 'receptions.technician_id')
+            ->select(
+                'reception_parts.part_name',
+                'receptions.technician_id',
+                'technicians.name as technician_name',
+                DB::raw('SUM(reception_parts.quantity) as qty'),
+                DB::raw('SUM(reception_parts.total_price) as sale_amount'),
+                DB::raw('SUM(reception_parts.quantity * COALESCE(parts.purchase_price, 0)) as purchase_cost')
+            )
+            ->whereDate('reception_parts.used_at', '>=', $from)
+            ->whereDate('reception_parts.used_at', '<=', $to);
+
+        if ($techId > 0) {
+            $query->where('receptions.technician_id', $techId);
+        }
+
+        $rows = $query
+            ->groupBy('reception_parts.part_name', 'receptions.technician_id', 'technicians.name')
+            ->orderByDesc(DB::raw('SUM(reception_parts.total_price)'))
+            ->get()
+            ->map(function ($row) {
+                $sale = (int) ($row->sale_amount ?? 0);
+                $buy = (int) ($row->purchase_cost ?? 0);
+                $row->profit = $sale - $buy;
+                $row->margin = $sale > 0 ? round(($sale - $buy) * 100 / $sale, 1) : null;
+
+                return $row;
+            });
+
+        $byPart = $rows->groupBy('part_name')->map(function ($group) {
+            $sale = (int) $group->sum('sale_amount');
+            $buy = (int) $group->sum('purchase_cost');
+
+            return (object) [
+                'part_name' => $group->first()->part_name,
+                'qty' => (int) $group->sum('qty'),
+                'sale_amount' => $sale,
+                'purchase_cost' => $buy,
+                'profit' => $sale - $buy,
+                'margin' => $sale > 0 ? round(($sale - $buy) * 100 / $sale, 1) : null,
+            ];
+        })->sortByDesc('profit')->values();
+
+        $totals = [
+            'qty' => (int) $rows->sum('qty'),
+            'sale' => (int) $rows->sum('sale_amount'),
+            'purchase' => (int) $rows->sum('purchase_cost'),
+            'profit' => (int) $rows->sum(fn ($r) => $r->profit),
+        ];
+
+        $technicians = Technician::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+
+        return view('reports.parts-bilans', compact(
+            'rows', 'byPart', 'totals', 'from', 'to', 'technicians', 'techId'
+        ));
+    }
+
+    /** پرمراجعه‌ترین مشتریان به تفکیک تعمیرکار */
+    public function technicianTopCustomers(Request $request): View
+    {
+        [$from, $to] = $this->range($request);
+        $techId = (int) $request->get('technician_id', 0);
+
+        $technicians = Technician::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+
+        $base = Reception::query()
+            ->select(
+                'technician_id',
+                'customer_id',
+                DB::raw('COUNT(*) as visits'),
+                DB::raw('SUM(total_amount) as billed'),
+                DB::raw('SUM(paid_amount) as paid'),
+                DB::raw('MAX(COALESCE(received_at, created_at)) as last_visit')
+            )
+            ->whereNotNull('technician_id')
+            ->whereNotNull('customer_id')
+            ->whereDate('created_at', '>=', $from)
+            ->whereDate('created_at', '<=', $to);
+
+        if ($techId > 0) {
+            $base->where('technician_id', $techId);
+        }
+
+        $rows = $base
+            ->groupBy('technician_id', 'customer_id')
+            ->orderByDesc('visits')
+            ->orderByDesc('billed')
+            ->with(['technician', 'customer'])
+            ->limit(200)
+            ->get();
+
+        $topPerTech = $rows
+            ->groupBy('technician_id')
+            ->map(fn ($group) => $group->take(10))
+            ->values();
+
+        return view('reports.technician-top-customers', compact(
+            'rows', 'topPerTech', 'from', 'to', 'technicians', 'techId'
+        ));
     }
 
     /** ورودی کالا / پذیرش در بازه */

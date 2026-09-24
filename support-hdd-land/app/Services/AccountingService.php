@@ -25,6 +25,7 @@ class AccountingService
     public const INC_ADMISSION = '4130';
     public const COGS = '5110';
     public const DISCOUNT = '5210';
+    public const FIXED_EXPENSE = '5310';
 
     public function ensureChart(): void
     {

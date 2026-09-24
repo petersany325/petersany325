@@ -2,12 +2,14 @@
 
 use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BankAccountController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DeviceBlacklistController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\ProfileController;
@@ -420,6 +422,12 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/parts-used', [ReportController::class, 'partsUsed'])
         ->middleware(EnsurePermission::class.':reports.parts')
         ->name('reports.parts-used');
+    Route::get('reports/parts-bilans', [ReportController::class, 'partsBilans'])
+        ->middleware(EnsurePermission::class.':reports.parts')
+        ->name('reports.parts-bilans');
+    Route::get('reports/technician-top-customers', [ReportController::class, 'technicianTopCustomers'])
+        ->middleware(EnsurePermission::class.':reports.technicians')
+        ->name('reports.technician-top-customers');
     Route::get('reports/goods-in', [ReportController::class, 'goodsIn'])
         ->middleware(EnsurePermission::class.':reports.parts')
         ->name('reports.goods-in');
@@ -439,6 +447,15 @@ Route::middleware('auth')->group(function () {
     Route::middleware(EnsurePermission::class.':reports.accounting')->prefix('accounting')->name('accounting.')->group(function () {
         Route::get('/', [AccountingController::class, 'index'])->name('index');
         Route::get('/accounts', [AccountingController::class, 'accounts'])->name('accounts');
+        Route::get('/banks', [BankAccountController::class, 'index'])->name('banks.index');
+        Route::post('/banks', [BankAccountController::class, 'store'])->name('banks.store');
+        Route::put('/banks/{bank}', [BankAccountController::class, 'update'])->name('banks.update');
+        Route::delete('/banks/{bank}', [BankAccountController::class, 'destroy'])->name('banks.destroy');
+        Route::get('/fixed-costs', [FixedCostController::class, 'index'])->name('fixed-costs.index');
+        Route::post('/fixed-costs', [FixedCostController::class, 'store'])->name('fixed-costs.store');
+        Route::put('/fixed-costs/{fixedCost}', [FixedCostController::class, 'update'])->name('fixed-costs.update');
+        Route::delete('/fixed-costs/{fixedCost}', [FixedCostController::class, 'destroy'])->name('fixed-costs.destroy');
+        Route::post('/fixed-costs/post-month', [FixedCostController::class, 'postMonth'])->name('fixed-costs.post');
         Route::get('/journals', [AccountingController::class, 'journals'])->name('journals');
         Route::get('/journals/{journal}', [AccountingController::class, 'show'])->name('show');
         Route::get('/ledger', [AccountingController::class, 'ledger'])->name('ledger');

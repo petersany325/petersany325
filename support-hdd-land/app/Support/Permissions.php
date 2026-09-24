@@ -29,7 +29,7 @@ class Permissions
         'reports.technicians' => 'گزارش عملکرد تعمیرکاران',
         'reports.staff_monthly' => 'گزارش ماهانه کارکنان (مدیر)',
         'reports.customers' => 'گزارش کاربران',
-        'reports.parts' => 'گزارش کالای خرج‌شده',
+        'reports.parts' => 'گزارش کالای خرج‌شده و بیلان قطعه',
         'reports.sms' => 'گزارش پیامک',
         'reports.messages' => 'گزارش پیام مشتری',
         'settings' => 'تنظیمات سیستم',

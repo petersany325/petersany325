@@ -87,6 +87,46 @@
     </div>
 </div>
 
+<div class="panel" style="margin-bottom:12px;">
+    <h3 style="margin-top:0;">پرمراجعه‌ترین مشتریان این تعمیرکار</h3>
+    <div class="table-wrap">
+        <table class="compact-table">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>مشتری</th>
+                <th>موبایل</th>
+                <th>تعداد مراجعه</th>
+                <th>مبلغ قبض</th>
+                <th>پرداخت‌شده</th>
+                <th>آخرین مراجعه</th>
+            </tr>
+            </thead>
+            <tbody>
+            @forelse($topCustomers as $i => $row)
+                <tr>
+                    <td>{{ $i + 1 }}</td>
+                    <td>
+                        @if($row->customer)
+                            <a href="{{ route('reports.customers.show', $row->customer) }}">{{ $row->customer->name }}</a>
+                        @else
+                            —
+                        @endif
+                    </td>
+                    <td dir="ltr">{{ $row->customer?->phone ?: '—' }}</td>
+                    <td>{{ number_format((int) $row->visits) }}</td>
+                    <td>{{ toman((int) $row->billed) }}</td>
+                    <td>{{ toman((int) $row->paid) }}</td>
+                    <td>{{ $row->last_visit ? jalali_like($row->last_visit) : '—' }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="7">مراجعی در این بازه نیست.</td></tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <div class="split-2">
     <div class="panel">
         <h3 style="margin-top:0;">هاردهای دست تعمیر (الان)</h3>
