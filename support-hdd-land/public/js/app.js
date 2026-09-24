@@ -1818,6 +1818,177 @@
         } catch (e) {}
     }
 
+    function initStaffShortcutDock() {
+        var dock = document.querySelector('[data-sc-dock]');
+        var editor = document.querySelector('[data-sc-editor]');
+        if (!dock || !editor) return;
+
+        var saveUrl = dock.getAttribute('data-save-url') || '';
+        var max = parseInt(dock.getAttribute('data-max') || '10', 10) || 10;
+        var selectedRoot = editor.querySelector('[data-sc-selected]');
+        var catalogRoot = editor.querySelector('[data-sc-catalog]');
+        var filterInput = editor.querySelector('[data-sc-filter]');
+        var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+        var defaultsSnapshot = selectedIds();
+
+        function selectedIds() {
+            return Array.prototype.map.call(selectedRoot.querySelectorAll('[data-sc-chip]'), function (el) {
+                return el.getAttribute('data-sc-id');
+            }).filter(Boolean);
+        }
+
+        function openEditor() {
+            editor.hidden = false;
+            document.body.style.overflow = 'hidden';
+        }
+        function closeEditor() {
+            editor.hidden = true;
+            if (!document.getElementById('staff-drawer') || document.getElementById('staff-drawer').hidden) {
+                document.body.style.overflow = '';
+            }
+        }
+
+        function syncCatalogState() {
+            var ids = selectedIds();
+            catalogRoot.querySelectorAll('[data-sc-add]').forEach(function (btn) {
+                var id = btn.getAttribute('data-sc-id');
+                var pinned = ids.indexOf(id) !== -1;
+                btn.classList.toggle('is-pinned', pinned);
+                btn.disabled = pinned;
+                var st = btn.querySelector('.sc-dock-cat-state');
+                if (st) st.textContent = pinned ? '✓' : '+';
+            });
+            var empty = selectedRoot.querySelector('[data-sc-empty]');
+            if (empty) empty.style.display = ids.length ? 'none' : '';
+        }
+
+        function addChip(meta) {
+            var ids = selectedIds();
+            if (ids.indexOf(meta.id) !== -1) return;
+            if (ids.length >= max) {
+                alert('حداکثر ' + max + ' میانبر می‌توانید داشته باشید.');
+                return;
+            }
+            var empty = selectedRoot.querySelector('[data-sc-empty]');
+            if (empty) empty.remove();
+            var chip = document.createElement('div');
+            chip.className = 'sc-dock-chip';
+            chip.setAttribute('data-sc-chip', '');
+            chip.setAttribute('data-sc-id', meta.id);
+            chip.innerHTML =
+                '<span class="sc-dock-ico tone-' + (meta.tone || 'slate') + '">' + (meta.mark || '•') + '</span>' +
+                '<span class="sc-dock-chip-text"><strong></strong><small></small></span>' +
+                '<button type="button" class="sc-dock-chip-x" data-sc-remove title="حذف">×</button>';
+            chip.querySelector('strong').textContent = meta.label || meta.id;
+            chip.querySelector('small').textContent = meta.group || '';
+            selectedRoot.appendChild(chip);
+            syncCatalogState();
+        }
+
+        document.querySelectorAll('[data-sc-open-editor]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                openEditor();
+            });
+        });
+        editor.querySelectorAll('[data-sc-close-editor]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                closeEditor();
+            });
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !editor.hidden) closeEditor();
+        });
+
+        selectedRoot.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-sc-remove]');
+            if (!btn) return;
+            var chip = btn.closest('[data-sc-chip]');
+            if (chip) chip.remove();
+            if (!selectedRoot.querySelector('[data-sc-chip]')) {
+                var p = document.createElement('p');
+                p.className = 'muted';
+                p.setAttribute('data-sc-empty', '');
+                p.textContent = 'هنوز میانبری نیست — از فهرست زیر اضافه کنید.';
+                selectedRoot.appendChild(p);
+            }
+            syncCatalogState();
+        });
+
+        catalogRoot.addEventListener('click', function (e) {
+            var btn = e.target.closest('[data-sc-add]');
+            if (!btn || btn.disabled) return;
+            addChip({
+                id: btn.getAttribute('data-sc-id'),
+                label: btn.getAttribute('data-sc-label'),
+                mark: btn.getAttribute('data-sc-mark'),
+                group: btn.getAttribute('data-sc-group'),
+                tone: btn.getAttribute('data-sc-tone'),
+            });
+        });
+
+        if (filterInput) {
+            filterInput.addEventListener('input', function () {
+                var q = (filterInput.value || '').trim().toLowerCase();
+                catalogRoot.querySelectorAll('[data-sc-add]').forEach(function (btn) {
+                    var label = (btn.getAttribute('data-menu-label') || '').toLowerCase();
+                    btn.style.display = (!q || label.indexOf(q) !== -1) ? '' : 'none';
+                });
+            });
+        }
+
+        var resetBtn = editor.querySelector('[data-sc-reset]');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function () {
+                // Clear and ask server to save empty → server will use defaults on next load,
+                // but for immediate UX wipe selection and save [] which resolves to defaults via reload.
+                if (!confirm('میانبرها به پیش‌فرض نقش شما برگردد؟')) return;
+                selectedRoot.innerHTML = '';
+                saveShortcuts([], true);
+            });
+        }
+
+        var saveBtn = editor.querySelector('[data-sc-save]');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                saveShortcuts(selectedIds(), true);
+            });
+        }
+
+        function saveShortcuts(ids, reload) {
+            if (!saveUrl) return;
+            saveBtn && (saveBtn.disabled = true);
+            fetch(saveUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ shortcuts: ids }),
+                credentials: 'same-origin',
+            }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+              .then(function (res) {
+                  if (!res.ok || !(res.j && res.j.ok)) {
+                      alert((res.j && res.j.message) || 'ذخیره میانبر ناموفق بود.');
+                      return;
+                  }
+                  if (reload) window.location.reload();
+                  else closeEditor();
+              })
+              .catch(function () { alert('خطا در ذخیره میانبرها.'); })
+              .finally(function () { saveBtn && (saveBtn.disabled = false); });
+        }
+
+        // Saving empty array: backend keeps empty and resolveIds falls back to defaults — good.
+        // But sanitizeIds with empty returns [] and user.ui_shortcuts=[] means defaults on read. OK.
+
+        syncCatalogState();
+        void defaultsSnapshot;
+    }
+
     function initStaffLoginDeviceHint() {
         var otpTab = document.querySelector('[data-login-tab="otp"]');
         var passTab = document.querySelector('[data-login-tab="pass"]');
@@ -2017,6 +2188,7 @@
         initReceptionWizard();
         initNoteMenus(document);
         initStaffShell();
+        initStaffShortcutDock();
         initStaffLoginDeviceHint();
         initLookupEditors();
         initJalaliDateInputs();

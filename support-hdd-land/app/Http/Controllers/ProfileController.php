@@ -70,4 +70,26 @@ class ProfileController extends Controller
 
         return back()->with('success', 'اطلاعات پروفایل ذخیره شد.');
     }
+
+    public function updateShortcuts(Request $request)
+    {
+        $user = Auth::user();
+        $data = $request->validate([
+            'shortcuts' => ['nullable', 'array', 'max:'.\App\Support\StaffShortcutDock::MAX],
+            'shortcuts.*' => ['string', 'max:120'],
+        ]);
+
+        $ids = \App\Support\StaffShortcutDock::sanitizeIds($user, $data['shortcuts'] ?? []);
+        $user->forceFill(['ui_shortcuts' => $ids])->save();
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'ok' => true,
+                'shortcuts' => \App\Support\StaffShortcutDock::forUser($user->fresh()),
+                'message' => 'میانبرها ذخیره شد.',
+            ]);
+        }
+
+        return back()->with('success', 'میانبرها ذخیره شد.');
+    }
 }

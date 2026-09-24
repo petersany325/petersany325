@@ -180,6 +180,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
         Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     });
+    // میانبرهای شخصی — همه نقش‌های واردشده
+    Route::post('/profile/shortcuts', [ProfileController::class, 'updateShortcuts'])->name('profile.shortcuts');
 
     // Shared customer name suggest (reception / delivery / blacklist) — ACL inside controller
     Route::get('customers/suggest', [CustomerController::class, 'suggest'])->name('customers.suggest');

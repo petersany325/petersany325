@@ -16,7 +16,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp46">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp47">
     <script>
     (function () {
         try {
@@ -149,6 +149,23 @@
         <div class="page-caption">@yield('page_title', 'میز کار')</div>
         <button type="button" class="btn btn-ghost mobile-only staff-more-btn" data-staff-drawer-open>منوها</button>
     </div>
+    @php
+        $dockStripItems = \App\Support\StaffShortcutDock::forUser(auth()->user());
+    @endphp
+    <div class="sc-dock-mobile-strip mobile-only" aria-label="میانبرها">
+        @foreach($dockStripItems as $item)
+            <a href="{{ $item['url'] }}"
+               class="sc-dock-btn tone-{{ $item['tone'] }} {{ !empty($item['active']) ? 'is-on' : '' }}"
+               title="{{ $item['label'] }}">
+                <span class="sc-dock-ico">{{ $item['mark'] }}</span>
+                <span class="sc-dock-lbl">{{ $item['label'] }}</span>
+            </a>
+        @endforeach
+        <button type="button" class="sc-dock-btn sc-dock-edit" data-sc-open-editor title="ویرایش میانبر">
+            <span class="sc-dock-ico">＋</span>
+            <span class="sc-dock-lbl">میانبر</span>
+        </button>
+    </div>
 
     <div class="app-workspace">
         <div class="win-frame">
@@ -195,6 +212,8 @@
             <small>بیشتر</small>
         </button>
     </nav>
+
+    @include('partials.staff-shortcut-dock')
 
     {{-- کشوی همه منوها (موبایل) --}}
     <div class="staff-drawer" id="staff-drawer" hidden>
@@ -257,7 +276,7 @@
 @else
     @yield('content')
 @endauth
-<script src="{{ asset('js/app.js') }}?v=erp46"></script>
+<script src="{{ asset('js/app.js') }}?v=erp47"></script>
 <script>
 (function () {
     var bar = document.getElementById('win-menubar');
