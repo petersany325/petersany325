@@ -35,7 +35,10 @@
         <div class="sc-dock-editor-head">
             <div>
                 <strong>میانبرهای من</strong>
-                <div class="muted" style="font-size:11px;">تا {{ \App\Support\StaffShortcutDock::MAX }} میانبر — برای تعمیرکار و کارمند</div>
+                <div class="muted" style="font-size:11px;">
+                    تیک روشن = نمایش در میانبر · حداکثر
+                    <span data-sc-count>{{ count($dockIds) }}</span>/{{ \App\Support\StaffShortcutDock::MAX }}
+                </div>
             </div>
             <button type="button" class="btn btn-ghost" data-sc-close-editor>بستن</button>
         </div>
@@ -45,45 +48,31 @@
         </div>
 
         <div class="sc-dock-editor-body">
-            <div class="sc-dock-section-label">میانبرهای فعال</div>
-            <div class="sc-dock-selected" data-sc-selected>
-                @forelse($dockItems as $item)
-                    <div class="sc-dock-chip" data-sc-chip data-sc-id="{{ $item['id'] }}">
-                        <span class="sc-dock-ico tone-{{ $item['tone'] }}">{{ $item['mark'] }}</span>
-                        <span class="sc-dock-chip-text">
-                            <strong>{{ $item['label'] }}</strong>
-                            <small>{{ $item['group'] }}</small>
-                        </span>
-                        <button type="button" class="sc-dock-chip-x" data-sc-remove title="حذف">×</button>
-                    </div>
-                @empty
-                    <p class="muted" data-sc-empty>هنوز میانبری نیست — از فهرست زیر اضافه کنید.</p>
-                @endforelse
-            </div>
-
-            <div class="sc-dock-section-label">افزودن از منوها</div>
+            <div class="sc-dock-section-label">منوها — روشن/خاموش برای میانبر</div>
             <div class="sc-dock-catalog" data-sc-catalog>
                 @foreach($dockCatalog as $row)
                     @php $pinned = in_array($row['id'], $dockIds, true); @endphp
-                    <button type="button"
-                            class="sc-dock-cat-item {{ $pinned ? 'is-pinned' : '' }}"
-                            data-sc-add
-                            data-sc-id="{{ $row['id'] }}"
-                            data-sc-label="{{ $row['label'] }}"
-                            data-sc-mark="{{ $row['mark'] }}"
-                            data-sc-hint="{{ $row['hint'] }}"
-                            data-sc-group="{{ $row['group'] }}"
-                            data-sc-tone="{{ $row['tone'] }}"
-                            data-sc-url="{{ route($row['route']) }}"
-                            data-menu-label="{{ $row['label'] }} {{ $row['group'] }} {{ $row['hint'] }}"
-                            @disabled($pinned)>
+                    <label class="sc-dock-cat-item {{ $pinned ? 'is-on' : '' }}"
+                           data-sc-row
+                           data-sc-id="{{ $row['id'] }}"
+                           data-menu-label="{{ $row['label'] }} {{ $row['group'] }} {{ $row['hint'] }}">
+                        <input type="checkbox"
+                               class="sc-dock-row-check"
+                               data-sc-pin
+                               value="{{ $row['id'] }}"
+                               {{ $pinned ? 'checked' : '' }}
+                               aria-label="نمایش {{ $row['label'] }} در میانبر">
                         <span class="sc-dock-ico tone-{{ $row['tone'] }}">{{ $row['mark'] }}</span>
-                        <span>
+                        <span class="sc-dock-cat-text">
                             <strong>{{ $row['label'] }}</strong>
                             <small>{{ $row['group'] }}@if($row['hint'] !== '') — {{ $row['hint'] }}@endif</small>
                         </span>
-                        <span class="sc-dock-cat-state">{{ $pinned ? '✓' : '+' }}</span>
-                    </button>
+                        <span class="sc-dock-row-switch" aria-hidden="true">
+                            <span class="sc-dock-row-knob"></span>
+                            <span class="sc-dock-row-on">ON</span>
+                            <span class="sc-dock-row-off">OFF</span>
+                        </span>
+                    </label>
                 @endforeach
             </div>
         </div>
