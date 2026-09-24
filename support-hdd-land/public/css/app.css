@@ -1645,12 +1645,19 @@ html[data-ui-mode="mobile"] .sc-dock-mobile-strip .sc-dock-btn{
   display:flex;justify-content:space-between;align-items:center;gap:8px;
   padding:12px;border-bottom:1px solid #d9dee6;flex:0 0 auto;
 }
-.sc-dock-editor-body{flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px;display:grid;gap:10px}
+.sc-dock-editor-body{
+  flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px;
+  display:flex;flex-direction:column;gap:12px;
+  width:100%;box-sizing:border-box;
+}
 .sc-dock-editor-foot{
   display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;
   padding:10px 12px;border-top:1px solid #d9dee6;flex:0 0 auto;background:#eef1f5;
 }
-.sc-dock-selected{display:flex;flex-wrap:wrap;gap:6px;min-height:40px}
+.sc-dock-selected{
+  display:flex;flex-wrap:wrap;gap:6px;min-height:40px;
+  width:100%;box-sizing:border-box;
+}
 .sc-dock-chip{
   display:flex;align-items:center;gap:6px;padding:6px 8px;
   border:1px solid #c5ccd6;border-radius:8px;background:#fff;max-width:100%;
@@ -1663,23 +1670,55 @@ html[data-ui-mode="mobile"] .sc-dock-mobile-strip .sc-dock-btn{
   border:0;background:#eef1f5;color:#334155;width:24px;height:24px;border-radius:6px;
   cursor:pointer;font-size:14px;line-height:1;flex:0 0 auto;
 }
-.sc-dock-catalog-head{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.sc-dock-catalog-head input{
-  flex:1 1 140px;min-height:34px;border:1px solid #9aa5b5;border-radius:8px;padding:6px 10px;background:#fff;
+.sc-dock-catalog-head{
+  display:flex;flex-direction:column;align-items:stretch;gap:8px;
+  width:100%;max-width:100%;box-sizing:border-box;
 }
-.sc-dock-catalog{display:grid;gap:4px}
+.sc-dock-catalog-title{
+  display:block;font-size:12.5px;font-weight:800;color:#243041;line-height:1.4;
+}
+.sc-dock-search{
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  gap:4px;width:100%;max-width:100%;margin:0;box-sizing:border-box;
+}
+.sc-dock-search-label{
+  display:block;font-size:11px;font-weight:700;color:#475569;margin:0;
+}
+.sc-dock-search input[type="search"],
+.sc-dock-catalog-head input[type="search"],
+.sc-dock-catalog-head input{
+  display:block!important;
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  min-height:40px!important;height:40px!important;
+  margin:0!important;padding:8px 12px!important;
+  border:1px solid #9aa5b5!important;border-radius:8px!important;
+  background:#fff!important;box-sizing:border-box!important;
+  font:inherit!important;font-size:14px!important;line-height:1.4!important;
+  writing-mode:horizontal-tb!important;direction:rtl!important;
+  flex:0 0 auto!important;align-self:stretch!important;
+  appearance:none;-webkit-appearance:none;
+}
+.sc-dock-catalog{
+  display:flex;flex-direction:column;gap:4px;
+  width:100%;max-width:100%;
+}
 .sc-dock-cat-item{
-  display:flex;gap:8px;align-items:center;width:100%;text-align:right;
+  display:flex!important;flex-direction:row!important;gap:8px;align-items:center;
+  width:100%!important;max-width:100%;text-align:right;
   padding:8px 10px;border:1px solid #d9dee6;border-radius:8px;background:#fff;
-  cursor:pointer;font:inherit;color:inherit;
+  cursor:pointer;font:inherit;color:inherit;box-sizing:border-box;
+  writing-mode:horizontal-tb;min-height:48px;
 }
 .sc-dock-cat-item:hover:not(:disabled){border-color:#2f6fed;background:#e7f0ff}
 .sc-dock-cat-item:disabled,.sc-dock-cat-item.is-pinned{opacity:.72;cursor:default}
 .sc-dock-cat-item .sc-dock-ico{width:28px;height:28px;color:#fff;flex:0 0 auto}
-.sc-dock-cat-item span:nth-child(2){min-width:0;flex:1}
-.sc-dock-cat-item strong{display:block;font-size:12.5px;line-height:1.35}
+.sc-dock-cat-item > span:nth-child(2){min-width:0;flex:1 1 auto}
+.sc-dock-cat-item strong{display:block;font-size:12.5px;line-height:1.35;overflow-wrap:anywhere}
 .sc-dock-cat-item small{display:block;font-size:10.5px;color:var(--muted);line-height:1.35;overflow-wrap:anywhere}
 .sc-dock-cat-state{font-weight:800;color:#2f6fed;flex:0 0 auto}
+.sc-dock-editor-panel .sc-dock-ico{
+  writing-mode:horizontal-tb;flex:0 0 auto;
+}
 .sc-dock-ico.tone-blue{background:#2f6fed}
 .sc-dock-ico.tone-teal{background:#0f766e}
 .sc-dock-ico.tone-amber{background:#b45309}

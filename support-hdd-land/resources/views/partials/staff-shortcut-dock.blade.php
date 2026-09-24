@@ -50,8 +50,11 @@
                 @endforelse
             </div>
             <div class="sc-dock-catalog-head">
-                <strong>افزودن از منوها</strong>
-                <input type="search" data-sc-filter placeholder="جستجوی منو..." autocomplete="off">
+                <div class="sc-dock-catalog-title">افزودن از منوها</div>
+                <label class="sc-dock-search">
+                    <span class="sc-dock-search-label">جستجو</span>
+                    <input type="search" data-sc-filter placeholder="جستجوی منو..." autocomplete="off">
+                </label>
             </div>
             <div class="sc-dock-catalog" data-sc-catalog>
                 @foreach($dockCatalog as $row)
