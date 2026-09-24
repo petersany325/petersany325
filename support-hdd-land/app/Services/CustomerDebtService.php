@@ -72,12 +72,45 @@ class CustomerDebtService
             ->filter(fn (Reception $r) => $r->status === 'delivered')
             ->sum(fn (Reception $r) => $r->remainingAmount());
 
+        $limit = $customer->hasCreditLimit() ? (int) $customer->credit_limit : null;
+
         return [
             'has_debt' => $total > 0,
             'total' => $total,
             'credit_total' => $creditTotal,
             'ticket_count' => $tickets->count(),
             'tickets' => $tickets,
+            'credit_limit' => $limit,
+            'credit_headroom' => $limit === null ? null : max(0, $limit - $total),
+            'over_credit_limit' => $limit !== null && $total > $limit,
         ];
+    }
+
+    /**
+     * پیام خطای سقف اعتبار برای تحویل نسیه، یا null اگر مجاز باشد.
+     * مانده قبض فعلی داخل totalOpen حساب شده است.
+     */
+    public function creditLimitBlockMessage(Customer $customer, ?int $openDebt = null): ?string
+    {
+        if (! $customer->hasCreditLimit()) {
+            return null;
+        }
+
+        $limit = (int) $customer->credit_limit;
+        $open = $openDebt ?? $this->totalOpen($customer);
+        if ($open <= $limit) {
+            return null;
+        }
+
+        if ($limit <= 0) {
+            return 'سقف اعتبار این مشتری صفر است — نسیه مجاز نیست. مانده بدهی: '
+                .number_format($open).' تومان.';
+        }
+
+        return 'سقف اعتبار مشتری پر شده است. سقف: '
+            .number_format($limit)
+            .' تومان — مانده بدهی فعلی: '
+            .number_format($open)
+            .' تومان ('.number_format($open - $limit).' تومان بیش از سقف). نسیه ثبت نمی‌شود.';
     }
 }

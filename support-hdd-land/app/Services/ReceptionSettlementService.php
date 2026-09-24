@@ -63,7 +63,18 @@ class ReceptionSettlementService
             return null;
         }
 
-        // credit allowed
+        // credit: enforce customer credit ceiling (نسیه)
+        if ($mode === self::MODE_CREDIT) {
+            $reception->loadMissing('customer');
+            $customer = $reception->customer;
+            if ($customer) {
+                $block = app(CustomerDebtService::class)->creditLimitBlockMessage($customer);
+                if ($block) {
+                    return $block;
+                }
+            }
+        }
+
         return null;
     }
 
@@ -199,6 +210,16 @@ class ReceptionSettlementService
                         throw ValidationException::withMessages([
                             'note' => 'برای تسویه نسیه، توضیح / تعهد پرداخت الزامی است (مثلاً مهلت یا توافق با مشتری).',
                         ]);
+                    }
+                    $customer = $reception->customer;
+                    if ($customer) {
+                        $limitMsg = app(CustomerDebtService::class)->creditLimitBlockMessage($customer);
+                        if ($limitMsg) {
+                            throw ValidationException::withMessages([
+                                'settlement_mode' => $limitMsg,
+                                'credit_limit' => $limitMsg,
+                            ]);
+                        }
                     }
                     // AR already recognized via syncReceptionRevenue (Dr 1210 / Cr income).
                     // Credit delivery keeps remaining unpaid; collection later credits 1210.

@@ -10,6 +10,7 @@
         </div>
         <div class="actions" style="margin:0;">
             <a class="btn btn-ghost" href="{{ route('customers.index', ['filter' => 'blacklist']) }}">لیست سیاه</a>
+            <a class="btn btn-ghost" href="{{ route('customers.credit-limits') }}">سقف اعتبار</a>
             <a class="btn btn-ghost" href="{{ route('device-blacklists.index') }}">لیست سیاه دستگاه</a>
             <a class="btn btn-primary" href="{{ route('customers.create') }}">مشتری جدید</a>
         </div>

@@ -228,6 +228,7 @@ class CustomerController extends Controller
             'address' => ['nullable', 'string', 'max:500'],
             'referral_source_id' => ['nullable', 'exists:referral_sources,id'],
             'notes' => ['nullable', 'string', 'max:1000'],
+            'credit_limit' => ['nullable', 'integer', 'min:0', 'max:999999999999'],
         ], [
             'name.unique' => 'نام مشتری تکراری است. مشتری دیگری با همین نام ثبت شده.',
             'phone.unique' => 'شماره موبایل تکراری است. مشتری دیگری با همین موبایل ثبت شده.',
@@ -241,6 +242,78 @@ class CustomerController extends Controller
             ]);
         }
 
+        if (array_key_exists('credit_limit', $data) && ($data['credit_limit'] === null || $data['credit_limit'] === '')) {
+            $data['credit_limit'] = null;
+        }
+
         return $data;
+    }
+
+    /** صفحه تعریف / ویرایش سریع سقف اعتبار نسیه مشتریان. */
+    public function creditLimits(Request $request)
+    {
+        $q = trim((string) $request->get('q'));
+        $filter = (string) $request->get('filter', ''); // with_limit|over
+
+        $customers = Customer::query()
+            ->withCount('receptions')
+            ->when($filter === 'with_limit', fn ($query) => $query->whereNotNull('credit_limit'))
+            ->when($q !== '', function ($query) use ($q) {
+                $phone = User::normalizePhone($q) ?: $q;
+                $query->where(function ($inner) use ($q, $phone) {
+                    $inner->where('name', 'like', "%{$q}%")
+                        ->orWhere('alias', 'like', "%{$q}%")
+                        ->orWhere('phone', 'like', "%{$q}%");
+                    if ($phone !== $q) {
+                        $inner->orWhere('phone', 'like', '%'.substr($phone, -10).'%');
+                    }
+                });
+            })
+            ->orderByDesc('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        $debt = app(\App\Services\CustomerDebtService::class);
+        $rows = $customers->getCollection()->map(function (Customer $c) use ($debt) {
+            $open = $debt->totalOpen($c);
+            $limit = $c->hasCreditLimit() ? (int) $c->credit_limit : null;
+
+            return [
+                'customer' => $c,
+                'open' => $open,
+                'limit' => $limit,
+                'headroom' => $limit === null ? null : max(0, $limit - $open),
+                'over' => $limit !== null && $open > $limit,
+            ];
+        });
+
+        return view('customers.credit-limits', [
+            'customers' => $customers,
+            'rows' => $rows,
+            'q' => $q,
+            'filter' => $filter,
+        ]);
+    }
+
+    public function updateCreditLimit(Request $request, Customer $customer)
+    {
+        $raw = $request->input('credit_limit');
+        if ($raw === null || $raw === '') {
+            $customer->update(['credit_limit' => null]);
+
+            return back()->with('success', 'سقف اعتبار «'.$customer->name.'» برداشته شد (بدون سقف).');
+        }
+
+        $data = $request->validate([
+            'credit_limit' => ['required', 'integer', 'min:0', 'max:999999999999'],
+        ], [
+            'credit_limit.required' => 'رقم سقف اعتبار را وارد کنید یا خالی بگذارید.',
+            'credit_limit.min' => 'سقف اعتبار نمی‌تواند منفی باشد.',
+        ]);
+
+        $customer->update(['credit_limit' => (int) $data['credit_limit']]);
+
+        return back()->with('success', 'سقف اعتبار «'.$customer->name.'» روی '
+            .number_format((int) $data['credit_limit']).' تومان تنظیم شد.');
     }
 }

@@ -44,6 +44,15 @@
         <input type="text" name="address" value="{{ old('address', $customer->address ?? '') }}">
     </div>
     <div class="full">
+        <label>سقف اعتبار نسیه (تومان)</label>
+        <input type="number" name="credit_limit" min="0" step="1000"
+               value="{{ old('credit_limit', $customer->credit_limit ?? '') }}"
+               placeholder="خالی = بدون سقف · ۰ = نسیه ممنوع"
+               dir="ltr" style="text-align:left;">
+        <div class="hint muted" style="margin-top:4px;">اگر مانده بدهی مشتری از این رقم بیشتر شود، تحویل نسیه با اخطار قرمز مسدود می‌شود.</div>
+        @error('credit_limit')<div class="hint" style="color:#9f1239;">{{ $message }}</div>@enderror
+    </div>
+    <div class="full">
         <label>یادداشت</label>
         <textarea name="notes">{{ old('notes', $customer->notes ?? '') }}</textarea>
     </div>

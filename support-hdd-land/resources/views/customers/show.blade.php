@@ -46,7 +46,7 @@
     @endif
 
     @if($customer->is_blacklisted)
-        <div class="alert alert-error" style="margin-bottom:10px;">
+        <div class="alert alert-error credit-limit-blink" style="margin-bottom:10px;">
             این مشتری در لیست سیاه است
             @if($customer->blacklist_reason) — {{ $customer->blacklist_reason }} @endif
             @if($customer->blacklisted_at) ({{ jalali_like($customer->blacklisted_at) }}) @endif
@@ -56,6 +56,12 @@
     @php
         $debtSummary = app(\App\Services\CustomerDebtService::class)->summary($customer);
     @endphp
+
+    @include('partials.credit-limit-warning', [
+        'customer' => $customer,
+        'openDebt' => $debtSummary['total'],
+    ])
+
     @if($debtSummary['has_debt'])
         <div class="alert alert-error" style="margin-bottom:10px;">
             بدهکاری فعال: <strong>{{ number_format($debtSummary['total']) }} تومان</strong>
@@ -75,6 +81,22 @@
         <div><span class="muted">کد ملی</span><div>{{ $customer->national_code ?: '—' }}</div></div>
         <div><span class="muted">نحوه آشنایی</span><div>{{ $customer->referralSource?->name ?: '—' }}</div></div>
         <div><span class="muted">بدهی باز</span><div style="{{ $debtSummary['has_debt'] ? 'color:#b42318;font-weight:800;' : '' }}">{{ number_format($debtSummary['total']) }} تومان</div></div>
+        <div>
+            <span class="muted">سقف اعتبار نسیه</span>
+            <div>
+                @if($customer->hasCreditLimit())
+                    <strong>{{ number_format((int) $customer->credit_limit) }}</strong> تومان
+                    @if($debtSummary['over_credit_limit'] ?? false)
+                        <span class="credit-limit-blink" style="display:inline-block;margin-right:6px;padding:2px 8px;border:1px solid #dc2626;border-radius:2px;background:#fee2e2;color:#9f1239;font-weight:800;">سقف پر</span>
+                    @elseif(($debtSummary['credit_headroom'] ?? null) !== null)
+                        <span class="muted">(ظرفیت {{ number_format($debtSummary['credit_headroom']) }})</span>
+                    @endif
+                @else
+                    بدون سقف
+                @endif
+                <a href="{{ route('customers.credit-limits', ['q' => $customer->name]) }}" class="muted" style="margin-right:8px;font-size:11px;">تغییر</a>
+            </div>
+        </div>
         <div style="grid-column:1/-1"><span class="muted">آدرس</span><div>{{ $customer->address ?: '—' }}</div></div>
         <div style="grid-column:1/-1"><span class="muted">یادداشت</span><div>{{ $customer->notes ?: '—' }}</div></div>
     </div>

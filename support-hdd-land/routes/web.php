@@ -189,6 +189,8 @@ Route::middleware('auth')->group(function () {
     Route::get('customers/suggest', [CustomerController::class, 'suggest'])->name('customers.suggest');
 
     Route::middleware(EnsurePermission::class.':customers')->group(function () {
+        Route::get('customers/credit-limits', [CustomerController::class, 'creditLimits'])->name('customers.credit-limits');
+        Route::put('customers/{customer}/credit-limit', [CustomerController::class, 'updateCreditLimit'])->name('customers.credit-limit');
         Route::resource('customers', CustomerController::class);
         Route::post('customers/{customer}/blacklist', [CustomerController::class, 'toggleBlacklist'])->name('customers.blacklist');
     });

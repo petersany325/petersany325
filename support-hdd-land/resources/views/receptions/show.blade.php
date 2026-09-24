@@ -999,6 +999,31 @@
                 <strong>{{ number_format($remain) }} تومان</strong>
             </div>
 
+            @php
+                $creditCustomer = $reception->customer;
+                $creditOpenDebt = $creditCustomer ? $creditCustomer->openDebtTotal() : 0;
+                $creditLimitOver = $creditCustomer && $creditCustomer->isOverCreditLimit($creditOpenDebt);
+            @endphp
+            @if($creditCustomer)
+                <div id="rx-credit-limit-box" style="margin-bottom:10px;"
+                     data-credit-limit="{{ $creditCustomer->hasCreditLimit() ? (int) $creditCustomer->credit_limit : '' }}"
+                     data-credit-open="{{ $creditOpenDebt }}"
+                     data-credit-over="{{ $creditLimitOver ? '1' : '0' }}">
+                    @include('partials.credit-limit-warning', [
+                        'customer' => $creditCustomer,
+                        'openDebt' => $creditOpenDebt,
+                    ])
+                    @error('credit_limit')
+                        <div class="alert alert-error credit-limit-blink" style="margin-top:6px;">{{ $message }}</div>
+                    @enderror
+                    @error('settlement_mode')
+                        @if(str_contains($message, 'سقف اعتبار'))
+                            <div class="alert alert-error credit-limit-blink" style="margin-top:6px;">{{ $message }}</div>
+                        @endif
+                    @enderror
+                </div>
+            @endif
+
             <div style="margin-bottom:10px;padding:8px 10px;border:1px solid #c5ccd6;border-radius:3px;background:#fff;">
                 <strong style="font-size:12px;">خروج کالا از کارگاه</strong>
                 <div class="muted" style="font-size:11px;margin:4px 0 6px;">
@@ -1378,6 +1403,15 @@
                 settleNote.placeholder = mode === 'credit'
                     ? 'تعهد پرداخت / مهلت نسیه (الزامی)'
                     : (mode === 'waive' ? 'دلیل بخشش (الزامی)' : 'شماره پیگیری / دلیل نسیه یا بخشش');
+            }
+            var creditBox = document.getElementById('rx-credit-limit-box');
+            if (creditBox) {
+                var over = creditBox.getAttribute('data-credit-over') === '1';
+                var banner = creditBox.querySelector('[data-credit-limit-banner]');
+                if (mode === 'credit' && over && banner) {
+                    banner.classList.add('credit-limit-blink', 'credit-limit-banner--danger');
+                    banner.classList.remove('credit-limit-banner--warn');
+                }
             }
         };
         settleMode.addEventListener('change', syncSettle);

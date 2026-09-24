@@ -63,7 +63,7 @@
         <div class="accept-row accept-row-3" style="margin-top:8px;">
             <div>
                 <label>تسویه قبض‌های مانده‌دار</label>
-                <select name="settlement_mode">
+                <select name="settlement_mode" id="group-settle-mode">
                     <option value="">فقط قبض‌های تسویه‌شده (مانده صفر)</option>
                     <option value="credit" @selected(old('settlement_mode') === 'credit')>نسیه — بدهکار شدن مشتری</option>
                     <option value="waive" @selected(old('settlement_mode') === 'waive')>بخشش مانده / بدون هزینه</option>
@@ -77,6 +77,14 @@
                 <input type="text" name="note" value="{{ old('note') }}" placeholder="برای نسیه یا بخشش الزامی است">
             </div>
         </div>
+
+        <div id="group-credit-limit-box" hidden style="margin-top:8px;"></div>
+        @error('settlement_mode')
+            <div class="alert alert-error {{ str_contains($message, 'سقف اعتبار') ? 'credit-limit-blink' : '' }}" style="margin-top:8px;">{{ $message }}</div>
+        @enderror
+        @error('credit_limit')
+            <div class="alert alert-error credit-limit-blink" style="margin-top:8px;">{{ $message }}</div>
+        @enderror
 
         <div class="sms-actions" style="margin-top:8px;">
             <button class="btn btn-primary" type="submit" id="final-deliver-btn" data-confirm="تسویه گروهی، خروج کالا و تحویل نهایی ثبت شود؟">تأیید تسویه / خروج کالا / تحویل</button>
@@ -129,6 +137,34 @@
     function setStatus(t, type) {
         statusEl.textContent = t || '';
         statusEl.className = 'lookup-status' + (type ? ' is-' + type : '');
+    }
+
+    function fmt(n) {
+        return Number(n || 0).toLocaleString('en-US');
+    }
+
+    function renderCreditBanner(customer) {
+        var box = document.getElementById('group-credit-limit-box');
+        if (!box) return;
+        if (!customer || customer.credit_limit === null || typeof customer.credit_limit === 'undefined') {
+            box.hidden = true;
+            box.innerHTML = '';
+            return;
+        }
+        var over = !!customer.over_credit_limit;
+        var limit = customer.credit_limit;
+        var open = customer.open_debt || 0;
+        var head = customer.credit_headroom;
+        var cls = over
+            ? 'credit-limit-banner credit-limit-banner--danger credit-limit-blink'
+            : 'credit-limit-banner credit-limit-banner--warn';
+        var title = over ? '⚠ سقف اعتبار پر شده — نسیه ممنوع' : 'سقف اعتبار نسیه';
+        var detail = over
+            ? ('سقف ' + fmt(limit) + ' تومان · مانده بدهی ' + fmt(open) + ' تومان · ' + fmt(Math.max(0, open - limit)) + ' بیش از سقف')
+            : ('سقف ' + fmt(limit) + ' تومان · مانده ' + fmt(open) + ' · ظرفیت باقی‌مانده ' + fmt(head) + ' تومان');
+        box.innerHTML = '<div class="' + cls + '" role="alert"><strong>' + title + '</strong><span>' + detail + '</span></div>';
+        box.hidden = false;
+        box.setAttribute('data-over', over ? '1' : '0');
     }
 
     function clearPick() {
@@ -266,6 +302,7 @@
                     if (phoneInput) phoneInput.value = data.customer.phone || phoneInput.value;
                     if (customerIdInput) customerIdInput.value = data.customer.id || '';
                 }
+                renderCreditBanner(data.customer || null);
                 render(data.items || []);
             })
             .catch(function () { setStatus('خطا در ارتباط.', 'error'); });
@@ -323,6 +360,13 @@
         if (unsettled && !mode) {
             e.preventDefault();
             setStatus('برای قبض‌های مانده‌دار، نسیه یا بخشش را انتخاب کنید.', 'error');
+            return;
+        }
+        var creditBox = document.getElementById('group-credit-limit-box');
+        if (mode === 'credit' && creditBox && creditBox.getAttribute('data-over') === '1') {
+            e.preventDefault();
+            setStatus('سقف اعتبار این مشتری پر است — نسیه مجاز نیست. اخطار قرمز چشمک‌زن را ببینید.', 'error');
+            creditBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     });
 })();

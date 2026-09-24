@@ -1753,3 +1753,32 @@ html[data-ui-mode="mobile"] .sc-dock-mobile-strip .sc-dock-btn{
 .sc-dock-ico.tone-violet{background:#6d28d9}
 .sc-dock-ico.tone-slate{background:#475569}
 
+/* سقف اعتبار نسیه — اخطار چشمک‌زن قرمز */
+.credit-limit-banner{
+  display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;
+  padding:10px 12px;margin-bottom:10px;border-radius:3px;
+  border:2px solid #f59e0b;background:#fff7ed;color:#9a3412;
+  font-size:12.5px;font-weight:700;line-height:1.45;
+}
+.credit-limit-banner strong{font-size:13px;}
+.credit-limit-banner--warn{border-color:#f59e0b;background:#fff7ed;color:#9a3412;}
+.credit-limit-banner--danger{
+  border-color:#dc2626;background:#fee2e2;color:#9f1239;
+  font-weight:800;
+}
+@keyframes creditLimitBlink{
+  0%,100%{opacity:1;background:#fee2e2;box-shadow:0 0 0 0 rgba(220,38,38,.55);}
+  50%{opacity:.72;background:#fecaca;box-shadow:0 0 0 6px rgba(220,38,38,.18);}
+}
+.credit-limit-blink{
+  animation:creditLimitBlink .85s ease-in-out infinite;
+  border-color:#dc2626!important;
+  color:#9f1239!important;
+  font-weight:800!important;
+}
+.credit-limit-row-over{background:#fff1f2;}
+.credit-limit-inline-form input[type=number]{min-height:34px;}
+@media (prefers-reduced-motion:reduce){
+  .credit-limit-blink{animation:none;outline:3px solid #dc2626;}
+}
+

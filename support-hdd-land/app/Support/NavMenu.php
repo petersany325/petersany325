@@ -121,11 +121,12 @@ class NavMenu
                 'route' => 'customers.index',
                 'match' => 'customers.*|portal-invites.*|device-blacklists.*',
                 'mark' => 'ش',
-                'hint' => 'فهرست و پرونده مشتری',
+                'hint' => 'فهرست، سقف اعتبار، لیست سیاه',
                 'any_of' => ['customers', 'portal.invites', 'device.blacklists'],
                 'children' => [
                     ['label' => 'فهرست مشتریان', 'route' => 'customers.index', 'match' => 'customers.index|customers.show|customers.edit', 'hint' => 'جستجو، ویرایش، حذف', 'mark' => 'ف', 'permission' => 'customers'],
                     ['label' => 'مشتری جدید', 'route' => 'customers.create', 'match' => 'customers.create', 'hint' => 'نام و موبایل یکتا', 'mark' => '+', 'permission' => 'customers'],
+                    ['label' => 'سقف اعتبار نسیه', 'route' => 'customers.credit-limits', 'match' => 'customers.credit-limits|customers.credit-limit', 'hint' => 'سقف بدهی مجاز هر مشتری', 'mark' => 'ع', 'permission' => 'customers'],
                     ['label' => 'ارسال لینک کارتابل', 'route' => 'portal-invites.index', 'match' => 'portal-invites.*', 'hint' => 'تکی + گروهی + گزارش', 'mark' => 'ل', 'permission' => 'portal.invites'],
                     ['label' => 'لیست سیاه مشتریان', 'route' => 'customers.index', 'params' => ['filter' => 'blacklist'], 'match' => 'customers.index', 'hint' => 'مشتریان مسدود', 'mark' => 'س', 'permission' => 'customers'],
                     ['label' => 'لیست سیاه دستگاه', 'route' => 'device-blacklists.index', 'match' => 'device-blacklists.*', 'hint' => 'سریال/مدل ممنوع', 'mark' => 'د', 'permission' => 'device.blacklists'],

@@ -85,6 +85,9 @@ class DeliveryController extends Controller
         });
 
         $open = $payload->where('already_delivered', false)->values();
+        $openDebt = (int) app(\App\Services\CustomerDebtService::class)->totalOpen($customer);
+        $creditLimit = $customer->hasCreditLimit() ? (int) $customer->credit_limit : null;
+        $overCredit = $creditLimit !== null && $openDebt > $creditLimit;
 
         return response()->json([
             'ok' => true,
@@ -93,6 +96,10 @@ class DeliveryController extends Controller
                 'name' => $customer->name,
                 'display_name' => $customer->displayName(),
                 'phone' => $customer->phone,
+                'credit_limit' => $creditLimit,
+                'open_debt' => $openDebt,
+                'credit_headroom' => $creditLimit === null ? null : max(0, $creditLimit - $openDebt),
+                'over_credit_limit' => $overCredit,
             ],
             'count' => $payload->count(),
             'open_count' => $open->count(),
@@ -278,6 +285,22 @@ class DeliveryController extends Controller
                 throw ValidationException::withMessages([
                     'note' => 'برای بخشش مانده در تحویل گروهی، دلیل الزامی است.',
                 ]);
+            }
+            if ($mode === ReceptionSettlementService::MODE_CREDIT) {
+                $debtService = app(\App\Services\CustomerDebtService::class);
+                foreach ($unsettled->groupBy('customer_id') as $customerId => $tickets) {
+                    $customer = $tickets->first()?->customer;
+                    if (! $customer) {
+                        continue;
+                    }
+                    $limitMsg = $debtService->creditLimitBlockMessage($customer);
+                    if ($limitMsg) {
+                        throw ValidationException::withMessages([
+                            'settlement_mode' => $limitMsg,
+                            'credit_limit' => $limitMsg,
+                        ]);
+                    }
+                }
             }
         }
 
