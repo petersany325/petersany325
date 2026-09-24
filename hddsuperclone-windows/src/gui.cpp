@@ -1,8 +1,10 @@
 #include "app.hpp"
 
+#include "carve_sigs.hpp"
 #include "clone_engine.hpp"
 #include "disk_io.hpp"
 #include "file_recovery.hpp"
+#include "ntfs_mft.hpp"
 #include "platform.hpp"
 #include "safety.hpp"
 #include "script_engine.hpp"
@@ -16,10 +18,12 @@
 #include <cstdio>
 #include <cstring>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 namespace hsc {
@@ -61,6 +65,14 @@ struct AppState {
     std::vector<std::string> scripts;
     int script_index = 0;
     std::string script_output;
+
+    NtfsVolumeInfo mft;
+    std::vector<char> mft_checked;
+    std::mutex mft_mu;
+    bool mft_loading = false;
+    CarveFilter grep;
+    CarveProgress grep_progress;
+    bool show_grep_catalog = true;
 };
 
 void append_job_log(AppState& a, const std::string& s) {
@@ -142,7 +154,149 @@ struct PendingJob {
     bool dest_is_file = false;
     bool dest_is_folder = false;
     bool dest_is_boot = false;
+    CarveFilter grep;
+    std::vector<uint64_t> mft_recnos;
+    bool mft_selected_only = false;
 };
+
+CarveFilter current_grep_filter(const AppState& a) { return a.grep; }
+
+void draw_signature_table(float height) {
+    const auto& cat = carve_catalog();
+    ImGui::Text("Signature grep table: %d greppable / %d skipped (no reliable magic)", carve_greppable_count(),
+                carve_skipped_count());
+    if (ImGui::BeginTable("carve_sigs", 5,
+                           ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY |
+                               ImGuiTableFlags_Resizable,
+                           ImVec2(0, height))) {
+        ImGui::TableSetupColumn("Ext", ImGuiTableColumnFlags_WidthFixed, 90);
+        ImGui::TableSetupColumn("Category", ImGuiTableColumnFlags_WidthFixed, 100);
+        ImGui::TableSetupColumn("Grep", ImGuiTableColumnFlags_WidthFixed, 80);
+        ImGui::TableSetupColumn("Max", ImGuiTableColumnFlags_WidthFixed, 80);
+        ImGui::TableSetupColumn("Magic / skip reason");
+        ImGui::TableHeadersRow();
+        for (const auto& e : cat) {
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextUnformatted(e.ext.c_str());
+            ImGui::TableSetColumnIndex(1);
+            ImGui::TextUnformatted(e.category.c_str());
+            ImGui::TableSetColumnIndex(2);
+            if (e.greppable)
+                ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1), "yes");
+            else
+                ImGui::TextDisabled("skip");
+            ImGui::TableSetColumnIndex(3);
+            if (e.greppable)
+                ImGui::Text("%u KiB", e.max_bytes / 1024);
+            else
+                ImGui::TextDisabled("-");
+            ImGui::TableSetColumnIndex(4);
+            ImGui::TextUnformatted(e.magic_desc.c_str());
+        }
+        ImGui::EndTable();
+    }
+}
+
+void draw_mft_table(AppState& a) {
+    std::lock_guard<std::mutex> g(a.mft_mu);
+    if (!a.mft.ok && a.mft.records.empty()) {
+        ImGui::TextDisabled("Load NTFS $MFT from the ticked damaged source to pick FILE records.");
+        return;
+    }
+    ImGui::Text("%s", a.mft.message.c_str());
+    if (static_cast<int>(a.mft_checked.size()) != static_cast<int>(a.mft.records.size()))
+        a.mft_checked.assign(a.mft.records.size(), 0);
+    if (ImGui::BeginTable("mft", 8,
+                           ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY |
+                               ImGuiTableFlags_Resizable,
+                           ImVec2(0, 180))) {
+        ImGui::TableSetupColumn("Pick", ImGuiTableColumnFlags_WidthFixed, 44);
+        ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 50);
+        ImGui::TableSetupColumn("Name");
+        ImGui::TableSetupColumn("Path");
+        ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 80);
+        ImGui::TableSetupColumn("Kind", ImGuiTableColumnFlags_WidthFixed, 70);
+        ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 80);
+        ImGui::TableSetupColumn("DATA", ImGuiTableColumnFlags_WidthFixed, 90);
+        ImGui::TableHeadersRow();
+        for (size_t i = 0; i < a.mft.records.size(); ++i) {
+            const auto& r = a.mft.records[i];
+            if (r.recno < 5 && r.name.empty()) continue;
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::PushID(int(i));
+            bool on = i < a.mft_checked.size() && a.mft_checked[i] != 0;
+            if (ImGui::Checkbox("##m", &on) && i < a.mft_checked.size()) a.mft_checked[i] = on ? 1 : 0;
+            ImGui::PopID();
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%llu", static_cast<unsigned long long>(r.recno));
+            ImGui::TableSetColumnIndex(2);
+            ImGui::TextUnformatted(r.name.empty() ? "(unnamed)" : r.name.c_str());
+            ImGui::TableSetColumnIndex(3);
+            ImGui::TextUnformatted(r.path.c_str());
+            ImGui::TableSetColumnIndex(4);
+            ImGui::Text("%llu", static_cast<unsigned long long>(r.data_size));
+            ImGui::TableSetColumnIndex(5);
+            ImGui::TextUnformatted(r.is_dir ? "dir" : "file");
+            ImGui::TableSetColumnIndex(6);
+            if (r.skipped_bad)
+                ImGui::TextColored(ImVec4(1, 0.4f, 0.3f, 1), "bad");
+            else if (r.deleted)
+                ImGui::TextColored(ImVec4(1, 0.7f, 0.3f, 1), "deleted");
+            else if (r.from_mirr)
+                ImGui::TextColored(ImVec4(0.6f, 0.8f, 1, 1), "mirr");
+            else if (r.in_use)
+                ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1), "in-use");
+            else
+                ImGui::TextDisabled("free");
+            ImGui::TableSetColumnIndex(7);
+            if (r.is_dir)
+                ImGui::TextDisabled("index");
+            else if (r.resident)
+                ImGui::TextUnformatted("resident");
+            else if (!r.runs.empty())
+                ImGui::Text("runs %d", int(r.runs.size()));
+            else
+                ImGui::TextDisabled("none");
+        }
+        ImGui::EndTable();
+    }
+    if (ImGui::CollapsingHeader("MFT tree (parent FILE_NAME refs)")) {
+        std::unordered_map<uint64_t, std::vector<size_t>> kids;
+        for (size_t i = 0; i < a.mft.records.size(); ++i) {
+            const auto& r = a.mft.records[i];
+            if (r.skipped_bad || r.name.empty()) continue;
+            if (r.recno == 5) continue;
+            kids[r.parent_recno].push_back(i);
+        }
+        std::function<void(uint64_t, int)> walk = [&](uint64_t parent, int depth) {
+            if (depth > 12) return;
+            auto it = kids.find(parent);
+            if (it == kids.end()) return;
+            for (size_t i : it->second) {
+                const auto& r = a.mft.records[i];
+                ImGui::PushID(int(i));
+                if (r.is_dir) {
+                    if (ImGui::TreeNode("%s  [#%llu]", r.name.c_str(),
+                                        static_cast<unsigned long long>(r.recno))) {
+                        walk(r.recno, depth + 1);
+                        ImGui::TreePop();
+                    }
+                } else {
+                    bool on = i < a.mft_checked.size() && a.mft_checked[i] != 0;
+                    if (ImGui::Checkbox("##t", &on) && i < a.mft_checked.size()) a.mft_checked[i] = on ? 1 : 0;
+                    ImGui::SameLine();
+                    ImGui::Text("%s  (#%llu, %llu bytes%s)", r.name.c_str(),
+                                static_cast<unsigned long long>(r.recno),
+                                static_cast<unsigned long long>(r.data_size), r.deleted ? ", deleted" : "");
+                }
+                ImGui::PopID();
+            }
+        };
+        walk(5, 0);
+    }
+}
 
 std::string disk_stem(const DiskInfo& d) {
     return sanitize_stem(d.model.empty() ? d.path : d.model);
@@ -232,9 +386,11 @@ std::vector<PendingJob> build_jobs(AppState& a, std::string& err) {
         }
     }
 
-    if (mode == JobMode::FileRecovery) {
+    if (mode == JobMode::FileRecovery || mode == JobMode::GrepScan) {
         if (a.dest_folder[0] == 0) {
-            err = "Choose a folder for recovered files (not the damaged disk).";
+            err = (mode == JobMode::GrepScan)
+                      ? "Choose a folder for Grep scan hits (carved/ files)."
+                      : "Choose a folder for recovered files (not the damaged disk).";
             return {};
         }
         for (int i : checked) {
@@ -245,6 +401,7 @@ std::vector<PendingJob> build_jobs(AppState& a, std::string& err) {
             std::string stem = disk_stem(a.disks[static_cast<size_t>(i)]);
             j.dest = (std::filesystem::path(a.dest_folder) / stem).string();
             j.dest_is_folder = true;
+            j.grep = current_grep_filter(a);
             jobs.push_back(j);
         }
         return jobs;
@@ -327,6 +484,96 @@ std::vector<PendingJob> build_jobs(AppState& a, std::string& err) {
     return jobs;
 }
 
+void start_load_mft(AppState& a) {
+    if (a.running || a.mft_loading) return;
+    auto checked = checked_indices(a);
+    if (checked.empty()) {
+        a.status_message = "Tick the damaged disk (source), then Load NTFS $MFT.";
+        return;
+    }
+    int idx = checked[0];
+    std::string path = a.disks[static_cast<size_t>(idx)].path;
+    bool is_file = a.disks[static_cast<size_t>(idx)].bus == "File";
+    a.stop_job = false;
+    a.mft_loading = true;
+    a.running = true;
+    a.status_message = "Loading NTFS $MFT...";
+    a.worker = std::make_unique<std::thread>([path, is_file, &a]() {
+        auto src = open_disk(path, false, is_file);
+        if (!src) {
+            a.status_message = "Cannot open source for MFT scan";
+            append_job_log(a, a.status_message);
+            a.last_result = CloneResult::SourceError;
+            a.mft_loading = false;
+            a.running = false;
+            return;
+        }
+        auto vol = scan_ntfs_on_disk(*src, &a.stop_job, [&a](const std::string& m) { append_job_log(a, m); });
+        {
+            std::lock_guard<std::mutex> g(a.mft_mu);
+            a.mft = std::move(vol);
+            a.mft_checked.assign(a.mft.records.size(), 0);
+        }
+        a.status_message = a.mft.message;
+        a.last_result = a.mft.ok ? CloneResult::Ok : CloneResult::SourceError;
+        a.mft_loading = false;
+        a.running = false;
+    });
+}
+
+void start_recover_mft_selected(AppState& a) {
+    if (a.running) return;
+    auto checked = checked_indices(a);
+    if (checked.empty()) {
+        a.status_message = "Tick the damaged disk (source) first.";
+        return;
+    }
+    if (a.dest_folder[0] == 0) {
+        a.status_message = "Choose a folder for recovered files.";
+        return;
+    }
+    std::vector<uint64_t> recnos;
+    {
+        std::lock_guard<std::mutex> g(a.mft_mu);
+        if (!a.mft.ok) {
+            a.status_message = "Load NTFS $MFT first.";
+            return;
+        }
+        for (size_t i = 0; i < a.mft.records.size() && i < a.mft_checked.size(); ++i)
+            if (a.mft_checked[i]) recnos.push_back(a.mft.records[i].recno);
+    }
+    if (recnos.empty()) {
+        a.status_message = "Pick one or more MFT records (table or tree).";
+        return;
+    }
+    int idx = checked[0];
+    std::string path = a.disks[static_cast<size_t>(idx)].path;
+    bool is_file = a.disks[static_cast<size_t>(idx)].bus == "File";
+    std::string dest = (std::filesystem::path(a.dest_folder) / disk_stem(a.disks[static_cast<size_t>(idx)])).string();
+    a.stop_job = false;
+    a.running = true;
+    a.status_message = "Recovering selected MFT records...";
+    a.worker = std::make_unique<std::thread>([path, is_file, dest, recnos, &a]() {
+        auto src = open_disk(path, false, is_file);
+        if (!src) {
+            a.status_message = "Cannot open source";
+            a.last_result = CloneResult::SourceError;
+            a.running = false;
+            return;
+        }
+        NtfsVolumeInfo vol;
+        {
+            std::lock_guard<std::mutex> g(a.mft_mu);
+            vol = a.mft;
+        }
+        auto st = recover_mft_records(*src, vol, recnos, dest, &a.stop_job,
+                                      [&a](const std::string& m) { append_job_log(a, m); });
+        a.status_message = st.message;
+        a.last_result = st.ok ? CloneResult::Ok : CloneResult::SourceError;
+        a.running = false;
+    });
+}
+
 void start_clone(AppState& a, bool confirmed) {
     if (a.running) return;
     join_worker(a);
@@ -389,6 +636,19 @@ void start_clone(AppState& a, bool confirmed) {
                 auto st = recover_files(*src, j.dest, &a.stop_job, [&a](const std::string& m) { append_job_log(a, m); });
                 a.status_message = st.message;
                 if (!st.ok && st.files_written == 0) a.last_result = CloneResult::SourceError;
+                continue;
+            }
+            if (j.mode == JobMode::GrepScan) {
+                auto src = open_disk(j.source, false, j.source_is_file);
+                if (!src) {
+                    a.last_result = CloneResult::SourceError;
+                    append_job_log(a, "Cannot open source");
+                    break;
+                }
+                auto st = grep_scan_disk(*src, j.dest, j.grep, &a.stop_job,
+                                         [&a](const std::string& m) { append_job_log(a, m); }, &a.grep_progress);
+                a.status_message = st.message;
+                if (!st.ok && st.carved == 0) a.last_result = CloneResult::SourceError;
                 continue;
             }
             std::string e;
@@ -466,6 +726,8 @@ void draw_disk_table(AppState& a) {
         ImGui::TextColored(ImVec4(0.4f, 0.85f, 0.5f, 1), "   |   Set image HDD = healthy destination for .img files");
     else if (mode == JobMode::FileRecovery)
         ImGui::TextColored(ImVec4(0.4f, 0.85f, 0.5f, 1), "   |   Destination is a folder (below), not a tick");
+    else if (mode == JobMode::GrepScan)
+        ImGui::TextColored(ImVec4(0.4f, 0.85f, 0.5f, 1), "   |   Grep scan writes carved/ into the folder below");
     else if (mode == JobMode::RestoreImageToDisk)
         ImGui::TextColored(ImVec4(0.4f, 0.85f, 0.5f, 1), "   |   Set dest HDD = disk that the .img will overwrite");
     else
@@ -518,7 +780,7 @@ void draw_disk_table(AppState& a) {
                     ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1), "DEST HDD");
                 ImGui::SameLine();
             }
-            if (mode == JobMode::FileRecovery) {
+            if (mode == JobMode::FileRecovery || mode == JobMode::GrepScan) {
                 ImGui::TextDisabled("use folder below");
             } else if (mode == JobMode::ImageOntoDrive) {
                 if (ImGui::SmallButton("Set image HDD")) set_dest_disk(a, i, true);
@@ -561,7 +823,7 @@ void draw_disk_table(AppState& a) {
 int run_gui(int argc, char** argv) {
     (void)argc;
     (void)argv;
-    if (!platform_init("HDDSuperClone for Windows", 1400, 980)) {
+    if (!platform_init("HDDSuperClone for Windows", 1440, 1020)) {
         std::fprintf(stderr, "Failed to create window\n");
         return 1;
     }
@@ -571,6 +833,7 @@ int run_gui(int argc, char** argv) {
         std::string sd = application_dir() + "/scripts";
         std::snprintf(a.script_dir, sizeof(a.script_dir), "%s", sd.c_str());
         a.scripts = list_scripts(sd);
+        load_carve_signatures(application_dir() + "/carve_signatures.txt");
     }
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
@@ -591,10 +854,18 @@ int run_gui(int argc, char** argv) {
             a.worker->join();
             a.worker.reset();
             auto p = a.engine.progress();
-            if (a.last_result == CloneResult::Ok && (p.finished || static_cast<JobMode>(a.job_mode) == JobMode::FileRecovery)) {
-                a.status_message = (static_cast<JobMode>(a.job_mode) == JobMode::FileRecovery)
-                                       ? "File recovery finished."
-                                       : "Clone finished.";
+            if (a.last_result == CloneResult::Ok &&
+                (p.finished || static_cast<JobMode>(a.job_mode) == JobMode::FileRecovery ||
+                 static_cast<JobMode>(a.job_mode) == JobMode::GrepScan || a.mft.ok)) {
+                auto mode = static_cast<JobMode>(a.job_mode);
+                if (mode == JobMode::FileRecovery)
+                    a.status_message = "File recovery finished.";
+                else if (mode == JobMode::GrepScan)
+                    a.status_message = "Grep scan finished.";
+                else if (a.mft_loading)
+                    a.status_message = "MFT load finished.";
+                else
+                    a.status_message = "Clone finished.";
             } else if (a.last_result == CloneResult::Stopped) {
                 a.status_message = "Stopped. Resume by starting again with the same progress log.";
             } else {
@@ -629,6 +900,52 @@ int run_gui(int argc, char** argv) {
                 }
                 ImGui::EndMenu();
             }
+            if (ImGui::BeginMenu("Scan")) {
+                if (ImGui::MenuItem("Start disk scan", nullptr, false, !a.scanning && !a.running)) {
+                    a.scanning = true;
+                    a.scanned = false;
+                    a.disks.clear();
+                    a.recover_checked.clear();
+                    a.dest_index = -1;
+                    a.scan_worker = std::make_unique<std::thread>([&a]() {
+                        auto disks = enumerate_disks();
+                        a.disks = std::move(disks);
+                        a.recover_checked.assign(a.disks.size(), 0);
+                        a.scanning = false;
+                        a.scanned = true;
+                        a.status_message = a.disks.empty()
+                                               ? "Scan finished - no disks found. Run as Administrator and try again."
+                                               : "Scan finished. TICK damaged disk (source).";
+                    });
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Grep scan...", nullptr, a.job_mode == int(JobMode::GrepScan))) {
+                    a.job_mode = int(JobMode::GrepScan);
+                    a.status_message =
+                        "Grep scan: tick damaged source, pick categories, choose a folder, then Start Grep scan.";
+                }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Recover")) {
+                if (ImGui::MenuItem("Grep scan", "signature grep of damaged HDD/USB",
+                                    a.job_mode == int(JobMode::GrepScan))) {
+                    a.job_mode = int(JobMode::GrepScan);
+                    a.status_message =
+                        "Grep scan menu: magic-byte search. Tick source, choose extensions/categories, pick dest folder.";
+                }
+                if (ImGui::MenuItem("File recovery (FAT/NTFS + carve)", nullptr,
+                                    a.job_mode == int(JobMode::FileRecovery))) {
+                    a.job_mode = int(JobMode::FileRecovery);
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Load NTFS $MFT", nullptr, false, !a.running)) start_load_mft(a);
+                if (ImGui::MenuItem("Recover selected MFT records", nullptr, false, !a.running))
+                    start_recover_mft_selected(a);
+                ImGui::Separator();
+                if (ImGui::MenuItem("Signature catalog", nullptr, a.show_grep_catalog))
+                    a.show_grep_catalog = !a.show_grep_catalog;
+                ImGui::EndMenu();
+            }
             if (ImGui::BeginMenu("Help")) {
                 ImGui::TextUnformatted("HDDSuperClone Windows port 2.4.0-windows");
                 ImGui::TextUnformatted("Based on Scott Dwyer's HDDSuperClone (GPL-2).");
@@ -637,6 +954,8 @@ int run_gui(int argc, char** argv) {
                 ImGui::TextUnformatted("  Generic, ATA/SCSI pass-through, Direct AHCI (user-mode DIRECT+reset),");
                 ImGui::TextUnformatted("  Direct IDE (PIO), USB-direct (BOT/SCSI), Rebuild Assist/FPDMA,");
                 ImGui::TextUnformatted("  VHDX virtual disk, USB HID relay, HDDSuperTool scripts.");
+                ImGui::TextUnformatted("  NTFS $MFT walk (FILE records, runlists, $MFTMirr).");
+                ImGui::TextUnformatted("  Grep scan: data-driven magic-byte signatures (photos/video/db/docs/archives).");
                 ImGui::TextWrapped("True kernel AHCI MMIO still needs a signed Windows driver; see driver/hscahci.");
                 ImGui::EndMenu();
             }
@@ -658,6 +977,9 @@ int run_gui(int argc, char** argv) {
         if (ImGui::RadioButton("File recovery only  -  recover files from damaged disk into a folder",
                                a.job_mode == 2))
             a.job_mode = 2;
+        if (ImGui::RadioButton("Grep scan  -  signature grep of ticked damaged HDD/USB (photos, video, databases, ...)",
+                               a.job_mode == 4))
+            a.job_mode = 4;
         if (ImGui::RadioButton("Restore image to dest disk  -  write an existing .img ONTO a physical disk (overwrite)",
                                a.job_mode == 3))
             a.job_mode = 3;
@@ -673,9 +995,13 @@ int run_gui(int argc, char** argv) {
             else if (mode == JobMode::RestoreImageToDisk)
                 ImGui::TextWrapped("Choose an existing .img/.dd file, then Set dest HDD. That dest disk is overwritten. "
                                    "Ticks are not used. This is restore, not imaging the damaged disk.");
+            else if (mode == JobMode::GrepScan)
+                ImGui::TextWrapped("Grep scan: TICK the damaged HDD/USB. Choose categories (photos, video, databases, "
+                                   "documents, archives, or all). Hits are written as carved/carved_NNNN.ext. "
+                                   "Types without reliable magic are listed as skip.");
             else
                 ImGui::TextWrapped("TICK the damaged HDD/USB (source). Choose a folder for recovered files. "
-                                   "FAT/NTFS walk + signature carving. No full-disk overwrite.");
+                                   "NTFS $MFT walk (or FAT) + signature carving fallback. Load MFT to pick records.");
         }
         ImGui::Separator();
         draw_disk_table(a);
@@ -689,6 +1015,9 @@ int run_gui(int argc, char** argv) {
             else if (mode == JobMode::FileRecovery)
                 ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1),
                                    "Recovered-files folder (destination)  -  not the damaged disk");
+            else if (mode == JobMode::GrepScan)
+                ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1),
+                                   "Grep scan folder (destination)  -  carved hits, not the damaged disk");
             else if (mode == JobMode::RestoreImageToDisk)
                 ImGui::TextColored(ImVec4(0.4f, 0.9f, 0.5f, 1),
                                    "Dest HDD (overwrite)  -  physical disk that receives the restored image");
@@ -731,14 +1060,64 @@ int run_gui(int argc, char** argv) {
                 ImGui::SetNextItemWidth(-1);
                 ImGui::InputText("##dst", a.dest_path, sizeof(a.dest_path));
                 ImGui::TextDisabled("Use Set dest HDD in the table. This overwrites that physical disk.");
-            } else if (mode == JobMode::FileRecovery) {
-                ImGui::TextUnformatted("Folder for recovered files");
+            } else if (mode == JobMode::FileRecovery || mode == JobMode::GrepScan) {
+                ImGui::TextUnformatted(mode == JobMode::GrepScan ? "Folder for Grep scan hits (carved/)"
+                                                                 : "Folder for recovered files");
                 ImGui::SetNextItemWidth(-220);
                 ImGui::InputText("##folder", a.dest_folder, sizeof(a.dest_folder));
                 ImGui::SameLine();
                 if (ImGui::Button("Choose folder...")) {
-                    auto f = native_pick_folder("Recovered files folder");
+                    auto f = native_pick_folder(mode == JobMode::GrepScan ? "Grep scan output folder"
+                                                                          : "Recovered files folder");
                     if (!f.empty()) std::snprintf(a.dest_folder, sizeof(a.dest_folder), "%s", f.c_str());
+                }
+                if (mode == JobMode::GrepScan) {
+                    ImGui::Separator();
+                    ImGui::TextUnformatted("Grep scan categories (extensions use the signature table)");
+            if (ImGui::Checkbox("All greppable types", &a.grep.all)) {
+                if (!a.grep.all) {
+                    a.grep.photo = a.grep.video = a.grep.audio = a.grep.document = a.grep.archive =
+                        a.grep.database = a.grep.mail = a.grep.executable = a.grep.media = false;
+                    a.grep.photo = true;
+                }
+            }
+                    ImGui::BeginDisabled(a.grep.all);
+                    ImGui::Checkbox("Photos", &a.grep.photo);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Video", &a.grep.video);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Audio", &a.grep.audio);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Documents", &a.grep.document);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Archives", &a.grep.archive);
+                    ImGui::Checkbox("Databases", &a.grep.database);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Mail", &a.grep.mail);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Executables", &a.grep.executable);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Media extras", &a.grep.media);
+                    ImGui::EndDisabled();
+                    ImGui::TextDisabled("Filter: %s", carve_filter_summary(a.grep).c_str());
+                    uint64_t done = a.grep_progress.bytes_done.load();
+                    uint64_t tot = a.grep_progress.bytes_total.load();
+                    int hits = a.grep_progress.hits.load();
+                    float gfrac = (tot > 0) ? float(double(done) / double(tot)) : 0.0f;
+                    ImGui::ProgressBar(gfrac, ImVec2(-1, 0),
+                                       (std::to_string(hits) + " hits").c_str());
+                    ImGui::Text("Grep progress: %llu / %llu bytes   hits %d",
+                                static_cast<unsigned long long>(done), static_cast<unsigned long long>(tot), hits);
+                    if (a.show_grep_catalog) draw_signature_table(160.0f);
+                } else {
+                    ImGui::Separator();
+                    if (ImGui::Button("Load NTFS $MFT") && !a.running) start_load_mft(a);
+                    ImGui::SameLine();
+                    if (ImGui::Button("Recover selected MFT records") && !a.running) start_recover_mft_selected(a);
+                    ImGui::SameLine();
+                    ImGui::TextDisabled("Carve is the fallback after the MFT/FAT walk.");
+                    draw_mft_table(a);
+                    if (ImGui::CollapsingHeader("Signature grep catalog (carve fallback)")) draw_signature_table(140.0f);
                 }
             } else {
                 ImGui::TextUnformatted("Dest HDD / copy disk (WRITES HERE)");
@@ -909,6 +1288,7 @@ int run_gui(int argc, char** argv) {
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.55f, 0.25f, 1));
             const char* go = "Start disk clone";
             if (static_cast<JobMode>(a.job_mode) == JobMode::FileRecovery) go = "Start file recovery";
+            else if (static_cast<JobMode>(a.job_mode) == JobMode::GrepScan) go = "Start Grep scan";
             else if (static_cast<JobMode>(a.job_mode) == JobMode::ImageOntoDrive) go = "Save image of damaged disk";
             else if (static_cast<JobMode>(a.job_mode) == JobMode::RestoreImageToDisk) go = "Restore image onto dest disk";
             if (ImGui::Button(go, ImVec2(240, 36))) start_clone(a, false);

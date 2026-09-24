@@ -1,5 +1,7 @@
 #include "clone_engine.hpp"
 #include "file_recovery.hpp"
+#include "carve_sigs.hpp"
+#include "ntfs_mft.hpp"
 #include "progress_log.hpp"
 #include "safety.hpp"
 #include "script_engine.hpp"
@@ -13,6 +15,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -203,6 +206,8 @@ int main() {
             return fail("job files");
         if (std::strstr(hsc::job_mode_name(hsc::JobMode::RestoreImageToDisk), "Restore image") == nullptr)
             return fail("job restore");
+        if (std::strstr(hsc::job_mode_name(hsc::JobMode::GrepScan), "Grep scan") == nullptr)
+            return fail("job grep");
     }
 
     // --- file recovery: FAT16 file + JPEG carving ---
@@ -275,6 +280,163 @@ int main() {
         }
         if (!saw_hello) return fail("fat HELLO.TXT missing");
         if (!saw_jpg) return fail("carved jpeg missing");
+    }
+
+    // --- signature catalog covers requested families; honest skips ---
+    {
+        auto cat = hsc::carve_catalog();
+        if (cat.size() < 40) return fail("carve catalog too small");
+        if (hsc::carve_greppable_count() < 30) return fail("too few greppable magics");
+        if (hsc::carve_skipped_count() < 10) return fail("expected honest skips");
+        auto has = [&](const char* ext, bool want_grep) {
+            for (auto& e : cat)
+                if (e.ext == ext && e.greppable == want_grep) return true;
+            return false;
+        };
+        if (!has("jpg", true) || !has("png", true) || !has("gif", true) || !has("webp", true))
+            return fail("photo magics");
+        if (!has("heic", true) || !has("mp4", true) || !has("mkv", true) || !has("avi", true))
+            return fail("video magics");
+        if (!has("mp3", true) || !has("flac", true) || !has("pdf", true) || !has("zip", true))
+            return fail("audio/doc/archive magics");
+        if (!has("sqlite", true) || !has("mdb", true) || !has("accdb", true) || !has("mdf", true))
+            return fail("database magics");
+        if (!has("pst", true) || !has("exe", true) || !has("elf", true) || !has("psd", true))
+            return fail("mail/exe magics");
+        if (!has("txt", false) || !has("ts", false) || !has("nef", false) || !has("docx", false) ||
+            !has("sql", false) || !has("eml", false))
+            return fail("honest skip missing");
+    }
+
+    // --- grep scan extra magics + category filter ---
+    {
+        auto grepp = (tmp / "grep.img").string();
+        std::vector<uint8_t> img(32 * 512, 0);
+        auto put = [&](size_t off, const char* p, size_t n) { std::memcpy(img.data() + off, p, n); };
+        // JPEG with footer so carve stops
+        img[0] = 0xFF;
+        img[1] = 0xD8;
+        img[2] = 0xFF;
+        img[20] = 0xFF;
+        img[21] = 0xD9;
+        // PNG
+        static const uint8_t png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0,
+                                      'I', 'E', 'N', 'D', 0xAE, 0x42, 0x60, 0x82};
+        put(1 * 512, reinterpret_cast<const char*>(png), sizeof(png));
+        put(2 * 512, "%PDF-1.4\n%%EOF\n", 16);
+        put(3 * 512, "SQLite format 3", 15);
+        static const char zipm[] = {'P', 'K', 0x03, 0x04, 'z', 'i', 'p', 'd', 'a', 't', 'a'};
+        put(4 * 512, zipm, sizeof(zipm));
+        static const char elfm[] = {0x7f, 'E', 'L', 'F', 0x02, 0x01};
+        put(5 * 512, elfm, sizeof(elfm));
+        put(6 * 512, "ID3mp3data", 10);
+        static const char mdbm[] = {0x00, 0x01, 0x00, 0x00, 'S', 't', 'a', 'n', 'd', 'a', 'r', 'd', ' ',
+                                    'J', 'e', 't', ' ', 'D', 'B'};
+        put(7 * 512, mdbm, sizeof(mdbm));
+        {
+            std::ofstream o(grepp, std::ios::binary);
+            o.write(reinterpret_cast<char*>(img.data()), static_cast<std::streamsize>(img.size()));
+        }
+        auto sess = hsc::open_disk(grepp, false, true);
+        if (!sess) return fail("open grep img");
+        auto outdir = (tmp / "grep-all").string();
+        std::atomic<bool> stop{false};
+        hsc::CarveFilter all;
+        auto st = hsc::grep_scan_disk(*sess, outdir, all, &stop, nullptr, nullptr);
+        if (st.carved < 6) return fail("grep scan too few hits");
+        bool saw_png = false, saw_pdf = false, saw_sqlite = false, saw_zip = false, saw_elf = false, saw_mdb = false;
+        for (auto& p : fs::recursive_directory_iterator(outdir)) {
+            auto e = p.path().extension().string();
+            if (e == ".png") saw_png = true;
+            if (e == ".pdf") saw_pdf = true;
+            if (e == ".sqlite") saw_sqlite = true;
+            if (e == ".zip") saw_zip = true;
+            if (e == ".elf") saw_elf = true;
+            if (e == ".mdb") saw_mdb = true;
+        }
+        if (!saw_png || !saw_pdf || !saw_sqlite || !saw_zip || !saw_elf || !saw_mdb)
+            return fail("grep scan missing type");
+        auto photodir = (tmp / "grep-photo-only").string();
+        fs::remove_all(photodir);
+        hsc::CarveFilter photos{};
+        photos.all = false;
+        photos.photo = true;
+        photos.video = false;
+        photos.audio = false;
+        photos.document = false;
+        photos.archive = false;
+        photos.database = false;
+        photos.mail = false;
+        photos.executable = false;
+        photos.media = false;
+        auto sess2 = hsc::open_disk(grepp, false, true);
+        auto st2 = hsc::grep_scan_disk(*sess2, photodir, photos, &stop, nullptr, nullptr);
+        if (st2.carved < 1) return fail("photo grep wrote nothing");
+        bool photo_ok = false, leaked_db = false;
+        for (auto& p : fs::recursive_directory_iterator(photodir)) {
+            auto e = p.path().extension().string();
+            if (e == ".jpg" || e == ".png") photo_ok = true;
+            if (e == ".sqlite" || e == ".mdb" || e == ".pdf") leaked_db = true;
+        }
+        if (!photo_ok) return fail("photo filter missed images");
+        if (leaked_db) return fail("photo filter leaked other categories");
+    }
+
+    // --- NTFS $MFT sample: resident, runlist, deleted ---
+    {
+        auto ntfs = (tmp / "ntfs-sample.img").string();
+        std::string nerr;
+        if (!hsc::write_minimal_ntfs_sample(ntfs, nerr)) {
+            std::fprintf(stderr, "%s\n", nerr.c_str());
+            return fail("write ntfs sample");
+        }
+        auto sess = hsc::open_disk(ntfs, false, true);
+        if (!sess) return fail("open ntfs sample");
+        std::atomic<bool> stop{false};
+        auto vol = hsc::scan_ntfs_on_disk(*sess, &stop, nullptr);
+        if (!vol.ok) return fail("mft scan failed");
+        bool saw_readme = false, saw_photo = false, saw_gone = false, saw_docs = false;
+        uint64_t rec_readme = 0, rec_photo = 0, rec_gone = 0;
+        for (auto& r : vol.records) {
+            if (r.name == "readme.txt") {
+                saw_readme = r.resident && r.path.find("docs") != std::string::npos;
+                rec_readme = r.recno;
+            }
+            if (r.name == "photo.dat") {
+                saw_photo = !r.resident && r.runs.size() >= 2;
+                rec_photo = r.recno;
+            }
+            if (r.name == "gone.txt") {
+                saw_gone = r.deleted;
+                rec_gone = r.recno;
+            }
+            if (r.name == "docs" && r.is_dir) saw_docs = true;
+        }
+        if (!saw_readme) return fail("mft readme resident/path");
+        if (!saw_photo) return fail("mft photo runlist");
+        if (!saw_gone) return fail("mft deleted gone.txt");
+        if (!saw_docs) return fail("mft docs folder");
+        auto outdir = (tmp / "mft-out").string();
+        auto st = hsc::recover_mft_records(*sess, vol, {rec_readme, rec_photo, rec_gone}, outdir, &stop, nullptr);
+        if (st.files_written < 3) return fail("mft recover count");
+        bool got_readme = false, got_photo = false, got_gone = false;
+        for (auto& p : fs::recursive_directory_iterator(outdir)) {
+            auto name = p.path().filename().string();
+            if (name == "readme.txt") {
+                std::ifstream in(p.path(), std::ios::binary);
+                std::string s((std::istreambuf_iterator<char>(in)), {});
+                got_readme = s.find("hello mft") != std::string::npos;
+            }
+            if (name == "photo.dat") {
+                std::ifstream in(p.path(), std::ios::binary);
+                std::string s((std::istreambuf_iterator<char>(in)), {});
+                got_photo = s.find("FRAG1") != std::string::npos && s.find("FRAG2") != std::string::npos;
+            }
+            if (name == "gone.txt") got_gone = p.path().string().find("deleted") != std::string::npos;
+        }
+        if (!got_readme) return fail("mft recovered readme contents");
+        if (!got_photo) return fail("mft recovered runlist photo");
+        if (!got_gone) return fail("mft recovered deleted gone.txt");
     }
 
     // --- folder dest safety ---

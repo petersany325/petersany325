@@ -1,6 +1,8 @@
 #pragma once
 
+#include "carve_sigs.hpp"
 #include "disk_io.hpp"
+#include "ntfs_mft.hpp"
 #include "types.hpp"
 
 #include <atomic>
@@ -23,12 +25,16 @@ struct FileRecoveryStats {
 
 using RecoveryLogFn = std::function<void(const std::string&)>;
 
-// Recover files from a disk/image into dest_dir. Walks MBR/GPT, FAT12/16/32,
-// a basic NTFS $MFT pass, then signature carving for JPEG/PNG/PDF/ZIP/DOCX.
 FileRecoveryStats recover_files(DiskSession& source, const std::string& dest_dir,
                                 std::atomic<bool>* stop, RecoveryLogFn log);
 
-// Helpers used by tests.
+FileRecoveryStats recover_mft_records(DiskSession& source, const NtfsVolumeInfo& vol,
+                                      const std::vector<uint64_t>& recnos, const std::string& dest_dir,
+                                      std::atomic<bool>* stop, RecoveryLogFn log);
+
+FileRecoveryStats grep_scan_disk(DiskSession& source, const std::string& dest_dir, const CarveFilter& filter,
+                                 std::atomic<bool>* stop, RecoveryLogFn log, CarveProgress* progress = nullptr);
+
 bool looks_like_fat_boot(const uint8_t* s512);
 bool looks_like_ntfs_boot(const uint8_t* s512);
 int parse_mbr_partitions(const uint8_t* s512, uint64_t out_lba[4], uint64_t out_sectors[4]);

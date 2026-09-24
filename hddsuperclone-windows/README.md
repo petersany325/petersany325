@@ -12,7 +12,8 @@ Install with **HDDSuperClone-Windows-Setup.exe** (NSIS). It installs to `Program
 - Four explicit jobs:
   - **Disk-to-disk** — clone the ticked damaged source onto **Dest HDD / copy disk** (Set dest HDD)
   - **Image onto Image HDD** — create a `.img`/`.dd` **of** the ticked damaged disk and save it on the healthy **Image HDD** (folder or file). This is not restore.
-  - **File recovery only** — ticked damaged source; folder for recovered files (FAT/NTFS walk + JPEG/PNG/PDF/ZIP carving)
+  - **File recovery only** — ticked damaged source; folder for recovered files. Walks **NTFS `$MFT`** (FILE records, `FILE_NAME`, `$STANDARD_INFORMATION`, resident + non-resident `$DATA` runlists, `$MFTMirr`, deleted vs in-use) or FAT, then signature carving as fallback. The File recovery panel loads an MFT table/tree so you can pick records.
+  - **Grep scan** — dedicated **Scan / Recover → Grep scan** menu (and on-screen job) that greps the ticked damaged HDD/USB for a data-driven magic-byte table (`carve_signatures.txt`: photos, video, audio, documents, archives, databases, mail, executables). Choose categories, pick a folder, watch hits; writes `carved/carved_NNNN.ext`. Types with no reliable magic are listed as skip (txt, sql, mpeg-ts, TIFF-based RAW, ZIP-wrapped OOXML, …).
   - **Restore image to dest disk** — write an **existing** `.img` onto a physical dest disk (overwrite). Separate mode, not the default imaging job.
 - Sector-by-sector copy with the original multi-pass strategy:
   - Phase 1 forward with adaptive skip

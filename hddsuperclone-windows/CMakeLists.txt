@@ -26,10 +26,16 @@ set(HSC_ENGINE_SRC
   src/script_engine.cpp
   src/usb_direct.cpp
   src/file_recovery.cpp
+  src/ntfs_mft.cpp
+  src/carve_sigs.cpp
 )
 
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/resources/carve_signatures.txt" HSC_CARVE_TABLE)
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/carve_sigs_table.inc.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/carve_sigs_table.inc" @ONLY)
+
 add_library(hsc_engine STATIC ${HSC_ENGINE_SRC})
-target_include_directories(hsc_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(hsc_engine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR})
 
 if(WIN32)
   target_link_libraries(hsc_engine PUBLIC setupapi hid virtdisk winusb ole32)
@@ -98,7 +104,10 @@ add_custom_command(TARGET hddsuperclone-windows POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory
           ${CMAKE_CURRENT_SOURCE_DIR}/scripts
           $<TARGET_FILE_DIR:hddsuperclone-windows>/scripts
-  COMMENT "Copy HDDSuperTool scripts next to the executable")
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          ${CMAKE_CURRENT_SOURCE_DIR}/resources/carve_signatures.txt
+          $<TARGET_FILE_DIR:hddsuperclone-windows>/carve_signatures.txt
+  COMMENT "Copy scripts and carve signature table next to the executable")
 
 add_executable(hsc_engine_tests tests/engine_test.cpp)
 target_link_libraries(hsc_engine_tests PRIVATE hsc_engine)

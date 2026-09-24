@@ -1,4 +1,6 @@
 #include "file_recovery.hpp"
+#include "carve_sigs.hpp"
+#include "ntfs_mft.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -7,6 +9,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <unordered_set>
 
 namespace hsc {
 namespace {
@@ -57,7 +60,6 @@ bool read_lba(DiskSession& src, uint64_t lba, uint32_t count, std::vector<uint8_
 
 uint16_t u16(const uint8_t* p) { return static_cast<uint16_t>(p[0] | (p[1] << 8)); }
 uint32_t u32(const uint8_t* p) { return p[0] | (uint32_t(p[1]) << 8) | (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24); }
-uint64_t u64(const uint8_t* p) { return uint64_t(u32(p)) | (uint64_t(u32(p + 4)) << 32); }
 
 struct FatVol {
     uint32_t bytes_per_sec = 512;
@@ -271,219 +273,26 @@ void recover_fat(DiskSession& src, uint64_t part_lba, const std::string& dest, F
     recover_fat_tree(src, v, fat, v.root_clus, root16, dest, "", st, stop, log, 0);
 }
 
-// --- NTFS (basic $MFT FILE records) ---
-
-int64_t read_runlist(const uint8_t* p, size_t n, std::vector<std::pair<int64_t, uint64_t>>& runs) {
-    size_t i = 0;
-    int64_t lcn = 0;
-    uint64_t total = 0;
-    while (i < n && p[i] != 0) {
-        uint8_t h = p[i++];
-        int len_len = h & 0x0f;
-        int off_len = h >> 4;
-        if (i + len_len + off_len > n) break;
-        uint64_t run_len = 0;
-        for (int b = 0; b < len_len; ++b) run_len |= uint64_t(p[i++]) << (8 * b);
-        int64_t off = 0;
-        for (int b = 0; b < off_len; ++b) off |= int64_t(p[i++]) << (8 * b);
-        if (off_len && (p[i - 1] & 0x80)) {
-            for (int b = off_len; b < 8; ++b) off |= int64_t(0xff) << (8 * b);
-        }
-        lcn += off;
-        runs.push_back({lcn, run_len});
-        total += run_len;
-    }
-    return static_cast<int64_t>(total);
-}
-
 void recover_ntfs(DiskSession& src, uint64_t part_lba, const std::string& dest, FileRecoveryStats& st,
                   std::atomic<bool>* stop, const RecoveryLogFn& log) {
-    std::vector<uint8_t> boot;
-    if (!read_lba(src, part_lba, 1, boot, IoMode::Generic) || !looks_like_ntfs_boot(boot.data())) return;
-    uint16_t bps = u16(boot.data() + 11);
-    uint8_t spc = boot[13];
-    uint64_t mft_clus = 0;
-    std::memcpy(&mft_clus, boot.data() + 48, 8);
-    int rec_shift = static_cast<int8_t>(boot[64]);
-    uint32_t rec_size = rec_shift < 0 ? (1u << -rec_shift) : uint32_t(rec_shift) * bps * spc;
-    if (rec_size == 0 || rec_size > 4096) rec_size = 1024;
-    uint32_t ss = src.sector_size() ? src.sector_size() : 512;
-    uint64_t mft_lba = part_lba + (mft_clus * spc * bps) / ss;
-    emit(log, "NTFS at LBA " + std::to_string(part_lba) + " MFT LBA " + std::to_string(mft_lba));
-    // Read first 64 $MFT records (enough for small volumes / tests; keep scanning 4096)
-    const int max_rec = 4096;
-    std::vector<uint8_t> recs;
-    uint32_t rec_secs = (rec_size + ss - 1) / ss;
-    for (int i = 0; i < max_rec; ++i) {
-        if (stopped(stop)) break;
-        std::vector<uint8_t> rec;
-        if (!read_lba(src, mft_lba + uint64_t(i) * rec_secs, rec_secs, rec, IoMode::Generic)) continue;
-        if (rec.size() < rec_size) continue;
-        if (std::memcmp(rec.data(), "FILE", 4) != 0) continue;
-        uint16_t attr_off = u16(rec.data() + 20);
-        uint32_t flags = u16(rec.data() + 22);
-        if (!(flags & 0x01)) continue;  // not in use
-        std::string fname;
-        std::vector<uint8_t> resident;
-        std::vector<std::pair<int64_t, uint64_t>> runs;
-        uint64_t data_size = 0;
-        size_t ao = attr_off;
-        while (ao + 16 < rec_size) {
-            uint32_t atype = u32(rec.data() + ao);
-            if (atype == 0xFFFFFFFF) break;
-            uint32_t alen = u32(rec.data() + ao + 4);
-            if (alen < 16 || ao + alen > rec_size) break;
-            uint8_t nonres = rec[ao + 8];
-            if (atype == 0x30 && !nonres) {  // $FILE_NAME
-                uint32_t voff = u16(rec.data() + ao + 20);
-                const uint8_t* fn = rec.data() + ao + voff;
-                uint8_t nlen = fn[64];
-                std::string n;
-                for (int c = 0; c < nlen; ++c) n.push_back(static_cast<char>(fn[66 + c * 2]));
-                if (!n.empty() && n[0] != '$') fname = n;
-            }
-            if (atype == 0x80) {  // $DATA unnamed
-                if (!nonres) {
-                    uint32_t vsz = u32(rec.data() + ao + 16);
-                    uint16_t voff = u16(rec.data() + ao + 20);
-                    resident.assign(rec.data() + ao + voff, rec.data() + ao + voff + vsz);
-                    data_size = vsz;
-                } else {
-                    data_size = u64(rec.data() + ao + 48);
-                    uint16_t run_off = u16(rec.data() + ao + 32);
-                    read_runlist(rec.data() + ao + run_off, alen > run_off ? alen - run_off : 0, runs);
-                }
-            }
-            ao += alen;
-        }
-        if (fname.empty()) continue;
-        std::string outp = join_path(dest, sanitize(fname));
-        std::vector<uint8_t> body = std::move(resident);
-        if (body.empty() && !runs.empty()) {
-            uint64_t left = data_size;
-            uint32_t cl_secs = (uint32_t(spc) * bps) / ss;
-            for (auto [lcn, len] : runs) {
-                if (!left) break;
-                for (uint64_t c = 0; c < len && left; ++c) {
-                    std::vector<uint8_t> chunk;
-                    uint64_t lba = part_lba + uint64_t(lcn + int64_t(c)) * cl_secs;
-                    uint32_t nsec = cl_secs ? cl_secs : 1;
-                    if (!read_lba(src, lba, nsec, chunk, IoMode::Generic)) {
-                        st.files_failed++;
-                        left = 0;
-                        break;
-                    }
-                    uint64_t take = std::min(left, uint64_t(chunk.size()));
-                    body.insert(body.end(), chunk.begin(), chunk.begin() + static_cast<size_t>(take));
-                    left -= take;
-                }
-            }
-        }
-        if (body.empty() && data_size == 0) continue;
-        if (write_bytes(outp, body.data(), body.size())) {
-            st.files_written++;
-            st.bytes_written += body.size();
-            emit(log, "NTFS file " + fname + " (" + std::to_string(body.size()) + " bytes)");
-        } else {
-            st.files_failed++;
-        }
+    auto vol = scan_ntfs_mft(src, part_lba, stop, log);
+    if (!vol.ok) {
+        emit(log, vol.message.empty() ? "NTFS MFT scan failed" : vol.message);
+        return;
     }
+    auto rec = recover_mft_records(src, vol, {}, dest, stop, log);
+    st.files_written += rec.files_written;
+    st.files_failed += rec.files_failed;
+    st.bytes_written += rec.bytes_written;
 }
-
-struct Sig {
-    const char* ext;
-    const uint8_t* mag;
-    size_t mag_n;
-    const uint8_t* end;
-    size_t end_n;
-    size_t max_n;
-};
-
-const uint8_t kJpg[] = {0xFF, 0xD8, 0xFF};
-const uint8_t kPng[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
-const uint8_t kPngEnd[] = {0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82};
-const uint8_t kPdf[] = {'%', 'P', 'D', 'F'};
-const uint8_t kPdfEnd[] = {'%', '%', 'E', 'O', 'F'};
-const uint8_t kZip[] = {'P', 'K', 0x03, 0x04};
 
 void carve(DiskSession& src, const std::string& dest, FileRecoveryStats& st, std::atomic<bool>* stop,
            const RecoveryLogFn& log) {
-    uint32_t ss = src.sector_size() ? src.sector_size() : 512;
-    uint64_t total = src.size_bytes() / ss;
-    if (total == 0) total = 1;
-    const uint32_t chunk_secs = 256;
-    int idx = 0;
-    auto save = [&](const char* ext, const uint8_t* p, size_t n) {
-        char name[64];
-        std::snprintf(name, sizeof(name), "carved_%04d.%s", idx++, ext);
-        if (write_bytes(join_path(join_path(dest, "carved"), name), p, n)) {
-            st.carved++;
-            st.files_written++;
-            st.bytes_written += n;
-            emit(log, std::string("Carved ") + name);
-        }
-    };
-    for (uint64_t lba = 0; lba < total && !stopped(stop);) {
-        uint32_t n = chunk_secs;
-        if (lba + n > total) n = static_cast<uint32_t>(total - lba);
-        std::vector<uint8_t> buf;
-        if (!read_lba(src, lba, n, buf, IoMode::Generic)) {
-            lba += n;
-            continue;
-        }
-        auto find_at = [&](const uint8_t* mag, size_t mn, size_t from) -> size_t {
-            if (buf.size() < mn) return size_t(-1);
-            for (size_t i = from; i + mn <= buf.size(); ++i) {
-                if (std::memcmp(buf.data() + i, mag, mn) == 0) return i;
-            }
-            return size_t(-1);
-        };
-        size_t pos = 0;
-        while (true) {
-            size_t j = find_at(kJpg, sizeof(kJpg), pos);
-            if (j == size_t(-1)) break;
-            size_t e = j + 3;
-            bool found = false;
-            for (; e + 2 <= buf.size(); ++e) {
-                if (buf[e] == 0xFF && buf[e + 1] == 0xD9) {
-                    save("jpg", buf.data() + j, e + 2 - j);
-                    pos = e + 2;
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                save("jpg", buf.data() + j, std::min(size_t(512 * 64), buf.size() - j));
-                pos = j + 3;
-            }
-        }
-        pos = 0;
-        while (true) {
-            size_t j = find_at(kPng, sizeof(kPng), pos);
-            if (j == size_t(-1)) break;
-            size_t e = find_at(kPngEnd, sizeof(kPngEnd), j);
-            size_t nlen = (e == size_t(-1)) ? std::min(size_t(512 * 64), buf.size() - j) : (e + sizeof(kPngEnd) - j);
-            save("png", buf.data() + j, nlen);
-            pos = j + 4;
-        }
-        pos = 0;
-        while (true) {
-            size_t j = find_at(kPdf, sizeof(kPdf), pos);
-            if (j == size_t(-1)) break;
-            size_t e = find_at(kPdfEnd, sizeof(kPdfEnd), j);
-            size_t nlen = (e == size_t(-1)) ? std::min(size_t(512 * 128), buf.size() - j) : (e + sizeof(kPdfEnd) - j);
-            save("pdf", buf.data() + j, nlen);
-            pos = j + 4;
-        }
-        pos = 0;
-        while (true) {
-            size_t j = find_at(kZip, sizeof(kZip), pos);
-            if (j == size_t(-1)) break;
-            save("zip", buf.data() + j, std::min(size_t(512 * 256), buf.size() - j));
-            pos = j + 4;
-        }
-        lba += n;
-    }
+    int written = 0;
+    uint64_t bytes = 0;
+    st.carved += carve_scan(src, dest, stop, log, written, bytes);
+    st.files_written += written;
+    st.bytes_written += bytes;
 }
 
 }  // namespace
@@ -582,6 +391,73 @@ FileRecoveryStats recover_files(DiskSession& source, const std::string& dest_dir
     st.ok = st.files_written > 0 || st.carved > 0;
     st.message = "Wrote " + std::to_string(st.files_written) + " file(s), " + std::to_string(st.files_failed) +
                  " failed, carved " + std::to_string(st.carved);
+    emit(log, st.message);
+    return st;
+}
+
+FileRecoveryStats recover_mft_records(DiskSession& source, const NtfsVolumeInfo& vol,
+                                      const std::vector<uint64_t>& recnos, const std::string& dest_dir,
+                                      std::atomic<bool>* stop, RecoveryLogFn log) {
+    FileRecoveryStats st;
+    if (dest_dir.empty()) {
+        st.message = "No destination folder";
+        return st;
+    }
+    std::error_code ec;
+    fs::create_directories(dest_dir, ec);
+    std::unordered_set<uint64_t> want(recnos.begin(), recnos.end());
+    bool filter = !recnos.empty();
+    emit(log, "MFT recover into " + dest_dir + (filter ? " (selected records)" : " (all named records)"));
+    for (const auto& rec : vol.records) {
+        if (stop && stop->load()) break;
+        if (!rec.parsed_ok || rec.skipped_bad) continue;
+        if (rec.name.empty() || rec.recno < 5) continue;
+        if (rec.name[0] == '$' && rec.recno < 24) continue;
+        if (filter && !want.count(rec.recno)) continue;
+        std::string rel = rec.path.empty() ? sanitize(rec.name) : rec.path;
+        if (rec.deleted) rel = std::string("deleted/") + rel;
+        std::string outp = join_path(dest_dir, rel);
+        bool failed = false;
+        uint64_t n = copy_mft_record_data(source, vol, rec, outp, failed, stop);
+        if (rec.is_dir) {
+            emit(log, "MFT dir " + rel);
+            continue;
+        }
+        if (failed && n == 0) {
+            st.files_failed++;
+            emit(log, "MFT failed " + rel);
+        } else {
+            st.files_written++;
+            st.bytes_written += n;
+            emit(log, std::string("MFT ") + (rec.deleted ? "deleted " : "") +
+                          (rec.resident ? "resident " : "runlist ") + rel + " (" + std::to_string(n) + " bytes)");
+        }
+    }
+    st.ok = st.files_written > 0;
+    st.message = "MFT wrote " + std::to_string(st.files_written) + " file(s), " + std::to_string(st.files_failed) +
+                 " failed";
+    emit(log, st.message);
+    return st;
+}
+
+FileRecoveryStats grep_scan_disk(DiskSession& source, const std::string& dest_dir, const CarveFilter& filter,
+                                 std::atomic<bool>* stop, RecoveryLogFn log, CarveProgress* progress) {
+    FileRecoveryStats st;
+    if (dest_dir.empty()) {
+        st.message = "No destination folder";
+        return st;
+    }
+    std::error_code ec;
+    fs::create_directories(dest_dir, ec);
+    emit(log, "Grep scan of " + source.path() + " into " + dest_dir);
+    int written = 0;
+    uint64_t bytes = 0;
+    st.carved = carve_scan(source, dest_dir, stop, log, written, bytes, filter, progress);
+    st.files_written = written;
+    st.bytes_written = bytes;
+    st.ok = st.carved > 0;
+    st.message = "Grep scan wrote " + std::to_string(st.carved) + " carved file(s), " +
+                 std::to_string(st.bytes_written) + " bytes";
     emit(log, st.message);
     return st;
 }

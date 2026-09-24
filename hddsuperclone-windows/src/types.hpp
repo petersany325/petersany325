@@ -79,6 +79,7 @@ enum class JobMode {
     ImageOntoDrive,      // save .img/.dd of damaged disk onto Image HDD
     FileRecovery,        // recover files from damaged disk into a folder
     RestoreImageToDisk,  // write an existing .img onto a physical dest disk
+    GrepScan,            // signature magic-byte grep of damaged source into carved/
 };
 
 enum class CloneResult {
@@ -234,6 +235,8 @@ inline const char* job_mode_name(JobMode m) {
             return "File recovery only (recover files, not a full sector clone)";
         case JobMode::RestoreImageToDisk:
             return "Restore image to dest disk (overwrite dest with an .img file)";
+        case JobMode::GrepScan:
+            return "Grep scan (signature magic-byte search of damaged source)";
         default:
             return "Unknown";
     }
