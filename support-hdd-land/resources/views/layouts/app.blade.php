@@ -16,7 +16,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp48">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp49">
     <script>
     (function () {
         try {
@@ -86,73 +86,30 @@
         </div>
     </div>
 
-    {{-- منوبار کلاسیک ویندوز (دسکتاپ) --}}
-    <div class="win-menubar desktop-only" id="win-menubar">
-        <nav class="win-menu-row" id="module-tabs">
-            @foreach($menuGroups as $group)
-                @php
-                    $groupActive = \App\Support\NavMenu::isActive($group['match']);
-                    $hasKids = count($group['children']) > 0;
-                    $href = !empty($group['route']) ? route($group['route']) : '#';
-                @endphp
-                <div class="win-menu tone-{{ \App\Support\NavMenu::tone($group['key']) }} {{ $groupActive ? 'is-current' : '' }} {{ $hasKids ? 'has-popup' : '' }}"
-                     data-menu-group
-                     data-menu-label="{{ $group['label'] }} {{ collect($group['children'])->pluck('label')->implode(' ') }}">
-                    @if($hasKids)
-                        <button type="button"
-                                class="win-menu-btn {{ $groupActive ? 'is-current' : '' }}"
-                                data-menu-toggle
-                                aria-haspopup="true"
-                                aria-expanded="false">
-                            <span class="win-menu-dot">{{ $group['mark'] ?? '•' }}</span>
-                            {{ $group['label'] }}
-                            <span class="win-menu-chevron">▾</span>
-                        </button>
-                        <div class="win-popup" role="menu">
-                            <div class="win-popup-head">{{ $group['label'] }}</div>
-                            @foreach($group['children'] as $i => $child)
-                                @if($i > 0 && (($child['sep'] ?? false) || ($group['children'][$i-1]['sep_after'] ?? false)))
-                                    <div class="win-popup-sep"></div>
-                                @endif
-                                <a href="{{ route($child['route'], $child['params'] ?? []) }}"
-                                   class="win-popup-item {{ \App\Support\NavMenu::isActive($child['match']) ? 'is-active' : '' }}"
-                                   role="menuitem"
-                                   data-menu-label="{{ $child['label'] }} {{ $group['label'] }}">
-                                    <span class="win-popup-ico">{{ $child['mark'] ?? '•' }}</span>
-                                    <span class="win-popup-text">
-                                        <span class="win-popup-label">{{ $child['label'] }}</span>
-                                        @if(!empty($child['hint']))
-                                            <span class="win-popup-hint">{{ $child['hint'] }}</span>
-                                        @endif
-                                    </span>
-                                </a>
-                            @endforeach
-                        </div>
-                    @else
-                        <a href="{{ $href }}"
-                           class="win-menu-btn link {{ $groupActive ? 'is-current' : '' }}"
-                           data-menu-label="{{ $group['label'] }}">
-                            <span class="win-menu-dot">{{ $group['mark'] ?? '•' }}</span>
-                            {{ $group['label'] }}
-                        </a>
-                    @endif
-                </div>
-            @endforeach
-        </nav>
-        <div class="win-menubar-search">
-            <input type="search" id="module-menu-search" placeholder="جستجوی منو..." autocomplete="off">
-        </div>
-    </div>
+    {{-- منوبار کلاسیک ویندوز حذف شد — ناوبری از میانبر + منوها --}}
 
     {{-- نوار ابزار --}}
-    <div class="app-toolbar">
-        <div class="page-caption">@yield('page_title', 'میز کار')</div>
-        <button type="button" class="btn btn-ghost mobile-only staff-more-btn" data-staff-drawer-open>منوها</button>
-    </div>
     @php
+        $dockEnabled = auth()->user()->ui_shortcuts_enabled !== false;
         $dockStripItems = \App\Support\StaffShortcutDock::forUser(auth()->user());
     @endphp
-    <div class="sc-dock-mobile-strip mobile-only" aria-label="میانبرها">
+    <div class="app-toolbar">
+        <div class="page-caption">@yield('page_title', 'میز کار')</div>
+        <div class="app-toolbar-actions">
+            <label class="sc-dock-switch" title="روشن/خاموش میانبر" data-sc-switch
+                   data-save-url="{{ route('profile.shortcuts') }}">
+                <span class="sc-dock-switch-txt">میانبر</span>
+                <input type="checkbox" data-sc-toggle {{ $dockEnabled ? 'checked' : '' }} aria-label="فعال‌سازی میانبر">
+                <span class="sc-dock-switch-ui" aria-hidden="true">
+                    <span class="sc-dock-switch-knob"></span>
+                    <span class="sc-dock-switch-on">ON</span>
+                    <span class="sc-dock-switch-off">OFF</span>
+                </span>
+            </label>
+            <button type="button" class="btn btn-ghost staff-more-btn" data-staff-drawer-open>منوها</button>
+        </div>
+    </div>
+    <div class="sc-dock-mobile-strip mobile-only {{ $dockEnabled ? '' : 'is-off' }}" aria-label="میانبرها" data-sc-mobile-strip @if(! $dockEnabled) hidden @endif>
         @foreach($dockStripItems as $item)
             <a href="{{ $item['url'] }}"
                class="sc-dock-btn tone-{{ $item['tone'] }} {{ !empty($item['active']) ? 'is-on' : '' }}"
@@ -276,7 +233,7 @@
 @else
     @yield('content')
 @endauth
-<script src="{{ asset('js/app.js') }}?v=erp47"></script>
+<script src="{{ asset('js/app.js') }}?v=erp49"></script>
 <script>
 (function () {
     var bar = document.getElementById('win-menubar');

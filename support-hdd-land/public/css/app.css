@@ -1569,11 +1569,35 @@ input[data-barcode][data-name="brand_model"]{
 }
 
 /* ===== Staff shortcut dock (میانبر) — right edge ===== */
+.app-toolbar-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sc-dock-switch{
+  display:inline-flex!important;align-items:center;gap:6px;margin:0;cursor:pointer;
+  user-select:none;font-size:11px;font-weight:700;color:#334155;
+}
+.sc-dock-switch input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.sc-dock-switch-ui{
+  position:relative;display:inline-flex;align-items:center;justify-content:space-between;
+  width:54px;height:26px;border-radius:999px;padding:0 6px;box-sizing:border-box;
+  background:#9aa5b5;border:1px solid #7f8a9a;color:#fff;font-size:9px;font-weight:800;
+  transition:.15s ease;
+}
+.sc-dock-switch-knob{
+  position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:.15s ease;
+}
+.sc-dock-switch-on{opacity:0}
+.sc-dock-switch-off{opacity:1}
+.sc-dock-switch input:checked + .sc-dock-switch-ui{background:#2f6fed;border-color:#1d4ed8}
+.sc-dock-switch input:checked + .sc-dock-switch-ui .sc-dock-switch-knob{right:auto;left:2px}
+.sc-dock-switch input:checked + .sc-dock-switch-ui .sc-dock-switch-on{opacity:1}
+.sc-dock-switch input:checked + .sc-dock-switch-ui .sc-dock-switch-off{opacity:0}
+
 .sc-dock{
   position:fixed;top:50%;right:8px;transform:translateY(-50%);
   z-index:35;display:flex;flex-direction:column;align-items:center;
   pointer-events:none;
 }
+.sc-dock[hidden],.sc-dock.is-off{display:none!important}
 .sc-dock-rail{
   pointer-events:auto;
   display:flex;flex-direction:column;gap:6px;align-items:center;
@@ -1610,13 +1634,13 @@ input[data-barcode][data-name="brand_model"]{
   display:block;max-width:48px;font-size:9px;font-weight:700;line-height:1.15;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-html[data-ui-mode="desktop"] .app-shell{padding-right:72px}
+html[data-ui-mode="desktop"] .app-shell{padding-right:0}
+html[data-ui-mode="desktop"] .app-shell:has(.sc-dock:not([hidden]):not(.is-off)){padding-right:72px}
 html[data-ui-mode="mobile"] .sc-dock{display:none!important}
 html[data-ui-mode="mobile"] .app-shell{padding-right:0}
 
-/* Mobile: horizontal shortcut strip under toolbar */
 .sc-dock-mobile-strip{display:none}
-html[data-ui-mode="mobile"] .sc-dock-mobile-strip{
+html[data-ui-mode="mobile"] .sc-dock-mobile-strip:not([hidden]):not(.is-off){
   display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
   padding:6px 8px 2px;scrollbar-width:none;max-width:100%;
 }
@@ -1630,14 +1654,17 @@ html[data-ui-mode="mobile"] .sc-dock-mobile-strip .sc-dock-btn{
 .sc-dock-editor-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.45);backdrop-filter:blur(2px)}
 .sc-dock-editor-panel{
   position:absolute;inset:auto 0 0 0;max-height:min(88vh,720px);
+  width:100%;max-width:100%;
   background:#f7f8fa;border-radius:14px 14px 0 0;border:1px solid #9aa5b5;
   box-shadow:0 -12px 40px rgba(0,0,0,.22);
   display:flex;flex-direction:column;overflow:hidden;
   padding-bottom:env(safe-area-inset-bottom,0px);
+  box-sizing:border-box;
 }
 @media (min-width:901px){
   .sc-dock-editor-panel{
-    inset:auto 16px 16px auto;width:min(420px,92vw);max-height:min(80vh,640px);
+    inset:auto 16px 16px auto;width:min(420px,92vw);max-width:min(420px,92vw);
+    max-height:min(80vh,640px);
     border-radius:12px;right:84px;left:auto;
   }
 }
@@ -1645,58 +1672,51 @@ html[data-ui-mode="mobile"] .sc-dock-mobile-strip .sc-dock-btn{
   display:flex;justify-content:space-between;align-items:center;gap:8px;
   padding:12px;border-bottom:1px solid #d9dee6;flex:0 0 auto;
 }
+.sc-dock-search-bar{
+  flex:0 0 auto;padding:10px 12px 0;width:100%;box-sizing:border-box;
+  border-bottom:0;
+}
+.sc-dock-search-input,
+.sc-dock-editor-panel input[data-sc-filter],
+.sc-dock-editor-panel input.sc-dock-search-input{
+  display:block!important;
+  width:100%!important;max-width:100%!important;min-width:0!important;
+  height:42px!important;min-height:42px!important;max-height:42px!important;
+  margin:0!important;padding:0 12px!important;
+  border:1px solid #9aa5b5!important;border-radius:8px!important;
+  background:#fff!important;box-sizing:border-box!important;
+  font:inherit!important;font-size:14px!important;line-height:42px!important;
+  writing-mode:horizontal-tb!important;direction:rtl!important;
+  appearance:none;-webkit-appearance:none;flex:none!important;
+}
 .sc-dock-editor-body{
-  flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px;
-  display:flex;flex-direction:column;gap:12px;
+  flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px 12px;
+  display:flex;flex-direction:column;gap:8px;
   width:100%;box-sizing:border-box;
+}
+.sc-dock-section-label{
+  display:block;width:100%;font-size:11.5px;font-weight:800;color:#475569;margin:4px 0 0;
 }
 .sc-dock-editor-foot{
   display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;
   padding:10px 12px;border-top:1px solid #d9dee6;flex:0 0 auto;background:#eef1f5;
 }
 .sc-dock-selected{
-  display:flex;flex-wrap:wrap;gap:6px;min-height:40px;
-  width:100%;box-sizing:border-box;
+  display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;align-items:stretch;
+  width:100%;box-sizing:border-box;min-height:36px;
 }
 .sc-dock-chip{
-  display:flex;align-items:center;gap:6px;padding:6px 8px;
-  border:1px solid #c5ccd6;border-radius:8px;background:#fff;max-width:100%;
+  display:flex;flex-direction:row;align-items:center;gap:6px;padding:6px 8px;
+  border:1px solid #c5ccd6;border-radius:8px;background:#fff;
+  max-width:100%;box-sizing:border-box;writing-mode:horizontal-tb;
 }
-.sc-dock-chip .sc-dock-ico{width:24px;height:24px;font-size:10px;color:#fff}
-.sc-dock-chip-text{min-width:0;flex:1}
+.sc-dock-chip .sc-dock-ico{width:24px;height:24px;font-size:10px;color:#fff;flex:0 0 auto}
+.sc-dock-chip-text{min-width:0;flex:1 1 auto}
 .sc-dock-chip-text strong{display:block;font-size:12px;line-height:1.3;overflow-wrap:anywhere}
 .sc-dock-chip-text small{display:block;font-size:10px;color:var(--muted)}
 .sc-dock-chip-x{
   border:0;background:#eef1f5;color:#334155;width:24px;height:24px;border-radius:6px;
   cursor:pointer;font-size:14px;line-height:1;flex:0 0 auto;
-}
-.sc-dock-catalog-head{
-  display:flex;flex-direction:column;align-items:stretch;gap:8px;
-  width:100%;max-width:100%;box-sizing:border-box;
-}
-.sc-dock-catalog-title{
-  display:block;font-size:12.5px;font-weight:800;color:#243041;line-height:1.4;
-}
-.sc-dock-search{
-  display:flex!important;flex-direction:column!important;align-items:stretch!important;
-  gap:4px;width:100%;max-width:100%;margin:0;box-sizing:border-box;
-}
-.sc-dock-search-label{
-  display:block;font-size:11px;font-weight:700;color:#475569;margin:0;
-}
-.sc-dock-search input[type="search"],
-.sc-dock-catalog-head input[type="search"],
-.sc-dock-catalog-head input{
-  display:block!important;
-  width:100%!important;max-width:100%!important;min-width:0!important;
-  min-height:40px!important;height:40px!important;
-  margin:0!important;padding:8px 12px!important;
-  border:1px solid #9aa5b5!important;border-radius:8px!important;
-  background:#fff!important;box-sizing:border-box!important;
-  font:inherit!important;font-size:14px!important;line-height:1.4!important;
-  writing-mode:horizontal-tb!important;direction:rtl!important;
-  flex:0 0 auto!important;align-self:stretch!important;
-  appearance:none;-webkit-appearance:none;
 }
 .sc-dock-catalog{
   display:flex;flex-direction:column;gap:4px;
@@ -1716,9 +1736,7 @@ html[data-ui-mode="mobile"] .sc-dock-mobile-strip .sc-dock-btn{
 .sc-dock-cat-item strong{display:block;font-size:12.5px;line-height:1.35;overflow-wrap:anywhere}
 .sc-dock-cat-item small{display:block;font-size:10.5px;color:var(--muted);line-height:1.35;overflow-wrap:anywhere}
 .sc-dock-cat-state{font-weight:800;color:#2f6fed;flex:0 0 auto}
-.sc-dock-editor-panel .sc-dock-ico{
-  writing-mode:horizontal-tb;flex:0 0 auto;
-}
+.sc-dock-editor-panel .sc-dock-ico{writing-mode:horizontal-tb;flex:0 0 auto}
 .sc-dock-ico.tone-blue{background:#2f6fed}
 .sc-dock-ico.tone-teal{background:#0f766e}
 .sc-dock-ico.tone-amber{background:#b45309}

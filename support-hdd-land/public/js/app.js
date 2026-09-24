@@ -1821,23 +1821,82 @@
     function initStaffShortcutDock() {
         var dock = document.querySelector('[data-sc-dock]');
         var editor = document.querySelector('[data-sc-editor]');
-        if (!dock || !editor) return;
+        var toggle = document.querySelector('[data-sc-toggle]');
+        var mobileStrip = document.querySelector('[data-sc-mobile-strip]');
+        var switchEl = document.querySelector('[data-sc-switch]');
+        var saveUrl = (dock && dock.getAttribute('data-save-url'))
+            || (switchEl && switchEl.getAttribute('data-save-url'))
+            || '';
+        if (!dock && !toggle) return;
 
-        var saveUrl = dock.getAttribute('data-save-url') || '';
-        var max = parseInt(dock.getAttribute('data-max') || '10', 10) || 10;
-        var selectedRoot = editor.querySelector('[data-sc-selected]');
-        var catalogRoot = editor.querySelector('[data-sc-catalog]');
-        var filterInput = editor.querySelector('[data-sc-filter]');
         var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
-        var defaultsSnapshot = selectedIds();
+        var max = parseInt((dock && dock.getAttribute('data-max')) || '10', 10) || 10;
+        var selectedRoot = editor ? editor.querySelector('[data-sc-selected]') : null;
+        var catalogRoot = editor ? editor.querySelector('[data-sc-catalog]') : null;
+        var filterInput = editor ? editor.querySelector('[data-sc-filter]') : null;
+        var defaultsSnapshot = selectedRoot ? selectedIds() : [];
 
         function selectedIds() {
+            if (!selectedRoot) return [];
             return Array.prototype.map.call(selectedRoot.querySelectorAll('[data-sc-chip]'), function (el) {
                 return el.getAttribute('data-sc-id');
             }).filter(Boolean);
         }
 
+        function applyEnabled(on) {
+            if (dock) {
+                dock.hidden = !on;
+                dock.classList.toggle('is-off', !on);
+                dock.setAttribute('data-enabled', on ? '1' : '0');
+            }
+            if (mobileStrip) {
+                mobileStrip.hidden = !on;
+                mobileStrip.classList.toggle('is-off', !on);
+            }
+            if (toggle) toggle.checked = !!on;
+            if (!on && editor && !editor.hidden) closeEditor();
+        }
+
+        function saveEnabled(on) {
+            if (!saveUrl) return;
+            fetch(saveUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ enabled: !!on }),
+                credentials: 'same-origin',
+            }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+              .then(function (res) {
+                  if (!res.ok || !(res.j && res.j.ok)) {
+                      applyEnabled(!on);
+                      alert((res.j && res.j.message) || 'ذخیره وضعیت میانبر ناموفق بود.');
+                  }
+              })
+              .catch(function () {
+                  applyEnabled(!on);
+                  alert('خطا در ذخیره وضعیت میانبر.');
+              });
+        }
+
+        if (toggle) {
+            toggle.addEventListener('change', function () {
+                var on = !!toggle.checked;
+                applyEnabled(on);
+                saveEnabled(on);
+            });
+        }
+
+        if (!editor || !selectedRoot || !catalogRoot) return;
+
         function openEditor() {
+            if (toggle && !toggle.checked) {
+                applyEnabled(true);
+                saveEnabled(true);
+            }
             editor.hidden = false;
             document.body.style.overflow = 'hidden';
         }

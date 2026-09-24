@@ -1,12 +1,17 @@
 {{-- نوار میانبر شخصی (آیکونی) — سمت راست صفحه --}}
 @php
-    $dockItems = \App\Support\StaffShortcutDock::forUser(auth()->user());
-    $dockCatalog = \App\Support\StaffShortcutDock::catalog(auth()->user());
+    $dockUser = auth()->user();
+    $dockEnabled = $dockUser->ui_shortcuts_enabled !== false;
+    $dockItems = \App\Support\StaffShortcutDock::forUser($dockUser);
+    $dockCatalog = \App\Support\StaffShortcutDock::catalog($dockUser);
     $dockIds = collect($dockItems)->pluck('id')->all();
 @endphp
-<aside class="sc-dock" id="staff-shortcut-dock" aria-label="میانبرهای کارمند" data-sc-dock
+<aside class="sc-dock {{ $dockEnabled ? '' : 'is-off' }}" id="staff-shortcut-dock" aria-label="میانبرهای کارمند"
+       data-sc-dock
        data-save-url="{{ route('profile.shortcuts') }}"
-       data-max="{{ \App\Support\StaffShortcutDock::MAX }}">
+       data-max="{{ \App\Support\StaffShortcutDock::MAX }}"
+       data-enabled="{{ $dockEnabled ? '1' : '0' }}"
+       @if(! $dockEnabled) hidden @endif>
     <div class="sc-dock-rail" data-sc-rail>
         @foreach($dockItems as $item)
             <a href="{{ $item['url'] }}"
@@ -19,7 +24,7 @@
         @endforeach
         <button type="button" class="sc-dock-btn sc-dock-edit" data-sc-open-editor title="افزودن / حذف میانبر">
             <span class="sc-dock-ico">＋</span>
-            <span class="sc-dock-lbl">میانبر</span>
+            <span class="sc-dock-lbl">ویرایش</span>
         </button>
     </div>
 </aside>
@@ -34,7 +39,13 @@
             </div>
             <button type="button" class="btn btn-ghost" data-sc-close-editor>بستن</button>
         </div>
+
+        <div class="sc-dock-search-bar">
+            <input type="search" class="sc-dock-search-input" data-sc-filter placeholder="جستجوی منو..." autocomplete="off">
+        </div>
+
         <div class="sc-dock-editor-body">
+            <div class="sc-dock-section-label">میانبرهای فعال</div>
             <div class="sc-dock-selected" data-sc-selected>
                 @forelse($dockItems as $item)
                     <div class="sc-dock-chip" data-sc-chip data-sc-id="{{ $item['id'] }}">
@@ -49,13 +60,8 @@
                     <p class="muted" data-sc-empty>هنوز میانبری نیست — از فهرست زیر اضافه کنید.</p>
                 @endforelse
             </div>
-            <div class="sc-dock-catalog-head">
-                <div class="sc-dock-catalog-title">افزودن از منوها</div>
-                <label class="sc-dock-search">
-                    <span class="sc-dock-search-label">جستجو</span>
-                    <input type="search" data-sc-filter placeholder="جستجوی منو..." autocomplete="off">
-                </label>
-            </div>
+
+            <div class="sc-dock-section-label">افزودن از منوها</div>
             <div class="sc-dock-catalog" data-sc-catalog>
                 @foreach($dockCatalog as $row)
                     @php $pinned = in_array($row['id'], $dockIds, true); @endphp
