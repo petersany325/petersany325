@@ -11,6 +11,7 @@
     <a class="btn" href="{{ url('/admin/accounting/docs/create?type=sale') }}">فروش + سریال</a>
     <a class="btn g" href="{{ url('/admin/accounting/docs/create?type=purchase') }}">خرید</a>
     <a class="btn w" href="{{ url('/admin/accounting/checks') }}">چک‌ها</a>
+    <a class="btn o" href="{{ url('/admin/accounting/chart') }}">کدینگ</a>
     <a class="btn o" href="{{ url('/admin/accounting/installments') }}">اقساط</a>
     <form method="post" action="{{ url('/admin/accounting/sync-shop') }}">@csrf
       <button class="btn g" type="submit">همگام‌سازی سفارش‌های فروشگاه</button>
@@ -26,7 +27,25 @@
 </div>
 
 <div class="panel">
-  <div class="hd"><strong>منوهای جدید حسابداری</strong><a class="btn g" href="{{ url('/admin/accounting/reports') }}">مرکز گزارش‌ها</a></div>
+  <div class="hd"><strong>دفتر کل و سایت</strong></div>
+  <div class="bd">
+    <div class="chips" style="margin:0">
+      <a href="{{ url('/admin/accounting/chart') }}">کدینگ ۴سطحی</a>
+      <a href="{{ url('/admin/accounting/reports/trial') }}">تراز آزمایشی</a>
+      <a href="{{ url('/admin/accounting/reports/income') }}">سود و زیان</a>
+      <a href="{{ url('/admin/accounting/reports/balance') }}">ترازنامه</a>
+      <a href="{{ url('/products') }}">فروشگاه</a>
+      <a href="{{ url('/admin/orders') }}">سفارش فروشگاه</a>
+      <a href="{{ url('/about') }}">سایت شرکتی — درباره</a>
+      <a href="{{ url('/services') }}">خدمات</a>
+      <a href="{{ url('/contact') }}">تماس فروش</a>
+      <a href="{{ url('/admin/tickets') }}">تیکت ادمین</a>
+      <a href="{{ url('/account/tickets') }}">تیکت مشتری</a>
+    </div>
+  </div>
+</div>
+<div class="panel">
+  <div class="hd"><strong>منوهای حسابداری</strong><a class="btn g" href="{{ url('/admin/accounting/reports') }}">مرکز گزارش‌ها</a></div>
   <div class="bd">
     <div class="chips" style="margin:0">
       <a href="{{ url('/admin/accounting/checks') }}">چک‌ها — پرداختی / دریافتی / برگشتی / تحویل</a>

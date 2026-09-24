@@ -163,6 +163,10 @@ class CheckController extends Controller
             $data['clear_date'] = null;
         }
         DB::table('acc_checks')->where('id', $id)->update($data);
+        try {
+            \Plugins\Accounting\src\Support\AccJournal::postCheckStatus($row, (string) $row->status, $status);
+        } catch (\Throwable) {
+        }
 
         return back()->with('success', 'وضعیت چک: ' . AccEngine::CHECK_STATUSES[$status]);
     }

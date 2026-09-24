@@ -56,6 +56,9 @@ class ReportController extends Controller
                 ['href' => '/admin/accounting/reports/customers', 'label' => 'مشتریان', 'desc' => 'جمع خرید هر مشتری'],
                 ['href' => '/admin/accounting/reports/checks', 'label' => 'چک‌ها', 'desc' => 'پرداختی، دریافتی، برگشتی، تحویل'],
                 ['href' => '/admin/accounting/reports/installments', 'label' => 'اقساط', 'desc' => 'درخواست‌های اقساطی مشتریان'],
+                ['href' => '/admin/accounting/reports/trial', 'label' => 'تراز آزمایشی', 'desc' => 'مانده هر حساب از دفتر کل'],
+                ['href' => '/admin/accounting/reports/income', 'label' => 'سود و زیان', 'desc' => 'درآمد، بها و هزینه از روی کدینگ'],
+                ['href' => '/admin/accounting/reports/balance', 'label' => 'ترازنامه', 'desc' => 'دارایی، بدهی و سرمایه'],
             ],
         ]);
     }

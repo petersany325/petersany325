@@ -172,6 +172,15 @@ class InstallmentController extends Controller
         if ($pending === 0) {
             DB::table('acc_installment_requests')->where('id', $id)->update(['status' => 'completed', 'updated_at' => now()]);
         }
+        if ($status === 'paid' && $paid > 0) {
+            try {
+                $req = DB::table('acc_installment_requests')->where('id', $id)->first();
+                if ($req) {
+                    \Plugins\Accounting\src\Support\AccJournal::postInstallmentPayment($sched, $req, $paid);
+                }
+            } catch (\Throwable) {
+            }
+        }
 
         return back()->with('success', 'قسط به‌روز شد.');
     }

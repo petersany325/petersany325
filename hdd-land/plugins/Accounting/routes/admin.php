@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Plugins\Accounting\src\Http\Controllers\Admin\ChartController;
 use Plugins\Accounting\src\Http\Controllers\Admin\CheckController;
 use Plugins\Accounting\src\Http\Controllers\Admin\HubController;
 use Plugins\Accounting\src\Http\Controllers\Admin\InstallmentController;
@@ -48,6 +49,13 @@ Route::prefix('accounting')->name('accounting.')->group(function () {
     Route::get('/commissions', [HubController::class, 'commissions'])->name('commissions');
     Route::post('/commissions/{staffId}', [HubController::class, 'updateCommission'])->name('commissions.update')->whereNumber('staffId');
 
+    Route::get('/chart', [ChartController::class, 'index'])->name('chart');
+    Route::post('/chart', [ChartController::class, 'store'])->name('chart.store');
+    Route::put('/chart/{id}', [ChartController::class, 'update'])->name('chart.update')->whereNumber('id');
+    Route::post('/chart/{id}', [ChartController::class, 'update'])->name('chart.update.post')->whereNumber('id');
+    Route::post('/chart/{id}/delete', [ChartController::class, 'destroy'])->name('chart.delete')->whereNumber('id');
+    Route::post('/chart/map', [ChartController::class, 'saveMap'])->name('chart.map');
+
     Route::get('/settings', [HubController::class, 'settings'])->name('settings');
     Route::post('/settings/categories', [HubController::class, 'storeCategory'])->name('settings.categories.store');
     Route::post('/settings/categories/{id}/update', [HubController::class, 'updateCategory'])->name('settings.categories.update')->whereNumber('id');
@@ -82,4 +90,7 @@ Route::prefix('accounting')->name('accounting.')->group(function () {
     Route::get('/reports/customers', [ReportController::class, 'customers'])->name('reports.customers');
     Route::get('/reports/checks', [ReportController::class, 'checks'])->name('reports.checks');
     Route::get('/reports/installments', [ReportController::class, 'installments'])->name('reports.installments');
+    Route::get('/reports/trial', [ChartController::class, 'trial'])->name('reports.trial');
+    Route::get('/reports/income', [ChartController::class, 'income'])->name('reports.income');
+    Route::get('/reports/balance', [ChartController::class, 'balanceSheet'])->name('reports.balance');
 });

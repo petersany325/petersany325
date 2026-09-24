@@ -84,6 +84,11 @@
         <div class="g">چک و اقساط</div>
         <a class="{{ request()->is('admin/accounting/checks*')?'on':'' }}" href="{{ url('/admin/accounting/checks') }}">چک‌ها (پرداختی/دریافتی)</a>
         <a class="{{ request()->is('admin/accounting/installments*')?'on':'' }}" href="{{ url('/admin/accounting/installments') }}">اقساط مشتریان</a>
+        <div class="g">کدینگ و دفتر کل</div>
+        <a class="{{ request()->is('admin/accounting/chart*')?'on':'' }}" href="{{ url('/admin/accounting/chart') }}">کدینگ حساب‌ها</a>
+        <a href="{{ url('/admin/accounting/reports/trial') }}">تراز آزمایشی</a>
+        <a href="{{ url('/admin/accounting/reports/income') }}">سود و زیان</a>
+        <a href="{{ url('/admin/accounting/reports/balance') }}">ترازنامه</a>
         <div class="g">تنظیمات و گزارش</div>
         <a class="{{ request()->is('admin/accounting/settings*')?'on':'' }}" href="{{ url('/admin/accounting/settings') }}">تنظیمات (دسته/حساب)</a>
         <a class="{{ request()->is('admin/accounting/reports*')?'on':'' }}" href="{{ url('/admin/accounting/reports') }}">مرکز گزارش‌ها</a>
@@ -95,6 +100,15 @@
         <a href="{{ url('/admin/accounting/reports/customers') }}">گزارش مشتریان</a>
         <a href="{{ url('/admin/accounting/reports/checks') }}">گزارش چک‌ها</a>
         <a href="{{ url('/admin/accounting/reports/installments') }}">گزارش اقساط</a>
+        <div class="g">فروشگاه و سایت</div>
+        <a href="{{ url('/products') }}">فروشگاه</a>
+        <a href="{{ url('/admin/orders') }}">سفارش‌های فروشگاه</a>
+        <a href="{{ url('/about') }}">درباره ما</a>
+        <a href="{{ url('/services') }}">خدمات سازمانی</a>
+        <a href="{{ url('/contact') }}">تماس با فروش</a>
+        <a href="{{ url('/admin/tickets') }}">تیکت‌ها</a>
+        <a href="{{ url('/account/tickets') }}">کارتابل تیکت مشتری</a>
+        <a href="{{ url('/warranty-register') }}">ثبت گارانتی</a>
         <a href="{{ url('/admin') }}">بازگشت ادمین</a>
       @else
         <div class="g">کارمند</div>
@@ -114,6 +128,7 @@
     <div class="mnav">
       @if($portal==='admin')
         <a href="{{ url('/admin/accounting') }}">میز</a>
+        <a href="{{ url('/admin/accounting/chart') }}">کدینگ</a>
         <a href="{{ url('/admin/accounting/docs') }}">اسناد</a>
         <a href="{{ url('/admin/accounting/stock') }}">انبار</a>
         <a href="{{ url('/admin/accounting/checks') }}">چک</a>

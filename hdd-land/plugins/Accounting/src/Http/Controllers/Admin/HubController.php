@@ -711,14 +711,20 @@ class HubController extends Controller
         if ($code === '' || $name === '') {
             return back()->with('error', 'کد و نام حساب الزامی است.');
         }
-        DB::table('acc_accounts')->insert([
+        $row = [
             'code' => $code,
             'name' => $name,
             'type' => $request->input('type', 'expense'),
             'is_active' => true,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+        if (Schema::hasColumn('acc_accounts', 'is_postable')) {
+            $row['is_postable'] = true;
+            $row['level'] = 'moeen';
+            $row['is_system'] = false;
+        }
+        DB::table('acc_accounts')->insert($row);
 
         return back()->with('success', 'حساب ثبت شد.');
     }

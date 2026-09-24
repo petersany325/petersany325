@@ -217,6 +217,10 @@ class AccEngine
             }
         }
         AccCommerce::applyCatalogStock($doc, $lines, 1);
+        try {
+            AccJournal::postDocument($doc);
+        } catch (\Throwable) {
+        }
     }
 
     public static function adjustStock(int $warehouseId, int $productId, float $qtyDelta, int $unitCost = 0): void
@@ -552,6 +556,10 @@ class AccEngine
                 }
             }
             AccCommerce::applyCatalogStock($doc, $lines, -1);
+            try {
+                AccJournal::reverseDocument((int) $doc->id);
+            } catch (\Throwable) {
+            }
         }
         DB::table('acc_documents')->where('id', $id)->update([
             'status' => 'cancelled',
