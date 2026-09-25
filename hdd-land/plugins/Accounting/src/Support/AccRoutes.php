@@ -122,6 +122,7 @@ class AccRoutes
             $base.'/Http/Controllers/Admin/CheckController.php',
             $base.'/Http/Controllers/Admin/ReportController.php',
             $base.'/Http/Controllers/Admin/ChartController.php',
+            $base.'/Http/Controllers/Admin/InstallmentController.php',
         ] as $file) {
             if (is_file($file)) {
                 try {
@@ -134,22 +135,48 @@ class AccRoutes
         $mw = ['web', 'auth'];
         try {
             Route::middleware($mw)->group(function () {
+                $hub = \Plugins\Accounting\src\Http\Controllers\Admin\HubController::class;
+                $staff = \Plugins\Accounting\src\Http\Controllers\Admin\StaffController::class;
+                $check = \Plugins\Accounting\src\Http\Controllers\Admin\CheckController::class;
+                $report = \Plugins\Accounting\src\Http\Controllers\Admin\ReportController::class;
+                $chart = \Plugins\Accounting\src\Http\Controllers\Admin\ChartController::class;
+                $inst = \Plugins\Accounting\src\Http\Controllers\Admin\InstallmentController::class;
                 $map = [
-                    'admin.accounting.staff' => ['get', 'admin/accounting/staff', \Plugins\Accounting\src\Http\Controllers\Admin\StaffController::class, 'index'],
-                    'admin.accounting.staff.store' => ['post', 'admin/accounting/staff', \Plugins\Accounting\src\Http\Controllers\Admin\StaffController::class, 'store'],
-                    'admin.accounting.goods' => ['get', 'admin/accounting/goods', \Plugins\Accounting\src\Http\Controllers\Admin\HubController::class, 'goods'],
-                    'admin.accounting.goods.store' => ['post', 'admin/accounting/goods', \Plugins\Accounting\src\Http\Controllers\Admin\HubController::class, 'storeGood'],
-                    'admin.accounting.checkbooks' => ['get', 'admin/accounting/checkbooks', \Plugins\Accounting\src\Http\Controllers\Admin\CheckController::class, 'books'],
-                    'admin.accounting.checkbooks.store' => ['post', 'admin/accounting/checkbooks', \Plugins\Accounting\src\Http\Controllers\Admin\CheckController::class, 'storeBook'],
-                    'admin.accounting.checks.received' => ['get', 'admin/accounting/checks/received', \Plugins\Accounting\src\Http\Controllers\Admin\CheckController::class, 'received'],
-                    'admin.accounting.checks.spent' => ['get', 'admin/accounting/checks/spent', \Plugins\Accounting\src\Http\Controllers\Admin\CheckController::class, 'spent'],
-                    'admin.accounting.checks.alerts' => ['get', 'admin/accounting/checks/alerts', \Plugins\Accounting\src\Http\Controllers\Admin\CheckController::class, 'alerts'],
-                    'admin.accounting.checks.alerts.save' => ['post', 'admin/accounting/checks/alerts', \Plugins\Accounting\src\Http\Controllers\Admin\CheckController::class, 'saveAlertSetting'],
-                    'admin.accounting.chart' => ['get', 'admin/accounting/chart', \Plugins\Accounting\src\Http\Controllers\Admin\ChartController::class, 'index'],
-                    'admin.accounting.reports.shop-stock' => ['get', 'admin/accounting/reports/shop-stock', \Plugins\Accounting\src\Http\Controllers\Admin\ReportController::class, 'shopStock'],
-                    'admin.accounting.reports.trial' => ['get', 'admin/accounting/reports/trial', \Plugins\Accounting\src\Http\Controllers\Admin\ChartController::class, 'trial'],
-                    'admin.accounting.reports.income' => ['get', 'admin/accounting/reports/income', \Plugins\Accounting\src\Http\Controllers\Admin\ChartController::class, 'income'],
-                    'admin.accounting.reports.balance' => ['get', 'admin/accounting/reports/balance', \Plugins\Accounting\src\Http\Controllers\Admin\ChartController::class, 'balanceSheet'],
+                    'admin.accounting.hub' => ['get', 'admin/accounting', $hub, 'hub'],
+                    'admin.accounting.docs' => ['get', 'admin/accounting/docs', $hub, 'docs'],
+                    'admin.accounting.docs.create' => ['get', 'admin/accounting/docs/create', $hub, 'createDoc'],
+                    'admin.accounting.warehouses' => ['get', 'admin/accounting/warehouses', $hub, 'warehouses'],
+                    'admin.accounting.banks' => ['get', 'admin/accounting/banks', $hub, 'banks'],
+                    'admin.accounting.stock' => ['get', 'admin/accounting/stock', $hub, 'stock'],
+                    'admin.accounting.expenses' => ['get', 'admin/accounting/expenses', $hub, 'expenses'],
+                    'admin.accounting.payroll' => ['get', 'admin/accounting/payroll', $hub, 'payroll'],
+                    'admin.accounting.settings' => ['get', 'admin/accounting/settings', $hub, 'settings'],
+                    'admin.accounting.staff' => ['get', 'admin/accounting/staff', $staff, 'index'],
+                    'admin.accounting.staff.store' => ['post', 'admin/accounting/staff', $staff, 'store'],
+                    'admin.accounting.goods' => ['get', 'admin/accounting/goods', $hub, 'goods'],
+                    'admin.accounting.goods.store' => ['post', 'admin/accounting/goods', $hub, 'storeGood'],
+                    'admin.accounting.checkbooks' => ['get', 'admin/accounting/checkbooks', $check, 'books'],
+                    'admin.accounting.checkbooks.store' => ['post', 'admin/accounting/checkbooks', $check, 'storeBook'],
+                    'admin.accounting.checks' => ['get', 'admin/accounting/checks', $check, 'index'],
+                    'admin.accounting.checks.received' => ['get', 'admin/accounting/checks/received', $check, 'received'],
+                    'admin.accounting.checks.spent' => ['get', 'admin/accounting/checks/spent', $check, 'spent'],
+                    'admin.accounting.checks.alerts' => ['get', 'admin/accounting/checks/alerts', $check, 'alerts'],
+                    'admin.accounting.checks.alerts.save' => ['post', 'admin/accounting/checks/alerts', $check, 'saveAlertSetting'],
+                    'admin.accounting.installments' => ['get', 'admin/accounting/installments', $inst, 'index'],
+                    'admin.accounting.chart' => ['get', 'admin/accounting/chart', $chart, 'index'],
+                    'admin.accounting.reports' => ['get', 'admin/accounting/reports', $report, 'hub'],
+                    'admin.accounting.reports.sales' => ['get', 'admin/accounting/reports/sales', $report, 'sales'],
+                    'admin.accounting.reports.staff' => ['get', 'admin/accounting/reports/staff', $report, 'staff'],
+                    'admin.accounting.reports.payroll' => ['get', 'admin/accounting/reports/payroll', $report, 'payroll'],
+                    'admin.accounting.reports.vouchers' => ['get', 'admin/accounting/reports/vouchers', $report, 'vouchers'],
+                    'admin.accounting.reports.warehouse' => ['get', 'admin/accounting/reports/warehouse', $report, 'warehouse'],
+                    'admin.accounting.reports.customers' => ['get', 'admin/accounting/reports/customers', $report, 'customers'],
+                    'admin.accounting.reports.checks' => ['get', 'admin/accounting/reports/checks', $report, 'checks'],
+                    'admin.accounting.reports.installments' => ['get', 'admin/accounting/reports/installments', $report, 'installments'],
+                    'admin.accounting.reports.shop-stock' => ['get', 'admin/accounting/reports/shop-stock', $report, 'shopStock'],
+                    'admin.accounting.reports.trial' => ['get', 'admin/accounting/reports/trial', $chart, 'trial'],
+                    'admin.accounting.reports.income' => ['get', 'admin/accounting/reports/income', $chart, 'income'],
+                    'admin.accounting.reports.balance' => ['get', 'admin/accounting/reports/balance', $chart, 'balanceSheet'],
                 ];
                 foreach ($map as $name => [$method, $path, $cls, $action]) {
                     if (Route::has($name) || ! class_exists($cls)) {

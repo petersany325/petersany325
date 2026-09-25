@@ -28,7 +28,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '1.4.2';
+        return '1.4.3';
     }
 
     public function isCore(): bool
@@ -38,9 +38,18 @@ class Plugin extends BasePlugin
 
     public function boot(): void
     {
-        static::loadClasses();
-        static::ensureSchema();
-        static::seedDefaults();
+        try {
+            static::loadClasses();
+        } catch (\Throwable) {
+        }
+        try {
+            static::ensureSchema();
+        } catch (\Throwable) {
+        }
+        try {
+            static::seedDefaults();
+        } catch (\Throwable) {
+        }
         try {
             AccCommerce::boot();
         } catch (\Throwable) {
@@ -49,7 +58,10 @@ class Plugin extends BasePlugin
             AccRoutes::registerCustomer();
         } catch (\Throwable) {
         }
-        parent::boot();
+        try {
+            parent::boot();
+        } catch (\Throwable) {
+        }
         try {
             AccRoutes::registerAdminFallbacks();
         } catch (\Throwable) {
@@ -66,6 +78,7 @@ class Plugin extends BasePlugin
             $base.'/Support/AccJournal.php',
             $base.'/Support/AccCommerce.php',
             $base.'/Support/AccRoutes.php',
+            $base.'/Support/AccSafe.php',
             $base.'/Support/AccountingLedger.php',
             $base.'/Support/AccEngine.php',
             $base.'/Http/Controllers/Admin/HubController.php',

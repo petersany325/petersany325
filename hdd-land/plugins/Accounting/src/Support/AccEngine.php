@@ -439,15 +439,19 @@ class AccEngine
         if (! Schema::hasTable('acc_checks')) {
             return [];
         }
-        $today = now()->toDateString();
-        $horizon = now()->addDays(90)->toDateString();
-        $rows = DB::table('acc_checks')
-            ->whereNotNull('due_date')
-            ->whereBetween('due_date', [$today, $horizon])
-            ->whereIn('status', ['pending', 'in_collection', 'delivered', 'received'])
-            ->orderBy('due_date')
-            ->limit($limit)
-            ->get();
+        try {
+            $today = now()->toDateString();
+            $horizon = now()->addDays(90)->toDateString();
+            $rows = DB::table('acc_checks')
+                ->whereNotNull('due_date')
+                ->whereBetween('due_date', [$today, $horizon])
+                ->whereIn('status', ['pending', 'in_collection', 'delivered', 'received'])
+                ->orderBy('due_date')
+                ->limit($limit)
+                ->get();
+        } catch (\Throwable) {
+            return [];
+        }
         $out = [];
         foreach ($rows as $row) {
             $days = (int) ($row->alert_days ?? 0);

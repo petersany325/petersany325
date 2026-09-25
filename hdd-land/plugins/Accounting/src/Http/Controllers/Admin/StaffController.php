@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Plugins\Accounting\Plugin;
 use Plugins\Accounting\src\Support\AccEngine;
+use Plugins\Accounting\src\Support\AccSafe;
 
 class StaffController extends Controller
 {
@@ -29,11 +30,11 @@ class StaffController extends Controller
         } catch (\Throwable) {
         }
 
-        return view('accounting::admin.staff', [
+        return AccSafe::page('accounting::admin.staff', [
             'rows' => $rows,
             'kinds' => AccEngine::STAFF_KINDS,
             'defaultAlert' => AccEngine::defaultCheckAlertDays(),
-        ]);
+        ], 'کارمند و ویزیتور');
     }
 
     public function store(Request $request)

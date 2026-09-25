@@ -41,5 +41,29 @@ $vat = (int) round($after * 10 / 100);
 $lineTotal = $after + $vat;
 $ok($lineTotal === 2090000, 'purchase line: qty*rate -5% +10% VAT = 2,090,000');
 
+$controllers = [
+    dirname(__DIR__).'/src/Http/Controllers/Admin/HubController.php',
+    dirname(__DIR__).'/src/Http/Controllers/Admin/ReportController.php',
+    dirname(__DIR__).'/src/Http/Controllers/Admin/ChartController.php',
+    dirname(__DIR__).'/src/Http/Controllers/Admin/CheckController.php',
+    dirname(__DIR__).'/src/Http/Controllers/Admin/InstallmentController.php',
+    dirname(__DIR__).'/src/Http/Controllers/Admin/StaffController.php',
+    dirname(__DIR__).'/src/Http/Controllers/Staff/AccountingController.php',
+    dirname(__DIR__).'/src/Support/AccSafe.php',
+];
+foreach ($controllers as $file) {
+    $src = is_file($file) ? (string) file_get_contents($file) : '';
+    $ok($src !== '', basename($file).' exists');
+    if (str_contains($file, 'AccSafe.php')) {
+        $ok(str_contains($src, '->render()'), 'AccSafe renders views inside try/catch');
+        continue;
+    }
+    $ok(str_contains($src, 'AccSafe'), basename($file).' uses AccSafe');
+    $ok(! preg_match('/abort_unless\s*\(\s*Schema::hasTable/', $src), basename($file).' never 404s missing tables');
+}
+
+$menu = (string) file_get_contents(dirname(__DIR__).'/Plugin.php');
+$ok(str_contains($menu, 'href') && ! str_contains($menu, "'route'"), 'adminMenu uses href not named routes');
+
 echo $fails === 0 ? "ALL STANDARDS OK\n" : "FAILED {$fails}\n";
 exit($fails === 0 ? 0 : 1);

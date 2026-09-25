@@ -11,6 +11,7 @@ use Plugins\Accounting\Plugin;
 use Plugins\Accounting\src\Support\AccCommerce;
 use Plugins\Accounting\src\Support\AccEngine;
 use Plugins\Accounting\src\Support\AccMath;
+use Plugins\Accounting\src\Support\AccSafe;
 
 class InstallmentController extends Controller
 {
@@ -24,33 +25,39 @@ class InstallmentController extends Controller
 
     public function index(Request $request)
     {
-        abort_unless(Schema::hasTable('acc_installment_requests'), 404);
+        return AccSafe::wrap('accounting::admin.installments', function () use ($request) {
+            $status = trim((string) $request->get('status', ''));
+            $q = trim((string) $request->get('q', ''));
+            $items = collect();
+            $pending = 0;
+            if (Schema::hasTable('acc_installment_requests')) {
+                $query = DB::table('acc_installment_requests as r')
+                    ->leftJoin('users as u', 'u.id', '=', 'r.user_id')
+                    ->select(array_merge(['r.*'], AccEngine::userAliasColumns('u')))
+                    ->orderByDesc('r.id');
+                if ($status !== '' && isset(AccEngine::INSTALLMENT_STATUSES[$status])) {
+                    $query->where('r.status', $status);
+                }
+                if ($q !== '') {
+                    $query->where(function ($w) use ($q) {
+                        $w->where('r.number', 'like', "%{$q}%")
+                            ->orWhere('r.customer_name', 'like', "%{$q}%")
+                            ->orWhere('r.customer_mobile', 'like', "%{$q}%")
+                            ->orWhere('r.product_title', 'like', "%{$q}%");
+                    });
+                }
+                $items = $query->limit(300)->get();
+                $pending = (int) DB::table('acc_installment_requests')->where('status', 'pending')->count();
+            }
 
-        $status = trim((string) $request->get('status', ''));
-        $q = trim((string) $request->get('q', ''));
-        $query = DB::table('acc_installment_requests as r')
-            ->leftJoin('users as u', 'u.id', '=', 'r.user_id')
-            ->select(array_merge(['r.*'], AccEngine::userAliasColumns('u')))
-            ->orderByDesc('r.id');
-        if ($status !== '' && isset(AccEngine::INSTALLMENT_STATUSES[$status])) {
-            $query->where('r.status', $status);
-        }
-        if ($q !== '') {
-            $query->where(function ($w) use ($q) {
-                $w->where('r.number', 'like', "%{$q}%")
-                    ->orWhere('r.customer_name', 'like', "%{$q}%")
-                    ->orWhere('r.customer_mobile', 'like', "%{$q}%")
-                    ->orWhere('r.product_title', 'like', "%{$q}%");
-            });
-        }
-
-        return view('accounting::admin.installments', [
-            'items' => $query->limit(300)->get(),
-            'status' => $status,
-            'q' => $q,
-            'statuses' => AccEngine::INSTALLMENT_STATUSES,
-            'pending' => (int) DB::table('acc_installment_requests')->where('status', 'pending')->count(),
-        ]);
+            return [
+                'items' => $items,
+                'status' => $status,
+                'q' => $q,
+                'statuses' => AccEngine::INSTALLMENT_STATUSES,
+                'pending' => $pending,
+            ];
+        }, 'اقساط مشتریان');
     }
 
     public function show(int $id)
@@ -66,18 +73,20 @@ class InstallmentController extends Controller
             ? DB::table('acc_documents')->where('id', $row->document_id)->first()
             : null;
 
-        return view('accounting::admin.installment-show', [
+        return AccSafe::page('accounting::admin.installment-show', [
             'row' => $row,
             'schedules' => $schedules,
             'user' => $user,
             'invoice' => $invoice,
             'statuses' => AccEngine::INSTALLMENT_STATUSES,
-        ]);
+        ], 'جزئیات اقساط');
     }
 
     public function store(Request $request)
     {
-        abort_unless(Schema::hasTable('acc_installment_requests'), 404);
+        if (! Schema::hasTable('acc_installment_requests')) {
+            return back()->with('error', 'جدول اقساط آماده نیست.');
+        }
 
         $price = (int) preg_replace('/\D+/', '', (string) $request->input('product_price', 0));
         $down = (int) preg_replace('/\D+/', '', (string) $request->input('down_payment', 0));

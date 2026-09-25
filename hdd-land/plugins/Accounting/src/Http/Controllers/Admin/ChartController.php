@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Schema;
 use Plugins\Accounting\Plugin;
 use Plugins\Accounting\src\Support\AccChart;
 use Plugins\Accounting\src\Support\AccJournal;
+use Plugins\Accounting\src\Support\AccSafe;
 
 class ChartController
 {
@@ -22,28 +23,29 @@ class ChartController
 
     public function index(Request $request)
     {
-        $accounts = collect();
-        try {
-            $q = DB::table('acc_accounts')->orderBy('code');
-            if (! $request->boolean('all')) {
-                $q->where('is_active', 1);
+        return AccSafe::wrap('accounting::admin.chart', function () use ($request) {
+            $accounts = collect();
+            if (Schema::hasTable('acc_accounts')) {
+                $q = DB::table('acc_accounts')->orderBy('code');
+                if (! $request->boolean('all')) {
+                    $q->where('is_active', 1);
+                }
+                $accounts = $q->get();
             }
-            $accounts = $q->get();
-        } catch (\Throwable) {
-        }
-        $parents = $accounts->where('is_postable', false)->values();
-        if ($parents->isEmpty()) {
-            $parents = $accounts->filter(fn ($a) => strlen((string) $a->code) <= 2)->values();
-        }
+            $parents = $accounts->where('is_postable', false)->values();
+            if ($parents->isEmpty()) {
+                $parents = $accounts->filter(fn ($a) => strlen((string) $a->code) <= 2)->values();
+            }
 
-        return view('accounting::admin.chart', [
-            'accounts' => $accounts,
-            'parents' => $parents,
-            'types' => AccChart::TYPES,
-            'levels' => AccChart::LEVELS,
-            'showAll' => $request->boolean('all'),
-            'map' => AccChart::defaultMap(),
-        ]);
+            return [
+                'accounts' => $accounts,
+                'parents' => $parents,
+                'types' => AccChart::TYPES,
+                'levels' => AccChart::LEVELS,
+                'showAll' => $request->boolean('all'),
+                'map' => AccChart::defaultMap(),
+            ];
+        }, 'کدینگ حساب‌ها');
     }
 
     public function store(Request $request)
@@ -150,7 +152,7 @@ class ChartController
             $credit += (int) ($r->credit ?? 0);
         }
 
-        return view('accounting::admin.reports.ledger', [
+        return AccSafe::page('accounting::admin.reports.ledger', [
             'kind' => 'trial',
             'title' => 'تراز آزمایشی',
             'from' => $from,
@@ -158,7 +160,7 @@ class ChartController
             'rows' => $rows,
             'debit' => $debit,
             'credit' => $credit,
-        ]);
+        ], 'تراز آزمایشی');
     }
 
     public function income(Request $request)
@@ -183,7 +185,7 @@ class ChartController
             }
         }
 
-        return view('accounting::admin.reports.ledger', [
+        return AccSafe::page('accounting::admin.reports.ledger', [
             'kind' => 'income',
             'title' => 'سود و زیان',
             'from' => $from,
@@ -192,7 +194,7 @@ class ChartController
             'debit' => $out,
             'credit' => $income,
             'profit' => $income - $out,
-        ]);
+        ], 'سود و زیان');
     }
 
     public function balanceSheet(Request $request)
@@ -206,7 +208,7 @@ class ChartController
         } catch (\Throwable) {
         }
 
-        return view('accounting::admin.reports.ledger', [
+        return AccSafe::page('accounting::admin.reports.ledger', [
             'kind' => 'balance',
             'title' => 'ترازنامه',
             'from' => null,
@@ -214,6 +216,6 @@ class ChartController
             'rows' => $rows,
             'debit' => 0,
             'credit' => 0,
-        ]);
+        ], 'ترازنامه');
     }
 }

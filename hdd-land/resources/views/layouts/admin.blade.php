@@ -93,6 +93,7 @@
       'open' => $is('accounting'),
       'items' => [
         ['label' => 'داشبورد حسابداری', 'href' => $u('accounting'), 'active' => $is('accounting') && ! str_contains($path, 'accounting/'), 'perm' => 'accounting'],
+        ['label' => 'کدینگ حساب‌ها', 'href' => $u('accounting/chart'), 'active' => $is('accounting/chart'), 'perm' => 'accounting'],
         ['label' => 'فاکتور و پیش‌فاکتور', 'href' => $u('accounting/docs'), 'active' => $is('accounting/docs') && ! str_contains($path, 'docs/create'), 'perm' => 'accounting'],
         ['label' => 'فاکتور فروش جدید', 'href' => $u('accounting/docs/create').'?type=sale', 'active' => str_contains($path, 'docs/create') && request('type','sale')==='sale', 'perm' => 'accounting'],
         ['label' => 'پیش‌فاکتور جدید', 'href' => $u('accounting/docs/create').'?type=proforma', 'active' => request('type')==='proforma', 'perm' => 'accounting'],
@@ -113,6 +114,10 @@
         ['label' => 'هزینه‌ها', 'href' => $u('accounting/expenses'), 'active' => $is('accounting/expenses'), 'perm' => 'accounting'],
         ['label' => 'حقوق و دستمزد', 'href' => $u('accounting/payroll'), 'active' => $is('accounting/payroll'), 'perm' => 'accounting.payroll'],
         ['label' => 'گزارش خرید و فروش', 'href' => $u('accounting/reports/sales'), 'active' => $is('accounting/reports/sales'), 'perm' => 'accounting.reports'],
+        ['label' => 'تراز آزمایشی', 'href' => $u('accounting/reports/trial'), 'active' => $is('accounting/reports/trial'), 'perm' => 'accounting.reports'],
+        ['label' => 'سود و زیان', 'href' => $u('accounting/reports/income'), 'active' => $is('accounting/reports/income'), 'perm' => 'accounting.reports'],
+        ['label' => 'ترازنامه', 'href' => $u('accounting/reports/balance'), 'active' => $is('accounting/reports/balance'), 'perm' => 'accounting.reports'],
+        ['label' => 'تطبیق موجودی سایت', 'href' => $u('accounting/reports/shop-stock'), 'active' => $is('accounting/reports/shop-stock'), 'perm' => 'accounting.reports'],
         ['label' => 'مرکز گزارش‌ها', 'href' => $u('accounting/reports'), 'active' => $is('accounting/reports') && ! str_contains($path, 'reports/'), 'perm' => 'accounting.reports'],
         ['label' => 'تنظیمات حسابداری', 'href' => $u('accounting/settings'), 'active' => $is('accounting/settings'), 'perm' => 'accounting.settings'],
       ],

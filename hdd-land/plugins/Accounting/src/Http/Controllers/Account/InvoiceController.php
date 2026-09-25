@@ -14,37 +14,53 @@ class InvoiceController extends Controller
 {
     public function __construct()
     {
-        Plugin::ensureSchema();
+        try {
+            Plugin::ensureSchema();
+        } catch (\Throwable) {
+        }
     }
 
     public function index()
     {
-        AccCommerce::syncPendingShopOrders(15);
-        $uid = (int) Auth::id();
-        $orderIds = [];
-        if (Schema::hasTable('orders') && Schema::hasColumn('orders', 'user_id')) {
-            $orderIds = DB::table('orders')->where('user_id', $uid)->pluck('id')->all();
+        $docs = collect();
+        try {
+            AccCommerce::syncPendingShopOrders(15);
+            $uid = (int) Auth::id();
+            $orderIds = [];
+            if (Schema::hasTable('orders') && Schema::hasColumn('orders', 'user_id')) {
+                $orderIds = DB::table('orders')->where('user_id', $uid)->pluck('id')->all();
+            }
+            if (Schema::hasTable('acc_documents')) {
+                $docs = DB::table('acc_documents')
+                    ->whereIn('type', ['sale', 'proforma'])
+                    ->where(function ($q) use ($uid, $orderIds) {
+                        $q->where('party_user_id', $uid);
+                        if ($orderIds && Schema::hasColumn('acc_documents', 'order_id')) {
+                            $q->orWhereIn('order_id', $orderIds);
+                        }
+                        $name = Auth::user()->name ?? '';
+                        if ($name !== '') {
+                            $q->orWhere(function ($w) use ($name) {
+                                $w->whereNull('party_user_id')->where('party_name', $name);
+                            });
+                        }
+                    })
+                    ->orderByDesc('id')->limit(100)->get();
+            }
+        } catch (\Throwable) {
         }
-        $docs = DB::table('acc_documents')
-            ->whereIn('type', ['sale', 'proforma'])
-            ->where(function ($q) use ($uid, $orderIds) {
-                $q->where('party_user_id', $uid);
-                if ($orderIds && Schema::hasColumn('acc_documents', 'order_id')) {
-                    $q->orWhereIn('order_id', $orderIds);
-                }
-                $name = Auth::user()->name ?? '';
-                if ($name !== '') {
-                    $q->orWhere(function ($w) use ($name) {
-                        $w->whereNull('party_user_id')->where('party_name', $name);
-                    });
-                }
-            })
-            ->orderByDesc('id')->limit(100)->get();
 
-        return view('accounting::account.invoices', [
-            'docs' => $docs,
-            'types' => AccEngine::TYPES,
-        ]);
+        try {
+            return view('accounting::account.invoices', [
+                'docs' => $docs,
+                'types' => AccEngine::TYPES,
+            ]);
+        } catch (\Throwable) {
+            return \Plugins\Accounting\src\Support\AccSafe::page('accounting::account.invoices', [
+                'docs' => $docs,
+                'types' => AccEngine::TYPES,
+            ], 'فاکتورهای من');
+        }
     }
 
     public function show(int $id)

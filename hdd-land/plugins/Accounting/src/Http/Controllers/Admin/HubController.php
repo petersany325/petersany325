@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Schema;
 use Plugins\Accounting\Plugin;
 use Plugins\Accounting\src\Support\AccCommerce;
 use Plugins\Accounting\src\Support\AccEngine;
+use Plugins\Accounting\src\Support\AccSafe;
 
 class HubController extends Controller
 {
@@ -26,71 +27,41 @@ class HubController extends Controller
 
     public function hub()
     {
-        try {
-            \Plugins\Accounting\src\Support\AccRoutes::registerViews();
-        } catch (\Throwable) {
-        }
-        $synced = 0;
-        try {
-            $synced = AccCommerce::syncPendingShopOrders(25);
-        } catch (\Throwable) {
-        }
-        $recent = collect();
-        try {
-            if (Schema::hasTable('acc_documents')) {
-                $recent = DB::table('acc_documents')->orderByDesc('id')->limit(12)->get();
+        return AccSafe::wrap('accounting::admin.hub', function () {
+            try {
+                \Plugins\Accounting\src\Support\AccRoutes::registerViews();
+            } catch (\Throwable) {
             }
-        } catch (\Throwable) {
-        }
+            $synced = 0;
+            try {
+                $synced = AccCommerce::syncPendingShopOrders(25);
+            } catch (\Throwable) {
+            }
+            $recent = collect();
+            try {
+                if (Schema::hasTable('acc_documents')) {
+                    $recent = DB::table('acc_documents')->orderByDesc('id')->limit(12)->get();
+                }
+            } catch (\Throwable) {
+            }
 
-        $stats = [
-            'sales_total' => 0, 'purchase_total' => 0, 'expense_total' => 0, 'proforma_open' => 0,
-            'warehouses' => 0, 'banks' => 0, 'docs' => [], 'check_alerts' => 0,
-        ];
-        try {
-            $stats = AccEngine::dashboardStats() + $stats;
-        } catch (\Throwable) {
-        }
+            $stats = [
+                'sales_total' => 0, 'purchase_total' => 0, 'expense_total' => 0, 'proforma_open' => 0,
+                'warehouses' => 0, 'banks' => 0, 'docs' => [], 'check_alerts' => 0,
+            ];
+            try {
+                $stats = AccEngine::dashboardStats() + $stats;
+            } catch (\Throwable) {
+            }
 
-        try {
-            return view('accounting::admin.hub', [
+            return [
                 'stats' => $stats,
                 'types' => AccEngine::TYPES,
                 'recent' => $recent,
                 'synced' => $synced,
-            ]);
-        } catch (\Throwable) {
-            return response($this->safeHubHtml(), 200, ['Content-Type' => 'text/html; charset=utf-8']);
-        }
-    }
-
-    protected function safeHubHtml(): string
-    {
-        $links = [
-            ['میز کار', '/admin/accounting'],
-            ['کارمند و ویزیتور', '/admin/accounting/staff'],
-            ['حقوق و دستمزد', '/admin/accounting/payroll'],
-            ['تعریف کالا', '/admin/accounting/goods'],
-            ['فاکتور فروش', '/admin/accounting/docs/create?type=sale'],
-            ['فاکتور خرید', '/admin/accounting/docs/create?type=purchase'],
-            ['پیش‌فاکتور', '/admin/accounting/docs/create?type=proforma'],
-            ['سند دستی', '/admin/accounting/docs/create?type=voucher'],
-            ['دسته چک', '/admin/accounting/checkbooks'],
-            ['چک دریافتی', '/admin/accounting/checks/received'],
-            ['چک خرج‌شده', '/admin/accounting/checks/spent'],
-            ['اخطار سررسید', '/admin/accounting/checks/alerts'],
-            ['مرکز گزارش‌ها', '/admin/accounting/reports'],
-            ['تطبیق موجودی', '/admin/accounting/reports/shop-stock'],
-            ['فروشگاه', '/products'],
-            ['سفارش‌ها', '/admin/orders'],
-            ['تیکت‌ها', '/admin/tickets'],
-        ];
-        $items = '';
-        foreach ($links as [$lab, $href]) {
-            $items .= '<a href="'.htmlspecialchars($href, ENT_QUOTES, 'UTF-8').'" style="display:block;padding:.65rem .8rem;border-radius:12px;background:#0b4f4c;color:#fff;text-decoration:none;margin:.3rem 0">'.$lab.'</a>';
-        }
-
-        return '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>حسابداری</title><link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet"><style>body{font-family:Vazirmatn,Tahoma,sans-serif;background:#f2f6f7;margin:0;padding:1.2rem}h1{color:#0b4f4c}</style></head><body><h1>مدیریت مالی HDD Land</h1><p>داشبورد بدون خطای ۵۰۰ — منوهای حسابداری:</p>'.$items.'</body></html>';
+                'subtitle' => 'میز کار حسابداری',
+            ];
+        }, 'داشبورد حسابداری');
     }
 
     public function syncShop()
@@ -106,12 +77,12 @@ class HubController extends Controller
     {
         $type = (string) $request->query('type', '');
         if (! Schema::hasTable('acc_documents')) {
-            return view('accounting::admin.docs', [
+            return AccSafe::page('accounting::admin.docs', [
                 'docs' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 30),
                 'type' => $type,
                 'types' => AccEngine::TYPES,
                 'search' => '',
-            ]);
+            ], 'اسناد مالی');
         }
         $q = DB::table('acc_documents')->orderByDesc('id');
         if ($type !== '' && isset(AccEngine::TYPES[$type])) {
@@ -124,12 +95,18 @@ class HubController extends Controller
             });
         }
 
-        return view('accounting::admin.docs', [
-            'docs' => $q->paginate(30)->withQueryString(),
+        try {
+            $docs = $q->paginate(30)->withQueryString();
+        } catch (\Throwable) {
+            $docs = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 30);
+        }
+
+        return AccSafe::page('accounting::admin.docs', [
+            'docs' => $docs,
             'type' => $type,
             'types' => AccEngine::TYPES,
             'search' => $search,
-        ]);
+        ], 'اسناد مالی');
     }
 
     public function createDoc(Request $request)
@@ -158,7 +135,7 @@ class HubController extends Controller
             return $q->get();
         });
 
-        return view('accounting::admin.doc-form', [
+        return AccSafe::page('accounting::admin.doc-form', [
             'type' => $type,
             'types' => AccEngine::TYPES,
             'warehouses' => $safe(fn () => DB::table('acc_warehouses')->where('is_active', 1)->orderBy('name')->get()),
@@ -166,12 +143,18 @@ class HubController extends Controller
             'accounts' => $accounts,
             'categories' => $safe(fn () => DB::table('acc_expense_categories')->where('is_active', 1)->orderBy('name')->get()),
             'staff' => $this->staffOptions(),
-            'products' => AccCommerce::catalogProducts('', 200),
-            'customers' => AccCommerce::customers('', 200),
+            'products' => $safe(fn () => AccCommerce::catalogProducts('', 200)),
+            'customers' => $safe(fn () => AccCommerce::customers('', 200)),
             'doc' => null,
             'lines' => [],
-            'number' => AccEngine::nextNumber($type),
-        ]);
+            'number' => (function () use ($type) {
+                try {
+                    return AccEngine::nextNumber($type);
+                } catch (\Throwable) {
+                    return strtoupper(substr($type, 0, 2)).'-'.date('ym').'-0001';
+                }
+            })(),
+        ], AccEngine::TYPES[$type] ?? 'سند جدید');
     }
 
     public function storeDoc(Request $request)
@@ -394,9 +377,9 @@ class HubController extends Controller
             $order = DB::table('orders')->where('id', $doc->order_id)->first();
         }
 
-        return view('accounting::admin.doc-show', compact('doc', 'lines', 'serials', 'order') + [
+        return AccSafe::page('accounting::admin.doc-show', compact('doc', 'lines', 'serials', 'order') + [
             'types' => AccEngine::TYPES,
-        ]);
+        ], 'سند');
     }
 
     public function issueDoc(int $id)
@@ -418,9 +401,15 @@ class HubController extends Controller
 
     public function warehouses()
     {
-        return view('accounting::admin.warehouses', [
-            'items' => DB::table('acc_warehouses')->orderByDesc('is_default')->orderBy('name')->get(),
-        ]);
+        $items = collect();
+        try {
+            if (Schema::hasTable('acc_warehouses')) {
+                $items = DB::table('acc_warehouses')->orderByDesc('is_default')->orderBy('name')->get();
+            }
+        } catch (\Throwable) {
+        }
+
+        return AccSafe::page('accounting::admin.warehouses', ['items' => $items], 'انبارها');
     }
 
     public function storeWarehouse(Request $request)
@@ -449,9 +438,15 @@ class HubController extends Controller
 
     public function banks()
     {
-        return view('accounting::admin.banks', [
-            'items' => DB::table('acc_banks')->orderBy('name')->get(),
-        ]);
+        $items = collect();
+        try {
+            if (Schema::hasTable('acc_banks')) {
+                $items = DB::table('acc_banks')->orderBy('name')->get();
+            }
+        } catch (\Throwable) {
+        }
+
+        return AccSafe::page('accounting::admin.banks', ['items' => $items], 'بانک‌ها');
     }
 
     public function storeBank(Request $request)
@@ -478,22 +473,42 @@ class HubController extends Controller
 
     public function stock()
     {
-        $balances = DB::table('acc_stock_balances as b')
-            ->leftJoin('acc_warehouses as w', 'w.id', '=', 'b.warehouse_id')
-            ->orderBy('w.name')
-            ->select('b.*', 'w.name as warehouse_name', 'w.code as warehouse_code');
-        if (Schema::hasTable('products')) {
-            $balances->leftJoin('products as p', 'p.id', '=', 'b.product_id')
-                ->addSelect(DB::raw('COALESCE(p.name, CONCAT("کالا #", b.product_id)) as product_name'));
+        $balances = collect();
+        $warehouses = collect();
+        $moves = collect();
+        try {
+            if (Schema::hasTable('acc_stock_balances')) {
+                $q = DB::table('acc_stock_balances as b')
+                    ->leftJoin('acc_warehouses as w', 'w.id', '=', 'b.warehouse_id')
+                    ->orderBy('w.name')
+                    ->select('b.*', 'w.name as warehouse_name', 'w.code as warehouse_code');
+                if (Schema::hasTable('products')) {
+                    $q->leftJoin('products as p', 'p.id', '=', 'b.product_id')
+                        ->addSelect(DB::raw('COALESCE(p.name, CONCAT("کالا #", b.product_id)) as product_name'));
+                }
+                $balances = $q->limit(200)->get();
+            }
+            if (Schema::hasTable('acc_warehouses')) {
+                $warehouses = DB::table('acc_warehouses')->where('is_active', 1)->get();
+            }
+            if (Schema::hasTable('acc_documents')) {
+                $moves = DB::table('acc_documents')->whereIn('type', ['stock_in', 'stock_out', 'transfer'])->orderByDesc('id')->limit(40)->get();
+            }
+        } catch (\Throwable) {
         }
-        $balances = $balances->limit(200)->get();
 
-        return view('accounting::admin.stock', [
+        $products = collect();
+        try {
+            $products = AccCommerce::catalogProducts('', 120);
+        } catch (\Throwable) {
+        }
+
+        return AccSafe::page('accounting::admin.stock', [
             'balances' => $balances,
-            'warehouses' => DB::table('acc_warehouses')->where('is_active', 1)->get(),
-            'products' => AccCommerce::catalogProducts('', 120),
-            'moves' => DB::table('acc_documents')->whereIn('type', ['stock_in', 'stock_out', 'transfer'])->orderByDesc('id')->limit(40)->get(),
-        ]);
+            'warehouses' => $warehouses,
+            'products' => $products,
+            'moves' => $moves,
+        ], 'حواله و رسید');
     }
 
     public function storeStockMove(Request $request)
@@ -549,11 +564,23 @@ class HubController extends Controller
 
     public function expenses()
     {
-        return view('accounting::admin.expenses', [
-            'items' => DB::table('acc_documents')->where('type', 'expense')->orderByDesc('id')->limit(100)->get(),
-            'categories' => DB::table('acc_expense_categories')->where('is_active', 1)->get(),
-            'banks' => DB::table('acc_banks')->where('is_active', 1)->get(),
-        ]);
+        $items = collect();
+        $categories = collect();
+        $banks = collect();
+        try {
+            if (Schema::hasTable('acc_documents')) {
+                $items = DB::table('acc_documents')->where('type', 'expense')->orderByDesc('id')->limit(100)->get();
+            }
+            if (Schema::hasTable('acc_expense_categories')) {
+                $categories = DB::table('acc_expense_categories')->where('is_active', 1)->get();
+            }
+            if (Schema::hasTable('acc_banks')) {
+                $banks = DB::table('acc_banks')->where('is_active', 1)->get();
+            }
+        } catch (\Throwable) {
+        }
+
+        return AccSafe::page('accounting::admin.expenses', compact('items', 'categories', 'banks'), 'هزینه‌ها');
     }
 
     public function storeExpense(Request $request)
@@ -598,11 +625,11 @@ class HubController extends Controller
         } catch (\Throwable) {
         }
 
-        return view('accounting::admin.payroll', [
+        return AccSafe::page('accounting::admin.payroll', [
             'runs' => $runs,
             'staff' => $this->staffOptions(),
             'period' => now()->format('Y-m'),
-        ]);
+        ], 'حقوق و دستمزد');
     }
 
     public function storePayroll(Request $request)
@@ -678,13 +705,21 @@ class HubController extends Controller
 
     public function showPayroll(int $id)
     {
-        $run = DB::table('acc_payroll_runs')->where('id', $id)->first();
-        abort_unless($run, 404);
+        return AccSafe::wrap('accounting::admin.payroll-show', function () use ($id) {
+            $run = null;
+            $slips = collect();
+            if (Schema::hasTable('acc_payroll_runs')) {
+                $run = DB::table('acc_payroll_runs')->where('id', $id)->first();
+            }
+            if ($run && Schema::hasTable('acc_payslips')) {
+                $slips = DB::table('acc_payslips')->where('payroll_run_id', $id)->orderBy('staff_name')->get();
+            }
 
-        return view('accounting::admin.payroll-show', [
-            'run' => $run,
-            'slips' => DB::table('acc_payslips')->where('payroll_run_id', $id)->orderBy('staff_name')->get(),
-        ]);
+            return [
+                'run' => $run,
+                'slips' => $slips,
+            ];
+        }, 'فیش حقوق');
     }
 
     public function commissions()
@@ -707,11 +742,15 @@ class HubController extends Controller
 
     public function goods()
     {
-        $products = AccCommerce::catalogProducts('', 300);
+        $products = collect();
+        try {
+            $products = AccCommerce::catalogProducts('', 300);
+        } catch (\Throwable) {
+        }
 
-        return view('accounting::admin.goods', [
+        return AccSafe::page('accounting::admin.goods', [
             'products' => $products,
-        ]);
+        ], 'تعریف کالا');
     }
 
     public function storeGood(Request $request)
@@ -765,17 +804,25 @@ class HubController extends Controller
     {
         $from = $request->query('from', now()->startOfMonth()->toDateString());
         $to = $request->query('to', now()->toDateString());
+        $empty = [
+            'from' => $from, 'to' => $to, 'sales' => 0, 'purchase' => 0, 'expense' => 0,
+            'commission' => 0, 'byType' => collect(), 'stockValue' => 0, 'menuReport' => [],
+            'daily' => collect(), 'types' => AccEngine::TYPES, 'profit' => 0,
+        ];
         if (! Schema::hasTable('acc_documents')) {
-            return view('accounting::admin.reports', [
-                'from' => $from, 'to' => $to, 'sales' => 0, 'purchase' => 0, 'expense' => 0,
-                'commission' => 0, 'byType' => collect(), 'stockValue' => 0, 'menuReport' => [],
-                'daily' => collect(), 'types' => AccEngine::TYPES, 'profit' => 0,
-            ]);
+            return AccSafe::page('accounting::admin.reports', $empty, 'مرکز گزارش‌ها');
         }
+        try {
         $sales = (int) DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('total');
         $purchase = (int) DB::table('acc_documents')->where('type', 'purchase')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('total');
         $expense = (int) DB::table('acc_documents')->where('type', 'expense')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('total');
-        $commission = (int) DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('commission_amount');
+        $commission = 0;
+        try {
+            if (Schema::hasColumn('acc_documents', 'commission_amount')) {
+                $commission = (int) DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('commission_amount');
+            }
+        } catch (\Throwable) {
+        }
         $byType = DB::table('acc_documents')
             ->select('type', DB::raw('count(*) as c'), DB::raw('sum(total) as s'))
             ->whereBetween('doc_date', [$from, $to])
@@ -793,7 +840,7 @@ class HubController extends Controller
             ['key' => 'expense', 'label' => 'هزینه', 'count' => (int) DB::table('acc_documents')->where('type', 'expense')->whereBetween('doc_date', [$from, $to])->count(), 'total' => $expense],
             ['key' => 'stock', 'label' => 'انبار', 'count' => (int) DB::table('acc_documents')->whereIn('type', ['stock_in', 'stock_out', 'transfer'])->whereBetween('doc_date', [$from, $to])->count(), 'total' => $stockValue],
             ['key' => 'payroll', 'label' => 'حقوق', 'count' => (int) (Schema::hasTable('acc_payroll_runs') ? DB::table('acc_payroll_runs')->whereBetween('created_at', [$from.' 00:00:00', $to.' 23:59:59'])->count() : 0), 'total' => (int) (Schema::hasTable('acc_payroll_runs') ? DB::table('acc_payroll_runs')->whereBetween('created_at', [$from.' 00:00:00', $to.' 23:59:59'])->sum('total_net') : 0)],
-            ['key' => 'commission', 'label' => 'کمیسیون', 'count' => (int) DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->where('commission_amount', '>', 0)->whereBetween('doc_date', [$from, $to])->count(), 'total' => $commission],
+            ['key' => 'commission', 'label' => 'کمیسیون', 'count' => (int) (Schema::hasColumn('acc_documents', 'commission_amount') ? DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->where('commission_amount', '>', 0)->whereBetween('doc_date', [$from, $to])->count() : 0), 'total' => $commission],
             ['key' => 'banks', 'label' => 'بانک‌ها', 'count' => (int) DB::table('acc_banks')->where('is_active', 1)->count(), 'total' => (int) DB::table('acc_banks')->sum('opening_balance')],
             ['key' => 'warehouses', 'label' => 'انبارها', 'count' => (int) DB::table('acc_warehouses')->where('is_active', 1)->count(), 'total' => $stockValue],
         ];
@@ -804,10 +851,13 @@ class HubController extends Controller
             ->orderBy('doc_date')
             ->get();
 
-        return view('accounting::admin.reports', compact('from', 'to', 'sales', 'purchase', 'expense', 'commission', 'byType', 'stockValue', 'menuReport', 'daily') + [
+        return AccSafe::page('accounting::admin.reports', compact('from', 'to', 'sales', 'purchase', 'expense', 'commission', 'byType', 'stockValue', 'menuReport', 'daily') + [
             'types' => AccEngine::TYPES,
             'profit' => $sales - $purchase - $expense - $commission,
-        ]);
+        ], 'مرکز گزارش‌ها');
+        } catch (\Throwable) {
+            return AccSafe::page('accounting::admin.reports', $empty, 'مرکز گزارش‌ها');
+        }
     }
 
     /* ─── CRUD: warehouses ─── */
@@ -895,10 +945,19 @@ class HubController extends Controller
     /* ─── CRUD: expense categories + chart accounts ─── */
     public function settings()
     {
-        return view('accounting::admin.settings', [
-            'categories' => DB::table('acc_expense_categories')->orderBy('name')->get(),
-            'accounts' => DB::table('acc_accounts')->orderBy('code')->get(),
-        ]);
+        $categories = collect();
+        $accounts = collect();
+        try {
+            if (Schema::hasTable('acc_expense_categories')) {
+                $categories = DB::table('acc_expense_categories')->orderBy('name')->get();
+            }
+            if (Schema::hasTable('acc_accounts')) {
+                $accounts = DB::table('acc_accounts')->orderBy('code')->get();
+            }
+        } catch (\Throwable) {
+        }
+
+        return AccSafe::page('accounting::admin.settings', compact('categories', 'accounts'), 'تنظیمات حسابداری');
     }
 
     public function storeCategory(Request $request)

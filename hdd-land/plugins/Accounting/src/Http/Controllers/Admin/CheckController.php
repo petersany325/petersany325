@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Plugins\Accounting\Plugin;
 use Plugins\Accounting\src\Support\AccEngine;
+use Plugins\Accounting\src\Support\AccSafe;
 
 class CheckController extends Controller
 {
@@ -20,87 +21,91 @@ class CheckController extends Controller
         }
     }
 
-    public function index(Request $request)
+    public function index(Request $request, string $heading = 'مدیریت چک‌ها', string $forceDirection = '')
     {
-        abort_unless(Schema::hasTable('acc_checks'), 404);
+        return AccSafe::wrap('accounting::admin.checks', function () use ($request, $heading, $forceDirection) {
+            $status = trim((string) $request->get('status', ''));
+            $direction = $forceDirection !== '' ? $forceDirection : trim((string) $request->get('direction', ''));
+            $q = trim((string) $request->get('q', ''));
+            $items = collect();
+            $summary = collect();
+            $alerts = [];
+            if (Schema::hasTable('acc_checks')) {
+                $query = DB::table('acc_checks')->orderByDesc('id');
+                if ($status !== '' && isset(AccEngine::CHECK_STATUSES[$status])) {
+                    $query->where('status', $status);
+                }
+                if ($direction !== '' && isset(AccEngine::CHECK_DIRECTIONS[$direction])) {
+                    $query->where('direction', $direction);
+                }
+                if ($q !== '') {
+                    $query->where(function ($w) use ($q) {
+                        $w->where('number', 'like', "%{$q}%")
+                            ->orWhere('sayad', 'like', "%{$q}%")
+                            ->orWhere('party_name', 'like', "%{$q}%")
+                            ->orWhere('bank_name', 'like', "%{$q}%");
+                    });
+                }
+                $items = $query->limit(300)->get();
+                $summary = DB::table('acc_checks')
+                    ->selectRaw('status, COUNT(*) as c, SUM(amount) as s')
+                    ->groupBy('status')
+                    ->get()
+                    ->keyBy('status');
+                $alerts = AccEngine::dueCheckAlerts(40);
+            }
 
-        $status = trim((string) $request->get('status', ''));
-        $direction = trim((string) $request->get('direction', ''));
-        $q = trim((string) $request->get('q', ''));
-
-        $query = DB::table('acc_checks')->orderByDesc('id');
-        if ($status !== '' && isset(AccEngine::CHECK_STATUSES[$status])) {
-            $query->where('status', $status);
-        }
-        if ($direction !== '' && isset(AccEngine::CHECK_DIRECTIONS[$direction])) {
-            $query->where('direction', $direction);
-        }
-        if ($q !== '') {
-            $query->where(function ($w) use ($q) {
-                $w->where('number', 'like', "%{$q}%")
-                    ->orWhere('sayad', 'like', "%{$q}%")
-                    ->orWhere('party_name', 'like', "%{$q}%")
-                    ->orWhere('bank_name', 'like', "%{$q}%");
-            });
-        }
-
-        $items = $query->limit(300)->get();
-        $summary = DB::table('acc_checks')
-            ->selectRaw('status, COUNT(*) as c, SUM(amount) as s')
-            ->groupBy('status')
-            ->get()
-            ->keyBy('status');
-
-        return view('accounting::admin.checks', [
-            'items' => $items,
-            'banks' => Schema::hasTable('acc_banks') ? DB::table('acc_banks')->where('is_active', true)->orderBy('name')->get() : collect(),
-            'books' => Schema::hasTable('acc_checkbooks') ? DB::table('acc_checkbooks')->where('is_active', 1)->orderBy('owner_name')->get() : collect(),
-            'status' => $status,
-            'direction' => $direction,
-            'q' => $q,
-            'summary' => $summary,
-            'statuses' => AccEngine::CHECK_STATUSES,
-            'directions' => AccEngine::CHECK_DIRECTIONS,
-            'alerts' => AccEngine::dueCheckAlerts(40),
-            'heading' => 'مدیریت چک‌ها',
-            'forceDirection' => '',
-        ]);
+            return [
+                'items' => $items,
+                'banks' => Schema::hasTable('acc_banks') ? DB::table('acc_banks')->where('is_active', true)->orderBy('name')->get() : collect(),
+                'books' => Schema::hasTable('acc_checkbooks') ? DB::table('acc_checkbooks')->where('is_active', 1)->orderBy('owner_name')->get() : collect(),
+                'status' => $status,
+                'direction' => $direction,
+                'q' => $q,
+                'summary' => $summary,
+                'statuses' => AccEngine::CHECK_STATUSES,
+                'directions' => AccEngine::CHECK_DIRECTIONS,
+                'alerts' => $alerts,
+                'heading' => $heading,
+                'forceDirection' => $forceDirection,
+            ];
+        }, $heading);
     }
 
     public function received(Request $request)
     {
         $request->merge(['direction' => 'receivable']);
-        $view = $this->index($request);
-        $view->with('heading', 'چک دریافتی از مشتری');
-        $view->with('forceDirection', 'receivable');
 
-        return $view;
+        return $this->index($request, 'چک دریافتی از مشتری', 'receivable');
     }
 
     public function spent(Request $request)
     {
         $request->merge(['direction' => 'spent']);
-        $view = $this->index($request);
-        $view->with('heading', 'چک خرج‌شده به مشتری');
-        $view->with('forceDirection', 'spent');
 
-        return $view;
+        return $this->index($request, 'چک خرج‌شده به مشتری', 'spent');
     }
 
     public function alerts()
     {
-        $items = AccEngine::dueCheckAlerts(300);
-        $default = AccEngine::defaultCheckAlertDays();
-        $parties = Schema::hasTable('acc_party_alerts')
-            ? DB::table('acc_party_alerts')->orderBy('party_name')->get()
-            : collect();
+        return AccSafe::wrap('accounting::admin.check-alerts', function () {
+            $items = [];
+            $parties = collect();
+            try {
+                $items = AccEngine::dueCheckAlerts(300);
+            } catch (\Throwable) {
+            }
+            if (Schema::hasTable('acc_party_alerts')) {
+                $parties = DB::table('acc_party_alerts')->orderBy('party_name')->get();
+            }
 
-        return view('accounting::admin.check-alerts', [
-            'items' => $items,
-            'defaultDays' => $default,
-            'parties' => $parties,
-            'statuses' => AccEngine::CHECK_STATUSES,
-        ]);
+            return [
+                'items' => $items,
+                'defaultDays' => AccEngine::defaultCheckAlertDays(),
+                'parties' => $parties,
+                'statuses' => AccEngine::CHECK_STATUSES,
+            ];
+        }, 'اخطار سررسید چک');
     }
 
     public function saveAlertSetting(Request $request)
@@ -147,16 +152,18 @@ class CheckController extends Controller
             ? DB::table('acc_checkbooks')->orderByDesc('id')->get()
             : collect();
 
-        return view('accounting::admin.checkbooks', [
+        return AccSafe::page('accounting::admin.checkbooks', [
             'items' => $items,
             'banks' => Schema::hasTable('acc_banks') ? DB::table('acc_banks')->where('is_active', 1)->orderBy('name')->get() : collect(),
             'defaultDays' => AccEngine::defaultCheckAlertDays(),
-        ]);
+        ], 'دسته چک');
     }
 
     public function storeBook(Request $request)
     {
-        abort_unless(Schema::hasTable('acc_checkbooks'), 404);
+        if (! Schema::hasTable('acc_checkbooks')) {
+            return back()->with('error', 'جدول دسته چک آماده نیست.');
+        }
         $name = trim((string) $request->input('owner_name', ''));
         $count = (int) $request->input('leaf_count', 0);
         if ($name === '' || $count < 1) {
@@ -206,7 +213,9 @@ class CheckController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless(Schema::hasTable('acc_checks'), 404);
+        if (! Schema::hasTable('acc_checks')) {
+            return back()->with('error', 'جدول چک‌ها آماده نیست.');
+        }
 
         $direction = (string) $request->input('direction', 'receivable');
         if (! isset(AccEngine::CHECK_DIRECTIONS[$direction])) {
