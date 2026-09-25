@@ -37,8 +37,15 @@ class HubController extends Controller
         } catch (\Throwable) {
         }
 
+        $stats = [];
+        try {
+            $stats = AccEngine::dashboardStats();
+        } catch (\Throwable) {
+            $stats = ['sales_total' => 0, 'purchase_total' => 0, 'expense_total' => 0, 'proforma_open' => 0, 'warehouses' => 0, 'banks' => 0, 'docs' => [], 'check_alerts' => 0];
+        }
+
         return view('accounting::admin.hub', [
-            'stats' => AccEngine::dashboardStats(),
+            'stats' => $stats,
             'types' => AccEngine::TYPES,
             'recent' => $recent,
             'synced' => $synced,
@@ -57,6 +64,14 @@ class HubController extends Controller
     public function docs(Request $request)
     {
         $type = (string) $request->query('type', '');
+        if (! Schema::hasTable('acc_documents')) {
+            return view('accounting::admin.docs', [
+                'docs' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 30),
+                'type' => $type,
+                'types' => AccEngine::TYPES,
+                'search' => '',
+            ]);
+        }
         $q = DB::table('acc_documents')->orderByDesc('id');
         if ($type !== '' && isset(AccEngine::TYPES[$type])) {
             $q->where('type', $type);
@@ -83,16 +98,35 @@ class HubController extends Controller
             $type = 'sale';
         }
 
+        $safe = function (callable $fn) {
+            try {
+                return $fn();
+            } catch (\Throwable) {
+                return collect();
+            }
+        };
+
+        $accounts = $safe(function () {
+            $q = DB::table('acc_accounts')->where('is_active', 1)->orderBy('code');
+            if (Schema::hasColumn('acc_accounts', 'is_postable')) {
+                $q->where(function ($w) {
+                    $w->where('is_postable', 1)->orWhere('level', 'moeen')->orWhere('level', 'tafsil');
+                });
+            }
+
+            return $q->get();
+        });
+
         return view('accounting::admin.doc-form', [
             'type' => $type,
             'types' => AccEngine::TYPES,
-            'warehouses' => DB::table('acc_warehouses')->where('is_active', 1)->orderBy('name')->get(),
-            'banks' => DB::table('acc_banks')->where('is_active', 1)->orderBy('name')->get(),
-            'accounts' => DB::table('acc_accounts')->where('is_active', 1)->orderBy('code')->get(),
-            'categories' => DB::table('acc_expense_categories')->where('is_active', 1)->orderBy('name')->get(),
+            'warehouses' => $safe(fn () => DB::table('acc_warehouses')->where('is_active', 1)->orderBy('name')->get()),
+            'banks' => $safe(fn () => DB::table('acc_banks')->where('is_active', 1)->orderBy('name')->get()),
+            'accounts' => $accounts,
+            'categories' => $safe(fn () => DB::table('acc_expense_categories')->where('is_active', 1)->orderBy('name')->get()),
             'staff' => $this->staffOptions(),
-            'products' => AccCommerce::catalogProducts('', 120),
-            'customers' => AccCommerce::customers('', 120),
+            'products' => AccCommerce::catalogProducts('', 200),
+            'customers' => AccCommerce::customers('', 200),
             'doc' => null,
             'lines' => [],
             'number' => AccEngine::nextNumber($type),
@@ -114,48 +148,118 @@ class HubController extends Controller
         $sides = (array) $request->input('line_side', []);
         $accountIds = (array) $request->input('line_account_id', []);
         $productIds = (array) $request->input('line_product_id', []);
+        $skusIn = (array) $request->input('line_sku', []);
+        $unitsIn = (array) $request->input('line_unit', []);
+        $vatRates = (array) $request->input('line_vat_rate', []);
+        $discRates = (array) $request->input('line_discount_rate', []);
+        $debits = (array) $request->input('line_debit', []);
+        $credits = (array) $request->input('line_credit', []);
+        $tafsils = (array) $request->input('line_tafsil', []);
 
         $lines = [];
         $subtotal = 0;
-        foreach ($titles as $i => $title) {
-            $title = trim((string) $title);
+        $lineDiscount = 0;
+        $lineTax = 0;
+        $debitSum = 0;
+        $creditSum = 0;
+        $rowCount = max(count($titles), count($accountIds), count($debits), count($productIds));
+        for ($i = 0; $i < $rowCount; $i++) {
+            $title = trim((string) ($titles[$i] ?? ''));
             $productId = (int) ($productIds[$i] ?? 0) ?: null;
-            $sku = null;
-            $qty = (float) str_replace(',', '', (string) ($qtys[$i] ?? 1));
+            $sku = trim((string) ($skusIn[$i] ?? '')) ?: null;
+            $unit = trim((string) ($unitsIn[$i] ?? '')) ?: 'عدد';
+            $qty = (float) str_replace(',', '', (string) ($qtys[$i] ?? ($type === 'voucher' ? 1 : 1)));
             $price = (int) str_replace(',', '', (string) ($prices[$i] ?? 0));
             $cost = (int) str_replace(',', '', (string) ($costs[$i] ?? 0));
+            $vatRate = (float) str_replace(',', '', (string) ($vatRates[$i] ?? 0));
+            $discRate = (float) str_replace(',', '', (string) ($discRates[$i] ?? 0));
+            $debit = (int) str_replace(',', '', (string) ($debits[$i] ?? 0));
+            $credit = (int) str_replace(',', '', (string) ($credits[$i] ?? 0));
+            $accountId = (int) ($accountIds[$i] ?? 0) ?: null;
+            $tafsil = trim((string) ($tafsils[$i] ?? '')) ?: null;
             if ($productId && Schema::hasTable('products')) {
                 $p = DB::table('products')->where('id', $productId)->first();
                 if ($p) {
                     $title = $title !== '' ? $title : (string) ($p->name ?? '');
-                    $sku = $p->sku ?? null;
+                    $sku = $sku ?: ($p->sku ?? null);
                     if ($price <= 0) {
                         $price = (int) ($p->price ?? 0);
                     }
                     if ($cost <= 0) {
                         $cost = (int) ($p->cost_price ?? 0);
                     }
+                    if ($vatRate <= 0 && isset($p->vat_rate)) {
+                        $vatRate = (float) $p->vat_rate;
+                    }
+                    if (($unitsIn[$i] ?? '') === '' && ! empty($p->unit)) {
+                        $unit = (string) $p->unit;
+                    }
                 }
+            }
+            if ($type === 'voucher') {
+                if ($debit <= 0 && $credit <= 0 && ! $accountId && $title === '') {
+                    continue;
+                }
+                if ($debit > 0 && $credit > 0) {
+                    return back()->withInput()->with('error', 'در هر سطر سند فقط بدهکار یا بستانکار وارد شود.');
+                }
+                if ($accountId < 1 || ($debit + $credit) <= 0) {
+                    continue;
+                }
+                $side = $credit > 0 ? 'credit' : 'debit';
+                $amount = $debit + $credit;
+                $debitSum += $debit;
+                $creditSum += $credit;
+                $lines[] = [
+                    'title' => $title !== '' ? $title : 'ماده سند',
+                    'sku' => $sku,
+                    'qty' => 1,
+                    'unit_price' => $debit,
+                    'unit_cost' => $credit,
+                    'line_total' => $amount,
+                    'side' => $side,
+                    'account_id' => $accountId,
+                    'tafsil' => $tafsil,
+                    'serials' => [],
+                ];
+                $subtotal += $amount;
+
+                continue;
             }
             if ($title === '') {
                 continue;
             }
-            $lineTotal = (int) round($qty * $price);
-            $subtotal += $lineTotal;
+            $gross = (int) round($qty * $price);
+            $discAmt = (int) round($gross * max(0, $discRate) / 100);
+            $afterDisc = max(0, $gross - $discAmt);
+            $vatAmt = (int) round($afterDisc * max(0, $vatRate) / 100);
+            $lineTotal = $afterDisc + $vatAmt;
+            $subtotal += $gross;
+            $lineDiscount += $discAmt;
+            $lineTax += $vatAmt;
             $snRaw = (string) ($serials[$i] ?? '');
             $snList = preg_split('/[\s,;]+/u', $snRaw, -1, PREG_SPLIT_NO_EMPTY) ?: [];
             $lines[] = [
                 'product_id' => $productId,
                 'title' => $title,
                 'sku' => $sku,
+                'unit' => $unit,
                 'qty' => $qty,
                 'unit_price' => $price,
                 'unit_cost' => $cost,
+                'vat_rate' => $vatRate,
+                'discount_rate' => $discRate,
                 'line_total' => $lineTotal,
                 'side' => $sides[$i] ?? null,
-                'account_id' => $accountIds[$i] ?? null,
+                'account_id' => $accountId,
                 'serials' => $snList,
             ];
+        }
+
+        if ($type === 'voucher') {
+            if ($lines === [] || $debitSum !== $creditSum || $debitSum <= 0) {
+                return back()->withInput()->with('error', 'سند دستی باید حداقل دو ماده داشته باشد و جمع بدهکار با بستانکار برابر باشد.');
+            }
         }
 
         if ($lines === [] && $type !== 'expense') {
@@ -175,11 +279,32 @@ class HubController extends Controller
             $subtotal = $amount;
         }
 
-        $discount = (int) str_replace(',', '', (string) $request->input('discount', 0));
-        $tax = (int) str_replace(',', '', (string) $request->input('tax', 0));
-        $total = max(0, $subtotal - $discount + $tax);
+        $discount = (int) str_replace(',', '', (string) $request->input('discount', 0)) + $lineDiscount;
+        $tax = (int) str_replace(',', '', (string) $request->input('tax', 0)) + $lineTax;
+        $total = $type === 'voucher' ? $debitSum : max(0, $subtotal - $discount + $tax);
+        $staffId = $request->filled('staff_id') ? (int) $request->input('staff_id') : null;
         $rate = (float) $request->input('commission_rate', 0);
-        $commission = (int) round($total * $rate / 100);
+        if ($staffId && $rate <= 0) {
+            $staff = $this->staffOptions()->firstWhere('id', $staffId);
+            if ($staff) {
+                $kind = (string) ($staff->kind ?? 'employee');
+                $rate = $kind === 'visitor'
+                    ? (float) ($staff->profit_rate ?? 0)
+                    : (float) ($staff->commission_rate ?? 0);
+            }
+        }
+        $commissionBase = $total;
+        if ($staffId) {
+            $staff = $this->staffOptions()->firstWhere('id', $staffId);
+            if ($staff && (string) ($staff->kind ?? '') === 'visitor') {
+                $cogs = 0;
+                foreach ($lines as $ln) {
+                    $cogs += (int) round(((float) ($ln['qty'] ?? 1)) * ((int) ($ln['unit_cost'] ?? 0)));
+                }
+                $commissionBase = max(0, $total - $cogs);
+            }
+        }
+        $commission = (int) round($commissionBase * $rate / 100);
 
         $partyUserId = $request->filled('party_user_id') ? (int) $request->input('party_user_id') : null;
         $partyName = trim((string) $request->input('party_name', ''));
@@ -194,7 +319,7 @@ class HubController extends Controller
             'party_name' => $partyName !== '' ? $partyName : null,
             'party_user_id' => $partyUserId,
             'source' => 'manual',
-            'warehouse_id' => $request->input('warehouse_id') ?: null,
+            'warehouse_id' => $request->input('warehouse_id') ?: AccCommerce::defaultWarehouseId(),
             'warehouse_to_id' => $request->input('warehouse_to_id') ?: null,
             'bank_id' => $request->input('bank_id') ?: null,
             'staff_id' => $request->input('staff_id') ?: null,
@@ -213,7 +338,7 @@ class HubController extends Controller
             AccEngine::issueDocument($id);
         }
 
-        return redirect()->route('admin.accounting.doc', $id)->with('success', 'سند ذخیره شد.');
+        return redirect(url('/admin/accounting/docs/'.$id))->with('success', 'سند ذخیره شد.');
     }
 
     public function showDoc(int $id)
@@ -247,7 +372,7 @@ class HubController extends Controller
             return back()->with('error', 'پیش‌فاکتور یافت نشد.');
         }
 
-        return redirect()->route('admin.accounting.doc', $newId)->with('success', 'به فاکتور فروش تبدیل شد.');
+        return redirect(url('/admin/accounting/docs/'.$newId))->with('success', 'به فاکتور فروش تبدیل شد.');
     }
 
     public function warehouses()
@@ -424,8 +549,16 @@ class HubController extends Controller
 
     public function payroll()
     {
+        $runs = collect();
+        try {
+            if (Schema::hasTable('acc_payroll_runs')) {
+                $runs = DB::table('acc_payroll_runs')->orderByDesc('id')->limit(24)->get();
+            }
+        } catch (\Throwable) {
+        }
+
         return view('accounting::admin.payroll', [
-            'runs' => DB::table('acc_payroll_runs')->orderByDesc('id')->limit(24)->get(),
+            'runs' => $runs,
             'staff' => $this->staffOptions(),
             'period' => now()->format('Y-m'),
         ]);
@@ -445,16 +578,33 @@ class HubController extends Controller
         $tb = $tc = $td = $tn = 0;
         foreach ($staffRows as $s) {
             $base = (int) ($s->base_salary ?? 0);
-            $rate = (float) ($s->commission_rate ?? 0);
-            // commission estimate from issued sales attributed to staff this period
+            $kind = (string) ($s->kind ?? 'employee');
+            $rate = $kind === 'visitor'
+                ? (float) ($s->profit_rate ?? $s->commission_rate ?? 0)
+                : (float) ($s->commission_rate ?? 0);
             $commission = 0;
             try {
-                $commission = (int) DB::table('acc_documents')
+                $docsQ = DB::table('acc_documents')
                     ->where('type', 'sale')
                     ->where('staff_id', $s->id)
                     ->where('status', 'issued')
-                    ->where('doc_date', 'like', $period.'%')
-                    ->sum('commission_amount');
+                    ->where('doc_date', 'like', $period.'%');
+                if ($kind === 'visitor') {
+                    $sales = (int) (clone $docsQ)->sum('total');
+                    $cogs = 0;
+                    if (Schema::hasTable('acc_document_lines')) {
+                        $ids = (clone $docsQ)->pluck('id');
+                        if ($ids->isNotEmpty()) {
+                            $cogs = (int) DB::table('acc_document_lines')
+                                ->whereIn('document_id', $ids)
+                                ->selectRaw('COALESCE(SUM(qty * unit_cost),0) as c')
+                                ->value('c');
+                        }
+                    }
+                    $commission = (int) round(max(0, $sales - $cogs) * $rate / 100);
+                } else {
+                    $commission = (int) $docsQ->sum('commission_amount');
+                }
             } catch (\Throwable) {
             }
             $deduction = 0;
@@ -482,7 +632,7 @@ class HubController extends Controller
             'updated_at' => now(),
         ]);
 
-        return redirect()->route('admin.accounting.payroll.show', $runId)->with('success', 'لیست حقوق محاسبه شد.');
+        return redirect(url('/admin/accounting/payroll/'.$runId))->with('success', 'لیست حقوق محاسبه شد.');
     }
 
     public function showPayroll(int $id)
@@ -498,22 +648,7 @@ class HubController extends Controller
 
     public function commissions()
     {
-        $staff = $this->staffOptions();
-        $rows = [];
-        foreach ($staff as $s) {
-            $sales = (int) DB::table('acc_documents')->where('type', 'sale')->where('staff_id', $s->id)->where('status', 'issued')->sum('total');
-            $comm = (int) DB::table('acc_documents')->where('type', 'sale')->where('staff_id', $s->id)->where('status', 'issued')->sum('commission_amount');
-            $rows[] = (object) [
-                'id' => $s->id,
-                'name' => $s->name,
-                'role' => $s->role ?? '',
-                'rate' => (float) ($s->commission_rate ?? 0),
-                'sales' => $sales,
-                'commission' => $comm,
-            ];
-        }
-
-        return view('accounting::admin.commissions', ['rows' => $rows]);
+        return redirect(url('/admin/accounting/staff'))->with('success', 'تعریف کمیسیون و درصد سود خالص الان در منوی کارمند و ویزیتور است.');
     }
 
     public function updateCommission(Request $request, int $staffId)
@@ -529,10 +664,73 @@ class HubController extends Controller
         return back()->with('success', 'درصد کمیسیون به‌روز شد.');
     }
 
+    public function goods()
+    {
+        $products = AccCommerce::catalogProducts('', 300);
+
+        return view('accounting::admin.goods', [
+            'products' => $products,
+        ]);
+    }
+
+    public function storeGood(Request $request)
+    {
+        if (! Schema::hasTable('products')) {
+            return back()->with('error', 'جدول کالاهای فروشگاه آماده نیست.');
+        }
+        $name = trim((string) $request->input('name', ''));
+        if ($name === '') {
+            return back()->with('error', 'نام کالا الزامی است.');
+        }
+        $row = [
+            'name' => $name,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+        $map = [
+            'sku' => trim((string) $request->input('sku', '')) ?: null,
+            'barcode' => trim((string) $request->input('barcode', '')) ?: null,
+            'unit' => trim((string) $request->input('unit', '')) ?: 'عدد',
+            'price' => (int) str_replace(',', '', (string) $request->input('price', 0)),
+            'cost_price' => (int) str_replace(',', '', (string) $request->input('cost_price', 0)),
+            'vat_rate' => (float) $request->input('vat_rate', 0),
+            'min_qty' => (float) $request->input('min_qty', 0),
+            'stock' => (float) $request->input('stock', 0),
+        ];
+        foreach ($map as $col => $val) {
+            if (Schema::hasColumn('products', $col)) {
+                $row[$col] = $val;
+            }
+        }
+        if (Schema::hasColumn('products', 'status')) {
+            $row['status'] = $request->boolean('is_active', true) ? 'publish' : 'draft';
+        }
+        if (Schema::hasColumn('products', 'stock_status')) {
+            $row['stock_status'] = ((float) ($row['stock'] ?? 0)) > 0 ? 'instock' : 'outofstock';
+        }
+        if ($request->filled('id')) {
+            $id = (int) $request->input('id');
+            unset($row['created_at']);
+            DB::table('products')->where('id', $id)->update($row);
+
+            return back()->with('success', 'کالا به‌روز شد.');
+        }
+        DB::table('products')->insert($row);
+
+        return back()->with('success', 'کالا در فروشگاه و حسابداری ثبت شد.');
+    }
+
     public function reports(Request $request)
     {
         $from = $request->query('from', now()->startOfMonth()->toDateString());
         $to = $request->query('to', now()->toDateString());
+        if (! Schema::hasTable('acc_documents')) {
+            return view('accounting::admin.reports', [
+                'from' => $from, 'to' => $to, 'sales' => 0, 'purchase' => 0, 'expense' => 0,
+                'commission' => 0, 'byType' => collect(), 'stockValue' => 0, 'menuReport' => [],
+                'daily' => collect(), 'types' => AccEngine::TYPES, 'profit' => 0,
+            ]);
+        }
         $sales = (int) DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('total');
         $purchase = (int) DB::table('acc_documents')->where('type', 'purchase')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('total');
         $expense = (int) DB::table('acc_documents')->where('type', 'expense')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('total');
@@ -765,7 +963,7 @@ class HubController extends Controller
             return back()->with('error', 'فقط پیش‌نویس/ابطال‌شده قابل حذف قطعی است.');
         }
 
-        return redirect()->route('admin.accounting.docs')->with('success', 'سند حذف شد.');
+        return redirect(url('/admin/accounting/docs'))->with('success', 'سند حذف شد.');
     }
 
     public function deletePayroll(int $id)
@@ -778,7 +976,7 @@ class HubController extends Controller
         DB::table('acc_payslips')->where('payroll_run_id', $id)->delete();
         DB::table('acc_payroll_runs')->where('id', $id)->delete();
 
-        return redirect()->route('admin.accounting.payroll')->with('success', 'لیست حقوق حذف شد.');
+        return redirect(url('/admin/accounting/payroll'))->with('success', 'لیست حقوق حذف شد.');
     }
 
     /** @return \Illuminate\Support\Collection<int,object> */

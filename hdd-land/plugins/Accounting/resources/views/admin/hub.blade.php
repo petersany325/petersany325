@@ -48,7 +48,12 @@
   <div class="hd"><strong>منوهای حسابداری</strong><a class="btn g" href="{{ url('/admin/accounting/reports') }}">مرکز گزارش‌ها</a></div>
   <div class="bd">
     <div class="chips" style="margin:0">
-      <a href="{{ url('/admin/accounting/checks') }}">چک‌ها — پرداختی / دریافتی / برگشتی / تحویل</a>
+      <a href="{{ url('/admin/accounting/staff') }}">کارمند و ویزیتور</a>
+      <a href="{{ url('/admin/accounting/checkbooks') }}">دسته چک</a>
+      <a href="{{ url('/admin/accounting/checks/received') }}">چک دریافتی از مشتری</a>
+      <a href="{{ url('/admin/accounting/checks/spent') }}">چک خرج‌شده</a>
+      <a href="{{ url('/admin/accounting/checks/alerts') }}">اخطار سررسید چک</a>
+      <a href="{{ url('/admin/accounting/goods') }}">تعریف کالا</a>
       <a href="{{ url('/admin/accounting/installments') }}">اقساط مشتریان — تأیید و جدول اقساط</a>
       <a href="{{ url('/admin/accounting/warehouses') }}">انبار چندگانه</a>
       <a href="{{ url('/admin/accounting/reports/sales') }}">گزارش فروش/خرید (فیلتر شماره فاکتور)</a>

@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Plugins\Accounting\Plugin;
+use Plugins\Accounting\src\Support\AccCommerce;
 use Plugins\Accounting\src\Support\AccEngine;
 
 class ReportController extends Controller
@@ -26,10 +27,28 @@ class ReportController extends Controller
         $today = now()->toDateString();
         $monthStart = now()->startOfMonth()->toDateString();
 
-        $sales = (int) DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('total');
-        $purchase = (int) DB::table('acc_documents')->where('type', 'purchase')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('total');
-        $expense = (int) DB::table('acc_documents')->where('type', 'expense')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('total');
-        $commission = (int) DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('commission_amount');
+        $sum = function (string $type) use ($from, $to): int {
+            try {
+                if (! Schema::hasTable('acc_documents')) {
+                    return 0;
+                }
+                $q = DB::table('acc_documents')->where('type', $type)->where('status', 'issued')->whereBetween('doc_date', [$from, $to]);
+
+                return (int) $q->sum('total');
+            } catch (\Throwable) {
+                return 0;
+            }
+        };
+        $sales = $sum('sale');
+        $purchase = $sum('purchase');
+        $expense = $sum('expense');
+        $commission = 0;
+        try {
+            if (Schema::hasTable('acc_documents') && Schema::hasColumn('acc_documents', 'commission_amount')) {
+                $commission = (int) DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('commission_amount');
+            }
+        } catch (\Throwable) {
+        }
 
         return view('accounting::admin.reports.hub', [
             'from' => $from,
@@ -40,12 +59,37 @@ class ReportController extends Controller
             'commission' => $commission,
             'profit' => $sales - $purchase - $expense - $commission,
             'quick' => [
-                'sales_today' => (int) DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->whereDate('doc_date', $today)->sum('total'),
-                'sales_month' => (int) DB::table('acc_documents')->where('type', 'sale')->where('status', 'issued')->whereBetween('doc_date', [$monthStart, $today])->sum('total'),
-                'purchases_month' => (int) DB::table('acc_documents')->where('type', 'purchase')->where('status', 'issued')->whereBetween('doc_date', [$monthStart, $today])->sum('total'),
-                'checks_open' => Schema::hasTable('acc_checks') ? (int) DB::table('acc_checks')->whereIn('status', ['pending', 'received', 'delivered'])->count() : 0,
-                'installments_pending' => Schema::hasTable('acc_installment_requests') ? (int) DB::table('acc_installment_requests')->where('status', 'pending')->count() : 0,
-                'warehouses' => (int) DB::table('acc_warehouses')->where('is_active', true)->count(),
+                'sales_today' => (int) $this->safeSum('sale', $today, $today),
+                'sales_month' => (int) $this->safeSum('sale', $monthStart, $today),
+                'purchases_month' => (int) $this->safeSum('purchase', $monthStart, $today),
+                'checks_open' => (int) (function () {
+                    try {
+                        return Schema::hasTable('acc_checks') ? DB::table('acc_checks')->whereIn('status', ['pending', 'received', 'delivered', 'in_collection'])->count() : 0;
+                    } catch (\Throwable) {
+                        return 0;
+                    }
+                })(),
+                'installments_pending' => (int) (function () {
+                    try {
+                        return Schema::hasTable('acc_installment_requests') ? DB::table('acc_installment_requests')->where('status', 'pending')->count() : 0;
+                    } catch (\Throwable) {
+                        return 0;
+                    }
+                })(),
+                'warehouses' => (int) (function () {
+                    try {
+                        return Schema::hasTable('acc_warehouses') ? DB::table('acc_warehouses')->where('is_active', true)->count() : 0;
+                    } catch (\Throwable) {
+                        return 0;
+                    }
+                })(),
+                'check_alerts' => (int) (function () {
+                    try {
+                        return count(AccEngine::dueCheckAlerts());
+                    } catch (\Throwable) {
+                        return 0;
+                    }
+                })(),
             ],
             'links' => [
                 ['href' => '/admin/accounting/reports/sales', 'label' => 'فروش و خرید', 'desc' => 'فیلتر تاریخ، شماره فاکتور، طرف حساب، انبار، فروشنده'],
@@ -56,11 +100,55 @@ class ReportController extends Controller
                 ['href' => '/admin/accounting/reports/customers', 'label' => 'مشتریان', 'desc' => 'جمع خرید هر مشتری'],
                 ['href' => '/admin/accounting/reports/checks', 'label' => 'چک‌ها', 'desc' => 'پرداختی، دریافتی، برگشتی، تحویل'],
                 ['href' => '/admin/accounting/reports/installments', 'label' => 'اقساط', 'desc' => 'درخواست‌های اقساطی مشتریان'],
+                ['href' => '/admin/accounting/reports/shop-stock', 'label' => 'موجودی فروشگاه', 'desc' => 'تطبیق انبار حسابداری با موجودی سایت'],
                 ['href' => '/admin/accounting/reports/trial', 'label' => 'تراز آزمایشی', 'desc' => 'مانده هر حساب از دفتر کل'],
                 ['href' => '/admin/accounting/reports/income', 'label' => 'سود و زیان', 'desc' => 'درآمد، بها و هزینه از روی کدینگ'],
                 ['href' => '/admin/accounting/reports/balance', 'label' => 'ترازنامه', 'desc' => 'دارایی، بدهی و سرمایه'],
             ],
         ]);
+    }
+
+    public function shopStock()
+    {
+        $rows = [];
+        try {
+            if (Schema::hasTable('products')) {
+                $products = AccCommerce::catalogProducts('', 400);
+                $acc = [];
+                if (Schema::hasTable('acc_stock_balances')) {
+                    foreach (DB::table('acc_stock_balances')->select('product_id', DB::raw('SUM(qty) as qty'))->groupBy('product_id')->get() as $b) {
+                        $acc[(int) $b->product_id] = (float) $b->qty;
+                    }
+                }
+                $sold = [];
+                if (Schema::hasTable('acc_document_lines') && Schema::hasTable('acc_documents')) {
+                    foreach (DB::table('acc_document_lines as l')
+                        ->join('acc_documents as d', 'd.id', '=', 'l.document_id')
+                        ->where('d.type', 'sale')->where('d.status', 'issued')
+                        ->whereNotNull('l.product_id')
+                        ->select('l.product_id', DB::raw('SUM(l.qty) as qty'))
+                        ->groupBy('l.product_id')->get() as $s) {
+                        $sold[(int) $s->product_id] = (float) $s->qty;
+                    }
+                }
+                foreach ($products as $p) {
+                    $site = (float) ($p->stock ?? 0);
+                    $wh = (float) ($acc[(int) $p->id] ?? 0);
+                    $rows[] = (object) [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                        'sku' => $p->sku ?? '',
+                        'site' => $site,
+                        'warehouse' => $wh,
+                        'sold' => (float) ($sold[(int) $p->id] ?? 0),
+                        'diff' => $site - $wh,
+                    ];
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return view('accounting::admin.reports.shop-stock', ['rows' => $rows]);
     }
 
     public function sales(Request $request)
@@ -72,20 +160,36 @@ class ReportController extends Controller
         $warehouseId = (int) $request->get('warehouse_id', 0);
         $staffId = (int) $request->get('staff_id', 0);
 
+        if (! Schema::hasTable('acc_documents')) {
+            return view('accounting::admin.reports.sales', [
+                'type' => $type, 'from' => $from, 'to' => $to,
+                'filters' => compact('docNo', 'party', 'warehouseId', 'staffId'),
+                'rows' => collect(),
+                'sum' => ['count' => 0, 'subtotal' => 0, 'discount' => 0, 'tax' => 0, 'total' => 0, 'commission' => 0],
+                'warehouses' => collect(), 'staff' => collect(), 'types' => AccEngine::TYPES,
+            ]);
+        }
+        $select = [
+            'd.id', 'd.number', 'd.doc_date', 'd.party_name', 'd.party_user_id',
+            'd.subtotal', 'd.discount', 'd.tax', 'd.total',
+            'd.staff_id',
+            'w.name as warehouse_name',
+        ];
+        if (Schema::hasColumn('acc_documents', 'commission_amount')) {
+            $select[] = 'd.commission_amount';
+        }
         $q = DB::table('acc_documents as d')
-            ->leftJoin('staff_members as sm', 'sm.id', '=', 'd.staff_id')
-            ->leftJoin('users as u', 'u.id', '=', 'sm.user_id')
             ->leftJoin('acc_warehouses as w', 'w.id', '=', 'd.warehouse_id')
             ->where('d.type', $type)
             ->where('d.status', 'issued')
-            ->whereBetween('d.doc_date', [$from, $to])
-            ->select([
-                'd.id', 'd.number', 'd.doc_date', 'd.party_name', 'd.party_user_id',
-                'd.subtotal', 'd.discount', 'd.tax', 'd.total',
-                'd.commission_amount', 'd.staff_id',
-                DB::raw('COALESCE(sm.name, u.name) as staff_name'),
-                'w.name as warehouse_name',
-            ]);
+            ->whereBetween('d.doc_date', [$from, $to]);
+        if (Schema::hasTable('staff_members')) {
+            $q->leftJoin('staff_members as sm', 'sm.id', '=', 'd.staff_id');
+            $select[] = DB::raw('sm.name as staff_name');
+        } else {
+            $select[] = DB::raw("'' as staff_name");
+        }
+        $q->select($select);
 
         if ($docNo !== '') {
             $q->where('d.number', 'like', '%'.$docNo.'%');
@@ -129,21 +233,30 @@ class ReportController extends Controller
         [$from, $to] = $this->range($request);
         $staffId = (int) $request->get('staff_id', 0);
 
-        $q = DB::table('acc_documents as d')
-            ->leftJoin('staff_members as sm', 'sm.id', '=', 'd.staff_id')
-            ->leftJoin('users as u', 'u.id', '=', 'sm.user_id')
-            ->where('d.type', 'sale')
-            ->where('d.status', 'issued')
-            ->whereBetween('d.doc_date', [$from, $to])
-            ->whereNotNull('d.staff_id');
-        if ($staffId > 0) {
-            $q->where('d.staff_id', $staffId);
+        $rows = collect();
+        try {
+            if (Schema::hasTable('acc_documents')) {
+                $q = DB::table('acc_documents as d')
+                    ->where('d.type', 'sale')
+                    ->where('d.status', 'issued')
+                    ->whereBetween('d.doc_date', [$from, $to])
+                    ->whereNotNull('d.staff_id');
+                $nameExpr = 'CONCAT("#", d.staff_id)';
+                if (Schema::hasTable('staff_members')) {
+                    $q->leftJoin('staff_members as sm', 'sm.id', '=', 'd.staff_id');
+                    $nameExpr = 'COALESCE(MAX(sm.name), CONCAT("#", d.staff_id))';
+                }
+                if ($staffId > 0) {
+                    $q->where('d.staff_id', $staffId);
+                }
+                $comm = Schema::hasColumn('acc_documents', 'commission_amount') ? 'SUM(d.commission_amount)' : '0';
+                $rows = $q->selectRaw('d.staff_id, '.$nameExpr.' as staff_name, COUNT(*) as docs_count, SUM(d.total) as sales_total, '.$comm.' as commission_total, SUM(d.total) - '.$comm.' as profit_est')
+                    ->groupBy('d.staff_id')
+                    ->orderByDesc('sales_total')
+                    ->get();
+            }
+        } catch (\Throwable) {
         }
-
-        $rows = $q->selectRaw('d.staff_id, COALESCE(sm.name, u.name, CONCAT("#", d.staff_id)) as staff_name, COUNT(*) as docs_count, SUM(d.total) as sales_total, SUM(d.commission_amount) as commission_total, SUM(d.total - d.commission_amount) as profit_est')
-            ->groupBy('d.staff_id', 'sm.name', 'u.name')
-            ->orderByDesc('sales_total')
-            ->get();
 
         return view('accounting::admin.reports.staff', [
             'from' => $from,
@@ -292,7 +405,7 @@ class ReportController extends Controller
     public function checks(Request $request)
     {
         if (! Schema::hasTable('acc_checks')) {
-            return redirect()->route('admin.accounting.reports')->with('error', 'جدول چک‌ها آماده نیست.');
+            return redirect(url('/admin/accounting/reports'))->with('error', 'جدول چک‌ها آماده نیست.');
         }
 
         [$from, $to] = $this->range($request);
@@ -349,7 +462,7 @@ class ReportController extends Controller
     public function installments(Request $request)
     {
         if (! Schema::hasTable('acc_installment_requests')) {
-            return redirect()->route('admin.accounting.reports')->with('error', 'جدول اقساط آماده نیست.');
+            return redirect(url('/admin/accounting/reports'))->with('error', 'جدول اقساط آماده نیست.');
         }
 
         $status = trim((string) $request->get('status', ''));
@@ -365,6 +478,19 @@ class ReportController extends Controller
             'rows' => $q->orderByDesc('r.id')->limit(300)->get(),
             'statuses' => AccEngine::INSTALLMENT_STATUSES,
         ]);
+    }
+
+    private function safeSum(string $type, string $from, string $to): int
+    {
+        try {
+            if (! Schema::hasTable('acc_documents')) {
+                return 0;
+            }
+
+            return (int) DB::table('acc_documents')->where('type', $type)->where('status', 'issued')->whereBetween('doc_date', [$from, $to])->sum('total');
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     private function range(Request $request, string $default = 'month'): array

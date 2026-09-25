@@ -112,7 +112,7 @@ class InstallmentController extends Controller
             'updated_at' => now(),
         ]);
 
-        return redirect()->route('admin.accounting.installments.show', $id)
+        return redirect(url('/admin/accounting/installments/'.$id))
             ->with('success', 'درخواست اقساط ثبت شد.');
     }
 
@@ -192,6 +192,6 @@ class InstallmentController extends Controller
         }
         DB::table('acc_installment_requests')->where('id', $id)->delete();
 
-        return redirect()->route('admin.accounting.installments')->with('success', 'درخواست حذف شد.');
+        return redirect(url('/admin/accounting/installments'))->with('success', 'درخواست حذف شد.');
     }
 }

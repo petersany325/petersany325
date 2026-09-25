@@ -28,7 +28,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '1.4.0';
+        return '1.4.1';
     }
 
     public function isCore(): bool
@@ -66,6 +66,7 @@ class Plugin extends BasePlugin
             $base.'/Support/AccEngine.php',
             $base.'/Http/Controllers/Admin/HubController.php',
             $base.'/Http/Controllers/Admin/ChartController.php',
+            $base.'/Http/Controllers/Admin/StaffController.php',
             $base.'/Http/Controllers/Admin/ReportController.php',
             $base.'/Http/Controllers/Admin/CheckController.php',
             $base.'/Http/Controllers/Admin/InstallmentController.php',
@@ -102,8 +103,13 @@ class Plugin extends BasePlugin
             ['label' => 'حواله و رسید', 'route' => 'admin.accounting.stock', 'icon' => '⇄', 'group' => 'warehouse'],
             ['label' => 'بانک‌ها', 'route' => 'admin.accounting.banks', 'icon' => '₿', 'group' => 'finance'],
             ['label' => 'هزینه‌ها', 'route' => 'admin.accounting.expenses', 'icon' => '📉', 'group' => 'finance'],
+            ['label' => 'تعریف کالا و سریال', 'route' => 'admin.accounting.goods', 'icon' => '▦', 'group' => 'warehouse'],
             ['label' => 'حقوق و دستمزد', 'route' => 'admin.accounting.payroll', 'icon' => '👥', 'group' => 'hr'],
-            ['label' => 'کمیسیون فروش', 'route' => 'admin.accounting.commissions', 'icon' => '%', 'group' => 'hr'],
+            ['label' => 'کارمند و ویزیتور', 'route' => 'admin.accounting.staff', 'icon' => '👤', 'group' => 'hr'],
+            ['label' => 'دسته چک', 'route' => 'admin.accounting.checkbooks', 'icon' => '▤', 'group' => 'finance'],
+            ['label' => 'چک دریافتی از مشتری', 'route' => 'admin.accounting.checks.received', 'icon' => '▭', 'group' => 'finance'],
+            ['label' => 'چک خرج‌شده', 'route' => 'admin.accounting.checks.spent', 'icon' => '↗', 'group' => 'finance'],
+            ['label' => 'اخطار سررسید چک', 'route' => 'admin.accounting.checks.alerts', 'icon' => '⚠', 'group' => 'finance'],
             ['label' => 'چک‌ها', 'route' => 'admin.accounting.checks', 'icon' => '▭', 'group' => 'finance'],
             ['label' => 'اقساط مشتریان', 'route' => 'admin.accounting.installments', 'icon' => '◫', 'group' => 'finance'],
             ['label' => 'گزارش خرید و فروش', 'route' => 'admin.accounting.reports.sales', 'icon' => '📈', 'group' => 'reports'],
@@ -116,6 +122,7 @@ class Plugin extends BasePlugin
             ['label' => 'گزارش مشتریان', 'route' => 'admin.accounting.reports.customers', 'icon' => '☺', 'group' => 'reports'],
             ['label' => 'گزارش چک‌ها', 'route' => 'admin.accounting.reports.checks', 'icon' => '▭', 'group' => 'reports'],
             ['label' => 'گزارش اقساط', 'route' => 'admin.accounting.reports.installments', 'icon' => '◫', 'group' => 'reports'],
+            ['label' => 'تطبیق موجودی سایت', 'route' => 'admin.accounting.reports.shop-stock', 'icon' => '▦', 'group' => 'reports'],
         ];
     }
 
@@ -392,6 +399,81 @@ class Plugin extends BasePlugin
             static::ensureColumn('acc_installment_requests', 'order_id', function ($t) {
                 $t->unsignedBigInteger('order_id')->nullable()->index();
             });
+            static::ensureColumn('acc_document_lines', 'unit', function ($t) {
+                $t->string('unit', 24)->nullable();
+            });
+            static::ensureColumn('acc_document_lines', 'vat_rate', function ($t) {
+                $t->decimal('vat_rate', 6, 2)->default(0);
+            });
+            static::ensureColumn('acc_document_lines', 'discount_rate', function ($t) {
+                $t->decimal('discount_rate', 6, 2)->default(0);
+            });
+            static::ensureColumn('acc_document_lines', 'tafsil', function ($t) {
+                $t->string('tafsil', 160)->nullable();
+            });
+            static::ensureColumn('acc_checks', 'checkbook_id', function ($t) {
+                $t->unsignedBigInteger('checkbook_id')->nullable()->index();
+            });
+            static::ensureColumn('acc_checks', 'endorsed_to', function ($t) {
+                $t->string('endorsed_to', 190)->nullable();
+            });
+            static::ensureColumn('acc_checks', 'alert_days', function ($t) {
+                $t->unsignedSmallInteger('alert_days')->nullable();
+            });
+            if (! Schema::hasTable('acc_checkbooks')) {
+                Schema::create('acc_checkbooks', function ($t) {
+                    $t->id();
+                    $t->string('owner_type', 16)->default('company')->index(); // company | person
+                    $t->string('owner_name');
+                    $t->string('bank_name', 120)->nullable();
+                    $t->unsignedBigInteger('bank_id')->nullable();
+                    $t->string('series_from', 40)->nullable();
+                    $t->string('series_to', 40)->nullable();
+                    $t->unsignedInteger('leaf_count')->default(0);
+                    $t->unsignedInteger('used_count')->default(0);
+                    $t->unsignedSmallInteger('alert_days')->default(3);
+                    $t->boolean('is_active')->default(true);
+                    $t->text('notes')->nullable();
+                    $t->timestamps();
+                });
+            }
+            if (! Schema::hasTable('acc_party_alerts')) {
+                Schema::create('acc_party_alerts', function ($t) {
+                    $t->id();
+                    $t->string('party_name')->nullable();
+                    $t->unsignedBigInteger('party_user_id')->nullable()->index();
+                    $t->string('owner_type', 16)->default('person'); // company | person
+                    $t->unsignedSmallInteger('alert_days')->default(3);
+                    $t->timestamps();
+                });
+            }
+            if (Schema::hasTable('staff_members')) {
+                static::ensureColumn('staff_members', 'kind', function ($t) {
+                    $t->string('kind', 16)->default('employee')->index();
+                });
+                static::ensureColumn('staff_members', 'profit_rate', function ($t) {
+                    $t->decimal('profit_rate', 5, 2)->default(0);
+                });
+                static::ensureColumn('staff_members', 'check_alert_days', function ($t) {
+                    $t->unsignedSmallInteger('check_alert_days')->default(3);
+                });
+            }
+            if (Schema::hasTable('products')) {
+                static::ensureColumn('products', 'unit', function ($t) {
+                    $t->string('unit', 24)->nullable();
+                });
+                static::ensureColumn('products', 'vat_rate', function ($t) {
+                    $t->decimal('vat_rate', 6, 2)->default(0);
+                });
+                static::ensureColumn('products', 'min_qty', function ($t) {
+                    $t->decimal('min_qty', 12, 3)->default(0);
+                });
+                if (! Schema::hasColumn('products', 'barcode')) {
+                    static::ensureColumn('products', 'barcode', function ($t) {
+                        $t->string('barcode', 64)->nullable()->index();
+                    });
+                }
+            }
         } catch (\Throwable) {
         }
     }
@@ -422,6 +504,14 @@ class Plugin extends BasePlugin
                     AccChart::seed();
                 } catch (\Throwable) {
                 }
+            }
+            if (Schema::hasTable('acc_settings') && ! DB::table('acc_settings')->where('k', 'check_alert_days')->exists()) {
+                DB::table('acc_settings')->insert([
+                    'k' => 'check_alert_days',
+                    'v' => '3',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
             if (Schema::hasTable('acc_expense_categories') && DB::table('acc_expense_categories')->count() === 0) {
                 foreach (['اجاره', 'حمل‌ونقل', 'تبلیغات', 'ملزومات', 'تعمیرات', 'سایر'] as $i => $name) {

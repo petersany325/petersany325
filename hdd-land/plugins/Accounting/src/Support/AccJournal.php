@@ -196,16 +196,22 @@ class AccJournal
                 if ($code === '') {
                     continue;
                 }
-                $side = (string) ($vl['side'] ?? 'debit');
-                $amt = (int) ($vl['amount'] ?? $vl['line_total'] ?? 0);
-                if ($amt <= 0) {
-                    continue;
+                $debit = (int) ($vl['debit'] ?? 0);
+                $credit = (int) ($vl['credit'] ?? 0);
+                if ($debit <= 0 && $credit <= 0) {
+                    $side = (string) ($vl['side'] ?? 'debit');
+                    $amt = (int) ($vl['amount'] ?? $vl['line_total'] ?? 0);
+                    if ($amt <= 0) {
+                        continue;
+                    }
+                    $debit = $side === 'credit' ? 0 : $amt;
+                    $credit = $side === 'credit' ? $amt : 0;
                 }
                 $lines[] = [
                     'account' => $code,
-                    'debit' => $side === 'credit' ? 0 : $amt,
-                    'credit' => $side === 'credit' ? $amt : 0,
-                    'memo' => (string) ($vl['title'] ?? ''),
+                    'debit' => $debit,
+                    'credit' => $credit,
+                    'memo' => trim((string) ($vl['title'] ?? '').' '.($vl['tafsil'] ?? '')),
                 ];
             }
         }
@@ -253,6 +259,16 @@ class AccJournal
             $lines = [
                 ['account' => AccChart::setting('notes_pay'), 'debit' => $amt, 'credit' => 0],
                 ['account' => AccChart::setting('bank'), 'debit' => 0, 'credit' => $amt],
+            ];
+        } elseif (in_array($dir, ['receivable', 'spent'], true) && $to === 'spent') {
+            $lines = [
+                ['account' => AccChart::setting('ap'), 'debit' => $amt, 'credit' => 0],
+                ['account' => AccChart::setting('notes'), 'debit' => 0, 'credit' => $amt],
+            ];
+        } elseif ($dir === 'receivable' && $to === 'in_collection') {
+            $lines = [
+                ['account' => AccChart::setting('notes'), 'debit' => $amt, 'credit' => 0],
+                ['account' => AccChart::setting('ar'), 'debit' => 0, 'credit' => $amt],
             ];
         }
         if ($lines === []) {
@@ -323,11 +339,25 @@ class AccJournal
                 if (! empty($line->account_id) && Schema::hasTable('acc_accounts')) {
                     $code = (string) (DB::table('acc_accounts')->where('id', $line->account_id)->value('code') ?? '');
                 }
+                $debit = (int) ($line->unit_price ?? 0);
+                $credit = (int) ($line->unit_cost ?? 0);
+                $side = (string) ($line->side ?? '');
+                $amount = (int) ($line->line_total ?? 0);
+                if ($debit <= 0 && $credit <= 0 && $amount > 0) {
+                    if ($side === 'credit') {
+                        $credit = $amount;
+                    } else {
+                        $debit = $amount;
+                    }
+                }
                 $voucher[] = [
                     'account' => $code,
-                    'side' => $line->side ?? 'debit',
-                    'amount' => (int) ($line->line_total ?? 0),
+                    'side' => $credit > 0 && $debit <= 0 ? 'credit' : 'debit',
+                    'amount' => $debit > 0 ? $debit : $credit,
+                    'debit' => $debit,
+                    'credit' => $credit,
                     'title' => $line->title ?? '',
+                    'tafsil' => $line->tafsil ?? '',
                 ];
             }
         }

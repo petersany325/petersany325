@@ -2,7 +2,10 @@
 @section('title','حقوق و دستمزد')
 @section('content')
 @php $money = fn($n) => number_format((int)$n).' تومان'; @endphp
-<div class="top"><div><h1>حقوق و دستمزد کارمندان</h1><p>محاسبه حقوق پایه + کمیسیون فروش دوره</p></div></div>
+<div class="top">
+  <div><h1>حقوق و دستمزد کارمندان</h1><p>حقوق پایه + کمیسیون کارمند یا درصد سود خالص ویزیتور از پرونده پرسنل</p></div>
+  <a class="btn" href="{{ url('/admin/accounting/staff') }}">تعریف کارمند و ویزیتور</a>
+</div>
 <div class="panel"><div class="hd"><strong>اجرای حقوق جدید</strong></div><div class="bd">
 <form method="post" action="{{ url('/admin/accounting/payroll') }}" class="form">@csrf
   <label>دوره (YYYY-MM)<input name="period" value="{{ $period }}" required></label>
