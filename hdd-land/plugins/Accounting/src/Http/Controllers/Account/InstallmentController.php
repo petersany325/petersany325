@@ -28,10 +28,17 @@ class InstallmentController extends Controller
             ? DB::table('acc_installment_requests')->where('user_id', $uid)->orderByDesc('id')->limit(50)->get()
             : collect();
 
-        return view('accounting::account.installments', [
-            'items' => $items,
-            'statuses' => AccEngine::INSTALLMENT_STATUSES,
-        ]);
+        try {
+            return view('accounting::account.installments', [
+                'items' => $items,
+                'statuses' => AccEngine::INSTALLMENT_STATUSES,
+            ]);
+        } catch (\Throwable) {
+            return \Plugins\Accounting\src\Support\AccSafe::page('accounting::account.installments', [
+                'items' => $items,
+                'statuses' => AccEngine::INSTALLMENT_STATUSES,
+            ], 'اقساط من');
+        }
     }
 
     public function create(Request $request)

@@ -47,16 +47,35 @@
 </div>
 <div class="panel"><div class="hd"><strong>اقلام</strong></div><div class="bd" style="padding:0">
 <table>
-  <thead><tr><th>عنوان</th><th>تعداد</th><th>فی</th><th>جمع</th></tr></thead>
+  <thead>
+    @if($doc->type==='voucher')
+      <tr><th>معین</th><th>تفصیل</th><th>شرح</th><th>بدهکار</th><th>بستانکار</th></tr>
+    @else
+      <tr><th>کد</th><th>نام</th><th>مقدار</th><th>واحد</th><th>نرخ</th><th>تخفیف٪</th><th>مالیات٪</th><th>جمع</th></tr>
+    @endif
+  </thead>
   <tbody>
   @foreach($lines as $l)
-    <tr>
-      <td>{{ $l->title }}@if($l->sku)<div style="color:var(--muted);font-size:.8rem">{{ $l->sku }}</div>@endif
-        @if(!empty($l->product_id))<div style="color:var(--muted);font-size:.8rem">کالا #{{ $l->product_id }}</div>@endif</td>
-      <td>{{ $l->qty }}</td>
-      <td>{{ $m($l->unit_price) }}</td>
-      <td>{{ $m($l->line_total) }}</td>
-    </tr>
+    @if($doc->type==='voucher')
+      <tr>
+        <td>{{ $l->account_id ?: '—' }}</td>
+        <td>{{ $l->tafsil ?? '—' }}</td>
+        <td>{{ $l->title }}</td>
+        <td>{{ $m($l->side==='credit' ? 0 : $l->unit_price) }}</td>
+        <td>{{ $m($l->side==='credit' ? $l->unit_cost : 0) }}</td>
+      </tr>
+    @else
+      <tr>
+        <td>{{ $l->sku ?: '—' }}</td>
+        <td>{{ $l->title }}@if(!empty($l->product_id))<div style="color:var(--muted);font-size:.8rem">کالا #{{ $l->product_id }}</div>@endif</td>
+        <td>{{ $l->qty }}</td>
+        <td>{{ $l->unit ?? 'عدد' }}</td>
+        <td>{{ $m($l->unit_price) }}</td>
+        <td>{{ $l->discount_rate ?? 0 }}</td>
+        <td>{{ $l->vat_rate ?? 0 }}</td>
+        <td>{{ $m($l->line_total) }}</td>
+      </tr>
+    @endif
   @endforeach
   </tbody>
 </table>

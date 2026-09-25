@@ -79,7 +79,7 @@ class AccCommerce
             });
         }
         $cols = ['id', 'name'];
-        foreach (['sku', 'price', 'cost_price', 'stock', 'stock_status'] as $col) {
+        foreach (['sku', 'price', 'cost_price', 'stock', 'stock_status', 'unit', 'vat_rate', 'barcode', 'min_qty'] as $col) {
             if (Schema::hasColumn('products', $col)) {
                 $cols[] = $col;
             }

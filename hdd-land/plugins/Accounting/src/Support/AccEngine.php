@@ -21,19 +21,71 @@ class AccEngine
     ];
 
     public const CHECK_DIRECTIONS = [
-        'receivable' => 'دریافتی',
-        'payable' => 'پرداختی',
+        'receivable' => 'دریافتی از مشتری',
+        'payable' => 'پرداختی شرکت',
+        'spent' => 'خرج‌شده به مشتری',
     ];
 
     public const CHECK_STATUSES = [
         'pending' => 'در انتظار',
+        'in_collection' => 'در جریان وصول',
         'received' => 'وصول‌شده',
         'paid' => 'پرداخت‌شده',
+        'spent' => 'خرج‌شده',
         'returned' => 'برگشتی',
         'delivered' => 'تحویل‌شده',
         'bounced' => 'برگشت‌خورده',
         'cancelled' => 'ابطال',
     ];
+
+    public const STAFF_KINDS = [
+        'employee' => 'کارمند',
+        'visitor' => 'ویزیتور',
+    ];
+
+    public static function defaultCheckAlertDays(): int
+    {
+        try {
+            if (Schema::hasTable('acc_settings')) {
+                $v = DB::table('acc_settings')->where('k', 'check_alert_days')->value('v');
+                if ($v !== null && $v !== '') {
+                    return max(1, min(90, (int) $v));
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return 3;
+    }
+
+    public static function alertDaysForParty(?int $userId, ?string $partyName, ?int $checkbookId = null): int
+    {
+        try {
+            if ($checkbookId && Schema::hasTable('acc_checkbooks')) {
+                $d = DB::table('acc_checkbooks')->where('id', $checkbookId)->value('alert_days');
+                if ($d) {
+                    return max(1, (int) $d);
+                }
+            }
+            if (Schema::hasTable('acc_party_alerts')) {
+                if ($userId) {
+                    $d = DB::table('acc_party_alerts')->where('party_user_id', $userId)->value('alert_days');
+                    if ($d) {
+                        return max(1, (int) $d);
+                    }
+                }
+                if ($partyName) {
+                    $d = DB::table('acc_party_alerts')->where('party_name', $partyName)->value('alert_days');
+                    if ($d) {
+                        return max(1, (int) $d);
+                    }
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return self::defaultCheckAlertDays();
+    }
 
     public const INSTALLMENT_STATUSES = [
         'pending' => 'در انتظار',
@@ -147,7 +199,7 @@ class AccEngine
             $qty = (float) ($line['qty'] ?? 1);
             $price = (int) ($line['unit_price'] ?? 0);
             $lineTotal = (int) ($line['line_total'] ?? (int) round($qty * $price));
-            $lineId = (int) DB::table('acc_document_lines')->insertGetId([
+            $lineRow = [
                 'document_id' => $id,
                 'product_id' => $line['product_id'] ?? null,
                 'title' => (string) ($line['title'] ?? 'قلم'),
@@ -160,7 +212,13 @@ class AccEngine
                 'side' => $line['side'] ?? null,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ];
+            foreach (['unit' => 'unit', 'vat_rate' => 'vat_rate', 'discount_rate' => 'discount_rate', 'tafsil' => 'tafsil'] as $key => $col) {
+                if (Schema::hasColumn('acc_document_lines', $col) && array_key_exists($key, $line)) {
+                    $lineRow[$col] = $line[$key];
+                }
+            }
+            $lineId = (int) DB::table('acc_document_lines')->insertGetId($lineRow);
             foreach ($line['serials'] ?? [] as $sn) {
                 $sn = trim((string) $sn);
                 if ($sn === '') {
@@ -217,6 +275,10 @@ class AccEngine
             }
         }
         AccCommerce::applyCatalogStock($doc, $lines, 1);
+        try {
+            AccJournal::postDocument($doc);
+        } catch (\Throwable) {
+        }
     }
 
     public static function adjustStock(int $warehouseId, int $productId, float $qtyDelta, int $unitCost = 0): void
@@ -272,6 +334,9 @@ class AccEngine
                 'unit_price' => $line->unit_price,
                 'unit_cost' => $line->unit_cost,
                 'line_total' => $line->line_total,
+                'unit' => $line->unit ?? null,
+                'vat_rate' => $line->vat_rate ?? 0,
+                'discount_rate' => $line->discount_rate ?? 0,
                 'serials' => $serials->get($line->id)?->pluck('serial')->all() ?? [],
             ];
         }
@@ -358,7 +423,55 @@ class AccEngine
                 'transfer' => $count('transfer'),
                 'payroll' => $count('payroll'),
             ],
+            'check_alerts' => (int) (function () {
+                try {
+                    return count(self::dueCheckAlerts());
+                } catch (\Throwable) {
+                    return 0;
+                }
+            })(),
         ];
+    }
+
+    /** @return list<object> */
+    public static function dueCheckAlerts(int $limit = 200): array
+    {
+        if (! Schema::hasTable('acc_checks')) {
+            return [];
+        }
+        try {
+            $today = now()->toDateString();
+            $horizon = now()->addDays(90)->toDateString();
+            $rows = DB::table('acc_checks')
+                ->whereNotNull('due_date')
+                ->whereBetween('due_date', [$today, $horizon])
+                ->whereIn('status', ['pending', 'in_collection', 'delivered', 'received'])
+                ->orderBy('due_date')
+                ->limit($limit)
+                ->get();
+        } catch (\Throwable) {
+            return [];
+        }
+        $out = [];
+        foreach ($rows as $row) {
+            $days = (int) ($row->alert_days ?? 0);
+            if ($days < 1) {
+                $days = self::alertDaysForParty(
+                    $row->party_user_id ? (int) $row->party_user_id : null,
+                    $row->party_name ?? null,
+                    ! empty($row->checkbook_id) ? (int) $row->checkbook_id : null
+                );
+            }
+            $due = \Carbon\Carbon::parse((string) $row->due_date)->startOfDay();
+            $left = now()->startOfDay()->diffInDays($due, false);
+            if ($left >= 0 && $left <= $days) {
+                $row->days_left = $left;
+                $row->alert_window = $days;
+                $out[] = $row;
+            }
+        }
+
+        return $out;
     }
 
     public static function money(int|float $n): string
@@ -552,6 +665,10 @@ class AccEngine
                 }
             }
             AccCommerce::applyCatalogStock($doc, $lines, -1);
+            try {
+                AccJournal::reverseDocument((int) $doc->id);
+            } catch (\Throwable) {
+            }
         }
         DB::table('acc_documents')->where('id', $id)->update([
             'status' => 'cancelled',

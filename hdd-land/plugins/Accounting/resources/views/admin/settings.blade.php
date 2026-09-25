@@ -2,7 +2,9 @@
 @section('title','تنظیمات حسابداری')
 @section('content')
 @php $m = fn($n) => number_format((int)$n).' تومان'; @endphp
-<div class="top"><div><h1>تنظیمات حسابداری</h1><p>دسته هزینه‌ها و سرفصل حساب‌ها — افزودن / ویرایش / حذف</p></div></div>
+<div class="top"><div><h1>تنظیمات حسابداری</h1><p>دسته هزینه‌ها و سرفصل حساب‌ها — درخت کامل در کدینگ است</p></div>
+  <div class="actions"><a class="btn" href="{{ url('/admin/accounting/chart') }}">کدینگ حساب‌ها</a></div>
+</div>
 
 <div class="panel"><div class="hd"><strong>دسته هزینه جدید</strong></div><div class="bd">
 <form method="post" action="{{ url('/admin/accounting/settings/categories') }}" class="form">@csrf

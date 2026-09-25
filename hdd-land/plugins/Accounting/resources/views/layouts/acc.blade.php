@@ -72,22 +72,33 @@
         <a href="{{ url('/admin/accounting/docs/create?type=sale') }}">فاکتور فروش + سریال</a>
         <a href="{{ url('/admin/accounting/docs/create?type=purchase') }}">فاکتور خرید + سریال</a>
         <a href="{{ url('/admin/accounting/docs/create?type=proforma') }}">پیش‌فاکتور</a>
-        <a href="{{ url('/admin/accounting/docs/create?type=voucher') }}">سند دستی</a>
+        <a href="{{ url('/admin/accounting/docs/create?type=voucher') }}">سند دستی استاندارد</a>
         <div class="g">انبار و بانک</div>
+        <a class="{{ request()->is('admin/accounting/goods*')?'on':'' }}" href="{{ url('/admin/accounting/goods') }}">تعریف کالا و سریال</a>
         <a class="{{ request()->is('admin/accounting/warehouses')?'on':'' }}" href="{{ url('/admin/accounting/warehouses') }}">تعریف انبار چندگانه</a>
         <a class="{{ request()->is('admin/accounting/stock')?'on':'' }}" href="{{ url('/admin/accounting/stock') }}">رسید / حواله / انتقال</a>
         <a class="{{ request()->is('admin/accounting/banks')?'on':'' }}" href="{{ url('/admin/accounting/banks') }}">تعریف بانک</a>
         <div class="g">هزینه و پرسنل</div>
         <a class="{{ request()->is('admin/accounting/expenses')?'on':'' }}" href="{{ url('/admin/accounting/expenses') }}">هزینه‌ها</a>
+        <a class="{{ request()->is('admin/accounting/staff*')?'on':'' }}" href="{{ url('/admin/accounting/staff') }}">کارمند و ویزیتور</a>
         <a class="{{ request()->is('admin/accounting/payroll*')?'on':'' }}" href="{{ url('/admin/accounting/payroll') }}">حقوق و دستمزد</a>
-        <a class="{{ request()->is('admin/accounting/commissions')?'on':'' }}" href="{{ url('/admin/accounting/commissions') }}">درصد فروشندگان</a>
         <div class="g">چک و اقساط</div>
-        <a class="{{ request()->is('admin/accounting/checks*')?'on':'' }}" href="{{ url('/admin/accounting/checks') }}">چک‌ها (پرداختی/دریافتی)</a>
+        <a class="{{ request()->is('admin/accounting/checkbooks*')?'on':'' }}" href="{{ url('/admin/accounting/checkbooks') }}">دسته چک</a>
+        <a class="{{ request()->is('admin/accounting/checks/received')?'on':'' }}" href="{{ url('/admin/accounting/checks/received') }}">چک دریافتی از مشتری</a>
+        <a class="{{ request()->is('admin/accounting/checks/spent')?'on':'' }}" href="{{ url('/admin/accounting/checks/spent') }}">چک خرج‌شده</a>
+        <a class="{{ request()->is('admin/accounting/checks/alerts')?'on':'' }}" href="{{ url('/admin/accounting/checks/alerts') }}">اخطار سررسید چک</a>
+        <a class="{{ request()->is('admin/accounting/checks') && !request()->is('admin/accounting/checks/*')?'on':'' }}" href="{{ url('/admin/accounting/checks') }}">همه چک‌ها</a>
         <a class="{{ request()->is('admin/accounting/installments*')?'on':'' }}" href="{{ url('/admin/accounting/installments') }}">اقساط مشتریان</a>
+        <div class="g">کدینگ و دفتر کل</div>
+        <a class="{{ request()->is('admin/accounting/chart*')?'on':'' }}" href="{{ url('/admin/accounting/chart') }}">کدینگ حساب‌ها</a>
+        <a href="{{ url('/admin/accounting/reports/trial') }}">تراز آزمایشی</a>
+        <a href="{{ url('/admin/accounting/reports/income') }}">سود و زیان</a>
+        <a href="{{ url('/admin/accounting/reports/balance') }}">ترازنامه</a>
         <div class="g">تنظیمات و گزارش</div>
         <a class="{{ request()->is('admin/accounting/settings*')?'on':'' }}" href="{{ url('/admin/accounting/settings') }}">تنظیمات (دسته/حساب)</a>
         <a class="{{ request()->is('admin/accounting/reports*')?'on':'' }}" href="{{ url('/admin/accounting/reports') }}">مرکز گزارش‌ها</a>
         <a href="{{ url('/admin/accounting/reports/sales') }}">گزارش فروش/خرید + شماره فاکتور</a>
+        <a href="{{ url('/admin/accounting/reports/shop-stock') }}">تطبیق موجودی سایت</a>
         <a href="{{ url('/admin/accounting/reports/staff') }}">گزارش کارمندان و سود</a>
         <a href="{{ url('/admin/accounting/reports/payroll') }}">گزارش حقوق و مزایا</a>
         <a href="{{ url('/admin/accounting/reports/vouchers') }}">گزارش سند حسابداری</a>
@@ -95,6 +106,15 @@
         <a href="{{ url('/admin/accounting/reports/customers') }}">گزارش مشتریان</a>
         <a href="{{ url('/admin/accounting/reports/checks') }}">گزارش چک‌ها</a>
         <a href="{{ url('/admin/accounting/reports/installments') }}">گزارش اقساط</a>
+        <div class="g">فروشگاه و سایت</div>
+        <a href="{{ url('/products') }}">فروشگاه</a>
+        <a href="{{ url('/admin/orders') }}">سفارش‌های فروشگاه</a>
+        <a href="{{ url('/about') }}">درباره ما</a>
+        <a href="{{ url('/services') }}">خدمات سازمانی</a>
+        <a href="{{ url('/contact') }}">تماس با فروش</a>
+        <a href="{{ url('/admin/tickets') }}">تیکت‌ها</a>
+        <a href="{{ url('/account/tickets') }}">کارتابل تیکت مشتری</a>
+        <a href="{{ url('/warranty-register') }}">ثبت گارانتی</a>
         <a href="{{ url('/admin') }}">بازگشت ادمین</a>
       @else
         <div class="g">کارمند</div>
@@ -114,6 +134,7 @@
     <div class="mnav">
       @if($portal==='admin')
         <a href="{{ url('/admin/accounting') }}">میز</a>
+        <a href="{{ url('/admin/accounting/chart') }}">کدینگ</a>
         <a href="{{ url('/admin/accounting/docs') }}">اسناد</a>
         <a href="{{ url('/admin/accounting/stock') }}">انبار</a>
         <a href="{{ url('/admin/accounting/checks') }}">چک</a>

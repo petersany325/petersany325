@@ -1,16 +1,28 @@
 @extends('accounting::layouts.acc')
 @section('title','چک‌ها')
 @section('content')
-@php $m = fn($n) => number_format((int)$n).' تومان'; @endphp
+@php
+  $m = fn($n) => number_format((int)$n).' تومان';
+  $heading = $heading ?? 'مدیریت چک‌ها';
+  $forceDirection = $forceDirection ?? '';
+  $books = $books ?? collect();
+  $alerts = $alerts ?? collect();
+@endphp
 <div class="top">
   <div>
-    <h1>مدیریت چک‌ها</h1>
-    <p>پرداختی، دریافتی، برگشتی، تحویل و وصول</p>
+    <h1>{{ $heading }}</h1>
+    <p>دریافتی از مشتری، خرج‌شده، دسته چک و اخطار چند روز مانده به سررسید</p>
   </div>
   <div class="actions">
-    <a class="btn g" href="{{ url('/admin/accounting/reports/checks') }}">گزارش چک</a>
+    <a class="btn" href="{{ url('/admin/accounting/checks/received') }}">دریافتی</a>
+    <a class="btn" href="{{ url('/admin/accounting/checks/spent') }}">خرج‌شده</a>
+    <a class="btn g" href="{{ url('/admin/accounting/checkbooks') }}">دسته چک</a>
+    <a class="btn w" href="{{ url('/admin/accounting/checks/alerts') }}">اخطار سررسید @if(count($alerts)) ({{ count($alerts) }})@endif</a>
   </div>
 </div>
+@if(count($alerts))
+<div class="flash err">{{ count($alerts) }} چک در پنجره اخطار سررسید است — <a href="{{ url('/admin/accounting/checks/alerts') }}">مشاهده</a></div>
+@endif
 
 @if($summary->isNotEmpty())
 <div class="grid">
@@ -53,7 +65,9 @@
     <label>شماره چک<input name="number" placeholder="خالی = خودکار"></label>
     <label>جهت
       <select name="direction" required>
-        @foreach($directions as $k=>$lab)<option value="{{ $k }}">{{ $lab }}</option>@endforeach
+        @foreach($directions as $k=>$lab)
+          <option value="{{ $k }}" @selected($forceDirection===$k)>{{ $lab }}</option>
+        @endforeach
       </select>
     </label>
   </div>
@@ -66,8 +80,19 @@
     </label>
   </div>
   <div class="row">
-    <label>طرف حساب<input name="party_name"></label>
-    <label>شناسه کاربر<input name="party_user_id" type="number"></label>
+    <label>طرف حساب / مشتری<input name="party_name"></label>
+    <label>خرج‌شده به<input name="endorsed_to" placeholder="اگر چک خرج می‌شود"></label>
+  </div>
+  <div class="row">
+    <label>دسته چک
+      <select name="checkbook_id">
+        <option value="">— بدون دسته —</option>
+        @foreach($books as $bk)
+          <option value="{{ $bk->id }}">{{ $bk->owner_name }} ({{ $bk->leaf_count - $bk->used_count }} برگ)</option>
+        @endforeach
+      </select>
+    </label>
+    <label>اخطار این چک (روز)<input name="alert_days" type="number" min="1" max="90" placeholder="خالی = پیش‌فرض طرف"></label>
   </div>
   <div class="row">
     <label>بانک (متن)<input name="bank_name"></label>
@@ -128,7 +153,7 @@
   </div>
   <div class="actions">
     <button class="btn" type="submit">ذخیره</button>
-    @foreach(['received'=>'وصول','paid'=>'پرداخت','returned'=>'برگشت','delivered'=>'تحویل','bounced'=>'برگشت‌خورده'] as $st=>$lab)
+    @foreach(['in_collection'=>'در جریان وصول','received'=>'وصول','spent'=>'خرج','paid'=>'پرداخت','returned'=>'برگشت','delivered'=>'تحویل','bounced'=>'برگشت‌خورده'] as $st=>$lab)
       <button class="btn g" type="submit" formaction="{{ url('/admin/accounting/checks/'.$c->id.'/status') }}" name="status" value="{{ $st }}">{{ $lab }}</button>
     @endforeach
     <button class="btn g" type="submit" formaction="{{ url('/admin/accounting/checks/'.$c->id.'/delete') }}" onclick="return confirm('حذف شود؟')">حذف</button>
