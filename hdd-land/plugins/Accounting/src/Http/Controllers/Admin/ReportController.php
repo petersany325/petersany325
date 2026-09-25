@@ -15,12 +15,22 @@ class ReportController extends Controller
     public function __construct()
     {
         try {
+            \Plugins\Accounting\src\Support\AccRoutes::registerViews();
             Plugin::ensureSchema();
         } catch (\Throwable) {
         }
     }
 
     public function hub(Request $request)
+    {
+        try {
+            return $this->hubInner($request);
+        } catch (\Throwable) {
+            return redirect(url('/admin/accounting'));
+        }
+    }
+
+    protected function hubInner(Request $request)
     {
         $from = $request->query('from', now()->startOfMonth()->toDateString());
         $to = $request->query('to', now()->toDateString());

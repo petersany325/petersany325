@@ -28,7 +28,7 @@ class Plugin extends BasePlugin
 
     public function version(): string
     {
-        return '1.4.1';
+        return '1.4.2';
     }
 
     public function isCore(): bool
@@ -50,6 +50,10 @@ class Plugin extends BasePlugin
         } catch (\Throwable) {
         }
         parent::boot();
+        try {
+            AccRoutes::registerAdminFallbacks();
+        } catch (\Throwable) {
+        }
     }
 
     /** Shared hosting without composer dump — load controllers/engine explicitly. */
@@ -84,45 +88,39 @@ class Plugin extends BasePlugin
         }
     }
 
-    /** @return list<array{label:string,route:string,icon?:string,group?:string}> */
+    /** @return list<array{label:string,href:string,icon?:string,group?:string}> */
     public function adminMenu(): array
     {
+        $h = static fn (string $path) => '/admin/accounting'.($path === '' ? '' : '/'.$path);
+
         return [
-            ['label' => 'داشبورد حسابداری', 'route' => 'admin.accounting.hub', 'icon' => '◈', 'group' => 'accounting'],
-            ['label' => 'کدینگ حساب‌ها', 'route' => 'admin.accounting.chart', 'icon' => '☰', 'group' => 'accounting'],
-            ['label' => 'تراز آزمایشی', 'route' => 'admin.accounting.reports.trial', 'icon' => '⚖', 'group' => 'reports'],
-            ['label' => 'سود و زیان', 'route' => 'admin.accounting.reports.income', 'icon' => '📈', 'group' => 'reports'],
-            ['label' => 'ترازنامه', 'route' => 'admin.accounting.reports.balance', 'icon' => '▤', 'group' => 'reports'],
-            ['label' => 'فاکتور و پیش‌فاکتور', 'route' => 'admin.accounting.docs', 'icon' => '▤', 'group' => 'accounting'],
-            ['label' => 'فاکتور فروش جدید', 'route' => 'admin.accounting.docs.create', 'icon' => '＋', 'group' => 'accounting', 'params' => ['type' => 'sale']],
-            ['label' => 'پیش‌فاکتور جدید', 'route' => 'admin.accounting.docs.create', 'icon' => '＋', 'group' => 'accounting', 'params' => ['type' => 'proforma']],
-            ['label' => 'فاکتور خرید', 'route' => 'admin.accounting.docs.create', 'icon' => '＋', 'group' => 'accounting', 'params' => ['type' => 'purchase']],
-            ['label' => 'دفتر روزنامه', 'route' => 'admin.accounting.docs', 'icon' => '▤', 'group' => 'accounting'],
-            ['label' => 'ثبت سند دستی', 'route' => 'admin.accounting.docs.create', 'icon' => '✎', 'group' => 'accounting', 'params' => ['type' => 'voucher']],
-            ['label' => 'انبارها', 'route' => 'admin.accounting.warehouses', 'icon' => '▣', 'group' => 'warehouse'],
-            ['label' => 'حواله و رسید', 'route' => 'admin.accounting.stock', 'icon' => '⇄', 'group' => 'warehouse'],
-            ['label' => 'بانک‌ها', 'route' => 'admin.accounting.banks', 'icon' => '₿', 'group' => 'finance'],
-            ['label' => 'هزینه‌ها', 'route' => 'admin.accounting.expenses', 'icon' => '📉', 'group' => 'finance'],
-            ['label' => 'تعریف کالا و سریال', 'route' => 'admin.accounting.goods', 'icon' => '▦', 'group' => 'warehouse'],
-            ['label' => 'حقوق و دستمزد', 'route' => 'admin.accounting.payroll', 'icon' => '👥', 'group' => 'hr'],
-            ['label' => 'کارمند و ویزیتور', 'route' => 'admin.accounting.staff', 'icon' => '👤', 'group' => 'hr'],
-            ['label' => 'دسته چک', 'route' => 'admin.accounting.checkbooks', 'icon' => '▤', 'group' => 'finance'],
-            ['label' => 'چک دریافتی از مشتری', 'route' => 'admin.accounting.checks.received', 'icon' => '▭', 'group' => 'finance'],
-            ['label' => 'چک خرج‌شده', 'route' => 'admin.accounting.checks.spent', 'icon' => '↗', 'group' => 'finance'],
-            ['label' => 'اخطار سررسید چک', 'route' => 'admin.accounting.checks.alerts', 'icon' => '⚠', 'group' => 'finance'],
-            ['label' => 'چک‌ها', 'route' => 'admin.accounting.checks', 'icon' => '▭', 'group' => 'finance'],
-            ['label' => 'اقساط مشتریان', 'route' => 'admin.accounting.installments', 'icon' => '◫', 'group' => 'finance'],
-            ['label' => 'گزارش خرید و فروش', 'route' => 'admin.accounting.reports.sales', 'icon' => '📈', 'group' => 'reports'],
-            ['label' => 'تنظیمات حسابداری', 'route' => 'admin.accounting.settings', 'icon' => '⚙', 'group' => 'settings'],
-            ['label' => 'مرکز گزارش‌ها', 'route' => 'admin.accounting.reports', 'icon' => '📊', 'group' => 'reports'],
-            ['label' => 'گزارش کارمندان', 'route' => 'admin.accounting.reports.staff', 'icon' => '👤', 'group' => 'reports'],
-            ['label' => 'گزارش حقوق', 'route' => 'admin.accounting.reports.payroll', 'icon' => '👥', 'group' => 'reports'],
-            ['label' => 'گزارش اسناد', 'route' => 'admin.accounting.reports.vouchers', 'icon' => '▤', 'group' => 'reports'],
-            ['label' => 'گزارش انبار', 'route' => 'admin.accounting.reports.warehouse', 'icon' => '▣', 'group' => 'reports'],
-            ['label' => 'گزارش مشتریان', 'route' => 'admin.accounting.reports.customers', 'icon' => '☺', 'group' => 'reports'],
-            ['label' => 'گزارش چک‌ها', 'route' => 'admin.accounting.reports.checks', 'icon' => '▭', 'group' => 'reports'],
-            ['label' => 'گزارش اقساط', 'route' => 'admin.accounting.reports.installments', 'icon' => '◫', 'group' => 'reports'],
-            ['label' => 'تطبیق موجودی سایت', 'route' => 'admin.accounting.reports.shop-stock', 'icon' => '▦', 'group' => 'reports'],
+            ['label' => 'داشبورد حسابداری', 'href' => $h(''), 'icon' => '◈', 'group' => 'accounting'],
+            ['label' => 'کدینگ حساب‌ها', 'href' => $h('chart'), 'icon' => '☰', 'group' => 'accounting'],
+            ['label' => 'فاکتور و پیش‌فاکتور', 'href' => $h('docs'), 'icon' => '▤', 'group' => 'accounting'],
+            ['label' => 'فاکتور فروش جدید', 'href' => $h('docs/create').'?type=sale', 'icon' => '＋', 'group' => 'accounting'],
+            ['label' => 'پیش‌فاکتور جدید', 'href' => $h('docs/create').'?type=proforma', 'icon' => '＋', 'group' => 'accounting'],
+            ['label' => 'فاکتور خرید', 'href' => $h('docs/create').'?type=purchase', 'icon' => '＋', 'group' => 'accounting'],
+            ['label' => 'ثبت سند دستی', 'href' => $h('docs/create').'?type=voucher', 'icon' => '✎', 'group' => 'accounting'],
+            ['label' => 'تعریف کالا و سریال', 'href' => $h('goods'), 'icon' => '▦', 'group' => 'warehouse'],
+            ['label' => 'انبارها', 'href' => $h('warehouses'), 'icon' => '▣', 'group' => 'warehouse'],
+            ['label' => 'حواله و رسید', 'href' => $h('stock'), 'icon' => '⇄', 'group' => 'warehouse'],
+            ['label' => 'بانک‌ها', 'href' => $h('banks'), 'icon' => '₿', 'group' => 'finance'],
+            ['label' => 'هزینه‌ها', 'href' => $h('expenses'), 'icon' => '📉', 'group' => 'finance'],
+            ['label' => 'کارمند و ویزیتور', 'href' => $h('staff'), 'icon' => '👤', 'group' => 'hr'],
+            ['label' => 'حقوق و دستمزد', 'href' => $h('payroll'), 'icon' => '👥', 'group' => 'hr'],
+            ['label' => 'دسته چک', 'href' => $h('checkbooks'), 'icon' => '▤', 'group' => 'finance'],
+            ['label' => 'چک دریافتی از مشتری', 'href' => $h('checks/received'), 'icon' => '▭', 'group' => 'finance'],
+            ['label' => 'چک خرج‌شده', 'href' => $h('checks/spent'), 'icon' => '↗', 'group' => 'finance'],
+            ['label' => 'اخطار سررسید چک', 'href' => $h('checks/alerts'), 'icon' => '⚠', 'group' => 'finance'],
+            ['label' => 'همه چک‌ها', 'href' => $h('checks'), 'icon' => '▭', 'group' => 'finance'],
+            ['label' => 'اقساط مشتریان', 'href' => $h('installments'), 'icon' => '◫', 'group' => 'finance'],
+            ['label' => 'مرکز گزارش‌ها', 'href' => $h('reports'), 'icon' => '📊', 'group' => 'reports'],
+            ['label' => 'گزارش خرید و فروش', 'href' => $h('reports/sales'), 'icon' => '📈', 'group' => 'reports'],
+            ['label' => 'تراز آزمایشی', 'href' => $h('reports/trial'), 'icon' => '⚖', 'group' => 'reports'],
+            ['label' => 'سود و زیان', 'href' => $h('reports/income'), 'icon' => '📈', 'group' => 'reports'],
+            ['label' => 'ترازنامه', 'href' => $h('reports/balance'), 'icon' => '▤', 'group' => 'reports'],
+            ['label' => 'تطبیق موجودی سایت', 'href' => $h('reports/shop-stock'), 'icon' => '▦', 'group' => 'reports'],
+            ['label' => 'تنظیمات حسابداری', 'href' => $h('settings'), 'icon' => '⚙', 'group' => 'settings'],
         ];
     }
 

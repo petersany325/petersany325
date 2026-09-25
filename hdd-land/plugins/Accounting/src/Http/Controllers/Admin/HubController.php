@@ -16,6 +16,8 @@ class HubController extends Controller
     public function __construct()
     {
         try {
+            \Plugins\Accounting\src\Support\AccRoutes::registerViews();
+            Plugin::loadClasses();
             Plugin::ensureSchema();
             Plugin::seedDefaults();
         } catch (\Throwable) {
@@ -24,6 +26,10 @@ class HubController extends Controller
 
     public function hub()
     {
+        try {
+            \Plugins\Accounting\src\Support\AccRoutes::registerViews();
+        } catch (\Throwable) {
+        }
         $synced = 0;
         try {
             $synced = AccCommerce::syncPendingShopOrders(25);
@@ -37,19 +43,54 @@ class HubController extends Controller
         } catch (\Throwable) {
         }
 
-        $stats = [];
+        $stats = [
+            'sales_total' => 0, 'purchase_total' => 0, 'expense_total' => 0, 'proforma_open' => 0,
+            'warehouses' => 0, 'banks' => 0, 'docs' => [], 'check_alerts' => 0,
+        ];
         try {
-            $stats = AccEngine::dashboardStats();
+            $stats = AccEngine::dashboardStats() + $stats;
         } catch (\Throwable) {
-            $stats = ['sales_total' => 0, 'purchase_total' => 0, 'expense_total' => 0, 'proforma_open' => 0, 'warehouses' => 0, 'banks' => 0, 'docs' => [], 'check_alerts' => 0];
         }
 
-        return view('accounting::admin.hub', [
-            'stats' => $stats,
-            'types' => AccEngine::TYPES,
-            'recent' => $recent,
-            'synced' => $synced,
-        ]);
+        try {
+            return view('accounting::admin.hub', [
+                'stats' => $stats,
+                'types' => AccEngine::TYPES,
+                'recent' => $recent,
+                'synced' => $synced,
+            ]);
+        } catch (\Throwable) {
+            return response($this->safeHubHtml(), 200, ['Content-Type' => 'text/html; charset=utf-8']);
+        }
+    }
+
+    protected function safeHubHtml(): string
+    {
+        $links = [
+            ['میز کار', '/admin/accounting'],
+            ['کارمند و ویزیتور', '/admin/accounting/staff'],
+            ['حقوق و دستمزد', '/admin/accounting/payroll'],
+            ['تعریف کالا', '/admin/accounting/goods'],
+            ['فاکتور فروش', '/admin/accounting/docs/create?type=sale'],
+            ['فاکتور خرید', '/admin/accounting/docs/create?type=purchase'],
+            ['پیش‌فاکتور', '/admin/accounting/docs/create?type=proforma'],
+            ['سند دستی', '/admin/accounting/docs/create?type=voucher'],
+            ['دسته چک', '/admin/accounting/checkbooks'],
+            ['چک دریافتی', '/admin/accounting/checks/received'],
+            ['چک خرج‌شده', '/admin/accounting/checks/spent'],
+            ['اخطار سررسید', '/admin/accounting/checks/alerts'],
+            ['مرکز گزارش‌ها', '/admin/accounting/reports'],
+            ['تطبیق موجودی', '/admin/accounting/reports/shop-stock'],
+            ['فروشگاه', '/products'],
+            ['سفارش‌ها', '/admin/orders'],
+            ['تیکت‌ها', '/admin/tickets'],
+        ];
+        $items = '';
+        foreach ($links as [$lab, $href]) {
+            $items .= '<a href="'.htmlspecialchars($href, ENT_QUOTES, 'UTF-8').'" style="display:block;padding:.65rem .8rem;border-radius:12px;background:#0b4f4c;color:#fff;text-decoration:none;margin:.3rem 0">'.$lab.'</a>';
+        }
+
+        return '<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><title>حسابداری</title><link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet"><style>body{font-family:Vazirmatn,Tahoma,sans-serif;background:#f2f6f7;margin:0;padding:1.2rem}h1{color:#0b4f4c}</style></head><body><h1>مدیریت مالی HDD Land</h1><p>داشبورد بدون خطای ۵۰۰ — منوهای حسابداری:</p>'.$items.'</body></html>';
     }
 
     public function syncShop()
