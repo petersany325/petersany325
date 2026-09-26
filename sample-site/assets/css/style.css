@@ -560,6 +560,13 @@ ul {
   transition: border-color 0.25s, background 0.25s;
   width: 100%;
   resize: vertical;
+  direction: rtl;
+  text-align: right;
+}
+
+.contact-form input::placeholder,
+.contact-form textarea::placeholder {
+  text-align: right;
 }
 
 .contact-form input:focus,
