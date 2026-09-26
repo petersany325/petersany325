@@ -81,6 +81,20 @@
           badge.className = 'vbdl-sediv-badge is-' + (row.status || 'sent');
           badge.textContent = row.status || 'sent';
           right.appendChild(badge);
+          if (row.src_download_url && row.src_available) {
+            right.appendChild(document.createTextNode(' '));
+            var dl = document.createElement('a');
+            dl.className = 'vbdl-sediv-dl';
+            dl.href = row.src_download_url;
+            dl.textContent = 'Download .src';
+            right.appendChild(dl);
+          } else if (row.src_purged) {
+            right.appendChild(document.createTextNode(' '));
+            var gone = document.createElement('span');
+            gone.className = 'vbdl-sediv-muted';
+            gone.textContent = 'src expired';
+            right.appendChild(gone);
+          }
           if (row.message_url) {
             right.appendChild(document.createTextNode(' '));
             var a = document.createElement('a');

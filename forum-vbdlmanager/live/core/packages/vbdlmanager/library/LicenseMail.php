@@ -274,11 +274,15 @@ class vbdl_LicenseMail
 	{
 		$type = $this->getLicenseType(isset($row['license_type']) ? $row['license_type'] : '');
 		$row['license_label'] = $type ? $type['label'] : (isset($row['license_type']) ? (string)$row['license_type'] : '');
+		$mirrorOk = $this->licenseMirrorExists(isset($row['token']) ? $row['token'] : '', 'src');
 		$row['src_available'] = (
 			!empty($row['status']) && $row['status'] === 'returned'
 			&& empty($row['src_purged'])
-			&& !empty($row['return_filedataid'])
+			&& (!empty($row['return_filedataid']) || $mirrorOk)
 		) ? 1 : 0;
+		$row['src_download_url'] = !empty($row['src_available'])
+			? ('/vbdlmanager/pm_lic_download.php?token=' . rawurlencode((string)$row['token']) . '&kind=src')
+			: '';
 		// Keep download_count in sync with Message Center attach counter when present.
 		if (!empty($row['return_nodeid']))
 		{
@@ -584,6 +588,7 @@ class vbdl_LicenseMail
 		{
 			$starterId = $parentId;
 		}
+		$this->ensureAttachmentTypes();
 		$p = $this->prefix;
 		$now = time();
 		$hash = md5($bytes);
@@ -799,6 +804,9 @@ class vbdl_LicenseMail
 			return $posted;
 		}
 
+		// Reliable mirror for downloads (bypasses broken MC filedata/fetch when needed).
+		$this->storeLicenseMirror($record['token'], 'src', $filename, $bytes);
+
 		$tokenEsc = $this->db->real_escape_string($record['token']);
 		$retName = $this->db->real_escape_string($filename);
 		$retFd = (int)$posted['filedataid'];
@@ -807,6 +815,7 @@ class vbdl_LicenseMail
 		$this->db->query(
 			'UPDATE ' . $this->prefix . 'vbdl_license_mail SET status=\'returned\', return_filename=\'' . $retName . '\', '
 			. 'return_filedataid=' . $retFd . ', return_nodeid=' . $retNode . ', returned_dateline=' . $now
+			. ', src_purged=0, src_purged_dateline=0'
 			. ' WHERE token=\'' . $tokenEsc . '\''
 		);
 
@@ -930,6 +939,7 @@ class vbdl_LicenseMail
 					'UPDATE ' . $p . 'attach SET visible=0 WHERE nodeid=' . $nodeid
 				);
 			}
+			$this->deleteLicenseMirror((string)$row['token'], 'src');
 			$tokenEsc = $this->db->real_escape_string((string)$row['token']);
 			$now = time();
 			$this->db->query(
@@ -1086,49 +1096,7 @@ class vbdl_LicenseMail
 	{
 		$p = $this->prefix;
 		$now = time();
-		// vB filehash column is MD5 (32 chars), not SHA1.
-		$hash = md5($bytes);
-		$size = strlen($bytes);
-		$ext = 'src';
-
-		$filedataid = 0;
-		// Large .src files: metadata in DB + bytes on filesystem (userid digit path).
-		if ($size <= 512000)
-		{
-			$hex = bin2hex($bytes);
-			$sqlFd = 'INSERT INTO ' . $p . 'filedata (userid, dateline, filehash, filesize, extension, filedata) VALUES ('
-				. (int)$userid . ',' . (int)$now . ',\'' . $this->db->real_escape_string($hash) . '\','
-				. (int)$size . ',\'' . $this->db->real_escape_string($ext) . '\',UNHEX(\'' . $hex . '\'))';
-			if ($this->db->query($sqlFd))
-			{
-				$filedataid = (int)$this->db->insert_id;
-			}
-		}
-		if ($filedataid < 1)
-		{
-			$sqlFd = 'INSERT INTO ' . $p . 'filedata (userid, dateline, filehash, filesize, extension, filedata) VALUES ('
-				. (int)$userid . ',' . (int)$now . ',\'' . $this->db->real_escape_string($hash) . '\','
-				. (int)$size . ',\'' . $this->db->real_escape_string($ext) . '\',\'\')';
-			if (!$this->db->query($sqlFd))
-			{
-				return array('error' => 'filedata insert failed: ' . $this->db->error);
-			}
-			$filedataid = (int)$this->db->insert_id;
-			if ($this->writeAttachFile($filedataid, $userid, $bytes) === '')
-			{
-				return array('error' => 'Could not write .src attachment to filesystem');
-			}
-		}
-		// vB fetchNodeAttachments joins only filedata with refcount > 0.
-		$this->db->query('UPDATE ' . $p . 'filedata SET refcount=GREATEST(refcount,1) WHERE filedataid=' . (int)$filedataid);
-
-		// contenttypeid for Text + Attach
-		$textType = $this->contentTypeId('Text');
-		$attachType = $this->contentTypeId('Attach');
-		if ($textType < 1 || $attachType < 1)
-		{
-			return array('error' => 'contenttype Text/Attach missing');
-		}
+		$this->ensureAttachmentTypes();
 
 		$customer = (string)$record['customer_username'];
 		$customerId = (int)$record['customer_userid'];
@@ -1144,28 +1112,35 @@ class vbdl_LicenseMail
 				}
 			}
 		}
-		$rawtext = 'Activated SeDiv license (.src) received for user ' . $customer . ".\n"
-			. 'Tracking: ' . $record['token'] . "\n"
-			. 'File: ' . $filename;
+		// Attach owner MUST match filedata.userid AND filesystem path segment.
+		$attachUserid = $customerId > 0 ? $customerId : (int)$userid;
+		$attachAuthor = $customer !== '' ? $customer : $this->usernameById($attachUserid);
+		$staffAuthor = $this->usernameById((int)$userid);
 
-		// Load parent routeid / author defaults (vB6 node schema).
+		$textType = $this->contentTypeId('Text');
+		$attachType = $this->contentTypeId('Attach');
+		if ($textType < 1 || $attachType < 1)
+		{
+			return array('error' => 'contenttype Text/Attach missing');
+		}
+
 		$parent = null;
-		$resP = $this->db->query('SELECT routeid, userid, authorname FROM ' . $p . 'node WHERE nodeid=' . (int)$parentId . ' LIMIT 1');
+		$resP = $this->db->query('SELECT routeid FROM ' . $p . 'node WHERE nodeid=' . (int)$parentId . ' LIMIT 1');
 		if ($resP)
 		{
 			$parent = $resP->fetch_assoc();
 		}
 		$routeid = $parent && !empty($parent['routeid']) ? (int)$parent['routeid'] : 63;
-		$staffAuthor = $this->usernameById($userid);
-		// Match normal MC .lic attaches: owned by ticket author, inlist=0, protected=1, null titles.
-		$attachUserid = $customerId > 0 ? $customerId : $userid;
-		$attachAuthor = $customer !== '' ? $customer : $this->usernameById($attachUserid);
 
-		// 2) Text note under the PM ticket (vB6 uses `created`, not createdate)
+		$rawtext = 'Activated SeDiv license (.src) received for user ' . $attachAuthor . ".\n"
+			. 'Tracking: ' . $record['token'] . "\n"
+			. 'File: ' . $filename . "\n"
+			. 'Download: /vbdlmanager/pm_lic_download.php?token=' . rawurlencode((string)$record['token']) . '&kind=src';
+
 		$title = 'Activated license (.src)';
 		$textNode = $this->insertNode(array(
 			'routeid' => $routeid,
-			'userid' => $userid,
+			'userid' => (int)$userid,
 			'authorname' => $staffAuthor,
 			'parentid' => (int)$parentId,
 			'starter' => (int)$starterId,
@@ -1177,7 +1152,7 @@ class vbdl_LicenseMail
 			'lastcontent' => $now,
 			'lastcontentid' => 0,
 			'lastcontentauthor' => $staffAuthor,
-			'lastauthorid' => $userid,
+			'lastauthorid' => (int)$userid,
 			'lastprefixid' => '',
 			'publishdate' => $now,
 			'showpublished' => 1,
@@ -1206,64 +1181,27 @@ class vbdl_LicenseMail
 			);
 		}
 
-		// 3) Attach .src directly under the PM node (same placement as user-uploaded .lic).
-		$attachNode = $this->insertNode(array(
-			'routeid' => $routeid,
-			'userid' => $attachUserid,
-			'authorname' => $attachAuthor,
-			'parentid' => (int)$parentId,
-			'starter' => (int)$starterId,
-			'contenttypeid' => $attachType,
-			'created' => $now,
-			'lastcontent' => $now,
-			'lastcontentid' => 0,
-			'lastcontentauthor' => $attachAuthor,
-			'lastauthorid' => $attachUserid,
-			'lastprefixid' => '',
-			'publishdate' => $now,
-			'showpublished' => 1,
-			'showopen' => 1,
-			'open' => 1,
-			'approved' => 1,
-			'showapproved' => 1,
-			'ipaddress' => '',
-			'CRC32' => (string)sprintf('%u', crc32($filename)),
-			'prefixid' => '',
-			'inlist' => 0,
-			'protected' => 1,
-			'nodeoptions' => 138,
-			'hasphoto' => 0,
-		));
-		if ($attachNode < 1)
+		// Prefer shared attach helper (consistent userid + disk path + visible=1).
+		$attached = $this->attachFileToTicket((int)$parentId, (int)$starterId, $attachUserid, $filename, $bytes);
+		if (!empty($attached['error']))
 		{
-			return array('error' => 'Failed creating attach node: ' . $this->lastNodeError);
+			return $attached;
 		}
-		$this->ensureClosure((int)$attachNode, (int)$parentId, $now);
-		$this->db->query(
-			'INSERT INTO ' . $p . 'attach (nodeid, filedataid, filename, counter, settings) VALUES ('
-			. $attachNode . ',' . $filedataid . ',\'' . $this->db->real_escape_string($filename) . '\',0,\'\')'
-		);
-		$this->db->query(
-			'UPDATE ' . $p . 'filedata SET refcount=GREATEST(refcount,1), userid=' . (int)$attachUserid
-			. ' WHERE filedataid=' . (int)$filedataid
-		);
 
-		// Update parent lastcontent + hasphoto so MC lists attachments.
 		$this->db->query(
-			'UPDATE ' . $p . 'node SET lastcontent=' . $now . ', lastcontentid=' . (int)$attachNode
+			'UPDATE ' . $p . 'node SET lastcontent=' . $now
 			. ', lastcontentauthor=\'' . $this->db->real_escape_string($staffAuthor) . '\''
-			. ', lastauthorid=' . $userid
+			. ', lastauthorid=' . (int)$userid
 			. ', hasphoto=1'
 			. ', totalcount=totalcount+1, textcount=textcount+1'
 			. ' WHERE nodeid=' . (int)$parentId
 		);
-
-		$this->clearNodeCaches(array((int)$parentId, (int)$textNode, (int)$attachNode));
+		$this->clearNodeCaches(array((int)$parentId, (int)$textNode, (int)$attached['attach_nodeid']));
 
 		return array(
-			'filedataid' => $filedataid,
-			'text_nodeid' => $textNode,
-			'attach_nodeid' => $attachNode,
+			'filedataid' => (int)$attached['filedataid'],
+			'text_nodeid' => (int)$textNode,
+			'attach_nodeid' => (int)$attached['attach_nodeid'],
 		);
 	}
 
@@ -1323,6 +1261,300 @@ class vbdl_LicenseMail
 			{
 				@chmod($path, 0644);
 				return $path;
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * Ensure .src / .lic are allowed attachment extensions (vB "Invalid File Specified" otherwise).
+	 */
+	public function ensureAttachmentTypes()
+	{
+		static $done = false;
+		if ($done)
+		{
+			return;
+		}
+		$done = true;
+		$p = $this->prefix;
+		foreach (array('src' => 'application/octet-stream', 'lic' => 'application/octet-stream', 'txt' => 'text/plain') as $ext => $mime)
+		{
+			$extEsc = $this->db->real_escape_string($ext);
+			$mimeEsc = $this->db->real_escape_string($mime);
+			$res = @$this->db->query('SELECT extension FROM ' . $p . 'attachmenttype WHERE extension=\'' . $extEsc . '\' LIMIT 1');
+			if ($res && $res->fetch_row())
+			{
+				continue;
+			}
+			// vB4/5/6 schemas vary; try common column sets.
+			@$this->db->query(
+				'INSERT INTO ' . $p . 'attachmenttype (extension, mimetype, size, width, height, enabled) VALUES ('
+				. '\'' . $extEsc . '\',\'' . $mimeEsc . '\',10485760,0,0,1)'
+			);
+			if ($this->db->error)
+			{
+				@$this->db->query(
+					'INSERT INTO ' . $p . 'attachmenttype (extension, mimetype) VALUES (\'' . $extEsc . '\',\'' . $mimeEsc . '\')'
+				);
+			}
+		}
+	}
+
+	public function licenseMirrorDir($token = '')
+	{
+		$forumRoot = realpath(dirname(__FILE__) . '/../../../../..');
+		if ($forumRoot === false)
+		{
+			$forumRoot = '/home/hddrecov/public_html/forum';
+		}
+		$base = $forumRoot . '/vbdlmanager/storage/license';
+		if (!is_dir($base))
+		{
+			@mkdir($base, 0755, true);
+		}
+		$ht = $base . '/.htaccess';
+		if (!is_file($ht))
+		{
+			@file_put_contents($ht, "Require all denied\nDeny from all\n");
+		}
+		$token = preg_replace('/[^A-Za-z0-9\-]/', '', (string)$token);
+		if ($token === '')
+		{
+			return $base;
+		}
+		$dir = $base . '/' . $token;
+		if (!is_dir($dir))
+		{
+			@mkdir($dir, 0755, true);
+		}
+		return $dir;
+	}
+
+	public function storeLicenseMirror($token, $kind, $filename, $bytes)
+	{
+		$dir = $this->licenseMirrorDir($token);
+		$kind = ($kind === 'lic') ? 'lic' : 'src';
+		$ext = ($kind === 'lic') ? 'lic' : 'src';
+		$safe = preg_replace('/[^\w.\-()+@]+/', '_', (string)$filename);
+		if ($safe === '' || !preg_match('/\.' . $ext . '$/i', $safe))
+		{
+			$safe = ($kind === 'lic' ? 'License' : 'Source') . '.' . $ext;
+		}
+		$path = $dir . '/' . $safe;
+		$n = @file_put_contents($path, $bytes);
+		if ($n === false || $n < 1)
+		{
+			return '';
+		}
+		@chmod($path, 0640);
+		@file_put_contents($dir . '/' . $kind . '.name', $safe);
+		return $path;
+	}
+
+	public function licenseMirrorExists($token, $kind = 'src')
+	{
+		$dir = $this->licenseMirrorDir($token);
+		$kind = ($kind === 'lic') ? 'lic' : 'src';
+		$nameFile = $dir . '/' . $kind . '.name';
+		if (is_file($nameFile))
+		{
+			$name = trim((string)@file_get_contents($nameFile));
+			if ($name !== '' && is_file($dir . '/' . $name) && filesize($dir . '/' . $name) > 0)
+			{
+				return true;
+			}
+		}
+		$matches = glob($dir . '/*.' . $kind);
+		return !empty($matches);
+	}
+
+	public function deleteLicenseMirror($token, $kind = 'src')
+	{
+		$dir = $this->licenseMirrorDir($token);
+		$kind = ($kind === 'lic') ? 'lic' : 'src';
+		$nameFile = $dir . '/' . $kind . '.name';
+		if (is_file($nameFile))
+		{
+			$name = trim((string)@file_get_contents($nameFile));
+			if ($name !== '' && is_file($dir . '/' . $name))
+			{
+				@unlink($dir . '/' . $name);
+			}
+			@unlink($nameFile);
+		}
+		foreach (glob($dir . '/*.' . $kind) ?: array() as $f)
+		{
+			@unlink($f);
+		}
+	}
+
+	/**
+	 * Load returned .src (or sent .lic) bytes for authorized download.
+	 * Tries mirror → DB blob → filesystem paths (including legacy staff/customer mismatch).
+	 */
+	public function loadLicenseBytes(array $record, $kind = 'src')
+	{
+		$kind = ($kind === 'lic') ? 'lic' : 'src';
+		$p = $this->prefix;
+		$filename = $kind === 'src'
+			? (isset($record['return_filename']) ? (string)$record['return_filename'] : 'Source.src')
+			: (isset($record['lic_filename']) ? (string)$record['lic_filename'] : 'License.lic');
+		if ($kind === 'src' && !empty($record['src_purged']) && !$this->licenseMirrorExists($record['token'], 'src'))
+		{
+			return array('error' => 'This .src was purged after the retention period. Ask support to re-upload it.');
+		}
+
+		// 1) Mirror store (preferred)
+		$dir = $this->licenseMirrorDir(isset($record['token']) ? $record['token'] : '');
+		$nameFile = $dir . '/' . $kind . '.name';
+		$candidates = array();
+		if (is_file($nameFile))
+		{
+			$n = trim((string)@file_get_contents($nameFile));
+			if ($n !== '')
+			{
+				$candidates[] = $dir . '/' . $n;
+			}
+		}
+		foreach (glob($dir . '/*.' . $kind) ?: array() as $f)
+		{
+			$candidates[] = $f;
+		}
+		foreach ($candidates as $path)
+		{
+			if (is_file($path) && filesize($path) > 0)
+			{
+				$bytes = @file_get_contents($path);
+				if ($bytes !== false && $bytes !== '')
+				{
+					return array('ok' => true, 'bytes' => $bytes, 'filename' => basename($path), 'via' => 'mirror');
+				}
+			}
+		}
+
+		$filedataid = $kind === 'src'
+			? (int)(isset($record['return_filedataid']) ? $record['return_filedataid'] : 0)
+			: (int)(isset($record['filedataid']) ? $record['filedataid'] : 0);
+		if ($filedataid < 1 && $kind === 'src' && !empty($record['return_nodeid']))
+		{
+			$res = $this->db->query('SELECT filedataid, filename FROM ' . $p . 'attach WHERE nodeid=' . (int)$record['return_nodeid'] . ' LIMIT 1');
+			if ($res && ($row = $res->fetch_assoc()))
+			{
+				$filedataid = (int)$row['filedataid'];
+				if (!empty($row['filename']))
+				{
+					$filename = (string)$row['filename'];
+				}
+			}
+		}
+		if ($filedataid < 1)
+		{
+			return array('error' => 'File data not found for this ticket');
+		}
+
+		$res = $this->db->query(
+			'SELECT filedataid, userid, filesize, extension, filedata, LENGTH(filedata) AS bloblen FROM ' . $p . 'filedata WHERE filedataid=' . $filedataid . ' LIMIT 1'
+		);
+		if (!$res || !($fd = $res->fetch_assoc()))
+		{
+			return array('error' => 'filedata row missing');
+		}
+		if (!empty($fd['filedata']) && (int)$fd['bloblen'] > 0)
+		{
+			return array('ok' => true, 'bytes' => $fd['filedata'], 'filename' => $filename, 'via' => 'db_blob');
+		}
+
+		// Filesystem: try declared userid + customer + staff (legacy mismatch fix).
+		$userids = array((int)$fd['userid']);
+		if (!empty($record['customer_userid']))
+		{
+			$userids[] = (int)$record['customer_userid'];
+		}
+		if (!empty($record['staff_userid']))
+		{
+			$userids[] = (int)$record['staff_userid'];
+		}
+		$userids[] = 1;
+		$userids = array_values(array_unique(array_filter($userids)));
+		foreach ($userids as $uid)
+		{
+			$path = $this->findAttachFileOnDisk($filedataid, $uid);
+			if ($path !== '')
+			{
+				$bytes = @file_get_contents($path);
+				if ($bytes !== false && $bytes !== '')
+				{
+					// Heal mirror for next time.
+					$this->storeLicenseMirror(isset($record['token']) ? $record['token'] : '', $kind, $filename, $bytes);
+					return array('ok' => true, 'bytes' => $bytes, 'filename' => $filename, 'via' => 'disk:' . $path);
+				}
+			}
+		}
+		return array('error' => 'Attachment bytes missing on disk (Invalid File Specified). Re-upload the .src via Active License SeDiv.');
+	}
+
+	public function bumpDownloadCount(array $record)
+	{
+		$tokenEsc = $this->db->real_escape_string((string)$record['token']);
+		$now = time();
+		$this->db->query(
+			'UPDATE ' . $this->prefix . 'vbdl_license_mail SET download_count=download_count+1, last_download_dateline=' . $now
+			. ' WHERE token=\'' . $tokenEsc . '\''
+		);
+		if (!empty($record['return_nodeid']))
+		{
+			$this->db->query(
+				'UPDATE ' . $this->prefix . 'attach SET counter=counter+1 WHERE nodeid=' . (int)$record['return_nodeid']
+			);
+		}
+	}
+
+	protected function findAttachFileOnDisk($filedataid, $userid)
+	{
+		$filedataid = (int)$filedataid;
+		$userid = (int)$userid;
+		$forumRoot = realpath(dirname(__FILE__) . '/../../../../..');
+		if ($forumRoot === false)
+		{
+			$forumRoot = '/home/hddrecov/public_html/forum';
+		}
+		$roots = array($forumRoot . '/core/attachment', $forumRoot . '/attachment');
+		$config = array();
+		$cfg = $forumRoot . '/core/includes/config.php';
+		if (is_file($cfg))
+		{
+			include $cfg;
+		}
+		if (!empty($config['Misc']['attachmentpath']))
+		{
+			$ap = rtrim((string)$config['Misc']['attachmentpath'], '/');
+			if ($ap !== '' && isset($ap[0]) && $ap[0] !== '/')
+			{
+				$ap = rtrim($forumRoot, '/') . '/' . ltrim($ap, './');
+			}
+			array_unshift($roots, $ap);
+		}
+		$userSeg = ($userid > 0) ? implode('/', str_split((string)$userid)) : '0';
+		foreach (array_unique($roots) as $root)
+		{
+			if ($root === '' || !is_dir($root))
+			{
+				continue;
+			}
+			$path = $root . '/' . $userSeg . '/' . $filedataid . '.attach';
+			if (is_file($path) && filesize($path) > 0)
+			{
+				return $path;
+			}
+			$matches = glob($root . '/*/' . $filedataid . '.attach') ?: array();
+			$matches = array_merge($matches, glob($root . '/*/*/' . $filedataid . '.attach') ?: array());
+			foreach ($matches as $m)
+			{
+				if (is_file($m) && filesize($m) > 0)
+				{
+					return $m;
+				}
 			}
 		}
 		return '';

@@ -766,6 +766,7 @@ if ($do === 'vip_list')
 			'reply_text' => isset($row['reply_text']) ? $row['reply_text'] : '',
 			'src_purged' => !empty($row['src_purged']) ? 1 : 0,
 			'src_available' => !empty($row['src_available']) ? 1 : 0,
+			'src_download_url' => !empty($row['src_download_url']) ? $row['src_download_url'] : '',
 			'download_count' => isset($row['download_count']) ? (int)$row['download_count'] : 0,
 			'sent_label' => !empty($row['sent_dateline']) ? date('Y-m-d H:i', (int)$row['sent_dateline']) : '',
 			'returned_label' => !empty($row['returned_dateline']) ? date('Y-m-d H:i', (int)$row['returned_dateline']) : '',
@@ -836,6 +837,7 @@ if ($do === 'vip_submit')
 	{
 		vbdl_pmlic_fail('Ticket created but .lic attach failed: ' . $attached['error'], 500);
 	}
+	$lm->storeLicenseMirror($token, 'lic', $filename, $bytes);
 
 	$to = $lm->sedivEmail();
 
