@@ -441,6 +441,7 @@ class vbdl_LicenseMail
 				{
 					$this->ensureParticipant($nodeid, $supportId);
 				}
+				$this->ensureStaffParticipants($nodeid);
 				return array(
 					'message_nodeid' => $nodeid,
 					'starter_nodeid' => $starter,
@@ -475,6 +476,7 @@ class vbdl_LicenseMail
 							{
 								$this->ensureParticipant($nodeid, $supportId);
 							}
+							$this->ensureStaffParticipants($nodeid);
 							return array(
 								'message_nodeid' => $nodeid,
 								'starter_nodeid' => $starter,
@@ -545,6 +547,138 @@ class vbdl_LicenseMail
 		$this->db->query(
 			'INSERT IGNORE INTO ' . $p . 'sentto (nodeid, userid, folderid, deleted, msgread) VALUES ('
 			. $nodeid . ',' . $userid . ',' . (int)$inboxId . ',0,0)'
+		);
+	}
+
+	/**
+	 * Add administrators / license staff so they can open the ticket and download attaches.
+	 * Without this, only VIP + support_userid are participants → other admins get Invalid File Specified.
+	 */
+	public function ensureStaffParticipants($nodeid)
+	{
+		$nodeid = (int)$nodeid;
+		if ($nodeid < 1)
+		{
+			return;
+		}
+		$ids = array(1, $this->supportUserid());
+		$p = $this->prefix;
+		$gids = array(6, 5);
+		$raw = trim((string)$this->repo->getSetting('license_email_usergroupids', '6'));
+		foreach (explode(',', $raw) as $g)
+		{
+			$g = (int)trim($g);
+			if ($g > 0)
+			{
+				$gids[] = $g;
+			}
+		}
+		$gids = array_values(array_unique($gids));
+		$gList = implode(',', array_map('intval', $gids));
+		$res = @$this->db->query(
+			'SELECT userid FROM ' . $p . 'user WHERE usergroupid IN (' . $gList . ') ORDER BY userid ASC LIMIT 40'
+		);
+		if ($res)
+		{
+			while ($row = $res->fetch_assoc())
+			{
+				$ids[] = (int)$row['userid'];
+			}
+		}
+		foreach ($gids as $gid)
+		{
+			$res2 = @$this->db->query(
+				'SELECT userid FROM ' . $p . 'user WHERE FIND_IN_SET(' . (int)$gid . ', membergroupids) ORDER BY userid ASC LIMIT 20'
+			);
+			if ($res2)
+			{
+				while ($row = $res2->fetch_assoc())
+				{
+					$ids[] = (int)$row['userid'];
+				}
+			}
+		}
+		foreach (array_unique($ids) as $uid)
+		{
+			if ((int)$uid > 0)
+			{
+				$this->ensureParticipant($nodeid, (int)$uid);
+			}
+		}
+	}
+
+	/**
+	 * Heal staff/admin ACL on an existing license ticket (all related PM nodes).
+	 * Fixes "Invalid File Specified" when the .src is on disk but admin is not in sentto.
+	 *
+	 * @param string|array $tokenOrRecord
+	 * @return array
+	 */
+	public function healTicketStaffAccess($tokenOrRecord)
+	{
+		$rec = is_array($tokenOrRecord) ? $tokenOrRecord : $this->findByToken((string)$tokenOrRecord);
+		if (!$rec || empty($rec['token']))
+		{
+			return array('error' => 'Unknown tracking token');
+		}
+		$p = $this->prefix;
+		$nodes = array();
+		foreach (array('message_nodeid', 'starter_nodeid', 'return_nodeid') as $k)
+		{
+			if (!empty($rec[$k]) && (int)$rec[$k] > 0)
+			{
+				$nodes[] = (int)$rec[$k];
+			}
+		}
+		$starter = !empty($rec['starter_nodeid']) ? (int)$rec['starter_nodeid'] : (int)$rec['message_nodeid'];
+		if ($starter > 0)
+		{
+			$res = @$this->db->query(
+				'SELECT DISTINCT s.nodeid FROM ' . $p . 'sentto s '
+				. 'INNER JOIN ' . $p . 'node n ON n.nodeid=s.nodeid '
+				. 'WHERE s.nodeid=' . $starter
+				. ' OR n.nodeid=' . $starter
+				. ' OR n.starter=' . $starter
+				. ' OR n.parentid=' . $starter
+				. ' LIMIT 200'
+			);
+			if ($res)
+			{
+				while ($row = $res->fetch_assoc())
+				{
+					$nodes[] = (int)$row['nodeid'];
+				}
+			}
+			if (!empty($rec['return_nodeid']))
+			{
+				$rid = (int)$rec['return_nodeid'];
+				$res2 = @$this->db->query(
+					'SELECT nodeid, parentid, starter FROM ' . $p . 'node WHERE nodeid=' . $rid . ' LIMIT 1'
+				);
+				if ($res2 && ($nr = $res2->fetch_assoc()))
+				{
+					$nodes[] = (int)$nr['nodeid'];
+					if (!empty($nr['parentid']))
+					{
+						$nodes[] = (int)$nr['parentid'];
+					}
+					if (!empty($nr['starter']))
+					{
+						$nodes[] = (int)$nr['starter'];
+					}
+				}
+			}
+		}
+		$nodes = array_values(array_unique(array_filter(array_map('intval', $nodes))));
+		foreach ($nodes as $nid)
+		{
+			$this->ensureStaffParticipants($nid);
+		}
+		return array(
+			'ok' => true,
+			'token' => (string)$rec['token'],
+			'nodes_healed' => $nodes,
+			'node_count' => count($nodes),
 		);
 	}
 
@@ -819,6 +953,18 @@ class vbdl_LicenseMail
 			. ' WHERE token=\'' . $tokenEsc . '\''
 		);
 
+		// Make sure all admins/staff can open the ticket + download attaches in Message Center.
+		$healed = $this->healTicketStaffAccess(array_merge($record, array(
+			'return_nodeid' => $retNode,
+			'message_nodeid' => $parentId,
+			'starter_nodeid' => $starter,
+		)));
+		if (!empty($posted['text_nodeid']))
+		{
+			$this->ensureStaffParticipants((int)$posted['text_nodeid']);
+		}
+		$this->ensureStaffParticipants($retNode);
+
 		return array(
 			'ok' => true,
 			'token' => $record['token'],
@@ -826,6 +972,7 @@ class vbdl_LicenseMail
 			'filedataid' => $retFd,
 			'attach_nodeid' => $retNode,
 			'message_nodeid' => (int)$posted['text_nodeid'],
+			'staff_healed' => !empty($healed['ok']) ? 1 : 0,
 		);
 	}
 

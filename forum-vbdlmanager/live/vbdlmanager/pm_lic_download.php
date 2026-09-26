@@ -102,8 +102,9 @@ function vbdl_licdl_db()
 	return $mysqli;
 }
 
-function vbdl_licdl_is_staff(array $userinfo, $repo)
+function vbdl_licdl_is_staff(array $userinfo, $repo, $acl = null)
 {
+	$userid = !empty($userinfo['userid']) ? (int)$userinfo['userid'] : 0;
 	$groups = array();
 	if (!empty($userinfo['usergroupid']))
 	{
@@ -120,10 +121,21 @@ function vbdl_licdl_is_staff(array $userinfo, $repo)
 			}
 		}
 	}
+	// Full administrators / supermods
 	if (in_array(6, $groups, true) || in_array(5, $groups, true))
 	{
 		return true;
 	}
+	// Download Manager admin_bypass matrix
+	if ($acl && method_exists($acl, 'globalPerms'))
+	{
+		$p = $acl->globalPerms($userinfo);
+		if (!empty($p['admin_bypass']))
+		{
+			return true;
+		}
+	}
+	// Configured license staff groups
 	$raw = trim((string)$repo->getSetting('license_email_usergroupids', '6'));
 	foreach (explode(',', $raw) as $g)
 	{
@@ -132,6 +144,12 @@ function vbdl_licdl_is_staff(array $userinfo, $repo)
 		{
 			return true;
 		}
+	}
+	// Named support account
+	$support = (int)$repo->getSetting('license_support_userid', '0');
+	if ($support > 0 && $userid === $support)
+	{
+		return true;
 	}
 	return false;
 }
@@ -154,8 +172,13 @@ if (!$rec)
 	exit;
 }
 
-$isStaff = vbdl_licdl_is_staff($userinfo, $repo);
+$isStaff = vbdl_licdl_is_staff($userinfo, $repo, $acl);
 $isOwner = ((int)$rec['customer_userid'] === $userid);
+// If staff opens download, heal PM participants across the whole ticket (fixes MC attach ACL).
+if ($isStaff)
+{
+	$lm->healTicketStaffAccess($rec);
+}
 if (!$isStaff && !$isOwner)
 {
 	header('HTTP/1.1 403 Forbidden');

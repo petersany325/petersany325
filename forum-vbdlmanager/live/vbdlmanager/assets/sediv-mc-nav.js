@@ -53,6 +53,55 @@
     return true;
   }
 
+  function findLicenseTokenNear(el) {
+    var root = (el && el.closest)
+      ? (el.closest('.b-post, .b-message, .l-row, article, li, .b-content-entry, .js-content-entry, .b-privatemessage, .conversation, .message') || el.parentElement)
+      : null;
+    var blobs = [];
+    if (root && root.textContent) blobs.push(root.textContent);
+    if (document.body && document.body.textContent) blobs.push(document.body.textContent.slice(0, 200000));
+    for (var i = 0; i < blobs.length; i++) {
+      var m = String(blobs[i]).match(/VBDL-LIC-[A-Z0-9]+/i);
+      if (m) return m[0].toUpperCase();
+    }
+    return '';
+  }
+
+  function isSrcAttachAnchor(a) {
+    if (!a || !a.getAttribute) return false;
+    if (a.getAttribute('data-vbdl-srcdl') === '1') return false;
+    var href = a.getAttribute('href') || '';
+    var text = (a.textContent || '').trim();
+    var title = a.getAttribute('title') || '';
+    var download = a.getAttribute('download') || '';
+    var blob = (href + ' ' + text + ' ' + title + ' ' + download).toLowerCase();
+    if (blob.indexOf('.src') === -1) return false;
+    if (/pm_lic_download\.php/i.test(href)) return false;
+    return /filedata\/fetch|\/attachment\/|content_attach|attachment\.php|filedataid=|attachmentid=/i.test(href)
+      || /\.src(\?|#|$)/i.test(href)
+      || /\.src$/i.test(text)
+      || /\.src$/i.test(download);
+  }
+
+  /** Rewrite MC .src attach links to dedicated staff/owner download (bypasses Invalid File Specified). */
+  function rewriteSrcDownloads() {
+    var anchors = document.querySelectorAll('a[href]');
+    for (var i = 0; i < anchors.length; i++) {
+      var a = anchors[i];
+      if (!isSrcAttachAnchor(a)) continue;
+      var token = findLicenseTokenNear(a);
+      if (!token) continue;
+      var url = '/vbdlmanager/pm_lic_download.php?token=' + encodeURIComponent(token) + '&kind=src';
+      a.setAttribute('href', url);
+      a.setAttribute('data-vbdl-srcdl', '1');
+      a.setAttribute('title', 'Download activated .src (admin-safe)');
+      if (!a.getAttribute('download')) {
+        var nameMatch = ((a.textContent || '') + ' ' + (a.getAttribute('download') || '')).match(/([^\s\\/]+\.src)\b/i);
+        a.setAttribute('download', nameMatch ? nameMatch[1] : 'Source.src');
+      }
+    }
+  }
+
   function inject(cfg) {
     var after = findInsertPoint();
     if (!after || !after.parentElement) return;
@@ -91,6 +140,14 @@
 
   function boot() {
     ensureStyle();
+    // Always rewrite .src attach links when a VBDL-LIC token is visible (admin ACL bypass).
+    rewriteSrcDownloads();
+    setInterval(rewriteSrcDownloads, 1200);
+    try {
+      var moSrc = new MutationObserver(function () { rewriteSrcDownloads(); });
+      moSrc.observe(document.documentElement, { childList: true, subtree: true });
+    } catch (e0) {}
+
     // Merge configs from both endpoints so request menu works for non-VIP.
     Promise.all([
       fetch('/vbdlmanager/pm_lic_request.php?do=config', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).catch(function () { return null; }),
