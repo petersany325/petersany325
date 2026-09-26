@@ -782,9 +782,10 @@ if ($do === 'vip_submit')
 	{
 		vbdl_pmlic_fail('License mail unavailable', 500);
 	}
-	if (!$isSedivVip)
+	// SeDiv VIP self-service, or admin/staff (license_email_usergroupids / ug 6).
+	if (!$isSedivVip && !$can)
 	{
-		vbdl_pmlic_fail('Only SeDiv VIP members can submit licenses here', 403);
+		vbdl_pmlic_fail('Only SeDiv VIP members or administrators can submit licenses here', 403);
 	}
 	$typeId = isset($_POST['license_type']) ? (string)$_POST['license_type'] : '';
 	$type = $lm->getLicenseType($typeId);
@@ -868,7 +869,7 @@ if ($do === 'vip_submit')
 	$body .= "Customer userid: " . $userid . "\n";
 	$body .= "License filename: " . $filename . "\n";
 	$body .= "Message Center ticket: https://forum.hdd-land.com/messagecenter/view/" . ($starterNode > 0 ? $starterNode : $messageNode) . "\n";
-	$body .= "Submitted via: Active License SeDiv (VIP self-service)\n";
+	$body .= "Submitted via: Active License SeDiv (" . ($isSedivVip ? 'VIP self-service' : 'admin/staff') . ")\n";
 	$body .= "Forum: https://forum.hdd-land.com/\n";
 	if ($note !== '')
 	{

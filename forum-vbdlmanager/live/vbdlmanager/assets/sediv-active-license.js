@@ -100,8 +100,8 @@
   }
 
   function submitLic() {
-    if (!page.isVip) {
-      msg.textContent = 'Only SeDiv VIP members can submit a license here.';
+    if (!page.isVip && !page.canStaff) {
+      msg.textContent = 'Only SeDiv VIP members or administrators can submit a license here.';
       return;
     }
     var type = selectedType();

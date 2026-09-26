@@ -153,8 +153,8 @@ if (!$licenseTypes)
 	<h1>Active License SeDiv</h1>
 	<p class="vbdl-sediv-lead">Choose the license product, upload your <code>.lic</code>, and press Send. A Message Center ticket opens for you and support. The file is emailed with the exact subject for that product; when the activated <code>.src</code> (or a text reply) returns, it is posted into the same ticket.</p>
 
-	<section class="vbdl-sediv-card" id="vbdl-sediv-upload-card" <?php echo $isVip ? '' : 'hidden'; ?>>
-		<h2>Send license</h2>
+	<section class="vbdl-sediv-card" id="vbdl-sediv-upload-card" <?php echo ($isVip || $canStaff) ? '' : 'hidden'; ?>>
+		<h2>Send license<?php echo ($canStaff && !$isVip) ? ' <span class="vbdl-sediv-muted">(admin)</span>' : ''; ?></h2>
 		<div class="vbdl-sediv-meta">
 			<div><span>Username</span><strong id="vbdl-sediv-user"><?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?></strong></div>
 			<div><span>Email</span><strong id="vbdl-sediv-email"><?php echo htmlspecialchars($email !== '' ? $email : '(not set)', ENT_QUOTES, 'UTF-8'); ?></strong></div>
@@ -186,10 +186,10 @@ if (!$licenseTypes)
 		<p class="vbdl-sediv-ticketlink" id="vbdl-sediv-ticketlink" hidden></p>
 	</section>
 
-	<?php if ($canStaff && !$isVip): ?>
+	<?php if ($canStaff): ?>
 	<section class="vbdl-sediv-card">
 		<h2>Support desk</h2>
-		<p class="vbdl-sediv-muted">VIP members open a license ticket from this menu. You receive each ticket as support and can review send + return steps below.</p>
+		<p class="vbdl-sediv-muted">Admins can send a license above (same VIP flow). You also receive VIP tickets as support and can poll inbox / upload returned <code>.src</code> below.</p>
 	</section>
 	<?php endif; ?>
 
@@ -226,6 +226,6 @@ window.__VBDL_SEDIV_PAGE__ = {
   licenseTypes: <?php echo json_encode($licenseTypes); ?>
 };
 </script>
-<script defer src="/vbdlmanager/assets/sediv-active-license.js?v=20260916i"></script>
+<script defer src="/vbdlmanager/assets/sediv-active-license.js?v=20260926admin1"></script>
 </body>
 </html>
