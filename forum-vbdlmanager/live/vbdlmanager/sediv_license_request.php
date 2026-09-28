@@ -105,7 +105,7 @@ catch (Throwable $e)
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>License Request — HDD LAND</title>
-<link rel="stylesheet" href="/vbdlmanager/assets/sediv-license-request.css?v=20260928r1" />
+<link rel="stylesheet" href="/vbdlmanager/assets/sediv-license-request.css?v=20260928r2" />
 </head>
 <body class="vbdl-req-page">
 <header class="vbdl-req-top">
@@ -188,6 +188,6 @@ window.__VBDL_REQ_PAGE__ = {
   email: <?php echo json_encode($email); ?>
 };
 </script>
-<script defer src="/vbdlmanager/assets/sediv-license-request.js?v=20260928r1"></script>
+<script defer src="/vbdlmanager/assets/sediv-license-request.js?v=20260928r2"></script>
 </body>
 </html>

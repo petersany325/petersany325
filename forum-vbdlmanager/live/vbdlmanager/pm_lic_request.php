@@ -7,11 +7,14 @@
 define('THIS_SCRIPT', 'vbdl_pm_lic_request');
 define('CSRF_PROTECTION', false);
 
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store, no-cache, must-revalidate');
-
 $forumRoot = dirname(__FILE__) . '/..';
 chdir($forumRoot);
+$_vbdlReqDo = isset($_REQUEST['do']) ? preg_replace('/[^a-z_]/', '', strtolower((string)$_REQUEST['do'])) : '';
+if ($_vbdlReqDo !== 'download_license')
+{
+	header('Content-Type: application/json; charset=utf-8');
+	header('Cache-Control: no-store, no-cache, must-revalidate');
+}
 
 if (is_file($forumRoot . '/core/includes/init.php'))
 {
@@ -209,6 +212,7 @@ if ($do === 'list')
 	foreach ($rows as $row)
 	{
 		$msgId = !empty($row['starter_nodeid']) ? (int)$row['starter_nodeid'] : (int)$row['message_nodeid'];
+		$approved = !empty($row['status']) && in_array($row['status'], array('approved', 'vip_added'), true);
 		$items[] = array(
 			'token' => $row['token'],
 			'customer_username' => $row['customer_username'],
@@ -219,9 +223,67 @@ if ($do === 'list')
 			'sent_label' => !empty($row['sent_dateline']) ? date('Y-m-d H:i', (int)$row['sent_dateline']) : '',
 			'approved_label' => !empty($row['approved_dateline']) ? date('Y-m-d H:i', (int)$row['approved_dateline']) : '',
 			'message_url' => $msgId > 0 ? ('/messagecenter/view/' . $msgId) : '',
+			'license_download_url' => $approved
+				? ('/vbdlmanager/pm_lic_request.php?do=download_license&token=' . rawurlencode((string)$row['token']))
+				: '',
 		);
 	}
 	echo json_encode(array('ok' => true, 'items' => $items, 'staff_view' => ($isStaff && !empty($_REQUEST['all'])) ? 1 : 0));
+	exit;
+}
+
+// Customer or staff: download approved license .txt for a request token.
+if ($do === 'download_license')
+{
+	$token = isset($_REQUEST['token']) ? (string)$_REQUEST['token'] : '';
+	$rec = $lr->findByToken($token);
+	if (!$rec)
+	{
+		vbdl_req_fail('Unknown tracking token', 404);
+	}
+	$owner = (int)$rec['customer_userid'];
+	if (!$isStaff && $owner !== $userid)
+	{
+		vbdl_req_fail('Not allowed', 403);
+	}
+	if (empty($rec['status']) || !in_array($rec['status'], array('approved', 'vip_added'), true))
+	{
+		vbdl_req_fail('License not available yet', 404);
+	}
+	$filename = !empty($rec['license_filename']) ? (string)$rec['license_filename'] : 'license.txt';
+	$bytes = null;
+	$mirror = $lm->loadMirrorBytes($rec['token'], 'txt');
+	if (!empty($mirror['ok']))
+	{
+		$bytes = $mirror['bytes'];
+		if (!empty($mirror['filename']))
+		{
+			$filename = $mirror['filename'];
+		}
+	}
+	if ($bytes === null && !empty($rec['reply_text']))
+	{
+		$bytes = (string)$rec['reply_text'];
+	}
+	if ($bytes === null && !empty($rec['license_filedataid']))
+	{
+		$fd = (int)$rec['license_filedataid'];
+		$r = $m->query('SELECT filedata, LENGTH(filedata) bloblen FROM ' . vbdl_req_prefix() . 'filedata WHERE filedataid=' . $fd . ' LIMIT 1');
+		if ($r && ($row = $r->fetch_assoc()) && !empty($row['bloblen']))
+		{
+			$bytes = $row['filedata'];
+		}
+	}
+	if ($bytes === null || $bytes === '')
+	{
+		vbdl_req_fail('License file missing', 404);
+	}
+	$filename = preg_replace('/[^\w.\-()+@]+/', '_', $filename);
+	header('Content-Type: text/plain; charset=utf-8');
+	header('Content-Length: ' . strlen($bytes));
+	header('Content-Disposition: attachment; filename="' . $filename . '"');
+	header('Cache-Control: private, no-store');
+	echo $bytes;
 	exit;
 }
 

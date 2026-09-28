@@ -1559,12 +1559,17 @@ class vbdl_LicenseMail
 	public function storeLicenseMirror($token, $kind, $filename, $bytes)
 	{
 		$dir = $this->licenseMirrorDir($token);
-		$kind = ($kind === 'lic') ? 'lic' : 'src';
-		$ext = ($kind === 'lic') ? 'lic' : 'src';
-		$safe = preg_replace('/[^\w.\-()+@]+/', '_', (string)$filename);
-		if ($safe === '' || !preg_match('/\.' . $ext . '$/i', $safe))
+		$kind = strtolower((string)$kind);
+		if ($kind !== 'lic' && $kind !== 'txt')
 		{
-			$safe = ($kind === 'lic' ? 'License' : 'Source') . '.' . $ext;
+			$kind = 'src';
+		}
+		$ext = $kind;
+		$safe = preg_replace('/[^\w.\-()+@]+/', '_', (string)$filename);
+		if ($safe === '' || !preg_match('/\.' . preg_quote($ext, '/') . '$/i', $safe))
+		{
+			$defaults = array('lic' => 'License.lic', 'src' => 'Source.src', 'txt' => 'license.txt');
+			$safe = $defaults[$kind];
 		}
 		$path = $dir . '/' . $safe;
 		$n = @file_put_contents($path, $bytes);
@@ -1580,7 +1585,11 @@ class vbdl_LicenseMail
 	public function licenseMirrorExists($token, $kind = 'src')
 	{
 		$dir = $this->licenseMirrorDir($token);
-		$kind = ($kind === 'lic') ? 'lic' : 'src';
+		$kind = strtolower((string)$kind);
+		if ($kind !== 'lic' && $kind !== 'txt')
+		{
+			$kind = 'src';
+		}
 		$nameFile = $dir . '/' . $kind . '.name';
 		if (is_file($nameFile))
 		{
@@ -1594,10 +1603,50 @@ class vbdl_LicenseMail
 		return !empty($matches);
 	}
 
+	public function loadMirrorBytes($token, $kind = 'src')
+	{
+		$dir = $this->licenseMirrorDir($token);
+		$kind = strtolower((string)$kind);
+		if ($kind !== 'lic' && $kind !== 'txt')
+		{
+			$kind = 'src';
+		}
+		$nameFile = $dir . '/' . $kind . '.name';
+		$candidates = array();
+		if (is_file($nameFile))
+		{
+			$n = trim((string)@file_get_contents($nameFile));
+			if ($n !== '')
+			{
+				$candidates[] = $dir . '/' . $n;
+			}
+		}
+		foreach (glob($dir . '/*.' . $kind) ?: array() as $f)
+		{
+			$candidates[] = $f;
+		}
+		foreach ($candidates as $path)
+		{
+			if (is_file($path) && filesize($path) > 0)
+			{
+				$bytes = @file_get_contents($path);
+				if ($bytes !== false && $bytes !== '')
+				{
+					return array('ok' => true, 'bytes' => $bytes, 'filename' => basename($path));
+				}
+			}
+		}
+		return array('error' => 'Mirror missing');
+	}
+
 	public function deleteLicenseMirror($token, $kind = 'src')
 	{
 		$dir = $this->licenseMirrorDir($token);
-		$kind = ($kind === 'lic') ? 'lic' : 'src';
+		$kind = strtolower((string)$kind);
+		if ($kind !== 'lic' && $kind !== 'txt')
+		{
+			$kind = 'src';
+		}
 		$nameFile = $dir . '/' . $kind . '.name';
 		if (is_file($nameFile))
 		{

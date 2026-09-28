@@ -73,6 +73,14 @@
             a.textContent = 'Open ticket';
             right.appendChild(a);
           }
+          if (row.license_download_url) {
+            right.appendChild(document.createTextNode(' '));
+            var dl = document.createElement('a');
+            dl.className = 'vbdl-req-dl';
+            dl.href = row.license_download_url;
+            dl.textContent = 'Download license';
+            right.appendChild(dl);
+          }
           item.appendChild(left);
           item.appendChild(right);
           listEl.appendChild(item);
@@ -262,28 +270,44 @@
 
   function pollInbox() {
     var retMsg = document.getElementById('vbdl-req-return-msg');
-    if (retMsg) retMsg.textContent = 'Polling inbox…';
-    fetch('/vbdlmanager/pm_lic_inbox.php?do=poll', { credentials: 'same-origin', cache: 'no-store' })
+    if (retMsg) retMsg.textContent = 'Importing license replies from mailbox…';
+    // Prefer dedicated REQ importer (posts license body into ticket even without .txt attach).
+    fetch('/vbdlmanager/_import_req_replies.php', { credentials: 'same-origin', cache: 'no-store' })
       .then(parseJson)
       .then(function (data) {
         if (!data || !data.ok) {
-          if (retMsg) retMsg.textContent = (data && data.error) || 'Poll failed';
-          return;
+          // Fallback to generic inbox poll
+          return fetch('/vbdlmanager/pm_lic_inbox.php?do=poll', { credentials: 'same-origin', cache: 'no-store' })
+            .then(parseJson)
+            .then(function (data2) {
+              if (!data2 || !data2.ok) {
+                if (retMsg) retMsg.textContent = (data && data.error) || (data2 && data2.error) || 'Import failed';
+                return;
+              }
+              var n2 = (data2.processed && data2.processed.length) ? data2.processed.length : 0;
+              if (retMsg) retMsg.textContent = 'Inbox poll: ' + n2 + ' imported.';
+              loadList();
+              loadAdmin();
+            });
         }
         var n = (data.processed && data.processed.length) ? data.processed.length : 0;
         var errN = (data.errors && data.errors.length) ? data.errors.length : 0;
         if (retMsg) {
-          retMsg.textContent = 'Poll done via ' + (data.mode || 'imap') + ': ' + n + ' imported'
-            + (errN ? (', ' + errN + ' errors') : '') + '.';
-          if (errN && data.errors[0] && data.errors[0].error) {
-            retMsg.textContent += ' First error: ' + data.errors[0].error;
+          retMsg.textContent = 'Imported ' + n + ' license reply(ies) into tickets'
+            + (errN ? ('; ' + errN + ' skipped/errors') : '') + '.';
+          if (n && data.processed[0] && data.processed[0].message_url) {
+            retMsg.innerHTML = retMsg.textContent + ' <a class="vbdl-req-dl" href="'
+              + data.processed[0].message_url + '">Open ticket</a>';
+          }
+          if (!n && errN && data.errors[0] && data.errors[0].error) {
+            retMsg.textContent += ' First: ' + data.errors[0].error;
           }
         }
         loadList();
         loadAdmin();
       })
       .catch(function (err) {
-        if (retMsg) retMsg.textContent = (err && err.message) ? err.message : 'Poll network error';
+        if (retMsg) retMsg.textContent = (err && err.message) ? err.message : 'Import network error';
       });
   }
 

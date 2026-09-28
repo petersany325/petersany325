@@ -354,6 +354,7 @@ class vbdl_LicenseRequest
 
 	/**
 	 * Activator replied with license .txt (+ optional text) → post into ticket, mark approved, notify user.
+	 * Always puts the license text in the visible PM body so the customer sees it even if the attach UI fails.
 	 */
 	public function approveWithLicense(array $record, $filename, $bytes, $replyText = '', $staffUserid = 0)
 	{
@@ -392,37 +393,63 @@ class vbdl_LicenseRequest
 		}
 
 		$custId = (int)$record['customer_userid'] > 0 ? (int)$record['customer_userid'] : $userid;
-		$attached = $this->mail->attachFileToTicket($parentId, $starter, $custId, $filename, $bytes);
-		if (!empty($attached['error']))
-		{
-			return $attached;
-		}
-
 		$replyText = trim(preg_replace('/\r\n?/', "\n", (string)$replyText));
-		$notice = "Approved\n"
-			. "Your license file has been received and attached to this ticket.\n"
-			. "You can use the .txt license with Active License SeDiv after an admin adds you to VIP SeDiv.";
-		if ($replyText !== '')
+		$licenseBody = trim(preg_replace('/\r\n?/', "\n", (string)$bytes));
+
+		// 1) Visible reply in ticket body (customer always sees this in Message Center).
+		$notice = "Approved — license received\n"
+			. "================================\n"
+			. "Tracking: " . $record['token'] . "\n"
+			. "File: " . $filename . "\n"
+			. "Your license is below and also attached to this ticket.\n"
+			. "After an admin adds you to VIP SeDiv you can use Active License SeDiv.\n\n"
+			. "----- LICENSE BEGIN -----\n"
+			. substr($licenseBody, 0, 50000) . "\n"
+			. "----- LICENSE END -----";
+		if ($replyText !== '' && $replyText !== $licenseBody)
 		{
 			$notice .= "\n\n--- Activator message ---\n" . substr($replyText, 0, 8000);
 		}
 		$textNode = $this->mail->postTextToTicket($parentId, $starter, $userid, 'License approved', $notice);
+		if ((int)$textNode < 1)
+		{
+			return array('error' => 'Could not post license reply into Message Center ticket');
+		}
+
+		// 2) Native .txt attach (best-effort — body above is the reliable path).
+		$attached = $this->mail->attachFileToTicket($parentId, $starter, $custId, $filename, $bytes);
+		$attachNode = 0;
+		$filedataid = 0;
+		if (!empty($attached['error']))
+		{
+			// Keep going — body already has the license.
+			$attachErr = $attached['error'];
+		}
+		else
+		{
+			$attachErr = '';
+			$attachNode = (int)$attached['attach_nodeid'];
+			$filedataid = (int)$attached['filedataid'];
+		}
+
+		// 3) Mirror for reliable download.
+		$this->mail->storeLicenseMirror($record['token'], 'txt', $filename, $bytes);
 
 		$tokenEsc = $this->db->real_escape_string($record['token']);
 		$nameEsc = $this->db->real_escape_string($filename);
-		$replyEsc = $this->db->real_escape_string($replyText);
+		$replyEsc = $this->db->real_escape_string($replyText !== '' ? $replyText : $licenseBody);
 		$now = time();
 		$this->db->query(
 			'UPDATE ' . $this->prefix . 'vbdl_license_request SET status=\'approved\', '
-			. 'license_filename=\'' . $nameEsc . '\', license_filedataid=' . (int)$attached['filedataid']
-			. ', license_nodeid=' . (int)$attached['attach_nodeid']
+			. 'license_filename=\'' . $nameEsc . '\', license_filedataid=' . $filedataid
+			. ', license_nodeid=' . $attachNode
 			. ', reply_text=\'' . $replyEsc . '\', approved_dateline=' . $now
 			. ' WHERE token=\'' . $tokenEsc . '\''
 		);
 
-		// Ensure customer + staff see the approval reply in Message Center Inbox.
+		// 4) Customer + all staff must see the new reply in Inbox.
 		$this->mail->healPmNodesAccess(
-			array($parentId, $starter, (int)$attached['attach_nodeid'], (int)$textNode),
+			array($parentId, $starter, $attachNode, (int)$textNode),
 			$custId
 		);
 
@@ -431,10 +458,13 @@ class vbdl_LicenseRequest
 			'token' => $record['token'],
 			'status' => 'approved',
 			'filename' => $filename,
-			'filedataid' => (int)$attached['filedataid'],
-			'attach_nodeid' => (int)$attached['attach_nodeid'],
+			'filedataid' => $filedataid,
+			'attach_nodeid' => $attachNode,
 			'text_nodeid' => (int)$textNode,
+			'attach_error' => $attachErr,
 			'message_url' => '/messagecenter/view/' . ($starter > 0 ? $starter : $parentId),
+			'download_url' => '/vbdlmanager/pm_lic_request.php?do=download_license&token='
+				. rawurlencode((string)$record['token']),
 		);
 	}
 
