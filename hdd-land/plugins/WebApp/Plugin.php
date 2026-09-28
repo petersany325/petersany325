@@ -34,6 +34,19 @@ class Plugin extends BasePlugin
         return true;
     }
 
+    public function boot(): void
+    {
+        parent::boot();
+        try {
+            $corp = dirname(__DIR__).DIRECTORY_SEPARATOR.'CorpDesk'.DIRECTORY_SEPARATOR.'Plugin.php';
+            if (is_file($corp)) {
+                require_once $corp;
+                \Plugins\CorpDesk\Plugin::ensureBooted();
+            }
+        } catch (\Throwable) {
+        }
+    }
+
     /** @return array<string,mixed> */
     public static function defaults(): array
     {
