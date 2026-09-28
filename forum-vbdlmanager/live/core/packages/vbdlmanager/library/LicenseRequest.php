@@ -391,7 +391,8 @@ class vbdl_LicenseRequest
 			$userid = 1;
 		}
 
-		$attached = $this->mail->attachFileToTicket($parentId, $starter, (int)$record['customer_userid'] > 0 ? (int)$record['customer_userid'] : $userid, $filename, $bytes);
+		$custId = (int)$record['customer_userid'] > 0 ? (int)$record['customer_userid'] : $userid;
+		$attached = $this->mail->attachFileToTicket($parentId, $starter, $custId, $filename, $bytes);
 		if (!empty($attached['error']))
 		{
 			return $attached;
@@ -419,6 +420,12 @@ class vbdl_LicenseRequest
 			. ' WHERE token=\'' . $tokenEsc . '\''
 		);
 
+		// Ensure customer + staff see the approval reply in Message Center Inbox.
+		$this->mail->healPmNodesAccess(
+			array($parentId, $starter, (int)$attached['attach_nodeid'], (int)$textNode),
+			$custId
+		);
+
 		return array(
 			'ok' => true,
 			'token' => $record['token'],
@@ -427,6 +434,7 @@ class vbdl_LicenseRequest
 			'filedataid' => (int)$attached['filedataid'],
 			'attach_nodeid' => (int)$attached['attach_nodeid'],
 			'text_nodeid' => (int)$textNode,
+			'message_url' => '/messagecenter/view/' . ($starter > 0 ? $starter : $parentId),
 		);
 	}
 

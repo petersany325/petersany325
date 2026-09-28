@@ -43,7 +43,11 @@
           return;
         }
         listEl.innerHTML = '';
+        var prefillsent = '';
         rows.forEach(function (row) {
+          if (!prefillsent && row.status === 'sent' && row.token) {
+            prefillsent = row.token;
+          }
           var item = document.createElement('div');
           item.className = 'vbdl-req-item';
           var left = document.createElement('div');
@@ -73,6 +77,10 @@
           item.appendChild(right);
           listEl.appendChild(item);
         });
+        var tokInput = document.getElementById('vbdl-req-return-token');
+        if (tokInput && !tokInput.value && prefillsent) {
+          tokInput.value = prefillsent;
+        }
       })
       .catch(function (err) {
         listEl.textContent = (err && err.message) ? err.message : 'Network error';
@@ -202,12 +210,93 @@
       });
   }
 
+  function returnLicense() {
+    var retMsg = document.getElementById('vbdl-req-return-msg');
+    if (!retMsg) return;
+    var token = (document.getElementById('vbdl-req-return-token').value || '').trim();
+    var fileInput = document.getElementById('vbdl-req-return-file');
+    var paste = (document.getElementById('vbdl-req-return-text').value || '').trim();
+    if (!token) {
+      retMsg.textContent = 'Enter tracking token (VBDL-REQ-…)';
+      return;
+    }
+    if ((!fileInput.files || !fileInput.files[0]) && !paste) {
+      retMsg.textContent = 'Choose a .txt file or paste the license text';
+      return;
+    }
+    var btn = document.getElementById('vbdl-req-return-btn');
+    btn.disabled = true;
+    retMsg.textContent = 'Posting license into ticket…';
+    var fd = new FormData();
+    fd.append('do', 'return_upload');
+    fd.append('token', token);
+    if (fileInput.files && fileInput.files[0]) {
+      fd.append('txtfile', fileInput.files[0]);
+    }
+    if (paste) {
+      fd.append('license_text', paste);
+    }
+    fetch('/vbdlmanager/pm_lic_request.php', { method: 'POST', body: fd, credentials: 'same-origin' })
+      .then(parseJson)
+      .then(function (data) {
+        btn.disabled = false;
+        if (!data.ok) {
+          retMsg.textContent = data.error || 'Return failed';
+          return;
+        }
+        retMsg.textContent = 'Posted. Status is now approved — customer can open the ticket.';
+        if (fileInput) fileInput.value = '';
+        var ta = document.getElementById('vbdl-req-return-text');
+        if (ta) ta.value = '';
+        loadList();
+        loadAdmin();
+        if (data.message_url) {
+          retMsg.innerHTML = 'Posted. <a class="vbdl-req-dl" href="' + data.message_url + '">Open ticket</a>';
+        }
+      })
+      .catch(function (err) {
+        btn.disabled = false;
+        retMsg.textContent = (err && err.message) ? err.message : 'Network error';
+      });
+  }
+
+  function pollInbox() {
+    var retMsg = document.getElementById('vbdl-req-return-msg');
+    if (retMsg) retMsg.textContent = 'Polling inbox…';
+    fetch('/vbdlmanager/pm_lic_inbox.php?do=poll', { credentials: 'same-origin', cache: 'no-store' })
+      .then(parseJson)
+      .then(function (data) {
+        if (!data || !data.ok) {
+          if (retMsg) retMsg.textContent = (data && data.error) || 'Poll failed';
+          return;
+        }
+        var n = (data.processed && data.processed.length) ? data.processed.length : 0;
+        var errN = (data.errors && data.errors.length) ? data.errors.length : 0;
+        if (retMsg) {
+          retMsg.textContent = 'Poll done via ' + (data.mode || 'imap') + ': ' + n + ' imported'
+            + (errN ? (', ' + errN + ' errors') : '') + '.';
+          if (errN && data.errors[0] && data.errors[0].error) {
+            retMsg.textContent += ' First error: ' + data.errors[0].error;
+          }
+        }
+        loadList();
+        loadAdmin();
+      })
+      .catch(function (err) {
+        if (retMsg) retMsg.textContent = (err && err.message) ? err.message : 'Poll network error';
+      });
+  }
+
   var submitBtn = document.getElementById('vbdl-req-submit');
   if (submitBtn) submitBtn.addEventListener('click', submitReceipt);
   var refresh = document.getElementById('vbdl-req-refresh');
   if (refresh) refresh.addEventListener('click', loadList);
   var adminRefresh = document.getElementById('vbdl-req-admin-refresh');
   if (adminRefresh) adminRefresh.addEventListener('click', loadAdmin);
+  var returnBtn = document.getElementById('vbdl-req-return-btn');
+  if (returnBtn) returnBtn.addEventListener('click', returnLicense);
+  var pollBtn = document.getElementById('vbdl-req-poll');
+  if (pollBtn) pollBtn.addEventListener('click', pollInbox);
   loadList();
   loadAdmin();
 })();

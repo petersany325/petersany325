@@ -105,7 +105,7 @@ catch (Throwable $e)
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>License Request — HDD LAND</title>
-<link rel="stylesheet" href="/vbdlmanager/assets/sediv-license-request.css?v=20260916c" />
+<link rel="stylesheet" href="/vbdlmanager/assets/sediv-license-request.css?v=20260928r1" />
 </head>
 <body class="vbdl-req-page">
 <header class="vbdl-req-top">
@@ -142,6 +142,27 @@ catch (Throwable $e)
 	</section>
 
 	<?php if ($canStaff): ?>
+	<section class="vbdl-req-card" id="vbdl-req-return">
+		<div class="vbdl-req-row">
+			<h2>Staff — post license reply into ticket</h2>
+			<button type="button" class="vbdl-req-linkbtn" id="vbdl-req-poll">Poll inbox now</button>
+		</div>
+		<p class="vbdl-req-muted">If the activator replied by email but the customer panel still shows <code>sent</code>, upload the <code>.txt</code> license (or paste it) for that tracking token. Poll also imports new replies from the info@ mailbox.</p>
+		<label class="vbdl-req-note">
+			<span>Tracking token</span>
+			<input type="text" id="vbdl-req-return-token" placeholder="VBDL-REQ-…" value="" />
+		</label>
+		<label class="vbdl-req-file">
+			<span>License .txt file</span>
+			<input type="file" id="vbdl-req-return-file" accept=".txt,text/plain" />
+		</label>
+		<label class="vbdl-req-note">
+			<span>Or paste license text</span>
+			<textarea id="vbdl-req-return-text" rows="4" placeholder="paste license reply here if no .txt file"></textarea>
+		</label>
+		<button type="button" class="vbdl-req-btn" id="vbdl-req-return-btn">Post license to ticket</button>
+		<p class="vbdl-req-msg" id="vbdl-req-return-msg" role="status"></p>
+	</section>
 	<section class="vbdl-req-card" id="vbdl-req-admin">
 		<div class="vbdl-req-row">
 			<h2>Admin report — Add to VIP SeDiv</h2>
@@ -167,6 +188,6 @@ window.__VBDL_REQ_PAGE__ = {
   email: <?php echo json_encode($email); ?>
 };
 </script>
-<script defer src="/vbdlmanager/assets/sediv-license-request.js?v=20260916c"></script>
+<script defer src="/vbdlmanager/assets/sediv-license-request.js?v=20260928r1"></script>
 </body>
 </html>

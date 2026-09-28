@@ -295,6 +295,50 @@ if ($do === 'heal_ticket')
 	exit;
 }
 
+// Staff: manually post activator .txt (or pasted license text) into the customer ticket.
+if ($do === 'return_upload')
+{
+	if (!$isStaff)
+	{
+		vbdl_req_fail('Staff only', 403);
+	}
+	$token = isset($_POST['token']) ? (string)$_POST['token'] : '';
+	$rec = $lr->findByToken($token);
+	if (!$rec)
+	{
+		vbdl_req_fail('Unknown tracking token');
+	}
+	$filename = 'license.txt';
+	$bytes = null;
+	if (!empty($_FILES['txtfile']) && is_uploaded_file($_FILES['txtfile']['tmp_name']))
+	{
+		$filename = (string)$_FILES['txtfile']['name'];
+		if (!preg_match('/\.txt$/i', $filename))
+		{
+			vbdl_req_fail('Only .txt license files are accepted');
+		}
+		$bytes = file_get_contents($_FILES['txtfile']['tmp_name']);
+	}
+	else
+	{
+		$paste = isset($_POST['license_text']) ? trim((string)$_POST['license_text']) : '';
+		if ($paste === '')
+		{
+			vbdl_req_fail('Upload a .txt license file or paste the license text');
+		}
+		$bytes = $paste . "\n";
+		$filename = 'license.txt';
+	}
+	$note = isset($_POST['note']) ? trim((string)$_POST['note']) : '';
+	$result = $lr->approveWithLicense($rec, $filename, $bytes, $note, $userid);
+	if (!empty($result['error']))
+	{
+		vbdl_req_fail($result['error'], 500);
+	}
+	echo json_encode(array_merge(array('ok' => true), $result));
+	exit;
+}
+
 if ($do === 'submit')
 {
 	if (empty($_FILES['receipt']) || !is_uploaded_file($_FILES['receipt']['tmp_name']))

@@ -55,8 +55,43 @@ $expected = trim((string)$repo->getSetting('license_inbox_key', ''));
 $userinfo = isset($vbulletin->userinfo) ? $vbulletin->userinfo : array('userid' => 0);
 $isAdmin = !empty($userinfo['usergroupid']) && (int)$userinfo['usergroupid'] === 6;
 $keyOk = ($expected !== '' && hash_equals($expected, $key));
+// Staff groups (admin / supermod / license_email_usergroupids) may poll from the License Request desk.
+$isStaff = $isAdmin;
+if (!$isStaff && !empty($userinfo['userid']))
+{
+	$groups = array();
+	if (!empty($userinfo['usergroupid']))
+	{
+		$groups[] = (int)$userinfo['usergroupid'];
+	}
+	if (!empty($userinfo['membergroupids']))
+	{
+		foreach (explode(',', (string)$userinfo['membergroupids']) as $g)
+		{
+			$g = (int)trim($g);
+			if ($g > 0)
+			{
+				$groups[] = $g;
+			}
+		}
+	}
+	if (in_array(5, $groups, true) || in_array(6, $groups, true))
+	{
+		$isStaff = true;
+	}
+	$rawStaff = trim((string)$repo->getSetting('license_email_usergroupids', '6'));
+	foreach (explode(',', $rawStaff) as $g)
+	{
+		$g = (int)trim($g);
+		if ($g > 0 && in_array($g, $groups, true))
+		{
+			$isStaff = true;
+			break;
+		}
+	}
+}
 
-if (!$keyOk && !$isAdmin)
+if (!$keyOk && !$isStaff)
 {
 	http_response_code(403);
 	echo json_encode(array('ok' => false, 'error' => 'Forbidden'));
@@ -166,30 +201,21 @@ if ($maildir !== '' && is_dir($maildir) && @is_readable($maildir))
 			continue;
 		}
 
-		// Purchase request replies (.txt license)
+		// Purchase request replies (.txt license, or plain-text body as license)
 		if ($reqToken !== '' || ($token !== '' && stripos($token, 'VBDL-REQ-') === 0))
 		{
 			$rt = $reqToken !== '' ? $reqToken : $token;
 			$rec = $lr->findByToken($rt);
 			if ($rec && $rec['status'] === 'sent')
 			{
-				$parsedTxt = vbdl_inbox_extract_txt_from_rfc822($raw);
-				if (!empty($parsedTxt['bytes']))
+				$result = vbdl_inbox_approve_req_from_raw($lr, $rec, $raw, 'maildir');
+				if (!empty($result['error']))
 				{
-					$textBody = vbdl_inbox_extract_text_from_rfc822($raw);
-					$result = $lr->approveWithLicense($rec, $parsedTxt['filename'], $parsedTxt['bytes'], $textBody, (int)$rec['staff_userid']);
-					if (!empty($result['error']))
-					{
-						$errors[] = array('token' => $rt, 'error' => $result['error']);
-					}
-					else
-					{
-						$processed[] = array('token' => $rt, 'file' => $parsedTxt['filename'], 'kind' => 'license_txt', 'via' => 'maildir');
-					}
+					$errors[] = array('token' => $rt, 'error' => $result['error']);
 				}
 				else
 				{
-					$errors[] = array('token' => $rt, 'error' => 'No .txt license attachment found for purchase request');
+					$processed[] = $result;
 				}
 			}
 			continue;
@@ -298,13 +324,16 @@ foreach ($ids as $msgno)
 		continue;
 	}
 
-	if ($reqToken !== '')
+	if ($reqToken !== '' || ($token !== '' && stripos($token, 'VBDL-REQ-') === 0))
 	{
-		$rec = $lr->findByToken($reqToken);
+		$rt = $reqToken !== '' ? $reqToken : $token;
+		$rec = $lr->findByToken($rt);
 		if (!$rec || $rec['status'] !== 'sent')
 		{
 			continue;
 		}
+		$rawMsg = $header . "\n" . $body;
+		// Prefer structured IMAP parts for .txt; fall back to RFC822 parser + body text.
 		$structure = imap_fetchstructure($imap, $msgno);
 		$parts = array();
 		vbdl_inbox_flatten_parts($structure, '', $parts);
@@ -333,19 +362,26 @@ foreach ($ids as $msgno)
 				break;
 			}
 		}
-		if ($txtBytes === null)
+		if ($txtBytes !== null)
 		{
-			$errors[] = array('token' => $reqToken, 'error' => 'No .txt license attachment found');
+			$textBody = vbdl_inbox_extract_text_from_rfc822($rawMsg);
+			$result = $lr->approveWithLicense($rec, $txtName, $txtBytes, $textBody, (int)$rec['staff_userid']);
+			if (!empty($result['error']))
+			{
+				$errors[] = array('token' => $rt, 'error' => $result['error']);
+				continue;
+			}
+			$processed[] = array('token' => $rt, 'file' => $txtName, 'kind' => 'license_txt', 'via' => 'imap');
+			@imap_setflag_full($imap, (string)$msgno, '\\Seen');
 			continue;
 		}
-		$textBody = vbdl_inbox_extract_text_from_rfc822($header . "\n" . $body);
-		$result = $lr->approveWithLicense($rec, $txtName, $txtBytes, $textBody, (int)$rec['staff_userid']);
+		$result = vbdl_inbox_approve_req_from_raw($lr, $rec, $rawMsg, 'imap');
 		if (!empty($result['error']))
 		{
-			$errors[] = array('token' => $reqToken, 'error' => $result['error']);
+			$errors[] = array('token' => $rt, 'error' => $result['error']);
 			continue;
 		}
-		$processed[] = array('token' => $reqToken, 'file' => $txtName, 'kind' => 'license_txt');
+		$processed[] = $result;
 		@imap_setflag_full($imap, (string)$msgno, '\\Seen');
 		continue;
 	}
@@ -687,6 +723,55 @@ function vbdl_inbox_clean_reply_text($text)
 		return '';
 	}
 	return $text;
+}
+
+/**
+ * Approve a License Request from a raw RFC822 reply.
+ * Accepts .txt attachment, or falls back to plain-text body as license.txt
+ * (activators often paste the license without attaching a file).
+ *
+ * @param vbdl_LicenseRequest $lr
+ * @param array $rec
+ * @param string $raw
+ * @param string $via
+ * @return array
+ */
+function vbdl_inbox_approve_req_from_raw($lr, array $rec, $raw, $via = 'maildir')
+{
+	$parsedTxt = vbdl_inbox_extract_txt_from_rfc822($raw);
+	$textBody = vbdl_inbox_extract_text_from_rfc822($raw);
+	$filename = !empty($parsedTxt['filename']) ? $parsedTxt['filename'] : 'license.txt';
+	$bytes = !empty($parsedTxt['bytes']) ? $parsedTxt['bytes'] : null;
+	$kind = 'license_txt';
+	if ($bytes === null || trim((string)$bytes) === '')
+	{
+		// No .txt attach — use cleaned reply body when it looks like a real license reply.
+		$body = trim((string)$textBody);
+		if (strlen($body) >= 12)
+		{
+			$bytes = $body . "\n";
+			$filename = 'license.txt';
+			$kind = 'license_txt_body';
+			$textBody = '';
+		}
+	}
+	if ($bytes === null || trim((string)$bytes) === '')
+	{
+		return array('error' => 'No .txt license attachment or usable reply text for purchase request');
+	}
+	$result = $lr->approveWithLicense($rec, $filename, $bytes, $textBody, (int)$rec['staff_userid']);
+	if (!empty($result['error']))
+	{
+		return $result;
+	}
+	return array(
+		'token' => $rec['token'],
+		'file' => isset($result['filename']) ? $result['filename'] : $filename,
+		'kind' => $kind,
+		'via' => $via,
+		'status' => 'approved',
+		'message_url' => isset($result['message_url']) ? $result['message_url'] : '',
+	);
 }
 
 /**
