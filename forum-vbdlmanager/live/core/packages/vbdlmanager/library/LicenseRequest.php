@@ -163,6 +163,36 @@ class vbdl_LicenseRequest
 		return null;
 	}
 
+	/**
+	 * Heal Message Center Inbox access for an existing License Request ticket.
+	 * Fixes: email notification arrived but ticket missing from admin/customer MC list.
+	 *
+	 * @param string|array $tokenOrRecord
+	 * @return array
+	 */
+	public function healRequestTicketAccess($tokenOrRecord)
+	{
+		$rec = is_array($tokenOrRecord) ? $tokenOrRecord : $this->findByToken((string)$tokenOrRecord);
+		if (!$rec || empty($rec['token']))
+		{
+			return array('error' => 'Unknown License Request token');
+		}
+		$nodes = array();
+		foreach (array('message_nodeid', 'starter_nodeid', 'license_nodeid') as $k)
+		{
+			if (!empty($rec[$k]) && (int)$rec[$k] > 0)
+			{
+				$nodes[] = (int)$rec[$k];
+			}
+		}
+		$healed = $this->mail->healPmNodesAccess($nodes, (int)$rec['customer_userid']);
+		$healed['token'] = (string)$rec['token'];
+		$healed['customer_userid'] = (int)$rec['customer_userid'];
+		$healed['message_url'] = '/messagecenter/view/'
+			. (!empty($rec['starter_nodeid']) ? (int)$rec['starter_nodeid'] : (int)$rec['message_nodeid']);
+		return $healed;
+	}
+
 	public function listForUser($userid, $limit = 30)
 	{
 		$userid = (int)$userid;
@@ -257,6 +287,10 @@ class vbdl_LicenseRequest
 		$messageNode = (int)$ticket['message_nodeid'];
 		$starterNode = (int)$ticket['starter_nodeid'];
 		$supportId = !empty($ticket['support_userid']) ? (int)$ticket['support_userid'] : $this->supportUserid();
+
+		// Make sure customer + every admin see this in Message Center Inbox
+		// (otherwise only the email copy to info@ / support mailbox appears).
+		$this->mail->healPmNodesAccess(array($messageNode, $starterNode), $userid);
 
 		$attached = $this->mail->attachFileToTicket($messageNode, $starterNode, $userid, $filename, $bytes);
 		if (!empty($attached['error']))

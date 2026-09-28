@@ -352,18 +352,27 @@ class vbdl_LicenseMail
 				return array('error' => 'Cannot create Message Center ticket for VIP + support');
 			}
 			$title = $typeLabel . ' - ' . $token;
+			$isReq = (stripos($token, 'VBDL-REQ-') === 0) || (strcasecmp($typeLabel, 'License Request') === 0);
 			$text = $typeLabel . " request\n"
 				. "================================\n"
-				. "VIP user: {$username} (userid {$userid})\n"
+				. ($isReq ? "Customer: {$username} (userid {$userid})\n" : "VIP user: {$username} (userid {$userid})\n")
 				. "Tracking token: {$token}\n"
 				. "License type: {$typeLabel}\n"
-				. "License file: {$licFilename}\n";
+				. ($isReq ? "Receipt file: {$licFilename}\n" : "License file: {$licFilename}\n");
 			if ($emailSubject !== '')
 			{
 				$text .= "Email subject: {$emailSubject}\n";
 			}
-			$text .= "\nThis ticket is for license send + activated .src return only.\n"
-				. "Support can review every step here.";
+			if ($isReq)
+			{
+				$text .= "\nThis ticket is for License Request (payment receipt → license .txt).\n"
+					. "Support/admin can review every step here in Message Center.";
+			}
+			else
+			{
+				$text .= "\nThis ticket is for license send + activated .src return only.\n"
+					. "Support can review every step here.";
+			}
 			$recipients = ($supportId !== $userid) ? $supportName : $username;
 			$sentto = ($supportId !== $userid) ? array($supportId) : array($userid);
 			$data = array(
@@ -442,6 +451,15 @@ class vbdl_LicenseMail
 					$this->ensureParticipant($nodeid, $supportId);
 				}
 				$this->ensureStaffParticipants($nodeid);
+				if ($starter > 0 && $starter !== $nodeid)
+				{
+					$this->ensureParticipant($starter, $userid);
+					if ($supportId !== $userid)
+					{
+						$this->ensureParticipant($starter, $supportId);
+					}
+					$this->ensureStaffParticipants($starter);
+				}
 				return array(
 					'message_nodeid' => $nodeid,
 					'starter_nodeid' => $starter,
@@ -477,6 +495,15 @@ class vbdl_LicenseMail
 								$this->ensureParticipant($nodeid, $supportId);
 							}
 							$this->ensureStaffParticipants($nodeid);
+							if ($starter > 0 && $starter !== $nodeid)
+							{
+								$this->ensureParticipant($starter, $userid);
+								if ($supportId !== $userid)
+								{
+									$this->ensureParticipant($starter, $supportId);
+								}
+								$this->ensureStaffParticipants($starter);
+							}
 							return array(
 								'message_nodeid' => $nodeid,
 								'starter_nodeid' => $starter,
@@ -694,7 +721,27 @@ class vbdl_LicenseMail
 		{
 			return (int)$row['folderid'];
 		}
-		// Fallback: any non-system custom/inbox-like folder
+		// Create Inbox folder when missing — otherwise ensureParticipant silently skips
+		// and staff only get the email copy, not the Message Center ticket list.
+		@$this->db->query(
+			'INSERT INTO ' . $p . 'messagefolder (userid, title, titlephrase) VALUES ('
+			. $userid . ',\'\',\'messages\')'
+		);
+		$newId = (int)$this->db->insert_id;
+		if ($newId > 0)
+		{
+			return $newId;
+		}
+		// Some schemas require extra columns — retry minimal variants.
+		@$this->db->query(
+			'INSERT INTO ' . $p . 'messagefolder (userid, titlephrase) VALUES (' . $userid . ',\'messages\')'
+		);
+		$newId = (int)$this->db->insert_id;
+		if ($newId > 0)
+		{
+			return $newId;
+		}
+		// Fallback: any existing folder for this user
 		$res = $this->db->query(
 			'SELECT folderid FROM ' . $p . 'messagefolder WHERE userid=' . $userid . ' ORDER BY folderid ASC LIMIT 1'
 		);
@@ -703,6 +750,37 @@ class vbdl_LicenseMail
 			return (int)$row['folderid'];
 		}
 		return 0;
+	}
+
+	/**
+	 * Heal staff/customer Inbox membership for arbitrary PM node ids (License Request / LIC).
+	 *
+	 * @param int[] $nodeids
+	 * @param int $customerUserid
+	 * @return array
+	 */
+	public function healPmNodesAccess(array $nodeids, $customerUserid = 0)
+	{
+		$nodes = array();
+		foreach ($nodeids as $nid)
+		{
+			$nid = (int)$nid;
+			if ($nid > 0)
+			{
+				$nodes[] = $nid;
+			}
+		}
+		$nodes = array_values(array_unique($nodes));
+		$customerUserid = (int)$customerUserid;
+		foreach ($nodes as $nid)
+		{
+			if ($customerUserid > 0)
+			{
+				$this->ensureParticipant($nid, $customerUserid);
+			}
+			$this->ensureStaffParticipants($nid);
+		}
+		return array('ok' => true, 'nodes' => $nodes, 'node_count' => count($nodes));
 	}
 
 	/**

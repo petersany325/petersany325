@@ -273,6 +273,28 @@ if ($do === 'admin_add_vip')
 	exit;
 }
 
+// Staff: put License Request ticket back into admin/customer Message Center Inbox.
+if ($do === 'heal_ticket')
+{
+	if (!$isStaff)
+	{
+		vbdl_req_fail('Staff only', 403);
+	}
+	$token = isset($_REQUEST['token']) ? (string)$_REQUEST['token'] : '';
+	$rec = $lr->findByToken($token);
+	if (!$rec)
+	{
+		vbdl_req_fail('Unknown tracking token');
+	}
+	$result = $lr->healRequestTicketAccess($rec);
+	if (!empty($result['error']))
+	{
+		vbdl_req_fail($result['error'], 500);
+	}
+	echo json_encode(array_merge(array('ok' => true), $result));
+	exit;
+}
+
 if ($do === 'submit')
 {
 	if (empty($_FILES['receipt']) || !is_uploaded_file($_FILES['receipt']['tmp_name']))
@@ -289,8 +311,16 @@ if ($do === 'submit')
 	{
 		vbdl_req_fail($result['error'], 500);
 	}
+	// Never deliver License Request mail to the forum main inbox (info@).
+	// That mailbox is From/Reply identity only — To must stay sedivlic.
+	$toEmail = !empty($result['to_email']) ? (string)$result['to_email'] : $lr->requestEmail();
+	if ($toEmail === '' || strcasecmp($toEmail, 'info@hdd-land.com') === 0)
+	{
+		$toEmail = 'sedivlic@list.ru';
+		$result['to_email'] = $toEmail;
+	}
 	$err = vbdl_req_send_mail(
-		$result['to_email'],
+		$toEmail,
 		$result['subject'],
 		$result['body'],
 		$result['filename'],
