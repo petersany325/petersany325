@@ -1,0 +1,95 @@
+# HDDSuperClone carve signatures (tab-separated, data-driven)
+# ext  category  magic_hex  off  footer_hex  max_bytes  flags
+# flags: skip=reason | ftyp:brand,brand | mag2=HEX@off
+# Types that share another type's magic are listed but skipped so grep stays one-file-per-hit.
+
+jpg	photo	FFD8FF	0	FFD9	33554432
+jpeg	photo	-	0	-	0	skip=same JPEG SOI as jpg
+png	photo	89504E470D0A1A0A	0	49454E44AE426082	67108864
+gif	photo	474946383961	0	003B	16777216
+gif	photo	474946383761	0	003B	16777216
+bmp	photo	424D	0	-	16777216
+tif	photo	49492A00	0	-	67108864
+tiff	photo	4D4D002A	0	-	67108864
+webp	photo	52494646	0	-	33554432	mag2=57454250@8
+heic	photo	66747970	4	-	67108864	ftyp:heic,heix,heim,heis,mif1,msf1
+heif	photo	66747970	4	-	67108864	ftyp:heif
+cr2	photo	49492A00	0	-	67108864	mag2=4352@8
+rw2	photo	49495500	0	-	67108864
+orf	photo	49495253	0	-	67108864
+dng	photo	-	0	-	0	skip=DNG is TIFF-based; carved as tif
+nef	photo	-	0	-	0	skip=NEF is TIFF-based; carved as tif
+arw	photo	-	0	-	0	skip=ARW is TIFF-based; carved as tif
+raw	photo	-	0	-	0	skip=generic RAW has no single magic
+
+mp4	video	66747970	4	-	268435456	ftyp:isom,iso2,iso5,iso6,mp41,mp42,mp71,avc1,dash,msdh,M4V
+mov	video	66747970	4	-	268435456	ftyp:qt
+m4v	video	66747970	4	-	268435456	ftyp:M4V
+3gp	video	66747970	4	-	134217728	ftyp:3gp4,3gp5,3gp6,3ge6,3gg6
+mkv	video	1A45DFA3	0	-	268435456
+webm	video	-	0	-	0	skip=same EBML header as mkv
+avi	video	52494646	0	-	268435456	mag2=41564920@8
+wmv	video	3026B2758E66CF11	0	-	268435456
+flv	video	464C5601	0	-	134217728
+mpg	video	000001BA	0	-	134217728
+mpeg	video	000001B3	0	-	134217728
+ts	video	-	0	-	0	skip=MPEG-TS is 0x47 every 188 bytes; too many false hits
+mts	video	-	0	-	0	skip=same as MPEG-TS
+
+mp3	audio	494433	0	-	33554432
+wav	audio	52494646	0	-	67108864	mag2=57415645@8
+flac	audio	664C6143	0	-	67108864
+ogg	audio	4F676753	0	-	33554432
+m4a	audio	66747970	4	-	67108864	ftyp:M4A,M4B
+wma	audio	-	0	-	0	skip=same ASF header as wmv
+aac	audio	-	0	-	0	skip=ADTS 0xFFF1 false-positives; M4A covers most AAC
+
+pdf	document	25504446	0	2525454F46	67108864
+doc	document	D0CF11E0A1B11AE1	0	-	33554432
+xls	document	-	0	-	0	skip=same OLE magic as doc
+ppt	document	-	0	-	0	skip=same OLE magic as doc
+docx	document	-	0	-	0	skip=Office Open XML is ZIP; carved as zip
+xlsx	document	-	0	-	0	skip=same ZIP magic
+pptx	document	-	0	-	0	skip=same ZIP magic
+odt	document	-	0	-	0	skip=OpenDocument is ZIP; carved as zip
+ods	document	-	0	-	0	skip=same ZIP magic
+rtf	document	7B5C727466	0	-	8388608
+epub	document	-	0	-	0	skip=EPUB is ZIP; carved as zip
+txt	document	-	0	-	0	skip=plain text has no magic
+svg	document	3C737667	0	-	2097152
+
+zip	archive	504B0304	0	-	134217728
+rar	archive	526172211A0700	0	-	134217728
+rar5	archive	526172211A070100	0	-	134217728
+7z	archive	377ABCAF271C	0	-	134217728
+gz	archive	1F8B08	0	-	67108864
+bz2	archive	425A68	0	-	67108864
+xz	archive	FD377A585A00	0	-	67108864
+cab	archive	4D534346	0	-	67108864
+tar	archive	7573746172	257	-	134217728
+iso	archive	4344303031	32769	-	134217728
+
+sqlite	database	53514C69746520666F726D61742033	0	-	134217728
+db	database	-	0	-	0	skip=same SQLite header as sqlite
+mdb	database	000100005374616E64617264204A6574204442	0	-	67108864
+accdb	database	000100005374616E6461726420414345204442	0	-	67108864
+mdf	database	010F0000	0	-	134217728
+sqlite-wal	database	57414C0A	0	-	67108864
+odb	database	-	0	-	0	skip=ODB is ZIP; carved as zip
+sql	database	-	0	-	0	skip=SQL dumps are text; no magic
+dbf	database	-	0	-	0	skip=dBase 0x03 header collides with random data
+frm	database	-	0	-	0	skip=MySQL .frm has no stable binary magic
+ibd	database	-	0	-	0	skip=InnoDB .ibd has no unique file header
+ldf	database	-	0	-	0	skip=SQL Server log has no unique magic
+
+pst	mail	2142444E	0	-	134217728
+ost	mail	-	0	-	0	skip=same !BDN header as pst
+msg	mail	-	0	-	0	skip=same OLE magic as doc
+eml	mail	-	0	-	0	skip=RFC822 email is text; no magic
+
+exe	executable	4D5A	0	-	67108864
+dll	executable	-	0	-	0	skip=same MZ header as exe
+elf	executable	7F454C46	0	-	67108864
+psd	media	38425053	0	-	67108864
+eps	media	252150532D41646F6265	0	-	16777216
+ai	media	-	0	-	0	skip=Illustrator is PDF or EPS; carved as those
