@@ -4,7 +4,9 @@ Native Windows port of [HDDSuperClone](https://github.com/thesourcerer8/hddsuper
 
 Upstream: <https://github.com/thesourcerer8/hddsuperclone> · original site: <http://www.hddsuperclone.com/>
 
-Install with **HDDSuperClone-Windows-Setup.exe** (NSIS). It installs to `Program Files\HDDSuperClone`, adds Start Menu + desktop shortcuts, requires Administrator, and registers Add/Remove Programs.
+Install with **HDDSuperClone-Windows-Setup.exe** (NSIS). Default folder is `D:\HDDSuperClone\CLONE IMAGE HDD-LAND` (the Image HDD-LAND working copy: exe, scripts, signatures, and full source). Start Menu + desktop shortcuts still point at that folder. Run Setup as Administrator. Registry: `HKLM\Software\HDDSuperClone\InstallDir`.
+
+To copy an already-built tree onto that disk without Setup, run `installer\copy-to-image-hdd.bat`.
 
 ## What this port does
 
