@@ -155,16 +155,30 @@ class HomePageConfig
         ];
     }
 
+    protected static bool $persistedCorpUpgrade = false;
+
     public static function get(): array
     {
         $raw = SettingsStore::get(self::KEY, []);
         if (is_string($raw)) {
             $raw = json_decode($raw, true) ?: [];
         }
+        $rawArr = is_array($raw) ? $raw : [];
 
-        $out = array_merge(self::defaults(), is_array($raw) ? $raw : []);
+        $out = array_merge(self::defaults(), $rawArr);
+        $out = self::upgradeCorpCards($out, $rawArr);
 
-        return self::upgradeCorpCards($out, is_array($raw) ? $raw : []);
+        if (! self::$persistedCorpUpgrade && self::corpCardsAreStale($rawArr)) {
+            self::$persistedCorpUpgrade = true;
+            $out['corp_cards_v'] = 4;
+            try {
+                SettingsStore::set(self::KEY, $out);
+            } catch (\Throwable) {
+                self::$persistedCorpUpgrade = false;
+            }
+        }
+
+        return $out;
     }
 
     /**
@@ -196,8 +210,26 @@ class HomePageConfig
                 $out[$k] = $def[$k];
             }
         }
+        $out['corp_cards_v'] = 4;
 
         return $out;
+    }
+
+    /** @param  array<string,mixed>  $raw */
+    protected static function corpCardsAreStale(array $raw): bool
+    {
+        if ((int) ($raw['corp_cards_v'] ?? 0) >= 4) {
+            return false;
+        }
+        $title2 = trim((string) ($raw['corp_2_title'] ?? ''));
+        $url1 = trim((string) ($raw['corp_1_url'] ?? ''));
+        $url3 = trim((string) ($raw['corp_3_url'] ?? ''));
+        $title4 = trim((string) ($raw['corp_4_title'] ?? ''));
+
+        return $title2 === '' || $title2 === 'تجهیز ذخیره‌سازی شعب'
+            || $url1 === '' || $url1 === '/contact'
+            || $url3 === '' || $url3 === '/contact'
+            || $title4 === '';
     }
 
     public static function save(array $d): array
