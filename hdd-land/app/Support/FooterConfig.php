@@ -20,7 +20,7 @@ class FooterConfig
             'text' => '#f8fafc',
             'muted' => '#94a3b8',
             'column1_title' => 'فروشگاه',
-            'column1_links' => "محصولات|/products\nپیگیری سفارش|/orders/track\nاستعلام گارانتی|/serial-check",
+            'column1_links' => "محصولات|/products\nتأمین سازمانی|/enterprise-storage\nپروژه CCTV|/cctv-projects\nسایت تعمیرکاران|/sites/repair-shop\nسایت فروشگاهی|/sites/online-store\nپیگیری سفارش|/orders/track\nاستعلام گارانتی|/serial-check",
             'column2_title' => 'خدمات مشتریان',
             'column2_links' => "حساب کاربری|/account\nپشتیبانی|/account/tickets\nتماس با ما|/contact\nدرباره ما|/about",
             'social_links' => "اینستاگرام|#\nتلگرام|#\nواتساپ|#",

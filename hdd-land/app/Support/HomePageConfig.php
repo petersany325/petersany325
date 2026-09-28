@@ -120,19 +120,23 @@ class HomePageConfig
 
             'corp_enabled' => true,
             'corp_title' => 'پروژه‌ها و خدمات سازمانی',
-            'corp_subtitle' => 'تأمین ذخیره‌سازی برای سازمان، شعب و پروژه‌های نظارتی',
+            'corp_subtitle' => 'تأمین ذخیره‌سازی، فروش سایت و پروژه‌های نظارتی',
             'corp_1_title' => 'تأمین هارد سازمانی',
             'corp_1_text' => 'موجودی سازمانی، مشاوره مدل و تحویل با فاکتور رسمی.',
             'corp_1_image' => 'images/home/corp-org.jpg',
-            'corp_1_url' => '/contact',
-            'corp_2_title' => 'تجهیز ذخیره‌سازی شعب',
-            'corp_2_text' => 'NAS، هارد سرور و ظرفیت مناسب برای آرشیو و بکاپ.',
-            'corp_2_image' => 'images/home/corp-nas.jpg',
-            'corp_2_url' => '/contact',
+            'corp_1_url' => '/enterprise-storage',
+            'corp_2_title' => 'فروش سایت تعمیرکاران',
+            'corp_2_text' => 'نرم‌افزار تعمیرگاه، آموزش و منوی کارکنان.',
+            'corp_2_image' => 'images/home/corp-repair.jpg',
+            'corp_2_url' => '/sites/repair-shop',
             'corp_3_title' => 'پروژه‌های نظارتی و CCTV',
             'corp_3_text' => 'هارد مناسب دوربین، ظرفیت آرشیو و تأمین عمده.',
             'corp_3_image' => 'images/home/corp-cctv.jpg',
-            'corp_3_url' => '/contact',
+            'corp_3_url' => '/cctv-projects',
+            'corp_4_title' => 'سایت فروشگاهی',
+            'corp_4_text' => 'فروش آنلاین کالا با ویترین، سبد و حساب مشتری.',
+            'corp_4_image' => 'images/home/corp-shop.jpg',
+            'corp_4_url' => '/sites/online-store',
             'corp_cta_title' => 'خرید سازمانی و استعلام قیمت',
             'corp_cta_text' => 'برای پیش‌فاکتور و تأمین عمده با واحد فروش تماس بگیرید.',
             'corp_cta_label' => 'تماس با واحد فروش',
@@ -158,7 +162,42 @@ class HomePageConfig
             $raw = json_decode($raw, true) ?: [];
         }
 
-        return array_merge(self::defaults(), is_array($raw) ? $raw : []);
+        $out = array_merge(self::defaults(), is_array($raw) ? $raw : []);
+
+        return self::upgradeCorpCards($out, is_array($raw) ? $raw : []);
+    }
+
+    /**
+     * Replace the old 3-card set (branch storage) with 4 live options.
+     *
+     * @param  array<string,mixed>  $out
+     * @param  array<string,mixed>  $raw
+     * @return array<string,mixed>
+     */
+    protected static function upgradeCorpCards(array $out, array $raw): array
+    {
+        $def = self::defaults();
+        $saved2 = trim((string) ($raw['corp_2_title'] ?? ''));
+        if ($saved2 === '' || $saved2 === 'تجهیز ذخیره‌سازی شعب') {
+            foreach (['corp_2_title', 'corp_2_text', 'corp_2_image', 'corp_2_url'] as $k) {
+                $out[$k] = $def[$k];
+            }
+        }
+        $saved1url = trim((string) ($raw['corp_1_url'] ?? ''));
+        if ($saved1url === '' || $saved1url === '/contact') {
+            $out['corp_1_url'] = $def['corp_1_url'];
+        }
+        $saved3url = trim((string) ($raw['corp_3_url'] ?? ''));
+        if ($saved3url === '' || $saved3url === '/contact') {
+            $out['corp_3_url'] = $def['corp_3_url'];
+        }
+        if (trim((string) ($raw['corp_4_title'] ?? '')) === '') {
+            foreach (['corp_4_title', 'corp_4_text', 'corp_4_image', 'corp_4_url'] as $k) {
+                $out[$k] = $def[$k];
+            }
+        }
+
+        return $out;
     }
 
     public static function save(array $d): array
@@ -231,6 +270,7 @@ class HomePageConfig
             'corp_1_title' => 160, 'corp_1_text' => 300, 'corp_1_image' => 500, 'corp_1_url' => 300,
             'corp_2_title' => 160, 'corp_2_text' => 300, 'corp_2_image' => 500, 'corp_2_url' => 300,
             'corp_3_title' => 160, 'corp_3_text' => 300, 'corp_3_image' => 500, 'corp_3_url' => 300,
+            'corp_4_title' => 160, 'corp_4_text' => 300, 'corp_4_image' => 500, 'corp_4_url' => 300,
             'corp_cta_title' => 160, 'corp_cta_text' => 300,
             'corp_cta_label' => 80, 'corp_cta_url' => 300,
             'webapp_corp_title' => 160, 'webapp_corp_text' => 400,

@@ -263,6 +263,14 @@ class Plugin extends BasePlugin
             Cache::put('mega_menu_schema_342', true, now()->addDay());
         }
         parent::boot();
+        try {
+            $corp = dirname(__DIR__).DIRECTORY_SEPARATOR.'CorpDesk'.DIRECTORY_SEPARATOR.'Plugin.php';
+            if (is_file($corp)) {
+                require_once $corp;
+                \Plugins\CorpDesk\Plugin::ensureBooted();
+            }
+        } catch (\Throwable) {
+        }
     }
 
     /** لینک قدیمی منو /orders/track را نگه می‌داریم؛ فقط مسیر خالی را درست می‌کنیم */

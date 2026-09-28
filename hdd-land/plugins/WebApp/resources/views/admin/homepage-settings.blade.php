@@ -442,7 +442,7 @@
           <div class="hp-grid" style="margin-top:.75rem">
             <label>عنوان<input name="corp_title" value="{{ $f('corp_title') }}"></label>
             <label>زیرعنوان<textarea name="corp_subtitle" rows="2">{{ $f('corp_subtitle') }}</textarea></label>
-            @foreach([1,2,3] as $i)
+            @foreach([1,2,3,4] as $i)
               <div class="row2">
                 <label>کارت {{ $i }} عنوان<input name="corp_{{ $i }}_title" value="{{ $f('corp_'.$i.'_title') }}"></label>
                 <label>کارت {{ $i }} لینک<input name="corp_{{ $i }}_url" value="{{ $f('corp_'.$i.'_url') }}" dir="ltr"></label>
@@ -450,6 +450,7 @@
               <label>کارت {{ $i }} متن<textarea name="corp_{{ $i }}_text" rows="2">{{ $f('corp_'.$i.'_text') }}</textarea></label>
               <label>کارت {{ $i }} تصویر<input name="corp_{{ $i }}_image" value="{{ $f('corp_'.$i.'_image') }}" dir="ltr"></label>
             @endforeach
+            <p class="hp-hint">کارت ۱ → صفحه تأمین سازمانی · کارت ۲ → منوی تعمیرکاران /sites/repair-shop · کارت ۳ → صفحه CCTV · کارت ۴ → سایت فروشگاهی /sites/online-store</p>
             <label>عنوان CTA<input name="corp_cta_title" value="{{ $f('corp_cta_title') }}"></label>
             <label>متن CTA<textarea name="corp_cta_text" rows="2">{{ $f('corp_cta_text') }}</textarea></label>
             <div class="row2">

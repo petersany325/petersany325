@@ -62,7 +62,7 @@
 {{-- ۴) شبکه پرومو ۲ستونه (مثل promoهای اپل) --}}
 @php
   $corpTiles = [];
-  foreach ([1, 2, 3] as $i) {
+  foreach ([1, 2, 3, 4] as $i) {
     $title = trim((string) ($home['corp_'.$i.'_title'] ?? ''));
     if ($title === '') {
       continue;
