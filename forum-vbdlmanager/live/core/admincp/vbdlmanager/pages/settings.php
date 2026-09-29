@@ -34,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST')
 		'license_request_vip_usergroupid',
 		'license_vip_only',
 		'license_inbox_key',
+		'license_maildir',
 		'license_imap_host',
 		'license_imap_port',
 		'license_imap_user',
@@ -188,8 +189,11 @@ echo '<div class="vbdl-form-row"><label>Staff usergroup IDs allowed</label><inpu
 	. '" placeholder="6" /><p class="vbdl-muted">Comma-separated. Administrators (6) are always allowed.</p></div>';
 echo '<div class="vbdl-form-row"><label>Inbox cron key</label><input class="vbdl-input" name="license_inbox_key" value="'
 	. vbdl_h(isset($s['license_inbox_key']) ? $s['license_inbox_key'] : '')
-	. '" placeholder="long random secret" /><p class="vbdl-muted">URL: <code>/vbdlmanager/pm_lic_inbox.php?key=SECRET&amp;do=poll</code></p></div>';
-echo '<h4 style="margin:16px 0 8px">IMAP (optional — auto import returned .src)</h4>';
+	. '" placeholder="long random secret" /><p class="vbdl-muted">Cron every 1–5 min: <code>/vbdlmanager/pm_lic_inbox.php?key=SECRET&amp;do=poll</code> — imports <code>.txt</code> (License Request) and <code>.src</code> (Active License) from info@ into the matching ticket. Staff desks also auto-poll while open.</p></div>';
+echo '<div class="vbdl-form-row"><label>Local maildir (preferred)</label><input class="vbdl-input" name="license_maildir" value="'
+	. vbdl_h(isset($s['license_maildir']) && $s['license_maildir'] !== '' ? $s['license_maildir'] : '/home/hddrecov/mail/hdd-land.com/info')
+	. '" placeholder="/home/hddrecov/mail/hdd-land.com/info" /><p class="vbdl-muted">When readable on this server, used instead of IMAP (no password needed).</p></div>';
+echo '<h4 style="margin:16px 0 8px">IMAP (optional fallback)</h4>';
 echo '<div class="vbdl-form-row"><label>IMAP host</label><input class="vbdl-input" name="license_imap_host" value="'
 	. vbdl_h(isset($s['license_imap_host']) && $s['license_imap_host'] !== '' ? $s['license_imap_host'] : 'mail.hdd-land.com') . '" placeholder="mail.hdd-land.com" /></div>';
 echo '<div class="vbdl-form-row"><label>IMAP port</label><input class="vbdl-input" name="license_imap_port" value="'

@@ -555,4 +555,28 @@ class vbdl_LicenseRequest
 			'already_member' => $already ? 1 : 0,
 		);
 	}
+
+	/**
+	 * Purchase requests waiting for activator .txt reply into the ticket.
+	 *
+	 * @param int $limit
+	 * @return array
+	 */
+	public function listPendingLicenseReturn($limit = 80)
+	{
+		$limit = max(1, min(300, (int)$limit));
+		$out = array();
+		$res = $this->db->query(
+			'SELECT * FROM ' . $this->prefix . 'vbdl_license_request WHERE status=\'sent\' '
+			. 'ORDER BY id DESC LIMIT ' . $limit
+		);
+		if ($res)
+		{
+			while ($row = $res->fetch_assoc())
+			{
+				$out[] = $row;
+			}
+		}
+		return $out;
+	}
 }

@@ -229,30 +229,43 @@
       });
   }
 
-  function pollInbox() {
+  function pollInbox(opts) {
+    opts = opts || {};
+    var silent = !!opts.silent;
+    var auto = !!opts.auto;
     var pollMsg = document.getElementById('vbdl-sediv-poll-msg');
-    pollMsg.textContent = 'Polling…';
-    fetch('/vbdlmanager/pm_lic_inbox.php?do=poll', { credentials: 'same-origin', cache: 'no-store' })
+    if (pollMsg && !silent) pollMsg.textContent = 'Polling…';
+    var url = '/vbdlmanager/pm_lic_inbox.php?do=poll' + (auto ? '&auto=1' : '');
+    fetch(url, { credentials: 'same-origin', cache: 'no-store' })
       .then(parseJson)
       .then(function (data) {
+        if (!data) return;
+        if (data.throttled) return;
         if (data.skipped) {
-          pollMsg.textContent = data.message || 'Inbox not configured';
+          if (pollMsg && !silent) pollMsg.textContent = data.message || 'Inbox not configured';
           return;
         }
         if (!data.ok) {
-          pollMsg.textContent = data.error || 'Poll failed';
+          if (pollMsg && !silent) pollMsg.textContent = data.error || 'Poll failed';
           return;
         }
         var n = (data.processed && data.processed.length) || 0;
         var p = data.purged_count || 0;
-        pollMsg.textContent = 'Checked ' + (data.checked || 0) + ' messages, imported ' + n
-          + (data.mode ? (' (' + data.mode + ')') : '')
-          + (p ? (', purged ' + p + ' expired .src') : '') + '.';
-        loadList();
+        if (pollMsg && (!silent || n > 0)) {
+          pollMsg.textContent = 'Checked ' + (data.checked || 0) + ' messages, imported ' + n
+            + (data.mode ? (' (' + data.mode + ')') : '')
+            + (p ? (', purged ' + p + ' expired .src') : '') + '.';
+        }
+        if (n > 0 || !silent) loadList();
       })
       .catch(function (err) {
-        pollMsg.textContent = (err && err.message) ? err.message : 'Network error';
+        if (pollMsg && !silent) pollMsg.textContent = (err && err.message) ? err.message : 'Network error';
       });
+  }
+
+  function startAutoPoll() {
+    setTimeout(function () { pollInbox({ auto: true, silent: true }); }, 700);
+    setInterval(function () { pollInbox({ auto: true, silent: true }); }, 90000);
   }
 
   var typeRadios = document.querySelectorAll('input[name="vbdl_sediv_type"]');
@@ -268,7 +281,7 @@
   var refresh = document.getElementById('vbdl-sediv-refresh');
   if (refresh) refresh.addEventListener('click', loadList);
   var pollBtn = document.getElementById('vbdl-sediv-poll');
-  if (pollBtn) pollBtn.addEventListener('click', pollInbox);
+  if (pollBtn) pollBtn.addEventListener('click', function () { pollInbox({ auto: false, silent: false }); });
   try {
     var q = new URLSearchParams(location.search || '');
     var tok = q.get('token');
@@ -279,4 +292,5 @@
   } catch (e) {}
   showImapStatus();
   loadList();
+  if (page.canStaff) startAutoPoll();
 })();

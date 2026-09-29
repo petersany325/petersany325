@@ -268,32 +268,28 @@
       });
   }
 
-  function pollInbox() {
+  function pollInbox(opts) {
+    opts = opts || {};
+    var silent = !!opts.silent;
+    var auto = !!opts.auto;
     var retMsg = document.getElementById('vbdl-req-return-msg');
-    if (retMsg) retMsg.textContent = 'Importing license replies from mailbox…';
-    // Prefer dedicated REQ importer (posts license body into ticket even without .txt attach).
-    fetch('/vbdlmanager/_import_req_replies.php', { credentials: 'same-origin', cache: 'no-store' })
+    if (retMsg && !silent) retMsg.textContent = 'Importing license replies from mailbox…';
+    var url = '/vbdlmanager/pm_lic_inbox.php?do=poll' + (auto ? '&auto=1' : '');
+    fetch(url, { credentials: 'same-origin', cache: 'no-store' })
       .then(parseJson)
       .then(function (data) {
         if (!data || !data.ok) {
-          // Fallback to generic inbox poll
-          return fetch('/vbdlmanager/pm_lic_inbox.php?do=poll', { credentials: 'same-origin', cache: 'no-store' })
-            .then(parseJson)
-            .then(function (data2) {
-              if (!data2 || !data2.ok) {
-                if (retMsg) retMsg.textContent = (data && data.error) || (data2 && data2.error) || 'Import failed';
-                return;
-              }
-              var n2 = (data2.processed && data2.processed.length) ? data2.processed.length : 0;
-              if (retMsg) retMsg.textContent = 'Inbox poll: ' + n2 + ' imported.';
-              loadList();
-              loadAdmin();
-            });
+          if (retMsg && !silent) retMsg.textContent = (data && data.error) || 'Import failed';
+          return;
+        }
+        if (data.throttled) {
+          return;
         }
         var n = (data.processed && data.processed.length) ? data.processed.length : 0;
         var errN = (data.errors && data.errors.length) ? data.errors.length : 0;
-        if (retMsg) {
-          retMsg.textContent = 'Imported ' + n + ' license reply(ies) into tickets'
+        if (retMsg && (!silent || n > 0)) {
+          retMsg.textContent = 'Imported ' + n + ' reply(ies) into tickets'
+            + (data.mode ? (' via ' + data.mode) : '')
             + (errN ? ('; ' + errN + ' skipped/errors') : '') + '.';
           if (n && data.processed[0] && data.processed[0].message_url) {
             retMsg.innerHTML = retMsg.textContent + ' <a class="vbdl-req-dl" href="'
@@ -303,12 +299,23 @@
             retMsg.textContent += ' First: ' + data.errors[0].error;
           }
         }
-        loadList();
-        loadAdmin();
+        if (n > 0) {
+          loadList();
+          loadAdmin();
+        } else if (!silent) {
+          loadList();
+          loadAdmin();
+        }
       })
       .catch(function (err) {
-        if (retMsg) retMsg.textContent = (err && err.message) ? err.message : 'Import network error';
+        if (retMsg && !silent) retMsg.textContent = (err && err.message) ? err.message : 'Import network error';
       });
+  }
+
+  function startAutoPoll() {
+    // Staff desk: import .txt/.src even when cron is missing.
+    setTimeout(function () { pollInbox({ auto: true, silent: true }); }, 600);
+    setInterval(function () { pollInbox({ auto: true, silent: true }); }, 90000);
   }
 
   var submitBtn = document.getElementById('vbdl-req-submit');
@@ -320,7 +327,8 @@
   var returnBtn = document.getElementById('vbdl-req-return-btn');
   if (returnBtn) returnBtn.addEventListener('click', returnLicense);
   var pollBtn = document.getElementById('vbdl-req-poll');
-  if (pollBtn) pollBtn.addEventListener('click', pollInbox);
+  if (pollBtn) pollBtn.addEventListener('click', function () { pollInbox({ auto: false, silent: false }); });
   loadList();
   loadAdmin();
+  if (page.canStaff) startAutoPoll();
 })();

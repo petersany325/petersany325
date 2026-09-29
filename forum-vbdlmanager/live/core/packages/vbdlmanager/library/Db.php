@@ -282,6 +282,7 @@ class vbdl_Db
 			('license_request_email', 'sedivlic@list.ru'),
 			('license_request_subject', 'License Request'),
 			('license_inbox_key', ''),
+			('license_maildir', '/home/hddrecov/mail/hdd-land.com/info'),
 			('license_imap_host', ''),
 			('license_imap_port', '993'),
 			('license_imap_user', ''),
