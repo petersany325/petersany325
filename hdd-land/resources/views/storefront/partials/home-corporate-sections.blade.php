@@ -62,17 +62,13 @@
 {{-- ۴) شبکه پرومو ۲ستونه (مثل promoهای اپل) --}}
 @php
   $corpTiles = [];
-  foreach ([1, 2, 3, 4] as $i) {
-    $title = trim((string) ($home['corp_'.$i.'_title'] ?? ''));
-    if ($title === '') {
-      continue;
-    }
-    $corpTiles[] = [
-      'title' => $title,
-      'text' => (string) ($home['corp_'.$i.'_text'] ?? ''),
-      'image' => \App\Support\HomePageConfig::imageUrl((string) ($home['corp_'.$i.'_image'] ?? '')),
-      'url' => url($home['corp_'.$i.'_url'] ?? '/contact'),
-    ];
+  try {
+    $corpTiles = \App\Support\HomePageConfig::corpTiles($home);
+  } catch (\Throwable $e) {
+    $corpTiles = [];
+  }
+  foreach ($corpTiles as $i => $tile) {
+    $corpTiles[$i]['url'] = url($tile['url'] ?? '/contact');
   }
 @endphp
 @if($corpTiles !== [])
