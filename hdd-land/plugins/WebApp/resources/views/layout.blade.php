@@ -15,7 +15,7 @@
   <title>{{ $title ?? ($s['app_name'] ?? 'سرزمین هارد') }}</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=21">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=24">
 </head>
 @php
   $anim = !empty($s['animations']);

@@ -2,12 +2,26 @@
 @section('content')
 @php
   $fmt = fn ($n) => number_format((int) $n);
-  $quickLinks = $quickLinks ?? [];
   $home = \App\Support\HomePageConfig::get();
   $trust = \App\Support\HomePageConfig::trustItems($home);
   $mh = is_array($mobileHero ?? null) ? $mobileHero : [];
+  $corpTiles = [];
+  try {
+    $corpTiles = \App\Support\HomePageConfig::corpTiles($home);
+  } catch (\Throwable $e) {
+    $corpTiles = [];
+  }
+  $mapUrl = static function (string $url): string {
+    if (class_exists(\App\Support\PortalNav::class)) {
+      return \App\Support\PortalNav::mapUrlForWebApp($url);
+    }
+    return $url;
+  };
+  $aboutParas = array_values(array_filter(array_map('trim', preg_split('/\R/u', (string) ($home['about_text'] ?? '')) ?: [])));
+  $aboutLead = $aboutParas[0] ?? '';
 @endphp
 
+{{-- ۱) هیرو — همان ورودی سایت اصلی --}}
 @if(!empty($s['hero_enabled']) || !empty($home['hero_enabled']))
 @php
   $heroImage = trim((string) ($mh['image'] ?? ''));
@@ -16,29 +30,21 @@
   }
 @endphp
 <section
-  class="wa-hero {{ $heroImage ? 'wa-hero-image' : '' }}"
-  style="{{ \App\Support\HomePageConfig::heroStyleAttr($home) }}@if($heroImage);background-image:url('{{ $heroImage }}')@endif"
+  class="wa-hero wa-hero--site {{ $heroImage ? 'wa-hero-image' : '' }}"
+  style="{{ \App\Support\HomePageConfig::heroStyleAttr($home) }}@if($heroImage);--wa-hero-photo:url('{{ $heroImage }}')@endif"
+  aria-label="هیرو فروشگاه"
 >
-  @if($heroImage)<div class="wa-hero-overlay"></div>@endif
-  <div class="wa-hero-glow"></div>
-  <p class="wa-hero-kicker">{{ $mh['kicker'] ?? $home['hero_kicker'] ?? 'شرکت تخصصی ذخیره‌سازی' }}</p>
-  <h1>{{ $mh['title'] ?? $s['hero_title'] ?? $home['hero_title'] ?? $s['app_name'] ?? 'سرزمین هارد' }}</h1>
-  <p>{{ $mh['text'] ?? $s['hero_text'] ?? $home['hero_text'] ?? '' }}</p>
-  <div class="wa-hero-actions">
-    <a class="wa-cta" href="{{ url($mh['cta_url'] ?? $s['hero_cta_url'] ?? $home['hero_webapp_cta1_url'] ?? '/app/shop') }}">{{ $mh['cta_label'] ?? $s['hero_cta_label'] ?? $home['hero_cta1_label'] ?? 'ورود به فروشگاه' }}</a>
-    <a class="wa-cta wa-cta-ghost" href="{{ url($mh['cta2_url'] ?? $home['hero_cta2_url'] ?? '/contact') }}">{{ $mh['cta2_label'] ?? $home['hero_cta2_label'] ?? 'درخواست سازمانی' }}</a>
-  </div>
-  @if(!empty($home['hero_merge_enabled']) && !empty($home['hero_merge_image']))
-    <img class="wa-hero-merge" src="{{ \App\Support\HomePageConfig::imageUrl((string) $home['hero_merge_image']) }}" alt="" loading="lazy">
+  @if($heroImage)
+    <span class="wa-hero-photo" aria-hidden="true"></span>
   @endif
-</section>
-@endif
-
-@if(!empty($home['trust_enabled']) && $trust !== [])
-<section class="wa-trust" aria-label="اعتماد">
-  @foreach($trust as $item)
-    <div class="wa-trust-item"><strong>{{ $item['title'] }}</strong><span>{{ $item['text'] }}</span></div>
-  @endforeach
+  <div class="wa-hero-overlay"></div>
+  <p class="wa-hero-brand">{{ $mh['brand'] ?? 'سرزمین هارد' }}</p>
+  <h1>{!! $mh['title_html'] ?? e($mh['title'] ?? $home['hero_title'] ?? $s['hero_title'] ?? 'سرزمین هارد') !!}</h1>
+  <p>{{ $mh['text'] ?? $home['hero_text'] ?? $s['hero_text'] ?? '' }}</p>
+  <div class="wa-hero-actions">
+    <a class="wa-cta" href="{{ url($mh['cta_url'] ?? $home['hero_webapp_cta1_url'] ?? '/app/shop') }}">{{ $mh['cta_label'] ?? $home['hero_cta1_label'] ?? 'ورود به فروشگاه' }}</a>
+    <a class="wa-cta wa-cta-ghost" href="{{ url($mapUrl((string) ($mh['cta2_url'] ?? $home['hero_cta2_url'] ?? '/contact'))) }}">{{ $mh['cta2_label'] ?? $home['hero_cta2_label'] ?? 'درخواست سازمانی' }}</a>
+  </div>
 </section>
 @endif
 
@@ -49,32 +55,51 @@
 </form>
 @endif
 
-@if(!empty($s['show_quick_links']) && !empty($quickLinks))
-<div class="wa-quick">
-  @foreach($quickLinks as $ql)
-    <a href="{{ str_starts_with($ql['url'], 'http') ? $ql['url'] : url($ql['url']) }}">{{ $ql['label'] }}</a>
-  @endforeach
-</div>
+{{-- ۲) درباره — همان بند سایت اصلی --}}
+@if(!empty($home['about_enabled']))
+<section class="wa-band wa-band--about" aria-label="درباره فروشگاه">
+  <span class="wa-band-photo" aria-hidden="true" style="background-image:url('{{ \App\Support\HomePageConfig::imageUrl((string) ($home['about_image'] ?? '')) }}')"></span>
+  <h2>{{ $home['about_title'] ?? 'معرفی سرزمین هارد' }}</h2>
+  @if($aboutLead !== '')
+    <p>{{ $aboutLead }}</p>
+  @endif
+  <div class="wa-band-links">
+    <a href="{{ url($mapUrl((string) ($home['about_cta1_url'] ?? '/about'))) }}">{{ $home['about_cta1_label'] ?? 'بیشتر بدانید' }}</a>
+    <a href="{{ url($mapUrl((string) ($home['about_cta2_url'] ?? '/contact'))) }}">{{ $home['about_cta2_label'] ?? 'تماس با ما' }}</a>
+  </div>
+</section>
 @endif
 
-@if(!empty($s['show_categories']) && $categories->isNotEmpty())
-<div class="wa-section-head">
-  <strong>دسته‌ها</strong>
-  <a href="{{ url('/app/shop') }}">همه</a>
-</div>
-<div class="wa-cats wa-cats-photo">
-  @foreach($categories as $cat)
-    <a class="wa-cat-card" href="{{ url('/app/shop?cat='.urlencode($cat->slug ?? '')) }}">
-      <img src="{{ \Plugins\WebApp\Plugin::categoryPhotoUrl($cat) }}" alt="" width="360" height="360" loading="lazy">
-      <span>{{ $cat->name }}</span>
+{{-- ۳–۴) سازمانی + چهار دایره مثل سایت اصلی --}}
+@if(!empty($home['corp_enabled']))
+<section class="wa-band wa-band--corp" aria-label="خرید سازمانی">
+  <p class="wa-band-eye">{{ $home['corp_subtitle'] ?? '' }}</p>
+  <h2>{{ $home['corp_cta_title'] ?: ($home['corp_title'] ?? '') }}</h2>
+  <p>{{ $home['corp_cta_text'] ?? '' }}</p>
+  <a class="wa-cta" href="{{ url($mapUrl((string) ($home['corp_cta_url'] ?? '/contact'))) }}">{{ $home['corp_cta_label'] ?? 'تماس با واحد فروش' }}</a>
+</section>
+
+@if($corpTiles !== [])
+<section class="wa-tiles" aria-label="خدمات سازمانی">
+  @foreach($corpTiles as $tile)
+    <a class="wa-tile" href="{{ url($mapUrl((string) ($tile['url'] ?? '/contact'))) }}">
+      <span class="wa-tile__media" aria-hidden="true">
+        @if(($tile['image'] ?? '') !== '')
+          <img src="{{ $tile['image'] }}" alt="" width="200" height="200" loading="lazy" decoding="async" onerror="this.remove()">
+        @endif
+      </span>
+      <strong class="wa-tile__title">{{ $tile['title'] }}</strong>
+      <span class="wa-tile__text">{{ $tile['text'] }}</span>
+      <span class="wa-tile__link">{{ $home['tile_link_label'] ?? 'جزئیات' }}</span>
     </a>
   @endforeach
-</div>
+</section>
+@endif
 @endif
 
 @if(!empty($s['show_featured']))
 <div class="wa-section-head">
-  <strong>{{ $s['featured_title'] ?? 'محصولات ویژه' }}</strong>
+  <strong>{{ $home['featured_title'] ?? $s['featured_title'] ?? 'محصولات ویژه' }}</strong>
   <a href="{{ url('/app/shop') }}">مشاهده همه</a>
 </div>
 <div class="wa-featured" role="list">
@@ -126,6 +151,21 @@
 </div>
 @endif
 
+@if(!empty($s['show_categories']) && $categories->isNotEmpty())
+<div class="wa-section-head">
+  <strong>دسته‌ها</strong>
+  <a href="{{ url('/app/shop') }}">همه</a>
+</div>
+<div class="wa-cats wa-cats-photo">
+  @foreach($categories as $cat)
+    <a class="wa-cat-card" href="{{ url('/app/shop?cat='.urlencode($cat->slug ?? '')) }}">
+      <img src="{{ \Plugins\WebApp\Plugin::categoryPhotoUrl($cat) }}" alt="" width="360" height="360" loading="lazy">
+      <span>{{ $cat->name }}</span>
+    </a>
+  @endforeach
+</div>
+@endif
+
 @if(!empty($home['edu_enabled']))
 <section class="wa-edu" aria-label="آموزش">
   <div class="wa-section-head">
@@ -145,14 +185,11 @@
 </section>
 @endif
 
-@if(!empty($home['corp_enabled']))
-<section class="wa-corp">
-  <img src="{{ \App\Support\HomePageConfig::imageUrl((string) ($home['webapp_corp_image'] ?? $home['corp_1_image'] ?? '')) }}" alt="" width="720" height="480" loading="lazy">
-  <div>
-    <strong>{{ $home['webapp_corp_title'] ?? $home['corp_title'] }}</strong>
-    <p>{{ $home['webapp_corp_text'] ?? $home['corp_subtitle'] }}</p>
-    <a class="wa-cta" href="{{ url($home['webapp_corp_cta_url'] ?? $home['corp_cta_url'] ?? '/contact') }}">{{ $home['webapp_corp_cta_label'] ?? $home['corp_cta_label'] ?? 'درخواست سازمانی' }}</a>
-  </div>
+@if(!empty($home['trust_enabled']) && $trust !== [])
+<section class="wa-trust" aria-label="اعتماد">
+  @foreach($trust as $item)
+    <div class="wa-trust-item"><strong>{{ $item['title'] }}</strong><span>{{ $item['text'] }}</span></div>
+  @endforeach
 </section>
 @endif
 @endsection

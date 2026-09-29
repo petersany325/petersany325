@@ -14,10 +14,10 @@ use App\Support\PortalNav;
 class SiteSync
 {
     /**
-     * Homepage online settings first, then designed image / ThemeBuilder banner.
+     * Same copy as the storefront HomePageConfig hero (Revolution is off).
      *
      * @param  array<string,mixed>|null  $s  WebApp settings
-     * @return array{image:string,title:string,text:string,cta_label:string,cta_url:string,kicker:string,cta2_label:string,cta2_url:string}|null
+     * @return array{image:string,title:string,title_html:string,text:string,cta_label:string,cta_url:string,kicker:string,cta2_label:string,cta2_url:string,brand:string}|null
      */
     public static function heroBanner(?array $s = null): ?array
     {
@@ -29,93 +29,41 @@ class SiteSync
 
         $designedRel = 'images/home/hero.jpg';
         $designedFile = public_path($designedRel);
-        $designedCopy = [
-            'title' => (string) ($home['hero_title'] ?? 'مرکز تخصصی هارد، SSD و تأمین سازمانی'),
-            'text' => (string) ($home['hero_text'] ?? 'تأمین تجهیزات ذخیره‌سازی برندهای معتبر با گارانتی شفاف — برای فروشگاه و سازمان.'),
-            'cta_label' => (string) ($home['hero_cta1_label'] ?? 'ورود به فروشگاه'),
-            'cta_url' => (string) ($home['hero_webapp_cta1_url'] ?? ($home['hero_cta1_url'] ?? '/app/shop')),
-            'kicker' => (string) ($home['hero_kicker'] ?? 'شرکت تخصصی ذخیره‌سازی'),
-            'cta2_label' => (string) ($home['hero_cta2_label'] ?? 'درخواست سازمانی'),
-            'cta2_url' => (string) ($home['hero_cta2_url'] ?? '/contact'),
-        ];
+        $title = trim((string) ($home['hero_title'] ?? $s['hero_title'] ?? 'مرکز تخصصی هارد، SSD و تأمین سازمانی'));
+        $text = trim((string) ($home['hero_text'] ?? $s['hero_text'] ?? ''));
+        $ctaLabel = trim((string) ($home['hero_cta1_label'] ?? $s['hero_cta_label'] ?? 'ورود به فروشگاه'));
+        $ctaUrl = trim((string) ($home['hero_webapp_cta1_url'] ?? $home['hero_cta1_url'] ?? $s['hero_cta_url'] ?? '/app/shop')) ?: '/app/shop';
+        $kicker = trim((string) ($home['hero_kicker'] ?? 'شرکت تخصصی ذخیره‌سازی'));
+        $cta2Label = trim((string) ($home['hero_cta2_label'] ?? 'درخواست سازمانی'));
+        $cta2Url = trim((string) ($home['hero_cta2_url'] ?? '/contact'));
+        $brand = static::shopName('سرزمین هارد');
 
-        $legacyTitles = ['', 'سرزمین هارد', 'سخت‌افزار مطمئن برای حرفه‌ای‌ها', 'سرزمین هارد'];
-        $title = trim((string) ($s['hero_title'] ?? $home['hero_title'] ?? ''));
-        $text = trim((string) ($s['hero_text'] ?? $home['hero_text'] ?? ''));
-        $ctaLabel = trim((string) ($s['hero_cta_label'] ?? $home['hero_cta1_label'] ?? ''));
-        $ctaUrl = trim((string) ($s['hero_cta_url'] ?? $home['hero_webapp_cta1_url'] ?? $home['hero_cta1_url'] ?? '')) ?: $designedCopy['cta_url'];
-        $kicker = trim((string) ($home['hero_kicker'] ?? $designedCopy['kicker']));
-        $cta2Label = trim((string) ($home['hero_cta2_label'] ?? $designedCopy['cta2_label']));
-        $cta2Url = trim((string) ($home['hero_cta2_url'] ?? $designedCopy['cta2_url']));
-
+        $legacyTitles = ['', 'سرزمین هارد', 'سخت‌افزار مطمئن برای حرفه‌ای‌ها'];
         if (in_array($title, $legacyTitles, true)) {
-            $title = $designedCopy['title'];
+            $title = 'مرکز تخصصی هارد، SSD و تأمین سازمانی';
         }
         if ($text === '') {
-            $text = $designedCopy['text'];
+            $text = 'تأمین تجهیزات ذخیره‌سازی برندهای معتبر با گارانتی شفاف — برای فروشگاه و سازمان.';
         }
         if ($ctaLabel === '' || $ctaLabel === 'مشاهده محصولات') {
-            $ctaLabel = $designedCopy['cta_label'];
+            $ctaLabel = 'ورود به فروشگاه';
         }
 
         $customImage = trim((string) ($home['hero_image'] ?? ''));
         $image = '';
-        $revolutionApplied = false;
-
-        // Mobile web (/app) must prefer the live ThemeBuilder/Revolution homepage banner.
-        // Do not short-circuit on images/home/hero.jpg — that hid the studio banner on mobile.
-        try {
-            $resolved = class_exists(\Plugins\ThemeBuilder\src\HomepageBanner::class)
-                ? \Plugins\ThemeBuilder\src\HomepageBanner::resolve()
-                : ['live' => false, 'banner' => []];
-            $isLive = ! empty($resolved['live']);
-            if ($isLive) {
-                $banner = is_array($resolved['banner'] ?? null) ? $resolved['banner'] : [];
-                if (class_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class)
-                    && method_exists(\Plugins\ThemeBuilder\src\ThemeConfig::class, 'bannerUrl')) {
-                    $image = (string) \Plugins\ThemeBuilder\src\ThemeConfig::bannerUrl($banner, 1);
-                } else {
-                    $image = (string) ($banner['image_url'] ?? $banner['image'] ?? $banner['src'] ?? '');
-                    if ($image !== '' && ! str_starts_with($image, 'http') && ! str_starts_with($image, '/')) {
-                        $image = asset('uploads/'.$image);
-                    } elseif ($image !== '' && str_starts_with($image, '/')) {
-                        $image = url($image);
-                    }
-                }
-                $layers = collect($banner['layers'] ?? [])->keyBy('id');
-                $read = static function ($layer, string $fallback = ''): string {
-                    return $layer && ! empty($layer['enabled']) && empty($layer['deleted'])
-                        ? trim((string) ($layer['content'] ?? $fallback)) : $fallback;
-                };
-                $bannerTitle = $read($layers->get('title'), (string) ($banner['overlay_title'] ?? ''));
-                if ($bannerTitle !== '') {
-                    $title = $bannerTitle;
-                }
-                $bannerText = $read($layers->get('text'), (string) ($banner['overlay_text'] ?? ''));
-                if ($bannerText !== '') {
-                    $text = $bannerText;
-                }
-                $cta = $layers->get('cta1');
-                if ($cta) {
-                    $ctaLabel = $read($cta, $ctaLabel) ?: $ctaLabel;
-                    $ctaUrl = trim((string) ($cta['url'] ?? $banner['cta_url'] ?? $ctaUrl)) ?: $ctaUrl;
-                }
-                if ($image !== '') {
-                    $revolutionApplied = true;
-                }
-            }
-        } catch (\Throwable) {
-            //
+        if ($customImage !== '') {
+            $image = method_exists(HomePageConfig::class, 'imageUrl')
+                ? HomePageConfig::imageUrl($customImage)
+                : asset(ltrim($customImage, '/'));
+        } elseif (is_file($designedFile) && filesize($designedFile) > 0) {
+            $image = asset($designedRel);
         }
 
-        if (! $revolutionApplied) {
-            if ($customImage !== '') {
-                $image = method_exists(HomePageConfig::class, 'imageUrl')
-                    ? HomePageConfig::imageUrl($customImage)
-                    : asset(ltrim($customImage, '/'));
-            } elseif (is_file($designedFile) && filesize($designedFile) > 0) {
-                $image = asset($designedRel);
-            }
+        $titleHtml = $title;
+        try {
+            $titleHtml = HomePageConfig::heroTitleHtml($home);
+        } catch (\Throwable) {
+            $titleHtml = e($title);
         }
 
         $map = static function (string $url): string {
@@ -129,12 +77,14 @@ class SiteSync
         return [
             'image' => $image,
             'title' => $title,
+            'title_html' => $titleHtml,
             'text' => $text,
             'cta_label' => $ctaLabel,
             'cta_url' => $map($ctaUrl),
             'kicker' => $kicker,
             'cta2_label' => $cta2Label,
             'cta2_url' => $cta2Url,
+            'brand' => $brand,
         ];
     }
 

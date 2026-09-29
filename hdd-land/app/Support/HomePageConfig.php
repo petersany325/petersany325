@@ -417,6 +417,31 @@ class HomePageConfig
         return asset(ltrim($path, '/'));
     }
 
+    /**
+     * Four homepage circular options — shared by storefront and WebApp.
+     *
+     * @return list<array{title:string,text:string,image:string,url:string}>
+     */
+    public static function corpTiles(?array $s = null): array
+    {
+        $s = $s ?? self::get();
+        $out = [];
+        for ($i = 1; $i <= 4; $i++) {
+            $title = trim((string) ($s['corp_'.$i.'_title'] ?? ''));
+            if ($title === '') {
+                continue;
+            }
+            $out[] = [
+                'title' => $title,
+                'text' => (string) ($s['corp_'.$i.'_text'] ?? ''),
+                'image' => self::imageUrl((string) ($s['corp_'.$i.'_image'] ?? '')),
+                'url' => (string) ($s['corp_'.$i.'_url'] ?? '/contact'),
+            ];
+        }
+
+        return $out;
+    }
+
     /** @return list<array{title:string,text:string}> */
     public static function trustItems(?array $s = null): array
     {
