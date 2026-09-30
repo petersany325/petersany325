@@ -1,0 +1,75 @@
+.vbdl-sediv-page{
+  margin:0;min-height:100vh;background:
+    radial-gradient(1200px 500px at 10% -10%, #dbeafe 0%, transparent 55%),
+    radial-gradient(900px 420px at 100% 0%, #e2e8f0 0%, transparent 50%),
+    #f1f5f9;
+  color:#0f172a;font-family:"Segoe UI",Tahoma,sans-serif;
+}
+.vbdl-sediv-top{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 22px;background:#0f172a;color:#fff;
+}
+.vbdl-sediv-brand{color:#fff;font-weight:800;text-decoration:none;letter-spacing:.02em}
+.vbdl-sediv-top nav{display:flex;gap:14px;flex-wrap:wrap}
+.vbdl-sediv-top a{color:#cbd5e1;text-decoration:none;font-size:13px;font-weight:600}
+.vbdl-sediv-top a:hover{color:#fff}
+.vbdl-sediv-main{max-width:760px;margin:0 auto;padding:28px 18px 48px}
+.vbdl-sediv-kicker{margin:0 0 6px;font-size:12px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.04em}
+.vbdl-sediv-main h1{margin:0 0 8px;font-size:28px;line-height:1.15;font-weight:800}
+.vbdl-sediv-lead{margin:0 0 20px;color:#475569;font-size:14px;line-height:1.5}
+.vbdl-sediv-card{
+  background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 18px 16px;margin:0 0 16px;
+  box-shadow:0 10px 30px rgba(15,23,42,.04);
+}
+.vbdl-sediv-card[hidden]{display:none!important}
+.vbdl-sediv-card h2{margin:0 0 12px;font-size:16px;font-weight:800}
+.vbdl-sediv-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px}
+.vbdl-sediv-meta span{display:block;font-size:11px;color:#64748b;font-weight:700;margin-bottom:2px}
+.vbdl-sediv-meta strong{font-size:13px;font-weight:700;word-break:break-all}
+.vbdl-sediv-file,.vbdl-sediv-note{display:block;margin:0 0 12px;font-size:12px;font-weight:700;color:#334155}
+.vbdl-sediv-file input,.vbdl-sediv-note input,.vbdl-sediv-note textarea{
+  display:block;width:100%;margin-top:5px;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;
+  padding:9px 11px;font:inherit;font-weight:400;background:#fff;
+}
+.vbdl-sediv-btn{
+  border:0;border-radius:8px;background:#0369a1;color:#fff;font-weight:800;padding:10px 16px;cursor:pointer
+}
+.vbdl-sediv-btn:hover{background:#0284c7}
+.vbdl-sediv-btn:disabled{opacity:.55;cursor:not-allowed}
+.vbdl-sediv-btn-alt{background:#0f766e}
+.vbdl-sediv-btn-alt:hover{background:#0d9488}
+.vbdl-sediv-msg{min-height:18px;margin:10px 0 0;font-size:13px;color:#0369a1}
+.vbdl-sediv-muted{margin:0 0 12px;font-size:13px;color:#64748b;line-height:1.45}
+.vbdl-sediv-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.vbdl-sediv-row h2{margin:0}
+.vbdl-sediv-linkbtn{border:0;background:transparent;color:#0369a1;font-weight:700;cursor:pointer;font-size:13px}
+.vbdl-sediv-list{font-size:13px}
+.vbdl-sediv-item{
+  display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 0;border-top:1px solid #e2e8f0
+}
+.vbdl-sediv-item:first-child{border-top:0}
+.vbdl-sediv-item strong{display:block;font-size:13px}
+.vbdl-sediv-item small{color:#64748b}
+.vbdl-sediv-badge{
+  display:inline-block;padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800;
+  background:#e2e8f0;color:#334155
+}
+.vbdl-sediv-badge.is-sent{background:#dbeafe;color:#1d4ed8}
+.vbdl-sediv-badge.is-returned{background:#dcfce7;color:#166534}
+.vbdl-sediv-badge.is-rejected{background:#ffedd5;color:#c2410c}
+.vbdl-sediv-badge.is-error{background:#fee2e2;color:#b91c1c}
+.vbdl-sediv-types{
+  border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin:0 0 14px;background:#f8fafc
+}
+.vbdl-sediv-types legend{padding:0 6px;font-size:12px;font-weight:800;color:#334155}
+.vbdl-sediv-type{
+  display:flex;align-items:flex-start;gap:8px;margin:6px 0;font-size:13px;font-weight:600;color:#0f172a;cursor:pointer
+}
+.vbdl-sediv-type input{margin-top:2px}
+.vbdl-sediv-dl{color:#0369a1;font-weight:700;text-decoration:none}
+.vbdl-sediv-ticketlink{margin:12px 0 0;font-size:14px}
+.vbdl-sediv-ticketlink a{font-size:14px}
+@media (max-width:640px){
+  .vbdl-sediv-meta{grid-template-columns:1fr}
+  .vbdl-sediv-main h1{font-size:24px}
+}
