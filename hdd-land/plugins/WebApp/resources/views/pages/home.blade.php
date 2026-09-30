@@ -81,6 +81,11 @@
 
 @if($corpTiles !== [])
 <section class="wa-tiles" aria-label="خدمات سازمانی">
+  @auth
+    @if((method_exists(auth()->user(), 'isAdmin') && auth()->user()->isAdmin()) || (method_exists(auth()->user(), 'isStaff') && auth()->user()->isStaff() && method_exists(auth()->user(), 'hasStaffPermission') && auth()->user()->hasStaffPermission('site.homepage')))
+      <a class="wa-tiles-admin" href="{{ url('/admin/home-options') }}">ویرایش ۴ گزینه</a>
+    @endif
+  @endauth
   @foreach($corpTiles as $tile)
     <a class="wa-tile" href="{{ url($mapUrl((string) ($tile['url'] ?? '/contact'))) }}">
       <span class="wa-tile__media" aria-hidden="true">

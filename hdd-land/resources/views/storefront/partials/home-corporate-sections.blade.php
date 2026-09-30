@@ -73,6 +73,13 @@
 @endphp
 @if($corpTiles !== [])
 <section class="hl-tiles" aria-label="خدمات سازمانی">
+  @auth
+    @if(method_exists(auth()->user(), 'isAdmin') && auth()->user()->isAdmin())
+      <a class="hl-tiles-admin" href="{{ url('/admin/home-options') }}">ویرایش ۴ گزینه صفحه اول</a>
+    @elseif(method_exists(auth()->user(), 'isStaff') && auth()->user()->isStaff() && method_exists(auth()->user(), 'hasStaffPermission') && auth()->user()->hasStaffPermission('site.homepage'))
+      <a class="hl-tiles-admin" href="{{ url('/admin/home-options') }}">ویرایش ۴ گزینه صفحه اول</a>
+    @endif
+  @endauth
   @foreach($corpTiles as $tile)
     <a class="hl-tile" href="{{ $tile['url'] }}">
       <span class="hl-tile__media" aria-hidden="true">

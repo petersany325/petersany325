@@ -322,6 +322,7 @@ img:not([class]), video:not([class]) { height: auto; }
   gap:.85rem .45rem;margin:.75rem .75rem 0;padding:.9rem .4rem .75rem;
   background:#fff;border-radius:10px;
 }
+.wa-tiles-admin{grid-column:1/-1;justify-self:end;font-size:.75rem;font-weight:800;color:#e23d12;text-decoration:none}
 .wa-tile{
   display:flex;flex-direction:column;align-items:center;gap:.35rem;
   text-decoration:none;color:inherit;text-align:center;padding:.2rem;

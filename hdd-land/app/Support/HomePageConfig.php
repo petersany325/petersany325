@@ -123,7 +123,7 @@ class HomePageConfig
             'corp_subtitle' => 'تأمین ذخیره‌سازی، فروش سایت و پروژه‌های نظارتی',
             'corp_1_title' => 'تأمین هارد سازمانی',
             'corp_1_text' => 'موجودی سازمانی، مشاوره مدل و تحویل با فاکتور رسمی.',
-            'corp_1_image' => 'images/home/corp-org.jpg',
+            'corp_1_image' => 'images/home/corp-enterprise-hero.jpg',
             'corp_1_url' => '/enterprise-storage',
             'corp_2_title' => 'فروش سایت تعمیرکاران',
             'corp_2_text' => 'نرم‌افزار تعمیرگاه، آموزش و منوی کارکنان.',
@@ -131,7 +131,7 @@ class HomePageConfig
             'corp_2_url' => '/sites/repair-shop',
             'corp_3_title' => 'پروژه‌های نظارتی و CCTV',
             'corp_3_text' => 'هارد مناسب دوربین، ظرفیت آرشیو و تأمین عمده.',
-            'corp_3_image' => 'images/home/corp-cctv.jpg',
+            'corp_3_image' => 'images/home/corp-cctv-hero.jpg',
             'corp_3_url' => '/cctv-projects',
             'corp_4_title' => 'سایت فروشگاهی',
             'corp_4_text' => 'فروش آنلاین کالا با ویترین، سبد و حساب مشتری.',
@@ -210,15 +210,46 @@ class HomePageConfig
                 $out[$k] = $def[$k];
             }
         }
-        $out['corp_cards_v'] = 4;
+        $old1 = trim((string) ($raw['corp_1_image'] ?? ''));
+        if ($old1 === '' || $old1 === 'images/home/corp-org.jpg') {
+            $out['corp_1_image'] = $def['corp_1_image'];
+        }
+        $old3 = trim((string) ($raw['corp_3_image'] ?? ''));
+        if ($old3 === '' || $old3 === 'images/home/corp-cctv.jpg') {
+            $out['corp_3_image'] = $def['corp_3_image'];
+        }
+        $out['corp_enabled'] = true;
+        $out['corp_cards_v'] = 5;
 
         return $out;
+    }
+
+    /** Write the designed 4 homepage options into settings (admin «اعمال»). */
+    public static function applyDesignedHomeOptions(): array
+    {
+        $s = self::get();
+        $def = self::defaults();
+        foreach ([
+            'corp_enabled', 'corp_title', 'corp_subtitle',
+            'corp_1_title', 'corp_1_text', 'corp_1_image', 'corp_1_url',
+            'corp_2_title', 'corp_2_text', 'corp_2_image', 'corp_2_url',
+            'corp_3_title', 'corp_3_text', 'corp_3_image', 'corp_3_url',
+            'corp_4_title', 'corp_4_text', 'corp_4_image', 'corp_4_url',
+            'corp_cta_title', 'corp_cta_text', 'corp_cta_label', 'corp_cta_url',
+        ] as $k) {
+            $s[$k] = $def[$k];
+        }
+        $s['corp_enabled'] = true;
+        $s['corp_cards_v'] = 5;
+        SettingsStore::set(self::KEY, $s);
+
+        return $s;
     }
 
     /** @param  array<string,mixed>  $raw */
     protected static function corpCardsAreStale(array $raw): bool
     {
-        if ((int) ($raw['corp_cards_v'] ?? 0) >= 4) {
+        if ((int) ($raw['corp_cards_v'] ?? 0) >= 5) {
             return false;
         }
         $title2 = trim((string) ($raw['corp_2_title'] ?? ''));

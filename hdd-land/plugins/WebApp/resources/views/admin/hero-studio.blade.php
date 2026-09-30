@@ -70,6 +70,7 @@
     <div class="hs-links">
       <a class="btn" href="{{ $previewDesktop }}" target="_blank" rel="noopener">سایت</a>
       <a class="btn" href="{{ $previewApp }}" target="_blank" rel="noopener">وب‌اپ</a>
+      <a class="btn" href="{{ url('/admin/home-options') }}">۴ گزینه صفحه اول</a>
       <a class="btn" href="{{ url('/admin/homepage-settings') }}">سایر بلوک‌های صفحه اول</a>
     </div>
   </div>

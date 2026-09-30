@@ -255,7 +255,7 @@ if (! class_exists(StaffAcl::class, false)) {
                 'site.theme_builder' => 'استودیو هیرو مدرن',
                 'site.theme_templates' => 'نصب و به‌روزرسانی قالب',
                 'site.page_builder' => 'صفحه‌ساز Elementor',
-                'site.homepage' => 'بلوک‌ها و محتوای صفحه اول',
+                'site.homepage' => '۴ گزینه صفحه اول و بلوک‌های خانه',
                 'site.footer' => 'تنظیمات فوتر',
                 'site.webapp' => 'تنظیمات وب‌اپ / PWA',
                 'site.shop_settings' => 'تنظیمات عمومی فروشگاه',

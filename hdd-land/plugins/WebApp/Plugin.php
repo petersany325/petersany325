@@ -38,6 +38,13 @@ class Plugin extends BasePlugin
     {
         parent::boot();
         try {
+            $tiles = __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'Admin'.DIRECTORY_SEPARATOR.'HomepageTilesController.php';
+            if (is_file($tiles)) {
+                require_once $tiles;
+            }
+        } catch (\Throwable) {
+        }
+        try {
             $corp = dirname(__DIR__).DIRECTORY_SEPARATOR.'CorpDesk'.DIRECTORY_SEPARATOR.'Plugin.php';
             if (is_file($corp)) {
                 require_once $corp;

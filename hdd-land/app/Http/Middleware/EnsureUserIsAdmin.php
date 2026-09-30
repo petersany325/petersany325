@@ -69,9 +69,11 @@ class EnsureUserIsAdmin
         if (
             $path === 'admin/corporate-home' || str_starts_with($path, 'admin/corporate-home/')
             || $path === 'admin/homepage-settings' || str_starts_with($path, 'admin/homepage-settings/')
+            || $path === 'admin/home-options' || str_starts_with($path, 'admin/home-options/')
             || $path === 'admin/online-home' || str_starts_with($path, 'admin/online-home/')
             || $path === 'admin/banner-settings' || str_starts_with($path, 'admin/banner-settings/')
             || $path === 'admin/hero-studio' || str_starts_with($path, 'admin/hero-studio/')
+            || $path === 'admin/corp-pages' || str_starts_with($path, 'admin/corp-pages/')
         ) {
             return 'site.homepage';
         }
