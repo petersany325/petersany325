@@ -206,6 +206,11 @@ body.hl-home .online-bar,
 }
 
 /* ——— 4 & 6) Graphical circular menus (English-site style) ——— */
+.hl-tiles-admin{
+  grid-column:1 / -1;
+  justify-self:end;
+  font-size:.78rem;font-weight:800;color:#e23d12;text-decoration:none;
+}
 .hl-tiles{
   display:grid;
   grid-template-columns:repeat(4,minmax(0,1fr));

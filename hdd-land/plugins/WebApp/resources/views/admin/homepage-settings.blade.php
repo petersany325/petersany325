@@ -450,7 +450,7 @@
               <label>کارت {{ $i }} متن<textarea name="corp_{{ $i }}_text" rows="2">{{ $f('corp_'.$i.'_text') }}</textarea></label>
               <label>کارت {{ $i }} تصویر<input name="corp_{{ $i }}_image" value="{{ $f('corp_'.$i.'_image') }}" dir="ltr"></label>
             @endforeach
-            <p class="hp-hint">همین ۴ کارت روی سایت اصلی و ورودی وب‌اپ موبایل (/app) نمایش داده می‌شود. کارت ۱ → تأمین سازمانی · کارت ۲ → سایت تعمیرکاران · کارت ۳ → CCTV · کارت ۴ → سایت فروشگاهی</p>
+            <p class="hp-hint">ویرایش اصلی این ۴ دایره از <a href="{{ url('/admin/home-options') }}">۴ گزینه صفحه اول</a> است. کارت ۱ → تأمین سازمانی · کارت ۲ → سایت تعمیرکاران · کارت ۳ → CCTV · کارت ۴ → سایت فروشگاهی</p>
             <label>عنوان CTA<input name="corp_cta_title" value="{{ $f('corp_cta_title') }}"></label>
             <label>متن CTA<textarea name="corp_cta_text" rows="2">{{ $f('corp_cta_text') }}</textarea></label>
             <div class="row2">
