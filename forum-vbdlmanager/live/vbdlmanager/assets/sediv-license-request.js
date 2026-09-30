@@ -18,10 +18,11 @@
   }
 
   function statusLabel(st) {
-    if (st === 'approved') return 'approved';
-    if (st === 'vip_added') return 'VIP added';
+    if (st === 'approved') return 'license received';
+    if (st === 'vip_added') return 'VIP active';
     if (st === 'rejected') return 'rejected';
     if (st === 'error') return 'error';
+    if (st === 'sent') return 'waiting for license';
     return st || 'sent';
   }
 
@@ -107,7 +108,7 @@
         }
         var rows = data.items || [];
         if (!rows.length) {
-          adminList.textContent = 'No approved requests waiting for VIP add.';
+          adminList.textContent = 'No fallback items — VIP auto-add is working (queue empty).';
           return;
         }
         adminList.innerHTML = '';
@@ -252,14 +253,17 @@
           retMsg.textContent = data.error || 'Return failed';
           return;
         }
-        retMsg.textContent = 'Posted. Status is now approved — customer can open the ticket.';
+        var vipBit = (data.status === 'vip_added' || data.vip_ok)
+          ? ' VIP SeDiv activated.'
+          : (data.vip_error ? (' VIP not activated: ' + data.vip_error) : ' License posted.');
+        retMsg.textContent = 'Posted.' + vipBit;
         if (fileInput) fileInput.value = '';
         var ta = document.getElementById('vbdl-req-return-text');
         if (ta) ta.value = '';
         loadList();
         loadAdmin();
         if (data.message_url) {
-          retMsg.innerHTML = 'Posted. <a class="vbdl-req-dl" href="' + data.message_url + '">Open ticket</a>';
+          retMsg.innerHTML = retMsg.textContent + ' <a class="vbdl-req-dl" href="' + data.message_url + '">Open ticket</a>';
         }
       })
       .catch(function (err) {

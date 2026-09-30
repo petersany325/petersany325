@@ -1,6 +1,6 @@
 <?php
 /**
- * License Request: payment receipt → sedivlic email → .txt license return → admin VIP add.
+ * License Request: payment receipt → sedivlic email → .txt license return → auto VIP SeDiv.
  */
 class vbdl_LicenseRequest
 {
@@ -107,22 +107,95 @@ class vbdl_LicenseRequest
 	}
 
 	/**
-	 * Primary VIP SeDiv group to assign after admin approval.
+	 * Primary VIP SeDiv group to assign when license .txt is received.
+	 * Always returns a group that is also listed in vip_usergroupids so Active License unlocks.
 	 */
 	public function targetVipGroupId()
 	{
+		$vipIds = $this->acl->vipGroupIds();
 		$forced = (int)$this->repo->getSetting('license_request_vip_usergroupid', '0');
 		if ($forced > 0)
 		{
+			$this->ensureVipGroupListed($forced);
 			return $forced;
 		}
-		$ids = $this->acl->vipGroupIds();
-		if (!$ids)
+		if ($vipIds)
 		{
-			// Hard fallback used elsewhere in this product.
-			return 14;
+			return (int)$vipIds[0];
 		}
-		return (int)$ids[0];
+		// Hard fallback used elsewhere in this product (VIP users admin default).
+		$this->ensureVipGroupListed(14);
+		return 14;
+	}
+
+	/**
+	 * Ensure group id is present in vip_usergroupids (needed for Acl::isVip / Active License).
+	 *
+	 * @param int $ugid
+	 */
+	protected function ensureVipGroupListed($ugid)
+	{
+		$ugid = (int)$ugid;
+		if ($ugid < 1)
+		{
+			return;
+		}
+		$ids = $this->acl->vipGroupIds();
+		if (in_array($ugid, $ids, true))
+		{
+			return;
+		}
+		$ids[] = $ugid;
+		$ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+		$this->repo->setSetting('vip_usergroupids', implode(',', $ids));
+	}
+
+	/**
+	 * Clear cached user permission / session so VIP access applies without re-login when possible.
+	 *
+	 * @param int $userid
+	 */
+	protected function clearUserPermCache($userid)
+	{
+		$userid = (int)$userid;
+		if ($userid < 1)
+		{
+			return;
+		}
+		try
+		{
+			$events = array('userChg_' . $userid, 'userPerms_' . $userid);
+			if (class_exists('vB_Cache', false) && method_exists('vB_Cache', 'allCacheEvent'))
+			{
+				vB_Cache::allCacheEvent($events);
+			}
+			elseif (class_exists('vB_Cache', false) && method_exists('vB_Cache', 'instance'))
+			{
+				$inst = @vB_Cache::instance();
+				if ($inst && method_exists($inst, 'event'))
+				{
+					foreach ($events as $ev)
+					{
+						@$inst->event($ev);
+					}
+				}
+			}
+			if (class_exists('vB_Library', false) && method_exists('vB_Library', 'instance'))
+			{
+				$userLib = @vB_Library::instance('user');
+				if ($userLib && method_exists($userLib, 'clearCacheEvents'))
+				{
+					@$userLib->clearCacheEvents(array($userid));
+				}
+			}
+		}
+		catch (Throwable $e)
+		{
+		}
+		@$this->db->query(
+			'UPDATE ' . $this->prefix . 'session SET lastactivity=' . (int)time()
+			. ' WHERE userid=' . $userid
+		);
 	}
 
 	public function makeToken()
@@ -320,7 +393,7 @@ class vbdl_LicenseRequest
 			return array('error' => 'DB insert failed: ' . $this->db->error);
 		}
 
-		$body = "License Request\n";
+		$body = "License Request / VIP SeDiv access\n";
 		$body .= "========================\n\n";
 		$body .= "Tracking token: {$token}\n";
 		$body .= "(Keep this token in your reply subject or body)\n\n";
@@ -335,7 +408,7 @@ class vbdl_LicenseRequest
 			$body .= "\nCustomer note:\n{$note}\n";
 		}
 		$body .= "\nPlease reply with the license as a .txt attachment (and optional text).\n";
-		$body .= "The system will post it into the same ticket and mark the request approved.\n";
+		$body .= "The system will post it into the same ticket and automatically activate VIP SeDiv for this customer.\n";
 
 		return array(
 			'ok' => true,
@@ -353,7 +426,7 @@ class vbdl_LicenseRequest
 	}
 
 	/**
-	 * Activator replied with license .txt (+ optional text) → post into ticket, mark approved, notify user.
+	 * Activator replied with license .txt (+ optional text) → post into ticket, then auto VIP SeDiv.
 	 * Always puts the license text in the visible PM body so the customer sees it even if the attach UI fails.
 	 */
 	public function approveWithLicense(array $record, $filename, $bytes, $replyText = '', $staffUserid = 0)
@@ -367,9 +440,66 @@ class vbdl_LicenseRequest
 		{
 			return array('error' => 'Empty license .txt file');
 		}
-		if (!empty($record['status']) && in_array($record['status'], array('approved', 'vip_added'), true))
+
+		$actorId = (int)$staffUserid;
+		if ($actorId < 1)
 		{
-			return array('ok' => true, 'skipped' => 1, 'reason' => 'already_' . $record['status']);
+			$actorId = (int)$record['staff_userid'];
+		}
+		if ($actorId < 1)
+		{
+			$actorId = $this->supportUserid();
+		}
+		if ($actorId < 1)
+		{
+			$actorId = 1;
+		}
+
+		// Already fully done.
+		if (!empty($record['status']) && $record['status'] === 'vip_added')
+		{
+			return array(
+				'ok' => true,
+				'skipped' => 1,
+				'reason' => 'already_vip_added',
+				'token' => $record['token'],
+				'status' => 'vip_added',
+				'message_url' => '/messagecenter/view/'
+					. (!empty($record['starter_nodeid']) ? (int)$record['starter_nodeid'] : (int)$record['message_nodeid']),
+			);
+		}
+
+		// License already posted earlier but VIP grant failed / was manual — finish VIP only.
+		if (!empty($record['status']) && $record['status'] === 'approved')
+		{
+			$vip = $this->addCustomerToVip($record, $actorId, true);
+			if (!empty($vip['error']))
+			{
+				return array(
+					'ok' => true,
+					'token' => $record['token'],
+					'status' => 'approved',
+					'vip_ok' => 0,
+					'vip_error' => $vip['error'],
+					'message_url' => '/messagecenter/view/'
+						. (!empty($record['starter_nodeid']) ? (int)$record['starter_nodeid'] : (int)$record['message_nodeid']),
+					'download_url' => '/vbdlmanager/pm_lic_request.php?do=download_license&token='
+						. rawurlencode((string)$record['token']),
+				);
+			}
+			return array(
+				'ok' => true,
+				'token' => $record['token'],
+				'status' => 'vip_added',
+				'vip_ok' => 1,
+				'vip_usergroupid' => isset($vip['vip_usergroupid']) ? (int)$vip['vip_usergroupid'] : 0,
+				'already_member' => !empty($vip['already_member']) ? 1 : 0,
+				'filename' => isset($record['license_filename']) ? $record['license_filename'] : '',
+				'message_url' => '/messagecenter/view/'
+					. (!empty($record['starter_nodeid']) ? (int)$record['starter_nodeid'] : (int)$record['message_nodeid']),
+				'download_url' => '/vbdlmanager/pm_lic_request.php?do=download_license&token='
+					. rawurlencode((string)$record['token']),
+			);
 		}
 
 		$parentId = (int)$record['message_nodeid'];
@@ -382,17 +512,8 @@ class vbdl_LicenseRequest
 		{
 			$starter = $parentId;
 		}
-		$userid = (int)$staffUserid;
-		if ($userid < 1)
-		{
-			$userid = (int)$record['staff_userid'];
-		}
-		if ($userid < 1)
-		{
-			$userid = 1;
-		}
 
-		$custId = (int)$record['customer_userid'] > 0 ? (int)$record['customer_userid'] : $userid;
+		$custId = (int)$record['customer_userid'] > 0 ? (int)$record['customer_userid'] : $actorId;
 		$replyText = trim(preg_replace('/\r\n?/', "\n", (string)$replyText));
 		$licenseBody = trim(preg_replace('/\r\n?/', "\n", (string)$bytes));
 
@@ -402,7 +523,7 @@ class vbdl_LicenseRequest
 			. "Tracking: " . $record['token'] . "\n"
 			. "File: " . $filename . "\n"
 			. "Your license is below and also attached to this ticket.\n"
-			. "After an admin adds you to VIP SeDiv you can use Active License SeDiv.\n\n"
+			. "VIP SeDiv access is being activated automatically so you can use Active License SeDiv and VIP downloads.\n\n"
 			. "----- LICENSE BEGIN -----\n"
 			. substr($licenseBody, 0, 50000) . "\n"
 			. "----- LICENSE END -----";
@@ -410,7 +531,7 @@ class vbdl_LicenseRequest
 		{
 			$notice .= "\n\n--- Activator message ---\n" . substr($replyText, 0, 8000);
 		}
-		$textNode = $this->mail->postTextToTicket($parentId, $starter, $userid, 'License approved', $notice);
+		$textNode = $this->mail->postTextToTicket($parentId, $starter, $actorId, 'License approved', $notice);
 		if ((int)$textNode < 1)
 		{
 			return array('error' => 'Could not post license reply into Message Center ticket');
@@ -422,7 +543,6 @@ class vbdl_LicenseRequest
 		$filedataid = 0;
 		if (!empty($attached['error']))
 		{
-			// Keep going — body already has the license.
 			$attachErr = $attached['error'];
 		}
 		else
@@ -453,15 +573,27 @@ class vbdl_LicenseRequest
 			$custId
 		);
 
+		// 5) Auto VIP SeDiv — license receipt is the approval signal.
+		$record['status'] = 'approved';
+		$record['license_filename'] = $filename;
+		$record['license_filedataid'] = $filedataid;
+		$record['license_nodeid'] = $attachNode;
+		$vip = $this->addCustomerToVip($record, $actorId, true);
+		$vipOk = empty($vip['error']) ? 1 : 0;
+
 		return array(
 			'ok' => true,
 			'token' => $record['token'],
-			'status' => 'approved',
+			'status' => $vipOk ? 'vip_added' : 'approved',
 			'filename' => $filename,
 			'filedataid' => $filedataid,
 			'attach_nodeid' => $attachNode,
 			'text_nodeid' => (int)$textNode,
 			'attach_error' => $attachErr,
+			'vip_ok' => $vipOk,
+			'vip_error' => $vipOk ? '' : (isset($vip['error']) ? $vip['error'] : 'VIP grant failed'),
+			'vip_usergroupid' => isset($vip['vip_usergroupid']) ? (int)$vip['vip_usergroupid'] : 0,
+			'already_member' => !empty($vip['already_member']) ? 1 : 0,
 			'message_url' => '/messagecenter/view/' . ($starter > 0 ? $starter : $parentId),
 			'download_url' => '/vbdlmanager/pm_lic_request.php?do=download_license&token='
 				. rawurlencode((string)$record['token']),
@@ -469,9 +601,15 @@ class vbdl_LicenseRequest
 	}
 
 	/**
-	 * Admin: add customer to VIP SeDiv secondary group and close the report.
+	 * Add customer to VIP SeDiv secondary group and mark request vip_added.
+	 * Called automatically after license .txt approval; staff can still retry from admin queue.
+	 *
+	 * @param array $record
+	 * @param int $adminUserid actor (staff / support / system)
+	 * @param bool $auto true when triggered by license import
+	 * @return array
 	 */
-	public function addCustomerToVip(array $record, $adminUserid)
+	public function addCustomerToVip(array $record, $adminUserid, $auto = false)
 	{
 		$adminUserid = (int)$adminUserid;
 		$userid = (int)$record['customer_userid'];
@@ -485,10 +623,16 @@ class vbdl_LicenseRequest
 		}
 		if (empty($record['status']) || $record['status'] !== 'approved')
 		{
-			return array('error' => 'Request must be approved before VIP add');
+			return array('error' => 'Request must be approved (license received) before VIP add');
 		}
 
 		$ugid = $this->targetVipGroupId();
+		if ($ugid < 1)
+		{
+			return array('error' => 'VIP SeDiv usergroup is not configured');
+		}
+		$this->ensureVipGroupListed($ugid);
+
 		$res = $this->db->query(
 			'SELECT userid, username, usergroupid, membergroupids FROM ' . $this->prefix . 'user WHERE userid=' . $userid . ' LIMIT 1'
 		);
@@ -516,10 +660,40 @@ class vbdl_LicenseRequest
 			$ids[] = $ugid;
 			$ids = array_values(array_unique($ids));
 			$csv = $this->db->real_escape_string(implode(',', $ids));
-			$this->db->query(
+			if (!$this->db->query(
 				'UPDATE ' . $this->prefix . 'user SET membergroupids=\'' . $csv . '\' WHERE userid=' . $userid
-			);
+			))
+			{
+				return array('error' => 'Failed updating user groups: ' . $this->db->error);
+			}
 		}
+
+		// Verify write stuck.
+		$check = $this->db->query(
+			'SELECT usergroupid, membergroupids FROM ' . $this->prefix . 'user WHERE userid=' . $userid . ' LIMIT 1'
+		);
+		$okMember = false;
+		if ($check && ($crow = $check->fetch_assoc()))
+		{
+			if ((int)$crow['usergroupid'] === $ugid)
+			{
+				$okMember = true;
+			}
+			foreach (explode(',', (string)$crow['membergroupids']) as $g)
+			{
+				if ((int)trim($g) === $ugid)
+				{
+					$okMember = true;
+					break;
+				}
+			}
+		}
+		if (!$okMember)
+		{
+			return array('error' => 'VIP group was not saved on the user account');
+		}
+
+		$this->clearUserPermCache($userid);
 
 		$tokenEsc = $this->db->real_escape_string($record['token']);
 		$now = time();
@@ -530,18 +704,26 @@ class vbdl_LicenseRequest
 			. ' WHERE token=\'' . $tokenEsc . '\''
 		);
 
-		// Notify in ticket
 		$parentId = (int)$record['message_nodeid'];
 		$starter = (int)$record['starter_nodeid'];
 		if ($parentId > 0)
 		{
-			$msg = "Admin added this user to VIP SeDiv (usergroup #{$ugid}).\n"
-				. "User can now use Active License SeDiv.";
+			if ($auto)
+			{
+				$msg = "VIP SeDiv access activated automatically (usergroup #{$ugid}).\n"
+					. "You can now use Active License SeDiv and VIP SeDiv downloads.\n"
+					. "If the menu does not appear yet, refresh the page or sign in again.";
+			}
+			else
+			{
+				$msg = "Admin added this user to VIP SeDiv (usergroup #{$ugid}).\n"
+					. "User can now use Active License SeDiv.";
+			}
 			$this->mail->postTextToTicket(
 				$parentId,
 				$starter > 0 ? $starter : $parentId,
 				$adminUserid > 0 ? $adminUserid : $this->supportUserid(),
-				'VIP SeDiv added',
+				'VIP SeDiv activated',
 				$msg
 			);
 		}
@@ -553,6 +735,7 @@ class vbdl_LicenseRequest
 			'username' => $user['username'],
 			'vip_usergroupid' => $ugid,
 			'already_member' => $already ? 1 : 0,
+			'auto' => $auto ? 1 : 0,
 		);
 	}
 

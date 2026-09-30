@@ -108,9 +108,57 @@ class vbdl_LicenseInbox
 		$purged = $this->mail->purgeExpiredSrcFiles(40);
 		$result['purged'] = $purged;
 		$result['purged_count'] = count($purged);
+
+		// Finish VIP for requests that already have license .txt but never got vip_added
+		// (e.g. older installs before auto-VIP, or a previous grant failure).
+		$vipFixed = $this->finishPendingVipGrants(40);
+		if ($vipFixed)
+		{
+			if (empty($result['processed']) || !is_array($result['processed']))
+			{
+				$result['processed'] = array();
+			}
+			foreach ($vipFixed as $row)
+			{
+				$result['processed'][] = $row;
+			}
+		}
+		$result['vip_auto_fixed'] = count($vipFixed);
+
 		$result['ok'] = isset($result['ok']) ? $result['ok'] : true;
 		$this->touchPollStamp();
 		return $result;
+	}
+
+	/**
+	 * Grant VIP SeDiv for approved License Requests that are still waiting.
+	 *
+	 * @param int $limit
+	 * @return array
+	 */
+	public function finishPendingVipGrants($limit = 40)
+	{
+		$out = array();
+		$rows = $this->request->listPendingVip($limit);
+		foreach ($rows as $rec)
+		{
+			$actor = !empty($rec['staff_userid']) ? (int)$rec['staff_userid'] : $this->mail->supportUserid();
+			$vip = $this->request->addCustomerToVip($rec, $actor, true);
+			if (!empty($vip['error']))
+			{
+				continue;
+			}
+			$out[] = array(
+				'token' => $rec['token'],
+				'kind' => 'vip_auto',
+				'status' => 'vip_added',
+				'via' => 'pending_vip_grant',
+				'vip_usergroupid' => isset($vip['vip_usergroupid']) ? (int)$vip['vip_usergroupid'] : 0,
+				'message_url' => '/messagecenter/view/'
+					. (!empty($rec['starter_nodeid']) ? (int)$rec['starter_nodeid'] : (int)$rec['message_nodeid']),
+			);
+		}
+		return $out;
 	}
 
 	/**

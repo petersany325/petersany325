@@ -164,10 +164,11 @@ echo '<div class="vbdl-form-row"><label>Legacy subject fallback</label><input cl
 echo '<div class="vbdl-form-row"><label>.src retention days</label><input class="vbdl-input" name="license_src_retention_days" value="'
 	. vbdl_h(isset($s['license_src_retention_days']) ? $s['license_src_retention_days'] : '7')
 	. '" placeholder="7" /><p class="vbdl-muted">After this many days, purge returned <code>.src</code> bytes; keep filename + download report.</p></div>';
-echo '<h4 style="margin:16px 0 8px">License Request (all users)</h4>';
+echo '<h4 style="margin:16px 0 8px">License Request (all users → auto VIP SeDiv)</h4>';
 echo '<p class="vbdl-muted">Message Center → <strong>License Request</strong>: user uploads payment receipt photo. '
-	. 'Mail goes to <code>sedivlic@list.ru</code>; reply with a <code>.txt</code> license into the same ticket (approved). '
-	. 'Admin then uses the report queue to add the user to VIP SeDiv.</p>';
+	. 'Mail goes to the license inbox; reply with a <code>.txt</code> license into the same ticket. '
+	. 'The system then <strong>automatically adds the customer to VIP SeDiv</strong>. '
+	. 'Admin fallback queue is only for rare VIP grant failures.</p>';
 echo '<div class="vbdl-form-row"><label>License Request To email</label><input class="vbdl-input" name="license_request_email" value="'
 	. vbdl_h(isset($s['license_request_email']) ? $s['license_request_email'] : 'sedivlic@list.ru')
 	. '" placeholder="sedivlic@list.ru" /></div>';
@@ -176,7 +177,7 @@ echo '<div class="vbdl-form-row"><label>License Request subject</label><input cl
 	. '" /></div>';
 echo '<div class="vbdl-form-row"><label>VIP SeDiv usergroup to assign</label><input class="vbdl-input" name="license_request_vip_usergroupid" value="'
 	. vbdl_h(isset($s['license_request_vip_usergroupid']) ? $s['license_request_vip_usergroupid'] : '')
-	. '" placeholder="first of vip_usergroupids (e.g. 14)" /><p class="vbdl-muted">Leave empty to use the first ID from <code>vip_usergroupids</code>.</p></div>';
+	. '" placeholder="first of vip_usergroupids (e.g. 14)" /><p class="vbdl-muted">Assigned automatically when the license <code>.txt</code> arrives. Leave empty to use the first ID from <code>vip_usergroupids</code>. The group is also kept in <code>vip_usergroupids</code> so Active License unlocks.</p></div>';
 $vipOnly = isset($s['license_vip_only']) ? $s['license_vip_only'] : '1';
 echo '<div class="vbdl-form-row"><label>VIP customers only</label><select class="vbdl-select" name="license_vip_only">'
 	. '<option value="1"' . ($vipOnly !== '0' ? ' selected' : '') . '>Yes (recommended)</option>'
