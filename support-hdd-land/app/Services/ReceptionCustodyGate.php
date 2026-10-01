@@ -16,15 +16,14 @@ use Illuminate\Validation\ValidationException;
  * reception → desk assigns to named tech → tech confirms → work report
  * → tech returns to desk → desk confirms receive → then cost/delivery.
  *
- * Main admin can bypass the handoff chain and manage repairs directly.
+ * Cartable handoff is mandatory for everyone — including admin.
  */
 class ReceptionCustodyGate
 {
+    /** Admin must also follow کارتابل ارجاع; no free bypass. */
     public function actorCanBypass(?User $actor = null): bool
     {
-        $actor ??= Auth::user();
-
-        return (bool) $actor?->isAdmin();
+        return false;
     }
 
     public function hasAcceptedBenchHandoff(Reception $reception): bool

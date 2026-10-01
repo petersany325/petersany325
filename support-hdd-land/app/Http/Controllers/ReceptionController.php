@@ -790,10 +790,8 @@ class ReceptionController extends Controller
             ]);
         }
 
-        // Soft assign of technician_id without handoff is blocked once custody workflow started
-        // (main admin may manage repairs directly without the referral chain).
-        if (! $gate->actorCanBypass()
-            && ! empty($data['technician_id'])
+        // Soft assign of technician_id without handoff is blocked — including for admin.
+        if (! empty($data['technician_id'])
             && (int) $data['technician_id'] !== (int) $reception->technician_id
             && ($reception->custody ?? 'front_desk') === 'front_desk'
             && ! $gate->hasAcceptedBenchHandoff($reception)) {
