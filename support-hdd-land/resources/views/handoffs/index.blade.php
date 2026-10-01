@@ -10,7 +10,7 @@
         <form method="GET" action="{{ route('handoffs.index') }}" class="handoff-search accept-row accept-row-4" style="align-items:end;">
             <div>
                 <label>شماره قبض</label>
-                <input type="text" name="ticket_no" value="{{ $ticket }}" placeholder="مثلاً شماره قبض یا SH-..." dir="ltr" style="text-align:left;">
+                <input type="text" name="ticket_no" value="{{ $ticket }}" placeholder="مثلاً T-20N… یا SH-..." dir="ltr" style="text-align:left;">
             </div>
             <div>
                 <label>سریال</label>
@@ -70,8 +70,15 @@
                 @forelse($pending as $item)
                     <tr>
                         <td>
-                            <a href="{{ route('receptions.show', $item->reception_id) }}">{{ $item->reception?->ticket_no }}</a>
-                            <div class="muted">{{ $item->reception?->customer?->name }}</div>
+                            @if($item->reception)
+                                <a href="{{ route('receptions.show', $item->reception) }}" dir="ltr" style="font-weight:800;">{{ $item->reception->receipt_no ?: $item->reception->ticket_no }}</a>
+                                @if($item->reception->receipt_no && $item->reception->ticket_no)
+                                    <div class="muted" dir="ltr" style="font-size:10px;">{{ $item->reception->ticket_no }}</div>
+                                @endif
+                                <div class="muted">{{ $item->reception->customer?->name }}</div>
+                            @else
+                                —
+                            @endif
                         </td>
                         <td dir="ltr">{{ $item->serial_snapshot ?: '—' }}</td>
                         <td>{{ $item->directionLabel() }}</td>
@@ -118,7 +125,10 @@
                     @endphp
                     <tr>
                         <td>
-                            <a href="{{ route('receptions.show', $row) }}">{{ $row->ticket_no }}</a>
+                            <a href="{{ route('receptions.show', $row) }}" dir="ltr" style="font-weight:800;">{{ $row->receipt_no ?: $row->ticket_no }}</a>
+                            @if($row->receipt_no && $row->ticket_no)
+                                <div class="muted" dir="ltr" style="font-size:10px;">{{ $row->ticket_no }}</div>
+                            @endif
                             <div><span class="badge badge-{{ $row->status }}">{{ $row->statusLabel() }}</span></div>
                         </td>
                         <td>
@@ -208,8 +218,11 @@
                 @foreach($history as $h)
                     <tr>
                         <td>
-                            @if($h->reception_id)
-                                <a href="{{ route('receptions.show', $h->reception_id) }}">{{ $h->reception?->ticket_no }}</a>
+                            @if($h->reception)
+                                <a href="{{ route('receptions.show', $h->reception) }}" dir="ltr" style="font-weight:800;">{{ $h->reception->receipt_no ?: $h->reception->ticket_no }}</a>
+                                @if($h->reception->receipt_no && $h->reception->ticket_no)
+                                    <div class="muted" dir="ltr" style="font-size:10px;">{{ $h->reception->ticket_no }}</div>
+                                @endif
                             @else
                                 —
                             @endif

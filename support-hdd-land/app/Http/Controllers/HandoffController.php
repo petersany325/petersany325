@@ -62,7 +62,10 @@ class HandoffController extends Controller
             }
 
             if ($ticket !== '') {
-                $inHandQuery->where('ticket_no', 'like', '%'.$ticket.'%');
+                $inHandQuery->where(function ($inner) use ($ticket) {
+                    $inner->where('ticket_no', 'like', '%'.$ticket.'%')
+                        ->orWhere('receipt_no', 'like', '%'.$ticket.'%');
+                });
             }
             if ($serial !== '') {
                 $inHandQuery->where('serial_number', 'like', '%'.$serial.'%');
@@ -70,6 +73,7 @@ class HandoffController extends Controller
             if ($q !== '') {
                 $inHandQuery->where(function ($inner) use ($q) {
                     $inner->where('ticket_no', 'like', '%'.$q.'%')
+                        ->orWhere('receipt_no', 'like', '%'.$q.'%')
                         ->orWhere('serial_number', 'like', '%'.$q.'%')
                         ->orWhere('product_name', 'like', '%'.$q.'%')
                         ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('phone', 'like', '%'.$q.'%'));
@@ -129,7 +133,10 @@ class HandoffController extends Controller
     private function applyHandoffSearch($query, string $ticket, string $serial, string $q): void
     {
         if ($ticket !== '') {
-            $query->whereHas('reception', fn ($r) => $r->where('ticket_no', 'like', '%'.$ticket.'%'));
+            $query->whereHas('reception', function ($r) use ($ticket) {
+                $r->where('ticket_no', 'like', '%'.$ticket.'%')
+                    ->orWhere('receipt_no', 'like', '%'.$ticket.'%');
+            });
         }
         if ($serial !== '') {
             $query->where(function ($inner) use ($serial) {
@@ -143,6 +150,7 @@ class HandoffController extends Controller
                     ->orWhere('note', 'like', '%'.$q.'%')
                     ->orWhereHas('reception', function ($r) use ($q) {
                         $r->where('ticket_no', 'like', '%'.$q.'%')
+                            ->orWhere('receipt_no', 'like', '%'.$q.'%')
                             ->orWhere('serial_number', 'like', '%'.$q.'%')
                             ->orWhere('product_name', 'like', '%'.$q.'%')
                             ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('phone', 'like', '%'.$q.'%'));
