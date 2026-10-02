@@ -61,6 +61,15 @@
                 @if (!empty($ft['show_webapp']))
                     <a href="{{ url('/app') }}"><span>وب‌اپ فروشگاه</span><i aria-hidden="true">←</i></a>
                 @endif
+                @php
+                    $showBizCard = false;
+                    try {
+                        $showBizCard = class_exists(\Plugins\BizCard\Plugin::class) && \Plugins\BizCard\Plugin::isEnabled();
+                    } catch (\Throwable $e) {}
+                @endphp
+                @if ($showBizCard)
+                    <a href="{{ url('/card') }}"><span>کارت ویزیت دیجیتال</span><i aria-hidden="true">←</i></a>
+                @endif
             </nav>
 
             <section class="ft-contact" aria-labelledby="footerContactTitle">
@@ -93,6 +102,7 @@
         <div class="ft-bottom">
             <span>© {{ now()->year }} {{ $ft['copyright'] }}</span>
             <div>
+                <a href="{{ url('/card') }}">کارت ویزیت</a>
                 <a href="{{ url('/contact') }}">تماس</a>
                 <a href="{{ url('/about') }}">درباره ما</a>
                 @if (!empty($ft['show_back_top']))

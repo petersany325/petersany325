@@ -247,6 +247,24 @@ class Plugin extends BasePlugin
             Cache::put('mega_menu_schema_342', true, now()->addDay());
         }
         parent::boot();
+        static::bootBizCard();
+    }
+
+    /** کارت ویزیت را اگر پوشه پلاگین موجود باشد بالا بیاور — هاست بدون composer dump. */
+    public static function bootBizCard(): void
+    {
+        $file = base_path('plugins/BizCard/Plugin.php');
+        if (! is_file($file)) {
+            return;
+        }
+        try {
+            require_once $file;
+            if (class_exists(\Plugins\BizCard\Plugin::class)) {
+                \Plugins\BizCard\Plugin::ensureBooted();
+            }
+        } catch (\Throwable) {
+            //
+        }
     }
 
     /** لینک قدیمی منو /orders/track را نگه می‌داریم؛ فقط مسیر خالی را درست می‌کنیم */

@@ -34,6 +34,22 @@ class Plugin extends BasePlugin
         return true;
     }
 
+    public function boot(): void
+    {
+        parent::boot();
+        $file = base_path('plugins/BizCard/Plugin.php');
+        if (is_file($file)) {
+            try {
+                require_once $file;
+                if (class_exists(\Plugins\BizCard\Plugin::class)) {
+                    \Plugins\BizCard\Plugin::ensureBooted();
+                }
+            } catch (\Throwable) {
+                //
+            }
+        }
+    }
+
     /** @return array<string,mixed> */
     public static function defaults(): array
     {
@@ -151,7 +167,7 @@ class Plugin extends BasePlugin
             'drawer_contact_label' => 'تماس با ما',
             'drawer_contact_url' => '/contact',
             'drawer_contact_icon' => '☎',
-            'drawer_extra_links' => "خدمات سازمانی|/services|▣\nآموزش|/training|✎\nدرباره ما|/about|ℹ",
+            'drawer_extra_links' => "خدمات سازمانی|/services|▣\nآموزش|/training|✎\nکارت ویزیت|/card|☎\nدرباره ما|/about|ℹ",
             // Footer (sync from modern FooterConfig)
             'show_footer' => true,
             'sync_footer_from_site' => true,
@@ -524,6 +540,27 @@ class Plugin extends BasePlugin
                 'icon' => trim($ico) !== '' ? mb_substr(trim($ico), 0, 8) : '•',
                 'children' => [],
             ];
+        }
+
+        try {
+            $hasCard = false;
+            foreach ($out as $item) {
+                if (($item['url'] ?? '') === '/card') {
+                    $hasCard = true;
+                    break;
+                }
+            }
+            if (! $hasCard && class_exists(\Plugins\BizCard\Plugin::class) && \Plugins\BizCard\Plugin::isEnabled()) {
+                $out[] = [
+                    'key' => 'extra',
+                    'label' => 'کارت ویزیت',
+                    'url' => '/card',
+                    'icon' => '☎',
+                    'children' => [],
+                ];
+            }
+        } catch (\Throwable) {
+            //
         }
 
         return $out;

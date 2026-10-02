@@ -109,6 +109,7 @@
     <a class="btn" href="{{ url('/admin/mega-menu') }}">مگامنو</a>
     <a class="btn" href="{{ url('/admin/footer-settings') }}">فوتر</a>
     <a class="btn" href="{{ url('/admin/web-app') }}">سایر تنظیمات وب‌اپ</a>
+    <a class="btn" href="{{ url('/admin/biz-card') }}">کارت ویزیت دیجیتال</a>
   </div>
 </div>
 

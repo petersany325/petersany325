@@ -22,7 +22,7 @@ class FooterConfig
             'column1_title' => 'فروشگاه',
             'column1_links' => "محصولات|/products\nپیگیری سفارش|/orders/track\nاستعلام گارانتی|/serial-check",
             'column2_title' => 'خدمات مشتریان',
-            'column2_links' => "حساب کاربری|/account\nپشتیبانی|/account/tickets\nتماس با ما|/contact\nدرباره ما|/about",
+            'column2_links' => "حساب کاربری|/account\nپشتیبانی|/account/tickets\nکارت ویزیت|/card\nتماس با ما|/contact\nدرباره ما|/about",
             'social_links' => "اینستاگرام|#\nتلگرام|#\nواتساپ|#",
             'trust_items' => "موجودی واقعی\nگارانتی شفاف\nپشتیبانی سریع",
             'show_newsletter' => true,
