@@ -50,6 +50,11 @@ class PortalNav
                 'children' => [],
             ],
             [
+                'label' => 'کارت ویزیت',
+                'url' => '/card',
+                'children' => [],
+            ],
+            [
                 'label' => 'تماس با ما',
                 'url' => '/contact',
                 'children' => [],
@@ -126,6 +131,8 @@ class PortalNav
                 'items' => [
                     ['label' => 'بازگشت به فروشگاه', 'url' => '/', 'icon' => '⌂'],
                     ['label' => 'وب‌اپ موبایل', 'url' => '/app/account', 'icon' => '📱'],
+                    ['label' => 'کارت ویزیت دیجیتال', 'url' => '/card', 'icon' => '📇'],
+                    ['label' => 'باشگاه مشتری', 'url' => '/card#club', 'icon' => '★'],
                     ['label' => 'تماس با ما', 'url' => '/contact', 'icon' => '☎'],
                 ],
             ],

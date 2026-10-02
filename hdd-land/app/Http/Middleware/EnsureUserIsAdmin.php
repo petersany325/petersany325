@@ -80,6 +80,9 @@ class EnsureUserIsAdmin
         if ($path === 'admin/web-app' || str_starts_with($path, 'admin/web-app/')) {
             return 'site.webapp';
         }
+        if ($path === 'admin/biz-card' || str_starts_with($path, 'admin/biz-card/')) {
+            return 'site.biz_card';
+        }
         if ($path === 'admin/settings' || str_starts_with($path, 'admin/settings/')) {
             return 'site.shop_settings';
         }

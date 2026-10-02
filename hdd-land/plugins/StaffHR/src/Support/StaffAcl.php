@@ -36,6 +36,7 @@ class StaffAcl
             'site.footer' => 'تنظیمات فوتر',
             'site.webapp' => 'تنظیمات وب‌اپ / PWA',
             'site.shop_settings' => 'تنظیمات عمومی فروشگاه',
+            'site.biz_card' => 'کارت ویزیت دیجیتال و باشگاه مشتری',
             'full_site' => 'دسترسی گسترده پنل کارمند',
         ];
     }
@@ -78,7 +79,7 @@ class StaffAcl
                 'label' => 'مدیر ظاهر سایت',
                 'permissions' => [
                     'site.mega_menu', 'site.theme_builder', 'site.theme_templates', 'site.page_builder',
-                    'site.homepage', 'site.footer', 'site.webapp', 'site.shop_settings',
+                    'site.homepage', 'site.footer', 'site.webapp', 'site.shop_settings', 'site.biz_card',
                 ],
             ],
             'full_access' => [

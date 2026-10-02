@@ -34,6 +34,8 @@
     @endif
     <a href="{{ url('/account/serials') }}">سریال‌ها و گارانتی من <span>‹</span></a>
     <a href="{{ url('/serial-check') }}">استعلام گارانتی <span>‹</span></a>
+    <a href="{{ url('/card') }}">کارت ویزیت دیجیتال <span>‹</span></a>
+    <a href="{{ url('/card#club') }}">باشگاه مشتری سرزمین هارد <span>‹</span></a>
     <a href="{{ url('/account') }}">کارتابل کامل مشتری <span>‹</span></a>
     @if(!empty($s['account_show_full_site']))
       <a href="{{ url('/') }}" target="_blank" rel="noopener">نسخه کامل سایت <span>‹</span></a>
