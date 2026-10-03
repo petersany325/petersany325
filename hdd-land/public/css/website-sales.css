@@ -192,9 +192,22 @@
   color:var(--ws-muted);font-size:1rem;line-height:1.75;
 }
 .ws-guide-list{list-style:disc;list-style-position:outside}
-.ws-guide-steps{list-style:decimal;list-style-position:outside}
-.ws-guide-list li,.ws-guide-steps li{padding-right:.35rem;padding-left:0}
-.ws-guide-list li::marker,.ws-guide-steps li::marker{color:var(--ws-accent)}
+.ws-guide-steps{list-style:none;counter-reset:ws-step;padding-right:0}
+.ws-guide-list li{padding-right:.35rem;padding-left:0}
+.ws-guide-list li::marker{color:var(--ws-accent)}
+.ws-guide-list a.is-ready{
+  color:var(--ws-accent-deep);font-weight:700;text-decoration:underline;text-underline-offset:.15em;
+}
+.ws-guide-list a.is-ready:hover{color:var(--ws-accent)}
+.ws-guide-steps li{
+  position:relative;padding-right:2.15rem;padding-left:0;
+  counter-increment:ws-step;
+}
+.ws-guide-steps li::before{
+  content:counter(ws-step, persian);
+  position:absolute;right:0;top:0;
+  color:var(--ws-accent);font-weight:800;
+}
 .ws-guide-quote{
   margin:0;padding:1.05rem 1.15rem;border-right:3px solid var(--ws-accent);
   background:linear-gradient(120deg,#fff8f3,#eef6f5);

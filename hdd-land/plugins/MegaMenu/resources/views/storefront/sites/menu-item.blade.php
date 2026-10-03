@@ -53,7 +53,7 @@
         @elseif(($block['type'] ?? '') === 'ul')
           <ul class="ws-guide-list">
             @foreach(($block['items'] ?? []) as $item)
-              <li>{{ $item }}</li>
+              <li>{!! \Plugins\MegaMenu\Plugin::decorateGuideListItem((string) $item, $page['children'] ?? []) !!}</li>
             @endforeach
           </ul>
         @elseif(($block['type'] ?? '') === 'ol')
@@ -72,18 +72,18 @@
 
     @if(!empty($page['children']))
       <div class="ws-menu-children">
-        <h2 class="ws-guide-h">باز کردن زیرمنوها</h2>
-        <ul class="ws-outline__list">
+        <h2 class="ws-guide-h">رفتن به صفحات این بخش</h2>
+        <div class="ws-menu-entries">
           @foreach($page['children'] as $child)
-            <li>
-              @if(!empty($child['guide']))
-                <a class="is-ready" href="{{ url('/sites/repair-shop/'.$child['guide']) }}">{{ $child['title'] }}</a>
-              @else
-                <a class="is-ready" href="{{ url('/sites/repair-shop/m/'.$child['slug']) }}">{{ $child['title'] }}</a>
+            <a class="ws-menu-entry" href="{{ \Plugins\MegaMenu\Plugin::menuItemPublicUrl($child) }}">
+              <strong>{{ $child['title'] }}</strong>
+              @if(!empty($child['short']))
+                <span>{{ $child['short'] }}</span>
               @endif
-            </li>
+              <em>مشاهده ←</em>
+            </a>
           @endforeach
-        </ul>
+        </div>
       </div>
     @endif
 
