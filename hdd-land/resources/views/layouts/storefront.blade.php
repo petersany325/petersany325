@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=67">
     <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=49">
     <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=9">
+    <link rel="stylesheet" href="{{ asset('css/website-sales.css') }}?v=12">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=4">
     <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=23">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
