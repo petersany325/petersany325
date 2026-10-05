@@ -42,6 +42,61 @@
         <button class="btn btn-primary" type="submit">اعمال فیلتر</button>
     </form>
 
+    @if(($pendingSelfies ?? collect())->isNotEmpty())
+    <div class="panel" style="padding:14px;margin-bottom:14px;border:1px solid #f0c36d;background:#fff8e8;">
+        <h3 style="margin:0 0 10px;">سلفی‌های در انتظار تأیید ({{ $pendingSelfies->count() }})</h3>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>کارمند</th>
+                        <th>عکس</th>
+                        <th>زمان ارسال</th>
+                        <th>GPS موبایل</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($pendingSelfies as $ps)
+                        <tr>
+                            <td>
+                                <strong>{{ $ps->user?->name }}</strong>
+                                <div class="muted" dir="ltr">{{ $ps->user?->phone ?: '—' }}</div>
+                            </td>
+                            <td>
+                                <a href="{{ route('attendance.reference-photo', $ps->user) }}" target="_blank">مشاهده سلفی</a>
+                                @if($ps->face_detected)
+                                    <div class="muted" style="font-size:11px;">چهره تشخیص‌شده ✓</div>
+                                @endif
+                            </td>
+                            <td dir="ltr">{{ $ps->enrolled_at?->format('Y-m-d H:i') ?: '—' }}</td>
+                            <td dir="ltr" style="font-size:11px;">
+                                @if($ps->phone_gps_lat !== null)
+                                    {{ number_format($ps->phone_gps_lat, 5) }}, {{ number_format($ps->phone_gps_lng, 5) }}
+                                    <div>±{{ $ps->phone_gps_accuracy_m !== null ? (int) $ps->phone_gps_accuracy_m : '—' }} m</div>
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td style="white-space:nowrap;">
+                                <form method="POST" action="{{ route('attendance.selfie.approve', $ps->user) }}" style="display:inline;">
+                                    @csrf
+                                    <button class="btn btn-primary" type="submit">تأیید</button>
+                                </form>
+                                <form method="POST" action="{{ route('attendance.selfie.reject', $ps->user) }}" style="display:inline;margin-right:6px;" onsubmit="var r=prompt('دلیل رد (اختیاری):'); if(r!==null){ this.querySelector('[name=reason]').value=r; return true;} return false;">
+                                    @csrf
+                                    <input type="hidden" name="reason" value="">
+                                    <button class="btn btn-ghost" type="submit">رد</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
+
     <div class="panel" style="padding:14px;margin-bottom:14px;">
         <h3 style="margin:0 0 10px;">کارکنان و روزهای حضور</h3>
         <div class="table-wrap">
@@ -50,6 +105,7 @@
                     <tr>
                         <th>کارمند</th>
                         <th>عکس مرجع</th>
+                        <th>وضعیت سلفی</th>
                         <th>امروز</th>
                         <th>روزهای حضور (بازه)</th>
                         <th>عملیات</th>
@@ -71,6 +127,7 @@
                                     <span class="muted">ثبت نشده</span>
                                 @endif
                             </td>
+                            <td>{{ $p?->selfieStatusLabel() ?? 'ثبت نشده' }}</td>
                             <td>{{ ($row['today']['open'] ?? false) ? 'داخل شرکت' : 'خارج' }}</td>
                             <td><strong>{{ $row['present_days'] }}</strong></td>
                             <td>

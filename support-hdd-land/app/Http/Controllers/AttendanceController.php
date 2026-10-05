@@ -52,15 +52,22 @@ class AttendanceController extends Controller
     public function onboard(Request $request, AttendanceService $attendance): View|RedirectResponse
     {
         $user = $request->user();
-        if ($attendance->hasCompletedOnboarding($user)) {
+        $profile = $attendance->profileFor($user);
+
+        if ($profile?->isSelfieApproved()) {
             return redirect()->route('attendance.index')
-                ->with('success', 'ثبت اولیه حضور قبلاً انجام شده است.');
+                ->with('success', 'سلفی شما قبلاً تأیید شده است.');
+        }
+        if ($profile?->isSelfiePending()) {
+            return redirect()->route('attendance.index')
+                ->with('success', 'سلفی شما در انتظار تأیید ادمین است.');
         }
 
         return view('attendance.onboard', [
             'settings' => AttendanceSettings::all(),
-            'profile' => $attendance->profileFor($user),
+            'profile' => $profile,
             'officeReady' => AttendanceSettings::officeLat() !== null && AttendanceSettings::officeLng() !== null,
+            'isResubmit' => $profile?->isSelfieRejected() ?? false,
         ]);
     }
 
@@ -72,15 +79,33 @@ class AttendanceController extends Controller
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'accuracy_m' => ['nullable', 'numeric', 'min:0', 'max:5000'],
             'device_fingerprint' => ['nullable', 'string', 'max:191'],
+            'face_detected' => ['required', 'in:1'],
+        ], [
+            'face_detected.required' => 'چهره در سلفی تشخیص داده نشد.',
+            'face_detected.in' => 'چهره در سلفی تشخیص داده نشد.',
         ]);
 
         $attendance->completeOnboarding($request->user(), $request->file('photo'), $data);
+
+        // اعلان به مدیران
+        try {
+            $admins = User::query()->where('role', 'admin')->where('is_active', true)->get();
+            app(\App\Services\StaffNotifier::class)->notifyMany(
+                $admins,
+                'attendance_selfie',
+                'سلفی حضور برای تأیید',
+                'کارمند '.$request->user()->name.' سلفی حضور ارسال کرد؛ تأیید کنید.',
+                route('attendance.manage')
+            );
+        } catch (\Throwable $e) {
+            // ignore notify failures
+        }
 
         $home = $request->user()->isIntern() ? 'intern.portal' : 'dashboard';
 
         return redirect()
             ->route($home)
-            ->with('success', 'ثبت اولیه سلفی و GPS موبایل انجام شد. منوی کار آزاد شد — از میانبر «حضور» ورود/خروج بزنید.');
+            ->with('success', 'سلفی و GPS ثبت شد و برای تأیید ادمین ارسال شد. بعد از تأیید ادمین می‌توانید با سلفی ورود بزنید.');
     }
 
     public function sendOtp(Request $request, AttendanceService $attendance, NiazpardazSmsService $sms): RedirectResponse
@@ -111,6 +136,7 @@ class AttendanceController extends Controller
             'device_fingerprint' => ['nullable', 'string', 'max:191'],
             'note' => ['nullable', 'string', 'max:500'],
             'photo' => ['nullable', 'image', 'max:5120'],
+            'face_detected' => ['nullable', 'in:0,1'],
         ]);
 
         $event = $attendance->punch(
@@ -175,16 +201,70 @@ class AttendanceController extends Controller
             ->limit(100)
             ->get();
 
+        $pendingSelfies = AttendanceProfile::query()
+            ->with(['user', 'enrolledByUser'])
+            ->where('selfie_status', AttendanceProfile::SELFIE_PENDING)
+            ->whereNotNull('reference_photo_path')
+            ->orderByDesc('enrolled_at')
+            ->get();
+
         return view('attendance.manage', [
             'settings' => AttendanceSettings::all(),
             'rows' => $rows,
             'events' => $events,
+            'pendingSelfies' => $pendingSelfies,
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
             'filterUserId' => $request->input('user_id'),
             'filterStatus' => $request->input('status'),
             'users' => $users,
         ]);
+    }
+
+    public function approveSelfie(Request $request, User $user, AttendanceService $attendance): RedirectResponse
+    {
+        $this->authorizeManage($request);
+        $profile = AttendanceProfile::query()->where('user_id', $user->id)->firstOrFail();
+        $attendance->approveSelfie($profile, $request->user());
+
+        try {
+            app(\App\Services\StaffNotifier::class)->notifyMany(
+                [$user],
+                'attendance_selfie',
+                'سلفی حضور تأیید شد',
+                'سلفی شما تأیید شد. از این به بعد می‌توانید با سلفی ورود/خروج بزنید.',
+                route('attendance.index')
+            );
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
+        return back()->with('success', 'سلفی «'.$user->name.'» تأیید شد. از این به بعد ورود با سلفی برایش فعال است.');
+    }
+
+    public function rejectSelfie(Request $request, User $user, AttendanceService $attendance): RedirectResponse
+    {
+        $this->authorizeManage($request);
+        $data = $request->validate([
+            'reason' => ['nullable', 'string', 'max:255'],
+        ]);
+        $profile = AttendanceProfile::query()->where('user_id', $user->id)->firstOrFail();
+        $attendance->rejectSelfie($profile, $request->user(), $data['reason'] ?? null);
+
+        try {
+            $reason = $data['reason'] ?? '';
+            app(\App\Services\StaffNotifier::class)->notifyMany(
+                [$user],
+                'attendance_selfie',
+                'سلفی حضور رد شد',
+                'سلفی شما رد شد'.($reason !== '' ? ' ('.$reason.')' : '').'. لطفاً سلفی جدید ثبت کنید.',
+                route('attendance.onboard')
+            );
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
+        return back()->with('success', 'سلفی «'.$user->name.'» رد شد.');
     }
 
     public function settings(): View

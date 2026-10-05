@@ -392,6 +392,8 @@ Route::middleware(['auth', EnsureAttendanceOnboarded::class])->group(function ()
         Route::post('settings', [AttendanceController::class, 'saveSettings'])->name('settings.save');
         Route::get('geocode', [AttendanceController::class, 'geocodeSearch'])->name('geocode');
         Route::get('reference/{user}/photo', [AttendanceController::class, 'referencePhoto'])->name('reference-photo');
+        Route::post('selfie/{user}/approve', [AttendanceController::class, 'approveSelfie'])->name('selfie.approve');
+        Route::post('selfie/{user}/reject', [AttendanceController::class, 'rejectSelfie'])->name('selfie.reject');
     });
 
     // عکس مرجع ادمین (کنترل داخل کنترلر)

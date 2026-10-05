@@ -35,15 +35,23 @@ class AttendanceService
     }
 
     /**
-     * ثبت اولیه اولین ورود: سلفی + GPS موبایل → باز شدن منوی کار.
+     * ثبت اولیه اولین ورود: سلفی با تشخیص چهره + GPS موبایل.
+     * سلفی می‌رود برای تأیید ادمین؛ منوی کار بعد از این مرحله باز می‌شود.
      *
-     * @param  array{latitude:mixed,longitude:mixed,accuracy_m?:mixed,device_fingerprint?:?string}  $geo
+     * @param  array{latitude:mixed,longitude:mixed,accuracy_m?:mixed,device_fingerprint?:?string,face_detected?:mixed}  $geo
      */
     public function completeOnboarding(User $user, \Illuminate\Http\UploadedFile $selfie, array $geo): AttendanceProfile
     {
         $lat = isset($geo['latitude']) && $geo['latitude'] !== '' ? (float) $geo['latitude'] : null;
         $lng = isset($geo['longitude']) && $geo['longitude'] !== '' ? (float) $geo['longitude'] : null;
         $acc = isset($geo['accuracy_m']) && $geo['accuracy_m'] !== '' ? (float) $geo['accuracy_m'] : null;
+        $faceDetected = ! empty($geo['face_detected']);
+
+        if (! $faceDetected) {
+            throw ValidationException::withMessages([
+                'photo' => 'چهره در سلفی تشخیص داده نشد. صورت را روبه‌رو و در نور کافی بگیرید.',
+            ]);
+        }
 
         if ($lat === null || $lng === null) {
             throw ValidationException::withMessages([
@@ -65,6 +73,11 @@ class AttendanceService
         $device = trim((string) ($geo['device_fingerprint'] ?? ''));
         $profile->forceFill([
             'reference_photo_path' => $path,
+            'face_detected' => true,
+            'selfie_status' => AttendanceProfile::SELFIE_PENDING,
+            'selfie_approved_at' => null,
+            'selfie_approved_by' => null,
+            'selfie_reject_reason' => null,
             'enrolled_at' => now(),
             'enrolled_by' => $user->id,
             'phone_gps_lat' => $lat,
@@ -74,6 +87,34 @@ class AttendanceService
             'onboarding_completed_at' => now(),
             'device_fingerprint' => $device !== '' ? $device : $profile->device_fingerprint,
             'is_active' => true,
+        ])->save();
+
+        return $profile->fresh();
+    }
+
+    public function approveSelfie(AttendanceProfile $profile, User $admin): AttendanceProfile
+    {
+        if (! $profile->hasReferencePhoto()) {
+            throw ValidationException::withMessages(['photo' => 'عکس مرجع برای تأیید وجود ندارد.']);
+        }
+        $profile->forceFill([
+            'selfie_status' => AttendanceProfile::SELFIE_APPROVED,
+            'selfie_approved_at' => now(),
+            'selfie_approved_by' => $admin->id,
+            'selfie_reject_reason' => null,
+            'is_active' => true,
+        ])->save();
+
+        return $profile->fresh();
+    }
+
+    public function rejectSelfie(AttendanceProfile $profile, User $admin, ?string $reason = null): AttendanceProfile
+    {
+        $profile->forceFill([
+            'selfie_status' => AttendanceProfile::SELFIE_REJECTED,
+            'selfie_approved_at' => null,
+            'selfie_approved_by' => $admin->id,
+            'selfie_reject_reason' => mb_substr(trim((string) $reason) ?: 'رد توسط ادمین', 0, 255),
         ])->save();
 
         return $profile->fresh();
@@ -238,6 +279,11 @@ class AttendanceService
         $path = $photo->store('attendance/refs/'.$target->id, 'local');
         $profile->forceFill([
             'reference_photo_path' => $path,
+            'face_detected' => true,
+            'selfie_status' => AttendanceProfile::SELFIE_APPROVED,
+            'selfie_approved_at' => now(),
+            'selfie_approved_by' => $admin->id,
+            'selfie_reject_reason' => null,
             'enrolled_at' => now(),
             'enrolled_by' => $admin->id,
             'is_active' => true,
@@ -333,10 +379,19 @@ class AttendanceService
         }
 
         $profile = $this->profileFor($user);
-        if (AttendanceSettings::requireEnrolledPhoto() && $method === AttendanceEvent::METHOD_SELFIE) {
-            if (! $profile || ! $profile->hasReferencePhoto()) {
+        if ($method === AttendanceEvent::METHOD_SELFIE) {
+            if (! $profile || ! $profile->isSelfieApproved()) {
+                $msg = 'سلفی شما هنوز توسط ادمین تأیید نشده است.';
+                if ($profile?->isSelfiePending()) {
+                    $msg = 'سلفی شما در انتظار تأیید ادمین است. تا تأیید، ورود با سلفی ممکن نیست.';
+                } elseif ($profile?->isSelfieRejected()) {
+                    $msg = 'سلفی رد شده است'.($profile->selfie_reject_reason ? ' ('.$profile->selfie_reject_reason.')' : '').'. دوباره از ثبت اولیه/ادمین عکس بگیرید.';
+                }
+                throw ValidationException::withMessages(['photo' => $msg]);
+            }
+            if (empty($data['face_detected'])) {
                 throw ValidationException::withMessages([
-                    'photo' => 'عکس مرجع شما هنوز توسط مدیر ثبت نشده است. با ادمین تماس بگیرید.',
+                    'photo' => 'چهره در سلفی تشخیص داده نشد. صورت را روبه‌روی دوربین بگیرید.',
                 ]);
             }
         }

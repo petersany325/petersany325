@@ -8,6 +8,7 @@
   $open = (bool) ($state['open'] ?? false);
   $nextType = $open ? 'check_out' : 'check_in';
   $nextLabel = $open ? 'ثبت خروج از شرکت' : 'ثبت ورود به شرکت';
+  $selfieReady = $profile?->isSelfieApproved() && ($settings['allow_selfie'] ?? false);
 @endphp
 
 <div class="emp-cartable">
@@ -41,18 +42,37 @@
             <div class="emp-stat {{ $open ? 'tone-ok' : '' }}"><span>وضعیت امروز</span><strong>{{ $open ? 'داخل شرکت' : 'خارج / بدون ورود' }}</strong></div>
             <div class="emp-stat"><span>آخرین ثبت</span><strong>{{ $state['last']?->occurred_at?->format('H:i') ?: '—' }}</strong></div>
             <div class="emp-stat tone-sms"><span>روزهای حضور (بازه)</span><strong>{{ $presentDays }}</strong></div>
-            <div class="emp-stat"><span>عکس مرجع</span><strong>{{ $profile?->hasReferencePhoto() ? 'ثبت شده' : 'ثبت نشده' }}</strong></div>
+            <div class="emp-stat"><span>وضعیت سلفی</span><strong>{{ $profile?->selfieStatusLabel() ?? 'ثبت نشده' }}</strong></div>
         </div>
 
-        @if($settings['require_enrolled_photo'] && $settings['allow_selfie'] && ! $profile?->hasReferencePhoto())
-            <div class="alert alert-error">عکس مرجع شما هنوز توسط <strong>ادمین</strong> ثبت نشده؛ برای سلفی ابتدا ادمین باید عکس اولیه را بگیرد. فعلاً در صورت فعال بودن می‌توانید از OTP استفاده کنید.</div>
+        @if($profile?->isSelfiePending())
+            <div class="alert alert-error">سلفی شما <strong>در انتظار تأیید ادمین</strong> است. تا تأیید، ورود خودکار با سلفی فعال نیست.@if($settings['allow_otp']) فعلاً می‌توانید از OTP استفاده کنید.@endif</div>
+        @elseif($profile?->isSelfieRejected())
+            <div class="alert alert-error">
+                سلفی رد شده{{ $profile->selfie_reject_reason ? ' — '.$profile->selfie_reject_reason : '' }}.
+                <a href="{{ route('attendance.onboard') }}" class="btn btn-secondary" style="margin-right:8px;">ثبت مجدد سلفی</a>
+            </div>
+        @elseif(! $profile?->hasReferencePhoto())
+            <div class="alert alert-error">
+                هنوز سلفی مرجع ثبت نکرده‌اید.
+                <a href="{{ route('attendance.onboard') }}" class="btn btn-secondary" style="margin-right:8px;">ثبت اولیه</a>
+            </div>
         @endif
 
         <div class="panel" style="margin-top:12px;padding:14px;">
             <h3 style="margin:0 0 10px;">{{ $nextLabel }}</h3>
-            <p class="muted" style="margin:0 0 12px;">موقعیت GPS از موبایل خوانده می‌شود. سلفی باید از دوربین جلو گرفته شود (نه گالری).</p>
 
-            <form method="POST" action="{{ route('attendance.otp') }}" id="att-otp-form" style="margin-bottom:10px;">
+            @if($selfieReady)
+                <p class="muted" style="margin:0 0 10px;">سلفی تأیید شده — با تشخیص چهره، ورود/خروج به‌صورت خودکار ثبت می‌شود.</p>
+                <video id="att-live-cam" playsinline autoplay muted style="width:100%;max-width:320px;border-radius:10px;background:#111;transform:scaleX(-1);"></video>
+                <div style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" class="btn btn-secondary" id="att-open-cam">روشن کردن دوربین</button>
+                    <button type="button" class="btn btn-primary" id="att-auto-punch" disabled>{{ $nextLabel }} با سلفی</button>
+                </div>
+                <div class="muted" id="att-face-live">برای ورود خودکار، دوربین را روشن کنید و صورت را روبه‌رو بگیرید.</div>
+            @endif
+
+            <form method="POST" action="{{ route('attendance.otp') }}" id="att-otp-form" style="margin:12px 0 10px;">
                 @csrf
                 <input type="hidden" name="purpose" value="{{ $nextType }}">
                 @if($settings['allow_otp'])
@@ -63,41 +83,34 @@
             <form method="POST" action="{{ route('attendance.punch') }}" enctype="multipart/form-data" id="att-punch-form" class="form-grid">
                 @csrf
                 <input type="hidden" name="type" value="{{ $nextType }}">
+                <input type="hidden" name="method" id="att-method" value="{{ $selfieReady ? 'selfie' : ($settings['allow_otp'] ? 'otp' : 'selfie') }}">
                 <input type="hidden" name="latitude" id="att-lat" value="{{ old('latitude') }}">
                 <input type="hidden" name="longitude" id="att-lng" value="{{ old('longitude') }}">
                 <input type="hidden" name="accuracy_m" id="att-acc" value="{{ old('accuracy_m') }}">
                 <input type="hidden" name="device_fingerprint" id="att-device" value="">
+                <input type="hidden" name="face_detected" id="att-face" value="0">
+                <input type="file" name="photo" id="att-photo" accept="image/*" capture="user" style="display:none;">
 
-                <div>
-                    <label>روش تأیید</label>
-                    <select name="method" id="att-method" required>
-                        @if($settings['allow_selfie'])
-                            <option value="selfie" @selected(old('method', session('attendance_method')) === 'selfie')>سلفی لحظه‌ای</option>
-                        @endif
-                        @if($settings['allow_otp'])
-                            <option value="otp" @selected(old('method', session('attendance_method')) === 'otp')>رمز یک‌بارمصرف</option>
-                        @endif
-                    </select>
-                </div>
-
-                <div id="att-otp-wrap">
-                    <label>کد OTP</label>
-                    <input type="text" name="otp_code" inputmode="numeric" maxlength="10" value="{{ old('otp_code') }}" placeholder="کد پیامک‌شده" dir="ltr">
-                </div>
-
-                <div id="att-photo-wrap">
-                    <label>سلفی (دوربین جلو)</label>
-                    <input type="file" name="photo" accept="image/*" capture="user">
-                </div>
-
-                <div>
-                    <label>یادداشت (اختیاری)</label>
-                    <input type="text" name="note" value="{{ old('note') }}" maxlength="500">
-                </div>
+                @if($settings['allow_otp'] && ! $selfieReady)
+                    <div id="att-otp-wrap">
+                        <label>کد OTP</label>
+                        <input type="text" name="otp_code" inputmode="numeric" maxlength="10" value="{{ old('otp_code') }}" placeholder="کد پیامک‌شده" dir="ltr">
+                    </div>
+                    <div style="grid-column:1/-1;">
+                        <button class="btn btn-primary" type="submit" id="att-otp-submit">{{ $nextLabel }} با OTP</button>
+                    </div>
+                @elseif($settings['allow_otp'])
+                    <details style="grid-column:1/-1;">
+                        <summary class="muted">ورود جایگزین با OTP</summary>
+                        <div style="margin-top:8px;">
+                            <input type="text" name="otp_code" id="att-otp-code" inputmode="numeric" maxlength="10" value="{{ old('otp_code') }}" placeholder="کد OTP" dir="ltr">
+                            <button class="btn btn-ghost" type="button" id="att-otp-punch">ثبت با OTP</button>
+                        </div>
+                    </details>
+                @endif
 
                 <div style="grid-column:1/-1;">
                     <div class="muted" id="att-gps-status">در حال دریافت موقعیت GPS…</div>
-                    <button class="btn btn-primary" type="submit" id="att-submit" @disabled(! $settings['enabled'])>{{ $nextLabel }}</button>
                 </div>
             </form>
         </div>
@@ -178,28 +191,32 @@
     </div>
 </div>
 
+@if($selfieReady)
+@include('partials.attendance-face')
+@endif
 <script>
 (function () {
-  const lat = document.getElementById('att-lat');
-  const lng = document.getElementById('att-lng');
-  const acc = document.getElementById('att-acc');
-  const status = document.getElementById('att-gps-status');
-  const method = document.getElementById('att-method');
-  const otpWrap = document.getElementById('att-otp-wrap');
-  const photoWrap = document.getElementById('att-photo-wrap');
-  const device = document.getElementById('att-device');
-
-  function syncMethod() {
-    const m = method ? method.value : 'selfie';
-    if (otpWrap) otpWrap.style.display = m === 'otp' ? '' : 'none';
-    if (photoWrap) photoWrap.style.display = m === 'selfie' ? '' : 'none';
-  }
-  if (method) method.addEventListener('change', syncMethod);
-  syncMethod();
+  var lat = document.getElementById('att-lat');
+  var lng = document.getElementById('att-lng');
+  var acc = document.getElementById('att-acc');
+  var status = document.getElementById('att-gps-status');
+  var method = document.getElementById('att-method');
+  var device = document.getElementById('att-device');
+  var face = document.getElementById('att-face');
+  var photo = document.getElementById('att-photo');
+  var form = document.getElementById('att-punch-form');
+  var liveStatus = document.getElementById('att-face-live');
+  var openBtn = document.getElementById('att-open-cam');
+  var punchBtn = document.getElementById('att-auto-punch');
+  var video = document.getElementById('att-live-cam');
+  var stream = null;
+  var detecting = false;
+  var submitted = false;
+  var selfieReady = {{ $selfieReady ? 'true' : 'false' }};
 
   try {
-    const key = 'att_device_fp';
-    let fp = localStorage.getItem(key);
+    var key = 'att_device_fp';
+    var fp = localStorage.getItem(key);
     if (!fp) {
       fp = 'd_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36);
       localStorage.setItem(key, fp);
@@ -209,19 +226,124 @@
 
   if (!navigator.geolocation) {
     if (status) status.textContent = 'مرورگر GPS را پشتیبانی نمی‌کند.';
-    return;
+  } else {
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      if (lat) lat.value = pos.coords.latitude.toFixed(7);
+      if (lng) lng.value = pos.coords.longitude.toFixed(7);
+      if (acc) acc.value = pos.coords.accuracy != null ? Math.round(pos.coords.accuracy) : '';
+      if (status) {
+        status.textContent = 'موقعیت آماده است — دقت حدود ' + Math.round(pos.coords.accuracy || 0) + ' متر'
+          + ({{ $settings['require_inside_geofence'] ? 'true' : 'false' }} ? ' | شعاع مجاز شرکت: {{ $settings['geofence_radius_m'] }} متر' : '');
+      }
+    }, function (err) {
+      if (status) status.textContent = 'خطا در دریافت GPS: ' + (err && err.message ? err.message : 'دسترسی مکان را فعال کنید');
+    }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
   }
-  navigator.geolocation.getCurrentPosition(function (pos) {
-    if (lat) lat.value = pos.coords.latitude.toFixed(7);
-    if (lng) lng.value = pos.coords.longitude.toFixed(7);
-    if (acc) acc.value = pos.coords.accuracy != null ? Math.round(pos.coords.accuracy) : '';
-    if (status) {
-      status.textContent = 'موقعیت آماده است — دقت حدود ' + Math.round(pos.coords.accuracy || 0) + ' متر'
-        + ({{ $settings['require_inside_geofence'] ? 'true' : 'false' }} ? ' | شعاع مجاز شرکت: {{ $settings['geofence_radius_m'] }} متر' : '');
+
+  var otpPunch = document.getElementById('att-otp-punch');
+  if (otpPunch && form && method) {
+    otpPunch.addEventListener('click', function () {
+      method.value = 'otp';
+      if (face) face.value = '0';
+      form.submit();
+    });
+  }
+
+  if (!selfieReady || !openBtn || !punchBtn || !video || typeof AttFace === 'undefined') return;
+
+  function stopCam() {
+    if (stream) {
+      stream.getTracks().forEach(function (t) { t.stop(); });
+      stream = null;
     }
-  }, function (err) {
-    if (status) status.textContent = 'خطا در دریافت GPS: ' + (err && err.message ? err.message : 'دسترسی مکان را فعال کنید');
-  }, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
+  }
+
+  openBtn.addEventListener('click', function () {
+    if (liveStatus) liveStatus.textContent = 'درخواست دسترسی دوربین…';
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      .then(function (s) {
+        stream = s;
+        video.srcObject = s;
+        punchBtn.disabled = false;
+        if (liveStatus) liveStatus.textContent = 'صورت را روبه‌رو بگیرید؛ تشخیص خودکار شروع می‌شود…';
+        AttFace.load().then(function () {
+          loopDetect();
+        }).catch(function (e) {
+          if (liveStatus) liveStatus.textContent = 'خطا در لود تشخیص چهره: ' + (e && e.message ? e.message : '');
+        });
+      })
+      .catch(function (err) {
+        if (liveStatus) liveStatus.textContent = 'دوربین در دسترس نیست: ' + (err && err.message ? err.message : '');
+      });
+  });
+
+  function loopDetect() {
+    if (!stream || submitted || detecting) return;
+    detecting = true;
+    AttFace.detectFromVideo(video).then(function (res) {
+      detecting = false;
+      if (submitted) return;
+      if (res && res.ok) {
+        if (liveStatus) liveStatus.textContent = 'چهره تشخیص داده شد ✓ — در حال ثبت خودکار…';
+        punchBtn.disabled = true;
+        doAutoPunch();
+      } else {
+        if (liveStatus) liveStatus.textContent = 'چهره پیدا نشد — صورت را روبه‌روی دوربین نگه دارید…';
+        setTimeout(loopDetect, 900);
+      }
+    }).catch(function () {
+      detecting = false;
+      if (!submitted) setTimeout(loopDetect, 1200);
+    });
+  }
+
+  function doAutoPunch() {
+    if (submitted) return;
+    AttFace.captureVideoBlob(video).then(function (blob) {
+      if (!blob) {
+        if (liveStatus) liveStatus.textContent = 'گرفتن عکس ناموفق بود. دوباره تلاش کنید.';
+        punchBtn.disabled = false;
+        setTimeout(loopDetect, 1000);
+        return;
+      }
+      var file = new File([blob], 'punch.jpg', { type: 'image/jpeg' });
+      var dt = new DataTransfer();
+      dt.items.add(file);
+      photo.files = dt.files;
+      face.value = '1';
+      method.value = 'selfie';
+      if (!lat.value || !lng.value) {
+        if (liveStatus) liveStatus.textContent = 'GPS هنوز آماده نیست. صبر کنید و دوباره دکمه را بزنید.';
+        punchBtn.disabled = false;
+        return;
+      }
+      submitted = true;
+      stopCam();
+      form.submit();
+    });
+  }
+
+  punchBtn.addEventListener('click', function () {
+    if (!stream) {
+      openBtn.click();
+      return;
+    }
+    if (liveStatus) liveStatus.textContent = 'در حال تشخیص چهره و ثبت…';
+    punchBtn.disabled = true;
+    AttFace.detectFromVideo(video).then(function (res) {
+      if (!res || !res.ok) {
+        if (liveStatus) liveStatus.textContent = 'چهره پیدا نشد. صورت را روبه‌رو بگیرید.';
+        punchBtn.disabled = false;
+        return;
+      }
+      doAutoPunch();
+    }).catch(function (e) {
+      if (liveStatus) liveStatus.textContent = 'خطا: ' + (e && e.message ? e.message : '');
+      punchBtn.disabled = false;
+    });
+  });
+
+  window.addEventListener('beforeunload', stopCam);
 })();
 </script>
 @endsection
