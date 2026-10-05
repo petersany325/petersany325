@@ -25,6 +25,7 @@ class AttendanceSettings
             'late_after_minutes' => self::lateAfterMinutes(),
             'min_minutes_between_punches' => self::minMinutesBetweenPunches(),
             'bind_device' => self::bindDevice(),
+            'require_onboarding' => self::requireOnboarding(),
         ];
     }
 
@@ -112,6 +113,12 @@ class AttendanceSettings
         return AppSetting::getValue('attendance_bind_device', '0') === '1';
     }
 
+    /** اولین ورود: سلفی + GPS موبایل قبل از باز شدن منوی کار */
+    public static function requireOnboarding(): bool
+    {
+        return AppSetting::getValue('attendance_require_onboarding', '1') === '1';
+    }
+
     public static function save(array $data): void
     {
         AppSetting::setValue('attendance_enabled', ! empty($data['enabled']) ? '1' : '0');
@@ -130,5 +137,6 @@ class AttendanceSettings
         AppSetting::setValue('attendance_late_after_minutes', (string) max(0, min(180, (int) ($data['late_after_minutes'] ?? 15))));
         AppSetting::setValue('attendance_min_minutes_between', (string) max(0, min(120, (int) ($data['min_minutes_between_punches'] ?? 2))));
         AppSetting::setValue('attendance_bind_device', ! empty($data['bind_device']) ? '1' : '0');
+        AppSetting::setValue('attendance_require_onboarding', ! empty($data['require_onboarding']) ? '1' : '0');
     }
 }

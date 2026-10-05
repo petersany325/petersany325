@@ -27,6 +27,58 @@ class AttendanceService
         );
     }
 
+    public function hasCompletedOnboarding(User $user): bool
+    {
+        $profile = $this->profileFor($user);
+
+        return $profile?->hasCompletedOnboarding() ?? false;
+    }
+
+    /**
+     * ثبت اولیه اولین ورود: سلفی + GPS موبایل → باز شدن منوی کار.
+     *
+     * @param  array{latitude:mixed,longitude:mixed,accuracy_m?:mixed,device_fingerprint?:?string}  $geo
+     */
+    public function completeOnboarding(User $user, \Illuminate\Http\UploadedFile $selfie, array $geo): AttendanceProfile
+    {
+        $lat = isset($geo['latitude']) && $geo['latitude'] !== '' ? (float) $geo['latitude'] : null;
+        $lng = isset($geo['longitude']) && $geo['longitude'] !== '' ? (float) $geo['longitude'] : null;
+        $acc = isset($geo['accuracy_m']) && $geo['accuracy_m'] !== '' ? (float) $geo['accuracy_m'] : null;
+
+        if ($lat === null || $lng === null) {
+            throw ValidationException::withMessages([
+                'latitude' => 'موقعیت GPS موبایل الزامی است. دسترسی مکان را در گوشی فعال کنید.',
+            ]);
+        }
+        if ($acc !== null && $acc > AttendanceSettings::maxGpsAccuracyM()) {
+            throw ValidationException::withMessages([
+                'accuracy_m' => 'دقت GPS کافی نیست (حداکثر '.AttendanceSettings::maxGpsAccuracyM().' متر). در فضای باز دوباره تلاش کنید.',
+            ]);
+        }
+
+        $profile = $this->ensureProfile($user);
+        if ($profile->reference_photo_path) {
+            Storage::disk('local')->delete($profile->reference_photo_path);
+        }
+        $path = $selfie->store('attendance/refs/'.$user->id, 'local');
+
+        $device = trim((string) ($geo['device_fingerprint'] ?? ''));
+        $profile->forceFill([
+            'reference_photo_path' => $path,
+            'enrolled_at' => now(),
+            'enrolled_by' => $user->id,
+            'phone_gps_lat' => $lat,
+            'phone_gps_lng' => $lng,
+            'phone_gps_accuracy_m' => $acc,
+            'phone_gps_captured_at' => now(),
+            'onboarding_completed_at' => now(),
+            'device_fingerprint' => $device !== '' ? $device : $profile->device_fingerprint,
+            'is_active' => true,
+        ])->save();
+
+        return $profile->fresh();
+    }
+
     /** @return array{open:bool,last:?AttendanceEvent} */
     public function todayState(User $user, ?Carbon $now = null): array
     {

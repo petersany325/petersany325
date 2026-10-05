@@ -49,6 +49,40 @@ class AttendanceController extends Controller
         ]);
     }
 
+    public function onboard(Request $request, AttendanceService $attendance): View|RedirectResponse
+    {
+        $user = $request->user();
+        if ($attendance->hasCompletedOnboarding($user)) {
+            return redirect()->route('attendance.index')
+                ->with('success', 'ثبت اولیه حضور قبلاً انجام شده است.');
+        }
+
+        return view('attendance.onboard', [
+            'settings' => AttendanceSettings::all(),
+            'profile' => $attendance->profileFor($user),
+            'officeReady' => AttendanceSettings::officeLat() !== null && AttendanceSettings::officeLng() !== null,
+        ]);
+    }
+
+    public function onboardStore(Request $request, AttendanceService $attendance): RedirectResponse
+    {
+        $data = $request->validate([
+            'photo' => ['required', 'image', 'max:5120'],
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'accuracy_m' => ['nullable', 'numeric', 'min:0', 'max:5000'],
+            'device_fingerprint' => ['nullable', 'string', 'max:191'],
+        ]);
+
+        $attendance->completeOnboarding($request->user(), $request->file('photo'), $data);
+
+        $home = $request->user()->isIntern() ? 'intern.portal' : 'dashboard';
+
+        return redirect()
+            ->route($home)
+            ->with('success', 'ثبت اولیه سلفی و GPS موبایل انجام شد. منوی کار آزاد شد — از میانبر «حضور» ورود/خروج بزنید.');
+    }
+
     public function sendOtp(Request $request, AttendanceService $attendance, NiazpardazSmsService $sms): RedirectResponse
     {
         $data = $request->validate([
@@ -183,6 +217,7 @@ class AttendanceController extends Controller
             'late_after_minutes' => ['nullable', 'integer', 'min:0', 'max:180'],
             'min_minutes_between_punches' => ['nullable', 'integer', 'min:0', 'max:120'],
             'bind_device' => ['nullable'],
+            'require_onboarding' => ['nullable'],
         ]);
 
         AttendanceSettings::save($data);

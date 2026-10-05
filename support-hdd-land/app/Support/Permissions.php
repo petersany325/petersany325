@@ -113,7 +113,7 @@ class Permissions
                 'reports.technicians', 'reports.customers', 'reports.parts', 'reports.custody',
                 'customers', 'daily_logs', 'attendance', 'trash', 'profile',
             ],
-            'intern' => ['dashboard', 'daily_logs', 'notifications', 'profile'],
+            'intern' => ['dashboard', 'daily_logs', 'notifications', 'attendance', 'profile'],
             default => ['dashboard', 'notifications', 'daily_logs', 'attendance', 'profile'],
         };
     }

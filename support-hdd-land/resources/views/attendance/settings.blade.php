@@ -108,6 +108,7 @@
             <label style="margin-right:16px;"><input type="checkbox" name="allow_otp" value="1" @checked(old('allow_otp', $settings['allow_otp']))> اجازه رمز یک‌بارمصرف SMS</label>
             <label style="margin-right:16px;"><input type="checkbox" name="require_enrolled_photo" value="1" @checked(old('require_enrolled_photo', $settings['require_enrolled_photo']))> برای سلفی، عکس مرجع ادمین الزامی باشد</label>
             <label style="margin-right:16px;"><input type="checkbox" name="bind_device" value="1" @checked(old('bind_device', $settings['bind_device']))> قفل دستگاه (اولین موبایل ثبت شود)</label>
+            <label style="margin-right:16px;"><input type="checkbox" name="require_onboarding" value="1" @checked(old('require_onboarding', $settings['require_onboarding'] ?? true))> اولین ورود: سلفی + GPS موبایل اجباری (قفل منو تا ثبت)</label>
         </div>
 
         <div style="grid-column:1/-1;"><h3 style="margin:8px 0;">شیفت و تأخیر</h3></div>

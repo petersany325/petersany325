@@ -10,6 +10,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Middleware\EnsureAttendanceOnboarded;
+use App\Http\Middleware\EnsurePermission;
 use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\WarehouseController;
@@ -54,7 +56,6 @@ use App\Http\Controllers\LicenseApiController;
 use App\Http\Controllers\AppUpdateApiController;
 use App\Http\Controllers\AppUpdateController;
 use App\Http\Controllers\AppReleaseAdminController;
-use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsurePortalCustomer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -171,7 +172,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/login/otp/verify', [AuthController::class, 'verifyOtp'])->name('login.otp.verify');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', EnsureAttendanceOnboarded::class])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
     Route::get('/dashboard', [DashboardController::class, 'index'])
@@ -377,6 +378,8 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware(EnsurePermission::class.':attendance')->prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('onboard', [AttendanceController::class, 'onboard'])->name('onboard');
+        Route::post('onboard', [AttendanceController::class, 'onboardStore'])->name('onboard.store');
         Route::get('/', [AttendanceController::class, 'index'])->name('index');
         Route::post('otp', [AttendanceController::class, 'sendOtp'])->name('otp');
         Route::post('punch', [AttendanceController::class, 'punch'])->name('punch');
@@ -391,8 +394,8 @@ Route::middleware('auth')->group(function () {
         Route::get('reference/{user}/photo', [AttendanceController::class, 'referencePhoto'])->name('reference-photo');
     });
 
-    // عکس مرجع فقط ادمین (کنترل داخل کنترلر)
-    Route::middleware('auth')->prefix('attendance')->name('attendance.')->group(function () {
+    // عکس مرجع ادمین (کنترل داخل کنترلر)
+    Route::prefix('attendance')->name('attendance.')->group(function () {
         Route::get('enroll/{user}', [AttendanceController::class, 'enrollForm'])->name('enroll');
         Route::post('enroll/{user}', [AttendanceController::class, 'enrollStore'])->name('enroll.store');
     });

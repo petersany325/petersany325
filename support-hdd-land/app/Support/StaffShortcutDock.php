@@ -126,27 +126,31 @@ class StaffShortcutDock
     {
         $preferred = match ($user->role) {
             'technician' => [
+                'attendance.index',
                 'handoffs.index',
                 'receptions.search',
                 'receptions.create',
                 'parts.index',
-                'parts.receipt',
-                'work-reports.index',
                 'daily-logs.index',
             ],
             'receptionist' => [
+                'attendance.index',
                 'receptions.create',
                 'receptions.search',
                 'receptions.index',
                 'deliveries.group',
                 'customers.index',
-                'parts.index',
+            ],
+            'intern' => [
+                'attendance.index',
+                'daily-logs.index',
+                'dashboard',
             ],
             default => [
+                'attendance.index',
                 'dashboard',
                 'receptions.search',
                 'handoffs.index',
-                'parts.index',
                 'daily-logs.index',
             ],
         };
