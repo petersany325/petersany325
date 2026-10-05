@@ -29,6 +29,47 @@ class AttendanceService
         );
     }
 
+    /**
+     * آیا این کارمند اجازه استفاده از حضور و غیاب را دارد؟
+     * (سیستم سراسری فعال + دسترسی فردی فعال)
+     */
+    public function isAccessAllowed(User $user): bool
+    {
+        if (! AttendanceSettings::enabled()) {
+            return false;
+        }
+        $profile = $this->profileFor($user);
+        if ($profile && ! $profile->is_active) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function setAccessActive(User $user, bool $active): AttendanceProfile
+    {
+        $profile = $this->ensureProfile($user);
+        $profile->forceFill(['is_active' => $active])->save();
+
+        return $profile->fresh();
+    }
+
+    public function setGlobalEnabled(bool $enabled): void
+    {
+        \App\Models\AppSetting::setValue('attendance_enabled', $enabled ? '1' : '0');
+    }
+
+    public function assertAccessAllowed(User $user): void
+    {
+        if (! AttendanceSettings::enabled()) {
+            throw ValidationException::withMessages(['attendance' => 'سیستم حضور و غیاب فعلاً غیرفعال است.']);
+        }
+        $profile = $this->profileFor($user);
+        if ($profile && ! $profile->is_active) {
+            throw ValidationException::withMessages(['attendance' => 'دسترسی حضور و غیاب شما توسط مدیر غیرفعال شده است.']);
+        }
+    }
+
     public function hasCompletedOnboarding(User $user): bool
     {
         $profile = $this->profileFor($user);
@@ -44,6 +85,8 @@ class AttendanceService
      */
     public function completeOnboarding(User $user, \Illuminate\Http\UploadedFile $selfie, array $geo): AttendanceProfile
     {
+        $this->assertAccessAllowed($user);
+
         $lat = isset($geo['latitude']) && $geo['latitude'] !== '' ? (float) $geo['latitude'] : null;
         $lng = isset($geo['longitude']) && $geo['longitude'] !== '' ? (float) $geo['longitude'] : null;
         $acc = isset($geo['accuracy_m']) && $geo['accuracy_m'] !== '' ? (float) $geo['accuracy_m'] : null;
@@ -155,6 +198,8 @@ class AttendanceService
 
     public function sendPunchLinkSms(User $user, string $purpose, NiazpardazSmsService $sms): array
     {
+        $this->assertAccessAllowed($user);
+
         if (! AttendanceSettings::allowOtp() && ! AttendanceSettings::allowSelfie()) {
             throw ValidationException::withMessages(['method' => 'ارسال لینک حضور فعلاً غیرفعال است.']);
         }
@@ -387,6 +432,8 @@ class AttendanceService
 
     public function sendPunchOtp(User $user, string $purpose, NiazpardazSmsService $sms): array
     {
+        $this->assertAccessAllowed($user);
+
         if (! AttendanceSettings::allowOtp()) {
             throw ValidationException::withMessages(['method' => 'روش OTP برای حضور و غیاب غیرفعال است.']);
         }
@@ -439,9 +486,7 @@ class AttendanceService
      */
     public function punch(User $user, string $type, array $data, ?UploadedFile $selfie, NiazpardazSmsService $sms): AttendanceEvent
     {
-        if (! AttendanceSettings::enabled()) {
-            throw ValidationException::withMessages(['attendance' => 'سیستم حضور و غیاب فعلاً غیرفعال است.']);
-        }
+        $this->assertAccessAllowed($user);
 
         $method = $data['method'] ?? '';
         if ($method === AttendanceEvent::METHOD_SELFIE && ! AttendanceSettings::allowSelfie()) {

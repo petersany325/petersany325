@@ -46,7 +46,8 @@
         @csrf
 
         <div style="grid-column:1/-1;">
-            <label><input type="checkbox" name="enabled" value="1" @checked(old('enabled', $settings['enabled']))> فعال بودن سیستم حضور و غیاب</label>
+            <label><input type="checkbox" name="enabled" value="1" @checked(old('enabled', $settings['enabled']))> فعال بودن سیستم حضور و غیاب (سراسری برای همه کارمندان)</label>
+            <div class="muted" style="font-size:12px;margin-top:4px;">غیرفعال کردن اینجا کل سیستم را می‌بندد. برای قطع دسترسی یک نفر، از صفحه «مدیریت حضور» ستون دسترسی را بزنید.</div>
         </div>
 
         <div style="grid-column:1/-1;"><h3 style="margin:8px 0;">موقعیت شرکت (GPS)</h3></div>

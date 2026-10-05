@@ -40,6 +40,7 @@ class AttendanceController extends Controller
             'settings' => AttendanceSettings::all(),
             'state' => $state,
             'profile' => $profile,
+            'accessAllowed' => $attendance->isAccessAllowed($user),
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
             'presentDays' => $days,
@@ -52,6 +53,14 @@ class AttendanceController extends Controller
     public function onboard(Request $request, AttendanceService $attendance): View|RedirectResponse
     {
         $user = $request->user();
+
+        if (! $attendance->isAccessAllowed($user)) {
+            return redirect()->route('attendance.index')
+                ->with('error', ! AttendanceSettings::enabled()
+                    ? 'سیستم حضور و غیاب فعلاً غیرفعال است.'
+                    : 'دسترسی حضور و غیاب شما توسط مدیر غیرفعال شده است.');
+        }
+
         $profile = $attendance->profileFor($user);
 
         if ($profile?->isSelfieApproved()) {
@@ -389,6 +398,34 @@ class AttendanceController extends Controller
         }
 
         return back()->with('success', 'سلفی «'.$user->name.'» رد شد.');
+    }
+
+    public function toggleGlobal(Request $request, AttendanceService $attendance): RedirectResponse
+    {
+        $this->authorizeManage($request);
+        $data = $request->validate([
+            'enabled' => ['required', 'in:0,1'],
+        ]);
+        $enabled = $data['enabled'] === '1';
+        $attendance->setGlobalEnabled($enabled);
+
+        return back()->with('success', $enabled
+            ? 'سیستم حضور و غیاب برای همه فعال شد.'
+            : 'سیستم حضور و غیاب برای همه غیرفعال شد.');
+    }
+
+    public function toggleAccess(Request $request, User $user, AttendanceService $attendance): RedirectResponse
+    {
+        $this->authorizeManage($request);
+        $data = $request->validate([
+            'active' => ['required', 'in:0,1'],
+        ]);
+        $active = $data['active'] === '1';
+        $attendance->setAccessActive($user, $active);
+
+        return back()->with('success', $active
+            ? 'دسترسی حضور و غیاب «'.$user->name.'» فعال شد.'
+            : 'دسترسی حضور و غیاب «'.$user->name.'» غیرفعال شد.');
     }
 
     public function settings(): View

@@ -24,6 +24,11 @@ class EnsureAttendanceOnboarded
             return $next($request);
         }
 
+        // سیستم سراسری یا دسترسی فردی غیرفعال → قفل آنبوردینگ اعمال نشود
+        if (! AttendanceSettings::enabled()) {
+            return $next($request);
+        }
+
         // ادمین سیستم را قفل نمی‌کنیم (تنظیمات شرکت را خودش می‌چیند)
         if ($user->isAdmin()) {
             return $next($request);
@@ -34,6 +39,10 @@ class EnsureAttendanceOnboarded
         }
 
         $attendance = app(AttendanceService::class);
+        if (! $attendance->isAccessAllowed($user)) {
+            return $next($request);
+        }
+
         if ($attendance->hasCompletedOnboarding($user)) {
             return $next($request);
         }

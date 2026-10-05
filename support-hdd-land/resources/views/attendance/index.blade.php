@@ -36,13 +36,24 @@
     </div>
 
     @if(! $settings['enabled'])
-        <div class="alert alert-error">سیستم حضور و غیاب توسط مدیر غیرفعال شده است.</div>
+        <div class="alert alert-error">سیستم حضور و غیاب توسط مدیر برای همه غیرفعال شده است.</div>
+    @elseif(! ($accessAllowed ?? true))
+        <div class="alert alert-error">
+            <strong>دسترسی حضور و غیاب شما غیرفعال است.</strong>
+            <div style="margin-top:6px;">مدیر دسترسی فردی شما را بسته است؛ فعلاً نمی‌توانید ورود/خروج ثبت کنید. در صورت نیاز با مدیر تماس بگیرید.</div>
+        </div>
+        <div class="emp-stat-row">
+            <div class="emp-stat"><span>وضعیت دسترسی</span><strong>غیرفعال</strong></div>
+            <div class="emp-stat"><span>وضعیت سلفی</span><strong>{{ $profile?->selfieStatusLabel() ?? 'ثبت نشده' }}</strong></div>
+            <div class="emp-stat tone-sms"><span>روزهای حضور (بازه)</span><strong>{{ $presentDays }}</strong></div>
+        </div>
     @else
         <div class="emp-stat-row">
             <div class="emp-stat {{ $open ? 'tone-ok' : '' }}"><span>وضعیت امروز</span><strong>{{ $open ? 'داخل شرکت' : 'خارج / بدون ورود' }}</strong></div>
             <div class="emp-stat"><span>آخرین ثبت</span><strong>{{ $state['last']?->occurred_at?->format('H:i') ?: '—' }}</strong></div>
             <div class="emp-stat tone-sms"><span>روزهای حضور (بازه)</span><strong>{{ $presentDays }}</strong></div>
             <div class="emp-stat"><span>وضعیت سلفی</span><strong>{{ $profile?->selfieStatusLabel() ?? 'ثبت نشده' }}</strong></div>
+            <div class="emp-stat tone-ok"><span>دسترسی</span><strong>فعال</strong></div>
         </div>
 
         @if($profile?->isSelfiePending())

@@ -399,6 +399,8 @@ Route::middleware(['auth', EnsureAttendanceOnboarded::class])->group(function ()
         Route::get('manage', [AttendanceController::class, 'manage'])->name('manage');
         Route::get('settings', [AttendanceController::class, 'settings'])->name('settings');
         Route::post('settings', [AttendanceController::class, 'saveSettings'])->name('settings.save');
+        Route::post('toggle-global', [AttendanceController::class, 'toggleGlobal'])->name('toggle-global');
+        Route::post('access/{user}', [AttendanceController::class, 'toggleAccess'])->name('access.toggle');
         Route::get('geocode', [AttendanceController::class, 'geocodeSearch'])->name('geocode');
         Route::get('reference/{user}/photo', [AttendanceController::class, 'referencePhoto'])->name('reference-photo');
         Route::post('selfie/{user}/approve', [AttendanceController::class, 'approveSelfie'])->name('selfie.approve');

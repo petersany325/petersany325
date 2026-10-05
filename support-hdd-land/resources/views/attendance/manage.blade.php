@@ -20,6 +20,26 @@
         </div>
     </div>
 
+    <div class="panel" style="padding:14px;margin-bottom:14px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+        <div>
+            <strong>دسترسی سراسری حضور و غیاب</strong>
+            <div class="muted" style="font-size:13px;margin-top:4px;">
+                @if($settings['enabled'])
+                    سیستم برای همه فعال است. می‌توانید برای هر کارمند جداگانه غیرفعال کنید.
+                @else
+                    سیستم برای همه غیرفعال است — کارمندان نمی‌توانند ورود/خروج بزنند.
+                @endif
+            </div>
+        </div>
+        <form method="POST" action="{{ route('attendance.toggle-global') }}" style="display:inline;">
+            @csrf
+            <input type="hidden" name="enabled" value="{{ $settings['enabled'] ? '0' : '1' }}">
+            <button class="btn {{ $settings['enabled'] ? 'btn-ghost' : 'btn-primary' }}" type="submit">
+                {{ $settings['enabled'] ? 'غیرفعال کردن برای همه' : 'فعال کردن برای همه' }}
+            </button>
+        </form>
+    </div>
+
     <form method="GET" class="actions panel" style="padding:12px;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
         <label>از <input type="date" name="from" value="{{ $from }}" dir="ltr"></label>
         <label>تا <input type="date" name="to" value="{{ $to }}" dir="ltr"></label>
@@ -103,6 +123,7 @@
                         <th>کارمند</th>
                         <th>عکس مرجع</th>
                         <th>وضعیت سلفی</th>
+                        <th>دسترسی</th>
                         <th>امروز</th>
                         <th>روزهای حضور (بازه)</th>
                         <th>عملیات</th>
@@ -110,7 +131,11 @@
                 </thead>
                 <tbody>
                     @foreach($rows as $row)
-                        @php $u = $row['user']; $p = $row['profile']; @endphp
+                        @php
+                            $u = $row['user'];
+                            $p = $row['profile'];
+                            $accessOn = $p === null || (bool) $p->is_active;
+                        @endphp
                         <tr>
                             <td>
                                 <strong>{{ $u->name }}</strong>
@@ -131,6 +156,19 @@
                                 @endif
                             </td>
                             <td>{{ $p?->selfieStatusLabel() ?? 'ثبت نشده' }}</td>
+                            <td>
+                                <form method="POST" action="{{ route('attendance.access.toggle', $u) }}" style="display:inline;">
+                                    @csrf
+                                    <input type="hidden" name="active" value="{{ $accessOn ? '0' : '1' }}">
+                                    <button
+                                        class="btn {{ $accessOn ? 'btn-secondary' : 'btn-ghost' }}"
+                                        type="submit"
+                                        title="{{ $accessOn ? 'غیرفعال کردن دسترسی این کارمند' : 'فعال کردن دسترسی این کارمند' }}"
+                                    >
+                                        {{ $accessOn ? 'فعال' : 'غیرفعال' }}
+                                    </button>
+                                </form>
+                            </td>
                             <td>{{ ($row['today']['open'] ?? false) ? 'داخل شرکت' : 'خارج' }}</td>
                             <td><strong>{{ $row['present_days'] }}</strong></td>
                             <td>
