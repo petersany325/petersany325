@@ -8,6 +8,7 @@ use App\Http\Controllers\DeviceBlacklistController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\FixedCostController;
 use App\Http\Controllers\PartController;
@@ -373,6 +374,26 @@ Route::middleware('auth')->group(function () {
         Route::post('interns/{intern}/welcome-sms', [InternController::class, 'sendWelcomeSms'])->name('interns.welcome-sms');
         Route::get('staff-sms/templates', [StaffSmsTemplateController::class, 'edit'])->name('staff-sms.templates');
         Route::post('staff-sms/templates', [StaffSmsTemplateController::class, 'update'])->name('staff-sms.templates.save');
+    });
+
+    Route::middleware(EnsurePermission::class.':attendance')->prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('/', [AttendanceController::class, 'index'])->name('index');
+        Route::post('otp', [AttendanceController::class, 'sendOtp'])->name('otp');
+        Route::post('punch', [AttendanceController::class, 'punch'])->name('punch');
+        Route::get('punches/{event}/photo', [AttendanceController::class, 'punchPhoto'])->name('punch-photo');
+    });
+
+    Route::middleware(EnsurePermission::class.':attendance.manage')->prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('manage', [AttendanceController::class, 'manage'])->name('manage');
+        Route::get('settings', [AttendanceController::class, 'settings'])->name('settings');
+        Route::post('settings', [AttendanceController::class, 'saveSettings'])->name('settings.save');
+        Route::get('reference/{user}/photo', [AttendanceController::class, 'referencePhoto'])->name('reference-photo');
+    });
+
+    // عکس مرجع فقط ادمین (کنترل داخل کنترلر)
+    Route::middleware('auth')->prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('enroll/{user}', [AttendanceController::class, 'enrollForm'])->name('enroll');
+        Route::post('enroll/{user}', [AttendanceController::class, 'enrollStore'])->name('enroll.store');
     });
 
     Route::post('reports/settings', [ReportController::class, 'saveSettings'])->name('reports.settings');

@@ -16,6 +16,7 @@
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <a class="btn btn-primary" href="{{ route('employees.create') }}">کارمند جدید</a>
+            <a class="btn btn-secondary" href="{{ route('attendance.manage') }}">حضور و غیاب</a>
             <a class="btn btn-secondary" href="{{ route('employees.pay') }}">تخصص، سود و حقوق</a>
             <a class="btn btn-ghost" href="{{ route('interns.create') }}">کارآموز جدید</a>
             <a class="btn btn-ghost" href="{{ route('interns.index') }}">کارتابل کارآموز</a>

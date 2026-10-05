@@ -19,6 +19,8 @@ class Permissions
         'parts' => 'قطعات و انبار',
         'technicians' => 'تعمیرکاران',
         'employees' => 'کارمندان و دسترسی‌ها',
+        'attendance' => 'حضور و غیاب (ورود/خروج خود)',
+        'attendance.manage' => 'مدیریت حضور و غیاب و گزارش روزها',
         'sms.statuses' => 'تعریف تغییر وضعیت / پیامک',
         'reports.accounting' => 'حسابداری',
         'installments' => 'اقساط (مدیریت و گزارش)',
@@ -99,20 +101,20 @@ class Permissions
             'receptionist' => [
                 'dashboard', 'receptions', 'handoffs', 'partners', 'notifications', 'daily_logs', 'customers',
                 'portal.invites', 'device.blacklists', 'remote.preorders', 'parts', 'sms.statuses',
-                'reports.operations', 'reports.custody', 'reports.sms', 'reports.messages', 'trash', 'profile',
+                'attendance', 'reports.operations', 'reports.custody', 'reports.sms', 'reports.messages', 'trash', 'profile',
             ],
             'technician' => [
                 'dashboard', 'receptions', 'handoffs', 'partners', 'notifications', 'daily_logs', 'parts', 'sms.statuses',
-                'remote.preorders', 'reports.custody', 'reports.technicians', 'reports.sms', 'profile',
+                'remote.preorders', 'attendance', 'reports.custody', 'reports.technicians', 'reports.sms', 'profile',
             ],
             'accountant' => [
                 'dashboard', 'receptions', 'handoffs', 'partners', 'notifications',
                 'reports.accounting', 'installments', 'payment.receipts', 'reports.operations', 'reports.payments',
                 'reports.technicians', 'reports.customers', 'reports.parts', 'reports.custody',
-                'customers', 'daily_logs', 'trash', 'profile',
+                'customers', 'daily_logs', 'attendance', 'trash', 'profile',
             ],
             'intern' => ['dashboard', 'daily_logs', 'notifications', 'profile'],
-            default => ['dashboard', 'notifications', 'daily_logs', 'profile'],
+            default => ['dashboard', 'notifications', 'daily_logs', 'attendance', 'profile'],
         };
     }
 
