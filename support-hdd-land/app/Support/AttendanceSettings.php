@@ -14,6 +14,7 @@ class AttendanceSettings
             'require_inside_geofence' => self::requireInsideGeofence(),
             'office_lat' => self::officeLat(),
             'office_lng' => self::officeLng(),
+            'office_label' => self::officeLabel(),
             'geofence_radius_m' => self::geofenceRadiusM(),
             'max_gps_accuracy_m' => self::maxGpsAccuracyM(),
             'allow_selfie' => self::allowSelfie(),
@@ -54,6 +55,11 @@ class AttendanceSettings
         $v = AppSetting::getValue('attendance_office_lng');
 
         return $v !== null && $v !== '' ? (float) $v : null;
+    }
+
+    public static function officeLabel(): string
+    {
+        return trim((string) AppSetting::getValue('attendance_office_label', ''));
     }
 
     public static function geofenceRadiusM(): int
@@ -113,6 +119,7 @@ class AttendanceSettings
         AppSetting::setValue('attendance_require_geofence', ! empty($data['require_inside_geofence']) ? '1' : '0');
         AppSetting::setValue('attendance_office_lat', isset($data['office_lat']) && $data['office_lat'] !== '' ? (string) $data['office_lat'] : '');
         AppSetting::setValue('attendance_office_lng', isset($data['office_lng']) && $data['office_lng'] !== '' ? (string) $data['office_lng'] : '');
+        AppSetting::setValue('attendance_office_label', mb_substr(trim((string) ($data['office_label'] ?? '')), 0, 255));
         AppSetting::setValue('attendance_geofence_radius_m', (string) max(20, min(5000, (int) ($data['geofence_radius_m'] ?? 80))));
         AppSetting::setValue('attendance_max_gps_accuracy_m', (string) max(5, min(500, (int) ($data['max_gps_accuracy_m'] ?? 50))));
         AppSetting::setValue('attendance_allow_selfie', ! empty($data['allow_selfie']) ? '1' : '0');

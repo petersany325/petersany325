@@ -387,6 +387,7 @@ Route::middleware('auth')->group(function () {
         Route::get('manage', [AttendanceController::class, 'manage'])->name('manage');
         Route::get('settings', [AttendanceController::class, 'settings'])->name('settings');
         Route::post('settings', [AttendanceController::class, 'saveSettings'])->name('settings.save');
+        Route::get('geocode', [AttendanceController::class, 'geocodeSearch'])->name('geocode');
         Route::get('reference/{user}/photo', [AttendanceController::class, 'referencePhoto'])->name('reference-photo');
     });
 

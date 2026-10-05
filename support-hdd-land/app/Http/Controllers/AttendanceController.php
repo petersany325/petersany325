@@ -172,6 +172,7 @@ class AttendanceController extends Controller
             'require_inside_geofence' => ['nullable'],
             'office_lat' => ['nullable', 'numeric', 'between:-90,90'],
             'office_lng' => ['nullable', 'numeric', 'between:-180,180'],
+            'office_label' => ['nullable', 'string', 'max:255'],
             'geofence_radius_m' => ['nullable', 'integer', 'min:20', 'max:5000'],
             'max_gps_accuracy_m' => ['nullable', 'integer', 'min:5', 'max:500'],
             'allow_selfie' => ['nullable'],
@@ -187,6 +188,60 @@ class AttendanceController extends Controller
         AttendanceSettings::save($data);
 
         return back()->with('success', 'تنظیمات حضور و غیاب ذخیره شد.');
+    }
+
+    /**
+     * جستجوی آنلاین آدرس/محل برای تنظیم GPS شرکت (Nominatim).
+     */
+    public function geocodeSearch(Request $request)
+    {
+        abort_unless($request->user()->isAdmin() || $request->user()->canAccess('attendance.manage'), 403);
+
+        $q = trim((string) $request->query('q', ''));
+        if (mb_strlen($q) < 3) {
+            return response()->json(['ok' => false, 'message' => 'حداقل ۳ حرف برای جستجو لازم است.', 'results' => []], 422);
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(12)
+                ->withHeaders([
+                    'User-Agent' => 'HDDLandAttendance/1.3 (customer GPS setup)',
+                    'Accept-Language' => 'fa,en',
+                ])
+                ->get('https://nominatim.openstreetmap.org/search', [
+                    'q' => $q,
+                    'format' => 'json',
+                    'addressdetails' => 1,
+                    'limit' => 8,
+                    'countrycodes' => 'ir',
+                ]);
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'message' => 'خطا در ارتباط با سرویس نقشه.', 'results' => []], 502);
+        }
+
+        if (! $response->successful()) {
+            return response()->json(['ok' => false, 'message' => 'سرویس جستجوی نقشه در دسترس نیست.', 'results' => []], 502);
+        }
+
+        $results = [];
+        foreach ($response->json() ?: [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $lat = isset($row['lat']) ? (float) $row['lat'] : null;
+            $lng = isset($row['lon']) ? (float) $row['lon'] : null;
+            if ($lat === null || $lng === null) {
+                continue;
+            }
+            $results[] = [
+                'lat' => round($lat, 7),
+                'lng' => round($lng, 7),
+                'label' => (string) ($row['display_name'] ?? ''),
+                'type' => (string) ($row['type'] ?? ''),
+            ];
+        }
+
+        return response()->json(['ok' => true, 'results' => $results]);
     }
 
     public function enrollForm(User $user): View
