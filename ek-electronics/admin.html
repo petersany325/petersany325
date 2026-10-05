@@ -14,7 +14,7 @@
     <a class="brand" href="index.html">
       <svg viewBox="0 0 48 48" width="36" height="36" aria-hidden="true">
         <rect width="48" height="48" rx="12" fill="#1d4ed8"/>
-        <path d="M12 30V18h8.2c3.3 0 5.4 1.9 5.4 4.8 0 1.8-.9 3.2-2.4 4l3 3.2h-3.4l-2.6-2.8H15.2V30H12zm3.2-5.4h4.6c1.7 0 2.7-.9 2.7-2.2s-1-2.2-2.7-2.2h-4.6v4.4zM30 30l-5-12h3.3l3.4 8.6 3.4-8.6H38l-5 12h-3z" fill="#fff"/>
+        <text x="24" y="31" text-anchor="middle" fill="#fff" font-size="16" font-family="Manrope, sans-serif" font-weight="800">EK</text>
       </svg>
       <span>EK Operations<small style="color:#93c5fd">Staff · Midrand</small></span>
     </a>
@@ -213,12 +213,18 @@
       const to = digits.startsWith("27") ? digits : waNumber;
       window.open(`https://wa.me/${to}?text=${encodeURIComponent(text)}`, "_blank");
     }
+    function showAdmin(id) {
+      document.querySelectorAll("[data-admin]").forEach((b) => b.classList.toggle("active", b.dataset.admin === id));
+      document.querySelectorAll("[data-pane]").forEach((p) => p.classList.toggle("hidden", p.dataset.pane !== id));
+      if (location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
+    }
     document.querySelectorAll("[data-admin]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll("[data-admin]").forEach((b) => b.classList.toggle("active", b === btn));
-        document.querySelectorAll("[data-pane]").forEach((p) => p.classList.toggle("hidden", p.dataset.pane !== btn.dataset.admin));
-      });
+      btn.addEventListener("click", () => showAdmin(btn.dataset.admin));
     });
+    window.addEventListener("hashchange", () => {
+      showAdmin((location.hash || "#dash").slice(1) || "dash");
+    });
+    showAdmin((location.hash || "#dash").slice(1) || "dash");
     document.querySelectorAll("[data-wa]").forEach((btn) => {
       btn.addEventListener("click", () => openWa(btn.dataset.wa));
     });

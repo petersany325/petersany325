@@ -69,6 +69,7 @@ function waLink(text) {
 function showPage(id) {
   document.querySelectorAll("[data-page]").forEach((p) => p.classList.toggle("hidden", p.dataset.page !== id));
   document.querySelectorAll(".menu a, .menu button").forEach((a) => a.classList.toggle("active", a.dataset.go === id));
+  if (location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -160,10 +161,21 @@ document.addEventListener("input", (e) => {
   }
 });
 
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "#home").slice(1) || "home";
+  showPage(id);
+  if (id === "cart" || id === "checkout") renderCart();
+});
+
 document.addEventListener("DOMContentLoaded", () => {
   saveCart(cart());
   renderProducts(PRODUCTS);
   renderProducts(PRODUCTS.slice(0, 8), "#home-products");
+  const start = (location.hash || "#home").slice(1) || "home";
+  if (start && start !== "home") {
+    showPage(start);
+    if (start === "cart" || start === "checkout") renderCart();
+  }
   const filters = document.querySelector("#filters");
   if (filters) {
     filters.innerHTML = `<button class="active" data-cat="all">All categories</button>` +
