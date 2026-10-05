@@ -172,6 +172,13 @@ Route::middleware('guest')->group(function () {
     Route::post('/login/otp/verify', [AuthController::class, 'verifyOtp'])->name('login.otp.verify');
 });
 
+// لینک یک‌بارمصرف حضور از SMS — بدون لاگین
+Route::middleware('throttle:30,1')->prefix('attendance')->name('attendance.')->group(function () {
+    Route::get('l/{token}', [AttendanceController::class, 'showPunchLink'])->name('link.show');
+    Route::post('l/{token}', [AttendanceController::class, 'submitPunchLink'])->name('link.submit');
+    Route::get('l/{token}/photo', [AttendanceController::class, 'punchLinkPhoto'])->name('link.photo');
+});
+
 Route::middleware(['auth', EnsureAttendanceOnboarded::class])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
@@ -382,8 +389,10 @@ Route::middleware(['auth', EnsureAttendanceOnboarded::class])->group(function ()
         Route::post('onboard', [AttendanceController::class, 'onboardStore'])->name('onboard.store');
         Route::get('/', [AttendanceController::class, 'index'])->name('index');
         Route::post('otp', [AttendanceController::class, 'sendOtp'])->name('otp');
+        Route::post('link-sms', [AttendanceController::class, 'sendLinkSms'])->name('link-sms');
         Route::post('punch', [AttendanceController::class, 'punch'])->name('punch');
         Route::get('punches/{event}/photo', [AttendanceController::class, 'punchPhoto'])->name('punch-photo');
+        Route::get('my-photo', [AttendanceController::class, 'myReferencePhoto'])->name('my-photo');
     });
 
     Route::middleware(EnsurePermission::class.':attendance.manage')->prefix('attendance')->name('attendance.')->group(function () {

@@ -15,6 +15,10 @@ class AttendanceEvent extends Model
 
     public const METHOD_OTP = 'otp';
 
+    public const METHOD_PHOTO_CONFIRM = 'photo_confirm';
+
+    public const METHOD_SMS_LINK = 'sms_link';
+
     public const STATUS_ACCEPTED = 'accepted';
 
     public const STATUS_REJECTED = 'rejected';
@@ -62,7 +66,12 @@ class AttendanceEvent extends Model
 
     public function methodLabel(): string
     {
-        return $this->method === self::METHOD_OTP ? 'رمز یک‌بارمصرف' : 'سلفی';
+        return match ($this->method) {
+            self::METHOD_OTP => 'رمز یک‌بارمصرف',
+            self::METHOD_PHOTO_CONFIRM => 'تأیید عکس مرجع',
+            self::METHOD_SMS_LINK => 'لینک پیامک',
+            default => 'سلفی',
+        };
     }
 
     public function statusLabel(): string

@@ -5,11 +5,13 @@ namespace App\Services;
 use App\Models\AttendanceEvent;
 use App\Models\AttendanceOtp;
 use App\Models\AttendanceProfile;
+use App\Models\AttendancePunchLink;
 use App\Models\User;
 use App\Support\AttendanceSettings;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AttendanceService
@@ -106,6 +108,97 @@ class AttendanceService
         ])->save();
 
         return $profile->fresh();
+    }
+
+    /**
+     * پس از تأیید سلفی: اعلان داخل‌برنامه + SMS با لینک ورود امروز.
+     *
+     * @return array{ok:bool,message:string,url?:string,debug_code?:string}
+     */
+    public function notifySelfieApproved(User $user, NiazpardazSmsService $sms): array
+    {
+        $link = $this->createPunchLink($user, AttendanceEvent::TYPE_IN, 60 * 12); // تا ۱۲ ساعت
+        $url = route('attendance.link.show', ['token' => $link->token]);
+        $shop = \App\Models\AppSetting::getValue('invoice_shop_name', config('app.name'));
+        $message = "سلفی حضور شما در {$shop} تأیید شد. برای ورود امروز روی لینک بزنید:\n{$url}";
+
+        $phone = User::normalizePhone($user->phone);
+        if (! $phone) {
+            return ['ok' => false, 'message' => 'موبایل کارمند ثبت نشده؛ لینک ساخته شد ولی SMS ارسال نشد.', 'url' => $url];
+        }
+
+        $result = $sms->send($phone, $message);
+        $result['url'] = $url;
+
+        return $result;
+    }
+
+    public function createPunchLink(User $user, string $purpose, int $ttlMinutes = 15): AttendancePunchLink
+    {
+        if (! in_array($purpose, [AttendanceEvent::TYPE_IN, AttendanceEvent::TYPE_OUT], true)) {
+            throw ValidationException::withMessages(['purpose' => 'نوع لینک نامعتبر است.']);
+        }
+
+        AttendancePunchLink::query()
+            ->where('user_id', $user->id)
+            ->where('purpose', $purpose)
+            ->whereNull('used_at')
+            ->delete();
+
+        return AttendancePunchLink::create([
+            'user_id' => $user->id,
+            'token' => Str::random(48),
+            'purpose' => $purpose,
+            'expires_at' => now()->addMinutes(max(5, $ttlMinutes)),
+        ]);
+    }
+
+    public function sendPunchLinkSms(User $user, string $purpose, NiazpardazSmsService $sms): array
+    {
+        if (! AttendanceSettings::allowOtp() && ! AttendanceSettings::allowSelfie()) {
+            throw ValidationException::withMessages(['method' => 'ارسال لینک حضور فعلاً غیرفعال است.']);
+        }
+
+        $state = $this->todayState($user);
+        if ($purpose === AttendanceEvent::TYPE_IN && $state['open']) {
+            throw ValidationException::withMessages(['purpose' => 'امروز قبلاً ورود زده‌اید؛ برای خروج لینک بگیرید.']);
+        }
+        if ($purpose === AttendanceEvent::TYPE_OUT && ! $state['open']) {
+            throw ValidationException::withMessages(['purpose' => 'ورود بازی نیست؛ ابتدا ورود بزنید.']);
+        }
+
+        $link = $this->createPunchLink($user, $purpose, 15);
+        $url = route('attendance.link.show', ['token' => $link->token]);
+        $label = $purpose === AttendanceEvent::TYPE_OUT ? 'خروج' : 'ورود';
+        $shop = \App\Models\AppSetting::getValue('invoice_shop_name', config('app.name'));
+        $message = "لینک {$label} حضور {$shop} (۱۵ دقیقه):\n{$url}";
+
+        $phone = User::normalizePhone($user->phone);
+        if (! $phone) {
+            throw ValidationException::withMessages(['phone' => 'موبایل کارمند برای ارسال لینک ثبت نشده است.']);
+        }
+
+        $result = $sms->send($phone, $message);
+        $result['url'] = $url;
+
+        return $result;
+    }
+
+    public function findValidPunchLink(string $token): AttendancePunchLink
+    {
+        $link = AttendancePunchLink::query()->where('token', $token)->first();
+        if (! $link || ! $link->isValid()) {
+            throw ValidationException::withMessages([
+                'token' => 'لینک منقضی شده یا قبلاً استفاده شده است. دوباره درخواست دهید.',
+            ]);
+        }
+
+        return $link;
+    }
+
+    public function markPunchLinkUsed(AttendancePunchLink $link): void
+    {
+        $link->forceFill(['used_at' => now()])->save();
     }
 
     public function rejectSelfie(AttendanceProfile $profile, User $admin, ?string $reason = null): AttendanceProfile
@@ -342,7 +435,7 @@ class AttendanceService
     }
 
     /**
-     * @param  array{method:string,otp_code?:?string,latitude?:mixed,longitude?:mixed,accuracy_m?:mixed,device_fingerprint?:?string,note?:?string}  $data
+     * @param  array{method:string,otp_code?:?string,latitude?:mixed,longitude?:mixed,accuracy_m?:mixed,device_fingerprint?:?string,note?:?string,face_detected?:mixed,photo_confirmed?:mixed,punch_link_token?:?string}  $data
      */
     public function punch(User $user, string $type, array $data, ?UploadedFile $selfie, NiazpardazSmsService $sms): AttendanceEvent
     {
@@ -357,13 +450,22 @@ class AttendanceService
         if ($method === AttendanceEvent::METHOD_OTP && ! AttendanceSettings::allowOtp()) {
             throw ValidationException::withMessages(['method' => 'روش OTP غیرفعال است.']);
         }
-        if (! in_array($method, [AttendanceEvent::METHOD_SELFIE, AttendanceEvent::METHOD_OTP], true)) {
-            throw ValidationException::withMessages(['method' => 'روش تأیید را انتخاب کنید (سلفی یا OTP).']);
+        if ($method === AttendanceEvent::METHOD_PHOTO_CONFIRM && ! AttendanceSettings::allowSelfie()) {
+            throw ValidationException::withMessages(['method' => 'تأیید با عکس مرجع غیرفعال است.']);
+        }
+        $allowed = [
+            AttendanceEvent::METHOD_SELFIE,
+            AttendanceEvent::METHOD_OTP,
+            AttendanceEvent::METHOD_PHOTO_CONFIRM,
+            AttendanceEvent::METHOD_SMS_LINK,
+        ];
+        if (! in_array($method, $allowed, true)) {
+            throw ValidationException::withMessages(['method' => 'روش تأیید را انتخاب کنید.']);
         }
 
         $state = $this->todayState($user);
         if ($type === AttendanceEvent::TYPE_IN && $state['open']) {
-            throw ValidationException::withMessages(['type' => 'امروز قبلاً ورود زده‌اید؛ ابتدا خروج ثبت کنید.']);
+            throw ValidationException::withMessages(['type' => 'امروز قبلاً ورود زده‌اید؛ ابتدا خروج ثبت کنید. وضعیت هر روز از نیمه‌شب ریست می‌شود.']);
         }
         if ($type === AttendanceEvent::TYPE_OUT && ! $state['open']) {
             throw ValidationException::withMessages(['type' => 'ورود بازی برای امروز نیست؛ ابتدا ورود بزنید.']);
@@ -379,7 +481,19 @@ class AttendanceService
         }
 
         $profile = $this->profileFor($user);
-        if ($method === AttendanceEvent::METHOD_SELFIE) {
+        $link = null;
+        if ($method === AttendanceEvent::METHOD_SMS_LINK) {
+            $token = trim((string) ($data['punch_link_token'] ?? ''));
+            $link = $this->findValidPunchLink($token);
+            if ((int) $link->user_id !== (int) $user->id) {
+                throw ValidationException::withMessages(['token' => 'لینک متعلق به این کاربر نیست.']);
+            }
+            if ($link->purpose !== $type) {
+                throw ValidationException::withMessages(['token' => 'این لینک برای '.($link->purpose === AttendanceEvent::TYPE_OUT ? 'خروج' : 'ورود').' است.']);
+            }
+        }
+
+        if (in_array($method, [AttendanceEvent::METHOD_SELFIE, AttendanceEvent::METHOD_PHOTO_CONFIRM], true)) {
             if (! $profile || ! $profile->isSelfieApproved()) {
                 $msg = 'سلفی شما هنوز توسط ادمین تأیید نشده است.';
                 if ($profile?->isSelfiePending()) {
@@ -389,16 +503,25 @@ class AttendanceService
                 }
                 throw ValidationException::withMessages(['photo' => $msg]);
             }
-            if (empty($data['face_detected'])) {
-                throw ValidationException::withMessages([
-                    'photo' => 'چهره در سلفی تشخیص داده نشد. صورت را روبه‌روی دوربین بگیرید.',
-                ]);
-            }
+        }
+
+        if ($method === AttendanceEvent::METHOD_SELFIE && empty($data['face_detected'])) {
+            throw ValidationException::withMessages([
+                'photo' => 'چهره در سلفی تشخیص داده نشد. صورت را روبه‌روی دوربین بگیرید.',
+            ]);
+        }
+        if ($method === AttendanceEvent::METHOD_PHOTO_CONFIRM && empty($data['photo_confirmed'])) {
+            throw ValidationException::withMessages([
+                'photo' => 'برای ورود باید عکس تأییدشده خود را مشاهده و تأیید کنید.',
+            ]);
         }
 
         $otpVerified = false;
         if ($method === AttendanceEvent::METHOD_OTP) {
             $this->verifyOtp($user, $type, (string) ($data['otp_code'] ?? ''));
+            $otpVerified = true;
+        }
+        if ($method === AttendanceEvent::METHOD_SMS_LINK) {
             $otpVerified = true;
         }
 
@@ -408,6 +531,18 @@ class AttendanceService
                 throw ValidationException::withMessages(['photo' => 'سلفی لحظه‌ای الزامی است (از گالری انتخاب نکنید).']);
             }
             $photoPath = $selfie->store('attendance/punches/'.$user->id.'/'.now()->format('Ymd'), 'local');
+        } elseif (
+            in_array($method, [AttendanceEvent::METHOD_PHOTO_CONFIRM, AttendanceEvent::METHOD_SMS_LINK], true)
+            && $profile?->reference_photo_path
+            && ($method === AttendanceEvent::METHOD_PHOTO_CONFIRM || ! empty($data['photo_confirmed']))
+        ) {
+            // کپی از عکس مرجع تأییدشده برای آرشیو رویداد
+            $ext = pathinfo($profile->reference_photo_path, PATHINFO_EXTENSION) ?: 'jpg';
+            $dest = 'attendance/punches/'.$user->id.'/'.now()->format('Ymd').'/confirm_'.Str::random(8).'.'.$ext;
+            if (Storage::disk('local')->exists($profile->reference_photo_path)) {
+                Storage::disk('local')->copy($profile->reference_photo_path, $dest);
+                $photoPath = $dest;
+            }
         }
 
         $geo = $this->validateGeo($data);
@@ -430,7 +565,7 @@ class AttendanceService
             $flagReason = implode('؛ ', $flags);
         }
 
-        return AttendanceEvent::create([
+        $event = AttendanceEvent::create([
             'user_id' => $user->id,
             'type' => $type,
             'method' => $method,
@@ -449,5 +584,11 @@ class AttendanceService
             'note' => trim((string) ($data['note'] ?? '')) ?: null,
             'occurred_at' => now(),
         ]);
+
+        if ($link) {
+            $this->markPunchLinkUsed($link);
+        }
+
+        return $event;
     }
 }

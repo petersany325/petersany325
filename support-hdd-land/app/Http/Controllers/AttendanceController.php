@@ -124,11 +124,22 @@ class AttendanceController extends Controller
             ->with('attendance_method', 'otp');
     }
 
+    public function sendLinkSms(Request $request, AttendanceService $attendance, NiazpardazSmsService $sms): RedirectResponse
+    {
+        $data = $request->validate([
+            'purpose' => ['required', 'in:check_in,check_out'],
+        ]);
+        $result = $attendance->sendPunchLinkSms($request->user(), $data['purpose'], $sms);
+        $msg = ! empty($result['ok']) ? 'لینک ورود/خروج پیامک شد.' : ('ارسال پیامک ناموفق: '.($result['message'] ?? 'خطا'));
+
+        return back()->with(! empty($result['ok']) ? 'success' : 'error', $msg);
+    }
+
     public function punch(Request $request, AttendanceService $attendance, NiazpardazSmsService $sms): RedirectResponse
     {
         $data = $request->validate([
             'type' => ['required', 'in:check_in,check_out'],
-            'method' => ['required', 'in:selfie,otp'],
+            'method' => ['required', 'in:selfie,otp,photo_confirm,sms_link'],
             'otp_code' => ['nullable', 'string', 'max:10'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
@@ -137,6 +148,8 @@ class AttendanceController extends Controller
             'note' => ['nullable', 'string', 'max:500'],
             'photo' => ['nullable', 'image', 'max:5120'],
             'face_detected' => ['nullable', 'in:0,1'],
+            'photo_confirmed' => ['nullable', 'in:0,1'],
+            'punch_link_token' => ['nullable', 'string', 'max:64'],
         ]);
 
         $event = $attendance->punch(
@@ -153,6 +166,106 @@ class AttendanceController extends Controller
             : '';
 
         return back()->with('success', $label.' با موفقیت ثبت شد.'.$extra);
+    }
+
+    /** صفحه عمومی لینک پیامک — بدون لاگین */
+    public function showPunchLink(string $token, AttendanceService $attendance): View|RedirectResponse
+    {
+        $link = \App\Models\AttendancePunchLink::query()->where('token', $token)->first();
+        if (! $link) {
+            return redirect()->route('login')->with('error', 'لینک نامعتبر است.');
+        }
+
+        if (session('attendance_link_done')) {
+            return view('attendance.link-done', [
+                'message' => session('success') ?: 'ثبت حضور انجام شد.',
+                'employee' => $link->user,
+            ]);
+        }
+
+        if (! $link->isValid()) {
+            return view('attendance.link-done', [
+                'message' => $link->isUsed()
+                    ? 'این لینک قبلاً استفاده شده است.'
+                    : 'این لینک منقضی شده است. دوباره از کارتابل حضور درخواست دهید.',
+                'employee' => $link->user,
+                'error' => true,
+            ]);
+        }
+
+        $user = $link->user;
+        $state = $attendance->todayState($user);
+        $label = $link->purpose === AttendanceEvent::TYPE_OUT ? 'ثبت خروج' : 'ثبت ورود';
+
+        return view('attendance.link', [
+            'token' => $token,
+            'link' => $link,
+            'employee' => $user,
+            'label' => $label,
+            'settings' => AttendanceSettings::all(),
+            'state' => $state,
+            'profile' => $attendance->profileFor($user),
+        ]);
+    }
+
+    public function submitPunchLink(Request $request, string $token, AttendanceService $attendance, NiazpardazSmsService $sms): RedirectResponse
+    {
+        try {
+            $link = $attendance->findValidPunchLink($token);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->route('login')->with('error', $e->errors()['token'][0] ?? 'لینک نامعتبر است.');
+        }
+
+        $data = $request->validate([
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+            'accuracy_m' => ['nullable', 'numeric', 'min:0', 'max:5000'],
+            'device_fingerprint' => ['nullable', 'string', 'max:191'],
+            'photo_confirmed' => ['nullable', 'in:0,1'],
+        ]);
+
+        $data['method'] = AttendanceEvent::METHOD_SMS_LINK;
+        $data['punch_link_token'] = $token;
+
+        try {
+            $event = $attendance->punch(
+                $link->user,
+                $link->purpose,
+                $data,
+                null,
+                $sms
+            );
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return back()->withErrors($e->errors())->withInput();
+        }
+
+        $msg = $event->typeLabel().' با موفقیت از طریق لینک پیامک ثبت شد.'
+            .($event->status === AttendanceEvent::STATUS_FLAGGED ? ' (مشکوک: '.($event->flag_reason ?: '—').')' : '');
+
+        return redirect()
+            ->route('attendance.link.show', ['token' => $token])
+            ->with('success', $msg)
+            ->with('attendance_link_done', true);
+    }
+
+    public function myReferencePhoto(Request $request): Response
+    {
+        $user = $request->user();
+        abort_unless($user, 403);
+        $profile = AttendanceProfile::query()->where('user_id', $user->id)->first();
+        abort_unless($profile?->reference_photo_path && Storage::disk('local')->exists($profile->reference_photo_path), 404);
+
+        return Storage::disk('local')->response($profile->reference_photo_path);
+    }
+
+    public function punchLinkPhoto(string $token, AttendanceService $attendance): Response
+    {
+        $link = \App\Models\AttendancePunchLink::query()->where('token', $token)->first();
+        abort_unless($link && ($link->isValid() || session('attendance_link_done')), 404);
+        $profile = $attendance->profileFor($link->user);
+        abort_unless($profile?->reference_photo_path && Storage::disk('local')->exists($profile->reference_photo_path), 404);
+
+        return Storage::disk('local')->response($profile->reference_photo_path);
     }
 
     public function punchPhoto(AttendanceEvent $event): Response
@@ -221,7 +334,7 @@ class AttendanceController extends Controller
         ]);
     }
 
-    public function approveSelfie(Request $request, User $user, AttendanceService $attendance): RedirectResponse
+    public function approveSelfie(Request $request, User $user, AttendanceService $attendance, NiazpardazSmsService $sms): RedirectResponse
     {
         $this->authorizeManage($request);
         $profile = AttendanceProfile::query()->where('user_id', $user->id)->firstOrFail();
@@ -232,14 +345,25 @@ class AttendanceController extends Controller
                 [$user],
                 'attendance_selfie',
                 'سلفی حضور تأیید شد',
-                'سلفی شما تأیید شد. از این به بعد می‌توانید با سلفی ورود/خروج بزنید.',
+                'سلفی شما تأیید شد. لینک ورود امروز برایتان پیامک می‌شود.',
                 route('attendance.index')
             );
         } catch (\Throwable $e) {
             // ignore
         }
 
-        return back()->with('success', 'سلفی «'.$user->name.'» تأیید شد. از این به بعد ورود با سلفی برایش فعال است.');
+        $smsResult = ['ok' => false, 'message' => ''];
+        try {
+            $smsResult = $attendance->notifySelfieApproved($user, $sms);
+        } catch (\Throwable $e) {
+            $smsResult = ['ok' => false, 'message' => $e->getMessage()];
+        }
+
+        $extra = ! empty($smsResult['ok'])
+            ? ' لینک ورود امروز پیامک شد.'
+            : (' اعلان داخل سیستم ثبت شد'.(! empty($smsResult['message']) ? '؛ SMS: '.$smsResult['message'] : '').'.');
+
+        return back()->with('success', 'سلفی «'.$user->name.'» تأیید شد.'.$extra);
     }
 
     public function rejectSelfie(Request $request, User $user, AttendanceService $attendance): RedirectResponse

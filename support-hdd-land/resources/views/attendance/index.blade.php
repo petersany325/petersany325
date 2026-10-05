@@ -25,7 +25,7 @@
     <div class="emp-cartable-hero">
         <div>
             <h2>حضور و غیاب</h2>
-            <p class="lead">ورود/خروج با سلفی لحظه‌ای یا رمز یک‌بارمصرف + GPS</p>
+            <p class="lead">ورود/خروج روزانه با تأیید عکس مرجع یا لینک SMS + GPS — هر روز از نیمه‌شب ریست می‌شود</p>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
             @if($canManage)
@@ -60,53 +60,83 @@
         @endif
 
         <div class="panel" style="margin-top:12px;padding:14px;">
-            <h3 style="margin:0 0 10px;">{{ $nextLabel }}</h3>
+            <h3 style="margin:0 0 6px;">{{ $nextLabel }}</h3>
+            <p class="muted" style="margin:0 0 12px;">وضعیت ورود/خروج هر روز ساعت ۰۰:۰۰ ریست می‌شود.</p>
 
             @if($selfieReady)
-                <p class="muted" style="margin:0 0 10px;">سلفی تأیید شده — با تشخیص چهره، ورود/خروج به‌صورت خودکار ثبت می‌شود.</p>
-                <video id="att-live-cam" playsinline autoplay muted style="width:100%;max-width:320px;border-radius:10px;background:#111;transform:scaleX(-1);"></video>
-                <div style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap;">
-                    <button type="button" class="btn btn-secondary" id="att-open-cam">روشن کردن دوربین</button>
-                    <button type="button" class="btn btn-primary" id="att-auto-punch" disabled>{{ $nextLabel }} با سلفی</button>
+                <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;margin-bottom:14px;padding:12px;border:1px solid #dbeafe;background:#f8fbff;border-radius:10px;">
+                    <img src="{{ route('attendance.my-photo') }}" alt="عکس تأییدشده" style="width:120px;height:120px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;background:#111;">
+                    <div style="flex:1;min-width:200px;">
+                        <div style="font-weight:700;margin-bottom:6px;">عکس تأییدشده شما</div>
+                        <p class="muted" style="margin:0 0 10px;">همین عکس را ببینید و برای {{ $nextLabel }} تأیید کنید (همراه GPS).</p>
+                        <form method="POST" action="{{ route('attendance.punch') }}" id="att-confirm-form">
+                            @csrf
+                            <input type="hidden" name="type" value="{{ $nextType }}">
+                            <input type="hidden" name="method" value="photo_confirm">
+                            <input type="hidden" name="latitude" class="att-lat-sync" value="{{ old('latitude') }}">
+                            <input type="hidden" name="longitude" class="att-lng-sync" value="{{ old('longitude') }}">
+                            <input type="hidden" name="accuracy_m" class="att-acc-sync" value="{{ old('accuracy_m') }}">
+                            <input type="hidden" name="device_fingerprint" class="att-device-sync" value="">
+                            <input type="hidden" name="photo_confirmed" id="att-photo-confirmed" value="0">
+                            <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;margin-bottom:10px;">
+                                <input type="checkbox" id="att-photo-check">
+                                <span>این عکس من است و خودم {{ $nextLabel }} را ثبت می‌کنم.</span>
+                            </label>
+                            <button class="btn btn-primary" type="submit" id="att-confirm-btn" disabled>{{ $nextLabel }} با تأیید عکس</button>
+                        </form>
+                    </div>
                 </div>
-                <div class="muted" id="att-face-live">برای ورود خودکار، دوربین را روشن کنید و صورت را روبه‌رو بگیرید.</div>
             @endif
 
-            <form method="POST" action="{{ route('attendance.otp') }}" id="att-otp-form" style="margin:12px 0 10px;">
-                @csrf
-                <input type="hidden" name="purpose" value="{{ $nextType }}">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                <form method="POST" action="{{ route('attendance.link-sms') }}" style="display:inline;">
+                    @csrf
+                    <input type="hidden" name="purpose" value="{{ $nextType }}">
+                    <button class="btn btn-secondary" type="submit">ارسال لینک {{ $open ? 'خروج' : 'ورود' }} با SMS</button>
+                </form>
                 @if($settings['allow_otp'])
-                    <button class="btn btn-secondary" type="submit">ارسال رمز یک‌بارمصرف SMS</button>
+                <form method="POST" action="{{ route('attendance.otp') }}" style="display:inline;">
+                    @csrf
+                    <input type="hidden" name="purpose" value="{{ $nextType }}">
+                    <button class="btn btn-ghost" type="submit">ارسال کد OTP</button>
+                </form>
                 @endif
-            </form>
+            </div>
 
             <form method="POST" action="{{ route('attendance.punch') }}" enctype="multipart/form-data" id="att-punch-form" class="form-grid">
                 @csrf
                 <input type="hidden" name="type" value="{{ $nextType }}">
-                <input type="hidden" name="method" id="att-method" value="{{ $selfieReady ? 'selfie' : ($settings['allow_otp'] ? 'otp' : 'selfie') }}">
+                <input type="hidden" name="method" id="att-method" value="{{ $selfieReady ? 'photo_confirm' : ($settings['allow_otp'] ? 'otp' : 'selfie') }}">
                 <input type="hidden" name="latitude" id="att-lat" value="{{ old('latitude') }}">
                 <input type="hidden" name="longitude" id="att-lng" value="{{ old('longitude') }}">
                 <input type="hidden" name="accuracy_m" id="att-acc" value="{{ old('accuracy_m') }}">
                 <input type="hidden" name="device_fingerprint" id="att-device" value="">
                 <input type="hidden" name="face_detected" id="att-face" value="0">
+                <input type="hidden" name="photo_confirmed" value="0">
                 <input type="file" name="photo" id="att-photo" accept="image/*" capture="user" style="display:none;">
 
-                @if($settings['allow_otp'] && ! $selfieReady)
-                    <div id="att-otp-wrap">
-                        <label>کد OTP</label>
-                        <input type="text" name="otp_code" inputmode="numeric" maxlength="10" value="{{ old('otp_code') }}" placeholder="کد پیامک‌شده" dir="ltr">
-                    </div>
-                    <div style="grid-column:1/-1;">
-                        <button class="btn btn-primary" type="submit" id="att-otp-submit">{{ $nextLabel }} با OTP</button>
-                    </div>
-                @elseif($settings['allow_otp'])
-                    <details style="grid-column:1/-1;">
-                        <summary class="muted">ورود جایگزین با OTP</summary>
-                        <div style="margin-top:8px;">
-                            <input type="text" name="otp_code" id="att-otp-code" inputmode="numeric" maxlength="10" value="{{ old('otp_code') }}" placeholder="کد OTP" dir="ltr">
-                            <button class="btn btn-ghost" type="button" id="att-otp-punch">ثبت با OTP</button>
+                @if($settings['allow_otp'])
+                    <div id="att-otp-wrap" style="grid-column:1/-1;">
+                        <label>کد OTP (اختیاری)</label>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                            <input type="text" name="otp_code" id="att-otp-code" inputmode="numeric" maxlength="10" value="{{ old('otp_code') }}" placeholder="کد پیامک‌شده" dir="ltr" style="max-width:160px;">
+                            <button class="btn btn-ghost" type="button" id="att-otp-punch">{{ $nextLabel }} با OTP</button>
                         </div>
-                    </details>
+                    </div>
+                @endif
+
+                @if($selfieReady)
+                <details style="grid-column:1/-1;margin-top:4px;">
+                    <summary class="muted">روش پیشرفته: سلفی لحظه‌ای با دوربین</summary>
+                    <div style="margin-top:10px;">
+                        <video id="att-live-cam" playsinline autoplay muted style="width:100%;max-width:320px;border-radius:10px;background:#111;transform:scaleX(-1);"></video>
+                        <div style="margin:10px 0;display:flex;gap:8px;flex-wrap:wrap;">
+                            <button type="button" class="btn btn-secondary" id="att-open-cam">روشن کردن دوربین</button>
+                            <button type="button" class="btn btn-primary" id="att-auto-punch" disabled>{{ $nextLabel }} با سلفی لحظه‌ای</button>
+                        </div>
+                        <div class="muted" id="att-face-live">صورت را روبه‌روی دوربین بگیرید.</div>
+                    </div>
+                </details>
                 @endif
 
                 <div style="grid-column:1/-1;">
@@ -213,24 +243,62 @@
   var detecting = false;
   var submitted = false;
   var selfieReady = {{ $selfieReady ? 'true' : 'false' }};
+  var fp = '';
 
   try {
     var key = 'att_device_fp';
-    var fp = localStorage.getItem(key);
+    fp = localStorage.getItem(key);
     if (!fp) {
       fp = 'd_' + Math.random().toString(36).slice(2) + '_' + Date.now().toString(36);
       localStorage.setItem(key, fp);
     }
     if (device) device.value = fp;
+    document.querySelectorAll('.att-device-sync').forEach(function (el) { el.value = fp; });
   } catch (e) {}
+
+  function syncGeo(la, ln, ac) {
+    if (lat) lat.value = la;
+    if (lng) lng.value = ln;
+    if (acc) acc.value = ac;
+    document.querySelectorAll('.att-lat-sync').forEach(function (el) { el.value = la; });
+    document.querySelectorAll('.att-lng-sync').forEach(function (el) { el.value = ln; });
+    document.querySelectorAll('.att-acc-sync').forEach(function (el) { el.value = ac; });
+  }
+
+  var photoCheck = document.getElementById('att-photo-check');
+  var photoConfirmed = document.getElementById('att-photo-confirmed');
+  var confirmBtn = document.getElementById('att-confirm-btn');
+  var confirmForm = document.getElementById('att-confirm-form');
+  function syncConfirmBtn() {
+    if (!confirmBtn) return;
+    var ok = photoCheck && photoCheck.checked && lat && lat.value && lng && lng.value;
+    confirmBtn.disabled = !ok;
+    if (photoConfirmed) photoConfirmed.value = (photoCheck && photoCheck.checked) ? '1' : '0';
+  }
+  if (photoCheck) photoCheck.addEventListener('change', syncConfirmBtn);
+  if (confirmForm) {
+    confirmForm.addEventListener('submit', function (e) {
+      if (!photoCheck || !photoCheck.checked) {
+        e.preventDefault();
+        alert('ابتدا عکس را تأیید کنید.');
+        return;
+      }
+      if (!lat.value || !lng.value) {
+        e.preventDefault();
+        alert('GPS هنوز آماده نیست.');
+      }
+    });
+  }
 
   if (!navigator.geolocation) {
     if (status) status.textContent = 'مرورگر GPS را پشتیبانی نمی‌کند.';
   } else {
     navigator.geolocation.getCurrentPosition(function (pos) {
-      if (lat) lat.value = pos.coords.latitude.toFixed(7);
-      if (lng) lng.value = pos.coords.longitude.toFixed(7);
-      if (acc) acc.value = pos.coords.accuracy != null ? Math.round(pos.coords.accuracy) : '';
+      var la = pos.coords.latitude.toFixed(7);
+      var ln = pos.coords.longitude.toFixed(7);
+      var ac = pos.coords.accuracy != null ? Math.round(pos.coords.accuracy) : '';
+      syncGeo(la, ln, ac);
+      syncConfirmBtn();
       if (status) {
         status.textContent = 'موقعیت آماده است — دقت حدود ' + Math.round(pos.coords.accuracy || 0) + ' متر'
           + ({{ $settings['require_inside_geofence'] ? 'true' : 'false' }} ? ' | شعاع مجاز شرکت: {{ $settings['geofence_radius_m'] }} متر' : '');
