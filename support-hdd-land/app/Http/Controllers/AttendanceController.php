@@ -10,10 +10,10 @@ use App\Services\NiazpardazSmsService;
 use App\Support\AttendanceSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class AttendanceController extends Controller
 {
@@ -248,36 +248,36 @@ class AttendanceController extends Controller
             ->with('attendance_link_done', true);
     }
 
-    public function myReferencePhoto(Request $request): Response
+    public function myReferencePhoto(Request $request): BinaryFileResponse
     {
         $user = $request->user();
         abort_unless($user, 403);
         $profile = AttendanceProfile::query()->where('user_id', $user->id)->first();
-        abort_unless($profile?->reference_photo_path && Storage::disk('local')->exists($profile->reference_photo_path), 404);
+        abort_unless($profile?->reference_photo_path, 404);
 
-        return Storage::disk('local')->response($profile->reference_photo_path);
+        return $this->serveLocalImage($profile->reference_photo_path);
     }
 
-    public function punchLinkPhoto(string $token, AttendanceService $attendance): Response
+    public function punchLinkPhoto(string $token, AttendanceService $attendance): BinaryFileResponse
     {
         $link = \App\Models\AttendancePunchLink::query()->where('token', $token)->first();
         abort_unless($link && ($link->isValid() || session('attendance_link_done')), 404);
         $profile = $attendance->profileFor($link->user);
-        abort_unless($profile?->reference_photo_path && Storage::disk('local')->exists($profile->reference_photo_path), 404);
+        abort_unless($profile?->reference_photo_path, 404);
 
-        return Storage::disk('local')->response($profile->reference_photo_path);
+        return $this->serveLocalImage($profile->reference_photo_path);
     }
 
-    public function punchPhoto(AttendanceEvent $event): Response
+    public function punchPhoto(AttendanceEvent $event): BinaryFileResponse
     {
         $user = auth()->user();
         abort_unless(
             $user && ($user->id === (int) $event->user_id || $user->isAdmin() || $user->canAccess('attendance.manage')),
             403
         );
-        abort_unless($event->photo_path && Storage::disk('local')->exists($event->photo_path), 404);
+        abort_unless($event->photo_path, 404);
 
-        return Storage::disk('local')->response($event->photo_path);
+        return $this->serveLocalImage($event->photo_path);
     }
 
     public function manage(Request $request, AttendanceService $attendance): View
@@ -510,13 +510,30 @@ class AttendanceController extends Controller
             ->with('success', 'عکس مرجع «'.$user->name.'» فقط توسط ادمین ثبت شد.');
     }
 
-    public function referencePhoto(User $user): Response
+    public function referencePhoto(User $user): BinaryFileResponse
     {
         abort_unless(auth()->user()?->isAdmin() || auth()->user()?->canAccess('attendance.manage'), 403);
         $profile = AttendanceProfile::query()->where('user_id', $user->id)->first();
-        abort_unless($profile?->reference_photo_path && Storage::disk('local')->exists($profile->reference_photo_path), 404);
+        abort_unless($profile?->reference_photo_path, 404);
 
-        return Storage::disk('local')->response($profile->reference_photo_path);
+        return $this->serveLocalImage($profile->reference_photo_path);
+    }
+
+    private function serveLocalImage(string $path): BinaryFileResponse
+    {
+        abort_unless(Storage::disk('local')->exists($path), 404);
+        $full = Storage::disk('local')->path($path);
+        abort_unless(is_file($full), 404);
+
+        $mime = @mime_content_type($full) ?: 'image/jpeg';
+        if (! str_starts_with($mime, 'image/')) {
+            $mime = 'image/jpeg';
+        }
+
+        return response()->file($full, [
+            'Content-Type' => $mime,
+            'Cache-Control' => 'private, max-age=300',
+        ]);
     }
 
     private function authorizeManage(Request $request): void
