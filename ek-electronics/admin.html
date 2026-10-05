@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EK Operations | Accounting & WhatsApp desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body class="admin">
+  <aside class="sidebar">
+    <a class="brand" href="index.html">
+      <svg viewBox="0 0 48 48" width="36" height="36" aria-hidden="true">
+        <rect width="48" height="48" rx="12" fill="#1d4ed8"/>
+        <text x="24" y="31" text-anchor="middle" fill="#fff" font-size="16" font-family="Manrope, sans-serif" font-weight="800">EK</text>
+      </svg>
+      <span>EK Operations<small style="color:#93c5fd">Staff · Midrand</small></span>
+    </a>
+    <nav class="nav-side">
+      <button class="active" data-admin="dash">Dashboard</button>
+      <button data-admin="orders">Orders</button>
+      <button data-admin="inventory">Inventory</button>
+      <button data-admin="jobs">Recovery jobs</button>
+      <button data-admin="books">Accounting</button>
+      <button data-admin="vat">VAT 15%</button>
+      <button data-admin="wa">WhatsApp desk</button>
+      <button data-admin="customers">Customers</button>
+    </nav>
+    <p class="muted" style="padding:14px;font-size:0.8rem">All invoices, statements, tracking, and job updates leave this panel via WhatsApp Business.</p>
+    <a class="btn btn-ghost" style="margin:8px 12px;display:inline-flex" href="index.html">← Storefront</a>
+  </aside>
+
+  <div class="admin-main">
+    <section data-pane="dash">
+      <h1>Today at EK Electronics</h1>
+      <p class="lede">Live sample books for October 2026. Figures are demonstration data in ZAR.</p>
+      <div class="kpi">
+        <div class="card"><span class="muted">Revenue MTD</span><b>R 428,610</b><div class="delta">+12.4% vs Sep</div></div>
+        <div class="card"><span class="muted">Gross profit</span><b>R 163,070</b><div class="delta">38.0% margin</div></div>
+        <div class="card"><span class="muted">Open invoices</span><b>R 86,240</b><div class="delta" style="color:var(--warn)">4 waiting on WhatsApp</div></div>
+        <div class="card"><span class="muted">WhatsApp sent today</span><b>37</b><div class="delta">Orders · invoices · recovery</div></div>
+      </div>
+      <div class="grid-2" style="margin-block-start:18px">
+        <div class="card" style="padding:16px">
+          <h3>Sales last 12 months</h3>
+          <div class="bars" aria-hidden="true">
+            <span style="block-size:40%"></span><span style="block-size:48%"></span><span style="block-size:44%"></span>
+            <span style="block-size:62%"></span><span style="block-size:58%"></span><span style="block-size:70%"></span>
+            <span style="block-size:66%"></span><span style="block-size:80%"></span><span style="block-size:74%"></span>
+            <span style="block-size:88%"></span><span style="block-size:92%"></span><span style="block-size:100%"></span>
+          </div>
+        </div>
+        <div class="card" style="padding:16px">
+          <h3>Needs action</h3>
+          <p>INV-1051 R12,480 · 7 days · <button class="btn btn-wa" data-wa="Hi Thabo, invoice INV-1051 for R12,480 is due. Pay to EK Electronics FNB 6284… then reply PAID.">Chase on WhatsApp</button></p>
+          <p>JOB-224 RAID 5 · imaging 62% · <button class="btn btn-wa" data-wa="Update: RAID job JOB-224 is 62% imaged. We will WhatsApp the file list when the scan completes.">Send status</button></p>
+          <p>SO-331 8× 8TB SAS · packed · <button class="btn btn-wa" data-wa="Your order SO-331 has tracking CX2291. Courier from Midrand, Waterfall Business Park.">Send tracking</button></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="hidden" data-pane="orders">
+      <h1>Orders</h1>
+      <div class="card table-wrap" style="padding:8px 12px">
+        <table class="data">
+          <thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>WhatsApp</th></tr></thead>
+          <tbody>
+            <tr><td>SO-334</td><td>Naledi IT</td><td>NVMe 2TB × 4</td><td>R 9,996</td><td><span class="pill open">New cart</span></td><td><button class="btn btn-wa" data-wa="Hi Naledi IT, confirming 4× NVMe 2TB M.2 at R2,499. Stock is ready in Midrand.">Confirm</button></td></tr>
+            <tr><td>SO-333</td><td>Johannes P.</td><td>Laptop HDD 1TB</td><td>R 429</td><td><span class="pill paid">Paid</span></td><td><button class="btn btn-wa" data-wa="Payment received for SO-333. We will pack today.">Receipt</button></td></tr>
+            <tr><td>SO-331</td><td>CloudHost ZA</td><td>Enterprise SAS 8TB × 8</td><td>R 15,192</td><td><span class="pill sent">Dispatched</span></td><td><button class="btn btn-wa" data-wa="Tracking CX2291 for SO-331.">Tracking</button></td></tr>
+            <tr><td>SO-328</td><td>FixIt Springs</td><td>RAID card + 32GB DDR4</td><td>R 2,310</td><td><span class="pill paid">Collected</span></td><td><button class="btn btn-wa" data-wa="Thanks for collecting SO-328 at Lone Creek Unit 15.">Thanks</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="hidden" data-pane="inventory">
+      <h1>Inventory &amp; grades</h1>
+      <p class="lede">Tied to the public product page. Health reports can be attached and WhatsApped with the quote.</p>
+      <div class="card table-wrap" style="padding:8px 12px">
+        <table class="data">
+          <thead><tr><th>SKU</th><th>Category</th><th>Grade</th><th>Qty</th><th>Cost</th><th>List</th></tr></thead>
+          <tbody>
+            <tr><td>ent-hdd-8</td><td>Enterprise HDD</td><td>A</td><td>42</td><td>R 1,120</td><td>R 1,899</td></tr>
+            <tr><td>nvme-2</td><td>NVMe SSD</td><td>Enterprise pull</td><td>27</td><td>R 1,540</td><td>R 2,499</td></tr>
+            <tr><td>ecc-64</td><td>Server memory</td><td>RDIMM</td><td>14</td><td>R 1,280</td><td>R 2,180</td></tr>
+            <tr><td>gpu-16</td><td>GPU</td><td>Refurbished</td><td>8</td><td>R 2,900</td><td>R 4,590</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="hidden" data-pane="jobs">
+      <h1>Data recovery &amp; erasure jobs</h1>
+      <div class="card table-wrap" style="padding:8px 12px">
+        <table class="data">
+          <thead><tr><th>Job</th><th>Client</th><th>Media</th><th>Stage</th><th>Quote</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>JOB-224</td><td>Legal firm PTA</td><td>RAID 5 × 4</td><td>Imaging 62%</td><td>R 18,500</td><td><button class="btn btn-wa" data-wa="JOB-224 update: imaging 62%. Confidentiality maintained.">Update</button></td></tr>
+            <tr><td>JOB-221</td><td>Lerato M.</td><td>2.5\" HDD dropped</td><td>Quoted</td><td>R 2,450</td><td><button class="btn btn-wa" data-wa="Hi Lerato, recovery quote JOB-221 is R2,450 success-based. Reply YES to proceed.">Send quote</button></td></tr>
+            <tr><td>JOB-218</td><td>Municipality</td><td>Bulk wipe 120 HDD</td><td>Certificate ready</td><td>R 9,600</td><td><button class="btn btn-wa" data-wa="Erasure certificates for JOB-218 are ready. We can WhatsApp the PDF pack.">Send certs</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="hidden" data-pane="books">
+      <h1>Accounting reports</h1>
+      <p class="lede">P&amp;L, aged receivables, and cash. Export is a prototype CSV; production would post to Sage / Xero and still deliver PDFs on WhatsApp.</p>
+      <div class="kpi">
+        <div class="card"><span class="muted">Product sales</span><b>R 312,400</b></div>
+        <div class="card"><span class="muted">Recovery &amp; wipe</span><b>R 116,210</b></div>
+        <div class="card"><span class="muted">COGS</span><b>R 265,540</b></div>
+        <div class="card"><span class="muted">Operating costs</span><b>R 71,800</b></div>
+      </div>
+      <div class="grid-2" style="margin-block-start:16px">
+        <div class="card" style="padding:16px">
+          <h3>Profit &amp; loss — October 2026</h3>
+          <table class="data">
+            <tr><td>Revenue</td><td>R 428,610</td></tr>
+            <tr><td>Cost of goods</td><td>(R 265,540)</td></tr>
+            <tr><td>Gross profit</td><td>R 163,070</td></tr>
+            <tr><td>Rent · Lone Creek Unit 15</td><td>(R 28,000)</td></tr>
+            <tr><td>Salaries &amp; lab</td><td>(R 36,400)</td></tr>
+            <tr><td>Courier &amp; WhatsApp Business</td><td>(R 7,400)</td></tr>
+            <tr><td><strong>Net before tax</strong></td><td><strong>R 91,270</strong></td></tr>
+          </table>
+          <div class="cta-row" style="margin-block-start:12px">
+            <button class="btn btn-outline" id="csv">Download CSV</button>
+            <button class="btn btn-wa" data-wa="EK Electronics P&L October 2026%0ARevenue R428,610%0AGross profit R163,070%0ANet R91,270%0AFull PDF follows.">WhatsApp P&amp;L to accountant</button>
+          </div>
+        </div>
+        <div class="card" style="padding:16px">
+          <h3>Aged receivables</h3>
+          <table class="data">
+            <thead><tr><th>Invoice</th><th>Customer</th><th>Age</th><th>Amount</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>INV-1051</td><td>Thabo Logistics</td><td><span class="pill late">7d</span></td><td>R 12,480</td><td><button class="btn btn-wa" data-wa="Friendly reminder INV-1051 R12,480.">Remind</button></td></tr>
+              <tr><td>INV-1049</td><td>Resell Hub</td><td><span class="pill open">3d</span></td><td>R 31,200</td><td><button class="btn btn-wa" data-wa="INV-1049 R31,200. Banking details on previous WhatsApp.">Statement</button></td></tr>
+              <tr><td>INV-1044</td><td>School ICT</td><td><span class="pill paid">Paid</span></td><td>R 8,760</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="hidden" data-pane="vat">
+      <h1>VAT 15% (South Africa)</h1>
+      <div class="card" style="padding:16px">
+        <table class="data">
+          <tr><td>Standard-rated supplies (excl.)</td><td>R 372,704</td></tr>
+          <tr><td>Output VAT</td><td>R 55,906</td></tr>
+          <tr><td>Input VAT on stock &amp; overheads</td><td>(R 41,210)</td></tr>
+          <tr><td><strong>VAT payable</strong></td><td><strong>R 14,696</strong></td></tr>
+        </table>
+        <p class="notice" style="margin-block-start:12px">SARS pack would be generated here. This preview WhatsApps the VAT control account to the bookkeeper.</p>
+        <button class="btn btn-wa" data-wa="VAT October preview: output R55,906, input R41,210, payable R14,696.">WhatsApp VAT pack</button>
+      </div>
+    </section>
+
+    <section class="hidden" data-pane="wa">
+      <h1>WhatsApp desk</h1>
+      <p class="lede">Single channel for store orders, recovery clients, and accounts. Templates insert into the composer; Send opens WhatsApp with the packed message (Connect the Cloud API later to send in-app).</p>
+      <div class="wa-layout">
+        <div class="card inbox">
+          <div class="inbox-item"><strong>Naledi IT</strong><div class="muted">Need 4× NVMe today?</div></div>
+          <div class="inbox-item"><strong>Lerato M.</strong><div class="muted">Is the dropped laptop recoverable?</div></div>
+          <div class="inbox-item"><strong>Thabo Logistics</strong><div class="muted">Please resend INV-1051</div></div>
+          <div class="inbox-item"><strong>CloudHost ZA</strong><div class="muted">Tracking for SO-331?</div></div>
+        </div>
+        <div class="card thread" id="thread">
+          <div class="msg">Customer: Can you invoice the 8TB SAS batch to our Midrand warehouse?</div>
+          <div class="msg out">EK: Yes. INV-1052 is ready. I can send the PDF on this thread.</div>
+        </div>
+        <div class="card composer">
+          <div class="templates">
+            <button data-tpl="Thanks for your order from ekelectronics.co.za. Stock is being picked in Midrand.">Order ack</button>
+            <button data-tpl="Invoice attached. EFT to EK Electronics. Send POP on this WhatsApp.">Invoice</button>
+            <button data-tpl="Your courier tracking is ready. Collection also available at Lone Creek Unit 15.">Tracking</button>
+            <button data-tpl="Recovery update from the lab: diagnostics complete. Quote follows.">Recovery</button>
+            <button data-tpl="Aged statement: please settle so we can release the next lot.">Collections</button>
+          </div>
+          <label>To (WhatsApp)
+            <input id="wa-to" value="+27 82 000 0000" style="width:100%;margin-top:6px;padding:8px;border-radius:10px;border:1px solid var(--line)">
+          </label>
+          <textarea id="wa-body" rows="7" placeholder="Message"></textarea>
+          <button class="btn btn-wa" id="wa-send">Send on WhatsApp</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="hidden" data-pane="customers">
+      <h1>Customers</h1>
+      <div class="card table-wrap" style="padding:8px 12px">
+        <table class="data">
+          <thead><tr><th>Account</th><th>Type</th><th>WhatsApp</th><th>YTD</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>Naledi IT</td><td>Reseller</td><td>+27 82 …</td><td>R 86,400</td><td><button class="btn btn-wa" data-wa="Hi Naledi, new NVMe lot just graded A+.">Offer</button></td></tr>
+            <tr><td>CloudHost ZA</td><td>Corporate</td><td>+27 10 …</td><td>R 152,900</td><td><button class="btn btn-wa" data-wa="Monthly statement for CloudHost ZA is ready.">Statement</button></td></tr>
+            <tr><td>Johannes P.</td><td>Consumer</td><td>+27 73 …</td><td>R 429</td><td><button class="btn btn-wa" data-wa="Warranty card for your 2.5 inch HDD.">Warranty</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const waNumber = "27105002140";
+    function openWa(text) {
+      const digits = (document.getElementById("wa-to")?.value || "").replace(/\D/g, "") || waNumber;
+      const to = digits.startsWith("27") ? digits : waNumber;
+      window.open(`https://wa.me/${to}?text=${encodeURIComponent(text)}`, "_blank");
+    }
+    function showAdmin(id) {
+      document.querySelectorAll("[data-admin]").forEach((b) => b.classList.toggle("active", b.dataset.admin === id));
+      document.querySelectorAll("[data-pane]").forEach((p) => p.classList.toggle("hidden", p.dataset.pane !== id));
+      if (location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
+    }
+    document.querySelectorAll("[data-admin]").forEach((btn) => {
+      btn.addEventListener("click", () => showAdmin(btn.dataset.admin));
+    });
+    window.addEventListener("hashchange", () => {
+      showAdmin((location.hash || "#dash").slice(1) || "dash");
+    });
+    showAdmin((location.hash || "#dash").slice(1) || "dash");
+    document.querySelectorAll("[data-wa]").forEach((btn) => {
+      btn.addEventListener("click", () => openWa(btn.dataset.wa));
+    });
+    document.querySelectorAll("[data-tpl]").forEach((btn) => {
+      btn.addEventListener("click", () => { document.getElementById("wa-body").value = btn.dataset.tpl; });
+    });
+    document.getElementById("wa-send").addEventListener("click", () => {
+      const body = document.getElementById("wa-body").value.trim();
+      if (!body) return;
+      document.getElementById("thread").insertAdjacentHTML("beforeend", `<div class="msg out">EK: ${body}</div>`);
+      openWa(body);
+    });
+    document.getElementById("csv").addEventListener("click", () => {
+      const csv = "Account,Amount\nRevenue,428610\nCOGS,-265540\nGross,163070\nOpex,-71800\nNet,91270\n";
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+      a.download = "ek-electronics-pl-oct-2026.csv";
+      a.click();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EK Electronics | Hard Drives, Data Recovery & Reliable Tech</title>
+  <meta name="description" content="South African technology solutions: hard drive refurbishment, data recovery, secure erasure, and computer component sales. Innovation. Integrity. Impact.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <span>Midrand · Waterfall Business Park · Mon–Fri 08:00–17:00 SAST</span>
+      <span>
+        <a href="tel:+27105002140">+27 10 500 2140</a> ·
+        <a href="mailto:info@ekelectronics.co.za">info@ekelectronics.co.za</a> ·
+        <a class="whatsapp-chip" href="https://wa.me/27105002140?text=Hi%20EK%20Electronics%2C%20I%20need%20help%20with%20a%20drive.">Chat on WhatsApp</a>
+      </span>
+    </div>
+  </div>
+
+  <header class="site-header">
+    <div class="nav-inner">
+      <a class="brand" href="#" data-go="home">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <rect width="48" height="48" rx="12" fill="#1d4ed8"/>
+          <text x="24" y="31" text-anchor="middle" fill="#fff" font-size="16" font-family="Manrope, sans-serif" font-weight="800">EK</text>
+        </svg>
+        <span>EK Electronics<small>Innovation. Integrity. Impact.</small></span>
+      </a>
+      <form class="search" onsubmit="event.preventDefault(); document.querySelector('[data-go=shop]').click();">
+        <input id="header-search" type="search" placeholder="Search 885+ drives, memory, boards…" aria-label="Search products">
+        <button type="submit">Search</button>
+      </form>
+      <div class="header-actions">
+        <button class="icon-btn" data-go="account" aria-label="Customer profile">👤</button>
+        <button class="icon-btn" data-go="cart" aria-label="Shopping cart">🛒<span class="badge" data-cart-count>0</span></button>
+        <a class="btn btn-primary" href="admin.html">Staff panel</a>
+      </div>
+    </div>
+    <nav class="menu">
+      <a href="#" class="active" data-go="home">Home</a>
+      <a href="#" data-go="shop">Shop</a>
+      <a href="#" data-go="services">Services</a>
+      <a href="#" data-go="about">About</a>
+      <a href="#" data-go="contact">Contact</a>
+      <a href="#" data-go="shipping">Shipping</a>
+      <a href="#" data-go="warranty">Warranty</a>
+      <a href="#" data-go="terms">Terms</a>
+    </nav>
+  </header>
+
+  <main>
+    <section data-page="home">
+      <div class="hero">
+        <img src="assets/img/hero.jpg" alt="Enterprise server racks representing reliable storage infrastructure" width="1600" height="900">
+        <div class="hero-copy">
+          <div class="kicker">Innovation. Integrity. Impact.</div>
+          <h1>We’re experts in Hard Drives, Data Recovery, and Reliable Tech Solutions.</h1>
+          <p>Buy certified refurbished storage and components online. Recover lost data. Wipe drives to a compliant standard. EK Electronics serves individuals, IT companies, and resellers across South Africa.</p>
+          <div class="cta-row">
+            <button class="btn btn-primary" data-go="shop">Shop the catalogue</button>
+            <button class="btn btn-ghost" data-go="services">Book data recovery</button>
+            <a class="btn btn-wa" href="https://wa.me/27105002140?text=Hi%20EK%2C%20I%20need%20a%20data%20recovery%20assessment.">WhatsApp a technician</a>
+          </div>
+        </div>
+      </div>
+      <div class="wrap">
+        <div class="stats">
+          <div class="stat"><b>885+</b><span>SKU in the live product feed</span></div>
+          <div class="stat"><b>Grade A / A+</b><span>Tested, certified refurbished drives</span></div>
+          <div class="stat"><b>24–48h</b><span>Courier dispatch from Midrand</span></div>
+          <div class="stat"><b>WhatsApp-first</b><span>Orders, invoices &amp; recovery updates</span></div>
+        </div>
+      </div>
+      <div class="wrap section">
+        <h2>Shop bestsellers</h2>
+        <p class="lede">Direct cart checkout in ZAR. Pay on invoice or confirm stock on WhatsApp — both paths land in the same order desk.</p>
+        <div id="home-products" class="grid-4"></div>
+      </div>
+      <div class="wrap section">
+        <div class="split">
+          <div class="photo-frame"><img src="assets/img/lab.jpg" alt="Technician working on hardware diagnostics" width="1200" height="800"></div>
+          <div>
+            <div class="kicker" style="color:var(--blue)">Lab in Midrand</div>
+            <h2>Recover the unrecoverable. Supply drives that last.</h2>
+            <p class="lede">Every refurbished unit is health-tested, surface-scanned, and graded. Data recovery cases are handled confidentially with professional tools for HDD, SSD, flash, and RAID.</p>
+            <div class="cta-row">
+              <button class="btn btn-primary" data-go="about">Our story</button>
+              <button class="btn btn-outline" data-go="contact">Visit the office</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="hidden wrap section" data-page="shop">
+      <h2>Products</h2>
+      <p class="lede">Search the catalogue, filter by category, and add certified hardware to cart. Checkout opens a structured WhatsApp order for the sales desk.</p>
+      <div class="shop-layout">
+        <aside class="filters card">
+          <h3>Shop by category</h3>
+          <div class="filter-list" id="filters"></div>
+        </aside>
+        <div>
+          <div class="toolbar-row">
+            <div id="result-count" class="muted"></div>
+            <input id="shop-search" type="search" placeholder="Filter this page…" style="border:1px solid var(--line);border-radius:999px;padding:8px 14px;min-inline-size:220px">
+          </div>
+          <div id="product-grid" class="grid-3"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="hidden wrap section" data-page="services">
+      <h2>Our services</h2>
+      <p class="lede">Precision work for people and businesses who need storage that is honest about its health — and data that is either recovered or gone for good.</p>
+      <div class="grid-3">
+        <article class="service card">
+          <img src="assets/img/hdd.jpg" alt="Refurbished hard drives" style="border-radius:12px;aspect-ratio:16/9;object-fit:cover;inline-size:100%">
+          <h3>Hard drive refurbishment</h3>
+          <p class="muted">Multi-stage diagnostics: health testing, surface scanning, sector repair, and performance verification. Units are graded and certified for resellers, workshops, and budget-conscious buyers.</p>
+          <p><strong>Save money without compromising on performance.</strong></p>
+        </article>
+        <article class="service card">
+          <img src="assets/img/lab.jpg" alt="Data recovery bench" style="border-radius:12px;aspect-ratio:16/9;object-fit:cover;inline-size:100%">
+          <h3>Data recovery</h3>
+          <p class="muted">Lost files, failed, formatted, or non-detecting media. We recover from HDD, SSD, flash, externals, and RAID with urgency and confidentiality.</p>
+          <a class="btn btn-wa" href="https://wa.me/27105002140?text=Request%20a%20data%20recovery%20assessment.">Request an assessment</a>
+        </article>
+        <article class="service card">
+          <img src="assets/img/security.jpg" alt="Secure data practices" style="border-radius:12px;aspect-ratio:16/9;object-fit:cover;inline-size:100%">
+          <h3>Secure data erasure</h3>
+          <p class="muted">Simple deletion is not enough. Certified wiping for disposal or resale, using industry-approved methods so data cannot be recovered.</p>
+          <p><strong>Protect your privacy. Stay compliant.</strong></p>
+        </article>
+      </div>
+      <h3 style="margin-block-start:36px">Add-on services</h3>
+      <div class="grid-4">
+        <div class="card service">Drive diagnostics &amp; health reports</div>
+        <div class="card service">Custom bulk wiping &amp; asset disposal</div>
+        <div class="card service">Corporate hardware buy-backs</div>
+        <div class="card service">On-site data recovery consultations</div>
+      </div>
+    </section>
+
+    <section class="hidden wrap section" data-page="about">
+      <div class="split">
+        <div>
+          <div class="kicker" style="color:var(--blue)">Who we are</div>
+          <h2>EK Electronics</h2>
+          <p>A South African technology solutions company specialising in Hard Drive Refurbishment, Data Recovery, Secure Data Erasure, and Computer Component Sales.</p>
+          <p class="lede">We extend the life of technology — helping individuals and businesses save money, protect their data, and reduce electronic waste through innovative, reliable solutions.</p>
+        </div>
+        <div class="photo-frame"><img src="assets/img/team.jpg" alt="EK Electronics team collaboration" width="1200" height="800"></div>
+      </div>
+      <div class="grid-2" style="margin-block-start:28px">
+        <article class="card service">
+          <h3>Mission</h3>
+          <p>To provide trusted, affordable, and high-quality tech repair and recovery services, built on Integrity, Innovation, and Impact. Technology should serve people — not frustrate them. Every service is driven by precision, care, and transparency.</p>
+        </article>
+        <article class="card service">
+          <h3>Vision</h3>
+          <p>To become a leading data recovery and hardware refurbishment centre in South Africa, known for technical excellence, ethical standards, and a customer-first approach.</p>
+        </article>
+      </div>
+      <h3 style="margin-block-start:32px">What makes us different</h3>
+      <div class="grid-3">
+        <div class="card service"><strong>Expertise &amp; precision</strong><p class="muted">Trained specialists, advanced diagnostics and testing equipment.</p></div>
+        <div class="card service"><strong>Integrity &amp; transparency</strong><p class="muted">You always know what is happening with your device — no hidden costs.</p></div>
+        <div class="card service"><strong>Quality assurance</strong><p class="muted">Refurbished drives are tested, graded, and certified.</p></div>
+        <div class="card service"><strong>Data protection</strong><p class="muted">Strict confidentiality and erasure standards.</p></div>
+        <div class="card service"><strong>Eco-conscious</strong><p class="muted">Refurbishing components cuts e-waste and stretches hardware life.</p></div>
+        <div class="card service"><strong>Our story</strong><p class="muted">From a small repair project to a nationwide supplier of dependable refurbished drives.</p></div>
+      </div>
+    </section>
+
+    <section class="hidden wrap section" data-page="contact">
+      <h2>Contact us</h2>
+      <p class="lede">Support and general enquiries. Drop a pin at Waterfall Business Park or message the desk on WhatsApp — invoices and job status leave from the same number.</p>
+      <div class="grid-2">
+        <div class="card service">
+          <h3>Midrand office</h3>
+          <p>Unit 15, Ground floor, Lone Creek Office Building D<br>21 Mac-Mac Road and Howick Close<br>Waterfall Business Park, Midrand, 1685</p>
+          <p>Phone: <a href="tel:+27105002140">+27 10 500 2140</a><br>Email: <a href="mailto:info@ekelectronics.co.za">info@ekelectronics.co.za</a></p>
+          <a class="btn btn-wa" href="https://wa.me/27105002140">Message on WhatsApp</a>
+          <form class="form" style="margin-block-start:18px" onsubmit="event.preventDefault(); window.open('https://wa.me/27105002140?text=' + encodeURIComponent('Enquiry from ' + this.name.value + '%0A' + this.email.value + '%0A' + this.msg.value));">
+            <label>Name <input name="name" required></label>
+            <label>Email <input type="email" name="email" required></label>
+            <label>Message <textarea name="msg" rows="4" required></textarea></label>
+            <button class="btn btn-primary" type="submit">Send via WhatsApp</button>
+          </form>
+        </div>
+        <iframe class="map" title="EK Electronics Midrand map" src="https://maps.google.com/maps?q=Lone%20Creek%20Office%20Building%20Waterfall%20Business%20Park%20Midrand&t=&z=15&ie=UTF8&iwloc=&output=embed"></iframe>
+      </div>
+    </section>
+
+    <section class="hidden wrap section" data-page="cart">
+      <h2>Shopping cart</h2>
+      <div class="card" style="padding:16px;overflow:auto">
+        <table class="cart-table">
+          <thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Line</th><th></th></tr></thead>
+          <tbody id="cart-body"></tbody>
+        </table>
+      </div>
+      <div class="toolbar-row" style="margin-block-start:16px">
+        <strong>Subtotal: <span data-cart-total>R0.00</span></strong>
+        <div class="cta-row">
+          <button class="btn btn-outline" data-go="shop">Continue shopping</button>
+          <button class="btn btn-primary" data-go="checkout">Checkout</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="hidden wrap section" data-page="checkout">
+      <h2>Checkout</h2>
+      <p class="lede">This prototype places the order over WhatsApp Business so sales, accounting, and the courier desk share one thread. A later build can add PayFast / Peach / EFT still posting the same invoice to WhatsApp.</p>
+      <div class="account-grid">
+        <form class="card service form" onsubmit="event.preventDefault(); checkoutWhatsApp();">
+          <label>Full name <input id="co-name" required></label>
+          <label>WhatsApp number <input id="co-phone" placeholder="+27 …" required></label>
+          <label>City / courier <input id="co-city" value="Midrand / nationwide courier"></label>
+          <label>Company (optional) <input></label>
+          <p>Order total <strong data-cart-total>R0.00</strong> incl. VAT at invoice.</p>
+          <button class="btn btn-wa" type="submit">Place order on WhatsApp</button>
+        </form>
+        <aside class="card service">
+          <h3>Payment options</h3>
+          <ul class="muted">
+            <li>EFT against WhatsApp invoice (default for B2B)</li>
+            <li>Card gateway (PayFast) — recommended next integration</li>
+            <li>Collection from Lone Creek, Unit 15</li>
+          </ul>
+          <p class="notice">All order confirmations, invoices, and tracking numbers are sent on WhatsApp from the admin console.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="hidden wrap section" data-page="account">
+      <h2>Customer profile</h2>
+      <div class="grid-2">
+        <div class="card service">
+          <h3>Sign in</h3>
+          <form class="form" onsubmit="event.preventDefault(); toast('Demo login — profile saved on this device');">
+            <label>Email <input type="email" value="buyer@example.co.za"></label>
+            <label>Password <input type="password" value="••••••••"></label>
+            <button class="btn btn-primary">Login</button>
+          </form>
+        </div>
+        <div class="card service">
+          <h3>Recent activity</h3>
+          <p class="muted">INV-1048 · Enterprise SAS HDD 8TB · Paid · WhatsApp receipt sent</p>
+          <p class="muted">JOB-219 · 2.5" laptop recovery · In lab · Last update on WhatsApp 08:40</p>
+          <a class="btn btn-outline" href="https://wa.me/27105002140">Open my WhatsApp thread</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="hidden wrap section" data-page="shipping">
+      <h2>Shipping</h2>
+      <div class="card service">
+        <p>Couriers leave Midrand within 24–48 hours of cleared payment. Nationwide door-to-door. Collection at Unit 15, Lone Creek Office Building D is free. Tracking links are pushed to WhatsApp automatically from the staff panel.</p>
+      </div>
+    </section>
+    <section class="hidden wrap section" data-page="warranty">
+      <h2>Warranty policy</h2>
+      <div class="card service">
+        <p>Refurbished drives carry a graded warranty matching the certificate on the listing (typically 90–365 days). DOA units are replaced after a health report. Data recovery is billed on success unless otherwise quoted. Full terms are confirmed on the WhatsApp invoice.</p>
+      </div>
+    </section>
+    <section class="hidden wrap section" data-page="terms">
+      <h2>Terms and conditions</h2>
+      <div class="card service">
+        <p>Prices in South African Rand. Title passes on full payment. Confidentiality applies to all recovery and erasure jobs. This preview site is a design sample for www.ekelectronics.co.za (Afrihost). Phone number in the client brief was listed as +27 xxx xxxxxx — demo uses +27 10 500 2140 until the live number is confirmed.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div>
+        <h4>EK Electronics</h4>
+        <p>Innovation. Integrity. Impact.</p>
+        <div class="socials">
+          <a href="#" aria-label="Facebook">f</a>
+          <a href="#" aria-label="Instagram">ig</a>
+          <a href="#" aria-label="TikTok">♪</a>
+          <a href="#" aria-label="X">𝕏</a>
+        </div>
+      </div>
+      <div>
+        <h4>Customer services</h4>
+        <p><a href="#" data-go="shipping">Shipping</a></p>
+        <p><a href="#" data-go="warranty">Warranty policy</a></p>
+        <p><a href="#" data-go="terms">Terms and conditions</a></p>
+        <p><a href="#" data-go="account">Login</a></p>
+      </div>
+      <div>
+        <h4>Shop</h4>
+        <p><a href="#" data-go="shop">All products</a></p>
+        <p><a href="#" data-go="services">Refurbishment</a></p>
+        <p><a href="#" data-go="services">Data recovery</a></p>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <p>+27 10 500 2140<br>info@ekelectronics.co.za<br>Unit 15, Lone Creek Office Building D<br>Waterfall Business Park, Midrand, 1685</p>
+      </div>
+    </div>
+    <div class="wrap legal">© 2026 EK Electronics · ekelectronics.co.za · Design preview</div>
+  </footer>
+
+  <a class="fab-wa" href="https://wa.me/27105002140?text=Hi%20EK%20Electronics">WhatsApp us</a>
+  <script src="assets/js/store.js"></script>
+</body>
+</html>
