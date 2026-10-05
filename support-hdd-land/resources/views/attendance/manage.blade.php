@@ -45,54 +45,51 @@
     @if(($pendingSelfies ?? collect())->isNotEmpty())
     <div class="panel" style="padding:14px;margin-bottom:14px;border:1px solid #f0c36d;background:#fff8e8;">
         <h3 style="margin:0 0 10px;">سلفی‌های در انتظار تأیید ({{ $pendingSelfies->count() }})</h3>
-        <div class="table-wrap">
-            <table>
-                <thead>
-                    <tr>
-                        <th>کارمند</th>
-                        <th>عکس</th>
-                        <th>زمان ارسال</th>
-                        <th>GPS موبایل</th>
-                        <th>عملیات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($pendingSelfies as $ps)
-                        <tr>
-                            <td>
-                                <strong>{{ $ps->user?->name }}</strong>
-                                <div class="muted" dir="ltr">{{ $ps->user?->phone ?: '—' }}</div>
-                            </td>
-                            <td>
-                                <a href="{{ route('attendance.reference-photo', $ps->user) }}" target="_blank">مشاهده سلفی</a>
-                                @if($ps->face_detected)
-                                    <div class="muted" style="font-size:11px;">چهره تشخیص‌شده ✓</div>
-                                @endif
-                            </td>
-                            <td dir="ltr">{{ $ps->enrolled_at?->format('Y-m-d H:i') ?: '—' }}</td>
-                            <td dir="ltr" style="font-size:11px;">
+        <p class="muted" style="margin:0 0 12px;">عکس کارمند را ببینید، بعد تأیید یا رد کنید.</p>
+        <div style="display:grid;gap:14px;">
+            @foreach($pendingSelfies as $ps)
+                @php $photoUrl = route('attendance.reference-photo', $ps->user); @endphp
+                <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;padding:12px;background:#fff;border:1px solid #f0d9a0;border-radius:10px;">
+                    <a href="{{ $photoUrl }}" target="_blank" title="باز کردن عکس در اندازه کامل" style="flex:0 0 auto;">
+                        <img
+                            src="{{ $photoUrl }}"
+                            alt="سلفی {{ $ps->user?->name }}"
+                            style="width:160px;height:160px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;background:#111;display:block;"
+                        >
+                    </a>
+                    <div style="flex:1 1 220px;min-width:200px;">
+                        <div style="font-size:16px;font-weight:700;margin-bottom:4px;">{{ $ps->user?->name }}</div>
+                        <div class="muted" dir="ltr" style="margin-bottom:8px;">{{ $ps->user?->phone ?: '—' }}</div>
+                        <div style="font-size:13px;line-height:1.7;">
+                            <div>زمان ارسال: <span dir="ltr">{{ $ps->enrolled_at?->format('Y-m-d H:i') ?: '—' }}</span></div>
+                            <div>
+                                GPS موبایل:
                                 @if($ps->phone_gps_lat !== null)
-                                    {{ number_format($ps->phone_gps_lat, 5) }}, {{ number_format($ps->phone_gps_lng, 5) }}
-                                    <div>±{{ $ps->phone_gps_accuracy_m !== null ? (int) $ps->phone_gps_accuracy_m : '—' }} m</div>
+                                    <span dir="ltr">{{ number_format($ps->phone_gps_lat, 5) }}, {{ number_format($ps->phone_gps_lng, 5) }}</span>
+                                    <span class="muted">(±{{ $ps->phone_gps_accuracy_m !== null ? (int) $ps->phone_gps_accuracy_m : '—' }} m)</span>
                                 @else
                                     —
                                 @endif
-                            </td>
-                            <td style="white-space:nowrap;">
-                                <form method="POST" action="{{ route('attendance.selfie.approve', $ps->user) }}" style="display:inline;">
-                                    @csrf
-                                    <button class="btn btn-primary" type="submit">تأیید</button>
-                                </form>
-                                <form method="POST" action="{{ route('attendance.selfie.reject', $ps->user) }}" style="display:inline;margin-right:6px;" onsubmit="var r=prompt('دلیل رد (اختیاری):'); if(r!==null){ this.querySelector('[name=reason]').value=r; return true;} return false;">
-                                    @csrf
-                                    <input type="hidden" name="reason" value="">
-                                    <button class="btn btn-ghost" type="submit">رد</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                            </div>
+                            @if($ps->face_detected)
+                                <div style="color:#166534;">چهره تشخیص‌شده ✓</div>
+                            @endif
+                        </div>
+                        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                            <a class="btn btn-ghost" href="{{ $photoUrl }}" target="_blank">بزرگ‌نمایی عکس</a>
+                            <form method="POST" action="{{ route('attendance.selfie.approve', $ps->user) }}" style="display:inline;">
+                                @csrf
+                                <button class="btn btn-primary" type="submit">تأیید سلفی</button>
+                            </form>
+                            <form method="POST" action="{{ route('attendance.selfie.reject', $ps->user) }}" style="display:inline;" onsubmit="var r=prompt('دلیل رد (اختیاری):'); if(r!==null){ this.querySelector('[name=reason]').value=r; return true;} return false;">
+                                @csrf
+                                <input type="hidden" name="reason" value="">
+                                <button class="btn btn-ghost" type="submit">رد</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
         </div>
     </div>
     @endif
@@ -121,8 +118,14 @@
                             </td>
                             <td>
                                 @if($p?->hasReferencePhoto())
-                                    <a href="{{ route('attendance.reference-photo', $u) }}" target="_blank">مشاهده</a>
-                                    <div class="muted" style="font-size:11px;">{{ $p->enrolled_at?->format('Y-m-d H:i') }}</div>
+                                    <a href="{{ route('attendance.reference-photo', $u) }}" target="_blank" title="مشاهده عکس مرجع">
+                                        <img
+                                            src="{{ route('attendance.reference-photo', $u) }}"
+                                            alt="عکس {{ $u->name }}"
+                                            style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid #e5e7eb;background:#111;display:block;"
+                                        >
+                                    </a>
+                                    <div class="muted" style="font-size:11px;margin-top:4px;">{{ $p->enrolled_at?->format('Y-m-d H:i') }}</div>
                                 @else
                                     <span class="muted">ثبت نشده</span>
                                 @endif
