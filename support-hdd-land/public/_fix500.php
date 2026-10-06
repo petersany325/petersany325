@@ -253,4 +253,14 @@ try {
     out('boot warn '.$e->getMessage());
 }
 
+// 5) Static public/robots.txt blocks Laravel SEO route on many hosts
+$staticRobots = $root.'/public/robots.txt';
+if (is_file($staticRobots)) {
+    if (! is_file($staticRobots.'.bak-fix500')) {
+        @copy($staticRobots, $staticRobots.'.bak-fix500');
+    }
+    @unlink($staticRobots);
+    out('removed public/robots.txt (static blocker)');
+}
+
 out('DONE');
