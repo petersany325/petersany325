@@ -4,8 +4,21 @@
     
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#2b3340">
-    <title>{{ \App\Support\SeoSettings::documentTitle() }}</title>
-    @include('partials.seo-meta')
+    @php
+        $docTitle = null;
+        try {
+            if (class_exists(\App\Support\SeoSettings::class)) {
+                $docTitle = \App\Support\SeoSettings::documentTitle();
+            }
+        } catch (\Throwable $e) {
+            $docTitle = null;
+        }
+        if (! is_string($docTitle) || trim($docTitle) === '') {
+            $docTitle = shop_name().' | انتخاب ورود';
+        }
+    @endphp
+    <title>{{ $docTitle }}</title>
+    @includeIf('partials.seo-meta')
     <link rel="icon" href="{{ asset('favicon.ico') }}?v=hd1" type="image/x-icon">
     <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}?v=hd1">
     <link rel="preconnect" href="https://fonts.googleapis.com">

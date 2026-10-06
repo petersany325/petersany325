@@ -7,8 +7,21 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ \App\Support\SeoSettings::documentTitle(trim($__env->yieldContent('title')) ?: null) }}</title>
-    @include('partials.seo-meta')
+    @php
+        $docTitle = null;
+        try {
+            if (class_exists(\App\Support\SeoSettings::class)) {
+                $docTitle = \App\Support\SeoSettings::documentTitle(trim($__env->yieldContent('title')) ?: null);
+            }
+        } catch (\Throwable $e) {
+            $docTitle = null;
+        }
+        if (! is_string($docTitle) || trim($docTitle) === '') {
+            $docTitle = trim($__env->yieldContent('title')) ?: ('کارتابل مشتری | '.shop_name());
+        }
+    @endphp
+    <title>{{ $docTitle }}</title>
+    @includeIf('partials.seo-meta')
     <link rel="icon" href="{{ asset('favicon.ico') }}?v=hd1" type="image/x-icon">
     <link rel="manifest" href="{{ asset('pwa/manifest.json') }}?v=hd1">
     <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}?v=hd1">

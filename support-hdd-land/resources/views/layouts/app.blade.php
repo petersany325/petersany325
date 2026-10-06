@@ -3,8 +3,21 @@
 <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ \App\Support\SeoSettings::documentTitle(trim($__env->yieldContent('title')) ?: null) }}</title>
-    @include('partials.seo-meta')
+    @php
+        $docTitle = null;
+        try {
+            if (class_exists(\App\Support\SeoSettings::class)) {
+                $docTitle = \App\Support\SeoSettings::documentTitle(trim($__env->yieldContent('title')) ?: null);
+            }
+        } catch (\Throwable $e) {
+            $docTitle = null;
+        }
+        if (! is_string($docTitle) || trim($docTitle) === '') {
+            $docTitle = trim($__env->yieldContent('title')) ?: shop_name();
+        }
+    @endphp
+    <title>{{ $docTitle }}</title>
+    @includeIf('partials.seo-meta')
     <meta name="theme-color" content="#2b3340">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -148,13 +161,19 @@
     {{-- نوار ابزار --}}
     @php
         $dockEnabled = auth()->user()->ui_shortcuts_enabled !== false;
-        $dockStripItems = \App\Support\StaffShortcutDock::forUser(auth()->user());
+        $dockStripItems = \Illuminate\Support\Facades\Route::has('profile.shortcuts')
+            ? \App\Support\StaffShortcutDock::forUser(auth()->user())
+            : [];
+        $dockSaveUrl = \Illuminate\Support\Facades\Route::has('profile.shortcuts')
+            ? route('profile.shortcuts')
+            : null;
     @endphp
     <div class="app-toolbar">
         <div class="page-caption">@yield('page_title', 'میز کار')</div>
         <div class="app-toolbar-actions">
+            @if($dockSaveUrl)
             <label class="sc-dock-switch" title="روشن/خاموش میانبر" data-sc-switch
-                   data-save-url="{{ route('profile.shortcuts') }}">
+                   data-save-url="{{ $dockSaveUrl }}">
                 <span class="sc-dock-switch-txt">میانبر</span>
                 <input type="checkbox" data-sc-toggle {{ $dockEnabled ? 'checked' : '' }} aria-label="فعال‌سازی میانبر">
                 <span class="sc-dock-switch-ui" aria-hidden="true">
@@ -163,9 +182,11 @@
                     <span class="sc-dock-switch-off">OFF</span>
                 </span>
             </label>
+            @endif
             <button type="button" class="btn btn-ghost mobile-only staff-more-btn" data-staff-drawer-open>منوها</button>
         </div>
     </div>
+    @if($dockSaveUrl)
     <div class="sc-dock-mobile-strip mobile-only {{ $dockEnabled ? '' : 'is-off' }}" aria-label="میانبرها" data-sc-mobile-strip @if(! $dockEnabled) hidden @endif>
         @foreach($dockStripItems as $item)
             <a href="{{ $item['url'] }}"
@@ -180,6 +201,7 @@
             <span class="sc-dock-lbl">میانبر</span>
         </button>
     </div>
+    @endif
 
     <div class="app-workspace">
         <div class="win-frame">
@@ -227,7 +249,9 @@
         </button>
     </nav>
 
-    @include('partials.staff-shortcut-dock')
+    @if($dockSaveUrl)
+        @include('partials.staff-shortcut-dock')
+    @endif
 
     {{-- کشوی همه منوها (موبایل) --}}
     <div class="staff-drawer" id="staff-drawer" hidden>
