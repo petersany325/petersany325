@@ -37,6 +37,10 @@ class SettingController extends Controller
         if (! in_array($tab, self::TABS, true)) {
             $tab = 'general';
         }
+        $seoAvailable = SeoSettings::available();
+        if ($tab === 'seo' && ! $seoAvailable) {
+            $tab = 'general';
+        }
 
         return view('settings.index', [
             'activeTab' => $tab,
@@ -102,7 +106,8 @@ class SettingController extends Controller
             'backupCronUrl' => url('/cron/backup?token='.BackupSettings::all()['cron_token']),
             'googleRedirectUri' => url('/settings/backup/cloud/google/callback'),
             'onedriveRedirectUri' => url('/settings/backup/cloud/onedrive/callback'),
-            'seo' => SeoSettings::all(),
+            'seoAvailable' => $seoAvailable,
+            'seo' => $seoAvailable ? SeoSettings::all() : [],
             'seoSitemapUrl' => url('/sitemap.xml'),
             'seoRobotsUrl' => url('/robots.txt'),
         ]);
@@ -110,6 +115,8 @@ class SettingController extends Controller
 
     public function updateSeo(Request $request)
     {
+        abort_unless(SeoSettings::available(), 404);
+
         $data = $request->validate([
             'enabled' => ['nullable', 'boolean'],
             'site_title' => ['nullable', 'string', 'max:120'],

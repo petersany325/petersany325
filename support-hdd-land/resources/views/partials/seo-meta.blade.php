@@ -1,7 +1,7 @@
 @php
     $seoMeta = null;
     try {
-        if (class_exists(\App\Support\SeoSettings::class)) {
+        if (class_exists(\App\Support\SeoSettings::class) && \App\Support\SeoSettings::available()) {
             $seoMeta = \App\Support\SeoSettings::metaPayload(request(), trim($__env->yieldContent('title')) ?: null);
         }
     } catch (\Throwable $e) {

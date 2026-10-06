@@ -14,7 +14,9 @@
         <button type="button" class="{{ $activeTab === 'payments' ? 'active' : '' }}" data-ws-tab="payments">پرداخت / زرین‌پال</button>
         <button type="button" class="{{ $activeTab === 'sms' ? 'active' : '' }}" data-ws-tab="sms">پیامک نیازپرداز</button>
         <button type="button" class="{{ $activeTab === 'backup' ? 'active' : '' }}" data-ws-tab="backup">بکاپ دیتابیس</button>
+        @if(!empty($seoAvailable))
         <button type="button" class="{{ ($activeTab ?? '') === 'seo' ? 'active' : '' }}" data-ws-tab="seo">سئو / گوگل</button>
+        @endif
         <button type="button" class="{{ $activeTab === 'users' ? 'active' : '' }}" data-ws-tab="users">کارتابل کارمند</button>
     </div>
     <div class="ws-panes">
@@ -939,9 +941,10 @@
             @endif
         </div>
 
+        @if(!empty($seoAvailable))
         <div class="ws-pane {{ ($activeTab ?? '') === 'seo' ? 'active' : '' }}" data-ws-pane="seo">
             <h2>سئو و رتبه گوگل</h2>
-            <p class="lead">موتور سئوی داخلی: عنوان و توضیح متا، Open Graph، اسکیما JSON-LD، robots.txt، sitemap.xml و صفحهٔ دامنهٔ اصلی برای ایندکس بهتر در گوگل.</p>
+            <p class="lead">موتور سئوی داخلی: عنوان و توضیح متا، Open Graph، اسکیما JSON-LD، robots.txt، sitemap.xml و صفحهٔ دامنهٔ اصلی برای ایندکس بهتر در گوگل. فقط برای سایت فروشنده.</p>
 
             <div class="panel" style="margin-bottom:12px;background:#f3f7ff;border-color:#b7c8e8;">
                 <strong>لینک‌های زنده</strong>
@@ -1172,6 +1175,7 @@
                 </div>
             </div>
         </div>
+        @endif
 
         <div class="ws-pane {{ $activeTab === 'users' ? 'active' : '' }}" data-ws-pane="users">
             <div class="emp-cartable-hero">

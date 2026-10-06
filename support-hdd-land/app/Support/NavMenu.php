@@ -345,7 +345,7 @@ class NavMenu
                 'any_of' => ['settings', 'profile', 'daily_logs.manage'],
                 'children' => [
                     ['label' => 'تنظیمات سیستم', 'route' => 'settings.index', 'match' => 'settings.*', 'hint' => 'منو، فاکتور، برچسب، SMS، بکاپ', 'mark' => 'ظ', 'permission' => 'settings'],
-                    ['label' => 'سئو / گوگل', 'route' => 'settings.index', 'params' => ['tab' => 'seo'], 'match' => 'settings.index', 'hint' => 'متا، اسکیما، نقشه سایت، صفحه دامنه', 'mark' => 'س', 'permission' => 'settings'],
+                    ['label' => 'سئو / گوگل', 'route' => 'settings.index', 'params' => ['tab' => 'seo'], 'match' => 'settings.index', 'hint' => 'متا، اسکیما، نقشه سایت، صفحه دامنه', 'mark' => 'س', 'permission' => 'settings', 'seller_only' => true],
                     ['label' => 'برچسب / بارکد', 'route' => 'settings.index', 'params' => ['tab' => 'labels'], 'match' => 'labels.*', 'hint' => 'رول، حالت چاپ، پرینتر', 'mark' => 'ب', 'permission' => 'settings'],
                     ['label' => 'پیش‌نمایش برچسب', 'route' => 'labels.preview', 'match' => 'labels.preview', 'hint' => 'تست چاپ بارکد', 'mark' => 'پ', 'permission' => 'settings'],
                     ['label' => 'تنظیمات دفتر روز', 'route' => 'daily-logs.settings', 'match' => 'daily-logs.settings', 'hint' => 'دسته و قوانین — فقط ادمین', 'mark' => 'ر', 'permission' => 'daily_logs.manage'],

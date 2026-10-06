@@ -2,13 +2,16 @@
 @php
     $dockUser = auth()->user();
     $dockEnabled = $dockUser->ui_shortcuts_enabled !== false;
-    $dockItems = \App\Support\StaffShortcutDock::forUser($dockUser);
-    $dockCatalog = \App\Support\StaffShortcutDock::catalog($dockUser);
+    $dockHasSave = \Illuminate\Support\Facades\Route::has('profile.shortcuts');
+    $dockItems = $dockHasSave ? \App\Support\StaffShortcutDock::forUser($dockUser) : [];
+    $dockCatalog = $dockHasSave ? \App\Support\StaffShortcutDock::catalog($dockUser) : [];
     $dockIds = collect($dockItems)->pluck('id')->all();
+    $dockSaveUrl = $dockHasSave ? route('profile.shortcuts') : '';
 @endphp
+@if($dockHasSave)
 <aside class="sc-dock {{ $dockEnabled ? '' : 'is-off' }}" id="staff-shortcut-dock" aria-label="میانبرهای کارمند"
        data-sc-dock
-       data-save-url="{{ route('profile.shortcuts') }}"
+       data-save-url="{{ $dockSaveUrl }}"
        data-max="{{ \App\Support\StaffShortcutDock::MAX }}"
        data-enabled="{{ $dockEnabled ? '1' : '0' }}"
        @if(! $dockEnabled) hidden @endif>
@@ -82,3 +85,4 @@
         </div>
     </div>
 </div>
+@endif

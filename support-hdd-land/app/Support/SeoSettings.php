@@ -111,8 +111,22 @@ class SeoSettings
         return $out;
     }
 
+    /** Seller marketing hub only — never enable SEO tooling on customer installs. */
+    public static function available(): bool
+    {
+        try {
+            return LicenseStatus::isSellerSite();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     public static function enabled(): bool
     {
+        if (! self::available()) {
+            return false;
+        }
+
         return (self::all()['enabled'] ?? '1') === '1';
     }
 
@@ -121,6 +135,10 @@ class SeoSettings
      */
     public static function save(array $data, ?UploadedFile $ogImage = null): void
     {
+        if (! self::available()) {
+            abort(404);
+        }
+
         $boolKeys = [
             'enabled', 'index_gate', 'index_login', 'index_cartable', 'apex_enabled',
         ];
@@ -201,6 +219,9 @@ class SeoSettings
 
     public static function shouldIndex(?Request $request = null): bool
     {
+        if (! self::available()) {
+            return false;
+        }
         $seo = self::all();
         if (($seo['enabled'] ?? '1') !== '1') {
             return false;
@@ -217,6 +238,14 @@ class SeoSettings
 
     public static function documentTitle(?string $pageTitle = null, ?Request $request = null): string
     {
+        if (! self::available()) {
+            if (is_string($pageTitle) && trim($pageTitle) !== '') {
+                return trim($pageTitle);
+            }
+
+            return shop_name();
+        }
+
         $seo = self::all();
         $kind = self::pageKind($request);
         if (in_array($kind, ['gate', 'login', 'cartable'], true) && trim((string) $seo['site_title']) !== '') {
@@ -259,6 +288,29 @@ class SeoSettings
     /** @return array<string, mixed> */
     public static function metaPayload(?Request $request = null, ?string $pageTitle = null): array
     {
+        if (! self::available()) {
+            return [
+                'enabled' => false,
+                'title' => $pageTitle ?: shop_name(),
+                'description' => '',
+                'keywords' => '',
+                'canonical' => url()->current(),
+                'robots' => 'noindex,nofollow',
+                'indexable' => false,
+                'locale' => 'fa_IR',
+                'og_title' => '',
+                'og_description' => '',
+                'og_image' => '',
+                'og_url' => url()->current(),
+                'og_type' => 'website',
+                'twitter_card' => 'summary',
+                'gsc_verification' => '',
+                'bing_verification' => '',
+                'json_ld' => null,
+                'site_name' => shop_name(),
+            ];
+        }
+
         $seo = self::all();
         $index = self::shouldIndex($request);
         $title = self::documentTitle($pageTitle, $request);
@@ -367,6 +419,10 @@ class SeoSettings
 
     public static function robotsTxt(): string
     {
+        if (! self::available() || ! self::enabled()) {
+            return "User-agent: *\nDisallow: /\n";
+        }
+
         $seo = self::all();
         $base = rtrim((string) $seo['canonical_base'], '/') ?: url('/');
         $lines = [
@@ -404,12 +460,6 @@ class SeoSettings
                 }
             }
         }
-        if (($seo['enabled'] ?? '1') !== '1') {
-            $lines = [
-                'User-agent: *',
-                'Disallow: /',
-            ];
-        }
 
         return implode("\n", $lines)."\n";
     }
@@ -417,12 +467,13 @@ class SeoSettings
     /** @return list<array{loc:string,changefreq:string,priority:string}> */
     public static function sitemapUrls(): array
     {
+        if (! self::available() || ! self::enabled()) {
+            return [];
+        }
+
         $seo = self::all();
         $base = rtrim((string) $seo['canonical_base'], '/') ?: url('/');
         $urls = [];
-        if (($seo['enabled'] ?? '1') !== '1') {
-            return $urls;
-        }
         if (($seo['index_gate'] ?? '1') === '1') {
             $urls[] = ['loc' => $base.'/', 'changefreq' => 'weekly', 'priority' => '1.0'];
         }
@@ -438,6 +489,10 @@ class SeoSettings
 
     public static function renderApexHtml(): string
     {
+        if (! self::available()) {
+            abort(404);
+        }
+
         $seo = self::all();
         $titleRaw = trim($seo['site_title'].(trim($seo['title_suffix']) !== '' ? ' | '.$seo['title_suffix'] : ''));
         if ($titleRaw === '') {
@@ -579,6 +634,10 @@ HTML;
      */
     public static function publishApexLanding(): array
     {
+        if (! self::available()) {
+            return ['ok' => false, 'message' => 'SEO فقط روی سایت فروشنده فعال است.', 'paths' => []];
+        }
+
         $seo = self::all();
         if (($seo['apex_enabled'] ?? '1') !== '1') {
             return ['ok' => false, 'message' => 'انتشار صفحه دامنه در تنظیمات SEO غیرفعال است.', 'paths' => []];

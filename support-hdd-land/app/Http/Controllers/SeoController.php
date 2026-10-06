@@ -18,6 +18,17 @@ class SeoController extends Controller
 
     public function sitemap(): Response
     {
+        if (! SeoSettings::available()) {
+            return response(
+                '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>',
+                200,
+                [
+                    'Content-Type' => 'application/xml; charset=UTF-8',
+                    'Cache-Control' => 'public, max-age=3600',
+                ]
+            );
+        }
+
         $urls = SeoSettings::sitemapUrls();
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
@@ -38,6 +49,7 @@ class SeoController extends Controller
 
     public function downloadApex(Request $request)
     {
+        abort_unless(SeoSettings::available(), 404);
         abort_unless($request->user()?->canAccess('settings'), 403);
         $html = SeoSettings::renderApexHtml();
 
@@ -49,6 +61,7 @@ class SeoController extends Controller
 
     public function publishApex(Request $request)
     {
+        abort_unless(SeoSettings::available(), 404);
         abort_unless($request->user()?->canAccess('settings'), 403);
         $result = SeoSettings::publishApexLanding();
         $tab = (string) $request->input('settings_tab', 'seo');

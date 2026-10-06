@@ -6,7 +6,7 @@
     @php
         $docTitle = null;
         try {
-            if (class_exists(\App\Support\SeoSettings::class)) {
+            if (class_exists(\App\Support\SeoSettings::class) && \App\Support\SeoSettings::available()) {
                 $docTitle = \App\Support\SeoSettings::documentTitle(trim($__env->yieldContent('title')) ?: null);
             }
         } catch (\Throwable $e) {
