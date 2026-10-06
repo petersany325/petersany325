@@ -29,6 +29,16 @@ class NavMenu
                 'children' => [],
             ],
             [
+                'key' => 'attendance',
+                'label' => 'حضور و غیاب',
+                'permission' => 'attendance',
+                'route' => 'attendance.index',
+                'match' => 'attendance.index|attendance.punch*|attendance.otp|attendance.onboard*',
+                'mark' => 'ح',
+                'hint' => 'ورود و خروج از شرکت',
+                'children' => [],
+            ],
+            [
                 'key' => 'reception',
                 'label' => 'پذیرش',
                 'permission' => null,
@@ -161,12 +171,14 @@ class NavMenu
                 'label' => 'کارمندان',
                 'permission' => null,
                 'route' => null,
-                'match' => 'employees.*|technicians.*|interns.*|staff-sms.*',
+                'match' => 'employees.*|technicians.*|interns.*|staff-sms.*|attendance.manage*|attendance.settings*|attendance.enroll*',
                 'mark' => 'ک',
-                'hint' => 'کارتابل، کارآموز، SMS',
-                'any_of' => ['employees', 'technicians'],
+                'hint' => 'کارتابل، مدیریت حضور، کارآموز',
+                'any_of' => ['employees', 'technicians', 'attendance.manage'],
                 'children' => [
                     ['label' => 'کارتابل کارمند', 'route' => 'employees.index', 'match' => 'employees.index|employees.edit', 'hint' => 'لیست، وظیفه، دسترسی', 'mark' => 'ک', 'permission' => 'employees'],
+                    ['label' => 'مدیریت حضور و غیاب', 'route' => 'attendance.manage', 'match' => 'attendance.manage|attendance.enroll*', 'hint' => 'روزهای حضور و عکس مرجع', 'mark' => 'م', 'permission' => 'attendance.manage', 'sep' => true],
+                    ['label' => 'تنظیمات حضور / GPS', 'route' => 'attendance.settings', 'match' => 'attendance.settings*', 'hint' => 'مختصات شرکت و شعاع', 'mark' => 'گ', 'permission' => 'attendance.manage'],
                     ['label' => 'تخصص، سود و حقوق', 'route' => 'employees.pay', 'match' => 'employees.pay*', 'hint' => 'درصد سود و دستمزد تعمیرکار', 'mark' => '٪', 'permission' => 'employees|technicians', 'sep' => true],
                     ['label' => 'کارمند جدید', 'route' => 'employees.create', 'match' => 'employees.create', 'hint' => 'پذیرش / حسابدار / تعمیرکار…', 'mark' => '+', 'permission' => 'employees'],
                     ['label' => 'کارتابل کارآموز', 'route' => 'interns.index', 'match' => 'interns.index|interns.edit', 'hint' => 'دسترسی و پرتال ورود', 'mark' => 'آ', 'permission' => 'employees', 'sep' => true],
@@ -449,6 +461,7 @@ class NavMenu
     {
         return match ($key) {
             'home' => 'slate',
+            'attendance' => 'green',
             'reception' => 'blue',
             'handoffs' => 'green',
             'partners' => 'teal',
@@ -476,6 +489,7 @@ class NavMenu
     {
         return match ($key) {
             'home' => 'میز',
+            'attendance' => 'حضور',
             'reception' => 'پذیرش',
             'handoffs' => 'ارجاع',
             'partners' => 'نماینده',
@@ -505,7 +519,7 @@ class NavMenu
         $groups = collect($groups ?? self::forUser($user))->keyBy('key');
         // میز / پذیرش / دفتر روز / ارجاع — اولویت موبایل کارمند
         $order = [
-            'home', 'reception', 'daily_logs', 'handoffs', 'work', 'notifications',
+            'home', 'attendance', 'reception', 'daily_logs', 'handoffs', 'work', 'notifications',
             'customers', 'sms', 'parts', 'cost_approvals', 'accounting', 'reports',
         ];
 
