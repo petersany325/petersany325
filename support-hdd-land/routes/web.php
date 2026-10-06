@@ -56,9 +56,13 @@ use App\Http\Controllers\LicenseApiController;
 use App\Http\Controllers\AppUpdateApiController;
 use App\Http\Controllers\AppUpdateController;
 use App\Http\Controllers\AppReleaseAdminController;
+use App\Http\Controllers\SeoController;
 use App\Http\Middleware\EnsurePortalCustomer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('seo.robots');
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('seo.sitemap');
 
 Route::post('/license/activate', [LicenseApiController::class, 'activate'])
     ->middleware('throttle:30,1')
@@ -552,6 +556,9 @@ Route::middleware(['auth', EnsureAttendanceOnboarded::class])->group(function ()
         Route::post('settings/labels', [SettingController::class, 'updateLabels'])->name('settings.labels');
         Route::post('settings/payments', [SettingController::class, 'updatePayments'])->name('settings.payments');
         Route::post('settings/backup', [SettingController::class, 'updateBackup'])->name('settings.backup');
+        Route::post('settings/seo', [SettingController::class, 'updateSeo'])->name('settings.seo');
+        Route::get('settings/seo/apex-download', [SeoController::class, 'downloadApex'])->name('settings.seo.apex-download');
+        Route::post('settings/seo/apex-publish', [SeoController::class, 'publishApex'])->name('settings.seo.apex-publish');
         Route::post('settings/backup/run-now', [SettingController::class, 'runBackupNow'])->name('settings.backup.run-now');
         Route::get('settings/backup/cloud/{provider}/connect', [BackupCloudController::class, 'connect'])
             ->whereIn('provider', ['google', 'onedrive', 'mega'])

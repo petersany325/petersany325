@@ -15,12 +15,13 @@ use App\Support\CalendarSettings;
 use App\Support\LabelPrintSettings;
 use App\Support\PaymentGateways;
 use App\Support\Permissions;
+use App\Support\SeoSettings;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class SettingController extends Controller
 {
-    private const TABS = ['general', 'lookups', 'faults', 'referrals', 'invoice', 'labels', 'payments', 'sms', 'backup', 'users'];
+    private const TABS = ['general', 'lookups', 'faults', 'referrals', 'invoice', 'labels', 'payments', 'sms', 'backup', 'seo', 'users'];
 
     public function index(Request $request)
     {
@@ -101,7 +102,60 @@ class SettingController extends Controller
             'backupCronUrl' => url('/cron/backup?token='.BackupSettings::all()['cron_token']),
             'googleRedirectUri' => url('/settings/backup/cloud/google/callback'),
             'onedriveRedirectUri' => url('/settings/backup/cloud/onedrive/callback'),
+            'seo' => SeoSettings::all(),
+            'seoSitemapUrl' => url('/sitemap.xml'),
+            'seoRobotsUrl' => url('/robots.txt'),
         ]);
+    }
+
+    public function updateSeo(Request $request)
+    {
+        $data = $request->validate([
+            'enabled' => ['nullable', 'boolean'],
+            'site_title' => ['nullable', 'string', 'max:120'],
+            'title_suffix' => ['nullable', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:320'],
+            'keywords' => ['nullable', 'string', 'max:500'],
+            'canonical_base' => ['nullable', 'string', 'max:255'],
+            'locale' => ['nullable', 'string', 'max:20'],
+            'robots_public' => ['nullable', 'string', 'max:80'],
+            'robots_private' => ['nullable', 'string', 'max:80'],
+            'index_gate' => ['nullable', 'boolean'],
+            'index_login' => ['nullable', 'boolean'],
+            'index_cartable' => ['nullable', 'boolean'],
+            'og_title' => ['nullable', 'string', 'max:120'],
+            'og_description' => ['nullable', 'string', 'max:320'],
+            'twitter_card' => ['nullable', Rule::in(['summary', 'summary_large_image'])],
+            'gsc_verification' => ['nullable', 'string', 'max:120'],
+            'bing_verification' => ['nullable', 'string', 'max:120'],
+            'business_type' => ['nullable', 'string', 'max:60'],
+            'business_name' => ['nullable', 'string', 'max:160'],
+            'business_alt_name' => ['nullable', 'string', 'max:160'],
+            'business_phone' => ['nullable', 'string', 'max:60'],
+            'business_mobile' => ['nullable', 'string', 'max:60'],
+            'business_email' => ['nullable', 'email', 'max:160'],
+            'business_address' => ['nullable', 'string', 'max:300'],
+            'business_city' => ['nullable', 'string', 'max:80'],
+            'business_region' => ['nullable', 'string', 'max:80'],
+            'business_postal' => ['nullable', 'string', 'max:20'],
+            'business_country' => ['nullable', 'string', 'max:8'],
+            'geo_lat' => ['nullable', 'string', 'max:30'],
+            'geo_lng' => ['nullable', 'string', 'max:30'],
+            'same_as' => ['nullable', 'string', 'max:2000'],
+            'price_range' => ['nullable', 'string', 'max:20'],
+            'opening_hours' => ['nullable', 'string', 'max:1000'],
+            'robots_extra' => ['nullable', 'string', 'max:2000'],
+            'apex_enabled' => ['nullable', 'boolean'],
+            'apex_headline' => ['nullable', 'string', 'max:160'],
+            'apex_lead' => ['nullable', 'string', 'max:500'],
+            'apex_cta' => ['nullable', 'string', 'max:80'],
+            'apex_support_url' => ['nullable', 'string', 'max:255'],
+            'og_image_file' => ['nullable', 'image', 'max:4096'],
+        ]);
+
+        SeoSettings::save($data, $request->file('og_image_file'));
+
+        return $this->settingsRedirect($request, 'seo', 'success', 'تنظیمات SEO ذخیره شد.');
     }
 
     private function resolveTab(Request $request, string $fallback = 'general'): string

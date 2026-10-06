@@ -14,6 +14,7 @@
         <button type="button" class="{{ $activeTab === 'payments' ? 'active' : '' }}" data-ws-tab="payments">پرداخت / زرین‌پال</button>
         <button type="button" class="{{ $activeTab === 'sms' ? 'active' : '' }}" data-ws-tab="sms">پیامک نیازپرداز</button>
         <button type="button" class="{{ $activeTab === 'backup' ? 'active' : '' }}" data-ws-tab="backup">بکاپ دیتابیس</button>
+        <button type="button" class="{{ ($activeTab ?? '') === 'seo' ? 'active' : '' }}" data-ws-tab="seo">سئو / گوگل</button>
         <button type="button" class="{{ $activeTab === 'users' ? 'active' : '' }}" data-ws-tab="users">کارتابل کارمند</button>
     </div>
     <div class="ws-panes">
@@ -936,6 +937,240 @@
                 <input type="hidden" name="action" value="backup_upload_clouds">
             </form>
             @endif
+        </div>
+
+        <div class="ws-pane {{ ($activeTab ?? '') === 'seo' ? 'active' : '' }}" data-ws-pane="seo">
+            <h2>سئو و رتبه گوگل</h2>
+            <p class="lead">موتور سئوی داخلی: عنوان و توضیح متا، Open Graph، اسکیما JSON-LD، robots.txt، sitemap.xml و صفحهٔ دامنهٔ اصلی برای ایندکس بهتر در گوگل.</p>
+
+            <div class="panel" style="margin-bottom:12px;background:#f3f7ff;border-color:#b7c8e8;">
+                <strong>لینک‌های زنده</strong>
+                <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:10px 16px;font-size:13px;">
+                    <a href="{{ $seoRobotsUrl }}" target="_blank" rel="noopener" dir="ltr">{{ $seoRobotsUrl }}</a>
+                    <a href="{{ $seoSitemapUrl }}" target="_blank" rel="noopener" dir="ltr">{{ $seoSitemapUrl }}</a>
+                </div>
+                <p class="muted" style="margin:8px 0 0;font-size:12px;">بعد از ذخیره، همین آدرس‌ها را در Google Search Console به‌عنوان Sitemap ثبت کنید.</p>
+            </div>
+
+            <form method="POST" action="{{ route('settings.seo') }}" enctype="multipart/form-data" class="panel">
+                @csrf
+                <input type="hidden" name="settings_tab" value="seo">
+
+                <h3 style="margin:0 0 10px;">فعال‌سازی و ایندکس</h3>
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <input type="checkbox" name="enabled" value="1" @checked(old('enabled', $seo['enabled'] ?? '1') === '1')>
+                    موتور SEO فعال باشد
+                </label>
+                <div class="accept-row accept-row-3">
+                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" name="index_gate" value="1" @checked(old('index_gate', $seo['index_gate'] ?? '1') === '1')> ایندکس صفحه اصلی (/)</label>
+                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" name="index_login" value="1" @checked(old('index_login', $seo['index_login'] ?? '1') === '1')> ایندکس ورود کارمند</label>
+                    <label style="display:flex;align-items:center;gap:8px;"><input type="checkbox" name="index_cartable" value="1" @checked(old('index_cartable', $seo['index_cartable'] ?? '1') === '1')> ایندکس ورود کارتابل</label>
+                </div>
+                <p class="muted" style="margin:6px 0 14px;font-size:12px;">صفحات داخلی پنل (داشبورد، قبض، گزارش و …) همیشه noindex می‌مانند تا گوگل فقط برند شما را ببیند.</p>
+
+                <h3 style="margin:0 0 10px;">عنوان و توضیح</h3>
+                <div class="accept-row accept-row-2">
+                    <div>
+                        <label>عنوان سایت (برند در گوگل)</label>
+                        <input type="text" name="site_title" value="{{ old('site_title', $seo['site_title'] ?? '') }}" maxlength="120" placeholder="مثلاً کانون بازیابی اطلاعات دکتر هارد">
+                    </div>
+                    <div>
+                        <label>پسوند عنوان</label>
+                        <input type="text" name="title_suffix" value="{{ old('title_suffix', $seo['title_suffix'] ?? '') }}" maxlength="120" placeholder="ورود به سامانه">
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>توضیح متا (Description) — حدود ۱۵۰ تا ۱۶۰ کاراکتر</label>
+                    <textarea name="description" rows="3" maxlength="320">{{ old('description', $seo['description'] ?? '') }}</textarea>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>کلمات کلیدی (با ویرگول)</label>
+                    <input type="text" name="keywords" value="{{ old('keywords', $seo['keywords'] ?? '') }}" maxlength="500" placeholder="بازیابی اطلاعات، تعمیر هارد، قبض تعمیرگاه">
+                </div>
+                <div class="accept-row accept-row-2" style="margin-top:10px;">
+                    <div>
+                        <label>آدرس پایهٔ عمومی (Canonical)</label>
+                        <input type="url" name="canonical_base" value="{{ old('canonical_base', $seo['canonical_base'] ?? '') }}" dir="ltr" style="text-align:left;" placeholder="https://hddsoftware.ir">
+                        <p class="muted" style="margin:4px 0 0;font-size:11px;">اگر دامنهٔ اصلی جدا از ساب‌دامین پنل است، همین را بگذارید (بدون اسلش آخر).</p>
+                    </div>
+                    <div>
+                        <label>زبان / لوکیل</label>
+                        <input type="text" name="locale" value="{{ old('locale', $seo['locale'] ?? 'fa_IR') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                </div>
+                <div class="accept-row accept-row-2" style="margin-top:10px;">
+                    <div>
+                        <label>robots صفحات عمومی</label>
+                        <input type="text" name="robots_public" value="{{ old('robots_public', $seo['robots_public'] ?? 'index,follow') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                    <div>
+                        <label>robots صفحات داخلی</label>
+                        <input type="text" name="robots_private" value="{{ old('robots_private', $seo['robots_private'] ?? 'noindex,nofollow') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                </div>
+
+                <h3 style="margin:18px 0 10px;">Open Graph / شبکه‌های اجتماعی</h3>
+                <div class="accept-row accept-row-2">
+                    <div>
+                        <label>عنوان OG</label>
+                        <input type="text" name="og_title" value="{{ old('og_title', $seo['og_title'] ?? '') }}" maxlength="120">
+                    </div>
+                    <div>
+                        <label>نوع کارت توییتر</label>
+                        <select name="twitter_card">
+                            <option value="summary_large_image" @selected(old('twitter_card', $seo['twitter_card'] ?? '') === 'summary_large_image')>summary_large_image</option>
+                            <option value="summary" @selected(old('twitter_card', $seo['twitter_card'] ?? '') === 'summary')>summary</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>توضیح OG</label>
+                    <textarea name="og_description" rows="2" maxlength="320">{{ old('og_description', $seo['og_description'] ?? '') }}</textarea>
+                </div>
+                <div class="accept-row accept-row-2" style="margin-top:10px;">
+                    <div>
+                        <label>آدرس تصویر OG فعلی</label>
+                        <input type="url" name="og_image_url_display" value="{{ $seo['og_image'] ?? '' }}" readonly dir="ltr" style="text-align:left;">
+                    </div>
+                    <div>
+                        <label>آپلود تصویر OG جدید</label>
+                        <input type="file" name="og_image_file" accept="image/*">
+                    </div>
+                </div>
+
+                <h3 style="margin:18px 0 10px;">تأیید Search Console</h3>
+                <div class="accept-row accept-row-2">
+                    <div>
+                        <label>کد تأیید گوگل (google-site-verification)</label>
+                        <input type="text" name="gsc_verification" value="{{ old('gsc_verification', $seo['gsc_verification'] ?? '') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                    <div>
+                        <label>کد تأیید بینگ (msvalidate.01)</label>
+                        <input type="text" name="bing_verification" value="{{ old('bing_verification', $seo['bing_verification'] ?? '') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                </div>
+
+                <h3 style="margin:18px 0 10px;">اسکیما کسب‌وکار (JSON-LD)</h3>
+                <div class="accept-row accept-row-2">
+                    <div>
+                        <label>نوع کسب‌وکار (schema.org)</label>
+                        <input type="text" name="business_type" value="{{ old('business_type', $seo['business_type'] ?? 'LocalBusiness') }}" dir="ltr" style="text-align:left;" placeholder="LocalBusiness / ComputerStore">
+                    </div>
+                    <div>
+                        <label>نام کسب‌وکار</label>
+                        <input type="text" name="business_name" value="{{ old('business_name', $seo['business_name'] ?? '') }}">
+                    </div>
+                </div>
+                <div class="accept-row accept-row-2" style="margin-top:10px;">
+                    <div>
+                        <label>نام جایگزین</label>
+                        <input type="text" name="business_alt_name" value="{{ old('business_alt_name', $seo['business_alt_name'] ?? '') }}" placeholder="اگر برند دیگری هم دارید">
+                    </div>
+                    <div>
+                        <label>بازه قیمت</label>
+                        <input type="text" name="price_range" value="{{ old('price_range', $seo['price_range'] ?? '$$') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                </div>
+                <div class="accept-row accept-row-3" style="margin-top:10px;">
+                    <div>
+                        <label>تلفن</label>
+                        <input type="text" name="business_phone" value="{{ old('business_phone', $seo['business_phone'] ?? '') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                    <div>
+                        <label>موبایل</label>
+                        <input type="text" name="business_mobile" value="{{ old('business_mobile', $seo['business_mobile'] ?? '') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                    <div>
+                        <label>ایمیل</label>
+                        <input type="email" name="business_email" value="{{ old('business_email', $seo['business_email'] ?? '') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>آدرس</label>
+                    <input type="text" name="business_address" value="{{ old('business_address', $seo['business_address'] ?? '') }}">
+                </div>
+                <div class="accept-row accept-row-4" style="margin-top:10px;">
+                    <div>
+                        <label>شهر</label>
+                        <input type="text" name="business_city" value="{{ old('business_city', $seo['business_city'] ?? '') }}">
+                    </div>
+                    <div>
+                        <label>استان</label>
+                        <input type="text" name="business_region" value="{{ old('business_region', $seo['business_region'] ?? '') }}">
+                    </div>
+                    <div>
+                        <label>کد پستی</label>
+                        <input type="text" name="business_postal" value="{{ old('business_postal', $seo['business_postal'] ?? '') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                    <div>
+                        <label>کشور</label>
+                        <input type="text" name="business_country" value="{{ old('business_country', $seo['business_country'] ?? 'IR') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                </div>
+                <div class="accept-row accept-row-2" style="margin-top:10px;">
+                    <div>
+                        <label>عرض جغرافیایی</label>
+                        <input type="text" name="geo_lat" value="{{ old('geo_lat', $seo['geo_lat'] ?? '') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                    <div>
+                        <label>طول جغرافیایی</label>
+                        <input type="text" name="geo_lng" value="{{ old('geo_lng', $seo['geo_lng'] ?? '') }}" dir="ltr" style="text-align:left;">
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>لینک‌های شبکه‌های اجتماعی (هر خط یا با ویرگول)</label>
+                    <textarea name="same_as" rows="3" placeholder="https://instagram.com/...">{{ old('same_as', $seo['same_as'] ?? '') }}</textarea>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>ساعات کاری (schema openingHours — هر خط یک مقدار)</label>
+                    <textarea name="opening_hours" rows="3" placeholder="Mo-Sa 09:00-20:00" dir="ltr" style="text-align:left;">{{ old('opening_hours', $seo['opening_hours'] ?? '') }}</textarea>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>قوانین اضافه robots.txt</label>
+                    <textarea name="robots_extra" rows="3" dir="ltr" style="text-align:left;" placeholder="Disallow: /private">{{ old('robots_extra', $seo['robots_extra'] ?? '') }}</textarea>
+                </div>
+
+                <h3 style="margin:18px 0 10px;">صفحه دامنه اصلی (Apex)</h3>
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                    <input type="checkbox" name="apex_enabled" value="1" @checked(old('apex_enabled', $seo['apex_enabled'] ?? '1') === '1')>
+                    تولید / انتشار صفحهٔ دامنه فعال باشد
+                </label>
+                <div class="accept-row accept-row-2">
+                    <div>
+                        <label>تیتر صفحه دامنه</label>
+                        <input type="text" name="apex_headline" value="{{ old('apex_headline', $seo['apex_headline'] ?? '') }}">
+                    </div>
+                    <div>
+                        <label>متن دکمه</label>
+                        <input type="text" name="apex_cta" value="{{ old('apex_cta', $seo['apex_cta'] ?? '') }}">
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>متن کوتاه صفحه دامنه</label>
+                    <textarea name="apex_lead" rows="2">{{ old('apex_lead', $seo['apex_lead'] ?? '') }}</textarea>
+                </div>
+                <div style="margin-top:10px;">
+                    <label>آدرس ورود به سامانه (دکمه)</label>
+                    <input type="url" name="apex_support_url" value="{{ old('apex_support_url', $seo['apex_support_url'] ?? '') }}" dir="ltr" style="text-align:left;" placeholder="https://support.hddsoftware.ir">
+                </div>
+
+                <div class="actions" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;">
+                    <button class="btn btn-primary" type="submit">ذخیره تنظیمات SEO</button>
+                </div>
+            </form>
+
+            <div class="panel" style="margin-top:12px;">
+                <h3 style="margin:0 0 8px;">انتشار صفحه دامنه</h3>
+                <p class="muted" style="margin:0 0 10px;font-size:13px;">اگر اپ روی هاست اشتراکی داخل پوشه‌ای مثل <code dir="ltr">public_html/support</code> باشد، دکمهٔ انتشار سعی می‌کند <code dir="ltr">public_html/index.html</code> را بسازد. در غیر این صورت فایل را دانلود و دستی آپلود کنید.</p>
+                <div class="actions" style="display:flex;flex-wrap:wrap;gap:8px;">
+                    <a class="btn btn-secondary" href="{{ route('settings.seo.apex-download') }}">دانلود index.html</a>
+                    <form method="POST" action="{{ route('settings.seo.apex-publish') }}" style="display:inline;">
+                        @csrf
+                        <input type="hidden" name="settings_tab" value="seo">
+                        <button class="btn btn-primary" type="submit">انتشار روی دامنه</button>
+                    </form>
+                </div>
+            </div>
         </div>
 
         <div class="ws-pane {{ $activeTab === 'users' ? 'active' : '' }}" data-ws-pane="users">

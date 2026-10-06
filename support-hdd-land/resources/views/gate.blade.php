@@ -4,7 +4,8 @@
     
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#2b3340">
-    <title>{{ shop_name() }} | انتخاب ورود</title>
+    <title>{{ \App\Support\SeoSettings::documentTitle() }}</title>
+    @include('partials.seo-meta')
     <link rel="icon" href="{{ asset('favicon.ico') }}?v=hd1" type="image/x-icon">
     <link rel="apple-touch-icon" href="{{ asset('images/apple-touch-icon.png') }}?v=hd1">
     <link rel="preconnect" href="https://fonts.googleapis.com">
