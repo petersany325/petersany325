@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\AppUpdateService;
 use App\Services\ReleaseChangeBoardService;
+use App\Support\CustomerReleaseGuard;
 use Illuminate\Http\Request;
 
 /**
@@ -203,7 +204,13 @@ class AppReleaseAdminController extends Controller
             $safeName = (string) $built['file'];
             $path = (string) $built['path'];
             $sha = (string) $built['sha256'];
-            if (! empty($built['missing'])) {
+            if (! empty($built['seo_stripped'])) {
+                session()->flash(
+                    'warning',
+                    'فایل‌های SEO/فروشنده از آپدیت مشتری حذف شدند و منتشر نمی‌شوند: '.implode('، ', $built['seo_stripped'])
+                );
+            }
+            if (! empty($built['missing']) && empty($built['seo_stripped'])) {
                 session()->flash('warning', 'برخی فایل‌ها روی دیسک نبودند و از ZIP حذف شدند: '.implode('، ', $built['missing']));
             }
         } else {
@@ -212,7 +219,19 @@ class AppReleaseAdminController extends Controller
             }
             $request->file('zip')->move($dir, $safeName);
             $path = $dir.'/'.$safeName;
-            $sha = hash_file('sha256', $path) ?: '';
+            $scrub = CustomerReleaseGuard::scrubCustomerZip($path);
+            if (! ($scrub['ok'] ?? false)) {
+                @unlink($path);
+
+                return back()->withInput()->with('error', $scrub['message'] ?? 'بسته آپدیت مشتری نامعتبر است (SEO مجاز نیست).');
+            }
+            $sha = (string) ($scrub['sha256'] ?? (hash_file('sha256', $path) ?: ''));
+            if (! empty($scrub['stripped'])) {
+                session()->flash(
+                    'warning',
+                    'فایل‌های SEO از ZIP آپلودی حذف شدند: '.implode('، ', $scrub['stripped'])
+                );
+            }
         }
 
         $manifestPath = $dir.'/manifest.json';

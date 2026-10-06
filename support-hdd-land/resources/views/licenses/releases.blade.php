@@ -141,6 +141,9 @@
         <section class="panel" style="margin-top:12px;">
             <h3 style="margin-top:0;">انتشار آپدیت برای مشتریان</h3>
             <p class="lead">تغییرات انتخاب‌شده از تابلو به‌صورت ZIP انتخابی ساخته می‌شوند و در مانیفست لایسنس قرار می‌گیرند.</p>
+            <p class="muted" style="margin:0 0 12px;padding:10px 12px;background:#fff7ed;border:1px solid #fdba74;border-radius:6px;font-size:13px;">
+                <strong>مهم:</strong> فایل‌ها و تنظیمات SEO / گوگل فقط برای سایت فروشنده هستند و به‌صورت خودکار از بسته آپدیت مشتری حذف می‌شوند.
+            </p>
 
             @if($selectedCount === 0)
                 <div class="alert alert-error">هنوز تغییری انتخاب نشده. از زبانه تابلو، آیتم‌ها را تیک بزنید.</div>

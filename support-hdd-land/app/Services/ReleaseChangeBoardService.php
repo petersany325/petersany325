@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\CustomerReleaseGuard;
 use Illuminate\Support\Str;
 use ZipArchive;
 
@@ -214,6 +215,17 @@ class ReleaseChangeBoardService
             return ['ok' => false, 'message' => 'هیچ فایلی در تغییرات انتخاب‌شده ثبت نشده است.'];
         }
 
+        $filtered = CustomerReleaseGuard::filterCustomerFiles($files);
+        $files = $filtered['kept'];
+        $seoStripped = $filtered['stripped'];
+        if ($files === []) {
+            return [
+                'ok' => false,
+                'message' => 'همه فایل‌های انتخاب‌شده مربوط به SEO/سایت فروشنده هستند و نباید در آپدیت مشتری بیایند.',
+                'missing' => $seoStripped,
+            ];
+        }
+
         $root = base_path();
         $missing = [];
         $existing = [];
@@ -265,6 +277,7 @@ class ReleaseChangeBoardService
         $zip->addFromString(
             'RELEASE_BOARD.txt',
             "version={$version}\nfiles=".count($existing)."\nbuilt=".now()->toIso8601String()."\n"
+            .'seo_stripped='.count($seoStripped)."\n"
         );
         $zip->close();
 
@@ -274,7 +287,8 @@ class ReleaseChangeBoardService
             'file' => $safeName,
             'sha256' => hash_file('sha256', $out) ?: '',
             'count' => count($existing),
-            'missing' => $missing,
+            'missing' => array_values(array_unique(array_merge($missing, $seoStripped))),
+            'seo_stripped' => $seoStripped,
         ];
     }
 
