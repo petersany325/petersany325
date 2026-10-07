@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=4">
+  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=5">
 </head>
 <body>
   @php
@@ -194,11 +194,26 @@
         if (!root) return;
         const panel = root.querySelector('#wa-panel');
         const open = () => { panel.hidden = false; };
-        const close = () => { panel.hidden = true; };
-        root.querySelector('[data-wa-toggle]')?.addEventListener('click', () => { panel.hidden ? open() : close(); });
+        const close = (event) => {
+          event?.preventDefault();
+          event?.stopPropagation();
+          panel.hidden = true;
+          sessionStorage.setItem('ek_wa_closed', '1');
+        };
+        root.querySelector('[data-wa-toggle]')?.addEventListener('click', () => {
+          if (panel.hidden) {
+            sessionStorage.removeItem('ek_wa_closed');
+            open();
+          } else {
+            close();
+          }
+        });
         root.querySelector('[data-wa-close]')?.addEventListener('click', close);
-        if (root.dataset.autoOpen === '1' && !sessionStorage.getItem('ek_wa_opened')) {
-          setTimeout(() => { open(); sessionStorage.setItem('ek_wa_opened', '1'); }, 1200);
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape' && !panel.hidden) close(event);
+        });
+        if (root.dataset.autoOpen === '1' && !sessionStorage.getItem('ek_wa_closed')) {
+          setTimeout(open, 1200);
         }
       })();
     </script>
