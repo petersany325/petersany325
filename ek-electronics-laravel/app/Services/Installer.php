@@ -69,9 +69,9 @@ class Installer
             'DB_DATABASE' => $db['database'],
             'DB_USERNAME' => $db['username'],
             'DB_PASSWORD' => $db['password'],
-            'SESSION_DRIVER' => 'database',
-            'CACHE_STORE' => 'database',
-            'QUEUE_CONNECTION' => 'database',
+            'SESSION_DRIVER' => 'file',
+            'CACHE_STORE' => 'file',
+            'QUEUE_CONNECTION' => 'sync',
         ]);
 
         Artisan::call('config:clear');

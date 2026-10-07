@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('slug')->unique();
+            $table->string('slug', 191)->unique();
             $table->unsignedInteger('sort_order')->default(0);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
@@ -20,9 +20,9 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id();
             $table->foreignId('category_id')->constrained()->cascadeOnDelete();
-            $table->string('sku')->unique();
+            $table->string('sku', 191)->unique();
             $table->string('name');
-            $table->string('slug')->unique();
+            $table->string('slug', 191)->unique();
             $table->text('description')->nullable();
             $table->string('grade')->nullable();
             $table->decimal('price', 12, 2);
@@ -36,7 +36,7 @@ return new class extends Migration
 
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->string('number')->unique();
+            $table->string('number', 191)->unique();
             $table->string('customer_name');
             $table->string('customer_phone')->nullable();
             $table->string('customer_email')->nullable();
@@ -65,7 +65,7 @@ return new class extends Migration
 
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
-            $table->string('number')->unique();
+            $table->string('number', 191)->unique();
             $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
             $table->string('customer_name');
             $table->string('customer_phone')->nullable();
@@ -81,7 +81,7 @@ return new class extends Migration
 
         Schema::create('recovery_jobs', function (Blueprint $table) {
             $table->id();
-            $table->string('number')->unique();
+            $table->string('number', 191)->unique();
             $table->string('client_name');
             $table->string('client_phone')->nullable();
             $table->string('media')->nullable();
@@ -94,7 +94,7 @@ return new class extends Migration
 
         Schema::create('settings', function (Blueprint $table) {
             $table->id();
-            $table->string('key')->unique();
+            $table->string('key', 191)->unique();
             $table->text('value')->nullable();
             $table->timestamps();
         });
