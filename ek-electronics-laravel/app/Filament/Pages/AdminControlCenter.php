@@ -15,7 +15,7 @@ class AdminControlCenter extends Page
 
     protected static ?string $title = 'EK admin control center';
 
-    protected static ?string $navigationGroup = null;
+    protected static string|UnitEnum|null $navigationGroup = null;
 
     protected static ?int $navigationSort = -100;
 
