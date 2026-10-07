@@ -22,15 +22,15 @@ use UnitEnum;
  */
 class ManageSiteSettings extends Page
 {
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPhone;
 
-    protected static string|UnitEnum|null $navigationGroup = 'System';
+    protected static string|UnitEnum|null $navigationGroup = 'Store';
 
-    protected static ?string $navigationLabel = 'Site settings';
+    protected static ?string $navigationLabel = 'Quick contact';
 
-    protected static ?string $title = 'Site settings';
+    protected static ?string $title = 'Quick contact details';
 
-    protected static ?int $navigationSort = 100;
+    protected static ?int $navigationSort = 2;
 
     /** @var array<string, mixed>|null */
     public ?array $data = [];
@@ -54,13 +54,15 @@ class ManageSiteSettings extends Page
     public function form(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Contact & WhatsApp')->schema([
-                TextInput::make('phone')->required(),
-                TextInput::make('email')->email()->required(),
-                TextInput::make('whatsapp_number')->helperText('Digits only with country code')->required(),
-                TextInput::make('tagline')->required(),
-                Textarea::make('address')->rows(4)->required()->columnSpanFull(),
-            ])->columns(2),
+            Section::make('Contact shortcuts')
+                ->description('Full store, footer, WhatsApp, and login settings are in their own admin pages.')
+                ->schema([
+                    TextInput::make('phone')->required(),
+                    TextInput::make('email')->email()->required(),
+                    TextInput::make('whatsapp_number')->helperText('Digits only with country code')->required(),
+                    TextInput::make('tagline')->required(),
+                    Textarea::make('address')->rows(4)->required()->columnSpanFull(),
+                ])->columns(2),
         ]);
     }
 
@@ -78,16 +80,12 @@ class ManageSiteSettings extends Page
 
     public function save(): void
     {
-        $data = $this->form->getState();
-        foreach ($data as $key => $value) {
-            Setting::setValue($key, is_string($value) ? $value : (string) $value);
-        }
-
-        Notification::make()->title('Settings saved')->success()->send();
+        Setting::many($this->form->getState());
+        Notification::make()->title('Contact details saved')->success()->send();
     }
 
     protected function getSaveFormAction(): Action
     {
-        return Action::make('save')->label('Save settings')->submit('save');
+        return Action::make('save')->label('Save')->submit('save');
     }
 }

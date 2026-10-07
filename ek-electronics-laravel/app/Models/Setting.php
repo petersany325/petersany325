@@ -21,4 +21,33 @@ class Setting extends Model
         static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
         Cache::forget("setting.$key");
     }
+
+    /** @param  array<string, mixed>  $data */
+    public static function many(array $data): void
+    {
+        foreach ($data as $key => $value) {
+            if (is_bool($value)) {
+                $value = $value ? '1' : '0';
+            }
+            static::setValue((string) $key, $value === null ? null : (string) $value);
+        }
+    }
+
+    public static function bool(string $key, bool $default = false): bool
+    {
+        $value = static::getValue($key, $default ? '1' : '0');
+
+        return in_array($value, ['1', 'true', 'yes', 'on'], true);
+    }
+
+    /** @return array<string, string|null> */
+    public static function group(array $keys, array $defaults = []): array
+    {
+        $out = [];
+        foreach ($keys as $key) {
+            $out[$key] = static::getValue($key, $defaults[$key] ?? null);
+        }
+
+        return $out;
+    }
 }

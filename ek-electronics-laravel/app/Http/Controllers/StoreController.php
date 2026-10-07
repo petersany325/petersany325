@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Invoice;
+use App\Models\Menu;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Page;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Services\WhatsApp;
@@ -21,11 +23,14 @@ class StoreController extends Controller
         return view('store.home', [
             'featured' => Product::query()->with('category')->where('is_active', true)->where('is_featured', true)->take(8)->get(),
             'settings' => $this->settings(),
+            'menus' => $this->menus(),
         ]);
     }
 
     public function shop(Request $request): View
     {
+        abort_unless(Setting::bool('shop_enabled', true), 404);
+
         $q = Product::query()->with('category')->where('is_active', true);
         if ($request->filled('category')) {
             $q->whereHas('category', fn ($c) => $c->where('slug', $request->string('category')));
@@ -39,29 +44,43 @@ class StoreController extends Controller
             'products' => $q->orderBy('name')->paginate(24)->withQueryString(),
             'categories' => Category::query()->where('is_active', true)->orderBy('sort_order')->orderBy('name')->get(),
             'settings' => $this->settings(),
+            'menus' => $this->menus(),
         ]);
     }
 
     public function services(): View
     {
-        return view('store.services', ['settings' => $this->settings()]);
+        return view('store.services', ['settings' => $this->settings(), 'menus' => $this->menus()]);
     }
 
     public function about(): View
     {
-        return view('store.about', ['settings' => $this->settings()]);
+        return view('store.about', ['settings' => $this->settings(), 'menus' => $this->menus()]);
     }
 
     public function contact(): View
     {
-        return view('store.contact', ['settings' => $this->settings()]);
+        return view('store.contact', ['settings' => $this->settings(), 'menus' => $this->menus()]);
     }
 
     public function page(string $slug): View
     {
+        $page = Page::query()->with(['blocks' => fn ($q) => $q->where('is_active', true)->orderBy('sort_order')])
+            ->where('slug', $slug)
+            ->where('status', 'published')
+            ->first();
+
+        if ($page) {
+            return view('store.cms-page', [
+                'page' => $page,
+                'settings' => $this->settings(),
+                'menus' => $this->menus(),
+            ]);
+        }
+
         abort_unless(in_array($slug, ['shipping', 'warranty', 'terms'], true), 404);
 
-        return view('store.page', ['slug' => $slug, 'settings' => $this->settings()]);
+        return view('store.page', ['slug' => $slug, 'settings' => $this->settings(), 'menus' => $this->menus()]);
     }
 
     public function cart(): View
@@ -69,19 +88,24 @@ class StoreController extends Controller
         return view('store.cart', [
             'items' => $this->cartItems(),
             'settings' => $this->settings(),
+            'menus' => $this->menus(),
         ]);
     }
 
     public function checkout(): View
     {
+        abort_unless(Setting::bool('checkout_enabled', true), 404);
+
         return view('store.checkout', [
             'items' => $this->cartItems(),
             'settings' => $this->settings(),
+            'menus' => $this->menus(),
         ]);
     }
 
     public function addToCart(Request $request): RedirectResponse
     {
+        abort_unless(Setting::bool('shop_enabled', true), 404);
         $data = $request->validate([
             'product_id' => ['required', 'exists:products,id'],
             'qty' => ['nullable', 'integer', 'min:1', 'max:99'],
@@ -113,6 +137,8 @@ class StoreController extends Controller
 
     public function placeOrder(Request $request): RedirectResponse
     {
+        abort_unless(Setting::bool('checkout_enabled', true), 404);
+
         $data = $request->validate([
             'customer_name' => ['required', 'string', 'max:120'],
             'customer_phone' => ['required', 'string', 'max:40'],
@@ -150,10 +176,20 @@ class StoreController extends Controller
         }
 
         $lines = $items->map(fn ($r) => '• '.$r['product']->name.' x'.$r['qty'].' = R '.number_format($r['line_total'], 2))->implode("\n");
-        $msg = "New order {$order->number} from {$order->customer_name}\nPhone: {$order->customer_phone}\nShip to: {$order->city}\n\n{$lines}\n\nTotal: R ".number_format((float) $order->total, 2)."\nPlease confirm stock and courier.";
+        $template = Setting::getValue('whatsapp_order_template', "New order {number} from {name}\nPhone: {phone}\nShip to: {city}\n\n{lines}\n\nTotal: R {total}\nPlease confirm stock and courier.");
+        $msg = strtr($template, [
+            '{number}' => $order->number,
+            '{name}' => $order->customer_name,
+            '{phone}' => $order->customer_phone,
+            '{city}' => (string) $order->city,
+            '{lines}' => $lines,
+            '{total}' => number_format((float) $order->total, 2),
+        ]);
 
         $order->update(['whatsapp_payload' => $msg, 'whatsapp_sent_at' => now()]);
-        WhatsApp::logOutbound($msg, WhatsApp::number(), 'order', Order::class, $order->id);
+        if (Setting::bool('whatsapp_enabled', true) && Setting::bool('whatsapp_notify_orders', true)) {
+            WhatsApp::logOutbound($msg, WhatsApp::number(), 'order', Order::class, $order->id);
+        }
 
         Invoice::query()->create([
             'number' => 'INV-'.$order->number,
@@ -161,14 +197,18 @@ class StoreController extends Controller
             'customer_name' => $order->customer_name,
             'customer_phone' => $order->customer_phone,
             'amount' => $order->total,
-            'vat_amount' => round(((float) $order->total) * 15 / 115, 2),
+            'vat_amount' => round(((float) $order->total) * ((float) Setting::getValue('vat_rate', '15')) / (100 + (float) Setting::getValue('vat_rate', '15')), 2),
             'status' => 'open',
             'due_date' => now()->addDays(7),
         ]);
 
         session()->forget('cart');
 
-        return redirect()->away(WhatsApp::link($msg));
+        if (Setting::bool('whatsapp_enabled', true) && Setting::bool('whatsapp_notify_orders', true)) {
+            return redirect()->away(WhatsApp::link($msg));
+        }
+
+        return redirect()->route('home')->with('success', 'Order '.$order->number.' placed. We will contact you shortly.');
     }
 
     public function contactWhatsApp(Request $request): RedirectResponse
@@ -179,9 +219,13 @@ class StoreController extends Controller
             'message' => ['required', 'string', 'max:2000'],
         ]);
         $msg = "Enquiry from {$data['name']}\n{$data['email']}\n\n{$data['message']}";
-        WhatsApp::logOutbound($msg, WhatsApp::number(), 'contact');
+        if (Setting::bool('whatsapp_enabled', true) && Setting::bool('whatsapp_notify_contact', true)) {
+            WhatsApp::logOutbound($msg, WhatsApp::number(), 'contact');
 
-        return redirect()->away(WhatsApp::link($msg));
+            return redirect()->away(WhatsApp::link($msg));
+        }
+
+        return back()->with('success', 'Message received. We will reply soon.');
     }
 
     private function cartItems()
@@ -203,14 +247,62 @@ class StoreController extends Controller
         })->filter()->values();
     }
 
+    /** @return array<string, mixed> */
     private function settings(): array
     {
         return [
+            'store_name' => Setting::getValue('store_name', 'EK Electronics'),
             'phone' => Setting::getValue('phone', '+27 10 500 2140'),
             'email' => Setting::getValue('email', 'info@ekelectronics.co.za'),
             'address' => Setting::getValue('address', 'Unit 15, Ground floor, Lone Creek Office Building D, 21 Mac-Mac Road and Howick Close, Waterfall Business Park, Midrand, 1685'),
             'tagline' => Setting::getValue('tagline', 'Innovation. Integrity. Impact.'),
+            'hours' => Setting::getValue('hours', 'Mon–Fri 08:00–17:00 SAST'),
             'whatsapp' => WhatsApp::number(),
+            'whatsapp_default_message' => Setting::getValue('whatsapp_default_message', 'Hi EK Electronics, I need help with a drive.'),
+            'whatsapp_fab_enabled' => Setting::bool('whatsapp_fab_enabled', true) && Setting::bool('whatsapp_enabled', true),
+            'footer_about' => Setting::getValue('footer_about', 'Hard drive refurbishment, secure erasure, data recovery, and computer components from Midrand.'),
+            'footer_col1_title' => Setting::getValue('footer_col1_title', 'Customer services'),
+            'footer_col2_title' => Setting::getValue('footer_col2_title', 'Shop'),
+            'footer_col3_title' => Setting::getValue('footer_col3_title', 'Contact'),
+            'footer_legal' => str_replace('{year}', (string) date('Y'), Setting::getValue('footer_legal', '© {year} EK Electronics · ekelectronics.co.za') ?? ''),
+            'footer_show_socials' => Setting::bool('footer_show_socials', true),
+            'footer_show_whatsapp' => Setting::bool('footer_show_whatsapp', true),
+            'footer_facebook' => Setting::getValue('footer_facebook', ''),
+            'footer_instagram' => Setting::getValue('footer_instagram', ''),
+            'footer_tiktok' => Setting::getValue('footer_tiktok', ''),
+            'footer_x' => Setting::getValue('footer_x', ''),
+            'hero_headline' => Setting::getValue('hero_headline', 'Hard drives & components, refurbished with integrity.'),
+            'hero_sub' => Setting::getValue('hero_sub', 'Enterprise storage, memory, boards, and professional data recovery from Midrand.'),
+            'hero_cta_label' => Setting::getValue('hero_cta_label', 'Shop catalogue'),
+            'hero_cta_url' => Setting::getValue('hero_cta_url', '/shop'),
+            'show_prices' => Setting::bool('show_prices', true),
+            'customer_login_enabled' => Setting::bool('customer_login_enabled', true),
+            'customer_register_enabled' => Setting::bool('customer_register_enabled', true),
+            'staff_login_enabled' => Setting::bool('staff_login_enabled', true),
+        ];
+    }
+
+    /** @return array<string, \Illuminate\Support\Collection<int, Menu>> */
+    private function menus(): array
+    {
+        $all = Menu::query()->where('is_active', true)->orderBy('sort_order')->get()->groupBy('location');
+        $header = $all->get('header', collect());
+        if ($header->isEmpty()) {
+            $header = collect([
+                (object) ['label' => 'Home', 'url' => '/', 'target' => '_self'],
+                (object) ['label' => 'Shop', 'url' => '/shop', 'target' => '_self'],
+                (object) ['label' => 'Services', 'url' => '/services', 'target' => '_self'],
+                (object) ['label' => 'About', 'url' => '/about', 'target' => '_self'],
+                (object) ['label' => 'Contact', 'url' => '/contact', 'target' => '_self'],
+            ]);
+        }
+
+        return [
+            'header' => $header,
+            'footer' => $all->get('footer', collect()),
+            'footer_shop' => $all->get('footer_shop', collect()),
+            'footer_services' => $all->get('footer_services', collect()),
+            'footer_legal' => $all->get('footer_legal', collect()),
         ];
     }
 }

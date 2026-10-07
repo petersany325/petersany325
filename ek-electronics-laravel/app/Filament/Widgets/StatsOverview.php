@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Models\Ticket;
 use App\Models\WhatsappMessage;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -15,6 +16,7 @@ class StatsOverview extends StatsOverviewWidget
         $revenue = (float) Order::query()->whereIn('status', ['paid', 'dispatched', 'collected'])->sum('total');
         $openInvoices = (float) Invoice::query()->whereIn('status', ['open', 'late'])->sum('amount');
         $waToday = WhatsappMessage::query()->whereDate('sent_at', today())->count();
+        $openTickets = Ticket::query()->whereIn('status', ['open', 'pending'])->count();
 
         return [
             Stat::make('Orders', (string) Order::query()->count())
@@ -26,9 +28,9 @@ class StatsOverview extends StatsOverviewWidget
             Stat::make('Open invoices', 'R '.number_format($openInvoices, 2))
                 ->description('Waiting on WhatsApp / EFT')
                 ->color('warning'),
-            Stat::make('WhatsApp today', (string) $waToday)
-                ->description('Logged outbound messages')
-                ->color('success'),
+            Stat::make('Open tickets', (string) $openTickets)
+                ->description('WhatsApp today: '.$waToday)
+                ->color('info'),
         ];
     }
 }

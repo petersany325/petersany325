@@ -6,12 +6,12 @@
     <img src="{{ asset('assets/img/hero.jpg') }}" alt="Enterprise server racks" width="1600" height="900">
     <div class="hero-copy">
       <div class="kicker">{{ $settings['tagline'] ?? 'Innovation. Integrity. Impact.' }}</div>
-      <h1>We’re experts in Hard Drives, Data Recovery, and Reliable Tech Solutions.</h1>
-      <p>Buy certified refurbished storage and components online. Recover lost data. Wipe drives to a compliant standard. EK Electronics serves individuals, IT companies, and resellers across South Africa.</p>
+      <h1>{{ $settings['hero_headline'] ?? 'We’re experts in Hard Drives, Data Recovery, and Reliable Tech Solutions.' }}</h1>
+      <p>{{ $settings['hero_sub'] ?? 'Buy certified refurbished storage and components online. Recover lost data. Wipe drives to a compliant standard. EK Electronics serves individuals, IT companies, and resellers across South Africa.' }}</p>
       <div class="cta-row">
-        <a class="btn btn-primary" href="{{ route('shop') }}">Shop the catalogue</a>
+        <a class="btn btn-primary" href="{{ url($settings['hero_cta_url'] ?? '/shop') }}">{{ $settings['hero_cta_label'] ?? 'Shop the catalogue' }}</a>
         <a class="btn btn-ghost" href="{{ route('services') }}">Book data recovery</a>
-        <a class="btn btn-wa" href="https://wa.me/{{ $settings['whatsapp'] }}?text={{ urlencode('Hi EK, I need a data recovery assessment.') }}">WhatsApp a technician</a>
+        <a class="btn btn-wa" href="https://wa.me/{{ $settings['whatsapp'] }}?text={{ urlencode($settings['whatsapp_default_message'] ?? 'Hi EK, I need a data recovery assessment.') }}">WhatsApp a technician</a>
       </div>
     </div>
   </div>

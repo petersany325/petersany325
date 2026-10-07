@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'installed' => \App\Http\Middleware\EnsureInstalled::class,
             'not.installed' => \App\Http\Middleware\EnsureNotInstalled::class,
+            'role' => \App\Http\Middleware\EnsureRole::class,
         ]);
 
         $middleware->appendToGroup('web', [

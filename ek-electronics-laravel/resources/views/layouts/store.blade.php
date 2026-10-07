@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>@yield('title', 'EK Electronics')</title>
+  <title>@yield('title', ($settings['store_name'] ?? 'EK Electronics'))</title>
   <meta name="description" content="@yield('meta', 'Hard drive refurbishment, data recovery, secure erasure, and computer component sales in South Africa.')">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,15 +16,19 @@
     $email = $settings['email'] ?? 'info@ekelectronics.co.za';
     $wa = $settings['whatsapp'] ?? '27105002140';
     $tagline = $settings['tagline'] ?? 'Innovation. Integrity. Impact.';
+    $storeName = $settings['store_name'] ?? 'EK Electronics';
+    $hours = $settings['hours'] ?? 'Mon–Fri 08:00–17:00 SAST';
+    $waMsg = $settings['whatsapp_default_message'] ?? 'Hi EK Electronics, I need help with a drive.';
     $cartCount = collect(session('cart', []))->sum();
+    $menus = $menus ?? ['header' => collect(), 'footer' => collect(), 'footer_shop' => collect(), 'footer_services' => collect(), 'footer_legal' => collect()];
   @endphp
   <div class="topbar">
     <div class="topbar-inner">
-      <span>Midrand · Waterfall Business Park · Mon–Fri 08:00–17:00 SAST</span>
+      <span>Midrand · Waterfall Business Park · {{ $hours }}</span>
       <span>
         <a href="tel:{{ preg_replace('/\s+/', '', $phone) }}">{{ $phone }}</a> ·
         <a href="mailto:{{ $email }}">{{ $email }}</a> ·
-        <a class="whatsapp-chip" href="https://wa.me/{{ $wa }}?text={{ urlencode('Hi EK Electronics, I need help with a drive.') }}">Chat on WhatsApp</a>
+        <a class="whatsapp-chip" href="https://wa.me/{{ $wa }}?text={{ urlencode($waMsg) }}">Chat on WhatsApp</a>
       </span>
     </div>
   </div>
@@ -33,27 +37,35 @@
     <div class="nav-inner">
       <a class="brand" href="{{ route('home') }}">
         <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#1d4ed8"/><text x="24" y="31" text-anchor="middle" fill="#fff" font-size="16" font-family="Manrope, sans-serif" font-weight="800">EK</text></svg>
-        <span>EK Electronics<small>{{ $tagline }}</small></span>
+        <span>{{ $storeName }}<small>{{ $tagline }}</small></span>
       </a>
       <form class="search" action="{{ route('shop') }}" method="get">
         <input name="q" type="search" value="{{ request('q') }}" placeholder="Search 885+ drives, memory, boards…" aria-label="Search products">
         <button type="submit">Search</button>
       </form>
       <div class="header-actions">
-        <a class="icon-btn" href="{{ route('contact') }}" aria-label="Contact">👤</a>
+        @auth
+          @if(auth()->user()->isStaff())
+            <a class="icon-btn" href="{{ route('staff.dashboard') }}" aria-label="Staff desk">⚙</a>
+          @else
+            <a class="icon-btn" href="{{ route('account.dashboard') }}" aria-label="My account">👤</a>
+          @endif
+        @else
+          @if($settings['customer_login_enabled'] ?? true)
+            <a class="icon-btn" href="{{ route('login') }}" aria-label="Sign in">👤</a>
+          @endif
+        @endauth
         <a class="icon-btn" href="{{ route('cart') }}" aria-label="Shopping cart">🛒<span class="badge">{{ $cartCount }}</span></a>
-        <a class="btn btn-primary" href="{{ url('/admin') }}">Staff panel</a>
+        @if($settings['staff_login_enabled'] ?? true)
+          <a class="btn btn-primary" href="{{ route('login', ['portal' => 'staff']) }}">Staff</a>
+        @endif
       </div>
     </div>
     <nav class="menu">
-      <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">Home</a>
-      <a href="{{ route('shop') }}" class="{{ request()->routeIs('shop') ? 'active' : '' }}">Shop</a>
-      <a href="{{ route('services') }}" class="{{ request()->routeIs('services') ? 'active' : '' }}">Services</a>
-      <a href="{{ route('about') }}" class="{{ request()->routeIs('about') ? 'active' : '' }}">About</a>
-      <a href="{{ route('contact') }}" class="{{ request()->routeIs('contact') ? 'active' : '' }}">Contact</a>
-      <a href="{{ route('page', 'shipping') }}">Shipping</a>
-      <a href="{{ route('page', 'warranty') }}">Warranty</a>
-      <a href="{{ route('page', 'terms') }}">Terms</a>
+      @foreach ($menus['header'] as $item)
+        @php $href = str_starts_with($item->url, 'http') ? $item->url : url($item->url); @endphp
+        <a href="{{ $href }}" target="{{ $item->target ?? '_self' }}">{{ $item->label }}</a>
+      @endforeach
     </nav>
   </header>
 
@@ -68,36 +80,52 @@
   <footer class="site-footer">
     <div class="wrap">
       <div>
-        <h4>EK Electronics</h4>
-        <p>{{ $tagline }}</p>
-        <div class="socials">
-          <a href="#" aria-label="Facebook">f</a>
-          <a href="#" aria-label="Instagram">ig</a>
-          <a href="#" aria-label="TikTok">♪</a>
-          <a href="#" aria-label="X">𝕏</a>
-        </div>
+        <h4>{{ $storeName }}</h4>
+        <p>{{ $settings['footer_about'] ?? $tagline }}</p>
+        @if($settings['footer_show_socials'] ?? true)
+          <div class="socials">
+            @if(!empty($settings['footer_facebook']))<a href="{{ $settings['footer_facebook'] }}" aria-label="Facebook" target="_blank" rel="noopener">f</a>@endif
+            @if(!empty($settings['footer_instagram']))<a href="{{ $settings['footer_instagram'] }}" aria-label="Instagram" target="_blank" rel="noopener">ig</a>@endif
+            @if(!empty($settings['footer_tiktok']))<a href="{{ $settings['footer_tiktok'] }}" aria-label="TikTok" target="_blank" rel="noopener">♪</a>@endif
+            @if(!empty($settings['footer_x']))<a href="{{ $settings['footer_x'] }}" aria-label="X" target="_blank" rel="noopener">𝕏</a>@endif
+          </div>
+        @endif
       </div>
       <div>
-        <h4>Customer services</h4>
-        <p><a href="{{ route('page', 'shipping') }}">Shipping</a></p>
-        <p><a href="{{ route('page', 'warranty') }}">Warranty policy</a></p>
-        <p><a href="{{ route('page', 'terms') }}">Terms and conditions</a></p>
-        <p><a href="{{ url('/admin') }}">Staff login</a></p>
+        <h4>{{ $settings['footer_col1_title'] ?? 'Customer services' }}</h4>
+        @forelse ($menus['footer'] as $item)
+          <p><a href="{{ str_starts_with($item->url, 'http') ? $item->url : url($item->url) }}" target="{{ $item->target ?? '_self' }}">{{ $item->label }}</a></p>
+        @empty
+          <p><a href="{{ route('page', 'shipping') }}">Shipping</a></p>
+          <p><a href="{{ route('page', 'warranty') }}">Warranty policy</a></p>
+          <p><a href="{{ route('page', 'terms') }}">Terms and conditions</a></p>
+          <p><a href="{{ route('login') }}">Customer login</a></p>
+          <p><a href="{{ route('login', ['portal' => 'staff']) }}">Staff login</a></p>
+        @endforelse
+        @foreach ($menus['footer_legal'] as $item)
+          <p><a href="{{ str_starts_with($item->url, 'http') ? $item->url : url($item->url) }}">{{ $item->label }}</a></p>
+        @endforeach
       </div>
       <div>
-        <h4>Shop</h4>
-        <p><a href="{{ route('shop') }}">All products</a></p>
-        <p><a href="{{ route('services') }}">Refurbishment</a></p>
-        <p><a href="{{ route('services') }}">Data recovery</a></p>
+        <h4>{{ $settings['footer_col2_title'] ?? 'Shop' }}</h4>
+        @forelse ($menus['footer_shop']->merge($menus['footer_services']) as $item)
+          <p><a href="{{ str_starts_with($item->url, 'http') ? $item->url : url($item->url) }}">{{ $item->label }}</a></p>
+        @empty
+          <p><a href="{{ route('shop') }}">All products</a></p>
+          <p><a href="{{ route('services') }}">Refurbishment</a></p>
+          <p><a href="{{ route('services') }}">Data recovery</a></p>
+        @endforelse
       </div>
       <div>
-        <h4>Contact</h4>
+        <h4>{{ $settings['footer_col3_title'] ?? 'Contact' }}</h4>
         <p>{{ $phone }}<br>{{ $email }}<br>{{ $settings['address'] ?? '' }}</p>
       </div>
     </div>
-    <div class="wrap legal">© {{ date('Y') }} EK Electronics · ekelectronics.co.za</div>
+    <div class="wrap legal">{{ $settings['footer_legal'] ?? ('© '.date('Y').' EK Electronics · ekelectronics.co.za') }}</div>
   </footer>
 
-  <a class="fab-wa" href="https://wa.me/{{ $wa }}?text={{ urlencode('Hi EK Electronics') }}">WhatsApp us</a>
+  @if(($settings['whatsapp_fab_enabled'] ?? true) && ($settings['footer_show_whatsapp'] ?? true))
+    <a class="fab-wa" href="https://wa.me/{{ $wa }}?text={{ urlencode($waMsg) }}">WhatsApp us</a>
+  @endif
 </body>
 </html>

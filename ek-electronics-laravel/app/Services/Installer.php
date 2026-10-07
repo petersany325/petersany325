@@ -102,6 +102,8 @@ class Installer
                 'name' => 'EK Admin',
                 'password' => Hash::make($adminPassword),
                 'is_admin' => true,
+                'role' => 'admin',
+                'is_active' => true,
             ]
         );
 
