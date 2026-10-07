@@ -145,20 +145,33 @@ a { color: inherit; text-decoration: none; }
 }
 .menu {
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  padding: 0 0 12px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
+  padding: 0 0 8px;
   inline-size: min(1180px, calc(100% - 32px));
   margin-inline: auto;
+}
+.menu > a,
+.menu-item {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
 }
 .menu a, .menu button {
   border: 0;
   background: transparent;
   cursor: pointer;
-  padding: 8px 12px;
+  padding: 0 12px;
   border-radius: 999px;
   color: var(--muted);
   font-weight: 650;
+  white-space: nowrap;
+  line-height: 1;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
 }
 .menu a.active, .menu button.active, .menu a:hover, .menu button:hover {
   background: var(--blue-soft);
@@ -166,13 +179,13 @@ a { color: inherit; text-decoration: none; }
 }
 .menu a.is-hot { color: var(--blue); font-weight: 800; }
 .menu-item { position: relative; }
-.menu-item > a::after { content: " ▾"; font-size: 0.75em; }
+.menu-item > a::after { content: " ▾"; font-size: 0.7em; margin-inline-start: 4px; }
 .submenu {
   display: none;
   position: absolute;
-  inset-block-start: 100%;
+  inset-block-start: calc(100% + 4px);
   inset-inline-start: 0;
-  min-inline-size: 220px;
+  min-inline-size: 240px;
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -183,18 +196,22 @@ a { color: inherit; text-decoration: none; }
 .menu-item:hover .submenu,
 .menu-item:focus-within .submenu { display: grid; }
 .submenu a {
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   border-radius: 10px;
-  padding: 8px 10px;
+  padding: 0 10px;
+  height: 40px;
+  white-space: nowrap;
+  width: 100%;
 }
 .submenu a small {
-  display: block;
+  display: inline;
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--muted);
-}
-@media (max-width: 720px) {
-  .submenu { position: static; display: grid; box-shadow: none; min-inline-size: 0; margin-block-end: 6px; }
+  margin-inline-start: auto;
 }
 
 .hero {
