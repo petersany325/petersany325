@@ -310,7 +310,7 @@ class StoreController extends Controller
             'staff_login_enabled' => Setting::bool('staff_login_enabled', true),
             'agents_page_kicker' => Setting::getValue('agents_page_kicker', 'Authorized representation'),
             'agents_page_title' => Setting::getValue('agents_page_title', 'Brands we represent'),
-            'agents_page_intro' => Setting::getValue('agents_page_intro', 'EK Electronics is the local agent for specialist data-recovery tools in South Africa. Each brand below is managed from this page — add another representation in Admin → Representations whenever a new agency is confirmed.'),
+            'agents_page_intro' => Setting::getValue('agents_page_intro', 'EK Electronics represents specialist data-recovery brands for customers in South Africa. Each appointment is listed here, with the territory, what we supply, and how to reach the Midrand laboratory.'),
             'agents_empty_text' => Setting::getValue('agents_empty_text', 'No active representations are published yet.'),
         ], HomepageContent::forView());
     }
