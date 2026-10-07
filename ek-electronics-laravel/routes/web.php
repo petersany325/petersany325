@@ -22,6 +22,8 @@ Route::get('/shop', [StoreController::class, 'shop'])->name('shop');
 Route::get('/services', [StoreController::class, 'services'])->name('services');
 Route::get('/about', [StoreController::class, 'about'])->name('about');
 Route::get('/contact', [StoreController::class, 'contact'])->name('contact');
+Route::get('/agents', [StoreController::class, 'agents'])->name('agents');
+Route::get('/agents/{slug}', [StoreController::class, 'agent'])->name('agents.show');
 Route::post('/contact', [StoreController::class, 'contactWhatsApp'])->name('contact.whatsapp');
 Route::get('/page/{slug}', [StoreController::class, 'page'])->name('page');
 Route::get('/cart', [StoreController::class, 'cart'])->name('cart');

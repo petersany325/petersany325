@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Agency;
 use App\Models\Category;
 use App\Models\Invoice;
 use App\Models\Menu;
@@ -64,6 +65,26 @@ class StoreController extends Controller
     public function contact(): View
     {
         return view('store.contact', ['settings' => $this->settings(), 'menus' => $this->menus()]);
+    }
+
+    public function agents(): View
+    {
+        return view('store.agents', [
+            'agencies' => Agency::query()->where('is_active', true)->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('principal_name')->get(),
+            'settings' => $this->settings(),
+            'menus' => $this->menus(),
+        ]);
+    }
+
+    public function agent(string $slug): View
+    {
+        $agency = Agency::query()->where('slug', $slug)->where('is_active', true)->firstOrFail();
+
+        return view('store.agent', [
+            'agency' => $agency,
+            'settings' => $this->settings(),
+            'menus' => $this->menus(),
+        ]);
     }
 
     public function page(string $slug): View
@@ -287,6 +308,10 @@ class StoreController extends Controller
             'customer_login_enabled' => Setting::bool('customer_login_enabled', true),
             'customer_register_enabled' => Setting::bool('customer_register_enabled', true),
             'staff_login_enabled' => Setting::bool('staff_login_enabled', true),
+            'agents_page_kicker' => Setting::getValue('agents_page_kicker', 'Authorized representation'),
+            'agents_page_title' => Setting::getValue('agents_page_title', 'Brands we represent'),
+            'agents_page_intro' => Setting::getValue('agents_page_intro', 'EK Electronics is the local agent for specialist data-recovery tools in South Africa. Each brand below is managed from this page — add another representation in Admin → Representations whenever a new agency is confirmed.'),
+            'agents_empty_text' => Setting::getValue('agents_empty_text', 'No active representations are published yet.'),
         ], HomepageContent::forView());
     }
 

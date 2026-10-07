@@ -58,6 +58,11 @@ class AdminControlCenter extends Page
             'Services' => [
                 ['label' => 'Recovery jobs', 'url' => '/admin/recovery-jobs', 'hint' => 'Data recovery pipeline'],
             ],
+            'Agents' => [
+                ['label' => 'Agent page', 'url' => '/admin/manage-agent-settings', 'hint' => 'Menu label and page intro'],
+                ['label' => 'Representations', 'url' => '/admin/agencies', 'hint' => 'SeDiv and any further agencies'],
+                ['label' => 'Public agents page', 'url' => '/agents', 'hint' => 'Storefront listing'],
+            ],
             'Site repair' => [
                 ['label' => 'Site repair', 'url' => '/admin/site-repair', 'hint' => 'Clear cache, fix database, optimize'],
             ],

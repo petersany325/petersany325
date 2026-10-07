@@ -60,6 +60,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('WhatsApp')->collapsed(false)->collapsible(false),
                 NavigationGroup::make('Communications')->collapsed(false)->collapsible(false),
                 NavigationGroup::make('Services')->collapsed(false)->collapsible(false),
+                NavigationGroup::make('Agents')->collapsed(false)->collapsible(false),
                 NavigationGroup::make('System')->collapsed(false)->collapsible(false),
             ])
             ->homeUrl(fn (): string => AdminControlCenter::getUrl())
