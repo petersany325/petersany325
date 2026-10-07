@@ -2,9 +2,10 @@
 
 این ریپو **شامل نرم‌افزار Windex، WinFOF، SASDEX یا ابزار فکتوری هارد نیست.**
 
-### ۳) فروشگاه EK Electronics (`ek-electronics/`)
-- پیش‌نمایش انگلیسی فروشگاه + پنل عملیات (حسابداری و واتساپ)
-- اجرا: `cd ek-electronics && python3 -m http.server 4173`
+### ۳) فروشگاه EK Electronics
+- `ek-electronics/` — پیش‌نمایش HTML
+- `ek-electronics-laravel/` — لاراول + Filament (فروشگاه، سفارش، فاکتور، واتساپ)
+- نصب cPanel: [`ek-electronics-laravel/INSTALL-CPANEL.md`](ek-electronics-laravel/INSTALL-CPANEL.md)
 
 ## پروژه‌های داخل ریپو
 
