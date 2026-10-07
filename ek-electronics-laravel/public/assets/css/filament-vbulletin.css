@@ -13,6 +13,40 @@
   --vb-link: #23497c;
 }
 
+/* Always-visible quick menu in topbar (survives collapsed sidebar groups) */
+.ek-admin-quick-menu {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  align-items: center !important;
+  max-width: min(78vw, 920px) !important;
+  margin-inline-end: 10px !important;
+}
+
+.ek-admin-quick-menu a {
+  display: inline-block !important;
+  background: linear-gradient(180deg, #9db0d0 0%, var(--vb-header) 100%) !important;
+  border: 1px solid #0b198c !important;
+  color: #fff !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  padding: 4px 8px !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+}
+
+.ek-admin-quick-menu a:hover {
+  background: linear-gradient(180deg, #b6c4de 0%, #4a5d84 100%) !important;
+  color: #fff !important;
+}
+
+@media (max-width: 1024px) {
+  .ek-admin-quick-menu {
+    display: none !important;
+  }
+}
+
 .fi-body,
 .fi-main-ctn,
 .fi-main {
@@ -111,9 +145,34 @@
 .fi-sidebar-group-items {
   background: var(--vb-alt1) !important;
   padding: 0 !important;
+  /* Beat Alpine x-show display:none when localStorage left groups collapsed */
   display: flex !important;
   flex-direction: column !important;
   gap: 0 !important;
+  visibility: visible !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  opacity: 1 !important;
+}
+
+.fi-sidebar-group.fi-collapsed .fi-sidebar-group-items,
+.fi-sidebar-group-items[style*="display: none"] {
+  display: flex !important;
+}
+
+.fi-sidebar-item-label[style*="display: none"],
+.fi-sidebar-group-label[style*="display: none"],
+.fi-sidebar-group-btn[style*="display: none"] {
+  display: flex !important;
+}
+
+.fi-sidebar-item-label[style*="display: none"] {
+  display: inline-block !important;
+}
+
+.fi-sidebar-group-label[style*="display: none"] {
+  display: inline-block !important;
 }
 
 .fi-sidebar-item {

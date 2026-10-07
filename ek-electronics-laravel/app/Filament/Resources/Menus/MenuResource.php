@@ -29,9 +29,9 @@ class MenuResource extends Resource
 
     protected static string|UnitEnum|null $navigationGroup = 'Content';
 
-    protected static ?string $navigationLabel = 'Menu manager';
+    protected static ?string $navigationLabel = 'Menus (header & footer)';
 
-    protected static ?int $navigationSort = 1;
+    protected static ?int $navigationSort = -10;
 
     protected static ?string $modelLabel = 'menu item';
 

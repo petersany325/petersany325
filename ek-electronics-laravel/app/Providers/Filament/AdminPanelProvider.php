@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\AdminControlCenter;
 use App\Filament\Widgets\StatsOverview;
 use App\Http\Middleware\EnsureInstalled;
 use Filament\Enums\ThemeMode;
@@ -9,6 +10,7 @@ use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -44,13 +46,48 @@ class AdminPanelProvider extends PanelProvider
             ->darkMode(false)
             ->defaultThemeMode(ThemeMode::Light)
             ->sidebarCollapsibleOnDesktop(false)
+            ->collapsibleNavigationGroups(false)
+            ->navigationGroups([
+                NavigationGroup::make('Content')->collapsed(false)->collapsible(false),
+                NavigationGroup::make('Store')->collapsed(false)->collapsible(false),
+                NavigationGroup::make('Catalogue')->collapsed(false)->collapsible(false),
+                NavigationGroup::make('Sales')->collapsed(false)->collapsible(false),
+                NavigationGroup::make('Accounting')->collapsed(false)->collapsible(false),
+                NavigationGroup::make('Support')->collapsed(false)->collapsible(false),
+                NavigationGroup::make('WhatsApp')->collapsed(false)->collapsible(false),
+                NavigationGroup::make('Communications')->collapsed(false)->collapsible(false),
+                NavigationGroup::make('Services')->collapsed(false)->collapsible(false),
+                NavigationGroup::make('System')->collapsed(false)->collapsible(false),
+            ])
+            ->homeUrl(fn (): string => AdminControlCenter::getUrl())
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
-                fn (): string => Blade::render('<link rel="stylesheet" href="{{ asset(\'assets/css/filament-vbulletin.css\') }}?v=3">')
+                fn (): string => Blade::render('<link rel="stylesheet" href="{{ asset(\'assets/css/filament-vbulletin.css\') }}?v=4">')
+            )
+            ->renderHook(
+                PanelsRenderHook::TOPBAR_END,
+                fn (): string => view('filament.hooks.admin-quick-menu')->render()
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_START,
+                fn (): string => Blade::render(<<<'HTML'
+                    <script>
+                      try {
+                        localStorage.removeItem('filament_sidebar_groups');
+                        Object.keys(localStorage).forEach(function (k) {
+                          if (k.indexOf('collapsed') !== -1 || k.indexOf('sidebar') !== -1) {
+                            if (k.toLowerCase().indexOf('filament') !== -1) localStorage.removeItem(k);
+                          }
+                        });
+                      } catch (e) {}
+                    </script>
+                HTML)
             )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-            ->pages([])
+            ->pages([
+                AdminControlCenter::class,
+            ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 StatsOverview::class,

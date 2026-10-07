@@ -26,7 +26,7 @@ class AdminControlCenter extends Page
     {
         return [
             'Content & menus' => [
-                ['label' => 'Menu manager', 'url' => '/admin/menus', 'hint' => 'Header & footer links'],
+                ['label' => 'Menus (header & footer)', 'url' => '/admin/menus', 'hint' => 'Full storefront menu management'],
                 ['label' => 'Page builder', 'url' => '/admin/cms-pages/pages', 'hint' => 'Advanced CMS blocks'],
                 ['label' => 'Footer settings', 'url' => '/admin/manage-footer-settings', 'hint' => 'Footer text & socials'],
             ],
