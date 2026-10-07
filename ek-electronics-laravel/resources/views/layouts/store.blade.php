@@ -46,18 +46,22 @@
       <div class="header-actions">
         @auth
           @if(auth()->user()->isStaff())
-            <a class="icon-btn" href="{{ route('staff.dashboard') }}" aria-label="Staff desk">⚙</a>
+            <a class="btn btn-outline" href="{{ route('staff.dashboard') }}">Staff desk</a>
           @else
-            <a class="icon-btn" href="{{ route('account.dashboard') }}" aria-label="My account">👤</a>
+            <a class="btn btn-outline" href="{{ route('account.dashboard') }}">My account</a>
           @endif
+          <form method="post" action="{{ route('logout') }}" style="display:inline;margin:0">@csrf<button class="btn btn-ghost" type="submit">Logout</button></form>
         @else
           @if($settings['customer_login_enabled'] ?? true)
-            <a class="icon-btn" href="{{ route('login') }}" aria-label="Sign in">👤</a>
+            <a class="btn btn-outline" href="{{ route('login') }}">Login</a>
+            @if($settings['customer_register_enabled'] ?? true)
+              <a class="btn btn-ghost" href="{{ route('register') }}">Register</a>
+            @endif
           @endif
         @endauth
         <a class="icon-btn" href="{{ route('cart') }}" aria-label="Shopping cart">🛒<span class="badge">{{ $cartCount }}</span></a>
         @if($settings['staff_login_enabled'] ?? true)
-          <a class="btn btn-primary" href="{{ route('login', ['portal' => 'staff']) }}">Staff</a>
+          <a class="btn btn-primary" href="{{ route('login', ['portal' => 'staff']) }}">Staff login</a>
         @endif
       </div>
     </div>
@@ -66,6 +70,11 @@
         @php $href = str_starts_with($item->url, 'http') ? $item->url : url($item->url); @endphp
         <a href="{{ $href }}" target="{{ $item->target ?? '_self' }}">{{ $item->label }}</a>
       @endforeach
+      @guest
+        @if($settings['customer_login_enabled'] ?? true)
+          <a href="{{ route('login') }}" class="{{ request()->routeIs('login') ? 'active' : '' }}">Login</a>
+        @endif
+      @endguest
     </nav>
   </header>
 
