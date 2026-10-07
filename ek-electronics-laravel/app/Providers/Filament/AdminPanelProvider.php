@@ -46,7 +46,7 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop(false)
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
-                fn (): string => Blade::render('<link rel="stylesheet" href="{{ asset(\'assets/css/filament-vbulletin.css\') }}?v=1">')
+                fn (): string => Blade::render('<link rel="stylesheet" href="{{ asset(\'assets/css/filament-vbulletin.css\') }}?v=3">')
             )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
