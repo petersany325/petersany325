@@ -4,11 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>@yield('title', 'EK Portal')</title>
+  <link rel="icon" href="{{ asset('assets/brand/favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('assets/brand/favicon-32.png') }}">
+  <link rel="apple-touch-icon" href="{{ asset('assets/brand/apple-touch-icon.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}">
-  <link rel="stylesheet" href="{{ asset('assets/css/portal.css') }}">
+  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=2">
+  <link rel="stylesheet" href="{{ asset('assets/css/portal.css') }}?v=2">
 </head>
 <body class="portal-body @yield('body_class')">
   @php
@@ -18,7 +21,7 @@
   <header class="portal-top">
     <div class="portal-top-inner">
       <a class="portal-brand" href="{{ $portal === 'staff' ? route('staff.dashboard') : route('account.dashboard') }}">
-        <span class="mark">EK</span>
+        <img class="brand-mark" src="{{ asset('assets/brand/mark-hex.png') }}" width="40" height="40" alt="EK Electronics">
         <span>
           <strong>{{ $portal === 'staff' ? 'Staff desk' : 'My account' }}</strong>
           <small>{{ $user?->name }}</small>

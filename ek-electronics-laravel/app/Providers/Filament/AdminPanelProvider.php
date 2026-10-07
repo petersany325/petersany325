@@ -33,6 +33,9 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('EK Operations')
+            ->brandLogo(asset('assets/brand/mark-hex.png'))
+            ->brandLogoHeight('2.25rem')
+            ->favicon(asset('assets/brand/favicon.ico'))
             ->colors([
                 // Classic vBulletin blues
                 'primary' => Color::hex('#5c7099'),

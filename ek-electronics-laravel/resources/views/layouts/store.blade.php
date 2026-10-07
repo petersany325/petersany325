@@ -5,10 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>@yield('title', ($settings['store_name'] ?? 'EK Electronics'))</title>
   <meta name="description" content="@yield('meta', 'Hard drive refurbishment, data recovery, secure erasure, and computer component sales in South Africa.')">
+  <link rel="icon" href="{{ asset('assets/brand/favicon.ico') }}" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('assets/brand/favicon-32.png') }}">
+  <link rel="apple-touch-icon" href="{{ asset('assets/brand/apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ asset('site.webmanifest') }}">
+  <meta property="og:image" content="{{ asset('assets/brand/logo-hex.png') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}">
+  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=2">
 </head>
 <body>
   @php
@@ -36,7 +41,7 @@
   <header class="site-header">
     <div class="nav-inner">
       <a class="brand" href="{{ route('home') }}">
-        <svg viewBox="0 0 48 48" aria-hidden="true"><rect width="48" height="48" rx="12" fill="#1d4ed8"/><text x="24" y="31" text-anchor="middle" fill="#fff" font-size="16" font-family="Manrope, sans-serif" font-weight="800">EK</text></svg>
+        <img class="brand-mark" src="{{ asset('assets/brand/mark-primary.png') }}" width="44" height="44" alt="EK Electronics">
         <span>{{ $storeName }}<small>{{ $tagline }}</small></span>
       </a>
       <form class="search" action="{{ route('shop') }}" method="get">
@@ -88,8 +93,10 @@
 
   <footer class="site-footer">
     <div class="wrap">
-      <div>
-        <h4>{{ $storeName }}</h4>
+      <div class="footer-brand">
+        <a href="{{ route('home') }}" class="footer-logo">
+          <img src="{{ asset('assets/brand/logo-hex-plate.png') }}" width="220" height="174" alt="EK Electronics — Innovation. Integrity. Impact.">
+        </a>
         <p>{{ $settings['footer_about'] ?? $tagline }}</p>
         @if($settings['footer_show_socials'] ?? true)
           <div class="socials">
