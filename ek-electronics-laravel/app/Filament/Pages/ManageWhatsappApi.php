@@ -60,6 +60,7 @@ class ManageWhatsappApi extends Page
             'whatsapp_api_send_contact' => Setting::bool('whatsapp_api_send_contact', false),
             'whatsapp_api_fallback_wame' => Setting::bool('whatsapp_api_fallback_wame', true),
             'whatsapp_api_notes' => Setting::getValue('whatsapp_api_notes', ''),
+            'webhook_url_display' => url('/webhooks/whatsapp'),
         ]);
     }
 

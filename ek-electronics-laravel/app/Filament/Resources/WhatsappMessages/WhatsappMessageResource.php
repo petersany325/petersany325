@@ -81,13 +81,7 @@ class WhatsappMessageResource extends Resource
                             WhatsApp::sendViaApi($record->to_phone, $record->body);
                         }
                     })
-                    ->successRedirectUrl(function (WhatsappMessage $record) {
-                        if (WhatsApp::apiEnabled() && ! Setting::bool('whatsapp_api_fallback_wame', true)) {
-                            return null;
-                        }
-
-                        return WhatsApp::link($record->body, $record->to_phone);
-                    }),
+                    ->successRedirectUrl(fn (WhatsappMessage $record) => WhatsApp::link($record->body, $record->to_phone)),
             ])
             ->recordActions([
                 Action::make('open')
