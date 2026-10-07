@@ -43,7 +43,7 @@ class AdminPanelProvider extends PanelProvider
             ->font('Tahoma')
             ->darkMode(false)
             ->defaultThemeMode(ThemeMode::Light)
-            ->sidebarCollapsibleOnDesktop()
+            ->sidebarCollapsibleOnDesktop(false)
             ->renderHook(
                 PanelsRenderHook::STYLES_AFTER,
                 fn (): string => Blade::render('<link rel="stylesheet" href="{{ asset(\'assets/css/filament-vbulletin.css\') }}?v=1">')

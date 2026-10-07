@@ -157,6 +157,31 @@
 .fi-sidebar-item-label {
   font-size: 13px !important;
   color: inherit !important;
+  display: inline !important;
+  opacity: 1 !important;
+  max-width: none !important;
+  overflow: visible !important;
+}
+
+/* Keep sidebar labels readable (do not icon-only collapse on desktop) */
+.fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-label,
+.fi-main-ctn .fi-sidebar .fi-sidebar-item-label,
+.fi-sidebar-nav .fi-sidebar-item-label,
+.fi-sidebar-nav .fi-sidebar-group-label {
+  display: inline !important;
+  visibility: visible !important;
+  width: auto !important;
+  height: auto !important;
+  position: static !important;
+  clip: auto !important;
+}
+
+.fi-sidebar {
+  width: 18rem !important;
+  min-width: 18rem !important;
+}
+.fi-sidebar-nav {
+  overflow-x: hidden !important;
 }
 
 .fi-sidebar-item-btn svg,
