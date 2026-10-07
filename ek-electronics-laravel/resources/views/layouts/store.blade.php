@@ -134,7 +134,47 @@
   </footer>
 
   @if(($settings['whatsapp_fab_enabled'] ?? true) && ($settings['footer_show_whatsapp'] ?? true))
-    <a class="fab-wa" href="https://wa.me/{{ $wa }}?text={{ urlencode($waMsg) }}">WhatsApp us</a>
+    @php
+      $waPos = $settings['whatsapp_chat_position'] ?? 'bottom-right';
+      $waColor = $settings['whatsapp_chat_color'] ?? '#25d366';
+      $waLabel = $settings['whatsapp_chat_label'] ?? 'WhatsApp us';
+      $waSub = $settings['whatsapp_chat_subtitle'] ?? '';
+      $waAgent = $settings['whatsapp_chat_agent_name'] ?? 'EK Support';
+      $waQuick = $settings['whatsapp_quick_replies'] ?? [];
+    @endphp
+    <div class="wa-widget {{ $waPos === 'bottom-left' ? 'wa-left' : 'wa-right' }}" data-auto-open="{{ ($settings['whatsapp_chat_auto_open'] ?? false) ? '1' : '0' }}" style="--wa-accent: {{ $waColor }}">
+      <div class="wa-panel" id="wa-panel" hidden>
+        <div class="wa-panel-head">
+          <strong>{{ $waLabel }}</strong>
+          @if($settings['whatsapp_chat_show_agent'] ?? true)<small>{{ $waAgent }} · {{ $waSub }}</small>@endif
+          <button type="button" class="wa-close" data-wa-close aria-label="Close">×</button>
+        </div>
+        <p class="wa-welcome">{{ $settings['whatsapp_welcome_message'] ?? $waMsg }}</p>
+        @if(!empty($waQuick))
+          <div class="wa-chips">
+            @foreach($waQuick as $chip)
+              <a href="https://wa.me/{{ $wa }}?text={{ urlencode($chip) }}">{{ $chip }}</a>
+            @endforeach
+          </div>
+        @endif
+        <a class="wa-panel-cta" href="https://wa.me/{{ $wa }}?text={{ urlencode($waMsg) }}">Continue on WhatsApp</a>
+      </div>
+      <button type="button" class="fab-wa" data-wa-toggle>{{ $waLabel }}</button>
+    </div>
+    <script>
+      (() => {
+        const root = document.querySelector('.wa-widget');
+        if (!root) return;
+        const panel = root.querySelector('#wa-panel');
+        const open = () => { panel.hidden = false; };
+        const close = () => { panel.hidden = true; };
+        root.querySelector('[data-wa-toggle]')?.addEventListener('click', () => { panel.hidden ? open() : close(); });
+        root.querySelector('[data-wa-close]')?.addEventListener('click', close);
+        if (root.dataset.autoOpen === '1' && !sessionStorage.getItem('ek_wa_opened')) {
+          setTimeout(() => { open(); sessionStorage.setItem('ek_wa_opened', '1'); }, 1200);
+        }
+      })();
+    </script>
   @endif
 </body>
 </html>

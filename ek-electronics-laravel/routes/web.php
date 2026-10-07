@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Install\InstallController;
 use App\Http\Controllers\StaffPortalController;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\WhatsappWebhookController;
 use App\Http\Middleware\EnsureNotInstalled;
 use Illuminate\Support\Facades\Route;
 
@@ -12,6 +13,9 @@ Route::middleware(EnsureNotInstalled::class)->group(function () {
     Route::get('/install', [InstallController::class, 'show'])->name('install.show');
     Route::post('/install', [InstallController::class, 'store'])->name('install.store');
 });
+
+Route::get('/webhooks/whatsapp', [WhatsappWebhookController::class, 'verify'])->name('webhooks.whatsapp.verify');
+Route::post('/webhooks/whatsapp', [WhatsappWebhookController::class, 'receive'])->name('webhooks.whatsapp.receive');
 
 Route::get('/', [StoreController::class, 'home'])->name('home');
 Route::get('/shop', [StoreController::class, 'shop'])->name('shop');
