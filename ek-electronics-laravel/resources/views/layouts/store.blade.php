@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=2">
+  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=3">
 </head>
 <body>
   @php
@@ -72,8 +72,28 @@
     </div>
     <nav class="menu">
       @foreach ($menus['header'] as $item)
-        @php $href = str_starts_with($item->url, 'http') ? $item->url : url($item->url); @endphp
-        <a href="{{ $href }}" target="{{ $item->target ?? '_self' }}">{{ $item->label }}</a>
+        @php
+          $href = str_starts_with($item->url, 'http') ? $item->url : url($item->url);
+          $children = method_exists($item, 'relationLoaded') && $item->relationLoaded('children')
+            ? $item->children
+            : collect($item->children ?? []);
+        @endphp
+        @if ($children->isNotEmpty())
+          <div class="menu-item has-sub">
+            <a href="{{ $href }}" target="{{ $item->target ?? '_self' }}" class="{{ !empty($item->is_highlighted) ? 'is-hot' : '' }}">{{ $item->label }}</a>
+            <div class="submenu">
+              @foreach ($children as $child)
+                @php $childHref = str_starts_with($child->url, 'http') ? $child->url : url($child->url); @endphp
+                <a href="{{ $childHref }}" target="{{ $child->target ?? '_self' }}">
+                  {{ $child->label }}
+                  @if(!empty($child->hint))<small>{{ $child->hint }}</small>@endif
+                </a>
+              @endforeach
+            </div>
+          </div>
+        @else
+          <a href="{{ $href }}" target="{{ $item->target ?? '_self' }}" class="{{ !empty($item->is_highlighted) ? 'is-hot' : '' }}">{{ $item->label }}</a>
+        @endif
       @endforeach
       @guest
         @if($settings['customer_login_enabled'] ?? true)

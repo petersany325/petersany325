@@ -26,7 +26,8 @@ class AdminControlCenter extends Page
     {
         return [
             'Content & menus' => [
-                ['label' => 'Menus (header & footer)', 'url' => '/admin/menus', 'hint' => 'Full storefront menu management'],
+                ['label' => 'Homepage editor', 'url' => '/admin/homepage-editor', 'hint' => 'Live edit the homepage'],
+                ['label' => 'Menus (header & footer)', 'url' => '/admin/menus', 'hint' => 'Submenus, hints, highlight'],
                 ['label' => 'Page builder', 'url' => '/admin/cms-pages/pages', 'hint' => 'Advanced CMS blocks'],
                 ['label' => 'Footer settings', 'url' => '/admin/manage-footer-settings', 'hint' => 'Footer text & socials'],
             ],
@@ -56,6 +57,9 @@ class AdminControlCenter extends Page
             ],
             'Services' => [
                 ['label' => 'Recovery jobs', 'url' => '/admin/recovery-jobs', 'hint' => 'Data recovery pipeline'],
+            ],
+            'Site repair' => [
+                ['label' => 'Site repair', 'url' => '/admin/site-repair', 'hint' => 'Clear cache, fix database, optimize'],
             ],
         ];
     }

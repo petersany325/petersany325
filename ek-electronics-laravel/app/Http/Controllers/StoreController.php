@@ -11,6 +11,7 @@ use App\Models\Page;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Services\WhatsApp;
+use App\Support\HomepageContent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -20,9 +21,11 @@ class StoreController extends Controller
 {
     public function home(): View
     {
+        $settings = $this->settings();
+
         return view('store.home', [
-            'featured' => Product::query()->with('category')->where('is_active', true)->where('is_featured', true)->take(8)->get(),
-            'settings' => $this->settings(),
+            'featured' => Product::query()->with('category')->where('is_active', true)->where('is_featured', true)->take((int) ($settings['bestsellers_count'] ?? 8))->get(),
+            'settings' => $settings,
             'menus' => $this->menus(),
         ]);
     }
@@ -250,7 +253,7 @@ class StoreController extends Controller
     /** @return array<string, mixed> */
     private function settings(): array
     {
-        return [
+        return array_merge([
             'store_name' => Setting::getValue('store_name', 'EK Electronics'),
             'phone' => Setting::getValue('phone', '+27 10 500 2140'),
             'email' => Setting::getValue('email', 'info@ekelectronics.co.za'),
@@ -280,38 +283,43 @@ class StoreController extends Controller
             'footer_instagram' => Setting::getValue('footer_instagram', ''),
             'footer_tiktok' => Setting::getValue('footer_tiktok', ''),
             'footer_x' => Setting::getValue('footer_x', ''),
-            'hero_headline' => Setting::getValue('hero_headline', 'Hard drives & components, refurbished with integrity.'),
-            'hero_sub' => Setting::getValue('hero_sub', 'Enterprise storage, memory, boards, and professional data recovery from Midrand.'),
-            'hero_cta_label' => Setting::getValue('hero_cta_label', 'Shop catalogue'),
-            'hero_cta_url' => Setting::getValue('hero_cta_url', '/shop'),
             'show_prices' => Setting::bool('show_prices', true),
             'customer_login_enabled' => Setting::bool('customer_login_enabled', true),
             'customer_register_enabled' => Setting::bool('customer_register_enabled', true),
             'staff_login_enabled' => Setting::bool('staff_login_enabled', true),
-        ];
+        ], HomepageContent::forView());
     }
 
     /** @return array<string, \Illuminate\Support\Collection<int, Menu>> */
     private function menus(): array
     {
-        $all = Menu::query()->where('is_active', true)->orderBy('sort_order')->get()->groupBy('location');
-        $header = $all->get('header', collect());
+        $withChildren = fn ($q) => $q->where('is_active', true)->orderBy('sort_order')->orderBy('id');
+        $tops = Menu::query()
+            ->with(['children' => $withChildren])
+            ->whereNull('parent_id')
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('location');
+
+        $header = $tops->get('header', collect());
         if ($header->isEmpty()) {
             $header = collect([
-                (object) ['label' => 'Home', 'url' => '/', 'target' => '_self'],
-                (object) ['label' => 'Shop', 'url' => '/shop', 'target' => '_self'],
-                (object) ['label' => 'Services', 'url' => '/services', 'target' => '_self'],
-                (object) ['label' => 'About', 'url' => '/about', 'target' => '_self'],
-                (object) ['label' => 'Contact', 'url' => '/contact', 'target' => '_self'],
+                (object) ['label' => 'Home', 'url' => '/', 'target' => '_self', 'is_highlighted' => false, 'children' => collect()],
+                (object) ['label' => 'Shop', 'url' => '/shop', 'target' => '_self', 'is_highlighted' => false, 'children' => collect()],
+                (object) ['label' => 'Services', 'url' => '/services', 'target' => '_self', 'is_highlighted' => false, 'children' => collect()],
+                (object) ['label' => 'About', 'url' => '/about', 'target' => '_self', 'is_highlighted' => false, 'children' => collect()],
+                (object) ['label' => 'Contact', 'url' => '/contact', 'target' => '_self', 'is_highlighted' => false, 'children' => collect()],
             ]);
         }
 
         return [
             'header' => $header,
-            'footer' => $all->get('footer', collect()),
-            'footer_shop' => $all->get('footer_shop', collect()),
-            'footer_services' => $all->get('footer_services', collect()),
-            'footer_legal' => $all->get('footer_legal', collect()),
+            'footer' => $tops->get('footer', collect()),
+            'footer_shop' => $tops->get('footer_shop', collect()),
+            'footer_services' => $tops->get('footer_services', collect()),
+            'footer_legal' => $tops->get('footer_legal', collect()),
         ];
     }
 }

@@ -1,50 +1,81 @@
 @extends('layouts.store')
-@section('title', 'EK Electronics | Hard Drives, Data Recovery & Reliable Tech')
+@section('title', $settings['home_meta_title'] ?? 'EK Electronics | Hard Drives, Data Recovery & Reliable Tech')
 @section('content')
+@php
+  $img = fn (?string $path) => \App\Support\HomepageContent::imageUrl($path);
+@endphp
 <section>
-  <div class="hero">
-    <img src="{{ asset('assets/img/hero.jpg') }}" alt="Enterprise server racks" width="1600" height="900">
-    <div class="hero-copy">
-      <div class="kicker">{{ $settings['tagline'] ?? 'Innovation. Integrity. Impact.' }}</div>
-      <h1>{{ $settings['hero_headline'] ?? 'We’re experts in Hard Drives, Data Recovery, and Reliable Tech Solutions.' }}</h1>
-      <p>{{ $settings['hero_sub'] ?? 'Buy certified refurbished storage and components online. Recover lost data. Wipe drives to a compliant standard. EK Electronics serves individuals, IT companies, and resellers across South Africa.' }}</p>
-      <div class="cta-row">
-        <a class="btn btn-primary" href="{{ url($settings['hero_cta_url'] ?? '/shop') }}">{{ $settings['hero_cta_label'] ?? 'Shop the catalogue' }}</a>
-        <a class="btn btn-ghost" href="{{ route('services') }}">Book data recovery</a>
-        <a class="btn btn-wa" href="https://wa.me/{{ $settings['whatsapp'] }}?text={{ urlencode($settings['whatsapp_default_message'] ?? 'Hi EK, I need a data recovery assessment.') }}">WhatsApp a technician</a>
-      </div>
-    </div>
-  </div>
-  <div class="wrap">
-    <div class="stats">
-      <div class="stat"><b>885+</b><span>SKU in the live product feed</span></div>
-      <div class="stat"><b>Grade A / A+</b><span>Tested, certified refurbished drives</span></div>
-      <div class="stat"><b>24–48h</b><span>Courier dispatch from Midrand</span></div>
-      <div class="stat"><b>WhatsApp-first</b><span>Orders, invoices &amp; recovery updates</span></div>
-    </div>
-  </div>
-  <div class="wrap section">
-    <h2>Shop bestsellers</h2>
-    <p class="lede">Direct cart checkout in ZAR. Pay on invoice or confirm stock on WhatsApp — both paths land in the same order desk.</p>
-    <div class="grid-4">
-      @foreach ($featured as $product)
-        @include('store.partials.product-card', ['product' => $product])
-      @endforeach
-    </div>
-  </div>
-  <div class="wrap section">
-    <div class="split">
-      <div class="photo-frame"><img src="{{ asset('assets/img/lab.jpg') }}" alt="Technician diagnostics" width="1200" height="800"></div>
-      <div>
-        <div class="kicker" style="color:var(--blue)">Lab in Midrand</div>
-        <h2>Recover the unrecoverable. Supply drives that last.</h2>
-        <p class="lede">Every refurbished unit is health-tested, surface-scanned, and graded. Data recovery cases are handled confidentially with professional tools for HDD, SSD, flash, and RAID.</p>
+  @if($settings['home_show_hero'] ?? true)
+    <div class="hero">
+      @if($img($settings['hero_image'] ?? ''))
+        <img src="{{ $img($settings['hero_image'] ?? '') }}" alt="" width="1600" height="900">
+      @endif
+      <div class="hero-copy">
+        <div class="kicker">{{ $settings['hero_kicker'] ?? ($settings['tagline'] ?? '') }}</div>
+        <h1>{{ $settings['hero_headline'] ?? '' }}</h1>
+        <p>{{ $settings['hero_sub'] ?? '' }}</p>
         <div class="cta-row">
-          <a class="btn btn-primary" href="{{ route('about') }}">Our story</a>
-          <a class="btn btn-outline" href="{{ route('contact') }}">Visit the office</a>
+          @if(!empty($settings['hero_cta_label']))
+            <a class="btn btn-primary" href="{{ url($settings['hero_cta_url'] ?? '/shop') }}">{{ $settings['hero_cta_label'] }}</a>
+          @endif
+          @if(!empty($settings['hero_cta2_label']))
+            <a class="btn btn-ghost" href="{{ url($settings['hero_cta2_url'] ?? '/services') }}">{{ $settings['hero_cta2_label'] }}</a>
+          @endif
+          @if($settings['hero_show_whatsapp'] ?? true)
+            <a class="btn btn-wa" href="https://wa.me/{{ $settings['whatsapp'] }}?text={{ urlencode($settings['whatsapp_default_message'] ?? 'Hi EK, I need a data recovery assessment.') }}">WhatsApp a technician</a>
+          @endif
         </div>
       </div>
     </div>
-  </div>
+  @endif
+
+  @if($settings['home_show_stats'] ?? true)
+    <div class="wrap">
+      <div class="stats">
+        @foreach ([1, 2, 3, 4] as $n)
+          @if(!empty($settings['stat_'.$n.'_value']) || !empty($settings['stat_'.$n.'_label']))
+            <div class="stat"><b>{{ $settings['stat_'.$n.'_value'] ?? '' }}</b><span>{{ $settings['stat_'.$n.'_label'] ?? '' }}</span></div>
+          @endif
+        @endforeach
+      </div>
+    </div>
+  @endif
+
+  @if($settings['home_show_bestsellers'] ?? true)
+    <div class="wrap section">
+      <h2>{{ $settings['bestsellers_title'] ?? 'Shop bestsellers' }}</h2>
+      <p class="lede">{{ $settings['bestsellers_lede'] ?? '' }}</p>
+      <div class="grid-4">
+        @foreach ($featured as $product)
+          @include('store.partials.product-card', ['product' => $product])
+        @endforeach
+      </div>
+    </div>
+  @endif
+
+  @if($settings['home_show_lab'] ?? true)
+    <div class="wrap section">
+      <div class="split">
+        <div class="photo-frame">
+          @if($img($settings['lab_image'] ?? ''))
+            <img src="{{ $img($settings['lab_image'] ?? '') }}" alt="" width="1200" height="800">
+          @endif
+        </div>
+        <div>
+          <div class="kicker" style="color:var(--blue)">{{ $settings['lab_kicker'] ?? '' }}</div>
+          <h2>{{ $settings['lab_heading'] ?? '' }}</h2>
+          <p class="lede">{{ $settings['lab_body'] ?? '' }}</p>
+          <div class="cta-row">
+            @if(!empty($settings['lab_cta_label']))
+              <a class="btn btn-primary" href="{{ url($settings['lab_cta_url'] ?? '/about') }}">{{ $settings['lab_cta_label'] }}</a>
+            @endif
+            @if(!empty($settings['lab_cta2_label']))
+              <a class="btn btn-outline" href="{{ url($settings['lab_cta2_url'] ?? '/contact') }}">{{ $settings['lab_cta2_label'] }}</a>
+            @endif
+          </div>
+        </div>
+      </div>
+    </div>
+  @endif
 </section>
 @endsection
