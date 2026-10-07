@@ -1,0 +1,204 @@
+/* Classic vBulletin-inspired Filament admin shell */
+:root {
+  --vb-navy: #3a5078;
+  --vb-header: #5c7099;
+  --vb-header-deep: #4a5d84;
+  --vb-tcat: #869bbf;
+  --vb-tcat-deep: #6e87b0;
+  --vb-alt1: #f5f5ff;
+  --vb-alt2: #e1e4f2;
+  --vb-page: #d1d1e1;
+  --vb-border: #0b198c;
+  --vb-soft-border: #8299b4;
+  --vb-link: #23497c;
+  --vb-text: #000000;
+  --vb-muted: #3e3e5c;
+}
+
+/* Panel chrome */
+.fi-body,
+.fi-main-ctn,
+.fi-main {
+  background: var(--vb-page) !important;
+}
+
+.fi-topbar {
+  background: linear-gradient(180deg, #7192a8 0%, var(--vb-header) 55%, var(--vb-header-deep) 100%) !important;
+  border-bottom: 1px solid var(--vb-border) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.fi-topbar * {
+  color: #fff !important;
+}
+
+.fi-topbar .fi-icon-btn,
+.fi-topbar button {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  border-radius: 4px !important;
+}
+
+/* Sidebar shell — boxed forum menu look */
+.fi-sidebar,
+.fi-sidebar-nav {
+  background: var(--vb-alt2) !important;
+}
+
+.fi-sidebar {
+  border-right: 2px solid var(--vb-border) !important;
+}
+
+.fi-sidebar-header {
+  background: linear-gradient(180deg, #7192a8 0%, var(--vb-header) 100%) !important;
+  border-bottom: 1px solid var(--vb-border) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.fi-sidebar-header .fi-logo,
+.fi-sidebar-header .fi-logo span,
+.fi-sidebar-header a,
+.fi-sidebar-header button,
+.fi-sidebar-header svg {
+  color: #fff !important;
+  fill: currentColor;
+}
+
+.fi-sidebar-nav {
+  padding: 10px 8px 18px !important;
+}
+
+.fi-sidebar-nav-groups {
+  gap: 10px !important;
+}
+
+/* Group = tcat category block */
+.fi-sidebar-group {
+  background: var(--vb-alt1) !important;
+  border: 1px solid var(--vb-border) !important;
+  border-radius: 0 !important;
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.65) inset;
+}
+
+.fi-sidebar-group-btn,
+.fi-sidebar-group > .fi-sidebar-group-btn {
+  background: linear-gradient(180deg, #9db0d0 0%, var(--vb-tcat) 45%, var(--vb-tcat-deep) 100%) !important;
+  border-bottom: 1px solid var(--vb-border) !important;
+  border-radius: 0 !important;
+  min-height: 34px !important;
+  padding: 6px 10px !important;
+  color: #fff !important;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.25);
+}
+
+.fi-sidebar-group-label {
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+
+.fi-sidebar-group-btn svg,
+.fi-sidebar-group-collapse-btn svg,
+.fi-sidebar-group-btn .fi-icon {
+  color: #fff !important;
+}
+
+.fi-sidebar-group-items {
+  background: var(--vb-alt1) !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+/* Items = classic forum rows */
+.fi-sidebar-item {
+  border-bottom: 1px solid var(--vb-soft-border) !important;
+  margin: 0 !important;
+}
+
+.fi-sidebar-item:nth-child(even) > .fi-sidebar-item-btn {
+  background: var(--vb-alt2) !important;
+}
+
+.fi-sidebar-item:nth-child(odd) > .fi-sidebar-item-btn {
+  background: var(--vb-alt1) !important;
+}
+
+.fi-sidebar-item > .fi-sidebar-item-btn {
+  border-radius: 0 !important;
+  min-height: 36px !important;
+  padding: 7px 10px !important;
+  gap: 10px !important;
+  color: var(--vb-link) !important;
+  font-weight: 700 !important;
+}
+
+.fi-sidebar-item > .fi-sidebar-item-btn:hover {
+  background: #c7d0e8 !important;
+  color: #000 !important;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
+.fi-sidebar-item-btn[aria-current="page"] {
+  background: linear-gradient(180deg, #6f86b3 0%, var(--vb-navy) 100%) !important;
+  color: #fff !important;
+  box-shadow: inset 0 0 0 1px rgba(11, 25, 140, 0.35);
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-sidebar-item-label,
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn svg,
+.fi-sidebar-item-btn[aria-current="page"] .fi-sidebar-item-label,
+.fi-sidebar-item-btn[aria-current="page"] svg {
+  color: #fff !important;
+}
+
+.fi-sidebar-item-label {
+  font-size: 13px !important;
+  color: inherit !important;
+}
+
+.fi-sidebar-item-btn svg,
+.fi-sidebar-item-btn .fi-icon {
+  color: var(--vb-header) !important;
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn svg,
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-icon {
+  color: #fff !important;
+}
+
+/* Main content cards — forum table look */
+.fi-section,
+.fi-ta-ctn,
+.fi-wi-stats-overview-stat {
+  background: var(--vb-alt1) !important;
+  border: 1px solid var(--vb-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.fi-header-heading,
+.fi-section-header-heading {
+  color: var(--vb-navy) !important;
+}
+
+.fi-btn-color-primary {
+  background: linear-gradient(180deg, #9db0d0 0%, var(--vb-header) 100%) !important;
+  border: 1px solid var(--vb-border) !important;
+  border-radius: 3px !important;
+  color: #fff !important;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.fi-simple-page,
+.fi-simple-main {
+  background: var(--vb-page) !important;
+}
+
+.fi-simple-main .fi-logo span {
+  color: var(--vb-navy) !important;
+}
