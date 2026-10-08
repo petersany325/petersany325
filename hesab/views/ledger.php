@@ -1,6 +1,6 @@
 <div class="panel">
   <div class="hd"><strong>انتخاب حساب</strong></div>
-  <form class="form row" method="get" action="/ledger">
+  <form class="form row" method="get" action="<?= e(url('/ledger')) ?>">
     <label style="grid-column: span 3">حساب معین
       <select name="moein_id" onchange="this.form.submit()">
         <option value="">— انتخاب حساب —</option>

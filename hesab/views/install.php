@@ -1,5 +1,5 @@
 <div class="auth-wrap">
-  <form class="auth-card form" method="post" action="/install" style="width:min(520px,94vw)">
+  <form class="auth-card form" method="post" action="<?= e(url('/install')) ?>" style="width:min(520px,94vw)">
     <?= csrf_field() ?>
     <h1>نصب سامانه حساب</h1>
     <p>اتصال دیتابیس و ایجاد مدیر سیستم</p>
@@ -7,7 +7,7 @@
       <div class="flash <?= e($flash['type']) ?>"><?= e($flash['message']) ?></div>
     <?php endif; ?>
     <label>آدرس سایت
-      <input name="base_url" value="https://hesab.hdd-land.ir" required>
+      <input name="base_url" value="https://hdd-land.ir/hesab" required>
     </label>
     <label>هاست دیتابیس
       <input name="db_host" value="localhost" required>

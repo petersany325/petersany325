@@ -1,5 +1,5 @@
 <div class="grid" style="grid-template-columns:360px 1fr;gap:12px">
-  <form class="panel form" method="post" action="/invoices">
+  <form class="panel form" method="post" action="<?= e(url('/invoices')) ?>">
     <?= csrf_field() ?>
     <div class="hd" style="margin:-14px -14px 0;border:0;border-bottom:1px solid var(--line)"><strong>فاکتور فروش سریع</strong></div>
     <label>مشتری
@@ -34,7 +34,7 @@
             <td class="num"><?= money($r['total']) ?></td>
             <td>
               <?php if ($r['voucher_id']): ?>
-                <a href="/vouchers/view?id=<?= (int)$r['voucher_id'] ?>">#<?= (int)$r['voucher_id'] ?></a>
+                <a href="<?= e(url('/vouchers/view')) ?>?id=<?= (int)$r['voucher_id'] ?>">#<?= (int)$r['voucher_id'] ?></a>
               <?php else: ?>—<?php endif; ?>
             </td>
           </tr>

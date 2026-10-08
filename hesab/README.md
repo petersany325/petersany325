@@ -12,7 +12,7 @@
 1. ساب‌دامین `hesab.hdd-land.ir` با Document Root: `/home/USER/hesab`
 2. دیتابیس MySQL بسازید و کاربر را با ALL PRIVILEGES وصل کنید
 3. محتوای این پوشه را داخل Document Root آپلود کنید
-4. باز کنید: `https://hesab.hdd-land.ir/install`
+4. باز کنید: `https://hdd-land.ir/hesab/install`
 
 ## ورود پیش‌فرض بعد از نصب
 - ایمیل: مقدار واردشده در نصب (پیشنهادی: `admin@hesab.local`)

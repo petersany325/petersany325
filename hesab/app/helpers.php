@@ -11,14 +11,59 @@ function money($n): string
     return number_format((float) $n, 0, '.', ',');
 }
 
+function base_path(): string
+{
+    static $base = null;
+    if ($base !== null) {
+        return $base;
+    }
+    // When app lives in /hesab/index.php, SCRIPT_NAME is /hesab/index.php
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    $dir = rtrim(str_replace('\\', '/', dirname($script)), '/');
+    if ($dir === '/' || $dir === '.' || $dir === '') {
+        $base = '';
+    } else {
+        $base = $dir;
+    }
+    return $base;
+}
+
+function url(string $path = '/'): string
+{
+    if (str_starts_with($path, 'http')) {
+        return $path;
+    }
+    if ($path === '') {
+        $path = '/';
+    }
+    if ($path[0] !== '/') {
+        $path = '/' . $path;
+    }
+    return base_path() . $path;
+}
+
 function redirect(string $path): never
 {
-    $base = rtrim((string) (cfg('base_url') ?: ''), '/');
     if (str_starts_with($path, 'http')) {
         header('Location: ' . $path);
-    } else {
-        header('Location: ' . $base . $path);
+        exit;
     }
+    // Prefer configured absolute base_url when set to full host.
+    $configured = rtrim((string) (cfg('base_url') ?: ''), '/');
+    if ($configured !== '' && preg_match('#^https?://#i', $configured)) {
+        if ($path === '' || $path[0] !== '/') {
+            $path = '/' . ltrim($path, '/');
+        }
+        // If configured base already includes /hesab, avoid double prefix.
+        $configuredPath = parse_url($configured, PHP_URL_PATH) ?: '';
+        if ($configuredPath && str_starts_with($path, rtrim($configuredPath, '/') . '/')) {
+            header('Location: ' . preg_replace('#'.preg_quote($configuredPath,'#').'#', '', $configured, 1) . $path);
+            exit;
+        }
+        header('Location: ' . $configured . $path);
+        exit;
+    }
+    header('Location: ' . url($path));
     exit;
 }
 
@@ -86,4 +131,18 @@ function partial(string $name, array $data = []): void
 {
     extract($data, EXTR_SKIP);
     require __DIR__ . '/../views/' . $name . '.php';
+}
+
+function request_path(): string
+{
+    $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    $base = base_path();
+    if ($base !== '' && str_starts_with($uri, $base)) {
+        $uri = substr($uri, strlen($base)) ?: '/';
+    }
+    // Also support /index.php/path
+    if (str_starts_with($uri, '/index.php')) {
+        $uri = substr($uri, strlen('/index.php')) ?: '/';
+    }
+    return rtrim($uri, '/') ?: '/';
 }

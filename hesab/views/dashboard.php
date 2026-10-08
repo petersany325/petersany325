@@ -9,8 +9,8 @@
   <div class="hd">
     <strong>آخرین اسناد</strong>
     <div>
-      <a class="btn ghost" href="/vouchers">همه اسناد</a>
-      <a class="btn" href="/vouchers/create">سند جدید</a>
+      <a class="btn ghost" href="<?= e(url('/vouchers')) ?>">همه اسناد</a>
+      <a class="btn" href="<?= e(url('/vouchers/create')) ?>">سند جدید</a>
     </div>
   </div>
   <div class="bd">
@@ -30,7 +30,7 @@
       <?php endif; ?>
       <?php foreach ($recent as $r): ?>
         <tr>
-          <td><a href="/vouchers/view?id=<?= (int)$r['id'] ?>"><?= (int)$r['number'] ?></a></td>
+          <td><a href="<?= e(url('/vouchers/view')) ?>?id=<?= (int)$r['id'] ?>"><?= (int)$r['number'] ?></a></td>
           <td class="num"><?= e($r['voucher_date']) ?></td>
           <td><?= e($r['description'] ?: '—') ?></td>
           <td><span class="badge <?= e($r['status']) ?>"><?= e($r['status']) ?></span></td>

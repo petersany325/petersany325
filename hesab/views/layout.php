@@ -13,7 +13,7 @@ $isAuthPage = in_array($name, ['login', 'install'], true);
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($title ?? $appName) ?> | <?= e($appName) ?></title>
-  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>">
 </head>
 <body>
 <?php if ($isAuthPage): ?>
@@ -26,13 +26,13 @@ $isAuthPage = in_array($name, ['login', 'install'], true);
         <span>نرم‌افزار حسابداری تحت وب</span>
       </div>
       <nav class="nav">
-        <a class="<?= ($nav ?? '') === 'dashboard' ? 'active' : '' ?>" href="/"><span>داشبورد</span></a>
-        <a class="<?= ($nav ?? '') === 'accounts' ? 'active' : '' ?>" href="/accounts"><span>کدینگ حساب‌ها</span></a>
-        <a class="<?= ($nav ?? '') === 'vouchers' ? 'active' : '' ?>" href="/vouchers"><span>اسناد حسابداری</span></a>
-        <a class="<?= ($nav ?? '') === 'ledger' ? 'active' : '' ?>" href="/ledger"><span>دفتر حساب</span></a>
-        <a class="<?= ($nav ?? '') === 'trial' ? 'active' : '' ?>" href="/trial-balance"><span>تراز آزمایشی</span></a>
-        <a class="<?= ($nav ?? '') === 'parties' ? 'active' : '' ?>" href="/parties"><span>طرف‌حساب‌ها</span></a>
-        <a class="<?= ($nav ?? '') === 'invoices' ? 'active' : '' ?>" href="/invoices"><span>فاکتور فروش</span></a>
+        <a class="<?= ($nav ?? '') === 'dashboard' ? 'active' : '' ?>" href="<?= e(url('/')) ?>"><span>داشبورد</span></a>
+        <a class="<?= ($nav ?? '') === 'accounts' ? 'active' : '' ?>" href="<?= e(url('/accounts')) ?>"><span>کدینگ حساب‌ها</span></a>
+        <a class="<?= ($nav ?? '') === 'vouchers' ? 'active' : '' ?>" href="<?= e(url('/vouchers')) ?>"><span>اسناد حسابداری</span></a>
+        <a class="<?= ($nav ?? '') === 'ledger' ? 'active' : '' ?>" href="<?= e(url('/ledger')) ?>"><span>دفتر حساب</span></a>
+        <a class="<?= ($nav ?? '') === 'trial' ? 'active' : '' ?>" href="<?= e(url('/trial-balance')) ?>"><span>تراز آزمایشی</span></a>
+        <a class="<?= ($nav ?? '') === 'parties' ? 'active' : '' ?>" href="<?= e(url('/parties')) ?>"><span>طرف‌حساب‌ها</span></a>
+        <a class="<?= ($nav ?? '') === 'invoices' ? 'active' : '' ?>" href="<?= e(url('/invoices')) ?>"><span>فاکتور فروش</span></a>
       </nav>
     </aside>
     <div class="main">
@@ -40,7 +40,7 @@ $isAuthPage = in_array($name, ['login', 'install'], true);
         <h1><?= e($title ?? '') ?></h1>
         <div class="meta">
           <span><?= e($user['name'] ?? '') ?></span>
-          <a class="btn ghost" href="/logout">خروج</a>
+          <a class="btn ghost" href="<?= e(url('/logout')) ?>">خروج</a>
         </div>
       </header>
       <main class="content">
@@ -52,6 +52,6 @@ $isAuthPage = in_array($name, ['login', 'install'], true);
     </div>
   </div>
 <?php endif; ?>
-<script src="/assets/js/app.js"></script>
+<script src="<?= e(url('/assets/js/app.js')) ?>"></script>
 </body>
 </html>

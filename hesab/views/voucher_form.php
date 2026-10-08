@@ -1,4 +1,4 @@
-<form class="panel" method="post" action="/vouchers/create" id="voucher-form">
+<form class="panel" method="post" action="<?= e(url('/vouchers/create')) ?>" id="voucher-form">
   <?= csrf_field() ?>
   <div class="hd">
     <strong>ثبت سند حسابداری</strong>

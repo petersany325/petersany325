@@ -1,5 +1,5 @@
 <div class="grid" style="grid-template-columns:320px 1fr;gap:12px">
-  <form class="panel form" method="post" action="/parties">
+  <form class="panel form" method="post" action="<?= e(url('/parties')) ?>">
     <?= csrf_field() ?>
     <div class="hd" style="margin:-14px -14px 0;border:0;border-bottom:1px solid var(--line)"><strong>طرف‌حساب جدید</strong></div>
     <label>کد<input name="code" required placeholder="C-001"></label>

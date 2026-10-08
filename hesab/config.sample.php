@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 return [
     'app_name' => 'حساب پیشگام',
-    'base_url' => 'https://hesab.hdd-land.ir',
+    'base_url' => 'https://hdd-land.ir/hesab',
     'timezone' => 'Asia/Tehran',
     'db' => [
         'host' => 'localhost',

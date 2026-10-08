@@ -336,6 +336,4 @@ $router->post('/invoices', function () {
     redirect('/invoices');
 });
 
-// Front controller path fix when app is in /public via rewrite
-$uri = $_SERVER['REQUEST_URI'] ?? '/';
-$router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', $uri);
+$router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', request_path());

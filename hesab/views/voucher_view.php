@@ -9,9 +9,9 @@ foreach ($lines as $l) { $sumD += (float)$l['debit']; $sumC += (float)$l['credit
       <span class="badge <?= e($v['status']) ?>"><?= e($v['status']) ?></span>
     </div>
     <div style="display:flex;gap:8px">
-      <a class="btn ghost" href="/vouchers">بازگشت</a>
+      <a class="btn ghost" href="<?= e(url('/vouchers')) ?>">بازگشت</a>
       <?php if ($v['status'] === 'draft'): ?>
-      <form method="post" action="/vouchers/post" style="margin:0">
+      <form method="post" action="<?= e(url('/vouchers/post')) ?>" style="margin:0">
         <?= csrf_field() ?>
         <input type="hidden" name="id" value="<?= (int)$v['id'] ?>">
         <button class="btn" type="submit">ثبت قطعی</button>
