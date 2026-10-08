@@ -105,12 +105,48 @@ function verify_csrf(): void
     }
 }
 
+function wants_mobile_ui(): bool
+{
+    if (!empty($_GET['desktop'])) {
+        $_SESSION['ui_mode'] = 'desktop';
+    }
+    if (!empty($_GET['mobile'])) {
+        $_SESSION['ui_mode'] = 'mobile';
+    }
+    if (($_SESSION['ui_mode'] ?? '') === 'desktop') {
+        return false;
+    }
+    if (($_SESSION['ui_mode'] ?? '') === 'mobile') {
+        return true;
+    }
+    $ua = strtolower((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
+    return (bool) preg_match('/android|iphone|ipad|ipod|mobile|opera mini|windows phone|webos|blackberry/i', $ua);
+}
+
+function is_mobile_route(): bool
+{
+    $path = request_path();
+    return $path === '/m' || str_starts_with($path, '/m/');
+}
+
 function view(string $name, array $data = []): void
 {
     extract($data, EXTR_SKIP);
     $flash = take_flash();
     $user = current_user();
     $appName = cfg('app_name', 'حساب');
+    $mobile = !empty($force_mobile) || is_mobile_route();
+    if ($mobile) {
+        if ($name === 'login') {
+            $name = 'login';
+        }
+        if (!is_file(__DIR__ . '/../views/mobile/' . $name . '.php') && $name !== 'login') {
+            // fallback tiny page
+            $name = 'placeholder';
+        }
+        require __DIR__ . '/../views/mobile/layout.php';
+        return;
+    }
     require __DIR__ . '/../views/layout.php';
 }
 

@@ -13,5 +13,6 @@
       <input type="password" name="password" required>
     </label>
     <button class="btn" type="submit">ورود</button>
+    <a class="btn ghost" href="<?= e(url('/m/login?mobile=1')) ?>" style="text-align:center">ورود به نسخه موبایل</a>
   </form>
 </div>

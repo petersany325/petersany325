@@ -242,7 +242,8 @@ try {
     <span class="sb-pane">آماده</span>
     <span class="sb-pane">کاربر: <?= e($user['name'] ?? '') ?> (<?= e($user['role'] ?? '') ?>)</span>
     <span class="sb-pane"><?= e($fy['title'] ?? 'سال مالی نامشخص') ?></span>
-    <span class="sb-pane sb-end">build 6 · ویندوزی</span>
+    <span class="sb-pane"><a href="<?= e(url('/m?mobile=1')) ?>">نسخه موبایل</a></span>
+    <span class="sb-pane sb-end">build 7 · ویندوزی</span>
   </footer>
 </div>
 <?php endif; ?>

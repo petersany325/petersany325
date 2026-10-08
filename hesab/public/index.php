@@ -39,7 +39,10 @@ $router->get('/login', function () {
         redirect('/install');
     }
     if (current_user()) {
-        redirect('/');
+        redirect(wants_mobile_ui() ? '/m' : '/');
+    }
+    if (wants_mobile_ui()) {
+        redirect('/m/login');
     }
     view('login', ['title' => 'ورود']);
 });
@@ -50,10 +53,10 @@ $router->post('/login', function () {
     $pass = (string) ($_POST['password'] ?? '');
     if (attempt_login($email, $pass)) {
         Audit::log('auth.login');
-        redirect('/');
+        redirect(wants_mobile_ui() ? '/m' : '/');
     }
     flash('err', 'ایمیل یا رمز عبور نادرست است.');
-    redirect('/login');
+    redirect(wants_mobile_ui() ? '/m/login' : '/login');
 });
 
 $router->get('/logout', function () {
@@ -61,9 +64,16 @@ $router->get('/logout', function () {
         Audit::log('auth.logout');
     }
     logout_user();
-    redirect('/login');
+    redirect(wants_mobile_ui() ? '/m/login' : '/login');
 });
 
+require __DIR__ . '/../app/routes_mobile.php';
 require __DIR__ . '/../app/routes_app.php';
+
+// Auto-send phones from desktop home into mobile app (unless desktop mode forced)
+$router->get('/go-mobile', function () {
+    $_SESSION['ui_mode'] = 'mobile';
+    redirect(current_user() ? '/m' : '/m/login');
+});
 
 $router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', request_path());

@@ -5,6 +5,9 @@ declare(strict_types=1);
 
 $router->get('/', function () {
     require_login();
+    if (wants_mobile_ui()) {
+        redirect('/m');
+    }
     $fy = Database::query('SELECT * FROM fiscal_years WHERE is_active=1 LIMIT 1')->fetch();
     $counts = [
         'moein' => (int) Database::query('SELECT COUNT(*) c FROM accounts_moein')->fetch()['c'],
