@@ -48,21 +48,8 @@ function redirect(string $path): never
         header('Location: ' . $path);
         exit;
     }
-    // Prefer configured absolute base_url when set to full host.
-    $configured = rtrim((string) (cfg('base_url') ?: ''), '/');
-    if ($configured !== '' && preg_match('#^https?://#i', $configured)) {
-        if ($path === '' || $path[0] !== '/') {
-            $path = '/' . ltrim($path, '/');
-        }
-        // If configured base already includes /hesab, avoid double prefix.
-        $configuredPath = parse_url($configured, PHP_URL_PATH) ?: '';
-        if ($configuredPath && str_starts_with($path, rtrim($configuredPath, '/') . '/')) {
-            header('Location: ' . preg_replace('#'.preg_quote($configuredPath,'#').'#', '', $configured, 1) . $path);
-            exit;
-        }
-        header('Location: ' . $configured . $path);
-        exit;
-    }
+    // Always stay on the current host/path-base so DNS issues on a
+    // subdomain cannot break the working /hesab path.
     header('Location: ' . url($path));
     exit;
 }
