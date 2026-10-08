@@ -1,4 +1,31 @@
 (function () {
+  // Windows menubar: click to pin open; hover also works via CSS
+  const menubar = document.getElementById('win-menubar');
+  if (menubar) {
+    menubar.querySelectorAll('.win-menu-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const menu = btn.closest('.win-menu');
+        const wasOpen = menu.classList.contains('open');
+        menubar.querySelectorAll('.win-menu.open').forEach((m) => m.classList.remove('open'));
+        if (!wasOpen) menu.classList.add('open');
+      });
+    });
+    document.addEventListener('click', (e) => {
+      if (!menubar.contains(e.target)) {
+        menubar.querySelectorAll('.win-menu.open').forEach((m) => m.classList.remove('open'));
+      }
+    });
+  }
+
+  // Explorer tree branches
+  document.querySelectorAll('.branch-toggle').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      btn.closest('.branch')?.classList.toggle('open');
+    });
+  });
+
+  // Voucher lines calculator
   const table = document.getElementById('lines');
   if (!table) return;
 
@@ -15,10 +42,14 @@
       const cv = parseFloat((tr.querySelector('.credit')?.value || '0').replace(/,/g, '')) || 0;
       d += dv; c += cv;
     });
-    sumD.textContent = d.toLocaleString('en-US');
-    sumC.textContent = c.toLocaleString('en-US');
-    sumD.style.color = d === c ? 'var(--ok)' : 'var(--danger)';
-    sumC.style.color = d === c ? 'var(--ok)' : 'var(--danger)';
+    if (sumD) {
+      sumD.textContent = d.toLocaleString('en-US');
+      sumD.style.color = d === c ? 'var(--ok)' : 'var(--danger)';
+    }
+    if (sumC) {
+      sumC.textContent = c.toLocaleString('en-US');
+      sumC.style.color = d === c ? 'var(--ok)' : 'var(--danger)';
+    }
   }
 
   tbody.addEventListener('input', recalc);
@@ -31,7 +62,7 @@
   });
 
   addBtn?.addEventListener('click', () => {
-    tbody.appendChild(tpl.content.cloneNode(true));
+    if (tpl) tbody.appendChild(tpl.content.cloneNode(true));
     recalc();
   });
 
