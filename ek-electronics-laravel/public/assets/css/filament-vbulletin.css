@@ -1,0 +1,267 @@
+/* Classic vBulletin-inspired Filament admin shell — labels always visible */
+:root {
+  --vb-navy: #3a5078;
+  --vb-header: #5c7099;
+  --vb-header-deep: #4a5d84;
+  --vb-tcat: #869bbf;
+  --vb-tcat-deep: #6e87b0;
+  --vb-alt1: #f5f5ff;
+  --vb-alt2: #e1e4f2;
+  --vb-page: #d1d1e1;
+  --vb-border: #0b198c;
+  --vb-soft-border: #8299b4;
+  --vb-link: #23497c;
+}
+
+/* Always-visible quick menu in topbar (survives collapsed sidebar groups) */
+.ek-admin-quick-menu {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  align-items: center !important;
+  max-width: min(78vw, 920px) !important;
+  margin-inline-end: 10px !important;
+}
+
+.ek-admin-quick-menu a {
+  display: inline-block !important;
+  background: linear-gradient(180deg, #9db0d0 0%, var(--vb-header) 100%) !important;
+  border: 1px solid #0b198c !important;
+  color: #fff !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  padding: 4px 8px !important;
+  text-decoration: none !important;
+  white-space: nowrap !important;
+}
+
+.ek-admin-quick-menu a:hover {
+  background: linear-gradient(180deg, #b6c4de 0%, #4a5d84 100%) !important;
+  color: #fff !important;
+}
+
+@media (max-width: 1024px) {
+  .ek-admin-quick-menu {
+    display: none !important;
+  }
+}
+
+.fi-body,
+.fi-main-ctn,
+.fi-main {
+  background: var(--vb-page) !important;
+}
+
+.fi-topbar {
+  background: linear-gradient(180deg, #7192a8 0%, var(--vb-header) 55%, var(--vb-header-deep) 100%) !important;
+  border-bottom: 1px solid var(--vb-border) !important;
+}
+
+.fi-topbar,
+.fi-topbar * {
+  color: #fff !important;
+}
+
+/* Force wide open sidebar with readable text */
+.fi-sidebar {
+  background: var(--vb-alt2) !important;
+  border-right: 2px solid var(--vb-border) !important;
+  width: 19rem !important;
+  min-width: 19rem !important;
+  max-width: 19rem !important;
+}
+
+.fi-sidebar-nav {
+  background: var(--vb-alt2) !important;
+  padding: 10px 8px 18px !important;
+  overflow-x: hidden !important;
+}
+
+.fi-sidebar-header {
+  background: linear-gradient(180deg, #7192a8 0%, var(--vb-header) 100%) !important;
+  border-bottom: 1px solid var(--vb-border) !important;
+}
+
+.fi-sidebar-header,
+.fi-sidebar-header a,
+.fi-sidebar-header button,
+.fi-sidebar-header span,
+.fi-sidebar-header .fi-logo,
+.fi-sidebar-header svg {
+  color: #fff !important;
+}
+
+.fi-sidebar-nav-groups {
+  gap: 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.fi-sidebar-group {
+  background: var(--vb-alt1) !important;
+  border: 1px solid var(--vb-border) !important;
+  border-radius: 0 !important;
+  overflow: visible !important;
+  display: block !important;
+}
+
+.fi-sidebar-group-btn {
+  background: linear-gradient(180deg, #9db0d0 0%, var(--vb-tcat) 45%, var(--vb-tcat-deep) 100%) !important;
+  border-bottom: 1px solid var(--vb-border) !important;
+  border-radius: 0 !important;
+  min-height: 34px !important;
+  padding: 6px 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  color: #fff !important;
+}
+
+.fi-sidebar-group-label {
+  color: #fff !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  position: static !important;
+  clip: auto !important;
+  white-space: nowrap !important;
+}
+
+.fi-sidebar-group-btn svg,
+.fi-sidebar-group-collapse-btn svg {
+  color: #fff !important;
+  flex-shrink: 0 !important;
+}
+
+.fi-sidebar-group-items {
+  background: var(--vb-alt1) !important;
+  padding: 0 !important;
+  /* Beat Alpine x-show display:none when localStorage left groups collapsed */
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  visibility: visible !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  opacity: 1 !important;
+}
+
+.fi-sidebar-group.fi-collapsed .fi-sidebar-group-items,
+.fi-sidebar-group-items[style*="display: none"] {
+  display: flex !important;
+}
+
+.fi-sidebar-item-label[style*="display: none"],
+.fi-sidebar-group-label[style*="display: none"],
+.fi-sidebar-group-btn[style*="display: none"] {
+  display: flex !important;
+}
+
+.fi-sidebar-item-label[style*="display: none"] {
+  display: inline-block !important;
+}
+
+.fi-sidebar-group-label[style*="display: none"] {
+  display: inline-block !important;
+}
+
+.fi-sidebar-item {
+  border-bottom: 1px solid var(--vb-soft-border) !important;
+  margin: 0 !important;
+  display: block !important;
+}
+
+.fi-sidebar-item > .fi-sidebar-item-btn {
+  border-radius: 0 !important;
+  min-height: 38px !important;
+  padding: 8px 10px !important;
+  gap: 10px !important;
+  color: var(--vb-link) !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  background: var(--vb-alt1) !important;
+}
+
+.fi-sidebar-item:nth-child(even) > .fi-sidebar-item-btn {
+  background: var(--vb-alt2) !important;
+}
+
+.fi-sidebar-item > .fi-sidebar-item-btn:hover {
+  background: #c7d0e8 !important;
+  color: #000 !important;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
+.fi-sidebar-item-btn[aria-current="page"] {
+  background: linear-gradient(180deg, #6f86b3 0%, var(--vb-navy) 100%) !important;
+  color: #fff !important;
+}
+
+.fi-sidebar-item-label {
+  font-size: 13px !important;
+  color: inherit !important;
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  overflow: visible !important;
+  position: static !important;
+  clip: auto !important;
+  white-space: normal !important;
+  flex: 1 1 auto !important;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-sidebar-item-label,
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn svg {
+  color: #fff !important;
+}
+
+.fi-sidebar-item-btn svg {
+  color: var(--vb-header) !important;
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  flex-shrink: 0 !important;
+}
+
+/* Kill icon-only / collapsed modes that hide text */
+.fi-sidebar.fi-sidebar-open,
+.fi-sidebar:not(.fi-sidebar-open),
+aside.fi-sidebar {
+  width: 19rem !important;
+  min-width: 19rem !important;
+}
+
+.fi-main,
+.fi-main-ctn {
+  margin-inline-start: 0 !important;
+}
+
+.fi-section,
+.fi-ta-ctn,
+.fi-wi-stats-overview-stat {
+  background: var(--vb-alt1) !important;
+  border: 1px solid var(--vb-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+.fi-btn-color-primary {
+  background: linear-gradient(180deg, #9db0d0 0%, var(--vb-header) 100%) !important;
+  border: 1px solid var(--vb-border) !important;
+  border-radius: 3px !important;
+  color: #fff !important;
+}
