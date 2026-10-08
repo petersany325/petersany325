@@ -19,7 +19,8 @@ $menuOpen = static function (array $keys) use ($nav): bool {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($title ?? $appName) ?> | <?= e($appName) ?></title>
-  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=4">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=5">
 </head>
 <body>
 <?php if ($isAuthPage): ?>
@@ -29,13 +30,13 @@ $menuOpen = static function (array $keys) use ($nav): bool {
     <aside class="sidebar">
       <div class="brand">
         <strong><?= e($appName) ?></strong>
-        <span>حسابداری مالی</span>
+        <span>حسابداری مالی · منوی نرم‌افزاری</span>
       </div>
       <nav class="nav" id="app-nav">
         <a class="nav-item <?= $nav === 'dashboard' ? 'active' : '' ?>" href="<?= e(url('/')) ?>">داشبورد</a>
 
         <?php if ($can('accounts.manage') || $can('tafsili.manage') || $can('fiscal.manage')): ?>
-        <details class="nav-group" <?= $menuOpen(['accounts','tafsili','dimensions','fiscal','settings_acc']) ? 'open' : '' ?>>
+        <details class="nav-group" open>
           <summary>اطلاعات پایه</summary>
           <div class="nav-sub">
             <?php if ($can('accounts.manage')): ?>
@@ -56,18 +57,18 @@ $menuOpen = static function (array $keys) use ($nav): bool {
         <?php endif; ?>
 
         <?php if ($can('vouchers.create')): ?>
-        <details class="nav-group" <?= $menuOpen(['vouchers','invoices']) ? 'open' : '' ?>>
+        <details class="nav-group" open>
           <summary>حسابداری</summary>
           <div class="nav-sub">
             <a class="<?= $nav === 'vouchers' ? 'active' : '' ?>" href="<?= e(url('/vouchers')) ?>">اسناد حسابداری</a>
-            <a class="<?= $nav === 'vouchers' ? '' : '' ?>" href="<?= e(url('/vouchers/create')) ?>">ثبت سند جدید</a>
+            <a href="<?= e(url('/vouchers/create')) ?>">ثبت سند جدید</a>
             <a class="<?= $nav === 'invoices' ? 'active' : '' ?>" href="<?= e(url('/invoices')) ?>">فاکتور فروش</a>
           </div>
         </details>
         <?php endif; ?>
 
         <?php if ($can('treasury.manage')): ?>
-        <details class="nav-group" <?= $menuOpen(['treasury','bank_reconcile']) ? 'open' : '' ?>>
+        <details class="nav-group" open>
           <summary>خزانه‌داری</summary>
           <div class="nav-sub">
             <a class="<?= $nav === 'treasury' ? 'active' : '' ?>" href="<?= e(url('/treasury')) ?>">بانک / صندوق / چک</a>
@@ -80,7 +81,7 @@ $menuOpen = static function (array $keys) use ($nav): bool {
         <?php endif; ?>
 
         <?php if ($can('reports.view')): ?>
-        <details class="nav-group" <?= $menuOpen(['reports','ledger','trial','journal','pl','bs']) ? 'open' : '' ?>>
+        <details class="nav-group" open>
           <summary>گزارش‌ها</summary>
           <div class="nav-sub">
             <a class="<?= $nav === 'reports' ? 'active' : '' ?>" href="<?= e(url('/reports')) ?>">مرکز گزارش‌ها</a>
@@ -97,7 +98,7 @@ $menuOpen = static function (array $keys) use ($nav): bool {
         <?php endif; ?>
 
         <?php if ($can('moadian.manage') || $can('users.manage') || $can('audit.view')): ?>
-        <details class="nav-group" <?= $menuOpen(['moadian','users','audit']) ? 'open' : '' ?>>
+        <details class="nav-group" open>
           <summary>سیستم</summary>
           <div class="nav-sub">
             <?php if ($can('moadian.manage')): ?>
@@ -114,7 +115,7 @@ $menuOpen = static function (array $keys) use ($nav): bool {
         <?php endif; ?>
       </nav>
       <div class="sidebar-foot">
-        <span><?= e($user['name'] ?? '') ?></span>
+        <span><?= e($user['name'] ?? '') ?> · build 5</span>
         <a href="<?= e(url('/logout')) ?>">خروج</a>
       </div>
     </aside>
@@ -134,6 +135,6 @@ $menuOpen = static function (array $keys) use ($nav): bool {
     </div>
   </div>
 <?php endif; ?>
-<script src="<?= e(url('/assets/js/app.js')) ?>?v=4"></script>
+<script src="<?= e(url('/assets/js/app.js')) ?>?v=5"></script>
 </body>
 </html>
