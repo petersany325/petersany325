@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=7">
+  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=8">
 </head>
 <body>
   @php
@@ -184,7 +184,18 @@
         <p>{{ $phone }}<br>{{ $email }}<br>{{ $settings['address'] ?? '' }}</p>
       </div>
     </div>
-    <div class="wrap legal">{{ $settings['footer_legal'] ?? ('© '.date('Y').' EK Electronics · ekelectronics.co.za') }}</div>
+    <div class="wrap legal">
+      <div>{{ $settings['footer_legal'] ?? ('© '.date('Y').' EK Electronics · ekelectronics.co.za') }}</div>
+      @if($settings['footer_show_credit'] ?? true)
+        @php
+          $creditUrl = $settings['footer_credit_url'] ?? 'https://www.hdd-land.com';
+          if (! preg_match('#^https?://#i', (string) $creditUrl)) {
+            $creditUrl = 'https://'.ltrim((string) $creditUrl, '/');
+          }
+        @endphp
+        <p class="site-credit">{{ $settings['footer_credit_label'] ?? 'Website designed by' }} <a href="{{ $creditUrl }}">{{ $settings['footer_credit_name'] ?? 'HDD Land' }}</a></p>
+      @endif
+    </div>
   </footer>
 
   @if(($settings['whatsapp_fab_enabled'] ?? true) && ($settings['footer_show_whatsapp'] ?? true))
