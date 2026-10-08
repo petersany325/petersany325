@@ -58,6 +58,9 @@ class AdminControlCenter extends Page
             'Services' => [
                 ['label' => 'Recovery jobs', 'url' => '/admin/recovery-jobs', 'hint' => 'Data recovery pipeline'],
             ],
+            'Mobile web' => [
+                ['label' => 'Mobile web', 'url' => '/admin/manage-mobile-settings', 'hint' => 'Phones and small tablets, one setup'],
+            ],
             'Agents' => [
                 ['label' => 'Agent page', 'url' => '/admin/manage-agent-settings', 'hint' => 'Menu label and page intro'],
                 ['label' => 'Representations', 'url' => '/admin/agencies', 'hint' => 'SeDiv and any further agencies'],

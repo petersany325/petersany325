@@ -2,6 +2,7 @@
     <a href="{{ url('/admin/admin-control-center') }}">Control center</a>
     <a href="{{ url('/admin/homepage-editor') }}">Homepage</a>
     <a href="{{ url('/admin/menus') }}">Menu manager</a>
+    <a href="{{ url('/admin/manage-mobile-settings') }}">Mobile web</a>
     <a href="{{ url('/admin/agencies') }}">Agents</a>
     <a href="{{ url('/admin/site-repair') }}">Site repair</a>
     <a href="{{ url('/admin/cms-pages/pages') }}">Page builder</a>

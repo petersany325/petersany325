@@ -61,6 +61,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Communications')->collapsed(false)->collapsible(false),
                 NavigationGroup::make('Services')->collapsed(false)->collapsible(false),
                 NavigationGroup::make('Agents')->collapsed(false)->collapsible(false),
+                NavigationGroup::make('Mobile')->collapsed(false)->collapsible(false),
                 NavigationGroup::make('System')->collapsed(false)->collapsible(false),
             ])
             ->homeUrl(fn (): string => AdminControlCenter::getUrl())

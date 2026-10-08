@@ -1,8 +1,31 @@
+@php
+  $mobile = \App\Support\MobileWeb::resolved();
+  $mobileClass = \App\Support\MobileWeb::htmlClass($mobile);
+@endphp
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-mobile="{{ !empty($mobile['enabled']) ? '1' : '0' }}" data-mobile-bp="{{ (int) $mobile['breakpoint'] }}" class="{{ $mobileClass }}">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script>
+    (function () {
+      var root = document.documentElement;
+      if (root.getAttribute('data-mobile') !== '1') return;
+      var bp = parseInt(root.getAttribute('data-mobile-bp') || '900', 10) || 900;
+      var apply = function () {
+        root.classList.toggle('is-phone', window.matchMedia('(max-width: ' + bp + 'px)').matches);
+      };
+      apply();
+      window.addEventListener('resize', apply);
+    })();
+  </script>
+  <style>
+    @media (max-width: {{ (int) $mobile['breakpoint'] }}px) {
+      html[data-mobile="1"] .menu { display: none !important; }
+      html[data-mobile="1"] .nav-toggle { display: inline-grid; }
+      html[data-mobile="1"], html[data-mobile="1"] body { overflow-x: clip; }
+    }
+  </style>
   <title>@yield('title', ($settings['store_name'] ?? 'EK Electronics'))</title>
   <meta name="description" content="@yield('meta', 'Hard drive refurbishment, data recovery, secure erasure, and computer component sales in South Africa.')">
   <link rel="icon" href="{{ asset('assets/brand/favicon.ico') }}" sizes="any">
@@ -13,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=6">
+  <link rel="stylesheet" href="{{ asset('assets/css/app.css') }}?v=7">
 </head>
 <body>
   @php
@@ -40,6 +63,9 @@
 
   <header class="site-header">
     <div class="nav-inner">
+      <button type="button" class="nav-toggle icon-btn" data-drawer-open aria-label="{{ $mobile['menu_label'] }}">
+        <span class="nav-toggle-bars" aria-hidden="true"></span>
+      </button>
       <a class="brand" href="{{ route('home') }}">
         <img class="brand-mark" src="{{ asset('assets/brand/mark-primary.png') }}" width="44" height="44" alt="EK Electronics">
         <span>{{ $storeName }}<small>{{ $tagline }}</small></span>
@@ -102,6 +128,7 @@
       @endguest
     </nav>
   </header>
+  @include('store.partials.mobile-chrome', ['mobile' => $mobile, 'menus' => $menus, 'settings' => $settings, 'cartCount' => $cartCount])
 
   @if (session('success'))
     <div class="toast">{{ session('success') }}</div>
