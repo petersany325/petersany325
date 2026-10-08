@@ -440,6 +440,7 @@ a { color: inherit; text-decoration: none; }
   display: grid; place-items: center; background: #1c2740; color: #fff;
 }
 .legal { border-block-start: 1px solid #243049; margin-block-start: 28px; padding-block-start: 14px; font-size: 0.82rem; }
+.site-footer .wrap.legal { display: block; }
 .site-credit { margin: 8px 0 0; color: #8ea0bb; font-size: 0.78rem; }
 .site-credit a { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 
