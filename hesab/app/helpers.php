@@ -133,3 +133,20 @@ function request_path(): string
     }
     return rtrim($uri, '/') ?: '/';
 }
+
+function status_label(string $status): string
+{
+    return match ($status) {
+        'draft' => 'پیش‌نویس',
+        'operational' => 'عملیاتی',
+        'reviewed' => 'بررسی‌شده',
+        'locked', 'posted' => 'قطعی',
+        'void' => 'باطل',
+        default => $status,
+    };
+}
+
+function qdate(?string $v = null): string
+{
+    return $v ?: date('Y-m-d');
+}

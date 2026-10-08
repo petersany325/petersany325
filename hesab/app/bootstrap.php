@@ -11,6 +11,11 @@ require __DIR__ . '/helpers.php';
 require __DIR__ . '/Database.php';
 require __DIR__ . '/Auth.php';
 require __DIR__ . '/Installer.php';
+require __DIR__ . '/Migrator.php';
+require __DIR__ . '/Permission.php';
+require __DIR__ . '/Audit.php';
+require __DIR__ . '/ExcelExport.php';
+require __DIR__ . '/Accounting.php';
 
 $configFile = __DIR__ . '/../config.php';
 $CONFIG = is_file($configFile) ? require $configFile : require __DIR__ . '/../config.sample.php';
@@ -23,3 +28,12 @@ set_exception_handler(function (Throwable $e) {
     $msg = $e->getMessage();
     echo '<div style="font-family:tahoma;padding:2rem;direction:rtl">خطای سیستم: ' . htmlspecialchars($msg) . '</div>';
 });
+
+if (Installer::isInstalled()) {
+    try {
+        Migrator::migrate();
+    } catch (Throwable $e) {
+        // migration soft-fail; UI can still show error on use
+        error_log('migrate: ' . $e->getMessage());
+    }
+}

@@ -1,25 +1,49 @@
+<?php
+$tafsiliByType = [];
+foreach ($tafsili as $t) {
+    $tafsiliByType[(int)$t['type_id']][] = $t;
+}
+$mapsByMoein = [];
+foreach ($maps as $m) {
+    $mapsByMoein[(int)$m['moein_id']][(int)$m['level']] = $m;
+}
+?>
 <form class="panel" method="post" action="<?= e(url('/vouchers/create')) ?>" id="voucher-form">
   <?= csrf_field() ?>
   <div class="hd">
-    <strong>ثبت سند حسابداری</strong>
-    <button class="btn" type="submit">ذخیره پیش‌نویس</button>
+    <strong>ثبت سند حسابداری (تا ۳ سطح تفصیلی)</strong>
+    <div style="display:flex;gap:8px">
+      <button class="btn ghost" type="submit" name="save_as" value="draft">پیش‌نویس</button>
+      <button class="btn" type="submit" name="save_as" value="operational">عملیاتی</button>
+    </div>
   </div>
   <div class="form row">
     <label>تاریخ
       <input type="date" name="voucher_date" value="<?= e(date('Y-m-d')) ?>" required>
     </label>
-    <label style="grid-column: span 3">شرح سند
-      <input name="description" placeholder="شرح کلی سند">
+    <label>نوع سند
+      <select name="voucher_type_id">
+        <option value="">—</option>
+        <?php foreach ($types as $t): ?>
+          <option value="<?= (int)$t['id'] ?>"><?= e($t['title']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <label style="grid-column: span 2">شرح سند
+      <input name="description" placeholder="توضیحات دلخواه سند">
     </label>
   </div>
   <div class="bd">
     <table class="data" id="lines">
       <thead>
         <tr>
-          <th style="width:34%">حساب معین</th>
-          <th>شرح ردیف</th>
-          <th style="width:16%">بدهکار</th>
-          <th style="width:16%">بستانکار</th>
+          <th style="width:22%">حساب معین</th>
+          <th>تفصیلی ۱</th>
+          <th>تفصیلی ۲</th>
+          <th>تفصیلی ۳</th>
+          <th>شرح</th>
+          <th style="width:12%">بدهکار</th>
+          <th style="width:12%">بستانکار</th>
           <th></th>
         </tr>
       </thead>
@@ -27,10 +51,34 @@
         <?php for ($i = 0; $i < 4; $i++): ?>
         <tr>
           <td>
-            <select name="moein_id[]">
+            <select name="moein_id[]" class="moein-sel">
               <option value="">— انتخاب —</option>
               <?php foreach ($moeins as $m): ?>
-                <option value="<?= (int)$m['id'] ?>"><?= e($m['code'] . ' — ' . $m['title']) ?></option>
+                <option value="<?= (int)$m['id'] ?>" data-nature="<?= e($m['nature'] ?? '') ?>"><?= e($m['code'] . ' — ' . $m['title']) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </td>
+          <td>
+            <select name="tafsili1_id[]">
+              <option value="0">—</option>
+              <?php foreach ($tafsili as $t): ?>
+                <option value="<?= (int)$t['id'] ?>" data-type="<?= (int)$t['type_id'] ?>"><?= e($t['type_title'] . ': ' . $t['code'] . ' ' . $t['title']) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </td>
+          <td>
+            <select name="tafsili2_id[]">
+              <option value="0">—</option>
+              <?php foreach ($tafsili as $t): ?>
+                <option value="<?= (int)$t['id'] ?>" data-type="<?= (int)$t['type_id'] ?>"><?= e($t['type_title'] . ': ' . $t['code'] . ' ' . $t['title']) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </td>
+          <td>
+            <select name="tafsili3_id[]">
+              <option value="0">—</option>
+              <?php foreach ($tafsili as $t): ?>
+                <option value="<?= (int)$t['id'] ?>" data-type="<?= (int)$t['type_id'] ?>"><?= e($t['type_title'] . ': ' . $t['code'] . ' ' . $t['title']) ?></option>
               <?php endforeach; ?>
             </select>
           </td>
@@ -43,7 +91,7 @@
       </tbody>
       <tfoot>
         <tr>
-          <td colspan="2">
+          <td colspan="5">
             <button type="button" class="btn ghost" id="add-line">ردیف جدید</button>
           </td>
           <td class="num" id="sum-d">0</td>
@@ -58,10 +106,34 @@
 <template id="line-tpl">
   <tr>
     <td>
-      <select name="moein_id[]">
+      <select name="moein_id[]" class="moein-sel">
         <option value="">— انتخاب —</option>
         <?php foreach ($moeins as $m): ?>
           <option value="<?= (int)$m['id'] ?>"><?= e($m['code'] . ' — ' . $m['title']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </td>
+    <td>
+      <select name="tafsili1_id[]">
+        <option value="0">—</option>
+        <?php foreach ($tafsili as $t): ?>
+          <option value="<?= (int)$t['id'] ?>"><?= e($t['type_title'] . ': ' . $t['code'] . ' ' . $t['title']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </td>
+    <td>
+      <select name="tafsili2_id[]">
+        <option value="0">—</option>
+        <?php foreach ($tafsili as $t): ?>
+          <option value="<?= (int)$t['id'] ?>"><?= e($t['type_title'] . ': ' . $t['code'] . ' ' . $t['title']) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </td>
+    <td>
+      <select name="tafsili3_id[]">
+        <option value="0">—</option>
+        <?php foreach ($tafsili as $t): ?>
+          <option value="<?= (int)$t['id'] ?>"><?= e($t['type_title'] . ': ' . $t['code'] . ' ' . $t['title']) ?></option>
         <?php endforeach; ?>
       </select>
     </td>
