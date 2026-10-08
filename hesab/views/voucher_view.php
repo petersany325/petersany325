@@ -43,15 +43,16 @@ $st = $v['status'];
     <label>تاریخ<div><?= e($v['voucher_date']) ?></div></label>
     <label style="grid-column:span 3">شرح<div><?= e($v['description'] ?: '—') ?></div></label>
   </div>
-  <div class="bd">
+  <div class="bd" style="overflow:auto">
     <table class="data">
       <thead>
         <tr>
           <th>کد</th>
           <th>حساب</th>
-          <th>تفصیلی ۱</th>
-          <th>تفصیلی ۲</th>
-          <th>تفصیلی ۳</th>
+          <th>تفصیلی</th>
+          <th>پروژه</th>
+          <th>مرکز هزینه</th>
+          <th>شعبه</th>
           <th>شرح</th>
           <th>بدهکار</th>
           <th>بستانکار</th>
@@ -63,8 +64,9 @@ $st = $v['status'];
           <td class="num"><?= e($l['code']) ?></td>
           <td><?= e($l['title']) ?></td>
           <td><?= e($l['t1title'] ?? '—') ?></td>
-          <td><?= e($l['t2title'] ?? '—') ?></td>
-          <td><?= e($l['t3title'] ?? '—') ?></td>
+          <td><?= e($l['project_title'] ?? '—') ?></td>
+          <td><?= e($l['cost_title'] ?? '—') ?></td>
+          <td><?= e($l['branch_title'] ?? '—') ?></td>
           <td><?= e($l['description'] ?: '—') ?></td>
           <td class="num"><?= money($l['debit']) ?></td>
           <td class="num"><?= money($l['credit']) ?></td>
@@ -73,7 +75,7 @@ $st = $v['status'];
       </tbody>
       <tfoot>
         <tr>
-          <th colspan="6">جمع</th>
+          <th colspan="7">جمع</th>
           <th class="num"><?= money($sumD) ?></th>
           <th class="num"><?= money($sumC) ?></th>
         </tr>

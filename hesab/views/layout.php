@@ -7,6 +7,11 @@
 /** @var string $appName */
 $isAuthPage = in_array($name, ['login', 'install'], true);
 $can = static fn(string $code): bool => Permission::can($user, $code);
+$nav = $nav ?? '';
+
+$menuOpen = static function (array $keys) use ($nav): bool {
+    return in_array($nav, $keys, true);
+};
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -14,7 +19,7 @@ $can = static fn(string $code): bool => Permission::can($user, $code);
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($title ?? $appName) ?> | <?= e($appName) ?></title>
-  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=3">
+  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=4">
 </head>
 <body>
 <?php if ($isAuthPage): ?>
@@ -24,46 +29,100 @@ $can = static fn(string $code): bool => Permission::can($user, $code);
     <aside class="sidebar">
       <div class="brand">
         <strong><?= e($appName) ?></strong>
-        <span>نرم‌افزار حسابداری تحت وب</span>
+        <span>حسابداری مالی</span>
       </div>
-      <nav class="nav">
-        <a class="<?= ($nav ?? '') === 'dashboard' ? 'active' : '' ?>" href="<?= e(url('/')) ?>"><span>داشبورد</span></a>
-        <?php if ($can('accounts.manage')): ?>
-          <a class="<?= ($nav ?? '') === 'accounts' ? 'active' : '' ?>" href="<?= e(url('/accounts')) ?>"><span>کدینگ حساب‌ها</span></a>
+      <nav class="nav" id="app-nav">
+        <a class="nav-item <?= $nav === 'dashboard' ? 'active' : '' ?>" href="<?= e(url('/')) ?>">داشبورد</a>
+
+        <?php if ($can('accounts.manage') || $can('tafsili.manage') || $can('fiscal.manage')): ?>
+        <details class="nav-group" <?= $menuOpen(['accounts','tafsili','dimensions','fiscal','settings_acc']) ? 'open' : '' ?>>
+          <summary>اطلاعات پایه</summary>
+          <div class="nav-sub">
+            <?php if ($can('accounts.manage')): ?>
+              <a class="<?= $nav === 'accounts' ? 'active' : '' ?>" href="<?= e(url('/accounts')) ?>">کدینگ حساب‌ها</a>
+            <?php endif; ?>
+            <?php if ($can('tafsili.manage')): ?>
+              <a class="<?= $nav === 'tafsili' ? 'active' : '' ?>" href="<?= e(url('/tafsili')) ?>">تفصیلی شناور</a>
+              <a class="<?= $nav === 'dimensions' ? 'active' : '' ?>" href="<?= e(url('/dimensions')) ?>">ابعاد تحلیلی</a>
+            <?php endif; ?>
+            <?php if ($can('fiscal.manage')): ?>
+              <a class="<?= $nav === 'fiscal' ? 'active' : '' ?>" href="<?= e(url('/fiscal')) ?>">سال و دوره مالی</a>
+            <?php endif; ?>
+            <?php if ($can('accounts.manage')): ?>
+              <a class="<?= $nav === 'settings_acc' ? 'active' : '' ?>" href="<?= e(url('/settings/accounting')) ?>">تنظیمات حسابداری</a>
+            <?php endif; ?>
+          </div>
+        </details>
         <?php endif; ?>
-        <?php if ($can('tafsili.manage')): ?>
-          <a class="<?= ($nav ?? '') === 'tafsili' ? 'active' : '' ?>" href="<?= e(url('/tafsili')) ?>"><span>تفصیلی شناور</span></a>
-        <?php endif; ?>
+
         <?php if ($can('vouchers.create')): ?>
-          <a class="<?= ($nav ?? '') === 'vouchers' ? 'active' : '' ?>" href="<?= e(url('/vouchers')) ?>"><span>اسناد حسابداری</span></a>
-          <a class="<?= ($nav ?? '') === 'invoices' ? 'active' : '' ?>" href="<?= e(url('/invoices')) ?>"><span>فاکتور فروش</span></a>
+        <details class="nav-group" <?= $menuOpen(['vouchers','invoices']) ? 'open' : '' ?>>
+          <summary>حسابداری</summary>
+          <div class="nav-sub">
+            <a class="<?= $nav === 'vouchers' ? 'active' : '' ?>" href="<?= e(url('/vouchers')) ?>">اسناد حسابداری</a>
+            <a class="<?= $nav === 'vouchers' ? '' : '' ?>" href="<?= e(url('/vouchers/create')) ?>">ثبت سند جدید</a>
+            <a class="<?= $nav === 'invoices' ? 'active' : '' ?>" href="<?= e(url('/invoices')) ?>">فاکتور فروش</a>
+          </div>
+        </details>
         <?php endif; ?>
+
         <?php if ($can('treasury.manage')): ?>
-          <a class="<?= ($nav ?? '') === 'treasury' ? 'active' : '' ?>" href="<?= e(url('/treasury')) ?>"><span>خزانه‌داری</span></a>
+        <details class="nav-group" <?= $menuOpen(['treasury','bank_reconcile']) ? 'open' : '' ?>>
+          <summary>خزانه‌داری</summary>
+          <div class="nav-sub">
+            <a class="<?= $nav === 'treasury' ? 'active' : '' ?>" href="<?= e(url('/treasury')) ?>">بانک / صندوق / چک</a>
+            <a href="<?= e(url('/treasury')) ?>#receive">رسید دریافت</a>
+            <a href="<?= e(url('/treasury')) ?>#pay">رسید پرداخت</a>
+            <a class="<?= $nav === 'bank_reconcile' ? 'active' : '' ?>" href="<?= e(url('/reports/bank-reconcile')) ?>">مغایرت بانکی</a>
+            <a href="<?= e(url('/reports/checks')) ?>">چک‌های دریافتنی/پرداختنی</a>
+          </div>
+        </details>
         <?php endif; ?>
-        <?php if ($can('fiscal.manage')): ?>
-          <a class="<?= ($nav ?? '') === 'fiscal' ? 'active' : '' ?>" href="<?= e(url('/fiscal')) ?>"><span>دوره مالی</span></a>
-        <?php endif; ?>
+
         <?php if ($can('reports.view')): ?>
-          <a class="<?= ($nav ?? '') === 'reports' ? 'active' : '' ?>" href="<?= e(url('/reports')) ?>"><span>گزارش‌ها</span></a>
+        <details class="nav-group" <?= $menuOpen(['reports','ledger','trial','journal','pl','bs']) ? 'open' : '' ?>>
+          <summary>گزارش‌ها</summary>
+          <div class="nav-sub">
+            <a class="<?= $nav === 'reports' ? 'active' : '' ?>" href="<?= e(url('/reports')) ?>">مرکز گزارش‌ها</a>
+            <a href="<?= e(url('/trial-balance')) ?>">تراز آزمایشی</a>
+            <a href="<?= e(url('/reports/balance-sheet')) ?>">ترازنامه</a>
+            <a href="<?= e(url('/reports/pl')) ?>">سود و زیان</a>
+            <a href="<?= e(url('/ledger')) ?>">دفتر معین / مرور</a>
+            <a href="<?= e(url('/reports/journal')) ?>">دفتر روزنامه</a>
+            <a href="<?= e(url('/reports/nature-violations')) ?>">خلاف ماهیت</a>
+            <a href="<?= e(url('/reports/share')) ?>">سهم‌بری / پروژه</a>
+            <a href="<?= e(url('/reports/charts')) ?>">نمودار دوره‌ها</a>
+          </div>
+        </details>
         <?php endif; ?>
-        <?php if ($can('moadian.manage')): ?>
-          <a class="<?= ($nav ?? '') === 'moadian' ? 'active' : '' ?>" href="<?= e(url('/moadian')) ?>"><span>سامانه مودیان</span></a>
-        <?php endif; ?>
-        <?php if ($can('users.manage')): ?>
-          <a class="<?= ($nav ?? '') === 'users' ? 'active' : '' ?>" href="<?= e(url('/users')) ?>"><span>کاربران</span></a>
-        <?php endif; ?>
-        <?php if ($can('audit.view')): ?>
-          <a class="<?= ($nav ?? '') === 'audit' ? 'active' : '' ?>" href="<?= e(url('/audit')) ?>"><span>تاریخچه فعالیت</span></a>
+
+        <?php if ($can('moadian.manage') || $can('users.manage') || $can('audit.view')): ?>
+        <details class="nav-group" <?= $menuOpen(['moadian','users','audit']) ? 'open' : '' ?>>
+          <summary>سیستم</summary>
+          <div class="nav-sub">
+            <?php if ($can('moadian.manage')): ?>
+              <a class="<?= $nav === 'moadian' ? 'active' : '' ?>" href="<?= e(url('/moadian')) ?>">سامانه مودیان</a>
+            <?php endif; ?>
+            <?php if ($can('users.manage')): ?>
+              <a class="<?= $nav === 'users' ? 'active' : '' ?>" href="<?= e(url('/users')) ?>">کاربران و دسترسی</a>
+            <?php endif; ?>
+            <?php if ($can('audit.view')): ?>
+              <a class="<?= $nav === 'audit' ? 'active' : '' ?>" href="<?= e(url('/audit')) ?>">تاریخچه فعالیت</a>
+            <?php endif; ?>
+          </div>
+        </details>
         <?php endif; ?>
       </nav>
+      <div class="sidebar-foot">
+        <span><?= e($user['name'] ?? '') ?></span>
+        <a href="<?= e(url('/logout')) ?>">خروج</a>
+      </div>
     </aside>
     <div class="main">
       <header class="topbar">
         <h1><?= e($title ?? '') ?></h1>
         <div class="meta">
-          <span><?= e($user['name'] ?? '') ?></span>
-          <a class="btn ghost" href="<?= e(url('/logout')) ?>">خروج</a>
+          <span class="role-chip"><?= e($user['role'] ?? '') ?></span>
         </div>
       </header>
       <main class="content">
@@ -75,6 +134,6 @@ $can = static fn(string $code): bool => Permission::can($user, $code);
     </div>
   </div>
 <?php endif; ?>
-<script src="<?= e(url('/assets/js/app.js')) ?>?v=3"></script>
+<script src="<?= e(url('/assets/js/app.js')) ?>?v=4"></script>
 </body>
 </html>

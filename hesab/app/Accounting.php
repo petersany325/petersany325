@@ -65,6 +65,9 @@ final class Accounting
                 'tafsili1_id' => (int) ($ln['tafsili1_id'] ?? 0) ?: null,
                 'tafsili2_id' => (int) ($ln['tafsili2_id'] ?? 0) ?: null,
                 'tafsili3_id' => (int) ($ln['tafsili3_id'] ?? 0) ?: null,
+                'project_id' => (int) ($ln['project_id'] ?? 0) ?: null,
+                'cost_center_id' => (int) ($ln['cost_center_id'] ?? 0) ?: null,
+                'branch_id' => (int) ($ln['branch_id'] ?? 0) ?: null,
             ];
             $sumD += $d;
             $sumC += $c;
@@ -105,9 +108,13 @@ final class Accounting
             $n = 1;
             foreach ($clean as $ln) {
                 Database::query(
-                    'INSERT INTO voucher_lines (voucher_id, line_no, moein_id, description, debit, credit, tafsili1_id, tafsili2_id, tafsili3_id)
-                     VALUES (?,?,?,?,?,?,?,?,?)',
-                    [$vid, $n++, $ln['moein_id'], $ln['description'], $ln['debit'], $ln['credit'], $ln['tafsili1_id'], $ln['tafsili2_id'], $ln['tafsili3_id']]
+                    'INSERT INTO voucher_lines (voucher_id, line_no, moein_id, description, debit, credit, tafsili1_id, tafsili2_id, tafsili3_id, project_id, cost_center_id, branch_id)
+                     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+                    [
+                        $vid, $n++, $ln['moein_id'], $ln['description'], $ln['debit'], $ln['credit'],
+                        $ln['tafsili1_id'], $ln['tafsili2_id'], $ln['tafsili3_id'],
+                        $ln['project_id'], $ln['cost_center_id'], $ln['branch_id'],
+                    ]
                 );
             }
             $pdo->commit();

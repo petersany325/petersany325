@@ -89,6 +89,38 @@ final class Migrator
         self::addColumn($pdo, 'voucher_lines', 'tafsili1_id', 'INT UNSIGNED NULL');
         self::addColumn($pdo, 'voucher_lines', 'tafsili2_id', 'INT UNSIGNED NULL');
         self::addColumn($pdo, 'voucher_lines', 'tafsili3_id', 'INT UNSIGNED NULL');
+        self::addColumn($pdo, 'voucher_lines', 'project_id', 'INT UNSIGNED NULL');
+        self::addColumn($pdo, 'voucher_lines', 'cost_center_id', 'INT UNSIGNED NULL');
+        self::addColumn($pdo, 'voucher_lines', 'branch_id', 'INT UNSIGNED NULL');
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS accounts (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          parent_id INT UNSIGNED NULL,
+          code VARCHAR(40) NOT NULL UNIQUE,
+          title VARCHAR(190) NOT NULL,
+          level TINYINT UNSIGNED NOT NULL DEFAULT 1,
+          account_type ENUM('group','kol','moein','operational','other') NOT NULL DEFAULT 'other',
+          nature ENUM('debit','credit','neutral') NOT NULL DEFAULT 'neutral',
+          allow_debit TINYINT(1) NOT NULL DEFAULT 1,
+          allow_credit TINYINT(1) NOT NULL DEFAULT 1,
+          is_postable TINYINT(1) NOT NULL DEFAULT 0,
+          exclude_from_fs TINYINT(1) NOT NULL DEFAULT 0,
+          is_active TINYINT(1) NOT NULL DEFAULT 1,
+          legacy_moein_id INT UNSIGNED NULL,
+          KEY idx_acc_parent (parent_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::addColumn($pdo, 'accounts', 'is_postable', 'TINYINT(1) NOT NULL DEFAULT 0');
+        self::addColumn($pdo, 'accounts', 'exclude_from_fs', 'TINYINT(1) NOT NULL DEFAULT 0');
+        self::exec($pdo, "ALTER TABLE accounts MODIFY COLUMN account_type ENUM('group','kol','moein','operational','other') NOT NULL DEFAULT 'other'");
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS posting_rules (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          code VARCHAR(60) NOT NULL UNIQUE,
+          title VARCHAR(190) NOT NULL,
+          moein_code VARCHAR(40) NULL,
+          is_active TINYINT(1) NOT NULL DEFAULT 1
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
         self::addColumn($pdo, 'fiscal_years', 'is_closed', 'TINYINT(1) NOT NULL DEFAULT 0');
         self::addColumn($pdo, 'fiscal_years', 'closed_at', 'DATETIME NULL');
@@ -263,15 +295,80 @@ final class Migrator
         }
 
         $tt = [
-            ['PERSON', 'اشخاص'],
-            ['COSTCENTER', 'مرکز هزینه'],
-            ['PROJECT', 'پروژه'],
-            ['BANK', 'بانک/صندوق'],
+            ['01', 'مشتریان'],
+            ['02', 'تأمین‌کنندگان'],
+            ['03', 'بانک‌ها'],
+            ['04', 'کارکنان'],
+            ['05', 'شرکا و سهامداران'],
+            ['06', 'دارایی‌ها'],
+            ['07', 'پروژه‌ها'],
+            ['08', 'شعب و واحدها'],
+            ['09', 'مراکز هزینه'],
+            ['10', 'قراردادها'],
+            ['11', 'صندوق و تنخواه'],
+            ['12', 'سایر اشخاص'],
+            // aliases kept for older UI labels
+            ['PERSON', 'اشخاص (سازگاری)'],
+            ['COSTCENTER', 'مرکز هزینه (سازگاری)'],
+            ['PROJECT', 'پروژه (سازگاری)'],
+            ['BANK', 'بانک/صندوق (سازگاری)'],
             ['OTHER', 'سایر تفصیلی'],
         ];
         $insT = $pdo->prepare('INSERT IGNORE INTO tafsili_types (code, title) VALUES (?,?)');
         foreach ($tt as $t) {
             $insT->execute($t);
+        }
+
+        $rules = [
+            ['SALE', 'فروش کالا', '410101'],
+            ['AR_CUSTOMER', 'دریافتنی مشتری', '110401'],
+            ['VAT_SALE', 'مالیات فروش', '210301'],
+            ['INVENTORY', 'موجودی کالا', '110601'],
+            ['COGS', 'بهای کالای فروش‌رفته', '510101'],
+            ['AP_SUPPLIER', 'پرداختنی تأمین‌کننده', '210101'],
+            ['VAT_PURCHASE', 'مالیات خرید قابل اعتبار', '110801'],
+            ['CHECK_RECV', 'چک دریافتی', '110403'],
+            ['CHECK_PAY', 'چک پرداختنی', '210103'],
+            ['SALARY_PAY', 'حقوق پرداختنی', '210401'],
+        ];
+        $insR = $pdo->prepare('INSERT IGNORE INTO posting_rules (code, title, moein_code) VALUES (?,?,?)');
+        foreach ($rules as $r) {
+            $insR->execute($r);
+        }
+
+        $pdo->exec("INSERT IGNORE INTO settings (`key`,`value`) VALUES
+          ('coding_pattern','1/2/4/6'),
+          ('inventory_method','perpetual'),
+          ('auto_post_subsystems','1'),
+          ('enable_dimensions','1'),
+          ('allow_negative_stock','0')
+        ");
+
+        // bridge legacy moein into accounts tree (postable leaves)
+        try {
+            $rows = $pdo->query(
+                'SELECT m.id, m.code, m.title, m.nature, m.allow_debit, m.allow_credit, k.code kc, g.code gc
+                 FROM accounts_moein m
+                 JOIN accounts_kol k ON k.id=m.kol_id
+                 JOIN account_groups g ON g.id=k.group_id'
+            )->fetchAll();
+            $insA = $pdo->prepare(
+                'INSERT IGNORE INTO accounts (parent_id, code, title, level, account_type, nature, allow_debit, allow_credit, is_postable, legacy_moein_id)
+                 VALUES (NULL,?,?,?,?,?,?,?,1,?)'
+            );
+            foreach ($rows as $r) {
+                $len = strlen((string) $r['code']);
+                $level = $len >= 6 ? 4 : ($len >= 4 ? 3 : ($len >= 2 ? 2 : 1));
+                $type = $level >= 3 ? 'moein' : 'kol';
+                // treat current moein rows as postable operational until 6-digit children exist
+                $insA->execute([
+                    $r['code'], $r['title'], $level, $type === 'moein' ? 'operational' : $type,
+                    $r['nature'] ?: 'neutral', (int) $r['allow_debit'], (int) $r['allow_credit'], (int) $r['id'],
+                ]);
+                $pdo->prepare("UPDATE accounts SET is_postable=1, account_type='operational' WHERE legacy_moein_id=?")->execute([(int) $r['id']]);
+            }
+        } catch (Throwable $e) {
+            // ignore bridge errors
         }
 
         // migrate parties into PERSON tafsili

@@ -85,10 +85,54 @@ $router->post('/accounts/add-moein', function () {
 // ---- Floating tafsili ----
 $router->get('/tafsili', function () {
     Permission::require('tafsili.manage');
-    $types = Database::query('SELECT * FROM tafsili_types ORDER BY id')->fetchAll();
+    $types = Database::query('SELECT * FROM tafsili_types ORDER BY code, id')->fetchAll();
     $typeId = (int) ($_GET['type_id'] ?? ($types[0]['id'] ?? 0));
     $items = $typeId ? Database::query('SELECT * FROM tafsili_items WHERE type_id=? ORDER BY code', [$typeId])->fetchAll() : [];
     view('tafsili', compact('types', 'typeId', 'items') + ['title' => 'تفصیلی شناور', 'nav' => 'tafsili']);
+});
+
+$router->get('/dimensions', function () {
+    Permission::require('tafsili.manage');
+    $codes = ['07', '09', '08', 'PROJECT', 'COSTCENTER'];
+    $in = implode(',', array_fill(0, count($codes), '?'));
+    $types = Database::query("SELECT * FROM tafsili_types WHERE code IN ($in) ORDER BY code", $codes)->fetchAll();
+    $typeId = (int) ($_GET['type_id'] ?? ($types[0]['id'] ?? 0));
+    $items = $typeId ? Database::query('SELECT * FROM tafsili_items WHERE type_id=? ORDER BY code', [$typeId])->fetchAll() : [];
+    view('dimensions', compact('types', 'typeId', 'items') + ['title' => 'ابعاد تحلیلی (پروژه / مرکز هزینه / شعبه)', 'nav' => 'dimensions']);
+});
+
+$router->get('/settings/accounting', function () {
+    Permission::require('accounts.manage');
+    $keys = ['coding_pattern', 'inventory_method', 'auto_post_subsystems', 'enable_dimensions', 'allow_negative_stock'];
+    $settings = [];
+    foreach ($keys as $k) {
+        $row = Database::query('SELECT `value` FROM settings WHERE `key`=?', [$k])->fetch();
+        $settings[$k] = $row['value'] ?? '';
+    }
+    $rules = Database::query('SELECT * FROM posting_rules ORDER BY id')->fetchAll();
+    $treeCount = (int) Database::query('SELECT COUNT(*) c FROM accounts')->fetch()['c'];
+    view('settings_accounting', compact('settings', 'rules', 'treeCount') + ['title' => 'تنظیمات حسابداری', 'nav' => 'settings_acc']);
+});
+
+$router->post('/settings/accounting', function () {
+    Permission::require('accounts.manage');
+    verify_csrf();
+    $map = [
+        'coding_pattern' => $_POST['coding_pattern'] ?? '1/2/4/6',
+        'inventory_method' => $_POST['inventory_method'] ?? 'perpetual',
+        'auto_post_subsystems' => isset($_POST['auto_post_subsystems']) ? '1' : '0',
+        'enable_dimensions' => isset($_POST['enable_dimensions']) ? '1' : '0',
+        'allow_negative_stock' => isset($_POST['allow_negative_stock']) ? '1' : '0',
+    ];
+    foreach ($map as $k => $v) {
+        Database::query('INSERT INTO settings (`key`,`value`) VALUES (?,?) ON DUPLICATE KEY UPDATE `value`=VALUES(`value`)', [$k, $v]);
+    }
+    foreach ($_POST['rule_moein'] ?? [] as $id => $code) {
+        Database::query('UPDATE posting_rules SET moein_code=? WHERE id=?', [trim((string) $code), (int) $id]);
+    }
+    Audit::log('settings.accounting');
+    flash('ok', 'تنظیمات حسابداری ذخیره شد.');
+    redirect('/settings/accounting');
 });
 
 $router->post('/tafsili/type', function () {
@@ -103,7 +147,11 @@ $router->post('/tafsili/item', function () {
     Permission::require('tafsili.manage');
     verify_csrf();
     Database::query('INSERT INTO tafsili_items (type_id, code, title) VALUES (?,?,?)', [(int) $_POST['type_id'], trim($_POST['code'] ?? ''), trim($_POST['title'] ?? '')]);
-    flash('ok', 'تفصیلی اضافه شد.');
+    flash('ok', 'تفصیلی / بعد اضافه شد.');
+    $redir = trim((string) ($_POST['redirect'] ?? ''));
+    if ($redir !== '' && str_starts_with($redir, '/')) {
+        redirect($redir);
+    }
     redirect('/tafsili?type_id=' . (int) $_POST['type_id']);
 });
 
@@ -128,7 +176,16 @@ $router->get('/vouchers/create', function () {
     $types = Database::query('SELECT * FROM voucher_types WHERE is_active=1')->fetchAll();
     $tafsili = Database::query('SELECT i.id, i.code, i.title, i.type_id, t.title type_title FROM tafsili_items i JOIN tafsili_types t ON t.id=i.type_id WHERE i.is_active=1 ORDER BY t.id, i.code')->fetchAll();
     $maps = Database::query('SELECT * FROM moein_tafsili_map')->fetchAll();
-    view('voucher_form', compact('moeins', 'types', 'tafsili', 'maps') + ['title' => 'سند جدید', 'nav' => 'vouchers']);
+    $projects = Database::query(
+        "SELECT i.id, i.code, i.title FROM tafsili_items i JOIN tafsili_types t ON t.id=i.type_id WHERE t.code IN ('07','PROJECT') AND i.is_active=1 ORDER BY i.code"
+    )->fetchAll();
+    $costCenters = Database::query(
+        "SELECT i.id, i.code, i.title FROM tafsili_items i JOIN tafsili_types t ON t.id=i.type_id WHERE t.code IN ('09','COSTCENTER') AND i.is_active=1 ORDER BY i.code"
+    )->fetchAll();
+    $branches = Database::query(
+        "SELECT i.id, i.code, i.title FROM tafsili_items i JOIN tafsili_types t ON t.id=i.type_id WHERE t.code IN ('08') AND i.is_active=1 ORDER BY i.code"
+    )->fetchAll();
+    view('voucher_form', compact('moeins', 'types', 'tafsili', 'maps', 'projects', 'costCenters', 'branches') + ['title' => 'سند جدید', 'nav' => 'vouchers']);
 });
 
 $router->post('/vouchers/create', function () {
@@ -145,6 +202,9 @@ $router->post('/vouchers/create', function () {
                 'tafsili1_id' => $_POST['tafsili1_id'][$i] ?? 0,
                 'tafsili2_id' => $_POST['tafsili2_id'][$i] ?? 0,
                 'tafsili3_id' => $_POST['tafsili3_id'][$i] ?? 0,
+                'project_id' => $_POST['project_id'][$i] ?? 0,
+                'cost_center_id' => $_POST['cost_center_id'][$i] ?? 0,
+                'branch_id' => $_POST['branch_id'][$i] ?? 0,
             ];
         }
         $status = $_POST['save_as'] ?? 'draft';
@@ -174,12 +234,16 @@ $router->get('/vouchers/view', function () {
     }
     $lines = Database::query(
         'SELECT l.*, m.code, m.title,
-            t1.title t1title, t2.title t2title, t3.title t3title
+            t1.title t1title, t2.title t2title, t3.title t3title,
+            p.title project_title, c.title cost_title, b.title branch_title
          FROM voucher_lines l
          JOIN accounts_moein m ON m.id=l.moein_id
          LEFT JOIN tafsili_items t1 ON t1.id=l.tafsili1_id
          LEFT JOIN tafsili_items t2 ON t2.id=l.tafsili2_id
          LEFT JOIN tafsili_items t3 ON t3.id=l.tafsili3_id
+         LEFT JOIN tafsili_items p ON p.id=l.project_id
+         LEFT JOIN tafsili_items c ON c.id=l.cost_center_id
+         LEFT JOIN tafsili_items b ON b.id=l.branch_id
          WHERE voucher_id=? ORDER BY line_no',
         [$id]
     )->fetchAll();
@@ -550,7 +614,7 @@ $router->get('/reports/bank-reconcile', function () {
     Permission::require('treasury.manage');
     $banks = Database::query('SELECT * FROM bank_accounts')->fetchAll();
     $rows = Database::query('SELECT r.*, b.title bank_title FROM bank_reconciliations r JOIN bank_accounts b ON b.id=r.bank_account_id ORDER BY r.id DESC')->fetchAll();
-    view('report_bank_reconcile', compact('banks', 'rows') + ['title' => 'مغایرت بانکی', 'nav' => 'reports']);
+    view('report_bank_reconcile', compact('banks', 'rows') + ['title' => 'مغایرت بانکی', 'nav' => 'bank_reconcile']);
 });
 
 $router->post('/reports/bank-reconcile', function () {
