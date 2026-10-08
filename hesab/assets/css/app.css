@@ -1,5 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap');
-
+/* No external font CDN — avoids hang when Google Fonts is blocked. */
 :root {
   --bg: #e8edf2;
   --panel: #f7f9fc;
@@ -21,7 +20,7 @@
 html, body { height: 100%; }
 body {
   margin: 0;
-  font-family: "Vazirmatn", Tahoma, sans-serif;
+  font-family: Tahoma, "Segoe UI", sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 13.5px;
