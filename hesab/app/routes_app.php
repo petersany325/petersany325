@@ -14,9 +14,13 @@ $router->get('/', function () {
         'tafsili' => (int) Database::query('SELECT COUNT(*) c FROM tafsili_items')->fetch()['c'],
         'vouchers' => (int) Database::query('SELECT COUNT(*) c FROM vouchers')->fetch()['c'],
         'locked' => (int) Database::query("SELECT COUNT(*) c FROM vouchers WHERE status IN ('locked','posted')")->fetch()['c'],
-        'checks' => (int) (Database::query('SELECT COUNT(*) c FROM cheques')->fetch()['c']
-            ?? Database::query('SELECT COUNT(*) c FROM checks')->fetch()['c']
-            ?? ['c' => 0])['c'],
+        'checks' => (int) (function () {
+            try {
+                return Database::query('SELECT COUNT(*) c FROM cheques')->fetch()['c'];
+            } catch (Throwable $e) {
+                return Database::query('SELECT COUNT(*) c FROM checks')->fetch()['c'] ?? 0;
+            }
+        })(),
     ];
     $recent = Database::query('SELECT v.*, u.name AS user_name, t.title type_title FROM vouchers v LEFT JOIN users u ON u.id=v.created_by LEFT JOIN voucher_types t ON t.id=v.voucher_type_id ORDER BY v.id DESC LIMIT 10')->fetchAll();
     view('dashboard', compact('fy', 'counts', 'recent') + ['title' => 'داشبورد', 'nav' => 'dashboard']);
