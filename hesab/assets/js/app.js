@@ -2,13 +2,41 @@
   // Windows menubar: click to pin open; hover also works via CSS
   const menubar = document.getElementById('win-menubar');
   if (menubar) {
+    const placeDrop = (menu) => {
+      const drop = menu.querySelector('.win-menu-drop');
+      const btn = menu.querySelector('.win-menu-btn');
+      if (!drop || !btn) return;
+      // Reset absolute anchoring under the trigger (fixes RTL mis-stack)
+      drop.style.left = 'auto';
+      drop.style.right = 'auto';
+      drop.style.insetInlineStart = '0';
+      drop.style.insetInlineEnd = 'auto';
+      const btnRect = btn.getBoundingClientRect();
+      const dropRect = drop.getBoundingClientRect();
+      const vw = window.innerWidth || document.documentElement.clientWidth;
+      // Keep dropdown inside viewport horizontally
+      if (btnRect.left + dropRect.width > vw - 4) {
+        drop.style.insetInlineStart = 'auto';
+        drop.style.insetInlineEnd = '0';
+      }
+      if (btnRect.right - dropRect.width < 4) {
+        drop.style.insetInlineStart = '0';
+        drop.style.insetInlineEnd = 'auto';
+      }
+    };
     menubar.querySelectorAll('.win-menu-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
         const menu = btn.closest('.win-menu');
         const wasOpen = menu.classList.contains('open');
         menubar.querySelectorAll('.win-menu.open').forEach((m) => m.classList.remove('open'));
-        if (!wasOpen) menu.classList.add('open');
+        if (!wasOpen) {
+          menu.classList.add('open');
+          placeDrop(menu);
+        }
+      });
+      btn.addEventListener('mouseenter', () => {
+        requestAnimationFrame(() => placeDrop(btn.closest('.win-menu')));
       });
     });
     document.addEventListener('click', (e) => {
