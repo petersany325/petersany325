@@ -23,9 +23,12 @@
     <div class="panel">
       <div class="hd"><strong>قالب پیامک</strong></div>
       <div class="bd" style="padding:12px;display:grid;gap:8px">
-        <label>قالب OTP ورود<textarea name="sms_otp_template" rows="3"><?= e($s['sms_otp_template']??'') ?></textarea></label>
-        <label>قالب اطلاع فاکتور<textarea name="sms_invoice_template" rows="3"><?= e($s['sms_invoice_template']??'') ?></textarea></label>
-        <p style="color:var(--muted);font-size:12px;margin:0">متغیرها: {code} {app} {number} {amount}</p>
+        <label>قالب OTP ورود<textarea name="sms_otp_template" rows="2"><?= e($s['sms_otp_template']??'') ?></textarea></label>
+        <label>قالب اطلاع فاکتور<textarea name="sms_invoice_template" rows="2"><?= e($s['sms_invoice_template']??'') ?></textarea></label>
+        <label>قالب کارتابل ویزیتور<textarea name="sms_visitor_task" rows="2"><?= e($s['sms_visitor_task']??'') ?></textarea></label>
+        <label>قالب بازدید ویزیتور<textarea name="sms_visitor_visit" rows="2"><?= e($s['sms_visitor_visit']??'') ?></textarea></label>
+        <label>قالب پورسانت ویزیتور<textarea name="sms_visitor_commission" rows="2"><?= e($s['sms_visitor_commission']??'') ?></textarea></label>
+        <p style="color:var(--muted);font-size:12px;margin:0">متغیرها: {code} {app} {number} {amount} {title} {date} {customer} {invoice} {visitor}</p>
         <button class="btn" type="submit" name="op" value="save">ذخیره تنظیمات SMS</button>
       </div>
     </div>

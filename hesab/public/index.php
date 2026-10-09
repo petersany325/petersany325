@@ -103,6 +103,7 @@ $router->get('/logout', function () {
 require __DIR__ . '/../app/routes_mobile.php';
 require __DIR__ . '/../app/routes_app.php';
 require __DIR__ . '/../app/routes_settings.php';
+require __DIR__ . '/../app/routes_visitors.php';
 
 // Auto-send phones from desktop home into mobile app (unless desktop mode forced)
 $router->get('/go-mobile', function () {

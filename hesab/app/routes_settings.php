@@ -49,6 +49,9 @@ $router->post('/settings/sms', function () {
         'sms_base_url' => trim($_POST['sms_base_url'] ?? 'https://panel.niazpardaz-sms.com'),
         'sms_otp_template' => trim($_POST['sms_otp_template'] ?? ''),
         'sms_invoice_template' => trim($_POST['sms_invoice_template'] ?? ''),
+        'sms_visitor_task' => trim($_POST['sms_visitor_task'] ?? ''),
+        'sms_visitor_visit' => trim($_POST['sms_visitor_visit'] ?? ''),
+        'sms_visitor_commission' => trim($_POST['sms_visitor_commission'] ?? ''),
     ]);
     Audit::log('settings.sms');
     flash('ok', 'تنظیمات پیامک نیازپرداز ذخیره شد.');

@@ -12,6 +12,9 @@
       <a href="<?= e(url('/reports/checks')) ?>">اسناد دریافتنی و پرداختنی</a>
       <a href="<?= e(url('/reports/bank-reconcile')) ?>">مغایرت بانکی</a>
       <a href="<?= e(url('/reports/charts')) ?>">بررسی نموداری دوره‌ها</a>
+      <a href="<?= e(url('/visitors/reports')) ?>">گزارش عملکرد ویزیتورها</a>
+      <a href="<?= e(url('/visitors/commissions')) ?>">پورسانت ویزیتورها</a>
+      <a href="<?= e(url('/visitors/cartable')) ?>">کارتابل ویزیتور</a>
       <a href="<?= e(url('/audit')) ?>">تاریخچه فعالیت کاربران</a>
     </div>
     <p style="color:var(--muted);margin-top:14px">خروجی Excel از داخل هر گزارش با پارامتر <code>?excel=1</code> در دسترس است.</p>

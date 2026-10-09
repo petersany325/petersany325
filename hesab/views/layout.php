@@ -56,7 +56,7 @@ $initialTitle = $title ?? 'پنجره';
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($title ?? $appName) ?> — <?= e($appName) ?></title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=12">
+  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=13">
 </head>
 <body class="<?= $isAuthPage ? 'auth-body' : ($isEmbed ? 'embed-body' : 'win-body') ?>">
 <?php if ($isAuthPage): ?>
@@ -127,6 +127,27 @@ $initialTitle = $title ?? 'پنجره';
     </div>
     <?php endif; ?>
 
+    <?php if ($can('visitors.manage') || $can('visitors.cartable') || $can('visitors.commission') || $can('visitors.reports')): ?>
+    <div class="win-menu">
+      <button type="button" class="win-menu-btn">ویزیتور</button>
+      <div class="win-menu-drop">
+        <?php if ($can('visitors.manage')): ?>
+          <a href="<?= e(url('/visitors')) ?>" data-ws-title="تعریف ویزیتور">تعریف ویزیتور</a>
+          <a href="<?= e(url('/visitors/visits')) ?>" data-ws-title="بازدیدها">بازدیدها</a>
+        <?php endif; ?>
+        <?php if ($can('visitors.cartable')): ?>
+          <a href="<?= e(url('/visitors/cartable')) ?>" data-ws-title="کارتابل ویزیتور">کارتابل ویزیتور</a>
+        <?php endif; ?>
+        <?php if ($can('visitors.commission')): ?>
+          <a href="<?= e(url('/visitors/commissions')) ?>" data-ws-title="پورسانت">درصد / پورسانت</a>
+        <?php endif; ?>
+        <?php if ($can('visitors.reports')): ?>
+          <a href="<?= e(url('/visitors/reports')) ?>" data-ws-title="گزارش ویزیتور">گزارشات ویزیتور</a>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <?php if ($can('treasury.manage')): ?>
     <div class="win-menu">
       <button type="button" class="win-menu-btn">خزانه‌داری</button>
@@ -156,6 +177,10 @@ $initialTitle = $title ?? 'پنجره';
         <a href="<?= e(url('/reports/nature-violations')) ?>" data-ws-title="خلاف ماهیت">اسناد خلاف ماهیت</a>
         <a href="<?= e(url('/reports/share')) ?>" data-ws-title="سهم‌بری">سهم‌بری / پروژه</a>
         <a href="<?= e(url('/reports/charts')) ?>" data-ws-title="نمودارها">نمودار دوره‌ها</a>
+        <?php if ($can('visitors.reports')): ?>
+          <div class="win-menu-sep"></div>
+          <a href="<?= e(url('/visitors/reports')) ?>" data-ws-title="گزارش ویزیتور">گزارشات ویزیتور</a>
+        <?php endif; ?>
       </div>
     </div>
     <?php endif; ?>
@@ -246,6 +271,27 @@ $initialTitle = $title ?? 'پنجره';
         </li>
         <?php endif; ?>
 
+        <?php if ($can('visitors.manage') || $can('visitors.cartable') || $can('visitors.reports') || $can('visitors.commission')): ?>
+        <li class="branch open">
+          <button type="button" class="branch-toggle">ویزیتور</button>
+          <ul>
+            <?php if ($can('visitors.manage')): ?>
+              <li data-nav="visitors"><a href="<?= e(url('/visitors')) ?>" data-ws-title="تعریف ویزیتور">تعریف ویزیتور</a></li>
+              <li data-nav="visitor_visits"><a href="<?= e(url('/visitors/visits')) ?>" data-ws-title="بازدید ویزیتور">بازدیدها</a></li>
+            <?php endif; ?>
+            <?php if ($can('visitors.cartable')): ?>
+              <li data-nav="visitor_cartable"><a href="<?= e(url('/visitors/cartable')) ?>" data-ws-title="کارتابل ویزیتور">کارتابل ویزیتور</a></li>
+            <?php endif; ?>
+            <?php if ($can('visitors.commission')): ?>
+              <li data-nav="visitor_commissions"><a href="<?= e(url('/visitors/commissions')) ?>" data-ws-title="پورسانت ویزیتور">درصد / پورسانت</a></li>
+            <?php endif; ?>
+            <?php if ($can('visitors.reports')): ?>
+              <li data-nav="visitor_reports"><a href="<?= e(url('/visitors/reports')) ?>" data-ws-title="گزارش ویزیتور">گزارشات ویزیتور</a></li>
+            <?php endif; ?>
+          </ul>
+        </li>
+        <?php endif; ?>
+
         <?php if ($can('treasury.manage')): ?>
         <li class="branch open">
           <button type="button" class="branch-toggle">خزانه‌داری</button>
@@ -302,7 +348,7 @@ $initialTitle = $title ?? 'پنجره';
     <span class="sb-pane">حالت: <?= $workMode === 'manager' ? 'مدیریتی' : 'حسابدار' ?></span>
     <span class="sb-pane"><a href="<?= e(url('/m?mobile=1')) ?>" data-ws-bypass="1">نسخه موبایل</a></span>
     <span class="sb-pane">لایسنس: <?= e(class_exists('License') ? License::statusLabel() : '—') ?></span>
-    <span class="sb-pane sb-end">build 12 · کاور ورود</span>
+    <span class="sb-pane sb-end">build 13 · ویزیتور</span>
   </footer>
 </div>
 <script>
@@ -315,6 +361,6 @@ window.HESAB_WS = {
 window.HESAB_SHORTCUTS = <?= json_encode($shortcutCfg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 <?php endif; ?>
-<script src="<?= e(url('/assets/js/app.js')) ?>?v=12"></script>
+<script src="<?= e(url('/assets/js/app.js')) ?>?v=13"></script>
 </body>
 </html>

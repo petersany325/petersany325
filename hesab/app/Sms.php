@@ -18,6 +18,9 @@ final class Sms
             'sms_from',
             'sms_otp_template',
             'sms_invoice_template',
+            'sms_visitor_task',
+            'sms_visitor_visit',
+            'sms_visitor_commission',
             'sms_base_url',
         ], [
             'sms_enabled' => '0',
@@ -29,6 +32,9 @@ final class Sms
             'sms_from' => '',
             'sms_otp_template' => 'کد ورود {app}: {code}',
             'sms_invoice_template' => 'فاکتور شماره {number} به مبلغ {amount} صادر شد.',
+            'sms_visitor_task' => '{app}: کارتابل — {title}',
+            'sms_visitor_visit' => '{app}: بازدید {date} مشتری {customer} ثبت شد.',
+            'sms_visitor_commission' => '{app}: پورسانت فاکتور {invoice} مبلغ {amount} ریال.',
             'sms_base_url' => 'https://panel.niazpardaz-sms.com',
         ]);
     }

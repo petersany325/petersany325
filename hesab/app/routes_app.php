@@ -826,9 +826,16 @@ $router->get('/parties', function () {
 
 $router->get('/invoices', function () {
     Permission::require('vouchers.create');
-    $rows = Database::query('SELECT i.*, p.name party_name FROM invoices i LEFT JOIN parties p ON p.id=i.party_id ORDER BY i.id DESC')->fetchAll();
+    $rows = Database::query(
+        'SELECT i.*, p.name party_name, v.name visitor_name
+         FROM invoices i
+         LEFT JOIN parties p ON p.id=i.party_id
+         LEFT JOIN visitors v ON v.id=i.visitor_id
+         ORDER BY i.id DESC'
+    )->fetchAll();
     $parties = Database::query('SELECT id, name FROM parties ORDER BY name')->fetchAll();
-    view('invoices', compact('rows', 'parties') + ['title' => 'فاکتور فروش', 'nav' => 'invoices']);
+    $visitors = class_exists('Visitor') ? Visitor::listActive() : [];
+    view('invoices', compact('rows', 'parties', 'visitors') + ['title' => 'فاکتور فروش', 'nav' => 'invoices']);
 });
 
 $router->post('/invoices', function () {
@@ -836,6 +843,7 @@ $router->post('/invoices', function () {
     verify_csrf();
     // reuse previous invoice auto-voucher logic lightly
     $partyId = (int) ($_POST['party_id'] ?? 0);
+    $visitorId = (int) ($_POST['visitor_id'] ?? 0);
     $date = $_POST['invoice_date'] ?? date('Y-m-d');
     $title = trim($_POST['item_title'] ?? 'فروش');
     $qty = (float) ($_POST['qty'] ?? 1);
@@ -858,10 +866,20 @@ $router->post('/invoices', function () {
             ['moein_id' => $sale['id'], 'debit' => 0, 'credit' => $amount, 'description' => 'فروش'],
         ], 'operational');
         $num = (int) Database::query('SELECT COALESCE(MAX(number),0)+1 n FROM invoices')->fetch()['n'];
-        Database::query('INSERT INTO invoices (number, invoice_date, party_id, total, description, voucher_id, status) VALUES (?,?,?,?,?,?,?)', [$num, $date, $partyId, $amount, $title, $vid, 'confirmed']);
+        Database::query(
+            'INSERT INTO invoices (number, invoice_date, party_id, visitor_id, total, description, voucher_id, status) VALUES (?,?,?,?,?,?,?,?)',
+            [$num, $date, $partyId, $visitorId ?: null, $amount, $title, $vid, 'confirmed']
+        );
         $iid = (int) Database::pdo()->lastInsertId();
         Database::query('INSERT INTO invoice_items (invoice_id, title, qty, unit_price, amount) VALUES (?,?,?,?,?)', [$iid, $title, $qty, $price, $amount]);
-        flash('ok', 'فاکتور و سند اتوماتیک صادر شد.');
+        $msg = 'فاکتور و سند اتوماتیک صادر شد.';
+        if ($visitorId > 0 && class_exists('Visitor')) {
+            $acc = Visitor::accrueFromInvoice($iid);
+            if ($acc['ok']) {
+                $msg .= ' ' . $acc['message'];
+            }
+        }
+        flash('ok', $msg);
     } catch (Throwable $e) {
         flash('err', $e->getMessage());
     }

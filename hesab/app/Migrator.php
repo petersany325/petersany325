@@ -251,6 +251,85 @@ final class Migrator
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        // ---- Visitor (ویزیتور) subsystem ----
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS visitors (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          code VARCHAR(40) NOT NULL,
+          name VARCHAR(190) NOT NULL,
+          phone VARCHAR(20) NULL,
+          region VARCHAR(120) NULL,
+          commission_percent DECIMAL(6,2) NOT NULL DEFAULT 0,
+          user_id INT UNSIGNED NULL,
+          notes VARCHAR(500) NULL,
+          is_active TINYINT(1) NOT NULL DEFAULT 1,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY uq_visitors_code (code),
+          KEY idx_visitors_user (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS visitor_customers (
+          visitor_id INT UNSIGNED NOT NULL,
+          party_id INT UNSIGNED NOT NULL,
+          assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (visitor_id, party_id),
+          KEY idx_vc_party (party_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS visitor_visits (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          visitor_id INT UNSIGNED NOT NULL,
+          party_id INT UNSIGNED NULL,
+          visit_date DATE NOT NULL,
+          visit_time VARCHAR(10) NULL,
+          status ENUM('planned','done','cancelled','no_sale') NOT NULL DEFAULT 'planned',
+          result_note VARCHAR(500) NULL,
+          next_followup DATE NULL,
+          created_by INT UNSIGNED NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          KEY idx_vv_visitor (visitor_id),
+          KEY idx_vv_date (visit_date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS visitor_cartable (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          visitor_id INT UNSIGNED NULL,
+          title VARCHAR(190) NOT NULL,
+          body TEXT NULL,
+          kind ENUM('task','visit','commission','sms','other') NOT NULL DEFAULT 'task',
+          status ENUM('open','in_progress','done','rejected') NOT NULL DEFAULT 'open',
+          ref_type VARCHAR(40) NULL,
+          ref_id INT UNSIGNED NULL,
+          due_date DATE NULL,
+          created_by INT UNSIGNED NULL,
+          handled_by INT UNSIGNED NULL,
+          handled_at DATETIME NULL,
+          created_at DATETIME NOT NULL,
+          KEY idx_cart_status (status),
+          KEY idx_cart_visitor (visitor_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS visitor_commissions (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          visitor_id INT UNSIGNED NOT NULL,
+          invoice_id INT UNSIGNED NOT NULL,
+          base_amount DECIMAL(18,0) NOT NULL DEFAULT 0,
+          percent DECIMAL(6,2) NOT NULL DEFAULT 0,
+          commission_amount DECIMAL(18,0) NOT NULL DEFAULT 0,
+          status ENUM('accrued','approved','paid','void') NOT NULL DEFAULT 'accrued',
+          paid_at DATETIME NULL,
+          note VARCHAR(500) NULL,
+          created_at DATETIME NOT NULL,
+          UNIQUE KEY uq_vc_invoice (invoice_id),
+          KEY idx_vc_visitor (visitor_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::addColumn($pdo, 'invoices', 'visitor_id', 'INT UNSIGNED NULL');
+        try {
+            $pdo->exec('CREATE INDEX idx_invoices_visitor ON invoices (visitor_id)');
+        } catch (Throwable $e) {
+            // ignore
+        }
+
         self::seedDefaults($pdo);
         // migrate posted -> locked for backward compat display
         self::exec($pdo, "UPDATE vouchers SET status='locked' WHERE status='posted'");
@@ -298,6 +377,10 @@ final class Migrator
             ['invoices.print', 'چاپ فاکتور'],
             ['sms.manage', 'تنظیمات پیامک'],
             ['license.manage', 'مدیریت لایسنس'],
+            ['visitors.manage', 'مدیریت ویزیتورها'],
+            ['visitors.cartable', 'کارتابل ویزیتور'],
+            ['visitors.reports', 'گزارش ویزیتور'],
+            ['visitors.commission', 'پورسانت ویزیتور'],
         ];
         $ins = $pdo->prepare('INSERT IGNORE INTO permissions (code, title) VALUES (?,?)');
         foreach ($perms as $p) {
@@ -309,8 +392,9 @@ final class Migrator
             'accountant' => [
                 'accounts.manage','tafsili.manage','vouchers.create','vouchers.review','treasury.manage',
                 'reports.view','fiscal.manage','moadian.manage','invoices.manage','invoices.print','settings.manage',
+                'visitors.manage','visitors.cartable','visitors.reports','visitors.commission',
             ],
-            'viewer' => ['reports.view','audit.view','invoices.print'],
+            'viewer' => ['reports.view','audit.view','invoices.print','visitors.reports'],
         ];
         $rp = $pdo->prepare('INSERT IGNORE INTO role_permissions (role, permission_code) VALUES (?,?)');
         foreach ($roleMap as $role => $codes) {

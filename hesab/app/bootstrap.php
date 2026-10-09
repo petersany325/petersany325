@@ -13,6 +13,7 @@ require __DIR__ . '/SettingsStore.php';
 require __DIR__ . '/Sms.php';
 require __DIR__ . '/License.php';
 require __DIR__ . '/InvoiceSettings.php';
+require __DIR__ . '/Visitor.php';
 require __DIR__ . '/Auth.php';
 require __DIR__ . '/Installer.php';
 require __DIR__ . '/Migrator.php';
