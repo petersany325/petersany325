@@ -42,15 +42,65 @@ function url(string $path = '/'): string
     return base_path() . $path;
 }
 
+function is_embed_request(): bool
+{
+    if (isset($_GET['embed']) && (string) $_GET['embed'] === '1') {
+        return true;
+    }
+    // Form posts / redirects from an iframe tab
+    if (($_SERVER['HTTP_SEC_FETCH_DEST'] ?? '') === 'iframe') {
+        return true;
+    }
+    return false;
+}
+
+function with_embed(string $href): string
+{
+    if ($href === '' || str_starts_with($href, '#') || str_contains($href, 'embed=')) {
+        return $href;
+    }
+    $parts = parse_url($href);
+    if ($parts === false) {
+        return $href;
+    }
+    $query = [];
+    if (!empty($parts['query'])) {
+        parse_str($parts['query'], $query);
+    }
+    $query['embed'] = '1';
+    $q = http_build_query($query);
+    $out = ($parts['path'] ?? '');
+    if ($q !== '') {
+        $out .= '?' . $q;
+    }
+    if (!empty($parts['fragment'])) {
+        $out .= '#' . $parts['fragment'];
+    }
+    // Preserve absolute URLs
+    if (!empty($parts['scheme']) && !empty($parts['host'])) {
+        $auth = '';
+        if (!empty($parts['user'])) {
+            $auth = $parts['user'] . (isset($parts['pass']) ? ':' . $parts['pass'] : '') . '@';
+        }
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+        return $parts['scheme'] . '://' . $auth . $parts['host'] . $port . $out;
+    }
+    return $out;
+}
+
 function redirect(string $path): never
 {
     if (str_starts_with($path, 'http')) {
-        header('Location: ' . $path);
-        exit;
+        $loc = $path;
+    } else {
+        // Always stay on the current host/path-base so DNS issues on a
+        // subdomain cannot break the working /hesab path.
+        $loc = url($path);
     }
-    // Always stay on the current host/path-base so DNS issues on a
-    // subdomain cannot break the working /hesab path.
-    header('Location: ' . url($path));
+    if (is_embed_request()) {
+        $loc = with_embed($loc);
+    }
+    header('Location: ' . $loc);
     exit;
 }
 
@@ -132,10 +182,14 @@ function is_mobile_route(): bool
 function view(string $name, array $data = []): void
 {
     extract($data, EXTR_SKIP);
-    $flash = take_flash();
     $user = current_user();
     $appName = cfg('app_name', 'حساب');
     $mobile = !empty($force_mobile) || is_mobile_route();
+    $isEmbed = is_embed_request();
+    $isAuthPage = in_array($name, ['login', 'install'], true);
+    // Shell request only hosts tabs; leave flash for the embed iframe.
+    $isShell = !$mobile && !$isEmbed && !$isAuthPage;
+    $flash = $isShell ? null : take_flash();
     if ($mobile) {
         if ($name === 'login') {
             $name = 'login';

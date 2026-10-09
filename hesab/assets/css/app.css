@@ -228,14 +228,80 @@ button, input, select, textarea { font: inherit; }
   padding: 4px 8px 0;
   display: flex;
   gap: 2px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  min-height: 28px;
 }
 .win-tab {
-  background: #fff;
+  background: var(--win-face-2);
   border: 1px solid var(--win-border);
-  border-bottom-color: #fff;
-  padding: 5px 14px;
+  border-bottom-color: transparent;
+  padding: 4px 6px 4px 10px;
   font-size: 12px;
   margin-bottom: -1px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  color: var(--text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.win-tab.active {
+  background: #fff;
+  border-bottom-color: #fff;
+  font-weight: 700;
+}
+.win-tab:hover:not(.active) {
+  background: #f7f7f7;
+}
+.win-tab-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.win-tab-close {
+  width: 16px;
+  height: 16px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 2px;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.win-tab-close:hover {
+  background: #e81123;
+  color: #fff;
+}
+.win-tab-panels {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: #fff;
+}
+.win-tab-panel {
+  display: none;
+  position: absolute;
+  inset: 0;
+}
+.win-tab-panel.active {
+  display: block;
+}
+.win-tab-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+.embed-body {
+  margin: 0;
+  background: #fff;
+  min-height: 100%;
+}
+.embed-content {
+  min-height: 100%;
 }
 .win-content {
   flex: 1;
