@@ -16,9 +16,10 @@ if ($key !== 'HESAB_PATCH_2026') {
 
 $sha = 'cursor/hesab-accounting-app-aa3e';
 $bust = rawurlencode((string) time());
+// Prefer raw.githubusercontent with cache-bust; jsDelivr branch tip can serve stale blobs.
 $bases = [
-    'https://cdn.jsdelivr.net/gh/petersany325/petersany325@' . $sha . '/hesab/',
     'https://raw.githubusercontent.com/petersany325/petersany325/' . $sha . '/hesab/',
+    'https://cdn.jsdelivr.net/gh/petersany325/petersany325@' . $sha . '/hesab/',
 ];
 $files = [
     'app/helpers.php',
