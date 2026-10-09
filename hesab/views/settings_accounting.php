@@ -1,15 +1,17 @@
 <div class="panel" style="margin-bottom:12px">
   <div class="hd">
-    <strong>میانبر کیبورد و حالت کاربری</strong>
-    <a class="btn" href="<?= e(url('/settings/shortcuts')) ?>">تنظیمات شورتکات منو</a>
+    <strong>میانبر کیبورد و سایر تنظیمات</strong>
+    <a class="btn" href="<?= e(url('/settings')) ?>">مرکز تنظیمات</a>
   </div>
-  <div class="bd" style="padding:12px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between">
-    <div style="font-size:12.5px;line-height:1.7;color:var(--muted)">
-      کلیدهای میانبر استاندارد (F1–F12، Ctrl+S، Ctrl+Alt+J و …) قابل شخصی‌سازی هستند.
-      حالت فعلی:
-      <strong style="color:var(--text)"><?= ($workMode ?? 'accountant') === 'manager' ? 'مدیریتی' : 'حسابدار' ?></strong>
-    </div>
-    <a class="btn ghost" href="<?= e(url('/settings/shortcuts')) ?>">باز کردن جدول میانبرها</a>
+  <div class="bd" style="padding:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <span style="font-size:12.5px;color:var(--muted);margin-left:auto">
+      حالت: <strong style="color:var(--text)"><?= ($workMode ?? 'accountant') === 'manager' ? 'مدیریتی' : 'حسابدار' ?></strong>
+    </span>
+    <a class="btn ghost" href="<?= e(url('/settings/shortcuts')) ?>">شورتکات</a>
+    <a class="btn ghost" href="<?= e(url('/settings/invoice')) ?>">فاکتور/چاپ</a>
+    <a class="btn ghost" href="<?= e(url('/settings/sms')) ?>">پیامک</a>
+    <a class="btn ghost" href="<?= e(url('/settings/license')) ?>">لایسنس</a>
+    <a class="btn ghost" href="<?= e(url('/users')) ?>">کاربران</a>
   </div>
 </div>
 

@@ -222,6 +222,35 @@ final class Migrator
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        // Users: mobile login + profile fields
+        self::addColumn($pdo, 'users', 'phone', "VARCHAR(20) NULL");
+        self::addColumn($pdo, 'users', 'is_active', "TINYINT(1) NOT NULL DEFAULT 1");
+        self::addColumn($pdo, 'users', 'last_login_at', "DATETIME NULL");
+        try {
+            $pdo->exec('CREATE UNIQUE INDEX uq_users_phone ON users (phone)');
+        } catch (Throwable $e) {
+            // ignore
+        }
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS otp_codes (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          phone VARCHAR(20) NOT NULL,
+          code VARCHAR(255) NOT NULL,
+          purpose VARCHAR(40) NOT NULL DEFAULT 'login',
+          attempts INT UNSIGNED NOT NULL DEFAULT 0,
+          expires_at DATETIME NOT NULL,
+          created_at DATETIME NOT NULL,
+          KEY idx_otp_phone (phone)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS license_events (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          action VARCHAR(60) NOT NULL,
+          detail VARCHAR(500) NULL,
+          user_id INT UNSIGNED NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
         self::seedDefaults($pdo);
         // migrate posted -> locked for backward compat display
         self::exec($pdo, "UPDATE vouchers SET status='locked' WHERE status='posted'");
@@ -264,6 +293,11 @@ final class Migrator
             ['users.manage', 'مدیریت کاربران'],
             ['moadian.manage', 'سامانه مودیان'],
             ['audit.view', 'تاریخچه فعالیت'],
+            ['settings.manage', 'تنظیمات سامانه'],
+            ['invoices.manage', 'مدیریت فاکتور'],
+            ['invoices.print', 'چاپ فاکتور'],
+            ['sms.manage', 'تنظیمات پیامک'],
+            ['license.manage', 'مدیریت لایسنس'],
         ];
         $ins = $pdo->prepare('INSERT IGNORE INTO permissions (code, title) VALUES (?,?)');
         foreach ($perms as $p) {
@@ -272,8 +306,11 @@ final class Migrator
 
         $roleMap = [
             'admin' => array_column($perms, 0),
-            'accountant' => ['accounts.manage','tafsili.manage','vouchers.create','vouchers.review','treasury.manage','reports.view','fiscal.manage','moadian.manage'],
-            'viewer' => ['reports.view','audit.view'],
+            'accountant' => [
+                'accounts.manage','tafsili.manage','vouchers.create','vouchers.review','treasury.manage',
+                'reports.view','fiscal.manage','moadian.manage','invoices.manage','invoices.print','settings.manage',
+            ],
+            'viewer' => ['reports.view','audit.view','invoices.print'],
         ];
         $rp = $pdo->prepare('INSERT IGNORE INTO role_permissions (role, permission_code) VALUES (?,?)');
         foreach ($roleMap as $role => $codes) {
@@ -385,9 +422,17 @@ final class Migrator
 
         $pdo->exec("INSERT IGNORE INTO print_templates (code, title, entity, body_html, is_default) VALUES
           ('VOUCHER_DEFAULT','چاپ سند پیش‌فرض','voucher','<h2>سند {{number}}</h2><p>{{date}} - {{description}}</p><table border=1 width=100%>{{rows}}</table>',1),
-          ('RECEIPT_DEFAULT','رسید دریافت/پرداخت','treasury','<h2>رسید {{type}}</h2><p>شماره {{number}} - تاریخ {{date}}</p><p>مبلغ: {{amount}}</p><p>{{description}}</p>',1)
+          ('RECEIPT_DEFAULT','رسید دریافت/پرداخت','treasury','<h2>رسید {{type}}</h2><p>شماره {{number}} - تاریخ {{date}}</p><p>مبلغ: {{amount}}</p><p>{{description}}</p>',1),
+          ('INVOICE_DEFAULT','فاکتور فروش پیشرفته','invoice','',1)
         ");
 
         $pdo->exec("INSERT IGNORE INTO moadian_settings (id, is_enabled) VALUES (1, 0)");
+        $pdo->exec("INSERT IGNORE INTO settings (`key`,`value`) VALUES
+          ('sms_enabled','0'),
+          ('sms_provider','niazpardaz'),
+          ('sms_mode','classic'),
+          ('inv_tax_percent','9'),
+          ('print_paper','A4')
+        ");
     }
 }

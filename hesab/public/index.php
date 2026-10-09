@@ -44,19 +44,52 @@ $router->get('/login', function () {
     if (wants_mobile_ui()) {
         redirect('/m/login');
     }
-    view('login', ['title' => 'ورود']);
+    $tab = $_GET['tab'] ?? 'email';
+    if (!in_array($tab, ['email', 'phone', 'otp'], true)) {
+        $tab = 'email';
+    }
+    view('login', ['title' => 'ورود', 'tab' => $tab, 'otpPhone' => $_SESSION['otp_phone'] ?? '']);
 });
 
 $router->post('/login', function () {
     verify_csrf();
-    $email = trim($_POST['email'] ?? '');
-    $pass = (string) ($_POST['password'] ?? '');
-    if (attempt_login($email, $pass)) {
+    $mode = (string) ($_POST['mode'] ?? 'email');
+    $ok = false;
+    if ($mode === 'phone') {
+        $ok = attempt_login_phone(trim($_POST['phone'] ?? ''), (string) ($_POST['password'] ?? ''));
+    } else {
+        $ok = attempt_login(trim($_POST['email'] ?? ''), (string) ($_POST['password'] ?? ''));
+    }
+    if ($ok) {
         Audit::log('auth.login');
         redirect(wants_mobile_ui() ? '/m' : '/');
     }
-    flash('err', 'ایمیل یا رمز عبور نادرست است.');
-    redirect(wants_mobile_ui() ? '/m/login' : '/login');
+    flash('err', 'اطلاعات ورود نادرست است یا کاربر غیرفعال است.');
+    redirect(wants_mobile_ui() ? '/m/login' : '/login?tab=' . urlencode($mode === 'phone' ? 'phone' : 'email'));
+});
+
+$router->post('/login/otp/send', function () {
+    verify_csrf();
+    $phone = trim($_POST['phone'] ?? '');
+    $res = create_login_otp($phone);
+    $_SESSION['otp_phone'] = Sms::normalizeMobile($phone);
+    flash($res['ok'] ? 'ok' : 'err', $res['message']);
+    $toMobile = ($_POST['redirect'] ?? '') === 'mobile' || wants_mobile_ui();
+    redirect($toMobile ? '/m/login?tab=otp&mobile=1' : '/login?tab=otp');
+});
+
+$router->post('/login/otp/verify', function () {
+    verify_csrf();
+    $phone = trim($_POST['phone'] ?? ($_SESSION['otp_phone'] ?? ''));
+    $code = trim($_POST['code'] ?? '');
+    $toMobile = ($_POST['redirect'] ?? '') === 'mobile' || wants_mobile_ui();
+    if (verify_login_otp($phone, $code)) {
+        Audit::log('auth.login.otp');
+        unset($_SESSION['otp_phone']);
+        redirect($toMobile ? '/m' : '/');
+    }
+    flash('err', 'کد تأیید نادرست یا منقضی است.');
+    redirect($toMobile ? '/m/login?tab=otp&mobile=1' : '/login?tab=otp');
 });
 
 $router->get('/logout', function () {
@@ -69,6 +102,7 @@ $router->get('/logout', function () {
 
 require __DIR__ . '/../app/routes_mobile.php';
 require __DIR__ . '/../app/routes_app.php';
+require __DIR__ . '/../app/routes_settings.php';
 
 // Auto-send phones from desktop home into mobile app (unless desktop mode forced)
 $router->get('/go-mobile', function () {

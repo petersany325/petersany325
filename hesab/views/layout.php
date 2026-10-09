@@ -56,7 +56,7 @@ $initialTitle = $title ?? 'پنجره';
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($title ?? $appName) ?> — <?= e($appName) ?></title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=9">
+  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=11">
 </head>
 <body class="<?= $isAuthPage ? 'auth-body' : ($isEmbed ? 'embed-body' : 'win-body') ?>">
 <?php if ($isAuthPage): ?>
@@ -160,12 +160,22 @@ $initialTitle = $title ?? 'پنجره';
     </div>
     <?php endif; ?>
 
-    <?php if ($can('moadian.manage') || $can('users.manage') || $can('audit.view')): ?>
+    <?php if ($can('moadian.manage') || $can('users.manage') || $can('audit.view') || $can('settings.manage') || $can('license.manage') || $can('sms.manage') || $can('invoices.manage')): ?>
     <div class="win-menu">
       <button type="button" class="win-menu-btn">سیستم</button>
       <div class="win-menu-drop">
+        <?php if ($can('settings.manage') || $can('accounts.manage')): ?>
+          <a href="<?= e(url('/settings')) ?>" data-ws-title="مرکز تنظیمات">مرکز تنظیمات</a>
+          <a href="<?= e(url('/settings/invoice')) ?>" data-ws-title="فاکتور و چاپ">فاکتور و چاپ پیشرفته</a>
+          <a href="<?= e(url('/settings/sms')) ?>" data-ws-title="پیامک نیازپرداز">پیامک نیازپرداز</a>
+        <?php endif; ?>
+        <?php if ($can('license.manage')): ?>
+          <a href="<?= e(url('/settings/license')) ?>" data-ws-title="لایسنس">لایسنس و فروش</a>
+        <?php endif; ?>
+        <div class="win-menu-sep"></div>
         <?php if ($can('moadian.manage')): ?><a href="<?= e(url('/moadian')) ?>" data-ws-title="سامانه مودیان">سامانه مودیان</a><?php endif; ?>
         <?php if ($can('users.manage')): ?><a href="<?= e(url('/users')) ?>" data-ws-title="کاربران">کاربران و دسترسی</a><?php endif; ?>
+        <a href="<?= e(url('/settings/profile')) ?>" data-ws-title="پروفایل من">پروفایل من</a>
         <?php if ($can('audit.view')): ?><a href="<?= e(url('/audit')) ?>" data-ws-title="تاریخچه">تاریخچه فعالیت</a><?php endif; ?>
       </div>
     </div>
@@ -261,12 +271,17 @@ $initialTitle = $title ?? 'پنجره';
         </li>
         <?php endif; ?>
 
-        <?php if ($can('moadian.manage') || $can('users.manage') || $can('audit.view')): ?>
-        <li class="branch">
+        <?php if ($can('moadian.manage') || $can('users.manage') || $can('audit.view') || $can('settings.manage') || $can('license.manage') || $can('sms.manage') || $can('invoices.manage')): ?>
+        <li class="branch open">
           <button type="button" class="branch-toggle">سیستم</button>
           <ul>
+            <li data-nav="settings_hub"><a href="<?= e(url('/settings')) ?>" data-ws-title="مرکز تنظیمات">مرکز تنظیمات</a></li>
+            <?php if ($can('invoices.manage')): ?><li data-nav="settings_invoice"><a href="<?= e(url('/settings/invoice')) ?>" data-ws-title="فاکتور و چاپ">فاکتور / چاپ</a></li><?php endif; ?>
+            <?php if ($can('sms.manage')): ?><li data-nav="settings_sms"><a href="<?= e(url('/settings/sms')) ?>" data-ws-title="پیامک">پیامک نیازپرداز</a></li><?php endif; ?>
+            <?php if ($can('license.manage')): ?><li data-nav="settings_license"><a href="<?= e(url('/settings/license')) ?>" data-ws-title="لایسنس">لایسنس و فروش</a></li><?php endif; ?>
             <?php if ($can('moadian.manage')): ?><li data-nav="moadian"><a href="<?= e(url('/moadian')) ?>" data-ws-title="سامانه مودیان">سامانه مودیان</a></li><?php endif; ?>
-            <?php if ($can('users.manage')): ?><li data-nav="users"><a href="<?= e(url('/users')) ?>" data-ws-title="کاربران">کاربران</a></li><?php endif; ?>
+            <?php if ($can('users.manage')): ?><li data-nav="users"><a href="<?= e(url('/users')) ?>" data-ws-title="کاربران">کاربران و دسترسی</a></li><?php endif; ?>
+            <li data-nav="settings_profile"><a href="<?= e(url('/settings/profile')) ?>" data-ws-title="پروفایل">پروفایل من</a></li>
             <?php if ($can('audit.view')): ?><li data-nav="audit"><a href="<?= e(url('/audit')) ?>" data-ws-title="تاریخچه">تاریخچه فعالیت</a></li><?php endif; ?>
           </ul>
         </li>
@@ -286,7 +301,8 @@ $initialTitle = $title ?? 'پنجره';
     <span class="sb-pane"><?= e($fy['title'] ?? 'سال مالی نامشخص') ?></span>
     <span class="sb-pane">حالت: <?= $workMode === 'manager' ? 'مدیریتی' : 'حسابدار' ?></span>
     <span class="sb-pane"><a href="<?= e(url('/m?mobile=1')) ?>" data-ws-bypass="1">نسخه موبایل</a></span>
-    <span class="sb-pane sb-end">build 9 · شورتکات</span>
+    <span class="sb-pane">لایسنس: <?= e(class_exists('License') ? License::statusLabel() : '—') ?></span>
+    <span class="sb-pane sb-end">build 11 · تنظیمات کامل</span>
   </footer>
 </div>
 <script>
@@ -299,6 +315,6 @@ window.HESAB_WS = {
 window.HESAB_SHORTCUTS = <?= json_encode($shortcutCfg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 <?php endif; ?>
-<script src="<?= e(url('/assets/js/app.js')) ?>?v=9"></script>
+<script src="<?= e(url('/assets/js/app.js')) ?>?v=11"></script>
 </body>
 </html>

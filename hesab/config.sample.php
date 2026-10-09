@@ -5,6 +5,8 @@ return [
     'app_name' => 'حساب پیشگام',
     'base_url' => 'https://hdd-land.ir/hesab',
     'timezone' => 'Asia/Tehran',
+    // Override in production before issuing paid license keys
+    'license_secret' => '',
     'db' => [
         'host' => 'localhost',
         'name' => 'DBNAME_hesab',

@@ -22,10 +22,10 @@
     <div class="bd">
       <table class="data">
         <thead>
-          <tr><th>شماره</th><th>تاریخ</th><th>طرف‌حساب</th><th>مبلغ</th><th>سند</th></tr>
+          <tr><th>شماره</th><th>تاریخ</th><th>طرف‌حساب</th><th>مبلغ</th><th>سند</th><th></th></tr>
         </thead>
         <tbody>
-        <?php if (!$rows): ?><tr><td colspan="5">موردی نیست</td></tr><?php endif; ?>
+        <?php if (!$rows): ?><tr><td colspan="6">موردی نیست</td></tr><?php endif; ?>
         <?php foreach ($rows as $r): ?>
           <tr>
             <td><?= (int)$r['number'] ?></td>
@@ -36,6 +36,11 @@
               <?php if ($r['voucher_id']): ?>
                 <a href="<?= e(url('/vouchers/view')) ?>?id=<?= (int)$r['voucher_id'] ?>">#<?= (int)$r['voucher_id'] ?></a>
               <?php else: ?>—<?php endif; ?>
+            </td>
+            <td>
+              <?php if (Permission::can(current_user(), 'invoices.print')): ?>
+                <a href="<?= e(url('/invoices/print?id=' . (int)$r['id'])) ?>" target="_blank">چاپ</a>
+              <?php endif; ?>
             </td>
           </tr>
         <?php endforeach; ?>

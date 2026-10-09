@@ -37,20 +37,35 @@ $router->get('/m/login', function () use ($mview) {
         redirect('/m');
     }
     $_SESSION['ui_mode'] = 'mobile';
-    $mview('login', ['title' => 'ورود موبایل', 'nav' => 'login']);
+    $tab = $_GET['tab'] ?? 'email';
+    if (!in_array($tab, ['email', 'phone', 'otp'], true)) {
+        $tab = 'email';
+    }
+    $mview('login', [
+        'title' => 'ورود موبایل',
+        'nav' => 'login',
+        'tab' => $tab,
+        'otpPhone' => $_SESSION['otp_phone'] ?? '',
+    ]);
 });
 
 $router->post('/m/login', function () {
     verify_csrf();
     $_SESSION['ui_mode'] = 'mobile';
-    $email = trim($_POST['email'] ?? '');
-    $pass = (string) ($_POST['password'] ?? '');
-    if (attempt_login($email, $pass)) {
+    $mode = (string) ($_POST['mode'] ?? 'email');
+    $ok = false;
+    if ($mode === 'phone') {
+        $ok = attempt_login_phone(trim($_POST['phone'] ?? ''), (string) ($_POST['password'] ?? ''));
+    } else {
+        $ok = attempt_login(trim($_POST['email'] ?? ''), (string) ($_POST['password'] ?? ''));
+    }
+    if ($ok) {
         Audit::log('auth.login.mobile');
         redirect('/m');
     }
-    flash('err', 'ایمیل یا رمز عبور نادرست است.');
-    redirect('/m/login');
+    flash('err', 'اطلاعات ورود نادرست است یا کاربر غیرفعال است.');
+    $tab = $mode === 'phone' ? 'phone' : 'email';
+    redirect('/m/login?tab=' . urlencode($tab) . '&mobile=1');
 });
 
 $router->get('/m/vouchers', function () use ($mview) {

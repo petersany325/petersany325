@@ -705,25 +705,62 @@ $router->post('/reports/bank-reconcile', function () {
 // ---- Users / audit / moadian ----
 $router->get('/users', function () {
     Permission::require('users.manage');
-    $users = Database::query('SELECT id, name, email, role, created_at FROM users ORDER BY id')->fetchAll();
+    $users = Database::query('SELECT id, name, email, phone, role, is_active, created_at FROM users ORDER BY id')->fetchAll();
     $perms = Database::query('SELECT * FROM permissions ORDER BY id')->fetchAll();
-    view('users', compact('users', 'perms') + ['title' => 'کاربران و دسترسی', 'nav' => 'users']);
+    $edit = null;
+    $editPerms = [];
+    $editId = (int) ($_GET['edit'] ?? ($users[0]['id'] ?? 0));
+    if ($editId > 0) {
+        $edit = Database::query('SELECT * FROM users WHERE id=?', [$editId])->fetch() ?: null;
+        if ($edit) {
+            $rows = Database::query('SELECT permission_code FROM user_permissions WHERE user_id=? AND allowed=1', [$editId])->fetchAll();
+            $editPerms = array_column($rows, 'permission_code');
+            if (!$editPerms) {
+                $rows = Database::query('SELECT permission_code FROM role_permissions WHERE role=?', [$edit['role']])->fetchAll();
+                $editPerms = array_column($rows, 'permission_code');
+            }
+        }
+    }
+    view('users', compact('users', 'perms', 'edit', 'editPerms') + ['title' => 'کاربران و دسترسی', 'nav' => 'users']);
 });
 
 $router->post('/users/save', function () {
     Permission::require('users.manage');
     verify_csrf();
-    if (!empty($_POST['new_email'])) {
-        Database::query('INSERT INTO users (name, email, password_hash, role) VALUES (?,?,?,?)', [
-            trim($_POST['new_name'] ?? ''),
-            trim($_POST['new_email']),
-            password_hash((string) ($_POST['new_pass'] ?? 'ChangeMe123'), PASSWORD_DEFAULT),
-            $_POST['new_role'] ?? 'accountant',
-        ]);
+    $op = (string) ($_POST['op'] ?? '');
+    if ($op === 'create' || !empty($_POST['new_email'])) {
+        $phone = Sms::normalizeMobile(trim($_POST['new_phone'] ?? ''));
+        Database::query(
+            'INSERT INTO users (name, email, phone, password_hash, role, is_active) VALUES (?,?,?,?,?,1)',
+            [
+                trim($_POST['new_name'] ?? ''),
+                trim($_POST['new_email']),
+                $phone !== '' ? $phone : null,
+                password_hash((string) ($_POST['new_pass'] ?? 'ChangeMe123'), PASSWORD_DEFAULT),
+                $_POST['new_role'] ?? 'accountant',
+            ]
+        );
     }
-    if (!empty($_POST['user_id'])) {
+    if ($op === 'update' || (!empty($_POST['user_id']) && empty($_POST['new_email']))) {
         $uid = (int) $_POST['user_id'];
-        Database::query('UPDATE users SET role=? WHERE id=?', [$_POST['role'] ?? 'accountant', $uid]);
+        $phone = Sms::normalizeMobile(trim($_POST['phone'] ?? ''));
+        $active = isset($_POST['is_active']) ? 1 : 0;
+        Database::query(
+            'UPDATE users SET name=COALESCE(?, name), phone=?, role=?, is_active=? WHERE id=?',
+            [
+                trim($_POST['name'] ?? '') ?: null,
+                $phone !== '' ? $phone : null,
+                $_POST['role'] ?? 'accountant',
+                $active,
+                $uid,
+            ]
+        );
+        if (!empty($_POST['new_pass'])) {
+            Database::query('UPDATE users SET password_hash=? WHERE id=?', [
+                password_hash((string) $_POST['new_pass'], PASSWORD_DEFAULT),
+                $uid,
+            ]);
+        }
         Database::query('DELETE FROM user_permissions WHERE user_id=?', [$uid]);
         foreach ($_POST['perm'] ?? [] as $code) {
             Database::query('INSERT INTO user_permissions (user_id, permission_code, allowed) VALUES (?,?,1)', [$uid, $code]);
@@ -731,7 +768,7 @@ $router->post('/users/save', function () {
     }
     Audit::log('users.save');
     flash('ok', 'کاربران/دسترسی ذخیره شد.');
-    redirect('/users');
+    redirect('/users' . (!empty($_POST['user_id']) ? '?edit=' . (int) $_POST['user_id'] : ''));
 });
 
 $router->get('/audit', function () {

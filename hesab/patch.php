@@ -24,8 +24,17 @@ $bases = [
 $files = [
     'app/helpers.php',
     'app/bootstrap.php',
+    'app/SettingsStore.php',
+    'app/Sms.php',
+    'app/License.php',
+    'app/InvoiceSettings.php',
+    'app/Auth.php',
+    'app/Migrator.php',
+    'app/Permission.php',
     'app/Shortcuts.php',
     'app/routes_app.php',
+    'app/routes_mobile.php',
+    'app/routes_settings.php',
     'public/index.php',
     '.htaccess',
     'views/layout.php',
@@ -38,8 +47,16 @@ $files = [
     'views/ledger.php',
     'views/parties.php',
     'views/invoices.php',
+    'views/users.php',
     'views/settings_accounting.php',
     'views/settings_shortcuts.php',
+    'views/settings_hub.php',
+    'views/settings_invoice.php',
+    'views/settings_sms.php',
+    'views/settings_license.php',
+    'views/settings_profile.php',
+    'views/print_invoice.php',
+    'views/mobile/login.php',
     'assets/js/app.js',
     'assets/css/app.css',
     'assets/js/mobile.js',
@@ -65,10 +82,16 @@ foreach ($files as $rel) {
     $data = false;
     foreach ($bases as $base) {
         $url = $base . $rel . (str_contains($base, 'raw.githubusercontent') ? ('?t=' . $bust) : '');
-        $data = @file_get_contents($url, false, $ctx);
-        if ($data !== false && $data !== '') {
-            break;
+        $candidate = @file_get_contents($url, false, $ctx);
+        if ($candidate === false || $candidate === '') {
+            continue;
         }
+        // Reject known-stale layout bootstrap if a cleaner copy is available later.
+        if ($rel === 'views/layout.php' && str_contains($candidate, 'hesab_pull')) {
+            continue;
+        }
+        $data = $candidate;
+        break;
     }
     if ($data === false || $data === '') {
         echo "FAIL download {$rel}\n";

@@ -5,7 +5,7 @@
 /** @var array $conflicts */
 /** @var array $groups */
 $conflicts = $conflicts ?? [];
-
+?>
 <div class="panel" style="margin-bottom:12px">
   <div class="hd">
     <strong>تنظیمات میانبر کیبورد</strong>
