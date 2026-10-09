@@ -56,7 +56,7 @@ $initialTitle = $title ?? 'پنجره';
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($title ?? $appName) ?> — <?= e($appName) ?></title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=11">
+  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=12">
 </head>
 <body class="<?= $isAuthPage ? 'auth-body' : ($isEmbed ? 'embed-body' : 'win-body') ?>">
 <?php if ($isAuthPage): ?>
@@ -302,7 +302,7 @@ $initialTitle = $title ?? 'پنجره';
     <span class="sb-pane">حالت: <?= $workMode === 'manager' ? 'مدیریتی' : 'حسابدار' ?></span>
     <span class="sb-pane"><a href="<?= e(url('/m?mobile=1')) ?>" data-ws-bypass="1">نسخه موبایل</a></span>
     <span class="sb-pane">لایسنس: <?= e(class_exists('License') ? License::statusLabel() : '—') ?></span>
-    <span class="sb-pane sb-end">build 11 · تنظیمات کامل</span>
+    <span class="sb-pane sb-end">build 12 · کاور ورود</span>
   </footer>
 </div>
 <script>
@@ -315,6 +315,6 @@ window.HESAB_WS = {
 window.HESAB_SHORTCUTS = <?= json_encode($shortcutCfg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 <?php endif; ?>
-<script src="<?= e(url('/assets/js/app.js')) ?>?v=11"></script>
+<script src="<?= e(url('/assets/js/app.js')) ?>?v=12"></script>
 </body>
 </html>
