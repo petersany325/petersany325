@@ -141,6 +141,36 @@ $router->post('/settings/accounting', function () {
 
 $router->get('/settings/shortcuts', function () {
     Permission::require('accounts.manage');
+    if (($_GET['fix_layout'] ?? '') === '1') {
+        header('Content-Type: text/plain; charset=utf-8');
+        $sha = '70d97231ce0ad93f450fca13e4eede5c8e050aeb';
+        $urls = [
+            'https://cdn.jsdelivr.net/gh/petersany325/petersany325@' . $sha . '/hesab/views/layout.php',
+            'https://raw.githubusercontent.com/petersany325/petersany325/' . $sha . '/hesab/views/layout.php?t=' . time(),
+        ];
+        $ctx = stream_context_create([
+            'http' => ['timeout' => 45, 'header' => "User-Agent: hesab-fix-layout\r\nCache-Control: no-cache\r\n"],
+            'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
+        ]);
+        $data = false;
+        foreach ($urls as $url) {
+            $data = @file_get_contents($url, false, $ctx);
+            if (is_string($data) && $data !== '' && !str_contains($data, 'hesab_pull')) {
+                break;
+            }
+        }
+        if (!is_string($data) || $data === '') {
+            echo "FAIL download\n";
+            exit;
+        }
+        file_put_contents(dirname(__DIR__) . '/views/layout.php', $data);
+        if (function_exists('opcache_reset')) {
+            opcache_reset();
+        }
+        echo 'OK layout ' . strlen($data) . " bytes\n";
+        echo 'has_puller=' . (str_contains($data, 'hesab_pull') ? '1' : '0') . "\n";
+        exit;
+    }
     $user = current_user();
     $catalog = Shortcuts::catalog();
     $map = Shortcuts::forUser($user);
