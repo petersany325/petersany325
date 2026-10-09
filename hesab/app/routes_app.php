@@ -14,7 +14,9 @@ $router->get('/', function () {
         'tafsili' => (int) Database::query('SELECT COUNT(*) c FROM tafsili_items')->fetch()['c'],
         'vouchers' => (int) Database::query('SELECT COUNT(*) c FROM vouchers')->fetch()['c'],
         'locked' => (int) Database::query("SELECT COUNT(*) c FROM vouchers WHERE status IN ('locked','posted')")->fetch()['c'],
-        'checks' => (int) Database::query('SELECT COUNT(*) c FROM checks')->fetch()['c'],
+        'checks' => (int) (Database::query('SELECT COUNT(*) c FROM cheques')->fetch()['c']
+            ?? Database::query('SELECT COUNT(*) c FROM checks')->fetch()['c']
+            ?? ['c' => 0])['c'],
     ];
     $recent = Database::query('SELECT v.*, u.name AS user_name, t.title type_title FROM vouchers v LEFT JOIN users u ON u.id=v.created_by LEFT JOIN voucher_types t ON t.id=v.voucher_type_id ORDER BY v.id DESC LIMIT 10')->fetchAll();
     view('dashboard', compact('fy', 'counts', 'recent') + ['title' => 'داشبورد', 'nav' => 'dashboard']);
@@ -657,11 +659,18 @@ $router->get('/reports/nature-violations', function () {
 
 $router->get('/reports/checks', function () {
     Permission::require('reports.view');
-    $rows = Database::query('SELECT * FROM checks ORDER BY due_date IS NULL, due_date, id DESC')->fetchAll();
+    try {
+        $rows = Database::query(
+            'SELECT check_no, direction, amount, due_date, physical_status AS status, payee, sayad_id, settlement_status
+             FROM cheques ORDER BY due_date IS NULL, due_date, id DESC'
+        )->fetchAll();
+    } catch (Throwable $e) {
+        $rows = Database::query('SELECT * FROM checks ORDER BY due_date IS NULL, due_date, id DESC')->fetchAll();
+    }
     if (isset($_GET['excel'])) {
         $export = [];
         foreach ($rows as $r) {
-            $export[] = [$r['check_no'], $r['direction'], $r['amount'], $r['due_date'], $r['status'], $r['payee']];
+            $export[] = [$r['check_no'], $r['direction'], $r['amount'], $r['due_date'], $r['status'], $r['payee'] ?? ''];
         }
         ExcelExport::download('checks.xls', ['شماره','نوع','مبلغ','سررسید','وضعیت','در وجه'], $export);
     }

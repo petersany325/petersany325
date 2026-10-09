@@ -56,7 +56,7 @@ $initialTitle = $title ?? 'پنجره';
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($title ?? $appName) ?> — <?= e($appName) ?></title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=13">
+  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=14">
 </head>
 <body class="<?= $isAuthPage ? 'auth-body' : ($isEmbed ? 'embed-body' : 'win-body') ?>">
 <?php if ($isAuthPage): ?>
@@ -148,16 +148,26 @@ $initialTitle = $title ?? 'پنجره';
     </div>
     <?php endif; ?>
 
-    <?php if ($can('treasury.manage')): ?>
+    <?php if ($can('treasury.manage') || $can('cheques.manage')): ?>
     <div class="win-menu">
       <button type="button" class="win-menu-btn">خزانه‌داری</button>
       <div class="win-menu-drop">
-        <a href="<?= e(url('/treasury')) ?>" data-ws-title="خزانه‌داری">بانک / صندوق / چک</a>
-        <a href="<?= e(url('/treasury')) ?>#receive" data-ws-title="رسید دریافت">رسید دریافت<?= $accel('/treasury') ?></a>
-        <a href="<?= e(url('/treasury')) ?>#pay" data-ws-title="رسید پرداخت">رسید پرداخت</a>
-        <div class="win-menu-sep"></div>
-        <a href="<?= e(url('/reports/bank-reconcile')) ?>" data-ws-title="مغایرت بانکی">مغایرت بانکی</a>
-        <a href="<?= e(url('/reports/checks')) ?>" data-ws-title="چک‌ها">چک‌های دریافتنی و پرداختنی<?= $accel('/reports/checks') ?></a>
+        <?php if ($can('treasury.manage')): ?>
+          <a href="<?= e(url('/treasury')) ?>" data-ws-title="خزانه‌داری">بانک / صندوق</a>
+          <a href="<?= e(url('/treasury')) ?>#receive" data-ws-title="رسید دریافت">رسید دریافت<?= $accel('/treasury') ?></a>
+          <a href="<?= e(url('/treasury')) ?>#pay" data-ws-title="رسید پرداخت">رسید پرداخت</a>
+          <div class="win-menu-sep"></div>
+        <?php endif; ?>
+        <?php if ($can('cheques.manage') || $can('treasury.manage')): ?>
+          <a href="<?= e(url('/cheques')) ?>" data-ws-title="مدیریت چک‌ها">مدیریت چک‌ها</a>
+          <a href="<?= e(url('/cheques/receive')) ?>" data-ws-title="دریافت چک">دریافت چک</a>
+          <a href="<?= e(url('/cheques/pay')) ?>" data-ws-title="صدور چک">صدور چک پرداختی</a>
+          <div class="win-menu-sep"></div>
+        <?php endif; ?>
+        <?php if ($can('treasury.manage')): ?>
+          <a href="<?= e(url('/reports/bank-reconcile')) ?>" data-ws-title="مغایرت بانکی">مغایرت بانکی</a>
+        <?php endif; ?>
+        <a href="<?= e(url('/reports/checks')) ?>" data-ws-title="چک‌ها">گزارش اسناد چک<?= $accel('/reports/checks') ?></a>
       </div>
     </div>
     <?php endif; ?>
@@ -292,13 +302,22 @@ $initialTitle = $title ?? 'پنجره';
         </li>
         <?php endif; ?>
 
-        <?php if ($can('treasury.manage')): ?>
+        <?php if ($can('treasury.manage') || $can('cheques.manage')): ?>
         <li class="branch open">
           <button type="button" class="branch-toggle">خزانه‌داری</button>
           <ul>
-            <li data-nav="treasury"><a href="<?= e(url('/treasury')) ?>" data-ws-title="خزانه‌داری">بانک / صندوق / چک</a></li>
-            <li data-nav="bank_reconcile"><a href="<?= e(url('/reports/bank-reconcile')) ?>" data-ws-title="مغایرت بانکی">مغایرت بانکی</a></li>
-            <li><a href="<?= e(url('/reports/checks')) ?>" data-ws-title="اسناد چک">اسناد چک</a></li>
+            <?php if ($can('treasury.manage')): ?>
+              <li data-nav="treasury"><a href="<?= e(url('/treasury')) ?>" data-ws-title="خزانه‌داری">بانک / صندوق</a></li>
+            <?php endif; ?>
+            <?php if ($can('cheques.manage') || $can('treasury.manage')): ?>
+              <li data-nav="cheques"><a href="<?= e(url('/cheques')) ?>" data-ws-title="مدیریت چک‌ها">مدیریت چک‌ها</a></li>
+              <li><a href="<?= e(url('/cheques/receive')) ?>" data-ws-title="دریافت چک">دریافت چک</a></li>
+              <li><a href="<?= e(url('/cheques/pay')) ?>" data-ws-title="صدور چک">صدور چک پرداختی</a></li>
+            <?php endif; ?>
+            <?php if ($can('treasury.manage')): ?>
+              <li data-nav="bank_reconcile"><a href="<?= e(url('/reports/bank-reconcile')) ?>" data-ws-title="مغایرت بانکی">مغایرت بانکی</a></li>
+            <?php endif; ?>
+            <li><a href="<?= e(url('/reports/checks')) ?>" data-ws-title="اسناد چک">گزارش اسناد چک</a></li>
           </ul>
         </li>
         <?php endif; ?>
@@ -348,7 +367,7 @@ $initialTitle = $title ?? 'پنجره';
     <span class="sb-pane">حالت: <?= $workMode === 'manager' ? 'مدیریتی' : 'حسابدار' ?></span>
     <span class="sb-pane"><a href="<?= e(url('/m?mobile=1')) ?>" data-ws-bypass="1">نسخه موبایل</a></span>
     <span class="sb-pane">لایسنس: <?= e(class_exists('License') ? License::statusLabel() : '—') ?></span>
-    <span class="sb-pane sb-end">build 13 · ویزیتور</span>
+    <span class="sb-pane sb-end">build 14 · موتور چک</span>
   </footer>
 </div>
 <script>
@@ -361,6 +380,6 @@ window.HESAB_WS = {
 window.HESAB_SHORTCUTS = <?= json_encode($shortcutCfg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
 <?php endif; ?>
-<script src="<?= e(url('/assets/js/app.js')) ?>?v=13"></script>
+<script src="<?= e(url('/assets/js/app.js')) ?>?v=14"></script>
 </body>
 </html>

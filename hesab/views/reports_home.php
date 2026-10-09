@@ -9,6 +9,7 @@
       <a href="<?= e(url('/reports/journal')) ?>">دفتر روزنامه</a>
       <a href="<?= e(url('/reports/nature-violations')) ?>">اسناد خلاف ماهیت</a>
       <a href="<?= e(url('/reports/share')) ?>">سهم‌بری حساب‌ها / پروژه</a>
+      <a href="<?= e(url('/cheques')) ?>">مدیریت چک‌ها (موتور خزانه)</a>
       <a href="<?= e(url('/reports/checks')) ?>">اسناد دریافتنی و پرداختنی</a>
       <a href="<?= e(url('/reports/bank-reconcile')) ?>">مغایرت بانکی</a>
       <a href="<?= e(url('/reports/charts')) ?>">بررسی نموداری دوره‌ها</a>

@@ -160,6 +160,103 @@ final class Migrator
           description VARCHAR(500) NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
+        // Professional cheque engine tables (cheques = canonical; checks kept for legacy)
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS cheques (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          direction ENUM('receivable','payable') NOT NULL,
+          check_no VARCHAR(40) NOT NULL,
+          sayad_id VARCHAR(16) NULL,
+          bank_name VARCHAR(120) NULL,
+          branch_name VARCHAR(120) NULL,
+          account_no VARCHAR(80) NULL,
+          amount DECIMAL(18,0) NOT NULL DEFAULT 0,
+          amount_settled DECIMAL(18,0) NOT NULL DEFAULT 0,
+          currency VARCHAR(8) NOT NULL DEFAULT 'IRR',
+          issue_date DATE NULL,
+          receive_date DATE NULL,
+          due_date DATE NULL,
+          settle_date DATE NULL,
+          party_tafsili_id INT UNSIGNED NULL,
+          issuer_name VARCHAR(190) NULL,
+          beneficiary VARCHAR(190) NULL,
+          payee VARCHAR(190) NULL,
+          physical_status VARCHAR(40) NOT NULL DEFAULT 'in_hand',
+          sayad_status VARCHAR(40) NOT NULL DEFAULT 'unknown',
+          settlement_status VARCHAR(40) NOT NULL DEFAULT 'open',
+          location VARCHAR(40) NULL,
+          with_recourse TINYINT(1) NOT NULL DEFAULT 0,
+          bank_account_id INT UNSIGNED NULL,
+          checkbook_id INT UNSIGNED NULL,
+          last_voucher_id INT UNSIGNED NULL,
+          description VARCHAR(500) NULL,
+          created_by INT UNSIGNED NULL,
+          created_at DATETIME NOT NULL,
+          KEY idx_chq_dir (direction),
+          KEY idx_chq_phys (physical_status),
+          KEY idx_chq_due (due_date),
+          KEY idx_chq_sayad (sayad_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS cheque_events (
+          id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          cheque_id INT UNSIGNED NOT NULL,
+          event_type VARCHAR(40) NOT NULL,
+          event_date DATE NOT NULL,
+          physical_status VARCHAR(40) NULL,
+          settlement_status VARCHAR(40) NULL,
+          amount DECIMAL(18,0) NOT NULL DEFAULT 0,
+          voucher_id INT UNSIGNED NULL,
+          user_id INT UNSIGNED NULL,
+          detail VARCHAR(500) NULL,
+          created_at DATETIME NOT NULL,
+          KEY idx_ce_cheque (cheque_id),
+          KEY idx_ce_type (event_type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS cheque_deposits (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          cheque_id INT UNSIGNED NOT NULL,
+          bank_account_id INT UNSIGNED NULL,
+          deposit_date DATE NOT NULL,
+          slip_no VARCHAR(80) NULL,
+          voucher_id INT UNSIGNED NULL,
+          created_at DATETIME NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS cheque_settlements (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          cheque_id INT UNSIGNED NOT NULL,
+          settle_date DATE NOT NULL,
+          amount DECIMAL(18,0) NOT NULL,
+          kind ENUM('full','partial') NOT NULL DEFAULT 'full',
+          voucher_id INT UNSIGNED NULL,
+          created_at DATETIME NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS cheque_returns (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          cheque_id INT UNSIGNED NOT NULL,
+          return_date DATE NOT NULL,
+          reason VARCHAR(500) NULL,
+          voucher_id INT UNSIGNED NULL,
+          created_at DATETIME NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS cheque_transfers (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          cheque_id INT UNSIGNED NOT NULL,
+          transfer_date DATE NOT NULL,
+          to_party_tafsili_id INT UNSIGNED NULL,
+          to_name VARCHAR(190) NULL,
+          with_recourse TINYINT(1) NOT NULL DEFAULT 0,
+          voucher_id INT UNSIGNED NULL,
+          note VARCHAR(500) NULL,
+          created_at DATETIME NOT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Seed cheque-related moein under kol 13 / 31 when missing
+        self::seedChequeAccounts($pdo);
+
         self::exec($pdo, "CREATE TABLE IF NOT EXISTS bank_patterns (
           id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
           title VARCHAR(190) NOT NULL,
@@ -381,6 +478,7 @@ final class Migrator
             ['visitors.cartable', 'کارتابل ویزیتور'],
             ['visitors.reports', 'گزارش ویزیتور'],
             ['visitors.commission', 'پورسانت ویزیتور'],
+            ['cheques.manage', 'مدیریت چک و اسناد'],
         ];
         $ins = $pdo->prepare('INSERT IGNORE INTO permissions (code, title) VALUES (?,?)');
         foreach ($perms as $p) {
@@ -392,7 +490,7 @@ final class Migrator
             'accountant' => [
                 'accounts.manage','tafsili.manage','vouchers.create','vouchers.review','treasury.manage',
                 'reports.view','fiscal.manage','moadian.manage','invoices.manage','invoices.print','settings.manage',
-                'visitors.manage','visitors.cartable','visitors.reports','visitors.commission',
+                'visitors.manage','visitors.cartable','visitors.reports','visitors.commission','cheques.manage',
             ],
             'viewer' => ['reports.view','audit.view','invoices.print','visitors.reports'],
         ];
@@ -448,8 +546,10 @@ final class Migrator
             ['COGS', 'بهای کالای فروش‌رفته', '510101'],
             ['AP_SUPPLIER', 'پرداختنی تأمین‌کننده', '210101'],
             ['VAT_PURCHASE', 'مالیات خرید قابل اعتبار', '110801'],
-            ['CHECK_RECV', 'چک دریافتی', '110403'],
-            ['CHECK_PAY', 'چک پرداختنی', '210103'],
+            ['CHECK_RECV', 'چک دریافتی نزد صندوق', '1304'],
+            ['CHECK_PAY', 'چک پرداختنی صادره', '3109'],
+            ['CHECK_IN_COLLECTION', 'چک در جریان وصول', '1303'],
+            ['CHECK_RETURNED', 'چک برگشتی دریافتنی', '1306'],
             ['SALARY_PAY', 'حقوق پرداختنی', '210401'],
         ];
         $insR = $pdo->prepare('INSERT IGNORE INTO posting_rules (code, title, moein_code) VALUES (?,?,?)');
@@ -518,5 +618,47 @@ final class Migrator
           ('inv_tax_percent','9'),
           ('print_paper','A4')
         ");
+
+        try {
+            $pdo->exec("INSERT IGNORE INTO voucher_types (code, title, description_template) VALUES ('CHK','اسناد چک','چک')");
+        } catch (Throwable $e) {
+            // ignore
+        }
+    }
+
+    /** Ensure cheque COA accounts exist under kol 13 (receivable docs) and 31 (payables). */
+    private static function seedChequeAccounts(PDO $pdo): void
+    {
+        $need = [
+            // code, title, kol_code, nature, allow_debit, allow_credit
+            ['1303', 'اسناد در جریان وصول', '13', 'debit', 1, 1],
+            ['1304', 'اسناد / چک نزد صندوق', '13', 'debit', 1, 1],
+            ['1306', 'اسناد واخواست شده / چک برگشتی', '13', 'debit', 1, 1],
+            ['1308', 'چک‌های دریافتنی در جریان پیگیری حقوقی', '13', 'debit', 1, 1],
+            ['1309', 'چک‌های دریافتی در اختیار نمایندگی‌ها', '13', 'debit', 1, 1],
+            ['3108', 'اسناد پرداختنی تجاری', '31', 'credit', 1, 1],
+            ['3109', 'چک‌های صادره تحویل‌شده', '31', 'credit', 1, 1],
+            ['3110', 'چک‌های برگشتی پرداختنی', '31', 'credit', 1, 1],
+            ['3111', 'چک‌های پرداختنی سررسیدگذشته', '31', 'credit', 1, 1],
+        ];
+        foreach ($need as $m) {
+            try {
+                $kol = $pdo->query("SELECT id FROM accounts_kol WHERE code=" . $pdo->quote($m[2]) . " LIMIT 1")->fetch();
+                if (!$kol) {
+                    continue;
+                }
+                $exists = $pdo->query("SELECT id FROM accounts_moein WHERE code=" . $pdo->quote($m[0]) . " LIMIT 1")->fetch();
+                if ($exists) {
+                    continue;
+                }
+                $st = $pdo->prepare(
+                    'INSERT INTO accounts_moein (code, title, kol_id, nature, allow_debit, allow_credit, is_active)
+                     VALUES (?,?,?,?,?,?,1)'
+                );
+                $st->execute([$m[0], $m[1], (int) $kol['id'], $m[3], $m[4], $m[5]]);
+            } catch (Throwable $e) {
+                // ignore
+            }
+        }
     }
 }

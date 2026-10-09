@@ -1,3 +1,17 @@
+<div class="panel" style="margin-bottom:12px">
+  <div class="hd">
+    <strong>موتور چک (استاندارد حسابداری ایران)</strong>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a class="btn" href="<?= e(url('/cheques')) ?>">داشبورد چک‌ها</a>
+      <a class="btn ghost" href="<?= e(url('/cheques/receive')) ?>">دریافت چک</a>
+      <a class="btn ghost" href="<?= e(url('/cheques/pay')) ?>">صدور چک پرداختی</a>
+    </div>
+  </div>
+  <div class="bd" style="padding:10px 12px;color:var(--muted);font-size:12.5px;line-height:1.7">
+    دریافت، واگذاری بانک، وصول/برگشت، خرج چک، صدور پرداختی و برداشت بانکی با سند خودکار دفترکل — چک وصول‌نشده وارد موجودی بانک نمی‌شود.
+  </div>
+</div>
+
 <div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
   <div class="panel">
     <div class="hd"><strong>حساب بانکی</strong></div>
