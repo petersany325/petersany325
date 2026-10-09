@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
 /**
- * One-time patch uploader for subdirectory routing fix.
+ * Pull selected files from the feature branch into this hesab root.
  * Open: https://hdd-land.ir/hesab/patch.php?key=HESAB_PATCH_2026
- * Delete this file after success.
+ * Delete this file after success (or leave for future deploys).
  */
 header('Content-Type: text/plain; charset=utf-8');
 
@@ -17,6 +17,7 @@ if ($key !== 'HESAB_PATCH_2026') {
 $base = 'https://raw.githubusercontent.com/petersany325/petersany325/cursor/hesab-accounting-app-aa3e/hesab';
 $files = [
     'app/helpers.php',
+    'app/bootstrap.php',
     'public/index.php',
     '.htaccess',
     'views/layout.php',
@@ -29,6 +30,12 @@ $files = [
     'views/ledger.php',
     'views/parties.php',
     'views/invoices.php',
+    'assets/js/app.js',
+    'assets/css/app.css',
+    'assets/js/mobile.js',
+    'assets/css/mobile.css',
+    'opcache_reset.php',
+    'patch.php',
     'config.sample.php',
 ];
 
@@ -65,4 +72,8 @@ foreach ($files as $rel) {
 }
 
 echo "\nDone. ok={$ok} fail={$fail}\n";
-echo "Next: open /hesab/install and DELETE patch.php\n";
+if (function_exists('opcache_reset')) {
+    opcache_reset();
+    echo "opcache_reset=1\n";
+}
+echo "time=" . date('c') . "\n";

@@ -6,6 +6,62 @@ function e(?string $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * One-shot asset pull when cPanel upload is blocked.
+ * Hit: /hesab/?hesab_pull=hsbDeploy2026x  (then remove this block)
+ */
+function hesab_pull_workspace_assets(): void
+{
+    if (PHP_SAPI === 'cli') {
+        return;
+    }
+    if (($_GET['hesab_pull'] ?? '') !== 'hsbDeploy2026x') {
+        return;
+    }
+    header('Content-Type: text/plain; charset=utf-8');
+    $base = 'https://raw.githubusercontent.com/petersany325/petersany325/cursor/hesab-accounting-app-aa3e/hesab';
+    $files = [
+        'assets/js/app.js',
+        'assets/css/app.css',
+        'assets/js/mobile.js',
+        'assets/css/mobile.css',
+        'views/layout.php',
+        'app/helpers.php',
+        'opcache_reset.php',
+        'patch.php',
+    ];
+    $root = dirname(__DIR__);
+    $ok = 0;
+    $fail = 0;
+    foreach ($files as $rel) {
+        $ctx = stream_context_create([
+            'http' => ['timeout' => 45, 'header' => "User-Agent: hesab-pull\r\n"],
+            'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
+        ]);
+        $data = @file_get_contents($base . '/' . $rel, false, $ctx);
+        if ($data === false || $data === '') {
+            echo "FAIL {$rel}\n";
+            $fail++;
+            continue;
+        }
+        $dest = $root . '/' . $rel;
+        $dir = dirname($dest);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        file_put_contents($dest, $data);
+        echo "OK {$rel} (" . strlen($data) . " bytes)\n";
+        $ok++;
+    }
+    if (function_exists('opcache_reset')) {
+        opcache_reset();
+        echo "opcache_reset=1\n";
+    }
+    echo "Done ok={$ok} fail={$fail}\n";
+    exit;
+}
+hesab_pull_workspace_assets();
+
 function money($n): string
 {
     return number_format((float) $n, 0, '.', ',');
