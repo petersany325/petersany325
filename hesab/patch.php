@@ -23,6 +23,8 @@ $bases = [
 $files = [
     'app/helpers.php',
     'app/bootstrap.php',
+    'app/Shortcuts.php',
+    'app/routes_app.php',
     'public/index.php',
     '.htaccess',
     'views/layout.php',
@@ -35,6 +37,8 @@ $files = [
     'views/ledger.php',
     'views/parties.php',
     'views/invoices.php',
+    'views/settings_accounting.php',
+    'views/settings_shortcuts.php',
     'assets/js/app.js',
     'assets/css/app.css',
     'assets/js/mobile.js',

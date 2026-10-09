@@ -114,7 +114,8 @@ $router->get('/settings/accounting', function () {
     }
     $rules = Database::query('SELECT * FROM posting_rules ORDER BY id')->fetchAll();
     $treeCount = (int) Database::query('SELECT COUNT(*) c FROM accounts')->fetch()['c'];
-    view('settings_accounting', compact('settings', 'rules', 'treeCount') + ['title' => 'تنظیمات حسابداری', 'nav' => 'settings_acc']);
+    $workMode = class_exists('Shortcuts') ? Shortcuts::getMode(current_user()) : 'accountant';
+    view('settings_accounting', compact('settings', 'rules', 'treeCount', 'workMode') + ['title' => 'تنظیمات حسابداری', 'nav' => 'settings_acc']);
 });
 
 $router->post('/settings/accounting', function () {
@@ -136,6 +137,46 @@ $router->post('/settings/accounting', function () {
     Audit::log('settings.accounting');
     flash('ok', 'تنظیمات حسابداری ذخیره شد.');
     redirect('/settings/accounting');
+});
+
+$router->get('/settings/shortcuts', function () {
+    Permission::require('accounts.manage');
+    $user = current_user();
+    $catalog = Shortcuts::catalog();
+    $map = Shortcuts::forUser($user);
+    $mode = Shortcuts::getMode($user);
+    $conflicts = Shortcuts::findConflicts($map);
+    $groups = [];
+    foreach ($catalog as $id => $meta) {
+        $groups[$meta['group']][$id] = $meta;
+    }
+    view('settings_shortcuts', compact('catalog', 'map', 'mode', 'conflicts', 'groups') + [
+        'title' => 'میانبرهای کیبورد',
+        'nav' => 'settings_shortcuts',
+    ]);
+});
+
+$router->post('/settings/shortcuts', function () {
+    Permission::require('accounts.manage');
+    verify_csrf();
+    $user = current_user();
+    $op = (string) ($_POST['op'] ?? 'save');
+    if ($op === 'reset') {
+        Shortcuts::resetForUser($user);
+        Shortcuts::setMode($user, Shortcuts::MODE_ACCOUNTANT);
+        Audit::log('settings.shortcuts.reset');
+        flash('ok', 'میانبرها به پیش‌فرض استاندارد برگشت.');
+        redirect('/settings/shortcuts');
+    }
+    Shortcuts::setMode($user, (string) ($_POST['work_mode'] ?? Shortcuts::MODE_ACCOUNTANT));
+    $conflicts = Shortcuts::saveForUser($user, $_POST['keys'] ?? []);
+    Audit::log('settings.shortcuts.save');
+    if ($conflicts) {
+        flash('warn', 'ذخیره شد، ولی تداخل کلید دارید: ' . implode(' | ', $conflicts));
+    } else {
+        flash('ok', 'میانبرهای کیبورد ذخیره شد.');
+    }
+    redirect('/settings/shortcuts');
 });
 
 $router->post('/tafsili/type', function () {

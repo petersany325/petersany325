@@ -302,8 +302,285 @@
       }
     });
 
+    window.HESAB_WS_API = {
+      openTab: (href, title) => openTab(href, title),
+      closeActive: () => { if (activeId) closeTab(activeId); },
+      refreshActive: () => {
+        const tab = tabs.find((t) => t.id === activeId);
+        if (tab) tab.iframe.src = tab.iframe.src;
+      },
+    };
+
     openTab(cfg.initialUrl, cfg.initialTitle, { eager: true, seedTitle: cfg.initialTitle });
   }
+
+  // ===== Keyboard shortcuts engine =====
+  (function initShortcuts() {
+    const sc = window.HESAB_SHORTCUTS;
+    if (!sc || !sc.items) return;
+
+    let lastSaveAt = 0;
+    const chordIndex = {};
+    Object.keys(sc.items).forEach((id) => {
+      const item = sc.items[id];
+      if (!item || !item.available || !item.key) return;
+      chordIndex[item.key] = item;
+      chordIndex[item.key].id = id;
+    });
+
+    function eventChord(e) {
+      const parts = [];
+      if (e.ctrlKey || e.metaKey) parts.push('Ctrl');
+      if (e.altKey) parts.push('Alt');
+      if (e.shiftKey) parts.push('Shift');
+      let k = e.key;
+      if (k === 'Escape') k = 'Esc';
+      else if (k === ' ') k = 'Space';
+      else if (k === 'Del') k = 'Delete';
+      else if (k.length === 1) k = k.toUpperCase();
+      if (k === 'Control' || k === 'Shift' || k === 'Alt' || k === 'Meta') return '';
+      parts.push(k);
+      return parts.join('+');
+    }
+
+    function api() {
+      if (window.HESAB_WS_API) return window.HESAB_WS_API;
+      try {
+        if (window.parent && window.parent !== window && window.parent.HESAB_WS_API) {
+          return window.parent.HESAB_WS_API;
+        }
+      } catch (_) { /* ignore */ }
+      return null;
+    }
+
+    function absPath(path) {
+      if (!path) return '';
+      if (path.startsWith('http')) return path;
+      const base = sc.basePath || '';
+      if (path.startsWith('#')) {
+        return (base || '') + '/' + path;
+      }
+      const hashIdx = path.indexOf('#');
+      const pure = hashIdx >= 0 ? path.slice(0, hashIdx) : path;
+      const hash = hashIdx >= 0 ? path.slice(hashIdx) : '';
+      const p = pure.startsWith('/') ? pure : '/' + pure;
+      return base + p + hash;
+    }
+
+    function openPath(path) {
+      if (!path) return;
+      const href = absPath(path);
+      const title = (sc.titles && (sc.titles[path] || sc.titles[path.split('#')[0]])) || path;
+      const ws = api();
+      if (ws) ws.openTab(href, title);
+      else window.location.href = href;
+    }
+
+    function activeDoc() {
+      // Prefer current document; if shell, look into active iframe
+      let doc = document;
+      const wsRoot = document.getElementById('win-tab-panels');
+      if (wsRoot) {
+        const panel = wsRoot.querySelector('.win-tab-panel.active iframe');
+        try {
+          if (panel && panel.contentDocument) doc = panel.contentDocument;
+        } catch (_) { /* ignore */ }
+      }
+      return doc;
+    }
+
+    function submitVoucher(kind) {
+      const now = Date.now();
+      if (now - lastSaveAt < 1200) return; // anti double-submit
+      const doc = activeDoc();
+      const form = doc.getElementById('voucher-form') || doc.querySelector('form.panel');
+      if (!form) return;
+      lastSaveAt = now;
+      let btn = null;
+      if (kind === 'draft') btn = form.querySelector('button[name="save_as"][value="draft"]');
+      else if (kind === 'operational') btn = form.querySelector('button[name="save_as"][value="operational"]');
+      else if (kind === 'locked') btn = form.querySelector('button[name="save_as"][value="locked"]');
+      if (btn) btn.click();
+      else form.requestSubmit ? form.requestSubmit() : form.submit();
+    }
+
+    function ensureCalculator() {
+      let overlay = document.getElementById('hesab-calc-overlay');
+      if (overlay) return overlay;
+      overlay = document.createElement('div');
+      overlay.id = 'hesab-calc-overlay';
+      overlay.className = 'hesab-calc-overlay';
+      overlay.innerHTML = ''
+        + '<div class="hesab-calc panel" role="dialog" aria-label="ماشین‌حساب">'
+        + '<div class="hd"><strong>ماشین‌حساب</strong><button type="button" class="btn ghost" data-calc-close>×</button></div>'
+        + '<input class="hesab-calc-display" id="hesab-calc-display" value="0" readonly>'
+        + '<div class="hesab-calc-pad">'
+        + '<button type="button" data-k="C">C</button><button type="button" data-k="/">÷</button><button type="button" data-k="*">×</button><button type="button" data-k="-">−</button>'
+        + '<button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" data-k="+">+</button>'
+        + '<button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" data-k="=">=</button>'
+        + '<button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k=".">.</button>'
+        + '<button type="button" data-k="0" style="grid-column:span 2">0</button><button type="button" data-k="Backspace">⌫</button><button type="button" data-k="=">OK</button>'
+        + '</div></div>';
+      document.body.appendChild(overlay);
+      const display = overlay.querySelector('#hesab-calc-display');
+      let expr = '';
+      function render() { display.value = expr || '0'; }
+      function apply(k) {
+        if (k === 'C') { expr = ''; render(); return; }
+        if (k === 'Backspace') { expr = expr.slice(0, -1); render(); return; }
+        if (k === '=') {
+          try {
+            // eslint-disable-next-line no-new-func
+            const v = Function('"use strict"; return (' + expr.replace(/[^0-9+\-*/().]/g, '') + ')')();
+            expr = String(v);
+          } catch (_) { expr = ''; }
+          render();
+          return;
+        }
+        expr += k;
+        render();
+      }
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay || e.target.hasAttribute('data-calc-close')) {
+          overlay.classList.remove('open');
+          return;
+        }
+        const b = e.target.closest('button[data-k]');
+        if (b) apply(b.getAttribute('data-k'));
+      });
+      return overlay;
+    }
+
+    function runAction(item) {
+      if (!item || !item.available) return;
+      const action = item.action;
+      const doc = activeDoc();
+      const ws = api();
+
+      if (action === 'nav' && item.path) {
+        openPath(item.path);
+        return;
+      }
+      if (action === 'help') {
+        openPath('/settings/shortcuts');
+        return;
+      }
+      if (action === 'print') {
+        const frame = document.querySelector('#win-tab-panels .win-tab-panel.active iframe');
+        if (frame && frame.contentWindow) frame.contentWindow.print();
+        else window.print();
+        return;
+      }
+      if (action === 'refresh') {
+        if (ws) ws.refreshActive();
+        else location.reload();
+        return;
+      }
+      if (action === 'cancel') {
+        const overlay = document.getElementById('hesab-calc-overlay');
+        if (overlay && overlay.classList.contains('open')) {
+          overlay.classList.remove('open');
+          return;
+        }
+        if (ws) ws.closeActive();
+        return;
+      }
+      if (action === 'calculator') {
+        ensureCalculator().classList.add('open');
+        return;
+      }
+      if (action === 'save' || action === 'save_draft') {
+        submitVoucher('draft');
+        return;
+      }
+      if (action === 'save_operational') {
+        submitVoucher('operational');
+        return;
+      }
+      if (action === 'save_locked') {
+        submitVoucher('locked');
+        return;
+      }
+      if (action === 'recalc') {
+        doc.getElementById('lines')?.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+      if (action === 'row_insert') {
+        doc.getElementById('add-line')?.click();
+        return;
+      }
+      if (action === 'row_delete') {
+        const tr = doc.activeElement && doc.activeElement.closest
+          ? doc.activeElement.closest('#lines tbody tr')
+          : null;
+        if (tr) {
+          const rows = doc.querySelectorAll('#lines tbody tr');
+          if (rows.length > 2) tr.querySelector('.rm')?.click();
+        }
+        return;
+      }
+      if (action === 'search' || action === 'list') {
+        const sel = doc.querySelector('.moein-sel, select[name="moein_id[]"], input[type="search"], input[name="q"]');
+        if (sel) { sel.focus(); if (sel.showPicker) try { sel.showPicker(); } catch (_) {} }
+        else openPath('/vouchers');
+        return;
+      }
+      if (action === 'edit') {
+        openPath('/vouchers');
+        return;
+      }
+      if (action === 'undo_form') {
+        const form = doc.getElementById('voucher-form');
+        if (form && confirm('فرم به مقادیر اولیه برگردد؟')) form.reset();
+        return;
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      // Allow typing in shortcut settings capture fields
+      if (e.target && e.target.classList && e.target.classList.contains('sc-key')) return;
+
+      const chord = eventChord(e);
+      if (!chord) return;
+      const item = chordIndex[chord];
+      if (!item) return;
+
+      // Don't steal plain typing except function/special keys and modified chords
+      const isSpecial = /^(F\d+|Esc|Delete|Insert|Enter|Tab)/.test(chord)
+        || chord.includes('Ctrl') || chord.includes('Alt');
+      if (!isSpecial) return;
+
+      // Insert/Delete only meaningful on voucher grid
+      if ((item.action === 'row_insert' || item.action === 'row_delete')) {
+        const doc = activeDoc();
+        const inGrid = doc.activeElement && doc.activeElement.closest && doc.activeElement.closest('#lines');
+        if (!inGrid && item.action === 'row_delete') return;
+      }
+
+      e.preventDefault();
+      runAction(item);
+    }, true);
+  })();
+
+  // Money thousand-separator (display only; strip before submit)
+  document.querySelectorAll('input.debit, input.credit, input.num').forEach((input) => {
+    if (input.type === 'hidden') return;
+    input.addEventListener('blur', () => {
+      const raw = (input.value || '').replace(/,/g, '');
+      if (raw === '' || Number.isNaN(Number(raw))) return;
+      input.value = Number(raw).toLocaleString('en-US');
+    });
+    input.addEventListener('focus', () => {
+      input.value = (input.value || '').replace(/,/g, '');
+    });
+  });
+  document.querySelectorAll('form').forEach((form) => {
+    form.addEventListener('submit', () => {
+      form.querySelectorAll('input.debit, input.credit, input.num').forEach((input) => {
+        input.value = (input.value || '').replace(/,/g, '');
+      });
+    });
+  });
 
   // Voucher lines calculator (runs in embed pages too)
   const table = document.getElementById('lines');

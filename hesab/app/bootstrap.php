@@ -16,6 +16,9 @@ require __DIR__ . '/Permission.php';
 require __DIR__ . '/Audit.php';
 require __DIR__ . '/ExcelExport.php';
 require __DIR__ . '/Accounting.php';
+if (is_file(__DIR__ . '/Shortcuts.php')) {
+    require __DIR__ . '/Shortcuts.php';
+}
 
 $configFile = __DIR__ . '/../config.php';
 $CONFIG = is_file($configFile) ? require $configFile : require __DIR__ . '/../config.sample.php';

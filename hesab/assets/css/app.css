@@ -112,14 +112,24 @@ button, input, select, textarea { font: inherit; }
 .win-menu.open > .win-menu-drop,
 .win-menu:hover > .win-menu-drop { display: block; }
 .win-menu-drop a {
-  display: block;
-  padding: 5px 28px 5px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 5px 14px 5px 12px;
   white-space: nowrap;
 }
 .win-menu-drop a:hover {
   background: var(--accent);
   color: #fff;
 }
+.menu-accel {
+  color: var(--muted);
+  font-size: 11px;
+  font-family: Consolas, "Courier New", monospace;
+  margin-right: auto;
+}
+.win-menu-drop a:hover .menu-accel { color: #e8f3ff; }
 .win-menu-sep {
   height: 1px;
   background: var(--win-border);
@@ -421,6 +431,7 @@ input:focus, select:focus, textarea:focus {
 }
 .flash.ok { background: #e8f5e8; border-color: #9ccc9c; color: var(--ok); }
 .flash.err { background: #fde7e9; border-color: #f1aeb5; color: var(--danger); }
+.flash.warn { background: #fff4ce; border-color: #e0c36a; color: var(--warn); }
 
 .badge {
   display: inline-block;
@@ -435,6 +446,58 @@ input:focus, select:focus, textarea:focus {
 .badge.operational { background: #deecf9; color: #004578; border-color: #9dc3e6; }
 .badge.reviewed { background: #f0e6ff; color: #5c2d91; border-color: #c3a6e8; }
 .badge.void { background: #fde7e9; color: var(--danger); border-color: #f1aeb5; }
+.badge.ok { background: #e8f5e8; color: var(--ok); border-color: #9ccc9c; }
+.badge.warn { background: #fff4ce; color: var(--warn); border-color: #e0c36a; }
+
+.shortcuts-table .sc-key {
+  width: 100%;
+  max-width: 180px;
+  font-family: Consolas, "Courier New", monospace;
+  direction: ltr;
+  text-align: left;
+}
+.shortcuts-table tr.sc-disabled { opacity: .72; background: #fafafa; }
+.shortcuts-table tr.sc-disabled .sc-key { background: #f3f3f3; color: var(--muted); }
+
+.hesab-calc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.25);
+  display: none;
+  place-items: center;
+  z-index: 200;
+}
+.hesab-calc-overlay.open { display: grid; }
+.hesab-calc {
+  width: 240px;
+  background: var(--win-face);
+  border: 1px solid var(--win-border-dark);
+  box-shadow: 3px 3px 10px rgba(0,0,0,.25);
+}
+.hesab-calc .hd { display:flex; justify-content:space-between; align-items:center; }
+.hesab-calc-display {
+  box-sizing: border-box;
+  padding: 8px;
+  font-size: 20px;
+  text-align: left;
+  direction: ltr;
+  border: 1px solid var(--win-border);
+  margin: 8px;
+  width: calc(100% - 16px);
+}
+.hesab-calc-pad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  padding: 0 8px 8px;
+}
+.hesab-calc-pad button {
+  padding: 8px 0;
+  border: 1px solid var(--win-border);
+  background: #fff;
+  cursor: pointer;
+}
+.hesab-calc-pad button:hover { background: var(--win-menu-hot); }
 
 .report-grid {
   display: grid;
