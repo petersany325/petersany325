@@ -14,9 +14,9 @@ if ($key !== 'HESAB_PATCH_2026') {
     exit;
 }
 
-$sha = 'cursor/hesab-accounting-app-aa3e';
+// Pin to commit SHA so CDNs cannot serve a stale branch tip.
+$sha = '2464354ce0437f92567581a8d93216ce8634eaf9';
 $bust = rawurlencode((string) time());
-// Prefer raw.githubusercontent with cache-bust; jsDelivr branch tip can serve stale blobs.
 $bases = [
     'https://raw.githubusercontent.com/petersany325/petersany325/' . $sha . '/hesab/',
     'https://cdn.jsdelivr.net/gh/petersany325/petersany325@' . $sha . '/hesab/',
