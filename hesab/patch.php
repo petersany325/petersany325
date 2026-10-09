@@ -3,7 +3,6 @@ declare(strict_types=1);
 /**
  * Pull selected files from the feature branch into this hesab root.
  * Open: https://hdd-land.ir/hesab/patch.php?key=HESAB_PATCH_2026
- * Delete this file after success (or leave for future deploys).
  */
 header('Content-Type: text/plain; charset=utf-8');
 
@@ -14,7 +13,6 @@ if ($key !== 'HESAB_PATCH_2026') {
     exit;
 }
 
-// Prefer branch tip with cache-bust; fall back to jsDelivr.
 $sha = 'cursor/hesab-accounting-app-aa3e';
 $bust = rawurlencode((string) time());
 $bases = [
@@ -22,12 +20,50 @@ $bases = [
     'https://cdn.jsdelivr.net/gh/petersany325/petersany325@' . $sha . '/hesab/',
 ];
 $files = [
+    'app/helpers.php',
+    'app/bootstrap.php',
+    'app/SettingsStore.php',
+    'app/Sms.php',
+    'app/License.php',
+    'app/InvoiceSettings.php',
+    'app/Auth.php',
+    'app/Migrator.php',
+    'app/Permission.php',
+    'app/Shortcuts.php',
+    'app/routes_app.php',
+    'app/routes_mobile.php',
+    'app/routes_settings.php',
+    'public/index.php',
+    '.htaccess',
     'views/layout.php',
     'views/login.php',
+    'views/install.php',
+    'views/dashboard.php',
+    'views/vouchers.php',
+    'views/voucher_form.php',
+    'views/voucher_view.php',
+    'views/ledger.php',
+    'views/parties.php',
+    'views/invoices.php',
+    'views/users.php',
+    'views/settings_accounting.php',
+    'views/settings_shortcuts.php',
+    'views/settings_hub.php',
+    'views/settings_invoice.php',
+    'views/settings_sms.php',
+    'views/settings_license.php',
+    'views/settings_profile.php',
+    'views/print_invoice.php',
+    'views/mobile/login.php',
+    'assets/js/app.js',
     'assets/css/app.css',
+    'assets/js/mobile.js',
+    'assets/css/mobile.css',
     'assets/img/login-cover.jpg',
     'assets/img/hdd-land-cover-word.jpg',
+    'opcache_reset.php',
     'patch.php',
+    'config.sample.php',
 ];
 
 $root = __DIR__;
@@ -50,7 +86,6 @@ foreach ($files as $rel) {
         if ($candidate === false || $candidate === '') {
             continue;
         }
-        // Reject known-stale layout bootstrap if a cleaner copy is available later.
         if ($rel === 'views/layout.php' && str_contains($candidate, 'hesab_pull')) {
             continue;
         }
