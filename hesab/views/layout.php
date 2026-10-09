@@ -56,7 +56,7 @@ $initialTitle = $title ?? 'پنجره';
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= e($title ?? $appName) ?> — <?= e($appName) ?></title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=14">
+  <link rel="stylesheet" href="<?= e(url('/assets/css/app.css')) ?>?v=15">
 </head>
 <body class="<?= $isAuthPage ? 'auth-body' : ($isEmbed ? 'embed-body' : 'win-body') ?>">
 <?php if ($isAuthPage): ?>
@@ -99,11 +99,12 @@ $initialTitle = $title ?? 'پنجره';
 
     <?php if ($can('accounts.manage') || $can('tafsili.manage') || $can('fiscal.manage')): ?>
     <div class="win-menu">
-      <button type="button" class="win-menu-btn">تعاریف</button>
+      <button type="button" class="win-menu-btn">اطلاعات پایه</button>
       <div class="win-menu-drop">
         <?php if ($can('accounts.manage')): ?><a href="<?= e(url('/accounts')) ?>" data-ws-title="کدینگ حساب‌ها">کدینگ حساب‌ها</a><?php endif; ?>
         <?php if ($can('tafsili.manage')): ?>
           <a href="<?= e(url('/tafsili')) ?>" data-ws-title="تفصیلی شناور">تفصیلی شناور</a>
+          <a href="<?= e(url('/parties')) ?>" data-ws-title="طرف‌حساب‌ها">طرف‌حساب‌ها</a>
           <a href="<?= e(url('/dimensions')) ?>" data-ws-title="ابعاد تحلیلی">ابعاد تحلیلی</a>
         <?php endif; ?>
         <?php if ($can('fiscal.manage')): ?><a href="<?= e(url('/fiscal')) ?>" data-ws-title="سال و دوره مالی">سال و دوره مالی</a><?php endif; ?>
@@ -116,24 +117,44 @@ $initialTitle = $title ?? 'پنجره';
     </div>
     <?php endif; ?>
 
-    <?php if ($can('vouchers.create')): ?>
+    <?php if ($can('vouchers.create') || $can('fiscal.manage')): ?>
     <div class="win-menu">
-      <button type="button" class="win-menu-btn">عملیات</button>
+      <button type="button" class="win-menu-btn">حسابداری</button>
       <div class="win-menu-drop">
-        <a href="<?= e(url('/vouchers/create')) ?>" data-ws-title="ثبت سند حسابداری">ثبت سند حسابداری<?= $accel('/vouchers/create') ?></a>
-        <a href="<?= e(url('/vouchers')) ?>" data-ws-title="فهرست اسناد">فهرست اسناد<?= $accel('/vouchers') ?></a>
+        <?php if ($can('vouchers.create')): ?>
+          <a href="<?= e(url('/vouchers/create')) ?>" data-ws-title="ثبت سند حسابداری">ثبت سند حسابداری<?= $accel('/vouchers/create') ?></a>
+          <a href="<?= e(url('/vouchers')) ?>" data-ws-title="فهرست اسناد">فهرست اسناد<?= $accel('/vouchers') ?></a>
+        <?php endif; ?>
+        <?php if ($can('fiscal.manage')): ?>
+          <div class="win-menu-sep"></div>
+          <a href="<?= e(url('/fiscal')) ?>" data-ws-title="افتتاحیه و اختتامیه">افتتاحیه / اختتامیه دوره</a>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
+    <?php if ($can('vouchers.create') || $can('invoices.manage')): ?>
+    <div class="win-menu">
+      <button type="button" class="win-menu-btn">فروش</button>
+      <div class="win-menu-drop">
         <a href="<?= e(url('/invoices')) ?>" data-ws-title="فاکتور فروش">فاکتور فروش<?= $accel('/invoices') ?></a>
+        <?php if ($can('invoices.manage')): ?>
+          <a href="<?= e(url('/settings/invoice')) ?>" data-ws-title="تنظیمات فاکتور">تنظیمات فاکتور و چاپ</a>
+        <?php endif; ?>
+        <?php if ($can('tafsili.manage')): ?>
+          <a href="<?= e(url('/parties')) ?>" data-ws-title="طرف‌حساب‌ها">طرف‌حساب‌ها</a>
+        <?php endif; ?>
       </div>
     </div>
     <?php endif; ?>
 
     <?php if ($can('visitors.manage') || $can('visitors.cartable') || $can('visitors.commission') || $can('visitors.reports')): ?>
     <div class="win-menu">
-      <button type="button" class="win-menu-btn">ویزیتور</button>
+      <button type="button" class="win-menu-btn">پخش / ویزیتور</button>
       <div class="win-menu-drop">
         <?php if ($can('visitors.manage')): ?>
           <a href="<?= e(url('/visitors')) ?>" data-ws-title="تعریف ویزیتور">تعریف ویزیتور</a>
-          <a href="<?= e(url('/visitors/visits')) ?>" data-ws-title="بازدیدها">بازدیدها</a>
+          <a href="<?= e(url('/visitors/visits')) ?>" data-ws-title="بازدیدها">برنامه و بازدیدها</a>
         <?php endif; ?>
         <?php if ($can('visitors.cartable')): ?>
           <a href="<?= e(url('/visitors/cartable')) ?>" data-ws-title="کارتابل ویزیتور">کارتابل ویزیتور</a>
@@ -153,13 +174,14 @@ $initialTitle = $title ?? 'پنجره';
       <button type="button" class="win-menu-btn">خزانه‌داری</button>
       <div class="win-menu-drop">
         <?php if ($can('treasury.manage')): ?>
-          <a href="<?= e(url('/treasury')) ?>" data-ws-title="خزانه‌داری">بانک / صندوق</a>
-          <a href="<?= e(url('/treasury')) ?>#receive" data-ws-title="رسید دریافت">رسید دریافت<?= $accel('/treasury') ?></a>
-          <a href="<?= e(url('/treasury')) ?>#pay" data-ws-title="رسید پرداخت">رسید پرداخت</a>
+          <a href="<?= e(url('/treasury')) ?>#banks" data-ws-title="حساب بانکی">حساب‌های بانکی</a>
+          <a href="<?= e(url('/treasury')) ?>#checkbook" data-ws-title="دسته چک">سریال دسته چک</a>
+          <a href="<?= e(url('/treasury')) ?>#receive" data-ws-title="رسید دریافت">دریافت<?= $accel('/treasury') ?></a>
+          <a href="<?= e(url('/treasury')) ?>#pay" data-ws-title="رسید پرداخت">پرداخت</a>
           <div class="win-menu-sep"></div>
         <?php endif; ?>
         <?php if ($can('cheques.manage') || $can('treasury.manage')): ?>
-          <a href="<?= e(url('/cheques')) ?>" data-ws-title="مدیریت چک‌ها">مدیریت چک‌ها</a>
+          <a href="<?= e(url('/cheques')) ?>" data-ws-title="مدیریت چک‌ها">اسناد دریافتنی / پرداختنی</a>
           <a href="<?= e(url('/cheques/receive')) ?>" data-ws-title="دریافت چک">دریافت چک</a>
           <a href="<?= e(url('/cheques/pay')) ?>" data-ws-title="صدور چک">صدور چک پرداختی</a>
           <div class="win-menu-sep"></div>
@@ -167,7 +189,7 @@ $initialTitle = $title ?? 'پنجره';
         <?php if ($can('treasury.manage')): ?>
           <a href="<?= e(url('/reports/bank-reconcile')) ?>" data-ws-title="مغایرت بانکی">مغایرت بانکی</a>
         <?php endif; ?>
-        <a href="<?= e(url('/reports/checks')) ?>" data-ws-title="چک‌ها">گزارش اسناد چک<?= $accel('/reports/checks') ?></a>
+        <a href="<?= e(url('/reports/checks')) ?>" data-ws-title="چک‌ها">گزارش وضعیت چک‌ها<?= $accel('/reports/checks') ?></a>
       </div>
     </div>
     <?php endif; ?>
@@ -254,11 +276,12 @@ $initialTitle = $title ?? 'پنجره';
 
         <?php if ($can('accounts.manage') || $can('tafsili.manage') || $can('fiscal.manage')): ?>
         <li class="branch open">
-          <button type="button" class="branch-toggle">تعاریف پایه</button>
+          <button type="button" class="branch-toggle">اطلاعات پایه</button>
           <ul>
             <?php if ($can('accounts.manage')): ?><li data-nav="accounts"><a href="<?= e(url('/accounts')) ?>" data-ws-title="کدینگ حساب‌ها">کدینگ حساب‌ها</a></li><?php endif; ?>
             <?php if ($can('tafsili.manage')): ?>
               <li data-nav="tafsili"><a href="<?= e(url('/tafsili')) ?>" data-ws-title="تفصیلی شناور">تفصیلی شناور</a></li>
+              <li data-nav="parties"><a href="<?= e(url('/parties')) ?>" data-ws-title="طرف‌حساب‌ها">طرف‌حساب‌ها</a></li>
               <li data-nav="dimensions"><a href="<?= e(url('/dimensions')) ?>" data-ws-title="ابعاد تحلیلی">ابعاد تحلیلی</a></li>
             <?php endif; ?>
             <?php if ($can('fiscal.manage')): ?><li data-nav="fiscal"><a href="<?= e(url('/fiscal')) ?>" data-ws-title="سال و دوره مالی">سال و دوره مالی</a></li><?php endif; ?>
@@ -270,24 +293,40 @@ $initialTitle = $title ?? 'پنجره';
         </li>
         <?php endif; ?>
 
-        <?php if ($can('vouchers.create')): ?>
+        <?php if ($can('vouchers.create') || $can('fiscal.manage')): ?>
         <li class="branch open">
           <button type="button" class="branch-toggle">حسابداری</button>
           <ul>
-            <li data-nav="vouchers"><a href="<?= e(url('/vouchers')) ?>" data-ws-title="اسناد حسابداری">اسناد حسابداری</a></li>
-            <li><a href="<?= e(url('/vouchers/create')) ?>" data-ws-title="ثبت سند جدید">ثبت سند جدید</a></li>
+            <?php if ($can('vouchers.create')): ?>
+              <li data-nav="vouchers"><a href="<?= e(url('/vouchers')) ?>" data-ws-title="اسناد حسابداری">اسناد حسابداری</a></li>
+              <li><a href="<?= e(url('/vouchers/create')) ?>" data-ws-title="ثبت سند جدید">ثبت سند جدید</a></li>
+            <?php endif; ?>
+            <?php if ($can('fiscal.manage')): ?>
+              <li data-nav="fiscal"><a href="<?= e(url('/fiscal')) ?>" data-ws-title="افتتاحیه و اختتامیه">افتتاحیه / اختتامیه</a></li>
+            <?php endif; ?>
+          </ul>
+        </li>
+        <?php endif; ?>
+
+        <?php if ($can('vouchers.create') || $can('invoices.manage')): ?>
+        <li class="branch open">
+          <button type="button" class="branch-toggle">فروش</button>
+          <ul>
             <li data-nav="invoices"><a href="<?= e(url('/invoices')) ?>" data-ws-title="فاکتور فروش">فاکتور فروش</a></li>
+            <?php if ($can('tafsili.manage')): ?>
+              <li data-nav="parties"><a href="<?= e(url('/parties')) ?>" data-ws-title="طرف‌حساب‌ها">طرف‌حساب‌ها</a></li>
+            <?php endif; ?>
           </ul>
         </li>
         <?php endif; ?>
 
         <?php if ($can('visitors.manage') || $can('visitors.cartable') || $can('visitors.reports') || $can('visitors.commission')): ?>
         <li class="branch open">
-          <button type="button" class="branch-toggle">ویزیتور</button>
+          <button type="button" class="branch-toggle">پخش / ویزیتور</button>
           <ul>
             <?php if ($can('visitors.manage')): ?>
               <li data-nav="visitors"><a href="<?= e(url('/visitors')) ?>" data-ws-title="تعریف ویزیتور">تعریف ویزیتور</a></li>
-              <li data-nav="visitor_visits"><a href="<?= e(url('/visitors/visits')) ?>" data-ws-title="بازدید ویزیتور">بازدیدها</a></li>
+              <li data-nav="visitor_visits"><a href="<?= e(url('/visitors/visits')) ?>" data-ws-title="بازدید ویزیتور">برنامه و بازدیدها</a></li>
             <?php endif; ?>
             <?php if ($can('visitors.cartable')): ?>
               <li data-nav="visitor_cartable"><a href="<?= e(url('/visitors/cartable')) ?>" data-ws-title="کارتابل ویزیتور">کارتابل ویزیتور</a></li>
@@ -307,17 +346,20 @@ $initialTitle = $title ?? 'پنجره';
           <button type="button" class="branch-toggle">خزانه‌داری</button>
           <ul>
             <?php if ($can('treasury.manage')): ?>
-              <li data-nav="treasury"><a href="<?= e(url('/treasury')) ?>" data-ws-title="خزانه‌داری">بانک / صندوق</a></li>
+              <li data-nav="treasury"><a href="<?= e(url('/treasury')) ?>#banks" data-ws-title="حساب بانکی">حساب بانکی</a></li>
+              <li><a href="<?= e(url('/treasury')) ?>#checkbook" data-ws-title="دسته چک">دسته چک</a></li>
+              <li><a href="<?= e(url('/treasury')) ?>#receive" data-ws-title="دریافت">دریافت</a></li>
+              <li><a href="<?= e(url('/treasury')) ?>#pay" data-ws-title="پرداخت">پرداخت</a></li>
             <?php endif; ?>
             <?php if ($can('cheques.manage') || $can('treasury.manage')): ?>
-              <li data-nav="cheques"><a href="<?= e(url('/cheques')) ?>" data-ws-title="مدیریت چک‌ها">مدیریت چک‌ها</a></li>
+              <li data-nav="cheques"><a href="<?= e(url('/cheques')) ?>" data-ws-title="اسناد دریافتنی پرداختنی">اسناد دریافتنی / پرداختنی</a></li>
               <li><a href="<?= e(url('/cheques/receive')) ?>" data-ws-title="دریافت چک">دریافت چک</a></li>
               <li><a href="<?= e(url('/cheques/pay')) ?>" data-ws-title="صدور چک">صدور چک پرداختی</a></li>
             <?php endif; ?>
             <?php if ($can('treasury.manage')): ?>
               <li data-nav="bank_reconcile"><a href="<?= e(url('/reports/bank-reconcile')) ?>" data-ws-title="مغایرت بانکی">مغایرت بانکی</a></li>
             <?php endif; ?>
-            <li><a href="<?= e(url('/reports/checks')) ?>" data-ws-title="اسناد چک">گزارش اسناد چک</a></li>
+            <li><a href="<?= e(url('/reports/checks')) ?>" data-ws-title="گزارش چک">گزارش وضعیت چک‌ها</a></li>
           </ul>
         </li>
         <?php endif; ?>
@@ -367,7 +409,7 @@ $initialTitle = $title ?? 'پنجره';
     <span class="sb-pane">حالت: <?= $workMode === 'manager' ? 'مدیریتی' : 'حسابدار' ?></span>
     <span class="sb-pane"><a href="<?= e(url('/m?mobile=1')) ?>" data-ws-bypass="1">نسخه موبایل</a></span>
     <span class="sb-pane">لایسنس: <?= e(class_exists('License') ? License::statusLabel() : '—') ?></span>
-    <span class="sb-pane sb-end">build 14 · موتور چک</span>
+    <span class="sb-pane sb-end">build 15 · منوی پیشگامان</span>
   </footer>
 </div>
 <script>

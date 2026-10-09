@@ -831,10 +831,48 @@ $router->post('/moadian/queue-invoice', function () {
     redirect('/moadian');
 });
 
-// keep parties/invoices compatibility
+// ---- Parties (طرف‌حساب) — master data aligned with Pishgaman base info ----
 $router->get('/parties', function () {
     Permission::require('tafsili.manage');
-    redirect('/tafsili?type_id=' . (int) (Database::query("SELECT id FROM tafsili_types WHERE code='PERSON'")->fetch()['id'] ?? 0));
+    $rows = Database::query('SELECT * FROM parties ORDER BY type, name')->fetchAll();
+    view('parties', compact('rows') + ['title' => 'طرف‌حساب‌ها', 'nav' => 'parties']);
+});
+
+$router->post('/parties', function () {
+    Permission::require('tafsili.manage');
+    verify_csrf();
+    $code = trim((string) ($_POST['code'] ?? ''));
+    $name = trim((string) ($_POST['name'] ?? ''));
+    $type = (string) ($_POST['type'] ?? 'customer');
+    $phone = trim((string) ($_POST['phone'] ?? ''));
+    if ($code === '' || $name === '') {
+        flash('err', 'کد و نام طرف‌حساب الزامی است.');
+        redirect('/parties');
+    }
+    if (!in_array($type, ['customer', 'supplier', 'both', 'other'], true)) {
+        $type = 'customer';
+    }
+    try {
+        Database::query(
+            'INSERT INTO parties (code, name, type, phone) VALUES (?,?,?,?)',
+            [$code, $name, $type, $phone !== '' ? $phone : null]
+        );
+        // Sync into floating tafsili PERSON / 01 for GL lines
+        $typeRow = Database::query(
+            "SELECT id FROM tafsili_types WHERE code IN ('PERSON','01') ORDER BY FIELD(code,'PERSON','01') LIMIT 1"
+        )->fetch();
+        if ($typeRow) {
+            Database::query(
+                'INSERT IGNORE INTO tafsili_items (type_id, code, title, is_active) VALUES (?,?,?,1)',
+                [(int) $typeRow['id'], $code, $name]
+            );
+        }
+        Audit::log('parties.create', 'parties', (int) Database::pdo()->lastInsertId(), $code);
+        flash('ok', 'طرف‌حساب ثبت و با تفصیلی اشخاص همگام شد.');
+    } catch (Throwable $e) {
+        flash('err', 'خطا: احتمالاً کد طرف‌حساب تکراری است.');
+    }
+    redirect('/parties');
 });
 
 $router->get('/invoices', function () {
@@ -862,10 +900,14 @@ $router->post('/invoices', function () {
     $qty = (float) ($_POST['qty'] ?? 1);
     $price = (float) str_replace(',', '', (string) ($_POST['unit_price'] ?? 0));
     $amount = $qty * $price;
-    $sale = Database::query("SELECT id FROM accounts_moein WHERE code='6101' LIMIT 1")->fetch();
-    $recv = Database::query("SELECT id FROM accounts_moein WHERE code IN ('1302','1301') LIMIT 1")->fetch();
+    $saleCode = (string) (Database::query("SELECT moein_code FROM posting_rules WHERE code='SALE' AND is_active=1 LIMIT 1")->fetch()['moein_code'] ?? '6101');
+    $recvCode = (string) (Database::query("SELECT moein_code FROM posting_rules WHERE code='AR_CUSTOMER' AND is_active=1 LIMIT 1")->fetch()['moein_code'] ?? '1302');
+    $sale = Database::query('SELECT id FROM accounts_moein WHERE code=? LIMIT 1', [$saleCode])->fetch()
+        ?: Database::query("SELECT id FROM accounts_moein WHERE code LIKE '61%' ORDER BY LENGTH(code), code LIMIT 1")->fetch();
+    $recv = Database::query('SELECT id FROM accounts_moein WHERE code=? LIMIT 1', [$recvCode])->fetch()
+        ?: Database::query("SELECT id FROM accounts_moein WHERE code IN ('1302','1301') LIMIT 1")->fetch();
     if (!$partyId || !$sale || !$recv || $amount <= 0) {
-        flash('err', 'اطلاعات فاکتور/حساب فروش کامل نیست.');
+        flash('err', 'اطلاعات فاکتور/حساب فروش کامل نیست. طرف‌حساب و کدینگ فروش را بررسی کنید.');
         redirect('/invoices');
     }
     try {

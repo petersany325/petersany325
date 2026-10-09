@@ -46,6 +46,7 @@ final class Shortcuts
             // Specialized
             'nav_voucher' => ['group' => 'تخصصی', 'label' => 'سند حسابداری', 'key' => 'Ctrl+Alt+J', 'action' => 'nav', 'available' => true, 'hint' => '/vouchers/create'],
             'nav_sale' => ['group' => 'تخصصی', 'label' => 'فاکتور فروش', 'key' => 'Ctrl+Alt+S', 'action' => 'nav', 'available' => true, 'hint' => '/invoices'],
+            'nav_parties' => ['group' => 'تخصصی', 'label' => 'طرف‌حساب‌ها', 'key' => 'Ctrl+Alt+U', 'action' => 'nav', 'available' => true, 'hint' => '/parties'],
             'nav_buy' => ['group' => 'تخصصی', 'label' => 'فاکتور خرید', 'key' => 'Ctrl+Alt+B', 'action' => 'nav', 'available' => false, 'hint' => 'ماژول خرید به‌زودی'],
             'nav_stock' => ['group' => 'تخصصی', 'label' => 'مدیریت موجودی انبار', 'key' => 'Ctrl+Alt+I', 'action' => 'nav', 'available' => false, 'hint' => 'ماژول انبار به‌زودی'],
             'nav_checks' => ['group' => 'تخصصی', 'label' => 'مدیریت چک‌ها', 'key' => 'Ctrl+Alt+C', 'action' => 'nav', 'available' => true, 'hint' => '/cheques'],
@@ -64,6 +65,7 @@ final class Shortcuts
             '/vouchers/create' => 'nav_voucher',
             '/vouchers' => 'list',
             '/invoices' => 'nav_sale',
+            '/parties' => 'nav_parties',
             '/treasury' => 'nav_receive',
             '/cheques' => 'nav_checks',
             '/reports/checks' => 'nav_checks',

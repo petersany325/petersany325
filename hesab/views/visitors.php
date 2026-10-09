@@ -73,7 +73,7 @@ $assigned = $assigned ?? [];
   <div class="hd" style="margin:-12px -12px 12px;padding:10px 12px"><strong>تخصیص مشتریان به <?= e($edit['name']) ?></strong></div>
   <div class="perm-grid">
     <?php if (!$customers): ?>
-      <p style="color:var(--muted)">مشتری در طرف‌حساب‌ها یافت نشد. از تفصیلی/طرف‌حساب مشتری اضافه کنید.</p>
+      <p style="color:var(--muted)">مشتری در طرف‌حساب‌ها یافت نشد. از منوی <a href="<?= e(url('/parties')) ?>">اطلاعات پایه ← طرف‌حساب‌ها</a> مشتری اضافه کنید.</p>
     <?php endif; ?>
     <?php foreach ($customers as $c): ?>
       <label>

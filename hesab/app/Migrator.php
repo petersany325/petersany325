@@ -125,6 +125,16 @@ final class Migrator
         self::addColumn($pdo, 'fiscal_years', 'is_closed', 'TINYINT(1) NOT NULL DEFAULT 0');
         self::addColumn($pdo, 'fiscal_years', 'closed_at', 'DATETIME NULL');
 
+        // Parties (customers/suppliers) — used by invoices, visitors; synced to PERSON tafsili
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS parties (
+          id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          code VARCHAR(40) NOT NULL UNIQUE,
+          name VARCHAR(190) NOT NULL,
+          type ENUM('customer','supplier','both','other') NOT NULL DEFAULT 'customer',
+          phone VARCHAR(40) NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
         self::exec($pdo, "CREATE TABLE IF NOT EXISTS bank_accounts (
           id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
           title VARCHAR(190) NOT NULL,
@@ -539,8 +549,8 @@ final class Migrator
         }
 
         $rules = [
-            ['SALE', 'فروش کالا', '410101'],
-            ['AR_CUSTOMER', 'دریافتنی مشتری', '110401'],
+            ['SALE', 'فروش کالا', '6101'],
+            ['AR_CUSTOMER', 'دریافتنی مشتری', '1302'],
             ['VAT_SALE', 'مالیات فروش', '210301'],
             ['INVENTORY', 'موجودی کالا', '110601'],
             ['COGS', 'بهای کالای فروش‌رفته', '510101'],
@@ -555,6 +565,13 @@ final class Migrator
         $insR = $pdo->prepare('INSERT IGNORE INTO posting_rules (code, title, moein_code) VALUES (?,?,?)');
         foreach ($rules as $r) {
             $insR->execute($r);
+        }
+        // Fix legacy wrong SALE/AR codes from older seeds (only when still on bad defaults)
+        try {
+            $pdo->exec("UPDATE posting_rules SET moein_code='6101' WHERE code='SALE' AND moein_code IN ('410101','4101')");
+            $pdo->exec("UPDATE posting_rules SET moein_code='1302' WHERE code='AR_CUSTOMER' AND moein_code IN ('110401','1104')");
+        } catch (Throwable $e) {
+            // ignore
         }
 
         $pdo->exec("INSERT IGNORE INTO settings (`key`,`value`) VALUES

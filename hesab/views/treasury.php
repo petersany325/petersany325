@@ -13,7 +13,7 @@
 </div>
 
 <div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-  <div class="panel">
+  <div class="panel" id="banks">
     <div class="hd"><strong>حساب بانکی</strong></div>
     <form method="post" action="<?= e(url('/treasury/bank')) ?>" class="form" style="padding:12px">
       <?= csrf_field() ?>
@@ -34,7 +34,7 @@
     </div>
   </div>
 
-  <div class="panel">
+  <div class="panel" id="checkbook">
     <div class="hd"><strong>سریال دسته چک</strong></div>
     <form method="post" action="<?= e(url('/treasury/checkbook')) ?>" class="form" style="padding:12px">
       <?= csrf_field() ?>
@@ -70,12 +70,12 @@
 </div>
 
 <div class="grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-  <div class="panel">
-    <div class="hd"><strong>رسید دریافت / پرداخت (سند اتوماتیک)</strong></div>
+  <div class="panel" id="receive">
+    <div class="hd" id="pay"><strong>رسید دریافت / پرداخت (سند اتوماتیک)</strong></div>
     <form method="post" action="<?= e(url('/treasury/doc')) ?>" class="form" style="padding:12px">
       <?= csrf_field() ?>
       <label>نوع
-        <select name="doc_type">
+        <select name="doc_type" id="treasury-doc-type">
           <option value="receive">دریافت</option>
           <option value="pay">پرداخت</option>
         </select>
@@ -150,3 +150,12 @@
     </table>
   </div>
 </div>
+<script>
+(function () {
+  var h = (location.hash || '').replace('#', '');
+  var sel = document.getElementById('treasury-doc-type');
+  if (sel && (h === 'pay' || h === 'receive')) {
+    sel.value = h;
+  }
+})();
+</script>
