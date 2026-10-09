@@ -14,7 +14,12 @@ if ($key !== 'HESAB_PATCH_2026') {
     exit;
 }
 
-$base = 'https://raw.githubusercontent.com/petersany325/petersany325/cursor/hesab-accounting-app-aa3e/hesab';
+$sha = 'cursor/hesab-accounting-app-aa3e';
+$bust = rawurlencode((string) time());
+$bases = [
+    'https://cdn.jsdelivr.net/gh/petersany325/petersany325@' . $sha . '/hesab/',
+    'https://raw.githubusercontent.com/petersany325/petersany325/' . $sha . '/hesab/',
+];
 $files = [
     'app/helpers.php',
     'app/bootstrap.php',
@@ -44,13 +49,22 @@ $ok = 0;
 $fail = 0;
 
 foreach ($files as $rel) {
-    $url = $base . '/' . $rel;
     $dest = $root . '/' . $rel;
     $ctx = stream_context_create([
-        'http' => ['timeout' => 45, 'header' => "User-Agent: hesab-patch\r\n"],
+        'http' => [
+            'timeout' => 45,
+            'header' => "User-Agent: hesab-patch\r\nCache-Control: no-cache\r\n",
+        ],
         'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
     ]);
-    $data = @file_get_contents($url, false, $ctx);
+    $data = false;
+    foreach ($bases as $base) {
+        $url = $base . $rel . (str_contains($base, 'raw.githubusercontent') ? ('?t=' . $bust) : '');
+        $data = @file_get_contents($url, false, $ctx);
+        if ($data !== false && $data !== '') {
+            break;
+        }
+    }
     if ($data === false || $data === '') {
         echo "FAIL download {$rel}\n";
         $fail++;
