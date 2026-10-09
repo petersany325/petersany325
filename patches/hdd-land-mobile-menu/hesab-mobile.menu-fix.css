@@ -1,0 +1,74 @@
+/* ==== hesab.hdd-land.ir /m mobile menu & auth polish (append to mobile.css) ==== */
+
+/* Login tabs: wrap cleanly on narrow phones */
+.m-login-card > div[style*="display:flex"] {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px !important;
+  margin-bottom: 12px !important;
+}
+.m-login-card > div[style*="display:flex"] .m-btn {
+  min-height: 40px;
+  padding: 0 8px;
+  font-size: 12.5px;
+  width: 100%;
+}
+
+/* Bottom tabbar: safer overlap + active state */
+.m-tabbar {
+  z-index: 40;
+  padding-bottom: max(6px, var(--m-safe-bottom));
+  height: calc(var(--m-tab-h) + max(6px, var(--m-safe-bottom)));
+}
+.m-tabbar a {
+  min-height: 48px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.m-tabbar a.active {
+  position: relative;
+}
+.m-tabbar a.active::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  width: 22px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--m-brand);
+}
+
+/* App chrome: sticky top + icon button targets */
+.m-icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+.m-top {
+  padding-top: max(10px, var(--m-safe-top));
+}
+
+/* List rows already 56px — keep active feedback snappy */
+.m-list a,
+.m-row {
+  touch-action: manipulation;
+}
+
+@media (max-width: 360px) {
+  .m-tabbar a {
+    font-size: 9.5px;
+  }
+  .m-tabbar a i {
+    font-size: 16px;
+  }
+  .m-login-card > div[style*="display:flex"] .m-btn {
+    font-size: 11.5px;
+    padding: 0 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-tabbar a.m-fab {
+    transform: none;
+  }
+}

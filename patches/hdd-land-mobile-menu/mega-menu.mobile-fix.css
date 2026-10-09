@@ -1,0 +1,44 @@
+/* ==== Storefront mobile drawer fixes (append to mega-menu.css) ==== */
+@media (max-width: 960px) {
+  /* Extra bottom inset so last links clear the home indicator / tabbar */
+  body > .header-nav-wrap#headerNavWrap,
+  .header-nav-wrap#headerNavWrap {
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    overscroll-behavior: contain;
+    z-index: 1200 !important;
+  }
+
+  body > .nav-backdrop#navBackdrop,
+  .nav-backdrop#navBackdrop {
+    z-index: 1150 !important;
+  }
+
+  /* Tabbar must not steal taps while mega drawer is open */
+  body.nav-open .site-wa-tabbar,
+  body.nav-open .wa-tabbar {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(110%);
+    transition: opacity .2s ease, transform .25s ease;
+  }
+
+  .header-nav-wrap .mega-nav-pro .mega-trigger,
+  .mobile-nav-close {
+    touch-action: manipulation;
+    min-height: 48px;
+  }
+
+  .header-nav-wrap .mega-panel .mega-link,
+  .header-nav-wrap .mega-panel .mega-sub {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .mobile-nav-close:focus-visible,
+  .nav-toggle:focus-visible,
+  .header-nav-wrap .mega-nav-pro .mega-trigger:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--mega-accent, #e23d12) 70%, #fff);
+    outline-offset: 2px;
+  }
+}
