@@ -1,0 +1,62 @@
+/* ==== Mobile menu / tabbar fixes (append to webapp.css) ==== */
+/* Hide storefront + webapp tabbars while any drawer is open */
+body.wa-drawer-open .wa-tabbar,
+body.wa-drawer-open .site-wa-tabbar,
+body.nav-open .wa-tabbar,
+body.nav-open .site-wa-tabbar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(110%);
+  transition: opacity .2s ease, transform .25s ease;
+}
+
+/* Keep drawer above tabbar / chrome */
+.wa-drawer-backdrop { z-index: 190 !important; }
+.wa-drawer { z-index: 200 !important; }
+.wa-tabbar,
+.site-wa-tabbar { z-index: 80; }
+
+/* Scrollable nav: room for last items + home indicator */
+.wa-drawer-nav {
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px)) !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.wa-drawer-foot {
+  padding-bottom: calc(1.1rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Clearer nested links (RTL indent) */
+.wa-drawer-sub a {
+  padding-inline: .75rem .55rem;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.wa-drawer-parent:focus-visible,
+.wa-drawer-nav > a:focus-visible,
+.wa-drawer-sub a:focus-visible,
+.wa-drawer-close:focus-visible,
+.wa-menu-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--wa-brand, #e23d12) 70%, #fff);
+  outline-offset: 2px;
+}
+
+/* Larger hit target for caret parents */
+.wa-drawer-parent {
+  min-height: 52px;
+  touch-action: manipulation;
+}
+.wa-drawer-nav > a {
+  touch-action: manipulation;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.wa-drawer-open .wa-tabbar,
+  body.wa-drawer-open .site-wa-tabbar,
+  body.nav-open .wa-tabbar,
+  body.nav-open .site-wa-tabbar,
+  .wa-drawer {
+    transition: none !important;
+  }
+}
