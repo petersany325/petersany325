@@ -1,4 +1,57 @@
 (function () {
+  // Slide-out hamburger drawer
+  const btn = document.getElementById('m-menu-btn');
+  const drawer = document.getElementById('m-drawer');
+  const backdrop = document.getElementById('m-drawer-backdrop');
+  const closeBtn = document.getElementById('m-drawer-close');
+
+  function openDrawer() {
+    if (!drawer || !backdrop || !btn) return;
+    drawer.hidden = false;
+    backdrop.hidden = false;
+    void drawer.offsetWidth;
+    document.body.classList.add('m-drawer-open');
+    btn.setAttribute('aria-expanded', 'true');
+    drawer.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeDrawer() {
+    if (!drawer || !backdrop || !btn) return;
+    document.body.classList.remove('m-drawer-open');
+    btn.setAttribute('aria-expanded', 'false');
+    drawer.setAttribute('aria-hidden', 'true');
+    window.setTimeout(() => {
+      if (!document.body.classList.contains('m-drawer-open')) {
+        drawer.hidden = true;
+        backdrop.hidden = true;
+      }
+    }, 220);
+  }
+
+  function toggleDrawer(e) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (document.body.classList.contains('m-drawer-open')) {
+      closeDrawer();
+    } else {
+      openDrawer();
+    }
+  }
+
+  if (btn && drawer && backdrop) {
+    btn.addEventListener('click', toggleDrawer);
+    closeBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeDrawer();
+    });
+    backdrop.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDrawer();
+    });
+  }
+
   // Voucher mobile line calculator
   const form = document.getElementById('m-voucher-form');
   if (form) {
