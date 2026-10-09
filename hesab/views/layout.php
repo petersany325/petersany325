@@ -8,62 +8,6 @@
 /** @var bool $isEmbed */
 /** @var bool $isShell */
 
-// One-shot sync for shortcuts feature when cPanel upload is blocked.
-if (($_GET['hesab_pull'] ?? '') === 'hsbDeploy2026x') {
-    header('Content-Type: text/plain; charset=utf-8');
-    $sha = 'cursor/hesab-accounting-app-aa3e';
-    $bust = rawurlencode((string) time());
-    $bases = [
-        'https://cdn.jsdelivr.net/gh/petersany325/petersany325@' . $sha . '/hesab/',
-        'https://raw.githubusercontent.com/petersany325/petersany325/' . $sha . '/hesab/',
-    ];
-    $files = [
-        'app/Shortcuts.php',
-        'app/bootstrap.php',
-        'app/routes_app.php',
-        'views/settings_shortcuts.php',
-        'views/settings_accounting.php',
-        'views/layout.php',
-        'assets/js/app.js',
-        'assets/css/app.css',
-        'patch.php',
-    ];
-    $root = dirname(__DIR__);
-    $ok = 0;
-    $fail = 0;
-    $ctx = stream_context_create([
-        'http' => ['timeout' => 45, 'header' => "User-Agent: hesab-sc-pull\r\nCache-Control: no-cache\r\n"],
-        'ssl' => ['verify_peer' => true, 'verify_peer_name' => true],
-    ]);
-    foreach ($files as $rel) {
-        $data = false;
-        foreach ($bases as $base) {
-            $url = $base . $rel . (str_contains($base, 'raw.githubusercontent') ? ('?t=' . $bust) : '');
-            $data = @file_get_contents($url, false, $ctx);
-            if ($data !== false && $data !== '') {
-                break;
-            }
-        }
-        if ($data === false || $data === '') {
-            echo "FAIL {$rel}\n";
-            $fail++;
-            continue;
-        }
-        $dest = $root . '/' . $rel;
-        if (!is_dir(dirname($dest))) {
-            mkdir(dirname($dest), 0755, true);
-        }
-        file_put_contents($dest, $data);
-        echo "OK {$rel} (" . strlen($data) . " bytes)\n";
-        $ok++;
-    }
-    if (function_exists('opcache_reset')) {
-        opcache_reset();
-    }
-    echo "Done ok={$ok} fail={$fail}\n";
-    exit;
-}
-
 $isAuthPage = in_array($name, ['login', 'install'], true);
 $isEmbed = !empty($isEmbed);
 $isShell = !empty($isShell);
