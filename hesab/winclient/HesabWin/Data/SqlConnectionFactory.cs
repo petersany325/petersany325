@@ -99,6 +99,47 @@ END";
         cmd.Parameters.AddWithValue("@phone", (object?)phone ?? DBNull.Value);
         await cmd.ExecuteNonQueryAsync(ct);
     }
+
+    public async Task SoftDeletePartyAsync(int id, CancellationToken ct = default)
+    {
+        await using var conn = Create();
+        await conn.OpenAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+UPDATE dbo.parties
+SET is_deleted=1, updated_at=SYSUTCDATETIME(), sync_version=sync_version+1
+WHERE id=@id";
+        cmd.Parameters.AddWithValue("@id", id);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    public async Task<string?> GetSettingAsync(string key, CancellationToken ct = default)
+    {
+        await using var conn = Create();
+        await conn.OpenAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT [value] FROM dbo.settings WHERE [key]=@k";
+        cmd.Parameters.AddWithValue("@k", key);
+        var o = await cmd.ExecuteScalarAsync(ct);
+        return o is null or DBNull ? null : Convert.ToString(o);
+    }
+
+    public async Task SetSettingAsync(string key, string? value, CancellationToken ct = default)
+    {
+        await using var conn = Create();
+        await conn.OpenAsync(ct);
+        await using var cmd = conn.CreateCommand();
+        cmd.CommandText = @"
+MERGE dbo.settings AS t
+USING (SELECT @k AS [key]) AS s ON t.[key]=s.[key]
+WHEN MATCHED THEN UPDATE SET [value]=@v, updated_at=SYSUTCDATETIME(), sync_version=t.sync_version+1
+WHEN NOT MATCHED THEN INSERT ([key],[value]) VALUES (@k,@v);";
+        cmd.Parameters.AddWithValue("@k", key);
+        cmd.Parameters.AddWithValue("@v", (object?)value ?? DBNull.Value);
+        await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    public SqlConnectionFactory WithConnectionString(string cs) => new(cs);
 }
 
 public sealed record PartyRow(

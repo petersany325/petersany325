@@ -12,7 +12,7 @@
     <Company>HDD Land</Company>
     <Authors>HDD Land</Authors>
     <Description>نرم‌افزار حسابداری حساب HDD — نسخه ویندوز آفلاین</Description>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <AssemblyTitle>حساب HDD</AssemblyTitle>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>

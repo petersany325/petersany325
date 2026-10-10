@@ -3,7 +3,7 @@
 
 #define MyAppName "حساب HDD"
 #define MyAppNameEn "Hesab HDD"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "HDD Land"
 #define MyAppURL "https://hdd-land.ir/hesab/"
 #define MyAppExeName "HesabWin.exe"

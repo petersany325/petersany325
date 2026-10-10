@@ -43,14 +43,14 @@ jobs:
             -p:PublishSingleFile=true `
             -p:IncludeNativeLibrariesForSelfExtract=true `
             -p:EnableCompressionInSingleFile=true `
-            -p:Version=1.0.0 `
+            -p:Version=1.1.0 `
             -o $out
 
       - name: Zip portable package
         shell: pwsh
         run: |
           Compress-Archive -Path "hesab/winclient/artifacts/publish/*" `
-            -DestinationPath "hesab/winclient/artifacts/Hesab-HDD-Portable-1.0.0-win-x64.zip" -Force
+            -DestinationPath "hesab/winclient/artifacts/Hesab-HDD-Portable-1.1.0-win-x64.zip" -Force
 
       - name: Install Inno Setup
         shell: pwsh
@@ -62,16 +62,16 @@ jobs:
         shell: pwsh
         run: |
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
-            /DMyAppVersion=1.0.0 `
+            /DMyAppVersion=1.1.0 `
             hesab/winclient/installer/HesabHDD.iss
 
       - name: Upload installer artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Hesab-HDD-Windows-1.0.0
+          name: Hesab-HDD-Windows-1.1.0
           path: |
-            hesab/winclient/artifacts/Hesab-HDD-Setup-1.0.0.exe
-            hesab/winclient/artifacts/Hesab-HDD-Portable-1.0.0-win-x64.zip
+            hesab/winclient/artifacts/Hesab-HDD-Setup-1.1.0.exe
+            hesab/winclient/artifacts/Hesab-HDD-Portable-1.1.0-win-x64.zip
           if-no-files-found: error
 
       - name: Attach to GitHub Release (manual tags only)
@@ -79,6 +79,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            hesab/winclient/artifacts/Hesab-HDD-Setup-1.0.0.exe
-            hesab/winclient/artifacts/Hesab-HDD-Portable-1.0.0-win-x64.zip
+            hesab/winclient/artifacts/Hesab-HDD-Setup-1.1.0.exe
+            hesab/winclient/artifacts/Hesab-HDD-Portable-1.1.0-win-x64.zip
           generate_release_notes: true
