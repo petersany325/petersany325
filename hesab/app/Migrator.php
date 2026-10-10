@@ -437,6 +437,30 @@ final class Migrator
             // ignore
         }
 
+        // Desktop sync columns (GUID keys + LWW versioning)
+        self::addColumn($pdo, 'parties', 'sync_id', 'CHAR(36) NULL');
+        self::addColumn($pdo, 'parties', 'updated_at', 'DATETIME NULL');
+        self::addColumn($pdo, 'parties', 'sync_version', 'BIGINT NOT NULL DEFAULT 1');
+        self::addColumn($pdo, 'parties', 'is_deleted', 'TINYINT(1) NOT NULL DEFAULT 0');
+        try {
+            $pdo->exec("UPDATE parties SET sync_id = UUID() WHERE sync_id IS NULL OR sync_id = ''");
+            $pdo->exec('UPDATE parties SET updated_at = COALESCE(updated_at, created_at, UTC_TIMESTAMP()) WHERE updated_at IS NULL');
+            $pdo->exec('CREATE UNIQUE INDEX uq_parties_sync ON parties (sync_id)');
+        } catch (Throwable $e) {
+            // ignore index races
+        }
+
+        self::exec($pdo, "CREATE TABLE IF NOT EXISTS sync_inbox (
+          id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+          device_id VARCHAR(36) NULL,
+          entity VARCHAR(80) NOT NULL,
+          sync_id CHAR(36) NULL,
+          payload_json JSON NOT NULL,
+          created_at DATETIME NOT NULL,
+          processed_at DATETIME NULL,
+          KEY idx_sync_inbox_entity (entity, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
         self::seedDefaults($pdo);
         // migrate posted -> locked for backward compat display
         self::exec($pdo, "UPDATE vouchers SET status='locked' WHERE status='posted'");

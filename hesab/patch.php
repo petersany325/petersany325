@@ -37,6 +37,8 @@ $files = [
     'app/routes_settings.php',
     'app/routes_visitors.php',
     'app/routes_cheques.php',
+    'app/routes_sync.php',
+    'app/SyncApi.php',
     'public/index.php',
     '.htaccess',
     'views/layout.php',

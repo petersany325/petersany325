@@ -19,3 +19,9 @@
 - رمز: مقدار واردشده در نصب
 
 فایل `config.sample.php` نمونه تنظیمات است؛ بعد از نصب `config.php` ساخته می‌شود.
+
+## کلاینت ویندوز (آفلاین + SQL Server)
+
+1. اسکریپت SSMS: `sql/sqlserver_hesab.sql`
+2. پروژه .NET 8: `winclient/` — راهنما در `winclient/README.md`
+3. API همگام‌سازی وب: `GET/POST /api/sync` (طرف‌حساب کامل؛ بقیه در صف)
