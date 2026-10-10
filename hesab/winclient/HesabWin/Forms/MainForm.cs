@@ -102,7 +102,7 @@ public sealed class MainForm : Form
             Item("بررسی به‌روزرسانی…", async () => await CheckUpdateAsync(true)),
             Item("همگام‌سازی با سایت", async () => await RunSyncAsync()),
             Sep(),
-            Item("تنظیمات اتصال / نصب دیتابیس…", OpenSetup),
+            Item("تنظیمات اتصال / نصب دیتابیس…", () => { OpenSetup(); return Task.CompletedTask; }),
             Sep(),
             Item("خروج", () => { Close(); return Task.CompletedTask; })));
 
