@@ -36,6 +36,36 @@ public sealed class MainForm : Form
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Color.FromArgb(245, 247, 250);
 
+        var menu = new MenuStrip { RightToLeft = RightToLeft.Yes };
+        var fileMenu = new ToolStripMenuItem("پرونده");
+        var setupItem = new ToolStripMenuItem("تنظیمات اتصال / نصب دیتابیس…");
+        setupItem.Click += (_, _) =>
+        {
+            using var wizard = new SetupWizardForm(_settings);
+            if (wizard.ShowDialog(this) == DialogResult.OK && wizard.Ready)
+            {
+                MessageBox.Show(this,
+                    "تنظیمات ذخیره شد. برنامه را یک‌بار ببندید و دوباره باز کنید.",
+                    Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        };
+        var exitItem = new ToolStripMenuItem("خروج");
+        exitItem.Click += (_, _) => Close();
+        fileMenu.DropDownItems.Add(setupItem);
+        fileMenu.DropDownItems.Add(new ToolStripSeparator());
+        fileMenu.DropDownItems.Add(exitItem);
+        var helpMenu = new ToolStripMenuItem("راهنما");
+        var aboutItem = new ToolStripMenuItem("درباره…");
+        aboutItem.Click += (_, _) =>
+            MessageBox.Show(this,
+                $"{_settings.AppName}\nنسخه ۱٫۰٫۰\nنرم‌افزار ویندوز آفلاین + همگام‌سازی با سایت\nHDD Land",
+                "درباره", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        helpMenu.DropDownItems.Add(aboutItem);
+        menu.Items.Add(fileMenu);
+        menu.Items.Add(helpMenu);
+        MainMenuStrip = menu;
+        Controls.Add(menu);
+
         var header = new Panel
         {
             Dock = DockStyle.Top,
@@ -134,7 +164,7 @@ public sealed class MainForm : Form
             TextAlign = ContentAlignment.TopRight,
             Padding = new Padding(12, 6, 12, 6),
             BackColor = Color.FromArgb(250, 250, 252),
-            Text = "ابتدا اسکریپت sqlserver_hesab.sql را در SSMS اجرا کنید، سپس «تست اتصال SQL» را بزنید."
+            Text = "نرم‌افزار آماده است. طرف‌حساب را محلی ذخیره کنید؛ با اینترنت، همگام‌سازی با سایت را بزنید."
         };
 
         Controls.Add(_grid);

@@ -20,8 +20,10 @@
 
 فایل `config.sample.php` نمونه تنظیمات است؛ بعد از نصب `config.php` ساخته می‌شود.
 
-## کلاینت ویندوز (آفلاین + SQL Server)
+## نرم‌افزار نصبی ویندوز (مجزا)
 
-1. اسکریپت SSMS: `sql/sqlserver_hesab.sql`
-2. پروژه .NET 8: `winclient/` — راهنما در `winclient/README.md`
-3. API همگام‌سازی وب: `GET/POST /api/sync` (طرف‌حساب کامل؛ بقیه در صف)
+- پروژه و نصب‌کننده: `winclient/` — راهنمای دانلود Setup.exe در `winclient/README.md`
+- ساخت خودکار: GitHub Actions → workflow `Hesab Windows Installer`
+- فایل نصب: `Hesab-HDD-Setup-1.0.0.exe` (بدون نیاز به نصب .NET)
+- اسکریپت دیتابیس (داخل نصب‌کننده هم هست): `sql/sqlserver_hesab.sql`
+- API همگام‌سازی وب: `GET/POST /api/sync`

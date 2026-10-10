@@ -1,0 +1,84 @@
+name: Hesab Windows Installer
+
+on:
+  push:
+    branches:
+      - cursor/hesab-accounting-app-aa3e
+      - main
+    paths:
+      - "hesab/winclient/**"
+      - "hesab/sql/sqlserver_hesab.sql"
+      - ".github/workflows/hesab-windows-installer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Sync embedded SQL schema
+        shell: pwsh
+        run: |
+          Copy-Item -Force hesab/sql/sqlserver_hesab.sql hesab/winclient/HesabWin/Assets/sqlserver_hesab.sql
+
+      - name: Publish self-contained win-x64
+        shell: pwsh
+        run: |
+          $out = "hesab/winclient/artifacts/publish"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          dotnet publish hesab/winclient/HesabWin/HesabWin.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:Version=1.0.0 `
+            -o $out
+
+      - name: Zip portable package
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "hesab/winclient/artifacts/publish/*" `
+            -DestinationPath "hesab/winclient/artifacts/Hesab-HDD-Portable-1.0.0-win-x64.zip" -Force
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /? | Select-Object -First 3
+
+      - name: Compile Setup.exe
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" `
+            /DMyAppVersion=1.0.0 `
+            hesab/winclient/installer/HesabHDD.iss
+
+      - name: Upload installer artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Hesab-HDD-Windows-1.0.0
+          path: |
+            hesab/winclient/artifacts/Hesab-HDD-Setup-1.0.0.exe
+            hesab/winclient/artifacts/Hesab-HDD-Portable-1.0.0-win-x64.zip
+          if-no-files-found: error
+
+      - name: Attach to GitHub Release (manual tags only)
+        if: startsWith(github.ref, 'refs/tags/hesab-win-')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            hesab/winclient/artifacts/Hesab-HDD-Setup-1.0.0.exe
+            hesab/winclient/artifacts/Hesab-HDD-Portable-1.0.0-win-x64.zip
+          generate_release_notes: true
