@@ -1,0 +1,110 @@
+SET NAMES utf8mb4;
+SET time_zone = '+03:30';
+
+CREATE TABLE IF NOT EXISTS users (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(120) NOT NULL,
+  email VARCHAR(190) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  role ENUM('admin','accountant','viewer') NOT NULL DEFAULT 'accountant',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS account_groups (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(10) NOT NULL UNIQUE,
+  title VARCHAR(190) NOT NULL,
+  nature ENUM('debit','credit') NOT NULL DEFAULT 'debit'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS accounts_kol (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(20) NOT NULL UNIQUE,
+  title VARCHAR(190) NOT NULL,
+  group_id INT UNSIGNED NOT NULL,
+  CONSTRAINT fk_kol_group FOREIGN KEY (group_id) REFERENCES account_groups(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS accounts_moein (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(20) NOT NULL UNIQUE,
+  title VARCHAR(190) NOT NULL,
+  kol_id INT UNSIGNED NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  CONSTRAINT fk_moein_kol FOREIGN KEY (kol_id) REFERENCES accounts_kol(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS parties (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(40) NOT NULL UNIQUE,
+  name VARCHAR(190) NOT NULL,
+  type ENUM('customer','supplier','both','other') NOT NULL DEFAULT 'customer',
+  phone VARCHAR(40) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS fiscal_years (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(120) NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS vouchers (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  fiscal_year_id INT UNSIGNED NOT NULL,
+  number INT UNSIGNED NOT NULL,
+  voucher_date DATE NOT NULL,
+  description VARCHAR(500) NULL,
+  status ENUM('draft','posted','void') NOT NULL DEFAULT 'draft',
+  created_by INT UNSIGNED NULL,
+  posted_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_voucher_year_num (fiscal_year_id, number),
+  CONSTRAINT fk_v_year FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id),
+  CONSTRAINT fk_v_user FOREIGN KEY (created_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS voucher_lines (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  voucher_id INT UNSIGNED NOT NULL,
+  line_no SMALLINT UNSIGNED NOT NULL,
+  moein_id INT UNSIGNED NOT NULL,
+  party_id INT UNSIGNED NULL,
+  description VARCHAR(500) NULL,
+  debit DECIMAL(18,0) NOT NULL DEFAULT 0,
+  credit DECIMAL(18,0) NOT NULL DEFAULT 0,
+  CONSTRAINT fk_vl_v FOREIGN KEY (voucher_id) REFERENCES vouchers(id) ON DELETE CASCADE,
+  CONSTRAINT fk_vl_m FOREIGN KEY (moein_id) REFERENCES accounts_moein(id),
+  CONSTRAINT fk_vl_p FOREIGN KEY (party_id) REFERENCES parties(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS invoices (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  number INT UNSIGNED NOT NULL UNIQUE,
+  invoice_date DATE NOT NULL,
+  party_id INT UNSIGNED NOT NULL,
+  total DECIMAL(18,0) NOT NULL DEFAULT 0,
+  description VARCHAR(500) NULL,
+  voucher_id INT UNSIGNED NULL,
+  status ENUM('draft','confirmed') NOT NULL DEFAULT 'draft',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_inv_party FOREIGN KEY (party_id) REFERENCES parties(id),
+  CONSTRAINT fk_inv_v FOREIGN KEY (voucher_id) REFERENCES vouchers(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS invoice_items (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  invoice_id INT UNSIGNED NOT NULL,
+  title VARCHAR(190) NOT NULL,
+  qty DECIMAL(18,3) NOT NULL DEFAULT 1,
+  unit_price DECIMAL(18,0) NOT NULL DEFAULT 0,
+  amount DECIMAL(18,0) NOT NULL DEFAULT 0,
+  CONSTRAINT fk_ii_inv FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS settings (
+  `key` VARCHAR(80) PRIMARY KEY,
+  `value` TEXT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,0 +1,5 @@
+/config.php
+/storage/.installed
+/storage/sessions/*
+!/storage/sessions/.gitkeep
+/storage/logs/*
