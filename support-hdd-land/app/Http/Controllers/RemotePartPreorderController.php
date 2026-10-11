@@ -259,7 +259,7 @@ class RemotePartPreorderController extends Controller
             'min_photos' => ['required', 'integer', 'min:1', 'max:8'],
             'max_photos' => ['required', 'integer', 'min:1', 'max:8'],
             'instructions' => ['nullable', 'string', 'max:1000'],
-            'office_phone' => ['required', 'string', 'max:30'],
+            'office_phone' => ['nullable', 'string', 'max:40'],
         ]);
 
         if ((int) $data['max_photos'] < (int) $data['min_photos']) {

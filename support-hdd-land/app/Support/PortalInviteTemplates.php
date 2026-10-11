@@ -40,9 +40,14 @@ class PortalInviteTemplates
     public static function render(Customer $customer, ?string $template = null): string
     {
         $shop = shop_name();
-        $office = function_exists('shop_office_phone') ? shop_office_phone() : '01144447220';
+        $office = function_exists('shop_office_phone') ? shop_office_phone() : '';
+        $tpl = $template ?: self::template();
+        if ($office === '') {
+            $tpl = preg_replace('/^.*\{office_phone\}.*$/mu', '', $tpl) ?? $tpl;
+            $tpl = preg_replace("/\n{3,}/", "\n\n", trim($tpl))."\n";
+        }
 
-        return strtr($template ?: self::template(), [
+        return strtr($tpl, [
             '{name}' => trim((string) $customer->name) ?: 'مشتری',
             '{shop}' => $shop,
             '{phone}' => (string) $customer->phone,

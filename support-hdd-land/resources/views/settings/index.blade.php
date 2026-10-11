@@ -17,6 +17,7 @@
         @if(!empty($seoAvailable))
         <button type="button" class="{{ ($activeTab ?? '') === 'seo' ? 'active' : '' }}" data-ws-tab="seo">سئو / گوگل</button>
         @endif
+        <button type="button" class="{{ $activeTab === 'portal' ? 'active' : '' }}" data-ws-tab="portal">وب / موبایل</button>
         <button type="button" class="{{ $activeTab === 'users' ? 'active' : '' }}" data-ws-tab="users">کارتابل کارمند</button>
     </div>
     <div class="ws-panes">
@@ -1176,6 +1177,57 @@
             </div>
         </div>
         @endif
+
+        <div class="ws-pane {{ $activeTab === 'portal' ? 'active' : '' }}" data-ws-pane="portal">
+            <h2>تنظیمات وب و موبایل کارتابل مشتری</h2>
+            <p class="lead">شماره تماس و مشخصاتی که در کارتابل موبایل/وب مشتری نمایش داده می‌شود. اگر خالی بماند، شماره شرکت فروشنده نشان داده نمی‌شود.</p>
+            <form method="POST" action="{{ route('settings.portal') }}" class="panel">
+                @csrf
+                <input type="hidden" name="settings_tab" value="portal">
+                @include('partials.toggle', [
+                    'name' => 'show_contact',
+                    'label' => 'نمایش اطلاعات تماس در کارتابل مشتری',
+                    'checked' => old('show_contact', ($portal['show_contact'] ?? true)),
+                ])
+                <div class="accept-row accept-row-2" style="margin-top:10px;">
+                    <div>
+                        <label>تلفن دفتر</label>
+                        <input type="text" name="office_phone" value="{{ old('office_phone', $portal['stored_office_phone'] ?? '') }}" dir="ltr" style="text-align:left;" placeholder="مثلاً 021xxxxxxx" maxlength="40">
+                        <p class="muted" style="margin:4px 0 0;font-size:11px;">اگر خالی باشد، اولین شماره فاکتور (در صورت تنظیم) استفاده می‌شود.</p>
+                    </div>
+                    <div>
+                        <label>موبایل تماس</label>
+                        <input type="text" name="mobile_phone" value="{{ old('mobile_phone', $portal['stored_mobile_phone'] ?? '') }}" dir="ltr" style="text-align:left;" placeholder="مثلاً 09xxxxxxxxx" maxlength="40">
+                    </div>
+                    <div>
+                        <label>واتساپ</label>
+                        <input type="text" name="whatsapp" value="{{ old('whatsapp', $portal['stored_whatsapp'] ?? '') }}" dir="ltr" style="text-align:left;" placeholder="09xxxxxxxxx" maxlength="40">
+                    </div>
+                    <div>
+                        <label>آدرس نمایش در کارتابل</label>
+                        <input type="text" name="address" value="{{ old('address', $portal['stored_address'] ?? '') }}" placeholder="اگر خالی باشد آدرس فاکتور">
+                    </div>
+                    <div style="grid-column:1/-1">
+                        <label>متن کوتاه خوش‌آمد (اختیاری)</label>
+                        <textarea name="welcome_text" rows="3" maxlength="500" placeholder="مثلاً: برای هماهنگی تحویل با دفتر تماس بگیرید.">{{ old('welcome_text', $portal['stored_welcome_text'] ?? '') }}</textarea>
+                    </div>
+                </div>
+                <div class="panel" style="margin-top:10px;background:#f3f7ff;border-color:#b7c8e8;">
+                    <strong>پیش‌نمایش فعلی کارتابل:</strong>
+                    <div style="margin-top:6px;font-size:13px;">
+                        تلفن: <span dir="ltr">{{ ($portal['office_phone'] ?? '') !== '' ? $portal['office_phone'] : '— (نمایش داده نمی‌شود)' }}</span>
+                        @if(($portal['mobile_phone'] ?? '') !== '')
+                            · موبایل: <span dir="ltr">{{ $portal['mobile_phone'] }}</span>
+                        @endif
+                    </div>
+                    <div class="muted" style="margin-top:4px;font-size:11px;">لینک کارتابل: <span dir="ltr">{{ $portalUrl ?? url('/cartable') }}</span></div>
+                </div>
+                <div class="actions" style="margin-top:10px;">
+                    <button class="btn btn-primary" type="submit">ذخیره تنظیمات وب / موبایل</button>
+                    <a class="btn btn-ghost" href="{{ $portalUrl ?? url('/cartable') }}" target="_blank" rel="noopener">باز کردن کارتابل</a>
+                </div>
+            </form>
+        </div>
 
         <div class="ws-pane {{ $activeTab === 'users' ? 'active' : '' }}" data-ws-pane="users">
             <div class="emp-cartable-hero">

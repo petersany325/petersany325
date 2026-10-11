@@ -15,13 +15,24 @@ use App\Support\CalendarSettings;
 use App\Support\LabelPrintSettings;
 use App\Support\PaymentGateways;
 use App\Support\Permissions;
-use App\Support\SeoSettings;
+use App\Support\ShopPortalSettings;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class SettingController extends Controller
 {
-    private const TABS = ['general', 'lookups', 'faults', 'referrals', 'invoice', 'labels', 'payments', 'sms', 'backup', 'seo', 'users'];
+    private const TABS = ['general', 'lookups', 'faults', 'referrals', 'invoice', 'labels', 'payments', 'sms', 'backup', 'seo', 'portal', 'users'];
+
+    /** SEO engine is seller-only and may be absent on customer installs. */
+    private function seoAvailable(): bool
+    {
+        try {
+            return class_exists(\App\Support\SeoSettings::class)
+                && \App\Support\SeoSettings::available();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
 
     public function index(Request $request)
     {
@@ -37,7 +48,7 @@ class SettingController extends Controller
         if (! in_array($tab, self::TABS, true)) {
             $tab = 'general';
         }
-        $seoAvailable = SeoSettings::available();
+        $seoAvailable = $this->seoAvailable();
         if ($tab === 'seo' && ! $seoAvailable) {
             $tab = 'general';
         }
@@ -107,15 +118,55 @@ class SettingController extends Controller
             'googleRedirectUri' => url('/settings/backup/cloud/google/callback'),
             'onedriveRedirectUri' => url('/settings/backup/cloud/onedrive/callback'),
             'seoAvailable' => $seoAvailable,
-            'seo' => $seoAvailable ? SeoSettings::all() : [],
+            'seo' => $seoAvailable ? \App\Support\SeoSettings::all() : [],
             'seoSitemapUrl' => url('/sitemap.xml'),
             'seoRobotsUrl' => url('/robots.txt'),
+            'portal' => class_exists(ShopPortalSettings::class)
+                ? ShopPortalSettings::all()
+                : [
+                    'office_phone' => '',
+                    'mobile_phone' => '',
+                    'whatsapp' => '',
+                    'address' => '',
+                    'welcome_text' => '',
+                    'show_contact' => true,
+                    'stored_office_phone' => '',
+                    'stored_mobile_phone' => '',
+                    'stored_whatsapp' => '',
+                    'stored_address' => '',
+                    'stored_welcome_text' => '',
+                ],
         ]);
+    }
+
+    public function updatePortal(Request $request)
+    {
+        abort_unless(class_exists(ShopPortalSettings::class), 404);
+
+        $data = $request->validate([
+            'office_phone' => ['nullable', 'string', 'max:40'],
+            'mobile_phone' => ['nullable', 'string', 'max:40'],
+            'whatsapp' => ['nullable', 'string', 'max:40'],
+            'address' => ['nullable', 'string', 'max:300'],
+            'welcome_text' => ['nullable', 'string', 'max:500'],
+            'show_contact' => ['nullable', 'boolean'],
+        ]);
+
+        ShopPortalSettings::save([
+            'office_phone' => $data['office_phone'] ?? '',
+            'mobile_phone' => $data['mobile_phone'] ?? '',
+            'whatsapp' => $data['whatsapp'] ?? '',
+            'address' => $data['address'] ?? '',
+            'welcome_text' => $data['welcome_text'] ?? '',
+            'show_contact' => $request->boolean('show_contact'),
+        ]);
+
+        return $this->settingsRedirect($request, 'portal', 'success', 'تنظیمات وب / موبایل کارتابل ذخیره شد.');
     }
 
     public function updateSeo(Request $request)
     {
-        abort_unless(SeoSettings::available(), 404);
+        abort_unless($this->seoAvailable(), 404);
 
         $data = $request->validate([
             'enabled' => ['nullable', 'boolean'],
@@ -160,7 +211,7 @@ class SettingController extends Controller
             'og_image_file' => ['nullable', 'image', 'max:4096'],
         ]);
 
-        SeoSettings::save($data, $request->file('og_image_file'));
+        \App\Support\SeoSettings::save($data, $request->file('og_image_file'));
 
         return $this->settingsRedirect($request, 'seo', 'success', 'تنظیمات SEO ذخیره شد.');
     }

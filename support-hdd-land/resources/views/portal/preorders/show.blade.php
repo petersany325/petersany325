@@ -16,7 +16,9 @@
             {{ $preorder->code }}
         </div>
         <p class="muted" style="margin:8px 0 0;font-size:12px;">این کد را روی بسته یا فاکتور باربری بنویسید تا موقع تحویل سریع پیدا شود.</p>
-        <p class="p-office-phone" style="margin:10px 0 0;">تلفن دفتر: <a href="tel:{{ shop_office_phone() }}" dir="ltr">{{ shop_office_phone() }}</a></p>
+        @if(shop_office_phone() !== '')
+            <p class="p-office-phone" style="margin:10px 0 0;">تلفن دفتر: <a href="tel:{{ shop_office_phone() }}" dir="ltr">{{ shop_office_phone() }}</a></p>
+        @endif
     </div>
 
     @if($preorder->status === 'matched' && $preorder->reception)
@@ -28,7 +30,9 @@
         <div class="p-card" style="border-color:#f5d59a;background:#fff8eb;">
             <strong>قبض تأیید نشد · نیاز به تماس</strong>
             <p class="muted" style="margin:4px 0 0;">{{ $preorder->admin_note ?: 'لطفاً با دفتر تماس بگیرید.' }}</p>
-            <p class="p-office-phone" style="margin:8px 0 0;">تلفن دفتر: <a href="tel:{{ shop_office_phone() }}" dir="ltr">{{ shop_office_phone() }}</a></p>
+            @if(shop_office_phone() !== '')
+                <p class="p-office-phone" style="margin:8px 0 0;">تلفن دفتر: <a href="tel:{{ shop_office_phone() }}" dir="ltr">{{ shop_office_phone() }}</a></p>
+            @endif
             <a class="p-btn ghost" style="margin-top:8px;" href="{{ route('portal.messages') }}">مشاهده پیام‌ها</a>
         </div>
     @endif
