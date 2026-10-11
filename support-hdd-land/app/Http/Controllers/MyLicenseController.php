@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\LicenseStatus;
+use App\Support\SellerContact;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -22,7 +23,7 @@ class MyLicenseController extends Controller
         return view('my-license.index', [
             'license' => $status,
             'focus' => $focus,
-            'officePhone' => shop_office_phone(),
+            'officePhone' => SellerContact::phone(),
         ]);
     }
 

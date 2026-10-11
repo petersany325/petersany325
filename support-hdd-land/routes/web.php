@@ -559,6 +559,7 @@ Route::middleware(['auth', EnsureAttendanceOnboarded::class])->group(function ()
         Route::post('settings/seo', [SettingController::class, 'updateSeo'])->name('settings.seo');
         Route::get('settings/seo/apex-download', [SeoController::class, 'downloadApex'])->name('settings.seo.apex-download');
         Route::post('settings/seo/apex-publish', [SeoController::class, 'publishApex'])->name('settings.seo.apex-publish');
+        Route::post('settings/portal', [SettingController::class, 'updatePortal'])->name('settings.portal');
         Route::post('settings/backup/run-now', [SettingController::class, 'runBackupNow'])->name('settings.backup.run-now');
         Route::get('settings/backup/cloud/{provider}/connect', [BackupCloudController::class, 'connect'])
             ->whereIn('provider', ['google', 'onedrive', 'mega'])

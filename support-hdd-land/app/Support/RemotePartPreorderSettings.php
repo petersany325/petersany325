@@ -33,9 +33,22 @@ class RemotePartPreorderSettings
 
     public static function officePhone(): string
     {
-        $phone = trim((string) AppSetting::getValue('remote_part_preorder_office_phone', '01144447220'));
+        // Prefer editable portal/web contact; never fall back to seller HDD Land default.
+        if (class_exists(ShopPortalSettings::class)) {
+            $portal = ShopPortalSettings::officePhone();
+            if ($portal !== '') {
+                return $portal;
+            }
+        }
 
-        return $phone !== '' ? $phone : '01144447220';
+        $phone = ShopPortalSettings::normalizePhone(
+            (string) AppSetting::getValue('remote_part_preorder_office_phone', '')
+        );
+        if ($phone !== '' && ! ShopPortalSettings::isSellerDefault($phone)) {
+            return $phone;
+        }
+
+        return '';
     }
 
     public static function save(array $data): void
@@ -44,7 +57,10 @@ class RemotePartPreorderSettings
         AppSetting::setValue('remote_part_preorder_min_photos', (string) max(1, (int) ($data['min_photos'] ?? 1)));
         AppSetting::setValue('remote_part_preorder_max_photos', (string) max(1, min(8, (int) ($data['max_photos'] ?? 5))));
         AppSetting::setValue('remote_part_preorder_instructions', trim((string) ($data['instructions'] ?? '')));
-        $phone = preg_replace('/\s+/', '', ascii_digits((string) ($data['office_phone'] ?? '01144447220'))) ?? '01144447220';
-        AppSetting::setValue('remote_part_preorder_office_phone', $phone !== '' ? $phone : '01144447220');
+        $phone = ShopPortalSettings::normalizePhone((string) ($data['office_phone'] ?? ''));
+        AppSetting::setValue('remote_part_preorder_office_phone', $phone);
+        if ($phone !== '') {
+            AppSetting::setValue('portal_office_phone', $phone);
+        }
     }
 }

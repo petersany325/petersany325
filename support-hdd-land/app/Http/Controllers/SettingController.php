@@ -16,12 +16,13 @@ use App\Support\LabelPrintSettings;
 use App\Support\PaymentGateways;
 use App\Support\Permissions;
 use App\Support\SeoSettings;
+use App\Support\ShopPortalSettings;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class SettingController extends Controller
 {
-    private const TABS = ['general', 'lookups', 'faults', 'referrals', 'invoice', 'labels', 'payments', 'sms', 'backup', 'seo', 'users'];
+    private const TABS = ['general', 'lookups', 'faults', 'referrals', 'invoice', 'labels', 'payments', 'sms', 'backup', 'seo', 'portal', 'users'];
 
     public function index(Request $request)
     {
@@ -110,7 +111,31 @@ class SettingController extends Controller
             'seo' => $seoAvailable ? SeoSettings::all() : [],
             'seoSitemapUrl' => url('/sitemap.xml'),
             'seoRobotsUrl' => url('/robots.txt'),
+            'portal' => ShopPortalSettings::all(),
         ]);
+    }
+
+    public function updatePortal(Request $request)
+    {
+        $data = $request->validate([
+            'office_phone' => ['nullable', 'string', 'max:40'],
+            'mobile_phone' => ['nullable', 'string', 'max:40'],
+            'whatsapp' => ['nullable', 'string', 'max:40'],
+            'address' => ['nullable', 'string', 'max:300'],
+            'welcome_text' => ['nullable', 'string', 'max:500'],
+            'show_contact' => ['nullable', 'boolean'],
+        ]);
+
+        ShopPortalSettings::save([
+            'office_phone' => $data['office_phone'] ?? '',
+            'mobile_phone' => $data['mobile_phone'] ?? '',
+            'whatsapp' => $data['whatsapp'] ?? '',
+            'address' => $data['address'] ?? '',
+            'welcome_text' => $data['welcome_text'] ?? '',
+            'show_contact' => $request->boolean('show_contact'),
+        ]);
+
+        return $this->settingsRedirect($request, 'portal', 'success', 'تنظیمات وب / موبایل کارتابل ذخیره شد.');
     }
 
     public function updateSeo(Request $request)

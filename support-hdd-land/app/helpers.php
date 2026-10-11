@@ -448,17 +448,32 @@ if (! function_exists('shop_logo_url')) {
 }
 
 if (! function_exists('shop_office_phone')) {
-    /** Main office contact phone shown to customers. */
+    /** Main office contact phone shown to customers (never seller HDD Land default). */
     function shop_office_phone(): string
     {
         try {
-            if (class_exists(\App\Support\RemotePartPreorderSettings::class)) {
-                return \App\Support\RemotePartPreorderSettings::officePhone();
+            if (class_exists(\App\Support\ShopPortalSettings::class)) {
+                return \App\Support\ShopPortalSettings::officePhone();
             }
         } catch (\Throwable) {
         }
 
-        return '01144447220';
+        return '';
+    }
+}
+
+if (! function_exists('shop_portal_mobile')) {
+    /** Optional mobile contact for customer portal. */
+    function shop_portal_mobile(): string
+    {
+        try {
+            if (class_exists(\App\Support\ShopPortalSettings::class)) {
+                return \App\Support\ShopPortalSettings::mobilePhone();
+            }
+        } catch (\Throwable) {
+        }
+
+        return '';
     }
 }
 

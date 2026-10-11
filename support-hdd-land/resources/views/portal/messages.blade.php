@@ -5,7 +5,7 @@
 <div class="portal-shell">
     <div class="p-card">
         <h2>پیام‌ها</h2>
-        <p class="p-lead">پیام‌های تعمیرگاه و پیام‌های شما. برای هماهنگی با دفتر: <a href="tel:{{ shop_office_phone() }}" dir="ltr">{{ shop_office_phone() }}</a></p>
+        <p class="p-lead">پیام‌های تعمیرگاه و پیام‌های شما.@if(shop_office_phone() !== '') برای هماهنگی با دفتر: <a href="tel:{{ shop_office_phone() }}" dir="ltr">{{ shop_office_phone() }}</a>@endif</p>
 
         <form method="POST" action="{{ route('portal.messages.store') }}" class="p-form">
             @csrf

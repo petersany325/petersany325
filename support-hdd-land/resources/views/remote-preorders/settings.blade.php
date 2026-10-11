@@ -29,7 +29,8 @@
             </label>
         </div>
         <label>تلفن دفتر (نمایش در کارتابل و پیامک)
-            <input type="text" name="office_phone" value="{{ old('office_phone', $settings['office_phone']) }}" required dir="ltr" style="text-align:left;" placeholder="01144447220">
+            <input type="text" name="office_phone" value="{{ old('office_phone', $settings['office_phone']) }}" dir="ltr" style="text-align:left;" placeholder="مثلاً 021xxxxxxx">
+            <span class="muted" style="display:block;margin-top:4px;font-size:11px;">همین شماره از <a href="{{ route('settings.index', ['tab' => 'portal']) }}">تنظیمات وب / موبایل</a> هم قابل ویرایش است. خالی بگذارید تا شماره فروشنده نمایش داده نشود.</span>
         </label>
         <label>متن راهنمای مشتری
             <textarea name="instructions" rows="4" maxlength="1000">{{ old('instructions', $settings['instructions']) }}</textarea>

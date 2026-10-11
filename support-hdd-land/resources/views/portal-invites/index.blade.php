@@ -9,7 +9,7 @@
         <div>
             <h2 style="margin:0;">ارسال لینک کارتابل مشتری</h2>
             <p class="lead" style="margin:4px 0 0;">برای مهاجرت از سیستم قدیم؛ لینک ورود پیامکی کارتابل برای مشتریان ارسال می‌شود.</p>
-            <p class="muted" style="margin:6px 0 0;font-size:12px;">لینک: <span dir="ltr">{{ $loginUrl }}</span> · تلفن دفتر: <span dir="ltr">{{ $officePhone }}</span></p>
+            <p class="muted" style="margin:6px 0 0;font-size:12px;">لینک: <span dir="ltr">{{ $loginUrl }}</span>@if(!empty($officePhone)) · تلفن دفتر: <span dir="ltr">{{ $officePhone }}</span>@else · <a href="{{ route('settings.index', ['tab' => 'portal']) }}">تنظیم تلفن دفتر</a>@endif</p>
         </div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <a class="btn btn-secondary" href="{{ route('portal-invites.report') }}">گزارش ارسال‌ها</a>

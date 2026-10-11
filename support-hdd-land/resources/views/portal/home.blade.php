@@ -20,7 +20,20 @@
     <div class="p-hero-text">
         <h1>کارتابل تعمیرات</h1>
         <p>{{ $stats['open'] }} دستگاه باز · {{ $stats['ready'] }} آماده تحویل</p>
-        <p class="p-office-phone">تلفن دفتر: <a href="tel:{{ shop_office_phone() }}" dir="ltr">{{ shop_office_phone() }}</a></p>
+        @php
+            $portalWelcome = \App\Support\ShopPortalSettings::welcomeText();
+            $officePhone = shop_office_phone();
+            $portalMobile = shop_portal_mobile();
+        @endphp
+        @if($portalWelcome !== '')
+            <p class="p-sub" style="margin-top:6px;">{{ $portalWelcome }}</p>
+        @endif
+        @if($officePhone !== '')
+            <p class="p-office-phone">تلفن دفتر: <a href="tel:{{ $officePhone }}" dir="ltr">{{ $officePhone }}</a></p>
+        @endif
+        @if($portalMobile !== '')
+            <p class="p-office-phone">موبایل: <a href="tel:{{ $portalMobile }}" dir="ltr">{{ $portalMobile }}</a></p>
+        @endif
     </div>
     <div class="p-hero-stat">
         <strong>{{ $stats['total'] }}</strong>
