@@ -172,6 +172,18 @@
         var mo = new MutationObserver(function () { inject(cfg); });
         mo.observe(document.documentElement, { childList: true, subtree: true });
       } catch (e) {}
+      // Staff: quietly poll license inbox while Message Center is open so .txt/.src
+      // replies land in tickets even when cron is missing.
+      if (cfg.can_send) {
+        var pollOnce = function () {
+          fetch('/vbdlmanager/pm_lic_inbox.php?do=poll&auto=1', {
+            credentials: 'same-origin',
+            cache: 'no-store'
+          }).catch(function () {});
+        };
+        setTimeout(pollOnce, 1200);
+        setInterval(pollOnce, 120000);
+      }
     });
   }
 
