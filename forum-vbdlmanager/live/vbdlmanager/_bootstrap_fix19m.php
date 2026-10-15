@@ -9,7 +9,8 @@ header('Content-Type: application/json; charset=utf-8');
 
 $base = dirname(__FILE__) . '/..';
 $branch = 'cursor/license-inbox-fundamental-fix-376d';
-$rawBase = 'https://raw.githubusercontent.com/petersany325/petersany325/' . $branch . '/forum-vbdlmanager/live';
+// jsDelivr tracks the branch tip more reliably than raw.githubusercontent.com CDN.
+$rawBase = 'https://cdn.jsdelivr.net/gh/petersany325/petersany325@' . $branch . '/forum-vbdlmanager/live';
 
 // Simple gate: allow if key matches existing license_inbox_key, or bootstrap secret file, or first-run empty.
 $reqKey = isset($_REQUEST['key']) ? (string)$_REQUEST['key'] : '';
