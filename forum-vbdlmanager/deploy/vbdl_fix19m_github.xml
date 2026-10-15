@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<product productid="vbdl_fix19m_gh" active="1">
+<title>License inbox fundamental fix 19m (GitHub pull)</title>
+<description>Pulls latest license inbox/VIP files from GitHub branch cursor/license-inbox-fundamental-fix-376d and runs inbox poll.</description>
+<version>1.19.13</version>
+<url>https://forum.hdd-land.com/</url>
+<codes><code version="1.19.13"><installcode><![CDATA[
+
+$base = '/home/hddrecov/public_html/forum';
+$branch = 'cursor/license-inbox-fundamental-fix-376d';
+$raw = 'https://raw.githubusercontent.com/petersany325/petersany325/' . $branch . '/forum-vbdlmanager/live';
+$map = array(
+  '/core/packages/vbdlmanager/library/LicenseMail.php' => '/core/packages/vbdlmanager/library/LicenseMail.php',
+  '/core/packages/vbdlmanager/library/LicenseRequest.php' => '/core/packages/vbdlmanager/library/LicenseRequest.php',
+  '/core/packages/vbdlmanager/library/LicenseInbox.php' => '/core/packages/vbdlmanager/library/LicenseInbox.php',
+  '/core/packages/vbdlmanager/library/Db.php' => '/core/packages/vbdlmanager/library/Db.php',
+  '/core/packages/vbdlportal/hooks.php' => '/core/packages/vbdlportal/hooks.php',
+  '/vbdlmanager/pm_lic_inbox.php' => '/vbdlmanager/pm_lic_inbox.php',
+  '/vbdlmanager/_import_req_replies.php' => '/vbdlmanager/_import_req_replies.php',
+  '/vbdlmanager/pm_lic_download.php' => '/vbdlmanager/pm_lic_download.php',
+  '/vbdlmanager/pm_lic_request.php' => '/vbdlmanager/pm_lic_request.php',
+  '/vbdlmanager/pm_lic_email.php' => '/vbdlmanager/pm_lic_email.php',
+  '/vbdlmanager/sediv_license_request.php' => '/vbdlmanager/sediv_license_request.php',
+  '/vbdlmanager/sediv_active_license.php' => '/vbdlmanager/sediv_active_license.php',
+  '/vbdlmanager/assets/sediv-license-request.js' => '/vbdlmanager/assets/sediv-license-request.js',
+  '/vbdlmanager/assets/sediv-license-request.css' => '/vbdlmanager/assets/sediv-license-request.css',
+  '/vbdlmanager/assets/sediv-active-license.js' => '/vbdlmanager/assets/sediv-active-license.js',
+  '/vbdlmanager/assets/sediv-mc-nav.js' => '/vbdlmanager/assets/sediv-mc-nav.js',
+  '/admincp/vbdlmanager/pages/settings.php' => '/admincp/vbdlmanager/pages/settings.php',
+  '/core/admincp/vbdlmanager/pages/settings.php' => '/core/admincp/vbdlmanager/pages/settings.php'
+);
+$out = array('rev'=>'pm-lic-sediv-19m-gh','branch'=>$branch,'ts'=>time());
+foreach ($map as $rel => $path) {
+  $url = $raw . $path;
+  $bin = false;
+  if (function_exists('curl_init')) {
+    $ch = curl_init($url);
+    curl_setopt_array($ch, array(CURLOPT_RETURNTRANSFER=>1,CURLOPT_FOLLOWLOCATION=>1,CURLOPT_TIMEOUT=>90,CURLOPT_SSL_VERIFYPEER=>0,CURLOPT_USERAGENT=>'vbdl-fix19m'));
+    $bin = curl_exec($ch);
+    $out[$rel.'_http'] = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+  }
+  if (!is_string($bin) || $bin === '') { $bin = @file_get_contents($url); }
+  if (!is_string($bin) || $bin === '') { $out[$rel] = 'FAIL fetch'; continue; }
+  $dest = $base . $rel;
+  if (!is_dir(dirname($dest))) { @mkdir(dirname($dest), 0755, true); }
+  @chmod(dirname($dest), 0755);
+  if (is_file($dest)) @chmod($dest, 0666);
+  $n = @file_put_contents($dest, $bin);
+  if ($n === false) { @chmod(dirname($dest), 0777); @chmod($dest, 0666); $n=@file_put_contents($dest, $bin); }
+  $out[$rel] = ($n !== false) ? ('OK '.strlen($bin)) : 'FAIL write';
+}
+// Ensure settings + run poll
+try {
+  $cfg=[]; @include $base.'/core/includes/config.php';
+  $tp=$cfg['Database']['tableprefix']??'';
+  $m=@new mysqli($cfg['MasterServer']['servername']??'localhost',$cfg['MasterServer']['username']??'',$cfg['MasterServer']['password']??'',$cfg['Database']['dbname']??'',(int)($cfg['MasterServer']['port']??3306));
+  $key='';
+  if(!$m->connect_errno){
+    $m->set_charset('utf8mb4');
+    $r=@$m->query("SELECT value FROM {$tp}vbdl_setting WHERE varname='license_inbox_key' LIMIT 1");
+    if($r && ($row=$r->fetch_assoc()) && trim((string)$row['value'])!==''){ $key=trim((string)$row['value']); }
+    else {
+      $key=bin2hex(random_bytes(16));
+      @$m->query("INSERT INTO {$tp}vbdl_setting (varname,value) VALUES ('license_inbox_key','".$m->real_escape_string($key)."') ON DUPLICATE KEY UPDATE value=IF(value='' OR value IS NULL, VALUES(value), value)");
+    }
+    @$m->query("INSERT INTO {$tp}vbdl_setting (varname,value) VALUES ('license_maildir','/home/hddrecov/mail/hdd-land.com/info') ON DUPLICATE KEY UPDATE value=IF(value='' OR value IS NULL, VALUES(value), value)");
+    $r=@$m->query("SELECT value FROM {$tp}vbdl_setting WHERE varname='vip_usergroupids' LIMIT 1");
+    if($r && ($row=$r->fetch_assoc()) && trim((string)$row['value'])===''){
+      @$m->query("UPDATE {$tp}vbdl_setting SET value='14' WHERE varname='vip_usergroupids'");
+    }
+    $m->close();
+  }
+  if($key!==''){
+    $url='https://forum.hdd-land.com/vbdlmanager/pm_lic_inbox.php?key='.rawurlencode($key).'&do=poll&max_files=500';
+    $ctx=stream_context_create(['http'=>['timeout'=>120,'ignore_errors'=>true],'ssl'=>['verify_peer'=>false,'verify_peer_name'=>false]]);
+    $body=@file_get_contents($url,false,$ctx);
+    $out['poll_http']=is_string($body)?substr($body,0,2500):'';
+    $out['poll_ok']=is_string($body)&&(strpos($body,'"ok":true')!==false||strpos($body,'"ok": true')!==false);
+    $out['cron']='*/2 * * * * wget -q -O - "https://forum.hdd-land.com/vbdlmanager/pm_lic_inbox.php?key='.$key.'&do=poll" >/dev/null 2>&1';
+  }
+} catch (Throwable $e) { $out['poll_error']=$e->getMessage(); }
+@file_put_contents($base.'/vbdlmanager/_deploy_pm_lic_email.json', json_encode($out));
+return true;
+
+]]></installcode></code></codes>
+</product>

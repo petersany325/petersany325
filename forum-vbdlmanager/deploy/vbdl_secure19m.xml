@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<product productid="vbdl_secure19m" active="1"><title>Secure 19m deploy artifacts</title><description>Redact inbox key from public JSON and remove bootstrap</description><version>1.0.0</version><url>https://forum.hdd-land.com/</url>
+<codes><code version="1.0.0"><installcode><![CDATA[
+$base='/home/hddrecov/public_html/forum';
+$out=array('ok'=>true,'ts'=>time(),'rev'=>'secure19m');
+$jfile=$base.'/vbdlmanager/_deploy_pm_lic_email.json';
+if(is_file($jfile)){
+  $j=json_decode(@file_get_contents($jfile), true);
+  if(is_array($j)){
+    if(isset($j['cron']) && is_string($j['cron'])){
+      $j['cron']=preg_replace('/key=[0-9a-fA-F]+/','key=REDACTED',$j['cron']);
+    }
+    if(isset($j['poll_http']) && is_string($j['poll_http'])){
+      // keep poll summary but fine
+    }
+    @chmod($jfile,0666);
+    $out['json_redacted']=@file_put_contents($jfile, json_encode($j))!==false;
+  }
+}
+$boot=$base.'/vbdlmanager/_bootstrap_fix19m.php';
+if(is_file($boot)){
+  @chmod($boot,0666);
+  $out['bootstrap_deleted']=@unlink($boot)?1:0;
+} else {
+  $out['bootstrap_deleted']='absent';
+}
+@file_put_contents($base.'/vbdlmanager/_deploy_secure19m.json', json_encode($out));
+return true;
+]]></installcode></code></codes></product>

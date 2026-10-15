@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<product productid="vbdl_rmboot19m" active="1"><title>Remove bootstrap fix19m</title><description>Deletes one-shot bootstrap after successful 19m deploy</description><version>1.0.0</version><url>https://forum.hdd-land.com/</url>
+<codes><code version="1.0.0"><installcode><![CDATA[
+$base='/home/hddrecov/public_html/forum';
+$targets=array(
+  $base.'/vbdlmanager/_bootstrap_fix19m.php',
+);
+$out=array('ok'=>true,'ts'=>time(),'rev'=>'rmboot19m','deleted'=>array());
+foreach($targets as $p){
+  if(is_file($p)){
+    @chmod($p,0666);
+    $out['deleted'][$p]=@unlink($p)?1:0;
+  } else {
+    $out['deleted'][$p]='absent';
+  }
+}
+@file_put_contents($base.'/vbdlmanager/_deploy_rmboot19m.json', json_encode($out));
+return true;
+]]></installcode></code></codes></product>
