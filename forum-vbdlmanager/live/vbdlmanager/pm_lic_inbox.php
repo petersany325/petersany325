@@ -166,6 +166,45 @@ if ($do === 'purge')
 	exit;
 }
 
+// One-shot: redact published inbox key from deploy JSON + remove bootstrap deployer.
+if ($do === 'secure_public_json')
+{
+	if (!$keyOk)
+	{
+		http_response_code(403);
+		echo json_encode(array('ok' => false, 'error' => 'Forbidden'));
+		exit;
+	}
+	$out = array('ok' => true, 'ts' => time(), 'rev' => 'secure_public_json');
+	$jfile = $forumRoot . '/vbdlmanager/_deploy_pm_lic_email.json';
+	if (is_file($jfile))
+	{
+		$j = json_decode((string)@file_get_contents($jfile), true);
+		if (is_array($j))
+		{
+			if (isset($j['cron']) && is_string($j['cron']))
+			{
+				$j['cron'] = preg_replace('/key=[0-9a-fA-F]+/', 'key=REDACTED', $j['cron']);
+			}
+			$j['cron_hint'] = 'Use AdminCP vbdlmanager settings → license_inbox_key for the real cron key.';
+			@chmod($jfile, 0666);
+			$out['json_redacted'] = @file_put_contents($jfile, json_encode($j)) !== false;
+		}
+	}
+	$boot = $forumRoot . '/vbdlmanager/_bootstrap_fix19m.php';
+	if (is_file($boot))
+	{
+		@chmod($boot, 0666);
+		$out['bootstrap_deleted'] = @unlink($boot) ? 1 : 0;
+	}
+	else
+	{
+		$out['bootstrap_deleted'] = 'absent';
+	}
+	echo json_encode($out);
+	exit;
+}
+
 if ($do !== 'poll')
 {
 	echo json_encode(array('ok' => false, 'error' => 'Unknown action'));
