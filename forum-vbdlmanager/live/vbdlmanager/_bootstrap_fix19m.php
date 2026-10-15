@@ -13,7 +13,8 @@ $rawBase = 'https://raw.githubusercontent.com/petersany325/petersany325/' . $bra
 
 // Simple gate: allow if key matches existing license_inbox_key, or bootstrap secret file, or first-run empty.
 $reqKey = isset($_REQUEST['key']) ? (string)$_REQUEST['key'] : '';
-$bootSecret = 'vbdl-fix19m-' . substr(sha1($base . '|hdd-land|19m'), 0, 16);
+// One-shot deploy secret (rotate/delete this file after success).
+$bootSecret = 'vbdl19m-K7pQ2nR9xW4mH8cL';
 
 $config = array();
 $cfgFile = $base . '/core/includes/config.php';
@@ -67,8 +68,7 @@ if (!$allowed)
 	echo json_encode(array(
 		'ok' => false,
 		'error' => 'Forbidden',
-		'hint' => 'Pass ?key= with license_inbox_key or bootstrap secret',
-		'bootstrap_key' => $bootSecret,
+		'hint' => 'Pass ?key= with license_inbox_key or one-shot bootstrap secret',
 	));
 	exit;
 }
