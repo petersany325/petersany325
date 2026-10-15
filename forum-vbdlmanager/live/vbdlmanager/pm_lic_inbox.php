@@ -1,4 +1,5 @@
 <?php
+/* cachebust-19m-secure */
 /**
  * SeDiv license inbox: poll maildir/IMAP for returned .src and .txt, post into MC tickets.
  *
