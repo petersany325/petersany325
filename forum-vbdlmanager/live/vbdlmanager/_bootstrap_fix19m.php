@@ -209,10 +209,16 @@ $pollBody = vbdl_fetch_url($pollUrl);
 $out['poll_url_host'] = 'forum.hdd-land.com';
 $out['poll_http'] = is_string($pollBody) ? substr($pollBody, 0, 2500) : '';
 $out['poll_ok'] = is_string($pollBody) && (strpos($pollBody, '"ok":true') !== false || strpos($pollBody, '"ok": true') !== false);
-$out['cron'] = '*/2 * * * * wget -q -O - "https://forum.hdd-land.com/vbdlmanager/pm_lic_inbox.php?key='
-	. $inboxKey . '&do=poll" >/dev/null 2>&1';
+// Never publish the raw inbox key in a world-readable JSON file.
+$out['cron'] = '*/2 * * * * wget -q -O - "https://forum.hdd-land.com/vbdlmanager/pm_lic_inbox.php?key=REDACTED&do=poll" >/dev/null 2>&1';
 $out['inbox_key_set'] = ($inboxKey !== '') ? 1 : 0;
+$out['cron_hint'] = 'Use AdminCP vbdlmanager settings → license_inbox_key for the real cron key.';
 
 @file_put_contents($base . '/vbdlmanager/_deploy_pm_lic_email.json', json_encode($out));
+
+// Self-remove one-shot deployer after successful write.
+@chmod(__FILE__, 0666);
+@unlink(__FILE__);
+
 echo json_encode($out, JSON_PRETTY_PRINT);
 exit;
