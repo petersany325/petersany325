@@ -186,3 +186,48 @@ if (! function_exists('shop_tagline')) {
         return 'سیستم مدیریت تعمیرات';
     }
 }
+
+if (! function_exists('shop_logo_url')) {
+    /**
+     * @param  'main'|'header'|'invoice'  $variant
+     */
+    function shop_logo_url(string $variant = 'main'): string
+    {
+        $map = [
+            'main' => 'images/logo.png',
+            'header' => 'images/logo-header.png',
+            'invoice' => 'images/logo-invoice.png',
+        ];
+        $rel = $map[$variant] ?? $map['main'];
+        $ver = '1';
+        try {
+            if (class_exists(\App\Models\AppSetting::class)) {
+                $ver = (string) (\App\Models\AppSetting::getValue('brand_logo_version') ?: '1');
+                $custom = \App\Models\AppSetting::getValue('brand_logo_'.$variant);
+                if (is_string($custom) && trim($custom) !== '') {
+                    $rel = ltrim(trim($custom), '/');
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return asset($rel).'?v='.rawurlencode($ver);
+    }
+}
+
+if (! function_exists('shop_office_phone')) {
+    function shop_office_phone(): string
+    {
+        try {
+            if (class_exists(\App\Models\AppSetting::class)) {
+                $v = \App\Models\AppSetting::getValue('office_phone');
+                if (is_string($v) && trim($v) !== '') {
+                    return trim($v);
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return '01144447220';
+    }
+}
