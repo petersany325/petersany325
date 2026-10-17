@@ -33,14 +33,15 @@ class NavMenu
                 'label' => 'پذیرش',
                 'permission' => 'receptions',
                 'route' => null,
-                'match' => 'receptions.*|deliveries.*',
+                'match' => 'receptions.*|deliveries.*|trash.*',
                 'mark' => 'پ',
                 'hint' => 'قبض، جستجو، تحویل',
                 'children' => [
                     ['label' => 'پذیرش جدید', 'route' => 'receptions.create', 'match' => 'receptions.create', 'hint' => 'ثبت قبض تکی/گروهی', 'mark' => 'جد'],
                     ['label' => 'جستجوی قبض', 'route' => 'receptions.search', 'match' => 'receptions.search', 'hint' => 'سریال، موبایل، شماره', 'mark' => 'ج'],
-                    ['label' => 'لیست قبض‌ها', 'route' => 'receptions.index', 'match' => 'receptions.index|receptions.show', 'hint' => 'همه پذیرش‌ها', 'mark' => 'لی'],
+                    ['label' => 'لیست قبض‌ها', 'route' => 'receptions.index', 'match' => 'receptions.index|receptions.show|receptions.edit', 'hint' => 'همه پذیرش‌ها', 'mark' => 'لی'],
                     ['label' => 'تحویل گروهی', 'route' => 'deliveries.group', 'match' => 'deliveries.*', 'hint' => 'خروج چند قبض', 'mark' => 'تح'],
+                    ['label' => 'سطل زباله', 'route' => 'trash.index', 'match' => 'trash.*', 'hint' => 'بازیابی یا حذف دائم', 'mark' => 'سط'],
                 ],
             ],
             [
@@ -235,8 +236,52 @@ class NavMenu
             ],
         ];
 
+        // Seller: issue/monitor customer licenses. Customer install: show THIS site's active serial only.
+        if (LicenseStatus::isSellerSite()) {
+            $groups[] = [
+                'key' => 'licenses',
+                'label' => 'لایسنس‌ها',
+                'permission' => 'system.tools',
+                'route' => 'licenses.index',
+                'match' => 'licenses.*',
+                'mark' => 'ل',
+                'hint' => 'ساخت سریال و گزارش آنلاین نصب مشتریان',
+                'admin_only' => true,
+                'seller_only' => true,
+                'children' => [
+                    ['label' => 'مرکز لایسنس', 'route' => 'licenses.index', 'match' => 'licenses.index|licenses.issue|licenses.sms|licenses.revoke|licenses.unbind|licenses.extend', 'hint' => 'ساخت، ارسال SMS، باطل‌سازی', 'mark' => 'ل'],
+                    ['label' => 'پلن و قیمت', 'route' => 'licenses.plans', 'match' => 'licenses.plans*', 'hint' => '۶ ماهه / یک‌ساله و قیمت‌ها', 'mark' => 'ق'],
+                    ['label' => 'گزارش آنلاین', 'route' => 'licenses.online', 'match' => 'licenses.online', 'hint' => 'نصب‌های آنلاین / آفلاین', 'mark' => 'آ'],
+                ],
+            ];
+        } else {
+            $groups[] = [
+                'key' => 'licenses',
+                'label' => 'لایسنس نصب',
+                'permission' => 'dashboard',
+                'route' => 'licenses.status',
+                'match' => 'licenses.status',
+                'mark' => 'ل',
+                'hint' => 'سریال فعال این نصب',
+                'admin_only' => true,
+                'customer_only' => true,
+                'children' => [
+                    ['label' => 'وضعیت و سریال', 'route' => 'licenses.status', 'match' => 'licenses.status', 'hint' => 'پلن، دامنه، تاریخ اعتبار', 'mark' => 'ل'],
+                ],
+            ];
+        }
+
         $out = [];
         foreach ($groups as $group) {
+            if (! empty($group['admin_only']) && ! $user->isAdmin()) {
+                continue;
+            }
+            if (! empty($group['seller_only']) && ! LicenseStatus::isSellerSite()) {
+                continue;
+            }
+            if (! empty($group['customer_only']) && LicenseStatus::isSellerSite()) {
+                continue;
+            }
             if (! empty($group['any_of'])) {
                 $allowed = collect($group['any_of'])->contains(fn ($p) => $user->canAccess($p));
                 if (! $allowed) {
@@ -248,6 +293,12 @@ class NavMenu
 
             $children = [];
             foreach ($group['children'] as $child) {
+                if (! empty($child['seller_only']) && ! LicenseStatus::isSellerSite()) {
+                    continue;
+                }
+                if (! empty($child['customer_only']) && LicenseStatus::isSellerSite()) {
+                    continue;
+                }
                 $perm = $child['permission'] ?? $group['permission'] ?? null;
                 if ($perm && ! $user->canAccess($perm)) {
                     continue;
@@ -316,6 +367,7 @@ class NavMenu
             'accounting' => 'teal',
             'reports' => 'green',
             'system_tools' => 'teal',
+            'licenses' => 'violet',
             'settings' => 'slate',
             default => 'slate',
         };
@@ -348,9 +400,9 @@ class NavMenu
      *
      * @return list<array{key:string,label:string,mark:string,route:?string,match:string,tone:string}>
      */
-    public static function mobilePrimary(User $user): array
+    public static function mobilePrimary(User $user, ?array $groups = null): array
     {
-        $groups = collect(self::forUser($user))->keyBy('key');
+        $groups = collect($groups ?? self::forUser($user))->keyBy('key');
         $order = [
             'home', 'daily_logs', 'reception', 'handoffs', 'notifications',
             'customers', 'parts', 'cost_approvals', 'accounting', 'reports',

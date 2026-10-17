@@ -17,6 +17,7 @@ use App\Http\Controllers\SmsStatusController;
 use App\Http\Controllers\BackupCronController;
 use App\Http\Controllers\BackupCloudController;
 use App\Http\Controllers\SystemToolsController;
+use App\Http\Controllers\TrashController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
 use App\Http\Controllers\PaymentReceiptController;
@@ -29,10 +30,18 @@ use App\Http\Controllers\StaffSmsTemplateController;
 use App\Http\Controllers\Portal\AuthController as PortalAuthController;
 use App\Http\Controllers\Portal\CartableController as PortalCartableController;
 use App\Http\Controllers\Portal\MessageController as PortalMessageController;
+use App\Http\Controllers\LicenseApiController;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsurePortalCustomer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/license/activate', [LicenseApiController::class, 'activate'])
+    ->middleware('throttle:30,1')
+    ->name('license.activate');
+Route::post('/license/verify', [LicenseApiController::class, 'verify'])
+    ->middleware('throttle:60,1')
+    ->name('license.verify');
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -124,11 +133,21 @@ Route::middleware('auth')->group(function () {
         Route::get('deliveries/group', [DeliveryController::class, 'create'])->name('deliveries.group');
         Route::post('deliveries/lookup', [DeliveryController::class, 'lookup'])->name('deliveries.lookup');
         Route::post('deliveries/group', [DeliveryController::class, 'store'])->name('deliveries.store');
-        Route::resource('receptions', ReceptionController::class)->only(['index', 'create', 'store', 'show']);
+        Route::resource('receptions', ReceptionController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
+        Route::get('receptions/{reception}/report-partial', [ReceptionController::class, 'reportPartial'])->name('receptions.report-partial');
+        Route::get('receptions/{reception}/history', [ReceptionController::class, 'history'])->name('receptions.history');
         Route::post('receptions/{reception}/status', [ReceptionController::class, 'updateStatus'])->name('receptions.status');
         Route::post('receptions/{reception}/parts', [ReceptionController::class, 'addPart'])->name('receptions.parts');
         Route::post('receptions/{reception}/payments', [ReceptionController::class, 'addPayment'])->name('receptions.payments');
+        Route::put('receptions/{reception}/payments/{payment}', [ReceptionController::class, 'updatePayment'])->name('receptions.payments.update');
+        Route::delete('receptions/{reception}/payments/{payment}', [ReceptionController::class, 'destroyPayment'])->name('receptions.payments.destroy');
+        Route::post('receptions/{reception}/settle-deliver', [ReceptionController::class, 'settleAndDeliver'])->name('receptions.settle-deliver');
+        Route::post('receptions/{reception}/collect-debt', [ReceptionController::class, 'collectDebt'])->name('receptions.collect-debt');
         Route::post('receptions/{reception}/cancel-delivery', [ReceptionController::class, 'cancelDelivery'])->name('receptions.cancel-delivery');
+        Route::post('receptions/{reception}/exit-otp/required', [ReceptionController::class, 'updateExitOtpRequired'])->name('receptions.exit-otp.required');
+        Route::post('receptions/{reception}/exit-otp/send', [ReceptionController::class, 'sendExitOtp'])->name('receptions.exit-otp.send');
+        Route::post('receptions/{reception}/exit-otp/verify', [ReceptionController::class, 'verifyExitOtp'])->name('receptions.exit-otp.verify');
+        Route::post('receptions/{reception}/exit-otp/bypass', [ReceptionController::class, 'bypassExitOtp'])->name('receptions.exit-otp.bypass');
         Route::post('receptions/{reception}/cost-stages', [ReceptionController::class, 'storeCostStage'])->name('receptions.cost-stages');
         Route::delete('receptions/{reception}/cost-stages/{stage}', [ReceptionController::class, 'destroyCostStage'])->name('receptions.cost-stages.destroy');
         Route::post('receptions/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('receptions.zarinpal');
@@ -189,7 +208,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware(EnsurePermission::class.':technicians')->group(function () {
-        Route::resource('technicians', TechnicianController::class)->except(['show', 'destroy']);
+        Route::resource('technicians', TechnicianController::class)->except(['show']);
     });
 
     Route::middleware(EnsurePermission::class.':employees')->group(function () {
@@ -283,6 +302,7 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/invoice', [SettingController::class, 'updateInvoice'])->name('settings.invoice');
         Route::post('settings/payments', [SettingController::class, 'updatePayments'])->name('settings.payments');
         Route::post('settings/backup', [SettingController::class, 'updateBackup'])->name('settings.backup');
+        Route::post('settings/backup/run-now', [SettingController::class, 'runBackupNow'])->name('settings.backup.run-now');
         Route::get('settings/backup/cloud/{provider}/connect', [BackupCloudController::class, 'connect'])
             ->whereIn('provider', ['google', 'onedrive', 'mega'])
             ->name('settings.backup.cloud.connect');
@@ -306,5 +326,30 @@ Route::middleware('auth')->group(function () {
         Route::get('system-tools/backups/{file}', [SystemToolsController::class, 'downloadBackup'])
             ->where('file', '[A-Za-z0-9._-]+')
             ->name('system-tools.backups.download');
+    });
+
+    // Customer installs: /licenses/status shows THIS site's active serial.
+    // Seller installs: /licenses/* is the issue/monitor center (blocked on customer sites).
+    Route::middleware(EnsurePermission::class.':dashboard')->get('/licenses/status', [\App\Http\Controllers\LicenseAdminController::class, 'status'])->name('licenses.status');
+
+    Route::middleware(EnsurePermission::class.':system.tools')->prefix('licenses')->name('licenses.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');
+        Route::get('/online', [\App\Http\Controllers\LicenseAdminController::class, 'online'])->name('online');
+        Route::get('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'plans'])->name('plans');
+        Route::post('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'savePlans'])->name('plans.save');
+        Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
+        Route::get('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'edit'])->name('edit');
+        Route::post('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'update'])->name('update');
+        Route::get('/{license}/renew', [\App\Http\Controllers\LicenseAdminController::class, 'renewForm'])->name('renew');
+        Route::post('/{license}/sms', [\App\Http\Controllers\LicenseAdminController::class, 'sendSms'])->name('sms');
+        Route::post('/{license}/revoke', [\App\Http\Controllers\LicenseAdminController::class, 'revoke'])->name('revoke');
+        Route::post('/{license}/unbind', [\App\Http\Controllers\LicenseAdminController::class, 'unbind'])->name('unbind');
+        Route::post('/{license}/extend', [\App\Http\Controllers\LicenseAdminController::class, 'extend'])->name('extend');
+    });
+
+    Route::middleware(EnsurePermission::class.':receptions')->prefix('trash')->name('trash.')->group(function () {
+        Route::get('/', [TrashController::class, 'index'])->name('index');
+        Route::post('/restore', [TrashController::class, 'restore'])->name('restore');
+        Route::post('/force', [TrashController::class, 'forceDestroy'])->name('force');
     });
 });
