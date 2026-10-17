@@ -31,6 +31,7 @@ use App\Http\Controllers\Portal\AuthController as PortalAuthController;
 use App\Http\Controllers\Portal\CartableController as PortalCartableController;
 use App\Http\Controllers\Portal\MessageController as PortalMessageController;
 use App\Http\Controllers\LicenseApiController;
+use App\Http\Controllers\AppUpdateController;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsurePortalCustomer;
 use Illuminate\Support\Facades\Auth;
@@ -121,6 +122,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
         Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     });
+    // میانبرهای شخصی — همه نقش‌های واردشده
+    Route::post('/profile/shortcuts', [ProfileController::class, 'updateShortcuts'])->name('profile.shortcuts');
 
     Route::middleware(EnsurePermission::class.':customers')->group(function () {
         Route::resource('customers', CustomerController::class);
@@ -326,6 +329,9 @@ Route::middleware('auth')->group(function () {
         Route::get('system-tools/backups/{file}', [SystemToolsController::class, 'downloadBackup'])
             ->where('file', '[A-Za-z0-9._-]+')
             ->name('system-tools.backups.download');
+        Route::get('system-tools/updates', [AppUpdateController::class, 'index'])->name('system-tools.updates');
+        Route::get('system-tools/updates/check', [AppUpdateController::class, 'check'])->name('system-tools.updates.check');
+        Route::post('system-tools/updates/apply', [AppUpdateController::class, 'apply'])->name('system-tools.updates.apply');
     });
 
     // Customer installs: /licenses/status shows THIS site's active serial.

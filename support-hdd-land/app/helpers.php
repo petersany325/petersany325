@@ -151,3 +151,38 @@ if (! function_exists('jalali_input')) {
         return $v === '—' ? '' : $v;
     }
 }
+if (! function_exists('shop_name')) {
+    /** Customer brand / company name (white-label). */
+    function shop_name(?string $default = null): string
+    {
+        $fallback = $default ?? (string) config('app.name', 'تعمیرگاه');
+        try {
+            if (class_exists(\App\Models\AppSetting::class)) {
+                $v = \App\Models\AppSetting::getValue('invoice_shop_name');
+                if (is_string($v) && trim($v) !== '') {
+                    return trim($v);
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return trim($fallback) !== '' ? trim($fallback) : 'تعمیرگاه';
+    }
+}
+
+if (! function_exists('shop_tagline')) {
+    function shop_tagline(): string
+    {
+        try {
+            if (class_exists(\App\Models\AppSetting::class)) {
+                $v = \App\Models\AppSetting::getValue('shop_tagline');
+                if (is_string($v) && trim($v) !== '') {
+                    return trim($v);
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return 'سیستم مدیریت تعمیرات';
+    }
+}

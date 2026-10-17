@@ -214,9 +214,10 @@ class NavMenu
                 'route' => 'system-tools.index',
                 'match' => 'system-tools.*',
                 'mark' => 'س',
-                'hint' => 'کش، تعمیر و بازسازی دیتابیس',
+                'hint' => 'کش، تعمیر، بکاپ و آپدیت زنده',
                 'children' => [
-                    ['label' => 'نگهداری و بکاپ', 'route' => 'system-tools.index', 'match' => 'system-tools.*', 'hint' => 'کش، تعمیر، بکاپ و ریستور', 'mark' => 'ن'],
+                    ['label' => 'نگهداری و بکاپ', 'route' => 'system-tools.index', 'match' => 'system-tools.index|system-tools.run|system-tools.backups*', 'hint' => 'کش، تعمیر، بکاپ و ریستور', 'mark' => 'ن'],
+                    ['label' => 'آپدیت نرم‌افزار', 'route' => 'system-tools.updates', 'match' => 'system-tools.updates*', 'hint' => 'بررسی زنده و نصب نسخه جدید', 'mark' => 'آ'],
                 ],
             ],
             [
@@ -260,13 +261,14 @@ class NavMenu
                 'label' => 'لایسنس نصب',
                 'permission' => 'dashboard',
                 'route' => 'licenses.status',
-                'match' => 'licenses.status',
+                'match' => 'licenses.status|system-tools.updates*',
                 'mark' => 'ل',
-                'hint' => 'سریال فعال این نصب',
+                'hint' => 'سریال فعال و آپدیت نرم‌افزار',
                 'admin_only' => true,
                 'customer_only' => true,
                 'children' => [
                     ['label' => 'وضعیت و سریال', 'route' => 'licenses.status', 'match' => 'licenses.status', 'hint' => 'پلن، دامنه، تاریخ اعتبار', 'mark' => 'ل'],
+                    ['label' => 'آپدیت نرم‌افزار', 'route' => 'system-tools.updates', 'match' => 'system-tools.updates*', 'hint' => 'بررسی و نصب نسخه جدید', 'mark' => 'آ', 'permission' => 'system.tools'],
                 ],
             ];
         }

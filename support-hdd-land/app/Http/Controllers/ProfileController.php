@@ -52,4 +52,39 @@ class ProfileController extends Controller
 
         return back()->with('success', 'اطلاعات پروفایل ذخیره شد.');
     }
+
+    public function updateShortcuts(Request $request)
+    {
+        $user = Auth::user();
+        $data = $request->validate([
+            'shortcuts' => ['nullable', 'array', 'max:'.\App\Support\StaffShortcutDock::MAX],
+            'shortcuts.*' => ['string', 'max:120'],
+            'enabled' => ['nullable', 'boolean'],
+        ]);
+
+        $payload = [];
+        if (array_key_exists('enabled', $data)) {
+            $payload['ui_shortcuts_enabled'] = (bool) $data['enabled'];
+        }
+        if (array_key_exists('shortcuts', $data)) {
+            $payload['ui_shortcuts'] = \App\Support\StaffShortcutDock::sanitizeIds($user, $data['shortcuts'] ?? []);
+        }
+        if ($payload !== []) {
+            $user->forceFill($payload)->save();
+        }
+
+        $fresh = $user->fresh();
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'ok' => true,
+                'enabled' => $fresh->ui_shortcuts_enabled !== false,
+                'shortcuts' => \App\Support\StaffShortcutDock::forUser($fresh),
+                'message' => array_key_exists('enabled', $data) && ! array_key_exists('shortcuts', $data)
+                    ? (((bool) ($data['enabled'] ?? true)) ? 'میانبر روشن شد.' : 'میانبر خاموش شد.')
+                    : 'میانبرها ذخیره شد.',
+            ]);
+        }
+
+        return back()->with('success', 'تنظیمات میانبر ذخیره شد.');
+    }
 }
