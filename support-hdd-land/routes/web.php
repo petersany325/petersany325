@@ -293,6 +293,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware(EnsurePermission::class.':settings')->group(function () {
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::post('settings/general', [SettingController::class, 'updateGeneral'])->name('settings.general');
         Route::post('settings/fault-types', [SettingController::class, 'storeFaultType'])->name('settings.fault-types');
         Route::put('settings/fault-types/{faultType}', [SettingController::class, 'updateFaultType'])->name('settings.fault-types.update');
         Route::delete('settings/fault-types/{faultType}', [SettingController::class, 'destroyFaultType'])->name('settings.fault-types.destroy');
@@ -303,8 +304,20 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/sms', [SettingController::class, 'updateSms'])->name('settings.sms');
         Route::post('settings/sms/test', [SettingController::class, 'testSms'])->name('settings.sms.test');
         Route::post('settings/invoice', [SettingController::class, 'updateInvoice'])->name('settings.invoice');
+        Route::post('settings/labels', [SettingController::class, 'updateLabels'])->name('settings.labels');
+        Route::get('labels/preview', function () {
+            abort(404, 'ماژول چاپ برچسب روی این نصب فعال نیست.');
+        })->name('labels.preview');
         Route::post('settings/payments', [SettingController::class, 'updatePayments'])->name('settings.payments');
         Route::post('settings/backup', [SettingController::class, 'updateBackup'])->name('settings.backup');
+        Route::post('settings/seo', [SettingController::class, 'updateSeo'])->name('settings.seo');
+        Route::get('settings/seo/apex-download', function () {
+            abort(404, 'موتور سئو روی این نصب فعال نیست.');
+        })->name('settings.seo.apex-download');
+        Route::post('settings/seo/apex-publish', function () {
+            abort(404, 'موتور سئو روی این نصب فعال نیست.');
+        })->name('settings.seo.apex-publish');
+        Route::post('settings/portal', [SettingController::class, 'updatePortal'])->name('settings.portal');
         Route::post('settings/backup/run-now', [SettingController::class, 'runBackupNow'])->name('settings.backup.run-now');
         Route::get('settings/backup/cloud/{provider}/connect', [BackupCloudController::class, 'connect'])
             ->whereIn('provider', ['google', 'onedrive', 'mega'])

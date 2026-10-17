@@ -91,6 +91,11 @@ class User extends Authenticatable
         return in_array($permission, $this->permissionList(), true);
     }
 
+    public function needsInitialPassword(): bool
+    {
+        return ! $this->can_login_password;
+    }
+
     public static function normalizePhone(?string $phone): ?string
     {
         if (! $phone) {
