@@ -49,17 +49,21 @@
             <nav aria-label="{{ $ft['column1_title'] }}">
                 <h2>{{ $ft['column1_title'] }}</h2>
                 @foreach ($ftLinks1 as $link)
-                    <a href="{{ url($link['url']) }}"><span>{{ $link['label'] }}</span><i aria-hidden="true">←</i></a>
+                    <a href="{{ str_starts_with($link['url'], 'http') ? $link['url'] : url($link['url']) }}" @if(str_starts_with($link['url'], 'http')) rel="noopener" @endif><span>{{ $link['label'] }}</span><i aria-hidden="true">←</i></a>
                 @endforeach
             </nav>
 
             <nav aria-label="{{ $ft['column2_title'] }}">
                 <h2>{{ $ft['column2_title'] }}</h2>
                 @foreach ($ftLinks2 as $link)
-                    <a href="{{ url($link['url']) }}"><span>{{ $link['label'] }}</span><i aria-hidden="true">←</i></a>
+                    <a href="{{ str_starts_with($link['url'], 'http') ? $link['url'] : url($link['url']) }}" @if(str_starts_with($link['url'], 'http')) rel="noopener" @endif><span>{{ $link['label'] }}</span><i aria-hidden="true">←</i></a>
                 @endforeach
                 @if (!empty($ft['show_webapp']))
                     <a href="{{ url('/app') }}"><span>وب‌اپ فروشگاه</span><i aria-hidden="true">←</i></a>
+                @endif
+                @if(class_exists(\App\Support\SiteHost::class) && \App\Support\SiteHost::isShop())
+                    <a href="{{ \App\Support\SiteHost::studioUrl('/') }}"><span>طراحی سایت و نرم‌افزار</span><i aria-hidden="true">←</i></a>
+                    <a href="{{ \App\Support\SiteHost::receiptUrl() }}" rel="noopener"><span>سامانه قبض</span><i aria-hidden="true">←</i></a>
                 @endif
             </nav>
 

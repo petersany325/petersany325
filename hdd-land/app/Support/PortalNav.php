@@ -12,6 +12,18 @@ class PortalNav
     /** @return list<array{label:string,url:string,children?:list<array{label:string,url:string}>}> */
     public static function storefront(): array
     {
+        if (class_exists(SiteHost::class) && SiteHost::isStudio()) {
+            $items = [
+                ['label' => 'خانه', 'url' => '/', 'children' => []],
+            ];
+            foreach (SiteHost::studioMenu() as $row) {
+                $items[] = ['label' => $row['label'], 'url' => $row['url'], 'children' => []];
+            }
+            $items[] = ['label' => 'تماس', 'url' => '/contact', 'children' => []];
+
+            return $items;
+        }
+
         return [
             [
                 'label' => 'خانه',

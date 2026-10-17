@@ -30,7 +30,9 @@
 </head>
 @php
     $shopName = \App\Models\Setting::getValue('shop_name', config('app.name', 'HDD Land Shop'));
-    $cartCount = class_exists(\Plugins\CartCheckout\src\Cart::class) ? \Plugins\CartCheckout\src\Cart::count() : 0;
+    $isStudioFace = false;
+    try { $isStudioFace = class_exists(\App\Support\SiteHost::class) && \App\Support\SiteHost::isStudio(); } catch (\Throwable $e) {}
+    $cartCount = (!$isStudioFace && class_exists(\Plugins\CartCheckout\src\Cart::class)) ? \Plugins\CartCheckout\src\Cart::count() : 0;
     $mmNavAlign = 'right';
     $headerClass = 'site-header';
     $headerStyle = '';
@@ -45,7 +47,7 @@
     $waBodyClass = '';
     $waQuick = [];
     try {
-        if (class_exists(\Plugins\WebApp\Plugin::class)) {
+        if (! $isStudioFace && class_exists(\Plugins\WebApp\Plugin::class)) {
             $waS = \Plugins\WebApp\Plugin::settings();
             if (! empty($waS['enabled']) && ! empty($waS['storefront_bottom_nav'])) {
                 $waBodyClass = ' has-wa-tabbar';
@@ -66,7 +68,7 @@
 <div class="topbar">
     <div class="container">
         <div class="topbar-start">
-          <span>تأمین سخت‌افزار ذخیره‌سازی برای سازمان‌ها و حرفه‌ای‌ها</span>
+          <span>{{ $isStudioFace ? 'استودیو طراحی سایت و نرم‌افزار تحت وب' : 'فروشگاه قطعات ذخیره‌سازی' }}</span>
         </div>
         <div class="topbar-end">
           <a href="tel:{{ preg_replace('/\D+/', '', (string) \App\Models\Setting::getValue('shop_phone', '01144447220')) }}">{{ \App\Models\Setting::getValue('shop_phone', '01144447220') }}</a>
@@ -96,15 +98,19 @@
               <button type="button" class="mobile-nav-close" id="navCloseBtn" aria-label="بستن منو">×</button>
             </div>
             @include('mega-menu::storefront.nav')
-            <nav class="hl-extra-nav" aria-label="صفحات شرکت">
-              <a href="{{ url('/services') }}">خدمات سازمانی</a>
-              <a href="{{ url('/training') }}">آموزش</a>
-              <a href="{{ url('/about') }}">درباره ما</a>
+            @unless($isStudioFace)
+            <nav class="hl-extra-nav" aria-label="فروشگاه قطعات">
+              <a href="{{ url('/serial-check') }}">گارانتی</a>
+              <a href="{{ url('/orders/track') }}">پیگیری سفارش</a>
+              <a href="{{ \App\Support\SiteHost::receiptUrl() }}" rel="noopener">پیگیری قبض</a>
             </nav>
+            @endunless
           </div>
         </div>
         <div class="hl-headbar__utils">
+          @unless($isStudioFace)
           <a class="hdr-util" href="{{ url('/cart') }}">سبد خرید@if($cartCount>0)<i>{{ $cartCount }}</i>@endif</a>
+          @endunless
           @auth
             <a class="hdr-util" href="{{ route('account.index') }}">حساب کاربری</a>
             <form action="{{ url('/logout') }}" method="post" class="hdr-logout">@csrf
@@ -115,6 +121,7 @@
           @endauth
         </div>
     </div>
+    @unless($isStudioFace)
     <div class="hl-searchbar">
       <div class="container">
         <form class="hl-search" action="{{ url('/products') }}" method="get" role="search">
@@ -123,6 +130,7 @@
         </form>
       </div>
     </div>
+    @endunless
 </header>
 <div class="nav-backdrop" id="navBackdrop" hidden></div>
 

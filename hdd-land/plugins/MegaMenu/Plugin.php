@@ -247,6 +247,13 @@ class Plugin extends BasePlugin
             Cache::put('mega_menu_schema_342', true, now()->addDay());
         }
         parent::boot();
+        try {
+            if (is_file(base_path('plugins/Studio/Plugin.php'))) {
+                require_once base_path('plugins/Studio/Plugin.php');
+                \Plugins\Studio\Plugin::ensureBooted();
+            }
+        } catch (\Throwable) {
+        }
     }
 
     /** لینک قدیمی منو /orders/track را نگه می‌داریم؛ فقط مسیر خالی را درست می‌کنیم */

@@ -34,7 +34,7 @@ class FooterConfig
         ];
     }
 
-    public static function get(): array
+    public static function stored(): array
     {
         $raw = SettingsStore::get(self::KEY, []);
         if (is_string($raw)) {
@@ -44,9 +44,41 @@ class FooterConfig
         return array_merge(self::defaults(), is_array($raw) ? $raw : []);
     }
 
+    /** @return array<string, mixed> */
+    public static function studioOverlay(): array
+    {
+        $receipt = class_exists(SiteHost::class) ? SiteHost::receiptUrl() : 'https://support.hdd-land.ir';
+        $shop = class_exists(SiteHost::class) ? SiteHost::shopUrl('/') : 'https://shop.hdd-land.ir';
+
+        return [
+            'brand' => 'سرزمین هارد',
+            'description' => 'استودیو طراحی سایت، نرم‌افزار حسابداری تحت وب، پروژه هوش مصنوعی و نرم‌افزار قبض.',
+            'column1_title' => 'خدمات استودیو',
+            'column1_links' => "طراحی سایت|/design\nپروژه AI|/ai\nحسابداری تحت وب|/accounting\nپروژه‌های سایت|/projects\nنرم‌افزار قبض|/receipt-software",
+            'column2_title' => 'لینک‌ها',
+            'column2_links' => "تماس|/contact\nسامانه قبض|{$receipt}\nفروشگاه قطعات|{$shop}",
+            'show_newsletter' => false,
+            'show_webapp' => false,
+            'trust_items' => "منوی سبک\nبدون کاتالوگ قطعه\nقبض جدا و محفوظ",
+        ];
+    }
+
+    public static function get(): array
+    {
+        $base = static::stored();
+        try {
+            if (class_exists(SiteHost::class) && SiteHost::isStudio()) {
+                return array_merge($base, static::studioOverlay());
+            }
+        } catch (\Throwable) {
+        }
+
+        return $base;
+    }
+
     public static function save(array $d): void
     {
-        $s = self::get();
+        $s = static::stored();
         foreach (['enabled', 'show_newsletter', 'show_webapp', 'show_back_top'] as $k) {
             $s[$k] = ! empty($d[$k]);
         }
