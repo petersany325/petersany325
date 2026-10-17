@@ -1,5 +1,188 @@
 /* Saramin Hard — public/js/app.js */
 (function () {
+    function initStaffShortcutDock() {
+        var dock = document.querySelector('[data-sc-dock]');
+        var editor = document.querySelector('[data-sc-editor]');
+        var toggle = document.querySelector('[data-sc-toggle]');
+        var mobileStrip = document.querySelector('[data-sc-mobile-strip]');
+        var switchEl = document.querySelector('[data-sc-switch]');
+        var saveUrl = (dock && dock.getAttribute('data-save-url'))
+            || (switchEl && switchEl.getAttribute('data-save-url'))
+            || '';
+        if (!dock && !toggle) return;
+
+        var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+        var max = parseInt((dock && dock.getAttribute('data-max')) || '10', 10) || 10;
+        var catalogRoot = editor ? editor.querySelector('[data-sc-catalog]') : null;
+        var filterInput = editor ? editor.querySelector('[data-sc-filter]') : null;
+        var countEl = editor ? editor.querySelector('[data-sc-count]') : null;
+
+        function selectedIds() {
+            if (!catalogRoot) return [];
+            return Array.prototype.map.call(catalogRoot.querySelectorAll('[data-sc-pin]:checked'), function (el) {
+                return el.value || el.getAttribute('data-sc-id') || '';
+            }).filter(Boolean);
+        }
+
+        function syncRowState(row) {
+            if (!row) return;
+            var cb = row.querySelector('[data-sc-pin]');
+            row.classList.toggle('is-on', !!(cb && cb.checked));
+        }
+
+        function syncCount() {
+            if (countEl) countEl.textContent = String(selectedIds().length);
+        }
+
+        function applyEnabled(on) {
+            if (dock) {
+                dock.hidden = !on;
+                dock.classList.toggle('is-off', !on);
+                dock.setAttribute('data-enabled', on ? '1' : '0');
+            }
+            if (mobileStrip) {
+                mobileStrip.hidden = !on;
+                mobileStrip.classList.toggle('is-off', !on);
+            }
+            if (toggle) toggle.checked = !!on;
+            if (!on && editor && !editor.hidden) closeEditor();
+        }
+
+        function saveEnabled(on) {
+            if (!saveUrl) return;
+            fetch(saveUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ enabled: !!on }),
+                credentials: 'same-origin',
+            }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+              .then(function (res) {
+                  if (!res.ok || !(res.j && res.j.ok)) {
+                      applyEnabled(!on);
+                      alert((res.j && res.j.message) || 'ذخیره وضعیت میانبر ناموفق بود.');
+                  }
+              })
+              .catch(function () {
+                  applyEnabled(!on);
+                  alert('خطا در ذخیره وضعیت میانبر.');
+              });
+        }
+
+        if (toggle) {
+            toggle.addEventListener('change', function () {
+                var on = !!toggle.checked;
+                applyEnabled(on);
+                saveEnabled(on);
+            });
+        }
+
+        if (!editor || !catalogRoot) return;
+
+        function openEditor() {
+            if (toggle && !toggle.checked) {
+                applyEnabled(true);
+                saveEnabled(true);
+            }
+            editor.hidden = false;
+            document.body.style.overflow = 'hidden';
+            syncCount();
+        }
+        function closeEditor() {
+            editor.hidden = true;
+            if (!document.getElementById('staff-drawer') || document.getElementById('staff-drawer').hidden) {
+                document.body.style.overflow = '';
+            }
+        }
+
+        document.querySelectorAll('[data-sc-open-editor]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                openEditor();
+            });
+        });
+        editor.querySelectorAll('[data-sc-close-editor]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                closeEditor();
+            });
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !editor.hidden) closeEditor();
+        });
+
+        catalogRoot.addEventListener('change', function (e) {
+            var cb = e.target.closest('[data-sc-pin]');
+            if (!cb) return;
+            var row = cb.closest('[data-sc-row]');
+            if (cb.checked && selectedIds().length > max) {
+                cb.checked = false;
+                alert('حداکثر ' + max + ' میانبر می‌توانید داشته باشید.');
+            }
+            syncRowState(row);
+            syncCount();
+        });
+
+        if (filterInput) {
+            filterInput.addEventListener('input', function () {
+                var q = (filterInput.value || '').trim().toLowerCase();
+                catalogRoot.querySelectorAll('[data-sc-row]').forEach(function (row) {
+                    var label = (row.getAttribute('data-menu-label') || '').toLowerCase();
+                    row.style.display = (!q || label.indexOf(q) !== -1) ? '' : 'none';
+                });
+            });
+        }
+
+        var resetBtn = editor.querySelector('[data-sc-reset]');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function () {
+                if (!confirm('میانبرها به پیش‌فرض نقش شما برگردد؟')) return;
+                saveShortcuts([], true);
+            });
+        }
+
+        var saveBtn = editor.querySelector('[data-sc-save]');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function () {
+                saveShortcuts(selectedIds(), true);
+            });
+        }
+
+        function saveShortcuts(ids, reload) {
+            if (!saveUrl) return;
+            saveBtn && (saveBtn.disabled = true);
+            fetch(saveUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ shortcuts: ids }),
+                credentials: 'same-origin',
+            }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+              .then(function (res) {
+                  if (!res.ok || !(res.j && res.j.ok)) {
+                      alert((res.j && res.j.message) || 'ذخیره میانبر ناموفق بود.');
+                      return;
+                  }
+                  if (reload) window.location.reload();
+                  else closeEditor();
+              })
+              .catch(function () { alert('خطا در ذخیره میانبرها.'); })
+              .finally(function () { saveBtn && (saveBtn.disabled = false); });
+        }
+
+        catalogRoot.querySelectorAll('[data-sc-row]').forEach(syncRowState);
+        syncCount();
+    }
+
+
     'use strict';
 
     /* =========================================================
@@ -1176,5 +1359,6 @@
         initStaffShell();
         initStaffLoginDeviceHint();
         initLookupEditors();
+        initStaffShortcutDock();
     });
 })();

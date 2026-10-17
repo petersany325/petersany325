@@ -16,7 +16,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp11">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=erp12-dock">
     <script>
     (function () {
         try {
@@ -124,13 +124,43 @@
     </div>
 
     {{-- نوار ابزار --}}
+    @php
+        $dockEnabled = auth()->user()->ui_shortcuts_enabled !== false;
+        $dockStripItems = \App\Support\StaffShortcutDock::forUser(auth()->user());
+    @endphp
     <div class="app-toolbar">
         <div class="page-caption">@yield('page_title', 'میز کار')</div>
         <div class="user-chip desktop-only">
             <div class="avatar">{{ mb_substr(auth()->user()->name, 0, 1) }}</div>
             <div>{{ auth()->user()->name }}</div>
         </div>
-        <button type="button" class="btn btn-ghost mobile-only staff-more-btn" data-staff-drawer-open>منوها</button>
+        <div class="app-toolbar-actions">
+            <label class="sc-dock-switch" title="روشن/خاموش میانبر" data-sc-switch
+                   data-save-url="{{ route('profile.shortcuts') }}">
+                <span class="sc-dock-switch-txt">میانبر</span>
+                <input type="checkbox" data-sc-toggle {{ $dockEnabled ? 'checked' : '' }} aria-label="فعال‌سازی میانبر">
+                <span class="sc-dock-switch-ui" aria-hidden="true">
+                    <span class="sc-dock-switch-knob"></span>
+                    <span class="sc-dock-switch-on">ON</span>
+                    <span class="sc-dock-switch-off">OFF</span>
+                </span>
+            </label>
+            <button type="button" class="btn btn-ghost mobile-only staff-more-btn" data-staff-drawer-open>منوها</button>
+        </div>
+    </div>
+    <div class="sc-dock-mobile-strip mobile-only {{ $dockEnabled ? '' : 'is-off' }}" aria-label="میانبرها" data-sc-mobile-strip @if(! $dockEnabled) hidden @endif>
+        @foreach($dockStripItems as $item)
+            <a href="{{ $item['url'] }}"
+               class="sc-dock-btn tone-{{ $item['tone'] }} {{ !empty($item['active']) ? 'is-on' : '' }}"
+               title="{{ $item['label'] }}">
+                <span class="sc-dock-ico">{{ $item['mark'] }}</span>
+                <span class="sc-dock-lbl">{{ $item['label'] }}</span>
+            </a>
+        @endforeach
+        <button type="button" class="sc-dock-btn sc-dock-edit" data-sc-open-editor title="ویرایش میانبر">
+            <span class="sc-dock-ico">＋</span>
+            <span class="sc-dock-lbl">میانبر</span>
+        </button>
     </div>
 
     <div class="app-workspace">
@@ -147,6 +177,7 @@
             </div>
             <div class="win-body">
                 @include('partials.flash')
+                @includeIf('partials.update-banner')
                 @yield('content')
             </div>
         </div>
@@ -171,6 +202,8 @@
             <small>بیشتر</small>
         </button>
     </nav>
+
+    @include('partials.staff-shortcut-dock')
 
     {{-- کشوی همه منوها (موبایل) --}}
     <div class="staff-drawer" id="staff-drawer" hidden>
@@ -233,7 +266,7 @@
 @else
     @yield('content')
 @endauth
-<script src="{{ asset('js/app.js') }}?v=erp6"></script>
+<script src="{{ asset('js/app.js') }}?v=erp7-dock"></script>
 <script>
 (function () {
     var bar = document.getElementById('win-menubar');

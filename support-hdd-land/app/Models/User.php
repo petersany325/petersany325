@@ -13,7 +13,8 @@ use Illuminate\Notifications\Notifiable;
 
 #[Fillable([
     'name', 'email', 'phone', 'password', 'role', 'is_active',
-    'permissions', 'can_login_otp', 'can_login_password',
+    'permissions', 'ui_shortcuts', 'ui_shortcuts_enabled',
+    'can_login_otp', 'can_login_password',
 ])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
@@ -28,6 +29,8 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'permissions' => 'array',
+            'ui_shortcuts' => 'array',
+            'ui_shortcuts_enabled' => 'boolean',
             'can_login_otp' => 'boolean',
             'can_login_password' => 'boolean',
         ];
@@ -86,6 +89,11 @@ class User extends Authenticatable
         }
 
         return in_array($permission, $this->permissionList(), true);
+    }
+
+    public function needsInitialPassword(): bool
+    {
+        return ! $this->can_login_password;
     }
 
     public static function normalizePhone(?string $phone): ?string

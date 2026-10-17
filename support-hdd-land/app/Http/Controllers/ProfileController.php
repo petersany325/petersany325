@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Support\Permissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -13,25 +12,44 @@ class ProfileController extends Controller
 {
     public function edit()
     {
-        return view('profile.edit', ['user' => Auth::user()]);
+        $user = Auth::user();
+
+        return view('profile.edit', [
+            'user' => $user,
+            'needsPasswordCreate' => $user->needsInitialPassword(),
+        ]);
     }
 
     public function updatePassword(Request $request)
     {
         $user = Auth::user();
+        $needsCreate = $user->needsInitialPassword();
 
-        $data = $request->validate([
-            'current_password' => ['required', 'string'],
-            'password' => ['required', 'string', 'min:6', 'confirmed'],
-        ]);
+        if ($needsCreate) {
+            $data = $request->validate([
+                'password' => ['required', 'string', 'min:6', 'confirmed'],
+            ]);
+        } else {
+            $data = $request->validate([
+                'current_password' => ['required', 'string'],
+                'password' => ['required', 'string', 'min:6', 'confirmed'],
+            ]);
 
-        if (! Hash::check($data['current_password'], $user->password)) {
-            return back()->withErrors(['current_password' => 'رمز فعلی اشتباه است.']);
+            if (! Hash::check($data['current_password'], $user->password)) {
+                return back()->withErrors(['current_password' => 'رمز فعلی اشتباه است.']);
+            }
         }
 
-        $user->update(['password' => $data['password']]);
+        $user->update([
+            'password' => $data['password'],
+            'can_login_password' => true,
+        ]);
 
-        return back()->with('success', 'رمز عبور با موفقیت تغییر کرد.');
+        $message = $needsCreate
+            ? 'رمز عبور ایجاد شد.'
+            : 'رمز عبور با موفقیت تغییر کرد.';
+
+        return back()->with('success', $message);
     }
 
     public function updateProfile(Request $request)
@@ -51,5 +69,40 @@ class ProfileController extends Controller
         ]);
 
         return back()->with('success', 'اطلاعات پروفایل ذخیره شد.');
+    }
+
+    public function updateShortcuts(Request $request)
+    {
+        $user = Auth::user();
+        $data = $request->validate([
+            'shortcuts' => ['nullable', 'array', 'max:'.\App\Support\StaffShortcutDock::MAX],
+            'shortcuts.*' => ['string', 'max:120'],
+            'enabled' => ['nullable', 'boolean'],
+        ]);
+
+        $payload = [];
+        if (array_key_exists('enabled', $data)) {
+            $payload['ui_shortcuts_enabled'] = (bool) $data['enabled'];
+        }
+        if (array_key_exists('shortcuts', $data)) {
+            $payload['ui_shortcuts'] = \App\Support\StaffShortcutDock::sanitizeIds($user, $data['shortcuts'] ?? []);
+        }
+        if ($payload !== []) {
+            $user->forceFill($payload)->save();
+        }
+
+        $fresh = $user->fresh();
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'ok' => true,
+                'enabled' => $fresh->ui_shortcuts_enabled !== false,
+                'shortcuts' => \App\Support\StaffShortcutDock::forUser($fresh),
+                'message' => array_key_exists('enabled', $data) && ! array_key_exists('shortcuts', $data)
+                    ? (((bool) ($data['enabled'] ?? true)) ? 'میانبر روشن شد.' : 'میانبر خاموش شد.')
+                    : 'میانبرها ذخیره شد.',
+            ]);
+        }
+
+        return back()->with('success', 'تنظیمات میانبر ذخیره شد.');
     }
 }
