@@ -193,8 +193,10 @@ class NavMenu
                     'reports.payments',
                     'reports.sms',
                     'reports.messages',
+                    'receptions',
                 ],
                 'children' => [
+                    ['label' => 'پرینت کلی قبض', 'route' => 'reports.receipt-print', 'match' => 'reports.receipt-print|receptions.print-bulk', 'permission' => 'receptions', 'hint' => 'انتخاب چند قبض و چاپ یکجا', 'mark' => 'چ'],
                     ['label' => 'عملکرد تعمیرکاران', 'route' => 'reports.technicians', 'match' => 'reports.technicians*', 'permission' => 'reports.technicians', 'hint' => '', 'mark' => 'ت'],
                     ['label' => 'گزارش مشتریان', 'route' => 'reports.customers', 'match' => 'reports.customers*', 'permission' => 'reports.customers', 'hint' => '', 'mark' => 'ش'],
                     ['label' => 'کالای خرج‌شده', 'route' => 'reports.parts-used', 'match' => 'reports.parts-used', 'permission' => 'reports.parts', 'hint' => '', 'mark' => 'ق'],

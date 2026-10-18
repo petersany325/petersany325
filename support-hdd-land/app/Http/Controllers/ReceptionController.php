@@ -264,22 +264,17 @@ class ReceptionController extends Controller
         });
 
         $count = $receptions->count();
-        $first = $receptions->first();
         $action = $data['action'] ?? 'save_close';
 
-        $smsNote = '';
-        if ($first) {
-            $smsNote = $this->notifyReceptionCreated($first);
-            // for remaining tickets in batch, also send if configured
-            foreach ($receptions->slice(1) as $item) {
-                $this->notifyReceptionCreated($item);
-            }
-        }
+        // One coordinated SMS after the whole group is saved (not per-ticket).
+        $smsNote = $this->notifyGroupReceptionCreated($receptions);
 
         $flash = "{$count} قبض گروهی با کد {$batchCode} ثبت شد.".($smsNote ? ' '.$smsNote : '');
 
-        if ($action === 'save_print' && $first) {
-            return redirect()->route('receptions.print', $first)->with('success', $flash);
+        if ($action === 'save_print' && $receptions->isNotEmpty()) {
+            return redirect()
+                ->route('receptions.print-bulk', ['ids' => $receptions->pluck('id')->all()])
+                ->with('success', $flash);
         }
 
         return redirect()
@@ -758,8 +753,51 @@ class ReceptionController extends Controller
     public function print(Reception $reception)
     {
         $reception->load(['customer', 'technician', 'faultType', 'parts', 'payments', 'costStages']);
+        $invoice = $this->invoiceSettings();
+        $payLinks = \App\Support\PaymentGateways::showOnInvoice()
+            ? \App\Support\PaymentGateways::active()
+            : [];
 
-        $invoice = [
+        return view('receptions.print', compact('reception', 'invoice', 'payLinks'));
+    }
+
+    /**
+     * Print multiple receipts in one browser print job (page-break between sheets).
+     */
+    public function printBulk(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:40'],
+            'ids.*' => ['integer', 'distinct', 'exists:receptions,id'],
+        ]);
+
+        $ids = array_values(array_unique(array_map('intval', $data['ids'])));
+        $receptions = Reception::query()
+            ->with(['customer', 'technician', 'faultType', 'parts', 'payments', 'costStages'])
+            ->whereIn('id', $ids)
+            ->orderByDesc('id')
+            ->get();
+
+        // Keep user-selected order when possible.
+        $byId = $receptions->keyBy('id');
+        $ordered = collect($ids)->map(fn ($id) => $byId->get($id))->filter()->values();
+
+        $invoice = $this->invoiceSettings();
+        $payLinks = \App\Support\PaymentGateways::showOnInvoice()
+            ? \App\Support\PaymentGateways::active()
+            : [];
+
+        return view('receptions.print-bulk', [
+            'receptions' => $ordered,
+            'invoice' => $invoice,
+            'payLinks' => $payLinks,
+        ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function invoiceSettings(): array
+    {
+        return [
             'shop_name' => \App\Models\AppSetting::getValue('invoice_shop_name', 'سرزمین هارد'),
             'phones' => \App\Models\AppSetting::getValue('invoice_phones', ''),
             'address' => \App\Models\AppSetting::getValue('invoice_address', ''),
@@ -781,12 +819,6 @@ class ReceptionController extends Controller
             'show_fault' => \App\Models\AppSetting::getValue('invoice_show_fault', '1') !== '0',
             'show_serial' => \App\Models\AppSetting::getValue('invoice_show_serial', '1') !== '0',
         ];
-
-        $payLinks = \App\Support\PaymentGateways::showOnInvoice()
-            ? \App\Support\PaymentGateways::active()
-            : [];
-
-        return view('receptions.print', compact('reception', 'invoice', 'payLinks'));
     }
 
     private function formData(): array
@@ -1082,6 +1114,30 @@ class ReceptionController extends Controller
             return 'پیامک پذیرش ارسال نشد: '.($result['message'] ?? '');
         } catch (\Throwable $e) {
             return 'خطا در ارسال پیامک پذیرش.';
+        }
+    }
+
+    /**
+     * After group intake finishes: one SMS listing all tickets (not N separate create SMS).
+     */
+    private function notifyGroupReceptionCreated($receptions): string
+    {
+        try {
+            $sms = app(SmsNotificationService::class);
+            $result = $sms->sendGroupIntakeSms($receptions);
+            if (! $result) {
+                return '';
+            }
+            if ($result['ok'] ?? false) {
+                return 'پیامک پذیرش گروهی یکجا برای مشتری ارسال شد.';
+            }
+            if ($result['skipped'] ?? false) {
+                return '';
+            }
+
+            return 'پیامک پذیرش گروهی ارسال نشد: '.($result['message'] ?? '');
+        } catch (\Throwable $e) {
+            return 'خطا در ارسال پیامک پذیرش گروهی.';
         }
     }
 
