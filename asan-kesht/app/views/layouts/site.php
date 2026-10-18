@@ -63,7 +63,7 @@ $description = $tagline . ' — ' . $siteName;
           <a href="<?= e(url((string) $item['href'])) ?>"><?= e((string) $item['label']) ?></a>
         <?php endforeach; ?>
         <?php if ($user): ?>
-          <a href="<?= e(url($user['role'] === 'customer' ? '/account' : '/admin')) ?>">حساب</a>
+          <a href="<?= e(url(home_for_role((string) $user['role']))) ?>">حساب</a>
           <form method="post" action="<?= e(url('/logout')) ?>">
             <?= csrf_field() ?>
             <button class="nav-quote" type="submit">خروج</button>

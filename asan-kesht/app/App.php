@@ -146,8 +146,9 @@ final class App
     {
         $app = $this;
         $this->router->get('/login', function () use ($app): void {
-            if ($app->auth->user()) {
-                redirect($app->auth->user()['role'] === 'customer' ? '/account' : '/admin');
+            $user = $app->auth->user();
+            if ($user) {
+                redirect(home_for_role((string) $user['role']));
             }
             $app->view->render('auth/login', ['title' => 'ورود']);
         });
@@ -253,6 +254,17 @@ final class App
                 flash('error', 'نام کاربری یا موبایل تکراری است.');
             }
             redirect('/admin/users');
+        });
+        $this->router->get('/admin/settings', function () use ($app): void {
+            require_role($app, ['admin']);
+            $items = $app->filter('admin.settings', [
+                ['href' => '/admin/users', 'title' => 'کاربران', 'text' => 'نقش، فعال بودن و رمز کارمندان'],
+                ['href' => '/admin/plugins', 'title' => 'افزونه‌ها', 'text' => 'روشن یا خاموش کردن هر بخش، بدون پاک شدن داده‌ها'],
+            ]);
+            $app->view->render('admin/settings', [
+                'title' => 'تنظیمات',
+                'items' => is_array($items) ? $items : [],
+            ], 'layouts/admin');
         });
         $this->router->get('/admin/plugins', function () use ($app): void {
             require_role($app, ['admin']);

@@ -266,6 +266,6 @@ function reserved_slug(string $slug): bool
 {
     return in_array($slug, [
         'admin', 'account', 'login', 'logout', 'machines', 'quote', 'assets',
-        'install', 'p', 'index.php', 'api', 'estelam', 'rep',
+        'install', 'p', 'index.php', 'api', 'estelam', 'rep', 'register',
     ], true);
 }

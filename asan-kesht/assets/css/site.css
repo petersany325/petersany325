@@ -794,7 +794,10 @@ textarea {
   .foot-grid,
   .sheet,
   .machine,
-  .pair {
+  .pair,
+  .kind-pick,
+  .line-picks,
+  .facts {
     grid-template-columns: 1fr;
   }
 
@@ -851,6 +854,53 @@ a.chip {
 .hp {
   position: absolute;
   left: -9999px;
+}
+
+.kind-pick,
+.line-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.kind-pick label {
+  border: 1px solid var(--line);
+  background: white;
+  padding: 0.75rem;
+}
+
+.kind-pick input,
+.check-line input {
+  width: auto;
+}
+
+.kind-pick small,
+.muted-link {
+  display: block;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.check-line {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  font-weight: 600;
+}
+
+.terms-box {
+  max-height: 8rem;
+  overflow: auto;
+  background: var(--field);
+  border: 1px solid var(--line);
+  padding: 0.75rem;
+  font-weight: 500;
+}
+
+fieldset {
+  border: 1px solid var(--line);
+  margin: 0;
+  padding: 0.8rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

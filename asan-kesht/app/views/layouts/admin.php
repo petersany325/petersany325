@@ -8,6 +8,7 @@ $items = [
     ['href' => '/admin/profile', 'label' => 'نمایه', 'roles' => ['admin', 'employee', 'accountant', 'region_manager', 'representative']],
     ['href' => '/admin/users', 'label' => 'کاربران', 'roles' => ['admin']],
     ['href' => '/admin/plugins', 'label' => 'افزونه‌ها', 'roles' => ['admin']],
+    ['href' => '/admin/settings', 'label' => 'تنظیمات', 'roles' => ['admin']],
 ];
 $extra = $app->filter('admin.menu', []);
 if (is_array($extra)) {

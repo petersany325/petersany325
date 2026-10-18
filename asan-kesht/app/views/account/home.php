@@ -3,7 +3,7 @@
   <div class="wrap">
     <p class="kicker">حساب کاربری</p>
     <h1><?= e((string) $user['name']) ?></h1>
-    <p class="lead">نقش شما: <?= e($user['role'] === 'customer' ? 'مشتری' : ($user['role'] === 'employee' ? 'کارمند' : 'مدیر')) ?></p>
+    <p class="lead">نقش شما: <?= e(ak_role_labels()[(string) $user['role']] ?? (string) $user['role']) ?></p>
     <div class="facts">
       <?php foreach ($cards as $card): ?>
         <a class="line" href="<?= e(url((string) $card['href'])) ?>">

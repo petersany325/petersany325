@@ -40,6 +40,10 @@ return new class extends Plugin {
             $items[] = ['href' => '/admin/theme', 'label' => 'قالب', 'roles' => ['admin']];
             return $items;
         });
+        $app->listen('admin.settings', function (array $items): array {
+            $items[] = ['href' => '/admin/theme', 'title' => 'قالب', 'text' => 'نام، شعار، رنگ، تلفن، نشانی و ایمیل'];
+            return $items;
+        });
         $app->router->get('/admin/theme', function () use ($app): void {
             require_role($app, ['admin']);
             $keys = ['site_name', 'tagline', 'phone', 'address', 'email', 'color_oxide', 'color_ink', 'color_paper', 'color_dark'];

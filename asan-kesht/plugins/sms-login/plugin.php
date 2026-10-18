@@ -41,6 +41,14 @@ return new class extends Plugin {
                 redirect('/login');
             }
             $existing = $app->db->one('SELECT * FROM ak_users WHERE phone = ?', [$phone]);
+            if (!$existing && $app->pluginEnabled('register')) {
+                if (setting($app, 'register', 'open', '1') !== '1') {
+                    flash('error', setting($app, 'register', 'closed_message', 'ثبت‌نام بسته است.'));
+                    redirect('/login');
+                }
+                flash('error', 'برای ساخت حساب، فرم ثبت‌نام را پر کنید.');
+                redirect('/register');
+            }
             if (!$existing && mb_strlen($name) < 3) {
                 flash('error', 'برای ساخت حساب مشتری، نام را هم بنویسید.');
                 redirect('/login');
@@ -105,6 +113,10 @@ return new class extends Plugin {
             }
             $app->db->run('DELETE FROM ak_otp_codes WHERE phone = ?', [$phone]);
             $user = $app->db->one('SELECT * FROM ak_users WHERE phone = ?', [$phone]);
+            if (!$user && $app->pluginEnabled('register')) {
+                flash('error', 'حسابی با این موبایل نیست. اول فرم ثبت‌نام را پر کنید.');
+                redirect('/register');
+            }
             if (!$user) {
                 $app->db->run(
                     'INSERT INTO ak_users (name, phone, role, active, created_at) VALUES (?, ?, "customer", 1, NOW())',

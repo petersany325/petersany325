@@ -34,6 +34,10 @@ return new class extends Plugin {
             $items[] = ['href' => '/admin/sms', 'label' => 'پیامک نیازپرداز', 'roles' => ['admin']];
             return $items;
         });
+        $app->listen('admin.settings', function (array $items): array {
+            $items[] = ['href' => '/admin/sms', 'title' => 'پیامک نیازپرداز', 'text' => 'کلید، خط فرستنده و پیام آزمایشی. تا وقتی پر نشود کد ورود ارسال نمی‌شود.'];
+            return $items;
+        });
         $app->listen('dashboard.cards', function (array $cards) use ($app): array {
             $row = $app->db->one('SELECT COUNT(*) AS c FROM ak_sms_logs');
             $cards[] = ['label' => 'پیامک‌های ثبت‌شده', 'value' => fa_digits((string) ($row['c'] ?? 0)), 'href' => '/admin/sms'];

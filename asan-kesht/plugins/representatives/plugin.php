@@ -44,6 +44,10 @@ return new class extends Plugin {
             $items[] = ['href' => '/rep/requests', 'label' => 'درخواست‌های من', 'roles' => ['representative']];
             return $items;
         });
+        $app->listen('admin.settings', function (array $items): array {
+            $items[] = ['href' => '/admin/dealers/settings', 'title' => 'سیاست نمایندگی', 'text' => 'انحصار شهر، مدل فروش، پورسانت، مهلت اعتبار و قاعده‌های خاص'];
+            return $items;
+        });
         $app->listen('dashboard.cards', function (array $cards) use ($app): array {
             $user = $app->auth->user();
             if (!$user) {
