@@ -117,7 +117,7 @@ return new class extends Plugin {
                 redirect('/login');
             }
             $app->auth->login($user);
-            redirect($user['role'] === 'customer' ? '/account' : '/admin');
+            redirect(home_for_role((string) $user['role']));
         });
     }
 };

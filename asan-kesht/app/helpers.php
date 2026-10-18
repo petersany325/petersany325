@@ -240,10 +240,32 @@ function slugify(string $value): string
     return trim($value, '-');
 }
 
+/** @return array<string, string> */
+function ak_role_labels(): array
+{
+    return [
+        'admin' => 'مدیر شرکت',
+        'employee' => 'کارمند',
+        'accountant' => 'حسابدار',
+        'region_manager' => 'مدیر منطقه',
+        'representative' => 'نماینده',
+        'customer' => 'مشتری',
+    ];
+}
+
+function home_for_role(string $role): string
+{
+    return match ($role) {
+        'customer' => '/account',
+        'representative' => '/rep',
+        default => '/admin',
+    };
+}
+
 function reserved_slug(string $slug): bool
 {
     return in_array($slug, [
         'admin', 'account', 'login', 'logout', 'machines', 'quote', 'assets',
-        'install', 'p', 'index.php', 'api',
+        'install', 'p', 'index.php', 'api', 'estelam', 'rep',
     ], true);
 }

@@ -161,7 +161,7 @@ final class App
                 redirect('/login');
             }
             $app->auth->login($user);
-            redirect($user['role'] === 'customer' ? '/account' : '/admin');
+            redirect(home_for_role((string) $user['role']));
         });
         $this->router->post('/logout', function () use ($app): void {
             csrf_check();
@@ -169,8 +169,22 @@ final class App
             redirect('/');
         });
         $this->router->get('/admin', function () use ($app): void {
-            require_role($app, ['admin', 'employee']);
+            $user = require_role($app, ['admin', 'employee', 'accountant', 'region_manager', 'representative']);
+            if ($user['role'] === 'representative') {
+                redirect('/rep');
+            }
             $cards = $app->filter('dashboard.cards', []);
+            if (!is_array($cards)) {
+                $cards = [];
+            }
+            $role = (string) $user['role'];
+            $cards = array_values(array_filter($cards, static function ($card) use ($role): bool {
+                if (!is_array($card)) {
+                    return false;
+                }
+                $roles = $card['roles'] ?? ['admin', 'employee'];
+                return is_array($roles) && in_array($role, $roles, true);
+            }));
             $app->view->render('admin/dashboard', [
                 'title' => 'پیشخوان',
                 'cards' => is_array($cards) ? $cards : [],
@@ -195,7 +209,7 @@ final class App
             $role = post_string('role', 20);
             $active = isset($_POST['active']) ? 1 : 0;
             $password = (string) ($_POST['password'] ?? '');
-            if ($name === '' || !in_array($role, ['admin', 'employee', 'customer'], true)) {
+            if ($name === '' || !array_key_exists($role, ak_role_labels())) {
                 flash('error', 'نام و نقش را درست وارد کنید.');
                 redirect('/admin/users');
             }
@@ -257,12 +271,12 @@ final class App
             redirect('/admin/plugins');
         });
         $this->router->get('/admin/profile', function () use ($app): void {
-            $user = require_role($app, ['admin', 'employee']);
+            $user = require_role($app, ['admin', 'employee', 'accountant', 'region_manager', 'representative']);
             $app->view->render('admin/profile', ['title' => 'نمایه', 'user' => $user], 'layouts/admin');
         });
         $this->router->post('/admin/profile', function () use ($app): void {
             csrf_check();
-            $user = require_role($app, ['admin', 'employee']);
+            $user = require_role($app, ['admin', 'employee', 'accountant', 'region_manager', 'representative']);
             $name = post_string('name', 120);
             $phone = normalize_phone(post_string('phone', 20));
             $password = (string) ($_POST['password'] ?? '');

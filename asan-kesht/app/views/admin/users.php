@@ -8,9 +8,9 @@
     <label>موبایل <input name="phone" placeholder="09..."></label>
     <label>نقش
       <select name="role">
-        <option value="employee">کارمند</option>
-        <option value="customer">مشتری</option>
-        <option value="admin">مدیر</option>
+        <?php foreach (ak_role_labels() as $key => $label): ?>
+          <option value="<?= e($key) ?>"><?= e($label) ?></option>
+        <?php endforeach; ?>
       </select>
     </label>
     <label>رمز اختیاری <input name="password" type="password" autocomplete="new-password"></label>
@@ -33,7 +33,7 @@
             <label>موبایل <input name="phone" value="<?= e((string) ($user['phone'] ?? '')) ?>"></label>
             <label>نقش
               <select name="role">
-                <?php foreach (['admin' => 'مدیر', 'employee' => 'کارمند', 'customer' => 'مشتری'] as $key => $label): ?>
+                <?php foreach (ak_role_labels() as $key => $label): ?>
                   <option value="<?= e($key) ?>" <?= $user['role'] === $key ? 'selected' : '' ?>><?= e($label) ?></option>
                 <?php endforeach; ?>
               </select>

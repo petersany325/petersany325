@@ -4,8 +4,8 @@
 /** @var string $title */
 $user = $app->auth->user();
 $items = [
-    ['href' => '/admin', 'label' => 'پیشخوان', 'roles' => ['admin', 'employee']],
-    ['href' => '/admin/profile', 'label' => 'نمایه', 'roles' => ['admin', 'employee']],
+    ['href' => '/admin', 'label' => 'پیشخوان', 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
+    ['href' => '/admin/profile', 'label' => 'نمایه', 'roles' => ['admin', 'employee', 'accountant', 'region_manager', 'representative']],
     ['href' => '/admin/users', 'label' => 'کاربران', 'roles' => ['admin']],
     ['href' => '/admin/plugins', 'label' => 'افزونه‌ها', 'roles' => ['admin']],
 ];
