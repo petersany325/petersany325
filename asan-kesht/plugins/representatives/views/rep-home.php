@@ -1,7 +1,7 @@
 <?php /** @var array $dealer */ /** @var int $balance */ /** @var int $overdue */ /** @var array $orders */ /** @var array $circulars */ ?>
 <div class="cards">
   <div class="card"><span>کد استعلام</span><strong><?= e((string) $dealer['code']) ?></strong></div>
-  <div class="card"><span>مانده بدهکار</span><strong><?= e(money($balance)) ?></strong></div>
+  <div class="card"><span><?= e($balance > 0 ? 'بدهکار شما' : ($balance < 0 ? 'بستانکار شما' : 'حساب تسویه')) ?></span><strong><?= e(money(abs($balance))) ?></strong></div>
   <div class="card"><span>سقف اعتبار</span><strong><?= e(money((int) $dealer['credit_limit'])) ?></strong></div>
   <div class="card"><span>بدهی سررسیدشده</span><strong><?= e(money($overdue)) ?></strong></div>
   <a class="card" href="<?= e(url('/rep/circulars')) ?>"><span>بخشنامه دیده‌نشده</span><strong><?= e(fa_digits((string) ($circulars['c'] ?? 0))) ?></strong></a>

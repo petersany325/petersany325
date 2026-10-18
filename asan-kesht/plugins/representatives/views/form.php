@@ -4,7 +4,7 @@
 <?php if ($dealer): ?>
   <div class="cards">
     <div class="card"><span>کد استعلام</span><strong><?= e((string) $dealer['code']) ?></strong></div>
-    <div class="card"><span>مانده بدهکار</span><strong><?= e(money($balance)) ?></strong></div>
+    <div class="card"><span><?= e($balance > 0 ? 'بدهکار نماینده' : ($balance < 0 ? 'بستانکار نماینده' : 'حساب تسویه')) ?></span><strong><?= e(money(abs($balance))) ?></strong></div>
     <div class="card"><span>سررسیدشده</span><strong><?= e(money($overdue)) ?></strong></div>
     <div class="card"><span>سقف اعتبار</span><strong><?= e(money((int) $dealer['credit_limit'])) ?></strong></div>
   </div>
