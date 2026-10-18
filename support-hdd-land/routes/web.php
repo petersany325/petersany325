@@ -121,6 +121,7 @@ Route::middleware('auth')->group(function () {
         Route::get('receptions/lookup-phone', [ReceptionController::class, 'lookupPhone'])->name('receptions.lookup-phone');
         Route::post('receptions/ensure-customer', [ReceptionController::class, 'ensureCustomer'])->name('receptions.ensure-customer');
         Route::get('receptions/search', [ReceptionController::class, 'search'])->name('receptions.search');
+        Route::match(['get', 'post'], 'receptions/print-bulk', [ReceptionController::class, 'printBulk'])->name('receptions.print-bulk');
         Route::get('deliveries/group', [DeliveryController::class, 'create'])->name('deliveries.group');
         Route::post('deliveries/lookup', [DeliveryController::class, 'lookup'])->name('deliveries.lookup');
         Route::post('deliveries/group', [DeliveryController::class, 'store'])->name('deliveries.store');
@@ -209,6 +210,9 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/operations', [ReportController::class, 'operations'])
         ->middleware(EnsurePermission::class.':reports.operations')
         ->name('reports.operations');
+    Route::get('reports/receipt-print', [ReportController::class, 'receiptPrint'])
+        ->middleware(EnsurePermission::class.':receptions')
+        ->name('reports.receipt-print');
     Route::get('reports/custody', [ReportController::class, 'custody'])
         ->middleware(EnsurePermission::class.':reports.custody')
         ->name('reports.custody');

@@ -730,6 +730,44 @@ class ReportController extends Controller
         ]);
     }
 
+    /**
+     * Multi-select receipt list for one combined print job.
+     */
+    public function receiptPrint(Request $request): View
+    {
+        [$from, $to] = $this->range($request);
+        $q = trim((string) $request->query('q', ''));
+        $maxSelect = 40;
+
+        $query = Reception::query()
+            ->with(['customer'])
+            ->whereDate('received_at', '>=', $from)
+            ->whereDate('received_at', '<=', $to)
+            ->orderByDesc('id');
+
+        if ($q !== '') {
+            $like = '%'.$q.'%';
+            $query->where(function ($builder) use ($like, $q) {
+                $builder->where('ticket_no', 'like', $like)
+                    ->orWhere('receipt_no', 'like', $like)
+                    ->orWhere('serial_number', 'like', $like)
+                    ->orWhere('batch_code', 'like', $like)
+                    ->orWhereHas('customer', function ($c) use ($like, $q) {
+                        $c->where('name', 'like', $like)
+                            ->orWhere('phone', 'like', $like);
+                        $digits = preg_replace('/\D+/', '', $q) ?? '';
+                        if ($digits !== '') {
+                            $c->orWhere('phone', 'like', '%'.$digits.'%');
+                        }
+                    });
+            });
+        }
+
+        $receptions = $query->paginate(50)->withQueryString();
+
+        return view('reports.receipt-print', compact('receptions', 'from', 'to', 'q', 'maxSelect'));
+    }
+
     /** @return array{0:string,1:string} */
     private function range(Request $request): array
     {

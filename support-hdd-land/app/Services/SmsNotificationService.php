@@ -240,6 +240,77 @@ class SmsNotificationService
     }
 
     /**
+     * One SMS after group intake finishes — lists all tickets instead of N create SMS.
+     *
+     * @param  \Illuminate\Support\Collection<int, Reception>|iterable<Reception>  $receptions
+     * @return array{ok:bool,skipped?:bool,message:string}|null
+     */
+    public function sendGroupIntakeSms($receptions): ?array
+    {
+        $collection = collect($receptions)->filter()->values();
+        if ($collection->isEmpty()) {
+            return null;
+        }
+
+        $rule = SmsStatusRule::findOnCreate() ?: SmsStatusRule::findForStatus('received');
+        if (! $rule) {
+            return null;
+        }
+
+        if (! $this->masterEnabled()) {
+            return ['ok' => false, 'skipped' => true, 'message' => 'ارسال پیامک در سطح سیستم خاموش است.'];
+        }
+
+        if (! $rule->auto_send || ! $rule->is_active) {
+            return ['ok' => false, 'skipped' => true, 'message' => 'ارسال خودکار پذیرش خاموش است.'];
+        }
+
+        $first = $collection->first();
+        $first->loadMissing(['customer']);
+        $customer = $first->customer;
+        $phone = (string) ($customer?->phone ?? '');
+        if ($phone === '') {
+            return ['ok' => false, 'skipped' => true, 'message' => 'شماره موبایل مشتری خالی است.'];
+        }
+
+        $shop = AppSetting::getValue('invoice_shop_name', 'سرزمین هارد');
+        $name = $customer?->name ?? 'مشتری';
+        $batch = (string) ($first->batch_code ?: '');
+        $lines = ["سلام {$name}", "پذیرش گروهی {$shop}:"];
+        foreach ($collection as $r) {
+            $lines[] = sprintf(
+                '%s | سریال %s',
+                $r->ticket_no,
+                $r->serial_number ?: '—'
+            );
+        }
+        if ($batch !== '') {
+            $lines[] = 'کد گروه: '.$batch;
+        }
+        $lines[] = 'تعداد: '.$collection->count();
+        $message = implode("\n", $lines);
+
+        $result = $this->sms->send($phone, $message);
+        SmsLog::create([
+            'reception_id' => $first->id,
+            'customer_id' => $first->customer_id,
+            'sms_status_rule_id' => $rule->id,
+            'sent_by' => Auth::id(),
+            'phone' => $phone,
+            'status_key' => 'group_intake',
+            'audience' => 'customer',
+            'message' => $message,
+            'ok' => (bool) ($result['ok'] ?? false),
+            'provider_message' => $result['message'] ?? null,
+        ]);
+
+        return [
+            'ok' => (bool) ($result['ok'] ?? false),
+            'message' => $result['message'] ?? '',
+        ];
+    }
+
+    /**
      * SMS for group delivery — send to pickup phone using delivered template (or custom text).
      */
     public function sendGroupDeliverySms(string $phone, string $pickupName, $receptions): array
