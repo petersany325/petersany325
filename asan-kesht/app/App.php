@@ -178,13 +178,20 @@ final class App
             if (!is_array($cards)) {
                 $cards = [];
             }
-            $role = (string) $user['role'];
-            $cards = array_values(array_filter($cards, static function ($card) use ($role): bool {
+            $cards = array_values(array_filter($cards, static function ($card) use ($app, $user): bool {
                 if (!is_array($card)) {
                     return false;
                 }
                 $roles = $card['roles'] ?? ['admin', 'employee'];
-                return is_array($roles) && in_array($role, $roles, true);
+                if (!is_array($roles)) {
+                    return false;
+                }
+                $href = (string) ($card['href'] ?? '');
+                $section = access_section_for($href);
+                if ($section !== null) {
+                    return access_can($app, $user, $section, $roles);
+                }
+                return in_array((string) $user['role'], $roles, true);
             }));
             $app->view->render('admin/dashboard', [
                 'title' => 'پیشخوان',
@@ -193,7 +200,24 @@ final class App
         });
         $this->router->get('/admin/access', function () use ($app): void {
             require_role($app, ['admin']);
-            $app->view->render('admin/access', ['title' => 'دسترسی‌ها'], 'layouts/admin');
+            $app->view->render('admin/access', [
+                'title' => 'دسترسی‌ها',
+                'sections' => access_sections(),
+                'matrix' => access_matrix($app),
+                'roles' => ak_role_labels(),
+                'users' => $app->db->all('SELECT id, name, role, active FROM ak_users WHERE role <> "admin" ORDER BY id DESC LIMIT 80'),
+                'flags' => [],
+            ], 'layouts/admin');
+        });
+        $this->router->post('/admin/access', function () use ($app): void {
+            csrf_check();
+            require_role($app, ['admin']);
+            access_save_matrix($app);
+        });
+        $this->router->post('/admin/access/user', function () use ($app): void {
+            csrf_check();
+            require_role($app, ['admin']);
+            access_save_user($app);
         });
         $this->router->get('/admin/users', function () use ($app): void {
             require_role($app, ['admin']);

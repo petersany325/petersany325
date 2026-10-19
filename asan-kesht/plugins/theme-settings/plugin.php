@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/lib.php';
+
 return new class extends Plugin {
     public function meta(): array
     {
@@ -46,10 +48,18 @@ return new class extends Plugin {
         }
         $app->listen('admin.menu', function (array $items): array {
             $items[] = ['href' => '/admin/theme', 'label' => 'قالب', 'roles' => ['admin']];
+            $items[] = ['href' => '/admin/layout', 'label' => 'چیدمان و فوتر', 'roles' => ['admin']];
+            return $items;
+        });
+        $app->listen('site.toolbar', function (array $items): array {
+            if (request_path() === '/') {
+                array_unshift($items, ['href' => '/admin/layout', 'label' => 'چیدمان صفحه']);
+            }
             return $items;
         });
         $app->listen('admin.settings', function (array $items): array {
             $items[] = ['href' => '/admin/theme', 'title' => 'قالب', 'text' => 'نام، شعار، رنگ، تلفن، نشانی و ایمیل'];
+            $items[] = ['href' => '/admin/layout', 'title' => 'چیدمان و فوتر', 'text' => 'ساختار صفحه اول، نوار اطلاع، ترتیب بخش‌ها و ستون‌های فوتر'];
             return $items;
         });
         $app->router->get('/admin/theme', function () use ($app): void {
@@ -88,6 +98,22 @@ return new class extends Plugin {
             }
             flash('success', 'قالب ذخیره شد.');
             redirect('/admin/theme');
+        });
+        $app->router->get('/admin/layout', function () use ($app): void {
+            require_role($app, ['admin']);
+            $values = layout_values($app);
+            $app->view->plugin('theme-settings', 'layout', [
+                'title' => 'چیدمان صفحه اول و فوتر',
+                'values' => $values,
+                'home' => layout_home_blocks($app),
+                'links1' => layout_links($values['footer_links_1']),
+                'links2' => layout_links($values['footer_links_2']),
+            ]);
+        });
+        $app->router->post('/admin/layout', function () use ($app): void {
+            csrf_check();
+            require_role($app, ['admin']);
+            layout_save($app);
         });
     }
 };

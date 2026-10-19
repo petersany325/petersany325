@@ -211,12 +211,213 @@ function require_user(App $app): array
 function require_role(App $app, array $roles): array
 {
     $user = require_user($app);
+    $section = access_section_for(request_path());
+    if ($section !== null) {
+        if (!access_can($app, $user, $section, $roles)) {
+            access_forbid();
+        }
+        return $user;
+    }
     if (!in_array($user['role'], $roles, true)) {
-        http_response_code(403);
-        echo 'به این بخش دسترسی ندارید.';
-        exit;
+        access_forbid();
     }
     return $user;
+}
+
+function access_forbid(): void
+{
+    http_response_code(403);
+    echo 'به این بخش دسترسی ندارید.';
+    exit;
+}
+
+/** @return array<string, array{label:string, paths:list<string>, roles:list<string>}> */
+function access_sections(): array
+{
+    return [
+        'dashboard' => ['label' => 'پیشخوان', 'paths' => ['/admin'], 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
+        'profile' => ['label' => 'نمایه', 'paths' => ['/admin/profile'], 'roles' => ['admin', 'employee', 'accountant', 'region_manager', 'representative']],
+        'users' => ['label' => 'کاربران و دسترسی‌ها', 'paths' => ['/admin/users', '/admin/access'], 'roles' => ['admin']],
+        'system' => ['label' => 'افزونه‌ها و تنظیمات کلی', 'paths' => ['/admin/plugins', '/admin/settings'], 'roles' => ['admin']],
+        'accounting' => ['label' => 'حسابداری، فاکتور، ویزیتور و سود و زیان', 'paths' => ['/admin/accounting'], 'roles' => ['admin', 'employee', 'accountant']],
+        'audit' => ['label' => 'حسابرسی', 'paths' => ['/admin/accounting/audit'], 'roles' => ['admin', 'accountant']],
+        'dealers' => ['label' => 'پرونده و سفارش نماینده', 'paths' => ['/admin/dealers'], 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
+        'dealer_edit' => ['label' => 'قیمت و تنظیم نمایندگی', 'paths' => ['/admin/dealers/prices', '/admin/dealers/settings', '/admin/dealers/rules'], 'roles' => ['admin', 'employee']],
+        'dealer_money' => ['label' => 'حساب، چک و پورسانت نماینده', 'paths' => ['/admin/dealers/money', '/admin/dealers/payments', '/admin/dealers/checks', '/admin/dealers/adjust', '/admin/dealers/disputes', '/admin/dealers/commissions'], 'roles' => ['admin', 'accountant']],
+        'shop' => ['label' => 'تنظیم فروشگاه و درگاه', 'paths' => ['/admin/shop'], 'roles' => ['admin']],
+        'shop_orders' => ['label' => 'سفارش فروشگاه', 'paths' => ['/admin/shop/orders'], 'roles' => ['admin', 'employee']],
+        'catalog' => ['label' => 'مدل ماشین‌ها و پیش‌فاکتور', 'paths' => ['/admin/machines', '/admin/quotes'], 'roles' => ['admin', 'employee']],
+        'content' => ['label' => 'صفحه اول، فوتر، منو و قالب', 'paths' => ['/admin/pages', '/admin/menus', '/admin/theme', '/admin/layout'], 'roles' => ['admin']],
+        'messages' => ['label' => 'تیکت و پیامک', 'paths' => ['/admin/tickets', '/admin/sms', '/admin/niaz'], 'roles' => ['admin', 'employee']],
+        'register' => ['label' => 'ثبت‌نام و درخواست نمایندگی', 'paths' => ['/admin/register'], 'roles' => ['admin']],
+        'rep' => ['label' => 'کارتابل نمایندگی', 'paths' => ['/rep'], 'roles' => ['representative']],
+    ];
+}
+
+function access_section_for(string $path): ?string
+{
+    $path = rtrim($path, '/') ?: '/';
+    $best = null;
+    $bestLen = -1;
+    foreach (access_sections() as $id => $section) {
+        foreach ($section['paths'] as $prefix) {
+            $exact = $prefix === '/admin';
+            $hit = $path === $prefix || (!$exact && str_starts_with($path, $prefix . '/'));
+            if ($prefix === '/admin/shop' && str_starts_with($path, '/admin/shop/orders')) {
+                $hit = false;
+            }
+            if ($prefix === '/admin/accounting' && str_starts_with($path, '/admin/accounting/audit')) {
+                $hit = false;
+            }
+            if ($prefix === '/admin/dealers' && access_dealer_specific($path)) {
+                $hit = false;
+            }
+            if (!$hit) {
+                continue;
+            }
+            $len = strlen($prefix);
+            if ($len > $bestLen) {
+                $best = $id;
+                $bestLen = $len;
+            }
+        }
+    }
+    return $best;
+}
+
+function access_dealer_specific(string $path): bool
+{
+    foreach (['/prices', '/settings', '/rules', '/money', '/payments', '/checks', '/adjust', '/disputes', '/commissions'] as $tail) {
+        if ($path === '/admin/dealers' . $tail || str_starts_with($path, '/admin/dealers' . $tail . '/')) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/** @return array<string, list<string>> */
+function access_matrix(App $app): array
+{
+    $raw = setting($app, 'access', 'matrix', '');
+    $decoded = json_decode($raw, true);
+    if (!is_array($decoded)) {
+        return [];
+    }
+    $known = access_sections();
+    $roles = array_keys(ak_role_labels());
+    $out = [];
+    foreach ($decoded as $section => $list) {
+        if (!is_string($section) || !isset($known[$section]) || !is_array($list)) {
+            continue;
+        }
+        $picked = ['admin'];
+        foreach ($list as $role) {
+            if (is_string($role) && in_array($role, $roles, true) && !in_array($role, $picked, true)) {
+                $picked[] = $role;
+            }
+        }
+        $out[$section] = $picked;
+    }
+    return $out;
+}
+
+/** @return array<string, string> */
+function access_user_flags(App $app, int $userId): array
+{
+    if ($userId < 1) {
+        return [];
+    }
+    $decoded = json_decode(setting($app, 'access', 'user-' . $userId, ''), true);
+    if (!is_array($decoded)) {
+        return [];
+    }
+    $out = [];
+    foreach (access_sections() as $id => $section) {
+        $flag = $decoded[$id] ?? '';
+        if ($flag === 'allow' || $flag === 'deny') {
+            $out[$id] = $flag;
+        }
+    }
+    return $out;
+}
+
+function access_can(App $app, array $user, string $section, array $codeRoles): bool
+{
+    if (!isset(access_sections()[$section])) {
+        return false;
+    }
+    $role = (string) ($user['role'] ?? '');
+    if ($role === 'admin') {
+        return true;
+    }
+    if ($role === '' || !array_key_exists($role, ak_role_labels())) {
+        return false;
+    }
+    $flag = access_user_flags($app, (int) ($user['id'] ?? 0))[$section] ?? '';
+    if ($flag === 'deny') {
+        return false;
+    }
+    if ($flag === 'allow') {
+        return true;
+    }
+    if (!in_array($role, $codeRoles, true)) {
+        return false;
+    }
+    $matrix = access_matrix($app);
+    if (array_key_exists($section, $matrix)) {
+        return in_array($role, $matrix[$section], true);
+    }
+    return true;
+}
+
+function access_save_matrix(App $app): void
+{
+    $posted = $_POST['sections'] ?? [];
+    if (!is_array($posted)) {
+        $posted = [];
+    }
+    $matrix = [];
+    foreach (access_sections() as $id => $section) {
+        $picked = ['admin'];
+        $row = $posted[$id] ?? [];
+        if (is_array($row)) {
+            foreach (ak_role_labels() as $role => $label) {
+                if ($role !== 'admin' && isset($row[$role])) {
+                    $picked[] = $role;
+                }
+            }
+        }
+        $matrix[$id] = $picked;
+    }
+    save_setting($app, 'access', 'matrix', json_encode($matrix, JSON_UNESCAPED_UNICODE));
+    ak_audit($app, 'دسترسی', 'نقش‌ها', 'جدول دسترسی نقش‌ها ذخیره شد');
+    flash('success', 'دسترسی نقش‌ها ذخیره شد. مدیر همیشه به همه بخش‌ها دسترسی دارد.');
+    redirect('/admin/access');
+}
+
+function access_save_user(App $app): void
+{
+    $userId = (int) post_string('user_id', 12);
+    $user = $app->db->one('SELECT id, name, role FROM ak_users WHERE id = ?', [$userId]);
+    if (!$user || (string) $user['role'] === 'admin') {
+        flash('error', 'برای مدیر استثنا ثبت نمی‌شود؛ مدیر به همه بخش‌ها دسترسی دارد.');
+        redirect('/admin/access');
+    }
+    $posted = $_POST['flag'] ?? [];
+    if (!is_array($posted)) {
+        $posted = [];
+    }
+    $flags = [];
+    foreach (access_sections() as $id => $section) {
+        $flag = is_string($posted[$id] ?? null) ? $posted[$id] : '';
+        if ($flag === 'allow' || $flag === 'deny') {
+            $flags[$id] = $flag;
+        }
+    }
+    save_setting($app, 'access', 'user-' . $userId, json_encode($flags, JSON_UNESCAPED_UNICODE));
+    ak_audit($app, 'دسترسی', (string) $user['name'], 'استثنای دسترسی کاربر ذخیره شد');
+    flash('success', 'دسترسی این کاربر ذخیره شد.');
+    redirect('/admin/access');
 }
 
 function log_line(string $root, string $message): void
@@ -282,7 +483,7 @@ function admin_bucket(string $href): string
     if (str_contains($href, '/shop') || str_contains($href, 'machines') || str_contains($href, 'quotes')) {
         return 'فروشگاه';
     }
-    if (str_contains($href, '/pages') || str_contains($href, '/menus') || str_contains($href, '/theme')) {
+    if (str_contains($href, '/pages') || str_contains($href, '/menus') || str_contains($href, '/theme') || str_contains($href, '/layout')) {
         return 'محتوا';
     }
     if (str_contains($href, 'ticket') || str_contains($href, 'sms') || str_contains($href, 'niaz')) {
@@ -351,6 +552,18 @@ function nav_href(string $href): string
         return '#';
     }
     return url(str_starts_with($href, '/') ? $href : '/' . $href);
+}
+
+function menu_mark(mixed $item): string
+{
+    if (!is_array($item) || !function_exists('menu_icon_labels')) {
+        return '';
+    }
+    $icon = (string) ($item['icon'] ?? '');
+    if ($icon === '' || !array_key_exists($icon, menu_icon_labels())) {
+        return '';
+    }
+    return '<span class="nav-ico">' . ui_icon($icon) . '</span>';
 }
 
 function ui_icon(string $name): string

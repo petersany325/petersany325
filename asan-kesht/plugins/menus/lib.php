@@ -15,6 +15,9 @@ function menu_install(Database $db): void
             visible TINYINT(1) NOT NULL DEFAULT 1,
             new_tab TINYINT(1) NOT NULL DEFAULT 0,
             mega TINYINT(1) NOT NULL DEFAULT 0,
+            icon VARCHAR(20) NOT NULL DEFAULT "",
+            badge VARCHAR(24) NOT NULL DEFAULT "",
+            featured TINYINT(1) NOT NULL DEFAULT 0,
             INDEX parent_sort (parent_id, sort_order)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
@@ -48,7 +51,63 @@ function menu_insert(Database $db, ?int $parent, string $label, string $href, st
 /** @return list<array<string, mixed>> */
 function menu_rows(App $app): array
 {
+    menu_extend($app);
     return $app->db->all('SELECT * FROM ak_menu_items ORDER BY sort_order, id');
+}
+
+function menu_extend(App $app): void
+{
+    static $ready = false;
+    if ($ready) {
+        return;
+    }
+    $columns = [
+        'icon' => 'VARCHAR(20) NOT NULL DEFAULT ""',
+        'badge' => 'VARCHAR(24) NOT NULL DEFAULT ""',
+        'featured' => 'TINYINT(1) NOT NULL DEFAULT 0',
+    ];
+    foreach ($columns as $name => $definition) {
+        $found = $app->db->one(
+            'SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "ak_menu_items" AND COLUMN_NAME = ?',
+            [$name]
+        );
+        if (!$found) {
+            $app->db->exec('ALTER TABLE ak_menu_items ADD COLUMN ' . $name . ' ' . $definition);
+        }
+    }
+    $icons = [
+        '/' => 'home',
+        '/machines' => 'box',
+        '/about' => 'factory',
+        '/contact' => 'phone',
+        '/register' => 'plus',
+        '/estelam' => 'pin',
+    ];
+    foreach ($icons as $href => $icon) {
+        $app->db->run('UPDATE ak_menu_items SET icon = ? WHERE href = ? AND icon = ""', [$icon, $href]);
+    }
+    $featured = $app->db->one('SELECT id FROM ak_menu_items WHERE featured = 1 LIMIT 1');
+    if (!$featured) {
+        $app->db->run('UPDATE ak_menu_items SET featured = 1 WHERE label = ? AND parent_id IS NOT NULL', ['خطوط تولید']);
+    }
+    $ready = true;
+}
+
+/** @return array<string, string> */
+function menu_icon_labels(): array
+{
+    return [
+        '' => 'بدون نشانه',
+        'home' => 'خانه',
+        'box' => 'جعبه',
+        'factory' => 'کارخانه',
+        'pin' => 'مکان',
+        'file' => 'سند',
+        'phone' => 'تلفن',
+        'user' => 'کاربر',
+        'plus' => 'افزودن',
+        'key' => 'کلید',
+    ];
 }
 
 /** @param list<array<string, mixed>> $rows */
@@ -225,17 +284,23 @@ function menu_save(App $app): void
     $visible = isset($_POST['visible']) ? 1 : 0;
     $newTab = isset($_POST['new_tab']) ? 1 : 0;
     $mega = $newDepth === 0 && isset($_POST['mega']) ? 1 : 0;
+    $icon = post_string('icon', 20);
+    if (!array_key_exists($icon, menu_icon_labels())) {
+        $icon = '';
+    }
+    $badge = post_string('badge', 24);
+    $featured = $newDepth === 1 && isset($_POST['featured']) ? 1 : 0;
     $parentValue = $parentId > 0 ? $parentId : null;
     if ($id > 0) {
         $app->db->run(
-            'UPDATE ak_menu_items SET parent_id=?, label=?, href=?, description=?, sort_order=?, visible=?, new_tab=?, mega=? WHERE id=?',
-            [$parentValue, $label, $href, $description, $order, $visible, $newTab, $mega, $id]
+            'UPDATE ak_menu_items SET parent_id=?, label=?, href=?, description=?, sort_order=?, visible=?, new_tab=?, mega=?, icon=?, badge=?, featured=? WHERE id=?',
+            [$parentValue, $label, $href, $description, $order, $visible, $newTab, $mega, $icon, $badge, $featured, $id]
         );
         flash('success', 'آیتم منو ذخیره شد.');
     } else {
         $app->db->run(
-            'INSERT INTO ak_menu_items (parent_id, label, href, description, sort_order, visible, new_tab, mega) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [$parentValue, $label, $href, $description, $order, $visible, $newTab, $mega]
+            'INSERT INTO ak_menu_items (parent_id, label, href, description, sort_order, visible, new_tab, mega, icon, badge, featured) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [$parentValue, $label, $href, $description, $order, $visible, $newTab, $mega, $icon, $badge, $featured]
         );
         flash('success', 'آیتم به منو اضافه شد.');
     }

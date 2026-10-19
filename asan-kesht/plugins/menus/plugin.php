@@ -21,6 +21,7 @@ return new class extends Plugin {
 
     public function boot(App $app): void
     {
+        menu_extend($app);
         $app->listen('site.nav.ready', function (array $items) use ($app): array {
             $tree = menu_public_tree($app);
             return $tree !== [] ? $tree : $items;

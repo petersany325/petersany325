@@ -322,6 +322,15 @@ th, td { border-bottom: 1px solid var(--line); padding: 0.55rem; text-align: rig
   font-size: 12px;
 }
 
+.access-user {
+  background: white;
+  border: 1px solid var(--line);
+  margin: 0.55rem 0;
+  padding: 0.45rem 0.7rem;
+}
+
+.access-user summary { cursor: pointer; font-weight: 800; }
+
 .nav-toggle { display: none; }
 
 @media (max-width: 800px) {

@@ -42,7 +42,7 @@ $editTools = [];
 $staffLinks = [];
 if ($user) {
     $role = (string) $user['role'];
-    if ($role === 'admin') {
+    if (access_can($app, $user, 'content', ['admin'])) {
         $filteredTools = $app->filter('site.toolbar', []);
         $editTools = is_array($filteredTools) ? $filteredTools : [];
     }
@@ -54,15 +54,22 @@ if ($user) {
         ['href' => '/admin/accounting/audit', 'label' => 'حسابرسی', 'roles' => ['admin', 'accountant']],
         ['href' => '/admin/dealers', 'label' => 'نمایندگان', 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
         ['href' => '/admin/access', 'label' => 'دسترسی‌ها', 'roles' => ['admin']],
+        ['href' => '/admin/layout', 'label' => 'چیدمان', 'roles' => ['admin']],
         ['href' => '/admin/settings', 'label' => 'تنظیمات', 'roles' => ['admin']],
         ['href' => '/rep', 'label' => 'پنل نمایندگی', 'roles' => ['representative']],
     ];
     foreach ($work as $link) {
-        if (in_array($role, $link['roles'], true)) {
+        $section = access_section_for((string) $link['href']);
+        $allowed = $section !== null
+            ? access_can($app, $user, $section, $link['roles'])
+            : in_array($role, $link['roles'], true);
+        if ($allowed) {
             $staffLinks[] = $link;
         }
     }
 }
+$layoutPack = function_exists('layout_public') ? layout_public($app) : null;
+$homeClass = request_path() === '/' && is_array($layoutPack) ? ' is-home-' . $layoutPack['structure'] : '';
 $aside = $app->filter('site.aside', []);
 if (!is_array($aside)) {
     $aside = [];
@@ -130,10 +137,10 @@ if (!is_array($aside)) {
             $label = (string) ($item['label'] ?? '');
           ?>
           <?php if ($children === []): ?>
-            <a href="<?= e($href) ?>"<?= !empty($item['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>><?= e($label) ?></a>
+            <a href="<?= e($href) ?>"<?= !empty($item['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>><?= menu_mark($item) ?><span><?= e($label) ?></span></a>
           <?php else: ?>
             <div class="nav-item<?= $mega ? ' is-mega' : '' ?>">
-              <a href="<?= e($href) ?>"<?= !empty($item['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>><?= e($label) ?></a>
+              <a href="<?= e($href) ?>"<?= !empty($item['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>><?= menu_mark($item) ?><span><?= e($label) ?></span></a>
               <button class="nav-more" type="button" aria-expanded="false">زیرمنو</button>
               <div class="nav-panel">
                 <?php if ($mega): ?>
@@ -163,7 +170,9 @@ if (!is_array($aside)) {
                     </div>
                     <div class="mega-cols">
                       <?php foreach ($columns as $column): ?>
-                        <div class="mega-col">
+                        <div class="mega-col<?= !empty($column['featured']) ? ' is-featured' : '' ?>">
+                          <?= menu_mark($column) ?>
+                          <?php if ((string) ($column['badge'] ?? '') !== ''): ?><em class="mega-badge"><?= e((string) $column['badge']) ?></em><?php endif; ?>
                           <?php if ((string) ($column['href'] ?? '') !== ''): ?>
                             <a class="mega-title" href="<?= e(nav_href((string) $column['href'])) ?>"><?= e((string) ($column['label'] ?? '')) ?></a>
                           <?php else: ?>
@@ -173,7 +182,8 @@ if (!is_array($aside)) {
                           <?php foreach ($column['children'] as $link): ?>
                             <?php if (!is_array($link) || (string) ($link['href'] ?? '') === '') { continue; } ?>
                             <a href="<?= e(nav_href((string) $link['href'])) ?>"<?= !empty($link['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>>
-                              <span><?= e((string) ($link['label'] ?? '')) ?></span>
+                              <?= menu_mark($link) ?>
+                              <span><?= e((string) ($link['label'] ?? '')) ?><?php if ((string) ($link['badge'] ?? '') !== ''): ?> <em class="mega-badge"><?= e((string) $link['badge']) ?></em><?php endif; ?></span>
                               <?php if ((string) ($link['description'] ?? '') !== ''): ?><small><?= e((string) $link['description']) ?></small><?php endif; ?>
                             </a>
                           <?php endforeach; ?>
@@ -188,7 +198,7 @@ if (!is_array($aside)) {
                       <?php $grand = is_array($child['children'] ?? null) ? $child['children'] : []; ?>
                       <div class="nav-sub-item">
                         <?php if ((string) ($child['href'] ?? '') !== ''): ?>
-                          <a href="<?= e(nav_href((string) $child['href'])) ?>"<?= !empty($child['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>><?= e((string) ($child['label'] ?? '')) ?></a>
+                          <a href="<?= e(nav_href((string) $child['href'])) ?>"<?= !empty($child['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>><?= menu_mark($child) ?><span><?= e((string) ($child['label'] ?? '')) ?></span></a>
                         <?php else: ?>
                           <strong class="nav-sub-label"><?= e((string) ($child['label'] ?? '')) ?></strong>
                         <?php endif; ?>
@@ -196,7 +206,7 @@ if (!is_array($aside)) {
                           <div class="nav-nested">
                             <?php foreach ($grand as $link): ?>
                               <?php if (!is_array($link) || (string) ($link['href'] ?? '') === '') { continue; } ?>
-                              <a href="<?= e(nav_href((string) $link['href'])) ?>"<?= !empty($link['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>><?= e((string) ($link['label'] ?? '')) ?></a>
+                              <a href="<?= e(nav_href((string) $link['href'])) ?>"<?= !empty($link['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>><?= menu_mark($link) ?><span><?= e((string) ($link['label'] ?? '')) ?></span></a>
                             <?php endforeach; ?>
                           </div>
                         <?php endif; ?>
@@ -248,47 +258,76 @@ if (!is_array($aside)) {
       </nav>
     </div>
   </header>
-  <main id="main">
+  <main id="main" class="<?= e(trim($homeClass)) ?>">
+    <?php if (request_path() === '/' && is_array($layoutPack) && is_array($layoutPack['notice'])): ?>
+      <div class="home-notice">
+        <div class="wrap">
+          <p><?= e((string) $layoutPack['notice']['text']) ?></p>
+          <?php if ((string) $layoutPack['notice']['label'] !== '' && (string) $layoutPack['notice']['url'] !== ''): ?>
+            <a href="<?= e(nav_href((string) $layoutPack['notice']['url'])) ?>"><?= e((string) $layoutPack['notice']['label']) ?></a>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
     <?php foreach (take_flashes() as $flash): ?>
       <div class="wrap"><p class="flash flash-<?= e($flash['type']) ?>"><?= e($flash['message']) ?></p></div>
     <?php endforeach; ?>
     <?= $content ?>
   </main>
   <footer class="foot">
+    <?php
+      $footerAbout = is_array($layoutPack) && (string) $layoutPack['footer_about'] !== '' ? (string) $layoutPack['footer_about'] : $tagline;
+      $showMenu = !is_array($layoutPack) || $layoutPack['footer_show_menu'];
+      $footerColumns = is_array($layoutPack) ? $layoutPack['columns'] : [];
+      $footerNote = is_array($layoutPack) ? (string) $layoutPack['footer_note'] : '';
+    ?>
     <div class="wrap foot-grid">
       <div>
         <strong><?= e($siteName) ?></strong>
-        <p><?= e($tagline) ?></p>
+        <p><?= e($footerAbout) ?></p>
       </div>
-      <div>
-        <ul>
-          <?php
-            $footerLinks = [];
-            $collectFooter = static function (array $nodes) use (&$collectFooter, &$footerLinks): void {
-                foreach ($nodes as $node) {
-                    if (!is_array($node)) {
-                        continue;
-                    }
-                    if ((string) ($node['href'] ?? '') !== '') {
-                        $footerLinks[] = $node;
-                    }
-                    $kids = $node['children'] ?? [];
-                    if (is_array($kids)) {
-                        $collectFooter($kids);
-                    }
-                }
-            };
-            $collectFooter($nav);
-          ?>
-          <?php foreach ($footerLinks as $item): ?>
-            <li><a href="<?= e(nav_href((string) $item['href'])) ?>"><?= e((string) $item['label']) ?></a></li>
-          <?php endforeach; ?>
-        </ul>
-      </div>
+      <?php if ($showMenu): ?>
+        <div>
+          <strong>نقشه سایت</strong>
+          <ul>
+            <?php
+              $footerLinks = [];
+              $collectFooter = static function (array $nodes) use (&$collectFooter, &$footerLinks): void {
+                  foreach ($nodes as $node) {
+                      if (!is_array($node)) {
+                          continue;
+                      }
+                      if ((string) ($node['href'] ?? '') !== '') {
+                          $footerLinks[] = $node;
+                      }
+                      $kids = $node['children'] ?? [];
+                      if (is_array($kids)) {
+                          $collectFooter($kids);
+                      }
+                  }
+              };
+              $collectFooter($nav);
+            ?>
+            <?php foreach ($footerLinks as $item): ?>
+              <li><a href="<?= e(nav_href((string) $item['href'])) ?>"><?= e((string) $item['label']) ?></a></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endif; ?>
+      <?php foreach ($footerColumns as $column): ?>
+        <div>
+          <strong><?= e((string) $column['title']) ?></strong>
+          <ul>
+            <?php foreach ($column['links'] as $link): ?>
+              <li><a href="<?= e(nav_href((string) $link['href'])) ?>"><?= e((string) $link['label']) ?></a></li>
+            <?php endforeach; ?>
+          </ul>
+        </div>
+      <?php endforeach; ?>
       <div>
         <?php if ($phone !== ''): ?><p>تلفن: <?= e(fa_digits($phone)) ?></p><?php endif; ?>
         <?php if ($address !== ''): ?><p><?= e($address) ?></p><?php endif; ?>
-        <p>ورود کارمندان و مشتریان با پیامک، بعد از اتصال پنل نیازپرداز.</p>
+        <?php if ($footerNote !== ''): ?><p><?= e($footerNote) ?></p><?php else: ?><p>ورود کارمندان و مشتریان با پیامک، بعد از اتصال پنل نیازپرداز.</p><?php endif; ?>
       </div>
     </div>
     <div class="wrap legal">© <?= e(fa_digits((string) gregorian_to_jalali((int) date('Y'), (int) date('n'), (int) date('j'))[0])) ?> <?= e($siteName) ?></div>

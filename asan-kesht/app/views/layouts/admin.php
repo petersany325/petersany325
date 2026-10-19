@@ -19,10 +19,22 @@ $role = $user['role'] ?? '';
 $groups = [];
 $order = ['مدیریت', 'کاربران', 'فروشگاه', 'نمایندگان', 'حسابداری', 'محتوا', 'پیام‌ها'];
 foreach ($items as $item) {
-    if (!is_array($item) || !in_array($role, $item['roles'] ?? [], true)) {
+    if (!is_array($item)) {
         continue;
     }
-    $bucket = admin_bucket((string) ($item['href'] ?? ''));
+    $itemRoles = $item['roles'] ?? [];
+    if (!is_array($itemRoles)) {
+        continue;
+    }
+    $href = (string) ($item['href'] ?? '');
+    $section = access_section_for($href);
+    $allowed = $section !== null
+        ? access_can($app, $user ?? [], $section, $itemRoles)
+        : in_array($role, $itemRoles, true);
+    if (!$allowed) {
+        continue;
+    }
+    $bucket = admin_bucket($href);
     $groups[$bucket][] = $item;
 }
 $current = request_path();

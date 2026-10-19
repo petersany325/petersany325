@@ -27,6 +27,15 @@ $blocked = $currentId > 0 ? array_merge([$currentId], menu_descendant_ids($rows,
   </label>
   <label>ترتیب <input name="sort_order" value="<?= e((string) ($item['sort_order'] ?? 0)) ?>"></label>
 </div>
+<label>نشانه
+  <select name="icon">
+    <?php foreach (menu_icon_labels() as $icon => $iconLabel): ?>
+      <option value="<?= e($icon) ?>" <?= (string) ($item['icon'] ?? '') === $icon ? 'selected' : '' ?>><?= e($iconLabel) ?></option>
+    <?php endforeach; ?>
+  </select>
+</label>
+<label>نشان کوتاه <input name="badge" maxlength="24" value="<?= e((string) ($item['badge'] ?? '')) ?>" placeholder="جدید"></label>
 <label class="check"><input type="checkbox" name="visible" <?= !isset($item['id']) || (int) ($item['visible'] ?? 0) === 1 ? 'checked' : '' ?>> نمایان باشد</label>
 <label class="check"><input type="checkbox" name="new_tab" <?= (int) ($item['new_tab'] ?? 0) === 1 ? 'checked' : '' ?>> در زبانه تازه باز شود</label>
 <label class="check"><input type="checkbox" name="mega" <?= (int) ($item['mega'] ?? 0) === 1 ? 'checked' : '' ?>> اگر در منوی اصلی است، پنل مگا باز شود</label>
+<label class="check"><input type="checkbox" name="featured" <?= (int) ($item['featured'] ?? 0) === 1 ? 'checked' : '' ?>> اگر ستون است، کارت برجسته شود</label>

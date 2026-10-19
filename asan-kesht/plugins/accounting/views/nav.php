@@ -13,8 +13,8 @@ $links = [
     '/admin/accounting/invoice-settings' => 'تنظیم فاکتور',
 ];
 $current = rtrim(request_path(), '/') ?: '/';
-$role = (string) (($app->auth->user()['role'] ?? ''));
-if (!in_array($role, ['admin', 'accountant'], true)) {
+$actor = $app->auth->user();
+if (!is_array($actor) || !access_can($app, $actor, 'audit', ['admin', 'accountant'])) {
     unset($links['/admin/accounting/audit']);
 }
 ?>
