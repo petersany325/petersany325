@@ -12,6 +12,7 @@
   --brass: #c6a15a;
   --field: #e9f0e4;
   --white: #f7f4ee;
+  --on-oxide: #ffffff;
   --shadow: 0 18px 40px rgba(18, 20, 16, 0.12);
   --header: 4.6rem;
   --max: 1120px;
@@ -33,7 +34,7 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(900px 420px at 100% -10%, rgba(210, 74, 26, 0.08), transparent 55%),
+    radial-gradient(900px 420px at 100% -10%, color-mix(in srgb, var(--oxide) 14%, transparent), transparent 55%),
     var(--paper);
   color: var(--ink);
   font-family: var(--font);
@@ -76,7 +77,7 @@ textarea {
   top: -4rem;
   z-index: 80;
   background: var(--oxide);
-  color: white;
+  color: var(--on-oxide);
   padding: 0.5rem 0.8rem;
 }
 
@@ -178,7 +179,7 @@ textarea {
 
 .nav-quote:hover {
   background: var(--oxide);
-  color: white;
+  color: var(--on-oxide);
 }
 
 .nav-item {
@@ -327,12 +328,12 @@ h1 {
   font-weight: 700;
   cursor: pointer;
   background: var(--oxide);
-  color: white;
+  color: var(--on-oxide);
 }
 
 .btn:hover {
   background: var(--oxide-deep);
-  color: white;
+  color: var(--on-oxide);
 }
 
 .btn-ghost {
@@ -472,12 +473,12 @@ h2 {
 
 .line-oxide {
   background: var(--oxide);
-  color: white;
+  color: var(--on-oxide);
   border-color: var(--oxide);
 }
 
 .line-oxide:hover {
-  color: white;
+  color: var(--on-oxide);
 }
 
 .line-sand {
@@ -1045,7 +1046,7 @@ fieldset {
 
 .editbar a.is-primary {
   background: var(--oxide);
-  color: white;
+  color: var(--on-oxide);
   padding: 0.12rem 0.55rem;
 }
 
@@ -1328,18 +1329,101 @@ form.cart-add input {
   color: var(--oxide-deep);
 }
 
-.auth-nav .nav-more svg {
+.theme-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--line);
+  background: white;
+  padding: 0.22rem 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.theme-chip i,
+.theme-swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: none;
+  border: 1px solid rgba(22, 24, 20, 0.2);
+}
+
+.theme-chip i {
+  display: block;
+}
+
+.nav-item.theme-nav > .nav-panel {
+  min-width: 15rem;
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+}
+
+.theme-menu form {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.theme-menu button {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0.42rem 0.7rem;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.theme-menu button.is-current {
+  background: var(--field);
+}
+
+.theme-menu .theme-swatch {
+  width: 1.7rem;
+  height: 1.7rem;
+}
+
+.theme-swatch-site {
+  background:
+    linear-gradient(135deg, var(--dark) 0 46%, var(--oxide) 46% 72%, var(--paper) 72%);
+}
+
+.auth-nav .nav-more svg,
+.theme-nav .nav-more svg {
   width: 1rem;
   height: 1rem;
 }
 
 @media (max-width: 960px) {
-  .nav-item.auth-nav {
+  .nav-item.auth-nav,
+  .nav-item.theme-nav {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
     gap: 0.4rem;
+  }
+
+  .theme-chip {
+    margin-top: 0.55rem;
+    border-bottom: 0;
+  }
+
+  .theme-nav .nav-more {
+    width: 2rem;
+    height: 2rem;
+    margin-top: 0.55rem;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
   }
 
   .nav a.auth-chip {
@@ -1361,6 +1445,7 @@ form.cart-add input {
     padding: 0.4rem 0;
   }
 
+  .nav-item.theme-nav > .nav-panel,
   .nav-item.auth-nav > .nav-panel {
     position: static;
     flex-basis: 100%;

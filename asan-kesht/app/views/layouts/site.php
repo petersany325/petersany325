@@ -7,19 +7,17 @@ $siteName = 'آسان‌کشت';
 $tagline = 'ماشین‌آلات صنعتی کشاورزی';
 $phone = '';
 $address = '';
-$oxide = '#d24a1a';
-$ink = '#161814';
-$paper = '#f3efe4';
-$dark = '#121410';
 if ($app->pluginEnabled('theme-settings')) {
     $siteName = setting($app, 'theme-settings', 'site_name', $siteName);
     $tagline = setting($app, 'theme-settings', 'tagline', $tagline);
     $phone = setting($app, 'theme-settings', 'phone', '');
     $address = setting($app, 'theme-settings', 'address', '');
-    $oxide = hex_color(setting($app, 'theme-settings', 'color_oxide', $oxide), $oxide);
-    $ink = hex_color(setting($app, 'theme-settings', 'color_ink', $ink), $ink);
-    $paper = hex_color(setting($app, 'theme-settings', 'color_paper', $paper), $paper);
-    $dark = hex_color(setting($app, 'theme-settings', 'color_dark', $dark), $dark);
+}
+$theme = theme_choice($app);
+$themeBack = request_path();
+$themeQuery = (string) ($_SERVER['QUERY_STRING'] ?? '');
+if ($themeQuery !== '') {
+    $themeBack .= '?' . $themeQuery;
 }
 $nav = $app->filter('site.nav', [['href' => '/', 'label' => 'خانه']]);
 if (!is_array($nav)) {
@@ -52,7 +50,7 @@ if (!is_array($aside)) {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="<?= e(url('/assets/css/site.css')) ?>?v=<?= e((string) (@filemtime($app->root . '/assets/css/site.css') ?: 1)) ?>">
-  <style>:root{--oxide:<?= e($oxide) ?>;--ink:<?= e($ink) ?>;--paper:<?= e($paper) ?>;--dark:<?= e($dark) ?>}</style>
+  <style>:root{--oxide:<?= e($theme['oxide']) ?>;--on-oxide:<?= e($theme['on_oxide']) ?>;--oxide-deep:<?= e($theme['oxide_deep']) ?>;--ink:<?= e($theme['ink']) ?>;--paper:<?= e($theme['paper']) ?>;--paper-2:<?= e($theme['paper_2']) ?>;--dark:<?= e($theme['dark']) ?>;--dark-2:<?= e($theme['dark_2']) ?>;--brass:<?= e($theme['brass']) ?>;--field:<?= e($theme['field']) ?>;--white:<?= e($theme['white']) ?>}</style>
 </head>
 <body>
   <a class="skip" href="#main">رفتن به محتوا</a>
@@ -76,7 +74,7 @@ if (!is_array($aside)) {
         <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
           <rect width="32" height="32" rx="4" fill="currentColor"/>
           <path d="M7 22h18M9 22c1.2-6 3-9 7-12 2.2 2.4 3.2 5.2 3.6 8" fill="none" stroke="#f3efe4" stroke-width="1.7" stroke-linecap="round"/>
-          <path d="M16 10l5 2.2-1.2 4.2" fill="none" stroke="<?= e($oxide) ?>" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M16 10l5 2.2-1.2 4.2" fill="none" stroke="<?= e($theme['oxide']) ?>" stroke-width="1.7" stroke-linecap="round"/>
         </svg>
         <span>
           <strong><?= e($siteName) ?></strong>
@@ -161,6 +159,36 @@ if (!is_array($aside)) {
           <?php if (!is_array($item)) { continue; } ?>
           <a href="<?= e(url((string) ($item['href'] ?? '/'))) ?>"><?= e((string) ($item['label'] ?? '')) ?></a>
         <?php endforeach; ?>
+        <?php if ($app->pluginEnabled('theme-settings')): ?>
+          <div class="nav-item theme-nav">
+            <span class="theme-chip"><i style="background:<?= e($theme['oxide']) ?>"></i><span>تم</span></span>
+            <button class="nav-more" type="button" aria-expanded="false" aria-label="تم‌ها"><?= ui_icon('chevron') ?></button>
+            <div class="nav-panel">
+              <div class="nav-sub theme-menu">
+                <?php foreach (theme_palettes() as $id => $preset): ?>
+                  <form method="post" action="<?= e(url('/theme')) ?>">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="theme" value="<?= e($id) ?>">
+                    <input type="hidden" name="back" value="<?= e($themeBack) ?>">
+                    <button type="submit"<?= $theme['id'] === $id ? ' class="is-current"' : '' ?>>
+                      <span class="theme-swatch" style="background:linear-gradient(135deg, <?= e($preset['dark']) ?> 0 46%, <?= e($preset['oxide']) ?> 46% 72%, <?= e($preset['paper']) ?> 72%)"></span>
+                      <span class="auth-copy"><b><?= e($preset['name']) ?></b><small><?= e($preset['note']) ?></small></span>
+                    </button>
+                  </form>
+                <?php endforeach; ?>
+                <form method="post" action="<?= e(url('/theme')) ?>">
+                  <?= csrf_field() ?>
+                  <input type="hidden" name="theme" value="site">
+                  <input type="hidden" name="back" value="<?= e($themeBack) ?>">
+                  <button type="submit"<?= $theme['source'] === 'site' ? ' class="is-current"' : '' ?>>
+                    <span class="theme-swatch theme-swatch-site"></span>
+                    <span class="auth-copy"><b>پیش‌فرض سایت</b><small>برداشتن انتخاب شخصی</small></span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        <?php endif; ?>
         <?php if ($user): ?>
           <a href="<?= e(url(home_for_role((string) $user['role']))) ?>">حساب</a>
           <form method="post" action="<?= e(url('/logout')) ?>">
