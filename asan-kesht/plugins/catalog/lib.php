@@ -29,6 +29,15 @@ function catalog_extend(App $app): void
     $ready = true;
 }
 
+function catalog_text(string $key, int $max): string
+{
+    $value = trim((string) ($_POST[$key] ?? ''));
+    if (mb_strlen($value) > $max) {
+        $value = mb_substr($value, 0, $max);
+    }
+    return $value;
+}
+
 function catalog_photo_name(string $name): bool
 {
     return (bool) preg_match('/^[a-f0-9]{32}\.(jpg|png|webp)$/', $name);

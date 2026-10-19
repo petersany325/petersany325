@@ -201,7 +201,7 @@ return new class extends Plugin {
             $id = (int) post_string('id', 12);
             $code = strtoupper(slugify(post_string('code', 40)));
             $line = post_string('line', 20);
-            $name = post_string('name', 180);
+            $name = catalog_text('name', 180);
             if ($code === '' || $name === '' || !isset(catalog_lines()[$line])) {
                 flash('error', 'کد، نام و خط تولید را کامل کنید.');
                 redirect('/admin/machines');
@@ -223,7 +223,7 @@ return new class extends Plugin {
             } elseif ($photo !== '') {
                 $image = $photo;
             }
-            $params = [$code, $line, $name, post_string('summary', 400), post_string('hp', 80), post_string('width', 80), isset($_POST['active']) ? 1 : 0, (int) post_string('sort_order', 6), $image];
+            $params = [$code, $line, $name, catalog_text('summary', 400), catalog_text('hp', 80), catalog_text('width', 80), isset($_POST['active']) ? 1 : 0, (int) post_string('sort_order', 6), $image];
             if ($id > 0) {
                 $params[] = $id;
                 $app->db->run('UPDATE ak_machines SET code=?, line=?, name=?, summary=?, hp=?, width=?, active=?, sort_order=?, image=? WHERE id=?', $params);
