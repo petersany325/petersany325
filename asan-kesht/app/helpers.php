@@ -278,6 +278,20 @@ function nav_href(string $href): string
     return url(str_starts_with($href, '/') ? $href : '/' . $href);
 }
 
+function ui_icon(string $name): string
+{
+    $path = match ($name) {
+        'phone' => '<rect x="8" y="2.5" width="8" height="19" rx="2"/><path d="M11 17.5h2"/>',
+        'code' => '<rect x="2.5" y="7" width="3.5" height="10" rx="0.8"/><rect x="7.7" y="7" width="3.5" height="10" rx="0.8"/><rect x="12.8" y="7" width="3.5" height="10" rx="0.8"/><rect x="18" y="7" width="3.5" height="10" rx="0.8"/>',
+        'key' => '<circle cx="8" cy="12" r="3.4"/><path d="M11.2 12H21M16.2 12v3M19.2 12v2"/>',
+        'user' => '<circle cx="12" cy="8" r="3"/><path d="M5.5 19.5c1.3-3.2 3.5-4.7 6.5-4.7s5.2 1.5 6.5 4.7"/>',
+        'plus' => '<path d="M12 5v14M5 12h14"/>',
+        'chevron' => '<path d="M7 10l5 5 5-5"/>',
+        default => '',
+    };
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $path . '</svg>';
+}
+
 function reserved_slug(string $slug): bool
 {
     return in_array($slug, [

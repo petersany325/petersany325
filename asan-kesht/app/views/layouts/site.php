@@ -168,7 +168,31 @@ if (!is_array($aside)) {
             <button class="nav-quote" type="submit">خروج</button>
           </form>
         <?php else: ?>
-          <a class="nav-quote" href="<?= e(url('/login')) ?>">ورود</a>
+          <?php
+            $loginMenu = [];
+            if ($app->pluginEnabled('sms-login')) {
+                $loginMenu[] = ['href' => '/login#sms', 'icon' => 'phone', 'label' => 'پیامک', 'text' => 'دریافت کد'];
+                $loginMenu[] = ['href' => '/login#code', 'icon' => 'code', 'label' => 'کد', 'text' => 'تأیید پیامک'];
+            }
+            $loginMenu[] = ['href' => '/login#pass', 'icon' => 'key', 'label' => 'مدیر', 'text' => 'نام کاربری و رمز'];
+            if ($app->pluginEnabled('register') && setting($app, 'register', 'open', '1') === '1') {
+                $loginMenu[] = ['href' => '/register', 'icon' => 'plus', 'label' => 'ثبت‌نام', 'text' => 'ساخت حساب'];
+            }
+          ?>
+          <div class="nav-item auth-nav">
+            <a class="nav-quote auth-chip" href="<?= e(url('/login')) ?>"><?= ui_icon('user') ?><span>ورود</span></a>
+            <button class="nav-more" type="button" aria-expanded="false" aria-label="روش ورود"><?= ui_icon('chevron') ?></button>
+            <div class="nav-panel">
+              <div class="nav-sub auth-menu">
+                <?php foreach ($loginMenu as $item): ?>
+                  <a href="<?= e(url($item['href'])) ?>">
+                    <span class="auth-ico"><?= ui_icon($item['icon']) ?></span>
+                    <span class="auth-copy"><b><?= e($item['label']) ?></b><small><?= e($item['text']) ?></small></span>
+                  </a>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          </div>
         <?php endif; ?>
       </nav>
     </div>

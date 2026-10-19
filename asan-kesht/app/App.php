@@ -159,7 +159,7 @@ final class App
             $user = $app->auth->attemptPassword($username, $password);
             if (!$user) {
                 flash('error', 'نام کاربری یا رمز نادرست است.');
-                redirect('/login');
+                redirect('/login#pass');
             }
             $app->auth->login($user);
             redirect(landing_for_role((string) $user['role']));

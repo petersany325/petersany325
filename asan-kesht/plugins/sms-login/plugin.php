@@ -38,7 +38,7 @@ return new class extends Plugin {
             $name = post_string('name', 120);
             if (!is_mobile($phone)) {
                 flash('error', 'موبایل را با ۰۹ و یازده رقم وارد کنید.');
-                redirect('/login');
+                redirect('/login#sms');
             }
             $existing = $app->db->one('SELECT * FROM ak_users WHERE phone = ?', [$phone]);
             if (!$existing && $app->pluginEnabled('register')) {
@@ -51,11 +51,11 @@ return new class extends Plugin {
             }
             if (!$existing && mb_strlen($name) < 3) {
                 flash('error', 'برای ساخت حساب مشتری، نام را هم بنویسید.');
-                redirect('/login');
+                redirect('/login#sms');
             }
             if ($existing && (int) $existing['active'] !== 1) {
                 flash('error', 'این حساب غیرفعال است.');
-                redirect('/login');
+                redirect('/login#sms');
             }
             $recent = $app->db->one(
                 'SELECT COUNT(*) AS c FROM ak_otp_codes WHERE phone = ? AND created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)',
@@ -63,7 +63,7 @@ return new class extends Plugin {
             );
             if ((int) ($recent['c'] ?? 0) >= 3) {
                 flash('error', 'درخواست کد زیاد بوده. چند دقیقه بعد دوباره بخواهید.');
-                redirect('/login');
+                redirect('/login#sms');
             }
             $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
             $ipCount = $app->db->one(
@@ -72,12 +72,12 @@ return new class extends Plugin {
             );
             if ((int) ($ipCount['c'] ?? 0) >= 8) {
                 flash('error', 'از این شبکه درخواست زیادی آمده است.');
-                redirect('/login');
+                redirect('/login#sms');
             }
             $sms = $app->get('sms');
             if (!$sms instanceof NiazpardazClient || !$sms->configured()) {
                 flash('error', 'اول در مدیریت، افزونه نیازپرداز را با کلید و شماره خط پر کنید.');
-                redirect('/login');
+                redirect('/login#sms');
             }
             $code = (string) random_int(10000, 99999);
             $app->db->run('DELETE FROM ak_otp_codes WHERE phone = ?', [$phone]);
@@ -88,10 +88,10 @@ return new class extends Plugin {
             $result = $sms->send($phone, 'کد ورود آسان‌کشت: ' . $code, 'otp');
             if (!$result['ok']) {
                 flash('error', $result['message']);
-                redirect('/login');
+                redirect('/login#sms');
             }
             flash('success', 'کد به موبایل شما ارسال شد. تا دو دقیقه معتبر است.');
-            redirect('/login');
+            redirect('/login#code');
         });
 
         $app->router->post('/login/verify', function () use ($app): void {
@@ -104,12 +104,12 @@ return new class extends Plugin {
             );
             if (!$row || (int) $row['attempts'] >= 5) {
                 flash('error', 'کد منقضی یا نامعتبر است.');
-                redirect('/login');
+                redirect('/login#code');
             }
             if (!password_verify($code, (string) $row['code_hash'])) {
                 $app->db->run('UPDATE ak_otp_codes SET attempts = attempts + 1 WHERE id = ?', [(int) $row['id']]);
                 flash('error', 'کد درست نیست.');
-                redirect('/login');
+                redirect('/login#code');
             }
             $app->db->run('DELETE FROM ak_otp_codes WHERE phone = ?', [$phone]);
             $user = $app->db->one('SELECT * FROM ak_users WHERE phone = ?', [$phone]);
@@ -126,7 +126,7 @@ return new class extends Plugin {
             }
             if (!$user || (int) $user['active'] !== 1) {
                 flash('error', 'ورود ممکن نیست.');
-                redirect('/login');
+                redirect('/login#code');
             }
             $app->auth->login($user);
             redirect(landing_for_role((string) $user['role']));
