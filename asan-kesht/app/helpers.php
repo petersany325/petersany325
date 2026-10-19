@@ -288,7 +288,7 @@ function admin_bucket(string $href): string
     if (str_contains($href, 'ticket') || str_contains($href, 'sms') || str_contains($href, 'niaz')) {
         return 'پیام‌ها';
     }
-    if (str_contains($href, 'register') || str_contains($href, '/users')) {
+    if ($href === '/admin/access' || str_contains($href, 'register') || str_contains($href, '/users')) {
         return 'کاربران';
     }
     return 'مدیریت';
@@ -370,6 +370,44 @@ function ui_icon(string $name): string
         default => '',
     };
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $path . '</svg>';
+}
+
+function ak_audit(App $app, string $action, string $subject, string $detail = ''): void
+{
+    static $ready = false;
+    try {
+        if (!$ready) {
+            $app->db->exec(
+                'CREATE TABLE IF NOT EXISTS ak_audit (
+                    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    user_id INT UNSIGNED NOT NULL DEFAULT 0,
+                    user_name VARCHAR(120) NOT NULL DEFAULT "",
+                    action VARCHAR(80) NOT NULL,
+                    subject VARCHAR(160) NOT NULL,
+                    detail VARCHAR(400) NOT NULL DEFAULT "",
+                    created_at DATETIME NOT NULL,
+                    INDEX created_at (created_at)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+            );
+            $ready = true;
+        }
+        if ($action === '') {
+            return;
+        }
+        $user = $app->auth->user();
+        $app->db->run(
+            'INSERT INTO ak_audit (user_id, user_name, action, subject, detail, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+            [
+                (int) ($user['id'] ?? 0),
+                mb_substr((string) ($user['name'] ?? ''), 0, 120),
+                mb_substr($action, 0, 80),
+                mb_substr($subject, 0, 160),
+                mb_substr($detail, 0, 400),
+            ]
+        );
+    } catch (Throwable) {
+        return;
+    }
 }
 
 function reserved_slug(string $slug): bool

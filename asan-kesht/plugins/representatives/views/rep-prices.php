@@ -1,4 +1,5 @@
 <?php /** @var array $rows */ ?>
+<?php require __DIR__ . '/rep-nav.php'; ?>
 <div class="table-wrap"><table>
   <thead><tr><th>مدل</th><th>قیمت شما</th></tr></thead>
   <tbody>

@@ -1,4 +1,5 @@
 <?php /** @var array $dealer */ /** @var int $balance */ /** @var int $overdue */ /** @var array $orders */ /** @var array $circulars */ ?>
+<?php require __DIR__ . '/rep-nav.php'; ?>
 <div class="cards">
   <div class="card"><span>کد استعلام</span><strong><?= e((string) $dealer['code']) ?></strong></div>
   <div class="card"><span><?= e($balance > 0 ? 'بدهکار شما' : ($balance < 0 ? 'بستانکار شما' : 'حساب تسویه')) ?></span><strong><?= e(money(abs($balance))) ?></strong></div>

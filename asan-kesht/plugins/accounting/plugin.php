@@ -29,6 +29,7 @@ return new class extends Plugin {
             $items[] = ['href' => '/admin/accounting/sale', 'label' => 'فاکتور فروش', 'roles' => $roles];
             $items[] = ['href' => '/admin/accounting/purchase', 'label' => 'فاکتور خرید', 'roles' => $roles];
             $items[] = ['href' => '/admin/accounting/reports', 'label' => 'سود و زیان', 'roles' => $roles];
+            $items[] = ['href' => '/admin/accounting/audit', 'label' => 'حسابرسی', 'roles' => ['admin', 'accountant']];
             $items[] = ['href' => '/admin/accounting/visitors', 'label' => 'ویزیتورها', 'roles' => $roles];
             $items[] = ['href' => '/admin/accounting/checks', 'label' => 'چک و دسته‌چک', 'roles' => $roles];
             $items[] = ['href' => '/admin/accounting/payroll', 'label' => 'حقوق و مزایا', 'roles' => $roles];
@@ -96,11 +97,29 @@ return new class extends Plugin {
                 'rows' => $app->db->all('SELECT * FROM ak_checks ORDER BY due_on DESC, id DESC LIMIT 80'),
             ]);
         });
+        $app->router->get('/admin/accounting/audit', function () use ($app): void {
+            require_role($app, ['admin', 'accountant']);
+            ak_audit($app, '', '', '');
+            try {
+                $events = $app->db->all('SELECT * FROM ak_audit ORDER BY id DESC LIMIT 60');
+            } catch (Throwable) {
+                $events = [];
+            }
+            $app->view->plugin('accounting', 'audit', [
+                'title' => 'حسابرسی',
+                'figures' => accounting_figures($app),
+                'visitors' => accounting_visitors($app),
+                'dealers' => accounting_audit_dealers($app),
+                'events' => $events,
+            ]);
+        });
         $app->router->get('/admin/accounting/visitors', function () use ($app): void {
             require_role($app, accounting_roles());
+            $editId = (int) ($_GET['id'] ?? 0);
             $app->view->plugin('accounting', 'visitors', [
                 'title' => 'ویزیتورها',
                 'rows' => accounting_visitors($app),
+                'edit' => $editId > 0 ? $app->db->one('SELECT * FROM ak_visitors WHERE id = ?', [$editId]) : null,
             ]);
         });
         $app->router->post('/admin/accounting/visitors', function () use ($app): void {
@@ -284,6 +303,7 @@ return new class extends Plugin {
                     post_string('note', 240),
                 ]
             );
+            ak_audit($app, 'حقوق', $person, $period);
             flash('success', 'ردیف حقوق ثبت شد.');
             redirect('/admin/accounting/payroll');
         });

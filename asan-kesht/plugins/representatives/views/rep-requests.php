@@ -1,4 +1,5 @@
 <?php /** @var array $rows */ /** @var array $orders */ ?>
+<?php require __DIR__ . '/rep-nav.php'; ?>
 <form method="post" action="<?= e(url('/rep/requests')) ?>" class="stack">
   <?= csrf_field() ?>
   <label>نوع

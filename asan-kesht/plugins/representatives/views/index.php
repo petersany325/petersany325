@@ -15,7 +15,7 @@
   </form>
 <?php endif; ?>
 <div class="table-wrap"><table>
-  <thead><tr><th>کد</th><th>نام</th><th>شهر</th><th>مدل</th><th>وضعیت</th><th>قرارداد</th><th></th></tr></thead>
+  <thead><tr><th>کد</th><th>نام</th><th>شهر</th><th>مدل</th><th>درصد سود</th><th>وضعیت</th><th>قرارداد</th><th></th></tr></thead>
   <tbody>
   <?php foreach ($rows as $row): ?>
     <tr>
@@ -23,6 +23,7 @@
       <td><?= e((string) $row['name']) ?><?php if ((int) $row['exclusive_city'] === 1): ?><div class="muted">انحصاری شهر</div><?php endif; ?></td>
       <td><?= e((string) $row['province']) ?> — <?= e((string) $row['city']) ?><div class="muted"><?= e((string) ($row['region_name'] ?? '')) ?></div></td>
       <td><?= e(dealer_sale_models()[$row['sale_model']] ?? '') ?></td>
+      <td><?= $row['commission_percent'] === null ? 'پیش‌فرض' : e(fa_digits((string) $row['commission_percent'])) . '٪' ?></td>
       <td><?= e(dealer_statuses()[$row['status']] ?? '') ?></td>
       <td><?= e((string) ($row['contract_end'] ? jalali_date((string) $row['contract_end']) : '—')) ?></td>
       <td><a href="<?= e(url('/admin/dealers/' . $row['id'])) ?>">پرونده</a></td>

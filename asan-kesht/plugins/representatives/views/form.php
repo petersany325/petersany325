@@ -1,5 +1,6 @@
-<?php /** @var array|null $dealer */ /** @var array $regions */ /** @var array $ledger */ /** @var array $orders */ /** @var array $files */ /** @var array $receipts */ /** @var int $balance */ /** @var int $overdue */ ?>
+<?php /** @var array|null $dealer */ /** @var array $regions */ /** @var array $ledger */ /** @var array $orders */ /** @var array $files */ /** @var array $receipts */ /** @var int $balance */ /** @var int $overdue */ /** @var array|null $rule */ ?>
 <?php $dealer = is_array($dealer) ? $dealer : []; ?>
+<?php $rule = is_array($rule ?? null) ? $rule : []; ?>
 <?php $groups = $dealer === [] ? [] : array_filter(explode(',', (string) ($dealer['product_groups'] ?? ''))); ?>
 <?php if ($dealer): ?>
   <div class="cards">
@@ -36,6 +37,19 @@
     </label>
     <label>محدوده <input name="territory" value="<?= e((string) ($dealer['territory'] ?? '')) ?>"></label>
     <label>سطح <input name="level" value="<?= e((string) ($dealer['level'] ?? '')) ?>" placeholder="پایه، نقره‌ای، طلایی"></label>
+    <label>درصد سود نماینده <input name="commission_percent" inputmode="numeric" value="<?= e((string) ($rule['percent'] ?? 0)) ?>"></label>
+    <label>مبنای درصد
+      <select name="commission_basis">
+        <option value="sale" <?= ($rule['basis'] ?? 'sale') === 'sale' ? 'selected' : '' ?>>از مبلغ فروش</option>
+        <option value="gross" <?= ($rule['basis'] ?? '') === 'gross' ? 'selected' : '' ?>>از سود ناخالص</option>
+      </select>
+    </label>
+    <label>قطعی شدن پورسانت
+      <select name="commission_settle">
+        <option value="collection" <?= ($rule['settle_on'] ?? 'collection') === 'collection' ? 'selected' : '' ?>>هنگام وصول وجه</option>
+        <option value="sale" <?= ($rule['settle_on'] ?? '') === 'sale' ? 'selected' : '' ?>>هنگام تأیید فروش</option>
+      </select>
+    </label>
     <label>سقف اعتبار ریال <input name="credit_limit" value="<?= e((string) ($dealer['credit_limit'] ?? 0)) ?>"></label>
     <label>مهلت تسویه روز <input name="credit_days" value="<?= e((string) ($dealer['credit_days'] ?? 30)) ?>"></label>
     <label>شروع قرارداد <input type="date" name="contract_start" value="<?= e((string) ($dealer['contract_start'] ?? '')) ?>"></label>

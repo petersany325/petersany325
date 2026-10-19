@@ -314,6 +314,7 @@ function accounting_save_document(App $app, string $kind): void
     if ($kind === 'sale' && $visitorId > 0) {
         accounting_record_visitor_share($app, $visitorId, 'invoice', $invoiceId, $total, $costSum);
     }
+    ak_audit($app, $meta['label'], $number, 'مبلغ ' . (string) $total . ($visitorId > 0 ? '، با ویزیتور' : ''));
     flash('success', $meta['label'] . ' ' . $number . ' ثبت شد.');
     redirect('/admin/accounting/' . $kind);
 }
@@ -603,8 +604,34 @@ function accounting_save_visitor(App $app): void
             [$name, $phone, $code, $percent, $basis, $active]
         );
     }
+    ak_audit($app, 'ویزیتور', $name, $code . ' — ' . (string) $percent . '٪ از ' . ($basis === 'gross' ? 'سود' : 'فروش'));
     flash('success', 'ویزیتور ذخیره شد.');
     redirect('/admin/accounting/visitors');
+}
+
+/** @return list<array<string, mixed>> */
+function accounting_audit_dealers(App $app): array
+{
+    $found = $app->db->one(
+        'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "ak_dealers"'
+    );
+    if (!$found) {
+        return [];
+    }
+    try {
+        return $app->db->all(
+            'SELECT d.id, d.name, d.code, d.status, d.sale_model,
+                (SELECT r.percent FROM ak_commission_rules r WHERE r.dealer_id = d.id AND r.line = "" ORDER BY r.id DESC LIMIT 1) AS percent,
+                (SELECT r.basis FROM ak_commission_rules r WHERE r.dealer_id = d.id AND r.line = "" ORDER BY r.id DESC LIMIT 1) AS basis,
+                COALESCE((SELECT SUM(c.amount) FROM ak_dealer_commissions c WHERE c.dealer_id = d.id AND c.status = "earned"), 0) AS earned,
+                COALESCE((SELECT SUM(c.amount) FROM ak_dealer_commissions c WHERE c.dealer_id = d.id AND c.status = "pending"), 0) AS pending
+             FROM ak_dealers d
+             ORDER BY d.id DESC
+             LIMIT 40'
+        );
+    } catch (Throwable) {
+        return [];
+    }
 }
 
 function accounting_record_visitor_share(App $app, int $visitorId, string $source, int $refId, int $sale, int $cost): void

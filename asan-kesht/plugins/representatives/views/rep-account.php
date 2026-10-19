@@ -1,4 +1,5 @@
 <?php /** @var array $dealer */ /** @var int $balance */ /** @var array $ledger */ /** @var array $checks */ /** @var array $payments */ /** @var array $orders */ ?>
+<?php require __DIR__ . '/rep-nav.php'; ?>
 <p><?= e($balance > 0 ? 'بدهکار شما' : ($balance < 0 ? 'بستانکار شما' : 'حساب تسویه')) ?>: <?= e(money(abs($balance))) ?> — مهلت تسویه <?= e(fa_digits((string) $dealer['credit_days'])) ?> روز</p>
 <h2>پرداخت</h2>
 <form method="post" action="<?= e(url('/rep/payments')) ?>" enctype="multipart/form-data" class="grid">

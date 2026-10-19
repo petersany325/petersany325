@@ -7,6 +7,7 @@ $items = [
     ['href' => '/admin', 'label' => 'پیشخوان', 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
     ['href' => '/admin/profile', 'label' => 'نمایه', 'roles' => ['admin', 'employee', 'accountant', 'region_manager', 'representative']],
     ['href' => '/admin/users', 'label' => 'کاربران', 'roles' => ['admin']],
+    ['href' => '/admin/access', 'label' => 'دسترسی‌ها', 'roles' => ['admin']],
     ['href' => '/admin/plugins', 'label' => 'افزونه‌ها', 'roles' => ['admin']],
     ['href' => '/admin/settings', 'label' => 'تنظیمات', 'roles' => ['admin']],
 ];

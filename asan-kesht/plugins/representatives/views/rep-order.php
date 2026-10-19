@@ -1,4 +1,5 @@
 <?php /** @var array $dealer */ /** @var array $machines */ /** @var array $rows */ ?>
+<?php require __DIR__ . '/rep-nav.php'; ?>
 <form method="post" action="<?= e(url('/rep/orders')) ?>" class="stack">
   <?= csrf_field() ?>
   <?php foreach ($machines as $machine): ?>

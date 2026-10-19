@@ -39,9 +39,29 @@ if ($app->pluginEnabled('menus')) {
 }
 $description = $tagline . ' — ' . $siteName;
 $editTools = [];
-if ($user && (string) $user['role'] === 'admin') {
-    $filteredTools = $app->filter('site.toolbar', []);
-    $editTools = is_array($filteredTools) ? $filteredTools : [];
+$staffLinks = [];
+if ($user) {
+    $role = (string) $user['role'];
+    if ($role === 'admin') {
+        $filteredTools = $app->filter('site.toolbar', []);
+        $editTools = is_array($filteredTools) ? $filteredTools : [];
+    }
+    $work = [
+        ['href' => '/admin', 'label' => 'پیشخوان', 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
+        ['href' => '/admin/accounting', 'label' => 'حسابداری', 'roles' => ['admin', 'employee', 'accountant']],
+        ['href' => '/admin/accounting/visitors', 'label' => 'ویزیتورها', 'roles' => ['admin', 'employee', 'accountant']],
+        ['href' => '/admin/accounting/reports', 'label' => 'سود و زیان', 'roles' => ['admin', 'employee', 'accountant']],
+        ['href' => '/admin/accounting/audit', 'label' => 'حسابرسی', 'roles' => ['admin', 'accountant']],
+        ['href' => '/admin/dealers', 'label' => 'نمایندگان', 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
+        ['href' => '/admin/access', 'label' => 'دسترسی‌ها', 'roles' => ['admin']],
+        ['href' => '/admin/settings', 'label' => 'تنظیمات', 'roles' => ['admin']],
+        ['href' => '/rep', 'label' => 'پنل نمایندگی', 'roles' => ['representative']],
+    ];
+    foreach ($work as $link) {
+        if (in_array($role, $link['roles'], true)) {
+            $staffLinks[] = $link;
+        }
+    }
 }
 $aside = $app->filter('site.aside', []);
 if (!is_array($aside)) {
@@ -65,17 +85,25 @@ if (!is_array($aside)) {
 <body>
   <a class="skip" href="#main">رفتن به محتوا</a>
   <header class="top">
-    <?php if ($editTools !== [] || ($user && (string) $user['role'] === 'admin')): ?>
-      <nav class="editbar" aria-label="ویرایش">
-        <div class="wrap editbar-row">
-          <strong>ویرایش</strong>
-          <?php foreach ($editTools as $tool): ?>
-            <?php if (!is_array($tool)) { continue; } ?>
-            <a href="<?= e(url((string) ($tool['href'] ?? '/'))) ?>"<?= !empty($tool['primary']) ? ' class="is-primary"' : '' ?>><?= e((string) ($tool['label'] ?? '')) ?></a>
-          <?php endforeach; ?>
-          <a href="<?= e(url('/admin')) ?>">پیشخوان</a>
-          <a href="<?= e(url('/admin/settings')) ?>">تنظیمات</a>
-        </div>
+    <?php if ($editTools !== [] || $staffLinks !== []): ?>
+      <nav class="editbar" aria-label="کارتابل">
+        <?php if ($editTools !== []): ?>
+          <div class="wrap editbar-row">
+            <strong>ویرایش</strong>
+            <?php foreach ($editTools as $tool): ?>
+              <?php if (!is_array($tool)) { continue; } ?>
+              <a href="<?= e(url((string) ($tool['href'] ?? '/'))) ?>"<?= !empty($tool['primary']) ? ' class="is-primary"' : '' ?>><?= e((string) ($tool['label'] ?? '')) ?></a>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+        <?php if ($staffLinks !== []): ?>
+          <div class="wrap editbar-row">
+            <strong>کارتابل</strong>
+            <?php foreach ($staffLinks as $link): ?>
+              <a href="<?= e(url((string) $link['href'])) ?>"><?= e((string) $link['label']) ?></a>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
       </nav>
     <?php endif; ?>
     <div class="stripe" aria-hidden="true"></div>

@@ -191,6 +191,10 @@ final class App
                 'cards' => is_array($cards) ? $cards : [],
             ], 'layouts/admin');
         });
+        $this->router->get('/admin/access', function () use ($app): void {
+            require_role($app, ['admin']);
+            $app->view->render('admin/access', ['title' => 'دسترسی‌ها'], 'layouts/admin');
+        });
         $this->router->get('/admin/users', function () use ($app): void {
             require_role($app, ['admin']);
             $users = $app->db->all('SELECT * FROM ak_users ORDER BY id DESC LIMIT 200');
@@ -238,6 +242,7 @@ final class App
                         }
                         $app->db->run('UPDATE ak_users SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $id]);
                     }
+                    ak_audit($app, 'دسترسی', $name, 'نقش ' . (ak_role_labels()[$role] ?? $role) . ($active === 1 ? '، فعال' : '، غیرفعال'));
                     flash('success', 'کاربر ذخیره شد.');
                 } else {
                     if ($password !== '' && mb_strlen($password) < 8) {
@@ -248,6 +253,7 @@ final class App
                         'INSERT INTO ak_users (name, username, phone, password_hash, role, active, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
                         [$name, $usernameValue, $phoneValue, $password === '' ? null : password_hash($password, PASSWORD_DEFAULT), $role, $active]
                     );
+                    ak_audit($app, 'دسترسی', $name, 'کاربر تازه با نقش ' . (ak_role_labels()[$role] ?? $role));
                     flash('success', 'کاربر ساخته شد. ورود پیامکی بعد از تنظیم نیازپرداز با همین موبایل ممکن است.');
                 }
             } catch (PDOException) {

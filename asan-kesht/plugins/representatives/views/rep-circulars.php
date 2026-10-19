@@ -1,4 +1,5 @@
 <?php /** @var array $rows */ ?>
+<?php require __DIR__ . '/rep-nav.php'; ?>
 <?php foreach ($rows as $row): ?>
   <article>
     <h2><?= e((string) $row['title']) ?></h2>
