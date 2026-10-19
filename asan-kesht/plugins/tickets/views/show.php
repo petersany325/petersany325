@@ -34,12 +34,19 @@ $roles = [
           <strong><?= e((string) $message['name']) ?></strong>
           <span class="muted"><?= e(jalali_date((string) $message['created_at'])) ?> — <?= e($roles[$role] ?? $role) ?></span>
           <p><?= nl2br(e((string) $message['body'])) ?></p>
+          <?php if ($app->pluginEnabled('attachments') && (string) ($message['file'] ?? '') !== ''): ?>
+            <p><a href="<?= e(url('/files/' . (string) $message['file'])) ?>">دانلود پیوست</a></p>
+          <?php endif; ?>
         </article>
       <?php endforeach; ?>
       <?php if ($ticket['status'] !== 'closed'): ?>
-        <form method="post" action="<?= e(url($action)) ?>" class="stack ticket-reply">
+        <?php $filesOn = $app->pluginEnabled('attachments'); ?>
+        <form method="post" action="<?= e(url($action)) ?>" class="stack ticket-reply"<?= $filesOn ? ' enctype="multipart/form-data"' : '' ?>>
           <?= csrf_field() ?>
-          <label>پاسخ <textarea name="body" required></textarea></label>
+          <label>پاسخ <textarea name="body"<?= $filesOn ? '' : ' required' ?>></textarea></label>
+          <?php if ($filesOn): ?>
+            <label>پیوست PDF، JPG یا TXT، اختیاری <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.txt"></label>
+          <?php endif; ?>
           <button class="btn" type="submit">ارسال پاسخ</button>
         </form>
       <?php else: ?>

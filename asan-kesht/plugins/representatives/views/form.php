@@ -36,7 +36,24 @@
       </select>
     </label>
     <label>محدوده <input name="territory" value="<?= e((string) ($dealer['territory'] ?? '')) ?>"></label>
-    <label>سطح <input name="level" value="<?= e((string) ($dealer['level'] ?? '')) ?>" placeholder="پایه، نقره‌ای، طلایی"></label>
+    <label>سطح
+      <?php if ($app->pluginEnabled('cooperation') && function_exists('cooperation_levels')): ?>
+        <?php $levelNow = (string) ($dealer['level'] ?? ''); $levelList = cooperation_levels(); ?>
+        <select name="level">
+          <?php if ($levelNow !== '' && !isset($levelList[$levelNow])): ?>
+            <option value="<?= e($levelNow) ?>" selected><?= e($levelNow) ?></option>
+          <?php endif; ?>
+          <?php if ($levelNow === ''): ?>
+            <option value="" selected>عادی (سطح خالی)</option>
+          <?php endif; ?>
+          <?php foreach (array_keys($levelList) as $levelLabel): ?>
+            <option value="<?= e($levelLabel) ?>" <?= $levelNow === $levelLabel ? 'selected' : '' ?>><?= e($levelLabel) ?></option>
+          <?php endforeach; ?>
+        </select>
+      <?php else: ?>
+        <input name="level" value="<?= e((string) ($dealer['level'] ?? '')) ?>" placeholder="پایه، نقره‌ای، طلایی">
+      <?php endif; ?>
+    </label>
     <label>درصد پورسانت این نماینده <input name="commission_percent" inputmode="numeric" value="<?= e((string) ($rule['percent'] ?? '')) ?>" placeholder="خالی = پیش‌فرض"></label>
     <label>مبنای درصد
       <select name="commission_basis">

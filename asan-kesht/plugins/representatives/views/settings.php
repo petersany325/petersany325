@@ -24,6 +24,9 @@
   </div>
   <button type="submit">ذخیره تنظیمات</button>
 </form>
+<?php if ($app->pluginEnabled('cooperation')): ?>
+  <p><a href="<?= e(url('/admin/dealers/cooperation')) ?>">قیمت همکاری و حاشیه سطح‌ها</a></p>
+<?php endif; ?>
 <h2>قاعده خاص پورسانت</h2>
 <form method="post" action="<?= e(url('/admin/dealers/rules')) ?>" class="grid">
   <?= csrf_field() ?>

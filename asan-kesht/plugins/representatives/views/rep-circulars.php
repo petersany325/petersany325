@@ -5,6 +5,9 @@
     <h2><?= e((string) $row['title']) ?></h2>
     <p class="muted"><?= e($row['kind'] === 'law' ? 'قانون' : 'بخشنامه') ?> — <?= e((string) $row['priority']) ?> — <?= e((string) $row['receipt_status']) ?></p>
     <p><?= nl2br(e((string) $row['body'])) ?></p>
+    <?php if ($app->pluginEnabled('attachments') && (string) ($row['file'] ?? '') !== ''): ?>
+      <p><a href="<?= e(url('/files/' . (string) $row['file'])) ?>">دانلود پیوست</a></p>
+    <?php endif; ?>
     <?php if ($row['report'] !== ''): ?><p>گزارش شما: <?= e((string) $row['report']) ?></p><?php endif; ?>
     <?php
       $next = ['seen' => 'acked', 'acked' => 'doing', 'doing' => 'done', 'sent' => 'acked'][$row['receipt_status']] ?? '';

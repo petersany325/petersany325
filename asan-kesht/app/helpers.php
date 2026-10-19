@@ -243,7 +243,7 @@ function access_sections(): array
         'accounting' => ['label' => 'حسابداری، فاکتور، ویزیتور و سود و زیان', 'paths' => ['/admin/accounting'], 'roles' => ['admin', 'employee', 'accountant']],
         'audit' => ['label' => 'حسابرسی', 'paths' => ['/admin/accounting/audit'], 'roles' => ['admin', 'accountant']],
         'dealers' => ['label' => 'پرونده و سفارش نماینده', 'paths' => ['/admin/dealers'], 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
-        'dealer_edit' => ['label' => 'قیمت و تنظیم نمایندگی', 'paths' => ['/admin/dealers/prices', '/admin/dealers/settings', '/admin/dealers/rules'], 'roles' => ['admin', 'employee']],
+        'dealer_edit' => ['label' => 'قیمت و تنظیم نمایندگی', 'paths' => ['/admin/dealers/prices', '/admin/dealers/settings', '/admin/dealers/rules', '/admin/dealers/cooperation'], 'roles' => ['admin', 'employee']],
         'dealer_money' => ['label' => 'حساب، چک و پورسانت نماینده', 'paths' => ['/admin/dealers/money', '/admin/dealers/payments', '/admin/dealers/checks', '/admin/dealers/adjust', '/admin/dealers/disputes', '/admin/dealers/commissions'], 'roles' => ['admin', 'accountant']],
         'shop' => ['label' => 'تنظیم فروشگاه و درگاه', 'paths' => ['/admin/shop'], 'roles' => ['admin']],
         'shop_orders' => ['label' => 'سفارش فروشگاه', 'paths' => ['/admin/shop/orders'], 'roles' => ['admin', 'employee']],
@@ -251,6 +251,9 @@ function access_sections(): array
         'content' => ['label' => 'صفحه اول، فوتر، منو و قالب', 'paths' => ['/admin/pages', '/admin/menus', '/admin/theme', '/admin/layout'], 'roles' => ['admin']],
         'messages' => ['label' => 'تیکت و پیامک', 'paths' => ['/admin/tickets', '/admin/sms', '/admin/niaz'], 'roles' => ['admin', 'employee']],
         'register' => ['label' => 'ثبت‌نام و درخواست نمایندگی', 'paths' => ['/admin/register'], 'roles' => ['admin']],
+        'dealership' => ['label' => 'فرم عمومی درخواست نمایندگی', 'paths' => ['/admin/dealership'], 'roles' => ['admin', 'employee', 'region_manager']],
+        'warranty' => ['label' => 'گارانتی محصولات', 'paths' => ['/admin/warranty'], 'roles' => ['admin', 'employee']],
+        'received_checks' => ['label' => 'چک دریافتی مشتری', 'paths' => ['/admin/received-checks'], 'roles' => ['admin', 'employee', 'accountant']],
         'rep' => ['label' => 'کارتابل نمایندگی', 'paths' => ['/rep'], 'roles' => ['representative']],
     ];
 }
@@ -660,10 +663,36 @@ function admin_nav_groups(App $app): array
     return $ordered;
 }
 
+function ak_menu_ensure(App $app, string $href, string $label, string $description, string $parentHref): void
+{
+    try {
+        $found = $app->db->one('SELECT id FROM ak_menu_items WHERE href = ? LIMIT 1', [$href]);
+        if ($found) {
+            return;
+        }
+        $parent = $app->db->one(
+            'SELECT id FROM ak_menu_items WHERE href = ? AND parent_id IS NULL LIMIT 1',
+            [$parentHref]
+        );
+        $app->db->run(
+            'INSERT INTO ak_menu_items (parent_id, label, href, description, sort_order, visible, new_tab, mega) VALUES (?, ?, ?, ?, 55, 1, 0, 0)',
+            [$parent ? (int) $parent['id'] : null, $label, $href, $description]
+        );
+    } catch (Throwable) {
+        return;
+    }
+}
+
 function admin_bucket(string $href): string
 {
-    if (str_starts_with($href, '/admin/accounting')) {
+    if (str_starts_with($href, '/admin/accounting') || str_contains($href, '/received-checks')) {
         return 'حسابداری';
+    }
+    if (str_contains($href, '/warranty')) {
+        return 'فروشگاه';
+    }
+    if (str_contains($href, '/dealership')) {
+        return 'نمایندگان';
     }
     if (str_contains($href, '/dealers') || $href === '/rep' || str_starts_with($href, '/rep/')) {
         return 'نمایندگان';

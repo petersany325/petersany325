@@ -13,6 +13,16 @@ $links = [
     '/admin/accounting/expenses' => 'هزینه‌ها',
     '/admin/accounting/invoice-settings' => 'تنظیم فاکتور',
 ];
+if ($app->pluginEnabled('received-checks')) {
+    $rebuilt = [];
+    foreach ($links as $href => $label) {
+        $rebuilt[$href] = $label;
+        if ($href === '/admin/accounting/checks') {
+            $rebuilt['/admin/received-checks'] = 'چک دریافتی';
+        }
+    }
+    $links = $rebuilt;
+}
 $current = rtrim(request_path(), '/') ?: '/';
 $actor = $app->auth->user();
 if (!is_array($actor) || !access_can($app, $actor, 'audit', ['admin', 'accountant'])) {
@@ -24,7 +34,7 @@ if (!$app->pluginEnabled('warehouses')) {
 ?>
 <nav class="acct-nav" aria-label="حسابداری">
   <?php foreach ($links as $href => $label): ?>
-    <?php $on = $current === $href || ($href === '/admin/accounting/visitors' && str_starts_with($current, '/admin/accounting/visitors/')) || ($href === '/admin/accounting/warehouses' && str_starts_with($current, '/admin/accounting/warehouses')); ?>
+    <?php $on = $current === $href || ($href === '/admin/accounting/visitors' && str_starts_with($current, '/admin/accounting/visitors/')) || ($href === '/admin/accounting/warehouses' && str_starts_with($current, '/admin/accounting/warehouses')) || ($href === '/admin/received-checks' && str_starts_with($current, '/admin/received-checks')); ?>
     <a href="<?= e(url($href)) ?>"<?= $on ? ' class="is-current"' : '' ?>><?= e($label) ?></a>
   <?php endforeach; ?>
 </nav>

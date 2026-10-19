@@ -39,6 +39,9 @@ return new class extends Plugin {
 
     public function boot(App $app): void
     {
+        if ($app->pluginEnabled('attachments') && function_exists('attachment_column')) {
+            attachment_column($app->db, 'ak_ticket_messages');
+        }
         $app->listen('admin.menu', function (array $items): array {
             $items[] = ['href' => '/admin/tickets', 'label' => 'تیکت‌ها', 'roles' => ['admin', 'employee']];
             $items[] = ['href' => '/admin/tickets/new', 'label' => 'ایجاد تیکت', 'roles' => ['admin', 'employee']];
@@ -164,11 +167,25 @@ return new class extends Plugin {
             if (!isset(ticket_statuses()[$status])) {
                 $status = 'open';
             }
-            if (!$client || mb_strlen($subject) < 3 || mb_strlen($body) < 3) {
+            $incoming = function_exists('attachment_incoming') && attachment_incoming('file');
+            if (!$client || mb_strlen($subject) < 3 || (!$incoming && mb_strlen($body) < 2)) {
                 flash('error', 'مشتری، موضوع و متن تیکت را کامل کنید.');
                 redirect('/admin/tickets/new');
             }
-            $id = $this->openTicket($app, $ownerId, (int) $user['id'], $subject, $body, $status);
+            try {
+                $file = $this->takeFile($app);
+            } catch (RuntimeException $e) {
+                flash('error', $e->getMessage());
+                redirect('/admin/tickets/new');
+            }
+            if ($file === '' && mb_strlen($body) < 2) {
+                flash('error', 'متن تیکت را بنویسید یا یک پیوست مجاز بفرستید.');
+                redirect('/admin/tickets/new');
+            }
+            if ($file !== '' && mb_strlen($body) < 2) {
+                $body = 'پیوست';
+            }
+            $id = $this->openTicket($app, $ownerId, (int) $user['id'], $subject, $body, $status, $file);
             if (!empty($client['phone'])) {
                 $sms = $app->get('sms');
                 if ($sms instanceof NiazpardazClient && $sms->configured()) {
@@ -195,7 +212,8 @@ return new class extends Plugin {
             $user = require_role($app, ['admin', 'employee']);
             $ticket = $this->ticket($app, (int) $params['id']);
             $next = (string) ($_POST['status'] ?? '');
-            if ($next !== '' && isset(ticket_statuses()[$next]) && post_string('body', 4000) === '') {
+            $incoming = function_exists('attachment_incoming') && attachment_incoming('file');
+            if ($next !== '' && isset(ticket_statuses()[$next]) && post_string('body', 4000) === '' && !$incoming) {
                 $app->db->run('UPDATE ak_tickets SET status = ?, updated_at = NOW() WHERE id = ?', [$next, (int) $ticket['id']]);
                 flash('success', 'وضعیت تیکت شد: ' . ticket_status_label($next));
                 redirect('/admin/tickets/' . $ticket['id']);
@@ -239,29 +257,58 @@ return new class extends Plugin {
         $user = require_user($app);
         $subject = post_string('subject', 180);
         $body = post_string('body', 4000);
-        if (mb_strlen($subject) < 3 || mb_strlen($body) < 3) {
+        $incoming = function_exists('attachment_incoming') && attachment_incoming('file');
+        if (mb_strlen($subject) < 3 || (!$incoming && mb_strlen($body) < 2)) {
             flash('error', 'موضوع و متن تیکت را بنویسید.');
             redirect('/account/tickets/new');
         }
-        $id = $this->openTicket($app, (int) $user['id'], (int) $user['id'], $subject, $body, 'open');
+        try {
+            $file = $this->takeFile($app);
+        } catch (RuntimeException $e) {
+            flash('error', $e->getMessage());
+            redirect('/account/tickets/new');
+        }
+        if ($file === '' && mb_strlen($body) < 2) {
+            flash('error', 'متن تیکت را بنویسید یا یک پیوست مجاز بفرستید.');
+            redirect('/account/tickets/new');
+        }
+        if ($file !== '' && mb_strlen($body) < 2) {
+            $body = 'پیوست';
+        }
+        $id = $this->openTicket($app, (int) $user['id'], (int) $user['id'], $subject, $body, 'open', $file);
         flash('success', 'تیکت ثبت شد.');
         redirect('/account/tickets/' . $id);
     }
 
-    private function openTicket(App $app, int $ownerId, int $authorId, string $subject, string $body, string $status): int
+    private function openTicket(App $app, int $ownerId, int $authorId, string $subject, string $body, string $status, string $file = ''): int
     {
-        return (int) $app->db->transaction(function () use ($app, $ownerId, $authorId, $subject, $body, $status): int {
+        return (int) $app->db->transaction(function () use ($app, $ownerId, $authorId, $subject, $body, $status, $file): int {
             $app->db->run(
                 'INSERT INTO ak_tickets (user_id, subject, status, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
                 [$ownerId, $subject, $status]
             );
             $id = (int) $app->db->id();
-            $app->db->run(
-                'INSERT INTO ak_ticket_messages (ticket_id, user_id, body, created_at) VALUES (?, ?, ?, NOW())',
-                [$id, $authorId, $body]
-            );
+            if ($app->pluginEnabled('attachments')) {
+                $app->db->run(
+                    'INSERT INTO ak_ticket_messages (ticket_id, user_id, body, created_at, file) VALUES (?, ?, ?, NOW(), ?)',
+                    [$id, $authorId, $body, $file]
+                );
+            } else {
+                $app->db->run(
+                    'INSERT INTO ak_ticket_messages (ticket_id, user_id, body, created_at) VALUES (?, ?, ?, NOW())',
+                    [$id, $authorId, $body]
+                );
+            }
             return $id;
         });
+    }
+
+    private function takeFile(App $app): string
+    {
+        if (!$app->pluginEnabled('attachments') || !function_exists('attachment_store')) {
+            return '';
+        }
+        return attachment_store($app, 'file');
     }
 
     /** @return list<array<string, mixed>> */
@@ -274,19 +321,40 @@ return new class extends Plugin {
 
     private function reply(App $app, array $ticket, array $user, bool $staff): void
     {
-        $body = post_string('body', 4000);
-        if (mb_strlen($body) < 2) {
-            flash('error', 'متن پاسخ را بنویسید.');
-            redirect(($staff ? '/admin/tickets/' : '/account/tickets/') . $ticket['id']);
-        }
         if ($ticket['status'] === 'closed') {
             flash('error', 'این تیکت بسته است.');
             redirect(($staff ? '/admin/tickets/' : '/account/tickets/') . $ticket['id']);
         }
-        $app->db->run(
-            'INSERT INTO ak_ticket_messages (ticket_id, user_id, body, created_at) VALUES (?, ?, ?, NOW())',
-            [(int) $ticket['id'], (int) $user['id'], $body]
-        );
+        $body = post_string('body', 4000);
+        $incoming = function_exists('attachment_incoming') && attachment_incoming('file');
+        if (!$incoming && mb_strlen($body) < 2) {
+            flash('error', 'متن پاسخ را بنویسید.');
+            redirect(($staff ? '/admin/tickets/' : '/account/tickets/') . $ticket['id']);
+        }
+        try {
+            $file = $this->takeFile($app);
+        } catch (RuntimeException $e) {
+            flash('error', $e->getMessage());
+            redirect(($staff ? '/admin/tickets/' : '/account/tickets/') . $ticket['id']);
+        }
+        if ($file === '' && mb_strlen($body) < 2) {
+            flash('error', 'متن پاسخ را بنویسید یا یک پیوست مجاز بفرستید.');
+            redirect(($staff ? '/admin/tickets/' : '/account/tickets/') . $ticket['id']);
+        }
+        if ($file !== '' && mb_strlen($body) < 2) {
+            $body = 'پیوست';
+        }
+        if ($app->pluginEnabled('attachments')) {
+            $app->db->run(
+                'INSERT INTO ak_ticket_messages (ticket_id, user_id, body, created_at, file) VALUES (?, ?, ?, NOW(), ?)',
+                [(int) $ticket['id'], (int) $user['id'], $body, $file]
+            );
+        } else {
+            $app->db->run(
+                'INSERT INTO ak_ticket_messages (ticket_id, user_id, body, created_at) VALUES (?, ?, ?, NOW())',
+                [(int) $ticket['id'], (int) $user['id'], $body]
+            );
+        }
         $chosen = (string) ($_POST['status'] ?? '');
         if ($staff && isset(ticket_statuses()[$chosen])) {
             $status = $chosen;

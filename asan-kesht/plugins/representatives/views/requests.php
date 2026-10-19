@@ -7,7 +7,9 @@
     <tr>
       <td><?= e((string) $row['name']) ?></td>
       <td><?= e(dealer_request_types()[$row['type']] ?? '') ?></td>
-      <td><?= e((string) $row['body']) ?><?php if ((int) $row['amount'] > 0): ?><div class="muted"><?= e(money((int) $row['amount'])) ?></div><?php endif; ?></td>
+      <td><?= e((string) $row['body']) ?><?php if ((int) $row['amount'] > 0): ?><div class="muted"><?= e(money((int) $row['amount'])) ?></div><?php endif; ?>
+        <?php if ($app->pluginEnabled('attachments') && (string) ($row['file'] ?? '') !== ''): ?><div><a href="<?= e(url('/files/' . (string) $row['file'])) ?>">پیوست</a></div><?php endif; ?>
+      </td>
       <td><?= e((string) $row['status']) ?><?php if ($row['status'] === 'open'): ?><div class="muted">منتظر <?= e(ak_role_labels()[$expected] ?? $expected) ?></div><?php endif; ?></td>
       <td>
         <?php if ($row['status'] === 'open' && ($role === 'admin' || $role === $expected)): ?>

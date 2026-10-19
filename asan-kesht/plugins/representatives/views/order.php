@@ -3,7 +3,13 @@
 <p>وضعیت: <?= e(dealer_order_statuses()[$order['status']] ?? '') ?></p>
 <ul>
   <?php foreach ($items as $item): ?>
-    <li><?= e((string) $item['title']) ?> × <?= e(fa_digits((string) $item['qty'])) ?> — <?= e(money((int) $item['unit_price'])) ?></li>
+    <li><?= e((string) $item['title']) ?> × <?= e(fa_digits((string) $item['qty'])) ?> — <?= e(money((int) $item['unit_price'])) ?>
+      <?php if (isset($item['retail_price']) && (int) $item['retail_price'] > 0): ?>
+        — خرده <?= e(money((int) $item['retail_price'])) ?> — سود بالقوه <?= e(money((int) ($item['potential'] ?? 0))) ?>
+      <?php elseif (isset($item['retail_price'])): ?>
+        — سود بالقوه ثبت نشده
+      <?php endif; ?>
+    </li>
   <?php endforeach; ?>
 </ul>
 <p>جمع <?= e(money((int) $order['total'])) ?> — نقد <?= e(money((int) $order['cash_amount'])) ?> — چک <?= e(money((int) $order['check_amount'])) ?> — نسیه <?= e(money((int) $order['credit_amount'])) ?> برای <?= e(fa_digits((string) $order['credit_days'])) ?> روز</p>

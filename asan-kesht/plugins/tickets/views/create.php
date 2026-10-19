@@ -8,12 +8,13 @@ $statuses = $statuses ?? [];
 $action = $staff ? '/admin/tickets/new' : '/account/tickets/new';
 $back = $staff ? '/admin/tickets' : '/account/tickets';
 $roles = ak_role_labels();
+$filesOn = $app->pluginEnabled('attachments');
 ?>
 <?php if (!$staff): ?><section class="section"><div class="wrap"><?php endif; ?>
   <div class="ticket-toolbar">
     <a class="ticket-back" href="<?= e(url($back)) ?>">بازگشت به تیکت‌ها</a>
   </div>
-  <form method="post" action="<?= e(url($action)) ?>" class="stack ticket-form">
+  <form method="post" action="<?= e(url($action)) ?>" class="stack ticket-form"<?= $filesOn ? ' enctype="multipart/form-data"' : '' ?>>
     <?= csrf_field() ?>
     <?php if ($staff): ?>
       <label>مشتری
@@ -37,7 +38,11 @@ $roles = ak_role_labels();
       </label>
     <?php endif; ?>
     <label>موضوع <input name="subject" required maxlength="180"></label>
-    <label>شرح <textarea name="body" required></textarea></label>
+    <label>شرح <textarea name="body"<?= $filesOn ? '' : ' required' ?>></textarea></label>
+    <?php if ($filesOn): ?>
+      <label>پیوست PDF، JPG یا TXT، اختیاری <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.txt"></label>
+      <p class="muted">بدون پیوست، متن لازم است.</p>
+    <?php endif; ?>
     <button class="btn" type="submit"<?= $staff && $clients === [] ? ' disabled' : '' ?>>ایجاد تیکت</button>
   </form>
 <?php if (!$staff): ?></div></section><?php endif; ?>

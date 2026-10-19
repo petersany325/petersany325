@@ -22,4 +22,7 @@
       </article>
     <?php endif; ?>
   <?php endif; ?>
+<?php if ($app->pluginEnabled('dealership')): ?>
+    <p><a class="btn" href="<?= e(url('/dealership')) ?>">درخواست نمایندگی</a></p>
+  <?php endif; ?>
 </div></section>

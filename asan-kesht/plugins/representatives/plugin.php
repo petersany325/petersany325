@@ -21,6 +21,13 @@ return new class extends Plugin {
 
     public function boot(App $app): void
     {
+        if ($app->pluginEnabled('cooperation') && function_exists('cooperation_extend')) {
+            cooperation_extend($app->db);
+        }
+        if ($app->pluginEnabled('attachments') && function_exists('attachment_column')) {
+            attachment_column($app->db, 'ak_circulars');
+            attachment_column($app->db, 'ak_dealer_requests');
+        }
         $app->listen('site.nav', function (array $items): array {
             $items[] = ['href' => '/estelam', 'label' => 'استعلام نمایندگی'];
             return $items;
@@ -378,6 +385,10 @@ return new class extends Plugin {
 
         $app->router->get('/rep', function () use ($app): void {
             $dealer = dealer_require_rep($app);
+            $figures = ['earned' => null, 'potential' => null];
+            if ($app->pluginEnabled('cooperation') && function_exists('cooperation_rep_figures')) {
+                $figures = cooperation_rep_figures($app, (int) $dealer['id']);
+            }
             $app->view->plugin('representatives', 'rep-home', [
                 'title' => 'پنل نمایندگی',
                 'dealer' => $dealer,
@@ -385,6 +396,8 @@ return new class extends Plugin {
                 'overdue' => dealer_overdue($app, $dealer),
                 'orders' => $app->db->all('SELECT * FROM ak_dealer_orders WHERE dealer_id = ? ORDER BY id DESC LIMIT 8', [(int) $dealer['id']]),
                 'circulars' => $app->db->one('SELECT COUNT(*) AS c FROM ak_circular_receipts WHERE dealer_id = ? AND status IN ("sent","seen")', [(int) $dealer['id']]),
+                'earned' => $figures['earned'],
+                'potential' => $figures['potential'],
             ]);
         });
         $app->router->get('/rep/prices', function () use ($app): void {
@@ -473,23 +486,51 @@ return new class extends Plugin {
                 flash('error', 'نوع درخواست نامعتبر است.');
                 redirect('/rep/requests');
             }
+            $file = '';
+            if ($app->pluginEnabled('attachments') && function_exists('attachment_store')) {
+                try {
+                    $file = attachment_store($app, 'file');
+                } catch (RuntimeException $e) {
+                    flash('error', $e->getMessage());
+                    redirect('/rep/requests');
+                }
+            }
             $body = post_string('body', 4000);
-            if (mb_strlen($body) < 5) {
+            if ($file === '' && mb_strlen($body) < 5) {
                 flash('error', 'شرح درخواست را بنویسید.');
                 redirect('/rep/requests');
             }
-            $app->db->run(
-                'INSERT INTO ak_dealer_requests (dealer_id, type, order_id, amount, until_date, body, step, status, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, 0, "open", NOW(), NOW())',
-                [
-                    (int) $dealer['id'],
-                    $type,
-                    (int) post_string('order_id', 12) ?: null,
-                    dealer_money_input('amount'),
-                    dealer_date_input('until_date'),
-                    $body,
-                ]
-            );
+            if ($file !== '' && mb_strlen($body) < 5) {
+                $body = 'پیوست';
+            }
+            if ($app->pluginEnabled('attachments')) {
+                $app->db->run(
+                    'INSERT INTO ak_dealer_requests (dealer_id, type, order_id, amount, until_date, body, step, status, created_at, updated_at, file)
+                     VALUES (?, ?, ?, ?, ?, ?, 0, "open", NOW(), NOW(), ?)',
+                    [
+                        (int) $dealer['id'],
+                        $type,
+                        (int) post_string('order_id', 12) ?: null,
+                        dealer_money_input('amount'),
+                        dealer_date_input('until_date'),
+                        $body,
+                        $file,
+                    ]
+                );
+            } else {
+                $app->db->run(
+                    'INSERT INTO ak_dealer_requests (dealer_id, type, order_id, amount, until_date, body, step, status, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, ?, ?, 0, "open", NOW(), NOW())',
+                    [
+                        (int) $dealer['id'],
+                        $type,
+                        (int) post_string('order_id', 12) ?: null,
+                        dealer_money_input('amount'),
+                        dealer_date_input('until_date'),
+                        $body,
+                    ]
+                );
+            }
             flash('success', 'درخواست ثبت شد و به مسئول همان مرحله رسید.');
             redirect('/rep/requests');
         });
@@ -714,6 +755,20 @@ return new class extends Plugin {
             if ($allowed !== [] && !in_array($machine['line'], $allowed, true)) {
                 continue;
             }
+            if ($app->pluginEnabled('cooperation') && function_exists('cooperation_quote')) {
+                $quote = cooperation_quote($app, $dealer, (int) $machine['id']);
+                if (!$quote) {
+                    continue;
+                }
+                $machine['unit_price'] = $quote['price'];
+                $machine['unit_cost'] = $quote['cost'];
+                $machine['retail_price'] = $quote['retail'];
+                $machine['margin_label'] = $quote['margin_label'];
+                $machine['markup_label'] = $quote['markup_label'];
+                $machine['quote_source'] = $quote['source'];
+                $rows[] = $machine;
+                continue;
+            }
             $price = dealer_price_for($app, $dealer, (int) $machine['id']);
             if ($price) {
                 $machine['unit_price'] = $price['price'];
@@ -785,10 +840,22 @@ return new class extends Plugin {
             );
             $orderId = (int) $app->db->id();
             foreach ($items as $item) {
-                $app->db->run(
-                    'INSERT INTO ak_dealer_order_items (order_id, machine_id, title, qty, unit_price, unit_cost) VALUES (?, ?, ?, ?, ?, ?)',
-                    [$orderId, (int) $item['id'], (string) $item['name'], (int) $item['qty'], (int) $item['unit_price'], (int) $item['unit_cost']]
-                );
+                if ($app->pluginEnabled('cooperation')) {
+                    $retail = (int) ($item['retail_price'] ?? 0);
+                    $potential = 0;
+                    if ((string) ($dealer['sale_model'] ?? '') === 'resale' && $retail > 0) {
+                        $potential = ($retail - (int) $item['unit_price']) * (int) $item['qty'];
+                    }
+                    $app->db->run(
+                        'INSERT INTO ak_dealer_order_items (order_id, machine_id, title, qty, unit_price, unit_cost, retail_price, potential) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                        [$orderId, (int) $item['id'], (string) $item['name'], (int) $item['qty'], (int) $item['unit_price'], (int) $item['unit_cost'], $retail, $potential]
+                    );
+                } else {
+                    $app->db->run(
+                        'INSERT INTO ak_dealer_order_items (order_id, machine_id, title, qty, unit_price, unit_cost) VALUES (?, ?, ?, ?, ?, ?)',
+                        [$orderId, (int) $item['id'], (string) $item['name'], (int) $item['qty'], (int) $item['unit_price'], (int) $item['unit_cost']]
+                    );
+                }
             }
         });
         flash('success', 'سفارش ' . $number . ' برای تأیید شرکت ثبت شد. تا قبل از تأیید در حساب بدهکار نمی‌شود.');
@@ -895,11 +962,23 @@ return new class extends Plugin {
     private function publishCircular(App $app, int $userId): void
     {
         $title = post_string('title', 180);
-        $body = post_string('body', 8000);
         $audience = post_string('audience', 20);
-        if ($title === '' || mb_strlen($body) < 5 || !in_array($audience, ['all', 'province', 'selected'], true)) {
+        $file = '';
+        if ($app->pluginEnabled('attachments') && function_exists('attachment_store')) {
+            try {
+                $file = attachment_store($app, 'file');
+            } catch (RuntimeException $e) {
+                flash('error', $e->getMessage());
+                redirect('/admin/dealers/circulars');
+            }
+        }
+        $body = post_string('body', 8000);
+        if ($title === '' || !in_array($audience, ['all', 'province', 'selected'], true) || ($file === '' && mb_strlen($body) < 5)) {
             flash('error', 'عنوان، متن و مخاطب بخشنامه را کامل کنید.');
             redirect('/admin/dealers/circulars');
+        }
+        if ($file !== '' && mb_strlen($body) < 5) {
+            $body = 'پیوست';
         }
         $province = post_string('province', 80);
         $kind = post_string('kind', 20) === 'law' ? 'law' : 'circular';
@@ -907,10 +986,17 @@ return new class extends Plugin {
         if (!in_array($priority, ['normal', 'high', 'urgent'], true)) {
             $priority = 'normal';
         }
-        $app->db->run(
-            'INSERT INTO ak_circulars (title, body, kind, priority, audience, province, due_date, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-            [$title, $body, $kind, $priority, $audience, $province, dealer_date_input('due_date'), $userId]
-        );
+        if ($app->pluginEnabled('attachments')) {
+            $app->db->run(
+                'INSERT INTO ak_circulars (title, body, kind, priority, audience, province, due_date, created_by, created_at, file) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)',
+                [$title, $body, $kind, $priority, $audience, $province, dealer_date_input('due_date'), $userId, $file]
+            );
+        } else {
+            $app->db->run(
+                'INSERT INTO ak_circulars (title, body, kind, priority, audience, province, due_date, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+                [$title, $body, $kind, $priority, $audience, $province, dealer_date_input('due_date'), $userId]
+            );
+        }
         $circularId = (int) $app->db->id();
         $selected = $_POST['dealer_ids'] ?? [];
         $selectedIds = [];

@@ -1,5 +1,6 @@
 <?php /** @var array $rows */ /** @var array $dealers */ /** @var array $done */ ?>
-<form method="post" action="<?= e(url('/admin/dealers/circulars')) ?>" class="stack">
+<?php $filesOn = $app->pluginEnabled('attachments'); ?>
+<form method="post" action="<?= e(url('/admin/dealers/circulars')) ?>" class="stack"<?= $filesOn ? ' enctype="multipart/form-data"' : '' ?>>
   <?= csrf_field() ?>
   <div class="grid">
     <label>عنوان <input name="title" required></label>
@@ -9,7 +10,11 @@
     <label>استان <input name="province"></label>
     <label>مهلت <input type="date" name="due_date"></label>
   </div>
-  <label>متن <textarea name="body" required></textarea></label>
+  <label>متن <textarea name="body"<?= $filesOn ? '' : ' required' ?>></textarea></label>
+  <?php if ($filesOn): ?>
+    <label>پیوست PDF، JPG یا TXT، اختیاری <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.txt"></label>
+    <p class="muted">بدون پیوست، متن لازم است. با پیوست، نامه کوتاه هم ارسال می‌شود.</p>
+  <?php endif; ?>
   <fieldset>
     <legend>اگر مخاطب افراد مشخص است</legend>
     <?php foreach ($dealers as $dealer): ?>
@@ -23,7 +28,7 @@
   <tbody>
   <?php foreach ($rows as $row): ?>
     <tr>
-      <td><?= e((string) $row['title']) ?></td>
+      <td><?= e((string) $row['title']) ?><?php if ($filesOn && (string) ($row['file'] ?? '') !== ''): ?> <a href="<?= e(url('/files/' . (string) $row['file'])) ?>">پیوست</a><?php endif; ?></td>
       <td><?= e($row['kind'] === 'law' ? 'قانون' : 'بخشنامه') ?></td>
       <td><?= e((string) $row['priority']) ?></td>
       <td><?= e(fa_digits((string) $row['accepted'])) ?></td>

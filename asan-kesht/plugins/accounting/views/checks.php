@@ -18,6 +18,9 @@ require __DIR__ . '/nav.php';
   <?php endforeach; ?>
 </ul>
 <h2>چک</h2>
+<?php if ($app->pluginEnabled('received-checks')): ?>
+  <p class="muted">چک دریافتی مشتری، با بانک و شعبه و شماره صیاد، در <a href="<?= e(url('/admin/received-checks')) ?>">چک دریافتی</a> ثبت می‌شود. ثبت چک سند فروش نیست.</p>
+<?php endif; ?>
 <form method="post" action="<?= e(url('/admin/accounting/checks')) ?>" class="grid">
   <?= csrf_field() ?>
   <label>جهت
@@ -44,12 +47,17 @@ require __DIR__ . '/nav.php';
 </form>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>جهت</th><th>شماره</th><th>طرف</th><th>مبلغ</th><th>سررسید</th><th>وضعیت</th></tr></thead>
+    <thead><tr><th>جهت</th><th>شماره</th><?php if ($app->pluginEnabled('received-checks')): ?><th>صیاد</th><th>شعبه</th><th>دریافت</th><?php endif; ?><th>طرف</th><th>مبلغ</th><th>سررسید</th><th>وضعیت</th></tr></thead>
     <tbody>
     <?php foreach ($rows as $row): ?>
       <tr>
         <td><?= e((string) $row['direction'] === 'in' ? 'دریافتی' : 'پرداختی') ?></td>
         <td><?= e((string) $row['number']) ?></td>
+        <?php if ($app->pluginEnabled('received-checks')): ?>
+          <td><?= e(fa_digits((string) ($row['sayad'] ?? ''))) ?></td>
+          <td><?= e((string) ($row['branch'] ?? '')) ?></td>
+          <td><?= e(jalali_date(isset($row['received_on']) && $row['received_on'] !== null ? (string) $row['received_on'] : '')) ?></td>
+        <?php endif; ?>
         <td><?= e((string) $row['party_name']) ?></td>
         <td><?= e(money((int) $row['amount'])) ?></td>
         <td><?= e((string) $row['due_on']) ?></td>
