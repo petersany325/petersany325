@@ -25,7 +25,7 @@ $role = $user['role'] ?? '';
   <link rel="icon" href="<?= e(url('/assets/favicon.svg')) ?>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= e(url('/assets/css/admin.css')) ?>">
+  <link rel="stylesheet" href="<?= e(url('/assets/css/admin.css')) ?>?v=<?= e((string) (@filemtime($app->root . '/assets/css/admin.css') ?: 1)) ?>">
 </head>
 <body>
   <div class="shell">

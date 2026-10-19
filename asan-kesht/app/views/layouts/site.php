@@ -42,7 +42,7 @@ $description = $tagline . ' — ' . $siteName;
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= e(url('/assets/css/site.css')) ?>">
+  <link rel="stylesheet" href="<?= e(url('/assets/css/site.css')) ?>?v=<?= e((string) (@filemtime($app->root . '/assets/css/site.css') ?: 1)) ?>">
   <style>:root{--oxide:<?= e($oxide) ?>;--ink:<?= e($ink) ?>;--paper:<?= e($paper) ?>;--dark:<?= e($dark) ?>}</style>
 </head>
 <body>
@@ -192,6 +192,6 @@ $description = $tagline . ' — ' . $siteName;
     </div>
     <div class="wrap legal">© <?= e(fa_digits((string) gregorian_to_jalali((int) date('Y'), (int) date('n'), (int) date('j'))[0])) ?> <?= e($siteName) ?></div>
   </footer>
-  <script src="<?= e(url('/assets/js/site.js')) ?>"></script>
+  <script src="<?= e(url('/assets/js/site.js')) ?>?v=<?= e((string) (@filemtime($app->root . '/assets/js/site.js') ?: 1)) ?>"></script>
 </body>
 </html>
