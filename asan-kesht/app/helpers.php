@@ -239,6 +239,7 @@ function access_sections(): array
         'profile' => ['label' => 'نمایه', 'paths' => ['/admin/profile'], 'roles' => ['admin', 'employee', 'accountant', 'region_manager', 'representative']],
         'users' => ['label' => 'کاربران و دسترسی‌ها', 'paths' => ['/admin/users', '/admin/access'], 'roles' => ['admin']],
         'system' => ['label' => 'افزونه‌ها و تنظیمات کلی', 'paths' => ['/admin/plugins', '/admin/settings'], 'roles' => ['admin']],
+        'maintain' => ['label' => 'نگهداری، کش، تعمیر و پشتیبان', 'paths' => ['/admin/maintain'], 'roles' => ['admin']],
         'accounting' => ['label' => 'حسابداری، فاکتور، ویزیتور و سود و زیان', 'paths' => ['/admin/accounting'], 'roles' => ['admin', 'employee', 'accountant']],
         'audit' => ['label' => 'حسابرسی', 'paths' => ['/admin/accounting/audit'], 'roles' => ['admin', 'accountant']],
         'dealers' => ['label' => 'پرونده و سفارش نماینده', 'paths' => ['/admin/dealers'], 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
@@ -497,6 +498,9 @@ function admin_bucket(string $href): string
 
 function admin_glyph(string $href): string
 {
+    if (str_contains($href, '/maintain')) {
+        return 'wrench';
+    }
     return match (admin_bucket($href)) {
         'حسابداری' => 'file',
         'نمایندگان' => 'pin',
@@ -580,6 +584,7 @@ function ui_icon(string $name): string
         'factory' => '<path d="M3 20h18"/><path d="M5 20V10l5 3V10l5 3V8l5 3v9"/>',
         'pin' => '<path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z"/><circle cx="12" cy="11" r="1.6"/>',
         'file' => '<path d="M7 3.5h7l4 4V20H7z"/><path d="M14 3.5V8h4"/>',
+        'wrench' => '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.3 2.3-2-2z"/>',
         default => '',
     };
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $path . '</svg>';

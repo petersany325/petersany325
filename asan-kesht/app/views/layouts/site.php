@@ -58,6 +58,9 @@ if ($user) {
         ['href' => '/admin/settings', 'label' => 'تنظیمات', 'roles' => ['admin']],
         ['href' => '/rep', 'label' => 'پنل نمایندگی', 'roles' => ['representative']],
     ];
+    if ($app->pluginEnabled('maintain')) {
+        $work[] = ['href' => '/admin/maintain', 'label' => 'نگهداری', 'roles' => ['admin']];
+    }
     foreach ($work as $link) {
         $section = access_section_for((string) $link['href']);
         $allowed = $section !== null

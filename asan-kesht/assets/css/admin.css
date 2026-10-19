@@ -365,6 +365,49 @@ th, td { border-bottom: 1px solid var(--line); padding: 0.55rem; text-align: rig
   object-fit: cover;
 }
 
+.maintain-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.7rem;
+  margin: 0 0 1rem;
+}
+
+.maintain-menu form {
+  display: grid;
+  gap: 0.45rem;
+  align-content: start;
+  background: white;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--dark);
+  padding: 0.75rem;
+}
+
+.maintain-menu h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.maintain-menu p { margin: 0; }
+
+.maintain-menu button { justify-self: start; }
+
+.maintain-log {
+  background: white;
+  border: 1px solid var(--line);
+  margin: 0 0 1rem;
+  padding: 0.7rem 1.1rem;
+}
+
+.maintain-log li.is-bad { color: #8a2a2a; font-weight: 700; }
+
+.maintain-delete {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.35rem;
+}
+
 .nav-toggle { display: none; }
 
 @media (max-width: 800px) {
