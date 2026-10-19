@@ -41,6 +41,7 @@ return new class extends Plugin {
     {
         $app->listen('admin.menu', function (array $items): array {
             $items[] = ['href' => '/admin/tickets', 'label' => 'تیکت‌ها', 'roles' => ['admin', 'employee']];
+            $items[] = ['href' => '/admin/tickets/new', 'label' => 'ایجاد تیکت', 'roles' => ['admin', 'employee']];
             $items[] = ['href' => '/admin/tickets?status=customer', 'label' => 'پاسخ مشتری', 'roles' => ['admin', 'employee']];
             $items[] = ['href' => '/admin/tickets?status=open', 'label' => 'تیکت باز', 'roles' => ['admin', 'employee']];
             return $items;
@@ -48,6 +49,7 @@ return new class extends Plugin {
         $app->listen('dashboard.cards', function (array $cards) use ($app): array {
             $row = $app->db->one('SELECT COUNT(*) AS c FROM ak_tickets WHERE status IN ("open","customer")');
             $cards[] = ['label' => 'تیکت نیازمند پاسخ', 'value' => fa_digits((string) ($row['c'] ?? 0)), 'href' => '/admin/tickets?status=customer'];
+            $cards[] = ['label' => 'ایجاد تیکت', 'value' => 'جدید', 'href' => '/admin/tickets/new'];
             return $cards;
         });
         $app->listen('account.cards', function (array $cards) use ($app): array {
@@ -57,7 +59,24 @@ return new class extends Plugin {
             }
             $row = $app->db->one('SELECT COUNT(*) AS c FROM ak_tickets WHERE user_id = ?', [(int) $user['id']]);
             $cards[] = ['label' => 'تیکت‌های من', 'value' => fa_digits((string) ($row['c'] ?? 0)), 'href' => '/account/tickets'];
+            $cards[] = ['label' => 'ایجاد تیکت', 'value' => 'جدید', 'href' => '/account/tickets/new'];
             return $cards;
+        });
+        $app->listen('site.aside', function (array $items) use ($app): array {
+            $user = $app->auth->user();
+            if (!$user) {
+                return $items;
+            }
+            $role = (string) $user['role'];
+            if (in_array($role, ['customer', 'representative'], true)) {
+                $items[] = ['href' => '/account/tickets', 'label' => 'تیکت‌ها'];
+                $items[] = ['href' => '/account/tickets/new', 'label' => 'ایجاد تیکت'];
+            }
+            if (in_array($role, ['admin', 'employee'], true)) {
+                $items[] = ['href' => '/admin/tickets', 'label' => 'تیکت‌ها'];
+                $items[] = ['href' => '/admin/tickets/new', 'label' => 'ایجاد تیکت'];
+            }
+            return $items;
         });
         $app->router->get('/account/tickets', function () use ($app): void {
             $user = require_user($app);
@@ -75,27 +94,17 @@ return new class extends Plugin {
                 'base' => '/account/tickets',
             ], 'layouts/site');
         });
+        $app->router->get('/account/tickets/new', function () use ($app): void {
+            require_user($app);
+            $app->view->plugin('tickets', 'create', [
+                'title' => 'ایجاد تیکت',
+            ], 'layouts/site');
+        });
+        $app->router->post('/account/tickets/new', function () use ($app): void {
+            $this->createForCustomer($app);
+        });
         $app->router->post('/account/tickets', function () use ($app): void {
-            csrf_check();
-            $user = require_user($app);
-            $subject = post_string('subject', 180);
-            $body = post_string('body', 4000);
-            if (mb_strlen($subject) < 3 || mb_strlen($body) < 3) {
-                flash('error', 'موضوع و متن تیکت را بنویسید.');
-                redirect('/account/tickets');
-            }
-            $app->db->transaction(function () use ($app, $user, $subject, $body): void {
-                $app->db->run(
-                    'INSERT INTO ak_tickets (user_id, subject, status, created_at, updated_at) VALUES (?, ?, "open", NOW(), NOW())',
-                    [(int) $user['id'], $subject]
-                );
-                $app->db->run(
-                    'INSERT INTO ak_ticket_messages (ticket_id, user_id, body, created_at) VALUES (?, ?, ?, NOW())',
-                    [(int) $app->db->id(), (int) $user['id'], $body]
-                );
-            });
-            flash('success', 'تیکت ثبت شد.');
-            redirect('/account/tickets');
+            $this->createForCustomer($app);
         });
         $app->router->get('/account/tickets/{id}', function (array $params) use ($app): void {
             $user = require_user($app);
@@ -131,6 +140,43 @@ return new class extends Plugin {
                 'current' => $filter,
                 'base' => '/admin/tickets',
             ]);
+        });
+        $app->router->get('/admin/tickets/new', function () use ($app): void {
+            require_role($app, ['admin', 'employee']);
+            $app->view->plugin('tickets', 'create', [
+                'title' => 'ایجاد تیکت',
+                'staff' => true,
+                'clients' => $this->clients($app),
+                'statuses' => ticket_statuses(),
+            ]);
+        });
+        $app->router->post('/admin/tickets/new', function () use ($app): void {
+            csrf_check();
+            $user = require_role($app, ['admin', 'employee']);
+            $subject = post_string('subject', 180);
+            $body = post_string('body', 4000);
+            $ownerId = (int) ($_POST['user_id'] ?? 0);
+            $client = $app->db->one(
+                'SELECT id, phone FROM ak_users WHERE id = ? AND active = 1 AND role IN ("customer","representative")',
+                [$ownerId]
+            );
+            $status = (string) ($_POST['status'] ?? 'open');
+            if (!isset(ticket_statuses()[$status])) {
+                $status = 'open';
+            }
+            if (!$client || mb_strlen($subject) < 3 || mb_strlen($body) < 3) {
+                flash('error', 'مشتری، موضوع و متن تیکت را کامل کنید.');
+                redirect('/admin/tickets/new');
+            }
+            $id = $this->openTicket($app, $ownerId, (int) $user['id'], $subject, $body, $status);
+            if (!empty($client['phone'])) {
+                $sms = $app->get('sms');
+                if ($sms instanceof NiazpardazClient && $sms->configured()) {
+                    $sms->send((string) $client['phone'], 'یک تیکت پشتیبانی در آسان‌کشت برای شما ثبت شد. شماره ' . $id, 'ticket');
+                }
+            }
+            flash('success', 'تیکت ثبت شد.');
+            redirect('/admin/tickets/' . $id);
         });
         $app->router->get('/admin/tickets/{id}', function (array $params) use ($app): void {
             require_role($app, ['admin', 'employee']);
@@ -184,6 +230,45 @@ return new class extends Plugin {
         return $app->db->all(
             'SELECT m.*, u.name, u.role FROM ak_ticket_messages m JOIN ak_users u ON u.id = m.user_id WHERE m.ticket_id = ? ORDER BY m.id',
             [$id]
+        );
+    }
+
+    private function createForCustomer(App $app): void
+    {
+        csrf_check();
+        $user = require_user($app);
+        $subject = post_string('subject', 180);
+        $body = post_string('body', 4000);
+        if (mb_strlen($subject) < 3 || mb_strlen($body) < 3) {
+            flash('error', 'موضوع و متن تیکت را بنویسید.');
+            redirect('/account/tickets/new');
+        }
+        $id = $this->openTicket($app, (int) $user['id'], (int) $user['id'], $subject, $body, 'open');
+        flash('success', 'تیکت ثبت شد.');
+        redirect('/account/tickets/' . $id);
+    }
+
+    private function openTicket(App $app, int $ownerId, int $authorId, string $subject, string $body, string $status): int
+    {
+        return (int) $app->db->transaction(function () use ($app, $ownerId, $authorId, $subject, $body, $status): int {
+            $app->db->run(
+                'INSERT INTO ak_tickets (user_id, subject, status, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())',
+                [$ownerId, $subject, $status]
+            );
+            $id = (int) $app->db->id();
+            $app->db->run(
+                'INSERT INTO ak_ticket_messages (ticket_id, user_id, body, created_at) VALUES (?, ?, ?, NOW())',
+                [$id, $authorId, $body]
+            );
+            return $id;
+        });
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function clients(App $app): array
+    {
+        return $app->db->all(
+            'SELECT id, name, role FROM ak_users WHERE active = 1 AND role IN ("customer","representative") ORDER BY name LIMIT 400'
         );
     }
 

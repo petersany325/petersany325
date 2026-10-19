@@ -9,6 +9,9 @@ $counts = $counts ?? [];
 $current = $current ?? 'active';
 $base = $base ?? '/admin/tickets';
 ?>
+<div class="ticket-toolbar">
+  <a class="btn" href="<?= e(url('/admin/tickets/new')) ?>">ایجاد تیکت</a>
+</div>
 <nav class="ticket-menu" aria-label="وضعیت تیکت">
   <?php foreach ($tabs as $key => $label): ?>
     <?php $href = $key === 'active' ? $base : $base . '?status=' . $key; ?>

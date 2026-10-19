@@ -10,7 +10,10 @@ $current = $current ?? 'all';
 $base = $base ?? '/account/tickets';
 ?>
 <section class="section"><div class="wrap">
-  <h1>تیکت‌ها</h1>
+  <div class="ticket-toolbar">
+    <h1>تیکت‌ها</h1>
+    <a class="btn" href="<?= e(url('/account/tickets/new')) ?>">ایجاد تیکت</a>
+  </div>
   <nav class="ticket-menu" aria-label="وضعیت تیکت">
     <?php foreach ($tabs as $key => $label): ?>
       <?php $href = $key === 'all' ? $base : $base . '?status=' . $key; ?>
@@ -20,16 +23,7 @@ $base = $base ?? '/account/tickets';
       </a>
     <?php endforeach; ?>
   </nav>
-  <details class="ticket-new">
-    <summary>تیکت تازه</summary>
-    <form method="post" action="<?= e(url('/account/tickets')) ?>" class="stack">
-      <?= csrf_field() ?>
-      <label>موضوع <input name="subject" required></label>
-      <label>شرح <textarea name="body" required></textarea></label>
-      <button class="btn" type="submit">ثبت تیکت</button>
-    </form>
-  </details>
-  <div class="sheets">
+  <div class="sheets ticket-list">
     <?php if ($rows === []): ?>
       <p class="muted">تیکتی در این وضعیت نیست.</p>
     <?php endif; ?>

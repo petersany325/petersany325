@@ -1594,6 +1594,24 @@ form.cart-add input {
   to { opacity: 1; transform: none; }
 }
 
+.ticket-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin: 0 0 1rem;
+}
+
+.ticket-toolbar h1 { margin: 0; }
+
+.ticket-back {
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ticket-form { max-width: 40rem; }
+
 .ticket-menu {
   display: flex;
   flex-wrap: wrap;
@@ -1686,6 +1704,14 @@ form.cart-add input {
 .ticket-msg.is-staff { border-inline-start-color: #2f7d4a; }
 .ticket-msg p { margin: 0.35rem 0 0; }
 .ticket-reply { margin-top: 0.4rem; }
+
+@media (max-width: 720px) {
+  .ticket-toolbar { align-items: stretch; }
+  .ticket-toolbar .btn,
+  .ticket-form .btn { width: 100%; text-align: center; }
+  .ticket-menu a { flex: 1 1 calc(50% - 0.4rem); justify-content: space-between; }
+  .ticket-list .sheet { grid-template-columns: 1fr; gap: 0.35rem; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   html {

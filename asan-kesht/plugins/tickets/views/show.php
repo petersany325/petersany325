@@ -16,6 +16,9 @@ $roles = [
 ];
 ?>
 <?php if (!$staff): ?><section class="section"><div class="wrap"><?php endif; ?>
+  <p class="ticket-toolbar">
+    <a class="ticket-back" href="<?= e(url($staff ? '/admin/tickets' : '/account/tickets')) ?>">تیکت‌ها</a>
+  </p>
   <p class="ticket-head">
     <span class="ticket-pill st-<?= e((string) $ticket['status']) ?>"><?= e(ticket_status_label((string) $ticket['status'])) ?></span>
     <?php if ($staff && !empty($ticket['name'])): ?><span class="muted"><?= e((string) $ticket['name']) ?></span><?php endif; ?>
