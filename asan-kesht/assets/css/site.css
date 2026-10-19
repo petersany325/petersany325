@@ -1594,6 +1594,99 @@ form.cart-add input {
   to { opacity: 1; transform: none; }
 }
 
+.ticket-menu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1.2rem;
+  padding: 0.5rem;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-bottom: 3px solid var(--dark);
+}
+
+.ticket-menu a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  text-decoration: none;
+  font-size: 0.86rem;
+  font-weight: 700;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--line);
+  border-top: 3px solid #8aa0b8;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.ticket-menu a b {
+  min-width: 1.3rem;
+  text-align: center;
+  background: rgba(23, 32, 51, 0.08);
+  border-radius: 99px;
+  font-size: 0.75rem;
+  padding: 0 0.3rem;
+}
+
+.ticket-pill {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  background: var(--paper-2);
+  color: var(--ink);
+}
+
+.ticket-menu a.st-open { border-top-color: #1d6fbf; }
+.ticket-menu a.st-answered { border-top-color: #2f7d4a; }
+.ticket-menu a.st-closed { border-top-color: #6b7280; }
+.ticket-menu a.st-flow { border-top-color: #17304f; }
+
+.ticket-menu a.is-current.st-all,
+.ticket-menu a.is-current.st-flow { background: var(--dark); color: var(--paper); border-color: var(--dark); }
+.ticket-menu a.is-current.st-open,
+.ticket-pill.st-open { background: #1d6fbf; color: #fff; }
+.ticket-menu a.is-current.st-customer,
+.ticket-pill.st-customer { background: #e2b000; color: #172033; }
+.ticket-menu a.is-current.st-answered,
+.ticket-pill.st-answered { background: #2f7d4a; color: #fff; }
+.ticket-menu a.is-current.st-progress,
+.ticket-pill.st-progress { background: #17304f; color: #fff; }
+.ticket-menu a.is-current.st-hold,
+.ticket-pill.st-hold { background: #8a5a00; color: #fff; }
+.ticket-menu a.is-current.st-closed,
+.ticket-pill.st-closed { background: #6b7280; color: #fff; }
+.ticket-menu a.is-current b { background: rgba(255, 255, 255, 0.22); color: inherit; }
+.ticket-menu a.is-current.st-customer b { background: rgba(23, 32, 51, 0.12); }
+
+.ticket-new {
+  margin: 0 0 1.2rem;
+  background: var(--white);
+  border: 1px solid var(--line);
+  padding: 0.7rem 0.9rem;
+}
+
+.ticket-new summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.ticket-new form { margin-top: 0.8rem; }
+
+.ticket-head { display: flex; gap: 0.6rem; align-items: center; }
+
+.ticket-msg {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-inline-start: 4px solid #1d6fbf;
+  padding: 0.8rem 0.9rem;
+  margin: 0 0 0.7rem;
+}
+
+.ticket-msg.is-staff { border-inline-start-color: #2f7d4a; }
+.ticket-msg p { margin: 0.35rem 0 0; }
+.ticket-reply { margin-top: 0.4rem; }
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

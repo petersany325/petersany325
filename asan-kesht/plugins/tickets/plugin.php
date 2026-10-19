@@ -41,11 +41,13 @@ return new class extends Plugin {
     {
         $app->listen('admin.menu', function (array $items): array {
             $items[] = ['href' => '/admin/tickets', 'label' => 'تیکت‌ها', 'roles' => ['admin', 'employee']];
+            $items[] = ['href' => '/admin/tickets?status=customer', 'label' => 'پاسخ مشتری', 'roles' => ['admin', 'employee']];
+            $items[] = ['href' => '/admin/tickets?status=open', 'label' => 'تیکت باز', 'roles' => ['admin', 'employee']];
             return $items;
         });
         $app->listen('dashboard.cards', function (array $cards) use ($app): array {
-            $row = $app->db->one('SELECT COUNT(*) AS c FROM ak_tickets WHERE status = "open"');
-            $cards[] = ['label' => 'تیکت باز', 'value' => fa_digits((string) ($row['c'] ?? 0)), 'href' => '/admin/tickets'];
+            $row = $app->db->one('SELECT COUNT(*) AS c FROM ak_tickets WHERE status IN ("open","customer")');
+            $cards[] = ['label' => 'تیکت نیازمند پاسخ', 'value' => fa_digits((string) ($row['c'] ?? 0)), 'href' => '/admin/tickets?status=customer'];
             return $cards;
         });
         $app->listen('account.cards', function (array $cards) use ($app): array {
@@ -59,8 +61,19 @@ return new class extends Plugin {
         });
         $app->router->get('/account/tickets', function () use ($app): void {
             $user = require_user($app);
-            $rows = $app->db->all('SELECT * FROM ak_tickets WHERE user_id = ? ORDER BY updated_at DESC', [(int) $user['id']]);
-            $app->view->plugin('tickets', 'customer', ['title' => 'تیکت‌ها', 'rows' => $rows], 'layouts/site');
+            $filter = $this->filterKey((string) ($_GET['status'] ?? 'all'), false);
+            $params = [(int) $user['id']];
+            $sql = 'SELECT * FROM ak_tickets WHERE user_id = ?';
+            $sql .= $this->filterSql($filter, false, $params);
+            $rows = $app->db->all($sql . ' ORDER BY updated_at DESC', $params);
+            $app->view->plugin('tickets', 'customer', [
+                'title' => 'تیکت‌ها',
+                'rows' => $rows,
+                'tabs' => $this->tabs(false),
+                'counts' => $this->counts($app, (int) $user['id']),
+                'current' => $filter,
+                'base' => '/account/tickets',
+            ], 'layouts/site');
         });
         $app->router->post('/account/tickets', function () use ($app): void {
             csrf_check();
@@ -102,10 +115,22 @@ return new class extends Plugin {
         });
         $app->router->get('/admin/tickets', function () use ($app): void {
             require_role($app, ['admin', 'employee']);
-            $rows = $app->db->all(
-                'SELECT t.*, u.name FROM ak_tickets t JOIN ak_users u ON u.id = t.user_id ORDER BY t.updated_at DESC LIMIT 200'
-            );
-            $app->view->plugin('tickets', 'staff', ['title' => 'تیکت‌ها', 'rows' => $rows]);
+            $filter = $this->filterKey((string) ($_GET['status'] ?? 'active'), true);
+            $params = [];
+            $sql = 'SELECT t.*, u.name FROM ak_tickets t JOIN ak_users u ON u.id = t.user_id';
+            $where = $this->filterSql($filter, true, $params);
+            if ($where !== '') {
+                $sql .= ' WHERE ' . ltrim($where, ' AND');
+            }
+            $rows = $app->db->all($sql . ' ORDER BY t.updated_at DESC LIMIT 200', $params);
+            $app->view->plugin('tickets', 'staff', [
+                'title' => 'تیکت‌ها',
+                'rows' => $rows,
+                'tabs' => $this->tabs(true),
+                'counts' => $this->counts($app, null),
+                'current' => $filter,
+                'base' => '/admin/tickets',
+            ]);
         });
         $app->router->get('/admin/tickets/{id}', function (array $params) use ($app): void {
             require_role($app, ['admin', 'employee']);
@@ -116,15 +141,17 @@ return new class extends Plugin {
                 'messages' => $this->messages($app, (int) $ticket['id']),
                 'action' => '/admin/tickets/' . $ticket['id'],
                 'staff' => true,
+                'statuses' => ticket_statuses(),
             ], 'layouts/admin');
         });
         $app->router->post('/admin/tickets/{id}', function (array $params) use ($app): void {
             csrf_check();
             $user = require_role($app, ['admin', 'employee']);
             $ticket = $this->ticket($app, (int) $params['id']);
-            if (isset($_POST['close'])) {
-                $app->db->run('UPDATE ak_tickets SET status = "closed", updated_at = NOW() WHERE id = ?', [(int) $ticket['id']]);
-                flash('success', 'تیکت بسته شد.');
+            $next = (string) ($_POST['status'] ?? '');
+            if ($next !== '' && isset(ticket_statuses()[$next]) && post_string('body', 4000) === '') {
+                $app->db->run('UPDATE ak_tickets SET status = ?, updated_at = NOW() WHERE id = ?', [$next, (int) $ticket['id']]);
+                flash('success', 'وضعیت تیکت شد: ' . ticket_status_label($next));
                 redirect('/admin/tickets/' . $ticket['id']);
             }
             $this->reply($app, $ticket, $user, true);
@@ -175,7 +202,12 @@ return new class extends Plugin {
             'INSERT INTO ak_ticket_messages (ticket_id, user_id, body, created_at) VALUES (?, ?, ?, NOW())',
             [(int) $ticket['id'], (int) $user['id'], $body]
         );
-        $status = $staff ? 'answered' : 'open';
+        $chosen = (string) ($_POST['status'] ?? '');
+        if ($staff && isset(ticket_statuses()[$chosen])) {
+            $status = $chosen;
+        } else {
+            $status = $staff ? 'answered' : 'customer';
+        }
         $app->db->run('UPDATE ak_tickets SET status = ?, updated_at = NOW() WHERE id = ?', [$status, (int) $ticket['id']]);
         if ($staff && !empty($ticket['phone'])) {
             $sms = $app->get('sms');
@@ -186,4 +218,96 @@ return new class extends Plugin {
         flash('success', 'پاسخ ثبت شد.');
         redirect(($staff ? '/admin/tickets/' : '/account/tickets/') . $ticket['id']);
     }
+
+    /** @return array<string, string> */
+    private function tabs(bool $staff): array
+    {
+        if ($staff) {
+            return [
+                'active' => 'فعال',
+                'open' => 'باز',
+                'customer' => 'پاسخ مشتری',
+                'answered' => 'پاسخ داده‌شده',
+                'progress' => 'در حال انجام',
+                'hold' => 'در انتظار',
+                'closed' => 'بسته',
+                'all' => 'همه',
+            ];
+        }
+        return [
+            'all' => 'همه',
+            'flow' => 'در جریان',
+            'answered' => 'پاسخ داده‌شده',
+            'closed' => 'بسته',
+        ];
+    }
+
+    private function filterKey(string $value, bool $staff): string
+    {
+        $tabs = $this->tabs($staff);
+        if ($value === '' || !isset($tabs[$value])) {
+            return $staff ? 'active' : 'all';
+        }
+        return $value;
+    }
+
+    /** @param list<int|string> $params */
+    private function filterSql(string $filter, bool $staff, array &$params): string
+    {
+        if ($filter === 'all') {
+            return '';
+        }
+        if ($filter === 'active') {
+            return ' AND t.status != "closed"';
+        }
+        if (!$staff && $filter === 'flow') {
+            return ' AND status NOT IN ("answered","closed")';
+        }
+        $column = $staff ? 't.status' : 'status';
+        $params[] = $filter;
+        return ' AND ' . $column . ' = ?';
+    }
+
+    /** @return array<string, int> */
+    private function counts(App $app, ?int $userId): array
+    {
+        $sql = 'SELECT status, COUNT(*) AS c FROM ak_tickets';
+        $params = [];
+        if ($userId !== null) {
+            $sql .= ' WHERE user_id = ?';
+            $params[] = $userId;
+        }
+        $counts = array_fill_keys(array_keys(ticket_statuses()), 0);
+        $total = 0;
+        foreach ($app->db->all($sql . ' GROUP BY status', $params) as $row) {
+            $count = (int) $row['c'];
+            $total += $count;
+            $status = (string) $row['status'];
+            if (isset($counts[$status])) {
+                $counts[$status] = $count;
+            }
+        }
+        $counts['all'] = $total;
+        $counts['active'] = $total - $counts['closed'];
+        $counts['flow'] = $total - $counts['answered'] - $counts['closed'];
+        return $counts;
+    }
 };
+
+/** @return array<string, string> */
+function ticket_statuses(): array
+{
+    return [
+        'open' => 'باز',
+        'customer' => 'پاسخ مشتری',
+        'answered' => 'پاسخ داده‌شده',
+        'progress' => 'در حال انجام',
+        'hold' => 'در انتظار',
+        'closed' => 'بسته',
+    ];
+}
+
+function ticket_status_label(string $status): string
+{
+    return ticket_statuses()[$status] ?? $status;
+}
