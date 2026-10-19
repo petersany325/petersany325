@@ -408,6 +408,20 @@ th, td { border-bottom: 1px solid var(--line); padding: 0.55rem; text-align: rig
   margin-top: 0.35rem;
 }
 
+.user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.user-actions form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
 .nav-toggle { display: none; }
 
 @media (max-width: 800px) {

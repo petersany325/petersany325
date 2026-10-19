@@ -421,6 +421,147 @@ function access_save_user(App $app): void
     redirect('/admin/access');
 }
 
+function admin_user_other_admins(App $app, int $exceptId): int
+{
+    $row = $app->db->one(
+        'SELECT COUNT(*) AS c FROM ak_users WHERE role = "admin" AND active = 1 AND id <> ?',
+        [$exceptId]
+    );
+    return (int) ($row['c'] ?? 0);
+}
+
+/** @return list<string> */
+function admin_user_blocks(App $app, int $id): array
+{
+    $checks = [
+        ['ak_dealers', 'user_id', 'پرونده نمایندگی'],
+        ['ak_tickets', 'user_id', 'تیکت'],
+        ['ak_ticket_messages', 'user_id', 'پیام تیکت'],
+        ['ak_shop_orders', 'user_id', 'سفارش فروشگاه'],
+        ['ak_registrations', 'user_id', 'درخواست ثبت‌نام'],
+        ['ak_dealer_regions', 'manager_user_id', 'مدیریت منطقه'],
+    ];
+    $found = [];
+    foreach ($checks as [$table, $column, $label]) {
+        if (!preg_match('/^ak_[a-z_]+$/', $table) || !preg_match('/^[a-z_]+$/', $column)) {
+            continue;
+        }
+        try {
+            $row = $app->db->one('SELECT id FROM ' . $table . ' WHERE ' . $column . ' = ? LIMIT 1', [$id]);
+        } catch (Throwable) {
+            continue;
+        }
+        if ($row) {
+            $found[] = $label;
+        }
+    }
+    return $found;
+}
+
+function admin_user_save(App $app, int $id): void
+{
+    $name = post_string('name', 120);
+    $username = trim(post_string('username', 60));
+    if ($username !== '' && !preg_match('/^[A-Za-z0-9_.-]{3,60}$/', $username)) {
+        flash('error', 'نام کاربری فقط حروف انگلیسی، عدد، نقطه، خط تیره و زیرخط، حداقل ۳ نویسه.');
+        redirect($id > 0 ? '/admin/users/' . $id : '/admin/users');
+    }
+    $phone = normalize_phone(post_string('phone', 20));
+    $role = post_string('role', 20);
+    $active = isset($_POST['active']) ? 1 : 0;
+    $password = (string) ($_POST['password'] ?? '');
+    if ($name === '' || !array_key_exists($role, ak_role_labels())) {
+        flash('error', 'نام و نقش را درست وارد کنید.');
+        redirect($id > 0 ? '/admin/users/' . $id : '/admin/users');
+    }
+    if ($phone !== '' && !is_mobile($phone)) {
+        flash('error', 'موبایل را با ۱۱ رقم و شروع ۰۹ بنویسید.');
+        redirect($id > 0 ? '/admin/users/' . $id : '/admin/users');
+    }
+    $phoneValue = $phone === '' ? null : $phone;
+    $usernameValue = $username === '' ? null : $username;
+    $back = $id > 0 ? '/admin/users/' . $id : '/admin/users';
+    try {
+        if ($id > 0) {
+            $existing = $app->db->one('SELECT id, role FROM ak_users WHERE id = ?', [$id]);
+            if (!$existing) {
+                flash('error', 'این کاربر پیدا نشد.');
+                redirect('/admin/users');
+            }
+            $current = $app->auth->user();
+            if ($current && (int) $current['id'] === $id && $active === 0) {
+                flash('error', 'نمی‌توانید حساب خودتان را غیرفعال کنید.');
+                redirect($back);
+            }
+            $wasAdmin = (string) $existing['role'] === 'admin';
+            if ($wasAdmin && ($role !== 'admin' || $active === 0) && admin_user_other_admins($app, $id) === 0) {
+                flash('error', 'آخرین مدیر فعال را نمی‌توان غیرفعال کرد یا نقشش را عوض کرد.');
+                redirect($back);
+            }
+            $app->db->run(
+                'UPDATE ak_users SET name = ?, username = ?, phone = ?, role = ?, active = ? WHERE id = ?',
+                [$name, $usernameValue, $phoneValue, $role, $active, $id]
+            );
+            if ($password !== '') {
+                if (mb_strlen($password) < 8) {
+                    flash('error', 'رمز جدید حداقل ۸ نویسه باشد. بقیه مشخصات ذخیره شد.');
+                    redirect($back);
+                }
+                $app->db->run('UPDATE ak_users SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $id]);
+            }
+            ak_audit($app, 'کاربر', $name, 'ویرایش، نقش ' . (ak_role_labels()[$role] ?? $role) . ($active === 1 ? '، فعال' : '، غیرفعال'));
+            flash('success', 'کاربر ذخیره شد.');
+            redirect('/admin/users/' . $id);
+        }
+        if ($password !== '' && mb_strlen($password) < 8) {
+            flash('error', 'رمز حداقل ۸ نویسه باشد.');
+            redirect('/admin/users');
+        }
+        $app->db->run(
+            'INSERT INTO ak_users (name, username, phone, password_hash, role, active, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+            [$name, $usernameValue, $phoneValue, $password === '' ? null : password_hash($password, PASSWORD_DEFAULT), $role, $active]
+        );
+        ak_audit($app, 'کاربر', $name, 'کاربر تازه با نقش ' . (ak_role_labels()[$role] ?? $role));
+        flash('success', 'کاربر ساخته شد.');
+    } catch (PDOException) {
+        flash('error', 'نام کاربری یا موبایل تکراری است.');
+        redirect($back);
+    }
+    redirect('/admin/users');
+}
+
+function admin_user_delete(App $app, int $id): void
+{
+    if (!isset($_POST['confirm'])) {
+        flash('error', 'حذف کاربر را تأیید کنید.');
+        redirect('/admin/users');
+    }
+    $existing = $app->db->one('SELECT id, name, role FROM ak_users WHERE id = ?', [$id]);
+    if (!$existing) {
+        flash('error', 'این کاربر پیدا نشد.');
+        redirect('/admin/users');
+    }
+    $current = $app->auth->user();
+    if ($current && (int) $current['id'] === $id) {
+        flash('error', 'حساب خودتان حذف نمی‌شود.');
+        redirect('/admin/users');
+    }
+    if ((string) $existing['role'] === 'admin' && admin_user_other_admins($app, $id) === 0) {
+        flash('error', 'آخرین مدیر حذف نمی‌شود.');
+        redirect('/admin/users');
+    }
+    $blocks = admin_user_blocks($app, $id);
+    if ($blocks !== []) {
+        flash('error', 'این کاربر حذف نمی‌شود چون ' . implode('، ', $blocks) . ' دارد. از ویرایش می‌توانید او را غیرفعال کنید.');
+        redirect('/admin/users');
+    }
+    $app->db->run('DELETE FROM ak_settings WHERE plugin = "access" AND skey = ?', ['user-' . $id]);
+    $app->db->run('DELETE FROM ak_users WHERE id = ?', [$id]);
+    ak_audit($app, 'کاربر', (string) $existing['name'], 'حذف شد');
+    flash('success', 'کاربر حذف شد.');
+    redirect('/admin/users');
+}
+
 function log_line(string $root, string $message): void
 {
     $dir = $root . '/storage/logs';

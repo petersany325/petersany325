@@ -221,74 +221,46 @@ final class App
         });
         $this->router->get('/admin/users', function () use ($app): void {
             require_role($app, ['admin']);
-            $users = $app->db->all('SELECT * FROM ak_users ORDER BY id DESC LIMIT 200');
-            $app->view->render('admin/users', ['title' => 'کاربران', 'users' => $users], 'layouts/admin');
+            $users = $app->db->all('SELECT id, name, username, phone, role, active, created_at FROM ak_users ORDER BY id DESC LIMIT 200');
+            $actor = $app->auth->user();
+            $app->view->render('admin/users', [
+                'title' => 'کاربران',
+                'users' => $users,
+                'actor_id' => (int) ($actor['id'] ?? 0),
+            ], 'layouts/admin');
         });
         $this->router->post('/admin/users', function () use ($app): void {
             csrf_check();
             require_role($app, ['admin']);
-            $id = (int) post_string('id', 12);
-            $name = post_string('name', 120);
-            $username = trim(post_string('username', 60));
-            if ($username !== '' && !preg_match('/^[A-Za-z0-9_.-]{3,60}$/', $username)) {
-                flash('error', 'نام کاربری فقط حروف انگلیسی، عدد، نقطه، خط تیره و زیرخط، حداقل ۳ نویسه.');
+            admin_user_save($app, 0);
+        });
+        $this->router->get('/admin/users/{id}', function (array $params) use ($app): void {
+            require_role($app, ['admin']);
+            $id = (int) ($params['id'] ?? 0);
+            $user = $app->db->one('SELECT id, name, username, phone, role, active FROM ak_users WHERE id = ?', [$id]);
+            if (!$user) {
+                flash('error', 'این کاربر پیدا نشد.');
                 redirect('/admin/users');
             }
-            $phone = normalize_phone(post_string('phone', 20));
-            $role = post_string('role', 20);
-            $active = isset($_POST['active']) ? 1 : 0;
-            $password = (string) ($_POST['password'] ?? '');
-            if ($name === '' || !array_key_exists($role, ak_role_labels())) {
-                flash('error', 'نام و نقش را درست وارد کنید.');
-                redirect('/admin/users');
-            }
-            if ($phone !== '' && !is_mobile($phone)) {
-                flash('error', 'موبایل را با ۱۱ رقم و شروع ۰۹ بنویسید.');
-                redirect('/admin/users');
-            }
-            $phoneValue = $phone === '' ? null : $phone;
-            $usernameValue = $username === '' ? null : $username;
-            try {
-                if ($id > 0) {
-                    $current = $app->auth->user();
-                    if ($current && (int) $current['id'] === $id && $active === 0) {
-                        flash('error', 'نمی‌توانید حساب خودتان را غیرفعال کنید.');
-                        redirect('/admin/users');
-                    }
-                    $app->db->run(
-                        'UPDATE ak_users SET name = ?, username = ?, phone = ?, role = ?, active = ? WHERE id = ?',
-                        [$name, $usernameValue, $phoneValue, $role, $active, $id]
-                    );
-                    if ($password !== '') {
-                        if (mb_strlen($password) < 8) {
-                            flash('error', 'رمز جدید حداقل ۸ نویسه باشد.');
-                            redirect('/admin/users');
-                        }
-                        $app->db->run('UPDATE ak_users SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $id]);
-                    }
-                    ak_audit($app, 'دسترسی', $name, 'نقش ' . (ak_role_labels()[$role] ?? $role) . ($active === 1 ? '، فعال' : '، غیرفعال'));
-                    flash('success', 'کاربر ذخیره شد.');
-                } else {
-                    if ($password !== '' && mb_strlen($password) < 8) {
-                        flash('error', 'رمز حداقل ۸ نویسه باشد.');
-                        redirect('/admin/users');
-                    }
-                    $app->db->run(
-                        'INSERT INTO ak_users (name, username, phone, password_hash, role, active, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-                        [$name, $usernameValue, $phoneValue, $password === '' ? null : password_hash($password, PASSWORD_DEFAULT), $role, $active]
-                    );
-                    ak_audit($app, 'دسترسی', $name, 'کاربر تازه با نقش ' . (ak_role_labels()[$role] ?? $role));
-                    flash('success', 'کاربر ساخته شد. ورود پیامکی بعد از تنظیم نیازپرداز با همین موبایل ممکن است.');
-                }
-            } catch (PDOException) {
-                flash('error', 'نام کاربری یا موبایل تکراری است.');
-            }
-            redirect('/admin/users');
+            $app->view->render('admin/user-form', [
+                'title' => 'ویرایش کاربر',
+                'person' => $user,
+            ], 'layouts/admin');
+        });
+        $this->router->post('/admin/users/{id}/delete', function (array $params) use ($app): void {
+            csrf_check();
+            require_role($app, ['admin']);
+            admin_user_delete($app, (int) ($params['id'] ?? 0));
+        });
+        $this->router->post('/admin/users/{id}', function (array $params) use ($app): void {
+            csrf_check();
+            require_role($app, ['admin']);
+            admin_user_save($app, (int) ($params['id'] ?? 0));
         });
         $this->router->get('/admin/settings', function () use ($app): void {
             require_role($app, ['admin']);
             $items = $app->filter('admin.settings', [
-                ['href' => '/admin/users', 'title' => 'کاربران', 'text' => 'نقش، فعال بودن و رمز کارمندان'],
+                ['href' => '/admin/users', 'title' => 'کاربران', 'text' => 'افزودن، ویرایش و حذف کاربر، نقش و رمز'],
                 ['href' => '/admin/plugins', 'title' => 'افزونه‌ها', 'text' => 'روشن یا خاموش کردن هر بخش، بدون پاک شدن داده‌ها'],
             ]);
             $app->view->render('admin/settings', [
