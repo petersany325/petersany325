@@ -1,5 +1,5 @@
 <?php /** @var array $values */ /** @var array $rules */ /** @var array $lines */ ?>
-<p class="muted">این تنظیم‌ها سیاست همکاری را مشخص می‌کند: انحصار شهر، مدل خرید مجدد یا پورسانت، سقف و مهلت اعتبار، و اینکه پورسانت روی مبلغ فروش است یا سود ناخالص و کی قطعی می‌شود.</p>
+<p class="muted">این تنظیم‌ها سیاست همکاری را مشخص می‌کند: انحصار شهر، مدل خرید مجدد یا پورسانت، سقف و مهلت اعتبار، و اینکه پورسانت روی مبلغ فروش است یا سود ناخالص و کی قطعی می‌شود. سود ناخالص برابر مبلغ فروش منهای بهای تمام‌شده است. اگر بهای تمام‌شده ثبت نشده باشد، پایه همان مبلغ فروش می‌ماند و مبنا همچنان سود ناخالص است. اگر بهای تمام‌شده به اندازه فروش یا بیشتر باشد، برای آن ردیف پورسانتی ساخته نمی‌شود.</p>
 <form method="post" action="<?= e(url('/admin/dealers/settings')) ?>" class="stack">
   <?= csrf_field() ?>
   <label class="check"><input type="checkbox" name="enforce_exclusive" <?= $values['enforce_exclusive'] === '1' ? 'checked' : '' ?>> انحصار شهر اجرا شود</label>
@@ -12,7 +12,7 @@
     <label>مبنای پورسانت
       <select name="commission_basis">
         <option value="sale" <?= $values['commission_basis'] === 'sale' ? 'selected' : '' ?>>مبلغ فروش</option>
-        <option value="gross" <?= $values['commission_basis'] === 'gross' ? 'selected' : '' ?>>سود ناخالص، اگر بهای تمام‌شده ثبت شده باشد</option>
+        <option value="gross" <?= $values['commission_basis'] === 'gross' ? 'selected' : '' ?>>سود ناخالص (فروش منهای بهای تمام‌شده)</option>
       </select>
     </label>
     <label>زمان قطعی شدن
@@ -46,6 +46,6 @@
 </form>
 <ul>
   <?php foreach ($rules as $rule): ?>
-    <li>نماینده <?= e((string) $rule['dealer_id']) ?> — سطح <?= e((string) $rule['level']) ?> — <?= e((string) $rule['percent']) ?>٪ — <?= e((string) $rule['basis']) ?> — <?= e((string) $rule['settle_on']) ?></li>
+    <li>نماینده <?= e(fa_digits((string) $rule['dealer_id'])) ?> — سطح <?= e((string) $rule['level']) ?> — <?= e(fa_digits((string) $rule['percent'])) ?>٪ — <?= e(dealer_basis_label((string) $rule['basis'])) ?> — <?= e(dealer_settle_label((string) $rule['settle_on'])) ?></li>
   <?php endforeach; ?>
 </ul>

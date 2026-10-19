@@ -7,11 +7,11 @@
       <td><?= e((string) $row['name']) ?></td>
       <td><?= e((string) $row['number']) ?></td>
       <td><?= e(money((int) $row['amount'])) ?></td>
-      <td><?= e($row['basis'] === 'gross' ? 'سود ناخالص' : 'مبلغ فروش') ?></td>
-      <td><?= e($row['settle_on'] === 'sale' ? 'هنگام فروش' : 'هنگام وصول') ?></td>
-      <td><?= e((string) $row['status']) ?></td>
+      <td><?= e(dealer_basis_label((string) $row['basis'])) ?></td>
+      <td><?= e(dealer_settle_label((string) $row['settle_on'])) ?></td>
+      <td><?= e(dealer_commission_status_label((string) $row['status'])) ?><?php if (str_contains((string) ($row['note'] ?? ''), 'بهای تمام‌شده ثبت نشده')): ?><div class="muted">بهای تمام‌شده ثبت نشده؛ پایه برابر مبلغ فروش</div><?php endif; ?></td>
     </tr>
   <?php endforeach; ?>
   </tbody>
 </table></div>
-<p class="muted">پورسانت فروش نسیه تا وصول وجه در وضعیت pending می‌ماند. لغو سفارش یا تأیید مرجوعی، پورسانت قطعی‌شده را با سند برمی‌گرداند.</p>
+<p class="muted">پورسانت هر ردیف سفارش جدا ثبت می‌شود. اگر قطعی شدن «هنگام وصول وجه» باشد، تا وقتی پرداخت‌های تأییدشده به جمع سفارش برسد در جریان می‌ماند و هزینه سود و زیان نیست. لغو یا مرجوعی، پورسانت قطعی را با سند برمی‌گرداند. مدل خرید از شرکت و فروش دوباره پورسانت نمی‌سازد.</p>

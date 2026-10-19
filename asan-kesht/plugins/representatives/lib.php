@@ -278,6 +278,26 @@ function dealer_sale_models(): array
     ];
 }
 
+function dealer_commission_status_label(string $status): string
+{
+    return match ($status) {
+        'pending' => 'در جریان',
+        'earned' => 'قطعی',
+        'reversed' => 'برگشت‌خورده',
+        default => $status,
+    };
+}
+
+function dealer_basis_label(string $basis): string
+{
+    return $basis === 'gross' ? 'سود ناخالص' : 'مبلغ فروش';
+}
+
+function dealer_settle_label(string $settle): string
+{
+    return $settle === 'sale' ? 'هنگام تأیید فروش' : 'هنگام وصول وجه';
+}
+
 /** @return array<string, string> */
 function dealer_order_statuses(): array
 {
@@ -563,6 +583,29 @@ function dealer_rule_for(App $app, array $dealer, string $line): array
     }
     return [
         'dealer_id' => 0,
+        'level' => '',
+        'line' => '',
+        'percent' => (int) dealer_setting($app, 'default_commission_percent', '5'),
+        'basis' => dealer_setting($app, 'commission_basis', 'sale'),
+        'settle_on' => dealer_setting($app, 'commission_settle', 'collection'),
+    ];
+}
+
+function dealer_general_rule(App $app, array $dealer): array
+{
+    $rule = $app->db->one(
+        'SELECT * FROM ak_commission_rules
+         WHERE (dealer_id = ? OR dealer_id = 0) AND (level = ? OR level = "") AND line = ""
+         ORDER BY (dealer_id = 0) ASC, (level = "") ASC, id DESC LIMIT 1',
+        [(int) $dealer['id'], (string) ($dealer['level'] ?? '')]
+    );
+    if ($rule) {
+        return $rule;
+    }
+    return [
+        'dealer_id' => 0,
+        'level' => '',
+        'line' => '',
         'percent' => (int) dealer_setting($app, 'default_commission_percent', '5'),
         'basis' => dealer_setting($app, 'commission_basis', 'sale'),
         'settle_on' => dealer_setting($app, 'commission_settle', 'collection'),
@@ -593,26 +636,33 @@ function dealer_approve(App $app, array $order, int $userId): void
             dealer_post($app, (int) $dealer['id'], 'debit', (int) $order['total'], 'invoice', 'order', (int) $order['id'], 'فاکتور ' . $order['number'], $userId);
         }
         if ($dealer['sale_model'] === 'commission') {
-            $amount = 0;
-            $settle = (string) dealer_setting($app, 'commission_settle', 'collection');
-            $basis = 'sale';
             foreach ($items as $item) {
                 $rule = dealer_rule_for($app, $dealer, (string) $item['line']);
-                $settle = (string) $rule['settle_on'];
-                $basis = (string) $rule['basis'];
-                $base = (int) $item['qty'] * (int) $item['unit_price'];
-                if ($basis === 'gross' && (int) $item['unit_cost'] > 0 && (int) $item['unit_cost'] < (int) $item['unit_price']) {
-                    $base = (int) $item['qty'] * ((int) $item['unit_price'] - (int) $item['unit_cost']);
+                $basis = (string) $rule['basis'] === 'gross' ? 'gross' : 'sale';
+                $settle = (string) $rule['settle_on'] === 'sale' ? 'sale' : 'collection';
+                $qty = (int) $item['qty'];
+                $price = (int) $item['unit_price'];
+                $cost = (int) $item['unit_cost'];
+                $missing = false;
+                if ($basis === 'gross') {
+                    if ($cost <= 0) {
+                        $missing = true;
+                    }
+                    $base = $qty * max(0, $price - $cost);
                 } else {
-                    $basis = 'sale';
+                    $base = $qty * $price;
                 }
-                $amount += intdiv($base * (int) $rule['percent'], 100);
-            }
-            if ($amount > 0) {
+                $amount = intdiv($base * (int) $rule['percent'], 100);
+                if ($amount < 1) {
+                    continue;
+                }
+                $note = 'پورسانت ' . $order['number'];
+                if ($missing) {
+                    $note .= '؛ بهای تمام‌شده ثبت نشده و پایه برابر مبلغ فروش شده است';
+                }
                 $app->db->run(
-                    'INSERT INTO ak_dealer_commissions (dealer_id, order_id, amount, status, basis, settle_on, note, created_at)
-                     VALUES (?, ?, ?, "pending", ?, ?, ?, NOW())',
-                    [(int) $dealer['id'], (int) $order['id'], $amount, $basis, $settle, 'پورسانت ' . $order['number']]
+                    'INSERT INTO ak_dealer_commissions (dealer_id, order_id, amount, status, basis, settle_on, note, created_at) VALUES (?, ?, ?, "pending", ?, ?, ?, NOW())',
+                    [(int) $dealer['id'], (int) $order['id'], $amount, $basis, $settle, $note]
                 );
             }
         }

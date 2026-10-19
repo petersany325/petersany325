@@ -325,7 +325,7 @@ return new class extends Plugin {
             $scope = dealer_scope($user);
             $rows = $app->db->all(
                 'SELECT d.*, g.name AS region_name,
-                    (SELECT r.percent FROM ak_commission_rules r WHERE r.dealer_id = d.id AND r.line = "" ORDER BY r.id DESC LIMIT 1) AS commission_percent
+                    (SELECT r.percent FROM ak_commission_rules r WHERE r.dealer_id = d.id AND r.line = "" AND r.level = "" ORDER BY r.id DESC LIMIT 1) AS commission_percent
                  FROM ak_dealers d LEFT JOIN ak_dealer_regions g ON g.id = d.region_id WHERE 1=1' . $scope['sql'] . ' ORDER BY d.id DESC',
                 $scope['params']
             );
@@ -528,8 +528,8 @@ return new class extends Plugin {
             'receipts' => $id ? $app->db->all('SELECT r.status, c.title, c.kind FROM ak_circular_receipts r JOIN ak_circulars c ON c.id = r.circular_id WHERE r.dealer_id = ? ORDER BY c.id DESC', [$id]) : [],
             'balance' => $id ? dealer_balance($app, $id) : 0,
             'overdue' => $dealer ? dealer_overdue($app, $dealer) : 0,
-            'rule' => ($id ? $app->db->one('SELECT * FROM ak_commission_rules WHERE dealer_id = ? AND line = "" ORDER BY id DESC LIMIT 1', [$id]) : null) ?: [
-                'percent' => (int) dealer_setting($app, 'default_commission_percent', '5'),
+            'rule' => ($id ? $app->db->one('SELECT * FROM ak_commission_rules WHERE dealer_id = ? AND line = "" AND level = "" ORDER BY id DESC LIMIT 1', [$id]) : null) ?: [
+                'percent' => '',
                 'basis' => dealer_setting($app, 'commission_basis', 'sale'),
                 'settle_on' => dealer_setting($app, 'commission_settle', 'collection'),
             ],
@@ -633,22 +633,33 @@ return new class extends Plugin {
                 [$id, post_string('document_title', 160) ?: 'مدرک نمایندگی', $filename]
             );
         }
-        $percent = max(0, min(100, (int) post_string('commission_percent', 3)));
+        $rawPercent = post_string('commission_percent', 3);
         $basis = post_string('commission_basis', 12) === 'gross' ? 'gross' : 'sale';
         $settle = post_string('commission_settle', 20) === 'sale' ? 'sale' : 'collection';
-        $rule = $app->db->one('SELECT id FROM ak_commission_rules WHERE dealer_id = ? AND line = "" AND level = "" ORDER BY id DESC LIMIT 1', [$id]);
-        if ($rule) {
-            $app->db->run(
-                'UPDATE ak_commission_rules SET percent = ?, basis = ?, settle_on = ? WHERE id = ?',
-                [$percent, $basis, $settle, (int) $rule['id']]
-            );
+        if ($saleModel !== 'commission') {
+            ak_audit($app, 'نماینده', $name, 'خرید از شرکت و فروش دوباره؛ بدون پورسانت');
+        } elseif ($rawPercent === '') {
+            $app->db->run('DELETE FROM ak_commission_rules WHERE dealer_id = ? AND line = "" AND level = ""', [$id]);
+            ak_audit($app, 'نماینده', $name, 'درصد پیش‌فرض شرکت');
+        } elseif (!preg_match('/^\d{1,3}$/', $rawPercent) || (int) $rawPercent > 100) {
+            flash('error', 'درصد پورسانت باید عدد صفر تا ۱۰۰ باشد. برای پیش‌فرض شرکت، فیلد را خالی بگذارید.');
+            redirect('/admin/dealers/' . $id);
         } else {
-            $app->db->run(
-                'INSERT INTO ak_commission_rules (dealer_id, level, line, percent, basis, settle_on) VALUES (?, "", "", ?, ?, ?)',
-                [$id, $percent, $basis, $settle]
-            );
+            $percent = (int) $rawPercent;
+            $rule = $app->db->one('SELECT id FROM ak_commission_rules WHERE dealer_id = ? AND line = "" AND level = "" ORDER BY id DESC LIMIT 1', [$id]);
+            if ($rule) {
+                $app->db->run(
+                    'UPDATE ak_commission_rules SET percent = ?, basis = ?, settle_on = ? WHERE id = ?',
+                    [$percent, $basis, $settle, (int) $rule['id']]
+                );
+            } else {
+                $app->db->run(
+                    'INSERT INTO ak_commission_rules (dealer_id, level, line, percent, basis, settle_on) VALUES (?, "", "", ?, ?, ?)',
+                    [$id, $percent, $basis, $settle]
+                );
+            }
+            ak_audit($app, 'نماینده', $name, 'درصد ' . (string) $percent . ' از ' . ($basis === 'gross' ? 'سود' : 'فروش'));
         }
-        ak_audit($app, 'نماینده', $name, 'درصد ' . (string) $percent . ' از ' . ($basis === 'gross' ? 'سود' : 'فروش'));
         flash('success', 'پرونده نمایندگی ذخیره شد.');
         redirect('/admin/dealers/' . $id);
     }

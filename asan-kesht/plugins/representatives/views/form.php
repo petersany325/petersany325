@@ -37,7 +37,7 @@
     </label>
     <label>محدوده <input name="territory" value="<?= e((string) ($dealer['territory'] ?? '')) ?>"></label>
     <label>سطح <input name="level" value="<?= e((string) ($dealer['level'] ?? '')) ?>" placeholder="پایه، نقره‌ای، طلایی"></label>
-    <label>درصد سود نماینده <input name="commission_percent" inputmode="numeric" value="<?= e((string) ($rule['percent'] ?? 0)) ?>"></label>
+    <label>درصد پورسانت این نماینده <input name="commission_percent" inputmode="numeric" value="<?= e((string) ($rule['percent'] ?? '')) ?>" placeholder="خالی = پیش‌فرض"></label>
     <label>مبنای درصد
       <select name="commission_basis">
         <option value="sale" <?= ($rule['basis'] ?? 'sale') === 'sale' ? 'selected' : '' ?>>از مبلغ فروش</option>
@@ -68,6 +68,7 @@
     <label>نام کاربری ورود <input name="username"></label>
     <label>رمز ورود <input type="password" name="password" autocomplete="new-password"></label>
   </div>
+  <p class="muted">درصد خالی یعنی درصد، مبنا و زمان قطعی‌شدن از تنظیمات شرکت. صفر یعنی همین نماینده پورسانت ندارد. سود ناخالص برابر مبلغ فروش منهای بهای تمام‌شده است؛ اگر این تفاوت صفر باشد برای آن ردیف پورسانتی ساخته نمی‌شود. وصول وجه تا وقتی پرداخت‌های تأییدشده به جمع سفارش برسد، پورسانت را در جریان نگه می‌دارد. مدل خرید و فروش دوباره از این درصد استفاده نمی‌کند.</p>
   <label>شرایط تسویه <input name="settlement" value="<?= e((string) ($dealer['settlement'] ?? '')) ?>"></label>
   <fieldset>
     <legend>گروه کالای مجاز</legend>

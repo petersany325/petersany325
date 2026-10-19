@@ -376,6 +376,8 @@ function accounting_figures(App $app): array
     $dealerCommission = accounting_optional_sum($app, 'ak_dealer_commissions', 'SELECT COALESCE(SUM(amount),0) AS s FROM ak_dealer_commissions WHERE status = "earned"');
     $dealerPending = accounting_optional_sum($app, 'ak_dealer_commissions', 'SELECT COALESCE(SUM(amount),0) AS s FROM ak_dealer_commissions WHERE status = "pending"');
     $dealerSales = accounting_optional_sum($app, 'ak_dealer_orders', 'SELECT COALESCE(SUM(total),0) AS s FROM ak_dealer_orders WHERE status NOT IN ("submitted","cancelled")');
+    $dealerCommissionSales = accounting_optional_sum($app, 'ak_dealer_orders', 'SELECT COALESCE(SUM(o.total),0) AS s FROM ak_dealer_orders o JOIN ak_dealers d ON d.id = o.dealer_id WHERE d.sale_model = "commission" AND o.status NOT IN ("submitted","cancelled")');
+    $dealerGrossGap = accounting_optional_sum($app, 'ak_dealer_commissions', 'SELECT COUNT(*) AS s FROM ak_dealer_commissions WHERE status IN ("pending","earned") AND note LIKE "%بهای تمام‌شده ثبت نشده%"');
     $visitorCommission = accounting_sum($app, 'SELECT COALESCE(SUM(amount),0) AS s FROM ak_visitor_shares');
     $onlinePaid = accounting_optional_sum($app, 'ak_shop_orders', 'SELECT COALESCE(SUM(total),0) AS s FROM ak_shop_orders WHERE payment_status = "paid" AND status != "cancelled"');
     $shopCount = accounting_optional_sum($app, 'ak_shop_orders', 'SELECT COUNT(*) AS s FROM ak_shop_orders WHERE invoice_id > 0 AND status != "cancelled"');
@@ -392,6 +394,8 @@ function accounting_figures(App $app): array
         'dealer_commission' => $dealerCommission,
         'dealer_pending' => $dealerPending,
         'dealer_sales' => $dealerSales,
+        'dealer_commission_sales' => $dealerCommissionSales,
+        'dealer_gross_gap' => $dealerGrossGap,
         'visitor_commission' => $visitorCommission,
         'shop_sales' => $shopSales,
         'shop_count' => $shopCount,
@@ -619,16 +623,28 @@ function accounting_audit_dealers(App $app): array
         return [];
     }
     try {
-        return $app->db->all(
-            'SELECT d.id, d.name, d.code, d.status, d.sale_model,
-                (SELECT r.percent FROM ak_commission_rules r WHERE r.dealer_id = d.id AND r.line = "" ORDER BY r.id DESC LIMIT 1) AS percent,
-                (SELECT r.basis FROM ak_commission_rules r WHERE r.dealer_id = d.id AND r.line = "" ORDER BY r.id DESC LIMIT 1) AS basis,
+        $rows = $app->db->all(
+            'SELECT d.id, d.name, d.code, d.status, d.sale_model, d.level,
                 COALESCE((SELECT SUM(c.amount) FROM ak_dealer_commissions c WHERE c.dealer_id = d.id AND c.status = "earned"), 0) AS earned,
                 COALESCE((SELECT SUM(c.amount) FROM ak_dealer_commissions c WHERE c.dealer_id = d.id AND c.status = "pending"), 0) AS pending
              FROM ak_dealers d
              ORDER BY d.id DESC
              LIMIT 40'
         );
+        foreach ($rows as $index => $row) {
+            $rows[$index]['percent'] = null;
+            $rows[$index]['basis'] = '';
+            $rows[$index]['percent_note'] = 'بدون پورسانت';
+            if ((string) $row['sale_model'] !== 'commission' || !function_exists('dealer_general_rule')) {
+                continue;
+            }
+            $rule = dealer_general_rule($app, $row);
+            $rows[$index]['percent'] = (int) $rule['percent'];
+            $rows[$index]['basis'] = (string) ($rule['basis'] ?? 'sale');
+            $specific = (int) ($rule['dealer_id'] ?? 0) > 0 || (string) ($rule['level'] ?? '') !== '';
+            $rows[$index]['percent_note'] = $specific ? '' : 'پیش‌فرض شرکت';
+        }
+        return $rows;
     } catch (Throwable) {
         return [];
     }

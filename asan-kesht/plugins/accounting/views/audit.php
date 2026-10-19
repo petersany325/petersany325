@@ -46,16 +46,23 @@ $checks = [
     </tbody>
   </table>
 </div>
-<h2>نمایندگان و درصد سود</h2>
+<h2>نمایندگان و درصد پورسانت</h2>
 <div class="table-wrap">
   <table>
-    <thead><tr><th>نماینده</th><th>مدل</th><th>درصد تعریف‌شده</th><th>پورسانت قطعی</th><th>در جریان</th></tr></thead>
+    <thead><tr><th>نماینده</th><th>مدل</th><th>درصد مؤثر</th><th>پورسانت قطعی</th><th>در جریان</th></tr></thead>
     <tbody>
       <?php foreach ($dealers as $row): ?>
         <tr>
           <td><?= e((string) $row['name']) ?><div class="muted"><?= e((string) $row['code']) ?></div></td>
-          <td><?= e((string) $row['sale_model']) ?></td>
-          <td><?= $row['percent'] === null ? 'پیش‌فرض تنظیمات' : e(fa_digits((string) $row['percent'])) . '٪ ' . ((string) $row['basis'] === 'gross' ? 'از سود' : 'از فروش') ?></td>
+          <td><?= e(function_exists('dealer_sale_models') ? (dealer_sale_models()[(string) $row['sale_model']] ?? (string) $row['sale_model']) : (string) $row['sale_model']) ?></td>
+          <td>
+            <?php if ((string) ($row['percent_note'] ?? '') === 'بدون پورسانت' || $row['percent'] === null): ?>
+              بدون پورسانت
+            <?php else: ?>
+              <?= e(fa_digits((string) $row['percent'])) ?>٪ <?= e(function_exists('dealer_basis_label') ? dealer_basis_label((string) $row['basis']) : '') ?>
+              <?php if ((string) ($row['percent_note'] ?? '') !== ''): ?><div class="muted"><?= e((string) $row['percent_note']) ?></div><?php endif; ?>
+            <?php endif; ?>
+          </td>
           <td><?= e(money((int) $row['earned'])) ?></td>
           <td><?= e(money((int) $row['pending'])) ?></td>
         </tr>
