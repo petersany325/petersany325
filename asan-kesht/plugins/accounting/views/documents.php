@@ -4,7 +4,11 @@
 /** @var list<array<string, mixed>> $rows */
 /** @var list<array<string, mixed>> $parties */
 /** @var list<array<string, mixed>> $visitors */
+/** @var list<array<string, mixed>> $machines */
+/** @var list<array<string, mixed>> $houses */
 $visitors = $visitors ?? [];
+$machines = $machines ?? [];
+$houses = $houses ?? [];
 require __DIR__ . '/nav.php';
 ?>
 <h2><?= e($meta['label']) ?> تازه</h2>
@@ -34,13 +38,34 @@ require __DIR__ . '/nav.php';
     </label>
   <?php endif; ?>
   <label>یادداشت <input name="notes"></label>
+  <?php if ($machines !== [] && $kind !== 'proforma'): ?>
+    <p class="muted">اگر ماشین انتخاب شود، فاکتور خرید یک ورود و فاکتور فروش یک خروج در همان انبار می‌سازد. بهای فروش از میانگین آن انبار می‌آید و عدد بهای تمام‌شده نادیده گرفته می‌شود. اگر موجودی کم باشد سند ثبت نمی‌شود. بدون ماشین، سند فقط مالی است و موجودی را عوض نمی‌کند. موجودی فروشگاه جداست و با انبار جمع نمی‌شود.</p>
+  <?php endif; ?>
   <?php for ($i = 0; $i < 4; $i++): ?>
     <div class="grid">
       <label>شرح <input name="item_title[]"></label>
       <label>تعداد <input name="item_qty[]" inputmode="numeric"></label>
       <label>فی ریال <input name="item_price[]" inputmode="numeric"></label>
       <?php if ($kind === 'sale'): ?>
-        <label>بهای تمام‌شده واحد <input name="item_cost[]" inputmode="numeric"></label>
+        <label>بهای واحد، فقط بدون ماشین <input name="item_cost[]" inputmode="numeric"></label>
+      <?php endif; ?>
+      <?php if ($machines !== [] && $kind !== 'proforma'): ?>
+        <label>ماشین انبار
+          <select name="item_machine[]">
+            <option value="0">فقط مالی</option>
+            <?php foreach ($machines as $machine): ?>
+              <option value="<?= e((string) $machine['id']) ?>"><?= e((string) $machine['code']) ?> — <?= e((string) $machine['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label>انبار
+          <select name="item_warehouse[]">
+            <option value="0">پیش‌فرض</option>
+            <?php foreach ($houses as $house): ?>
+              <option value="<?= e((string) $house['id']) ?>"><?= e((string) $house['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
       <?php endif; ?>
     </div>
   <?php endfor; ?>
@@ -68,6 +93,15 @@ require __DIR__ . '/nav.php';
           <a href="<?= e(url('/admin/accounting/print/' . (string) $row['id'])) ?>" target="_blank">چاپ</a>
           <?php if ($kind === 'sale'): ?>
             <a href="<?= e(url('/admin/accounting/print/' . (string) $row['id'] . '?internal=1')) ?>" target="_blank">چاپ داخلی</a>
+          <?php endif; ?>
+          <?php if ($kind !== 'proforma' && (string) $row['status'] !== 'cancelled' && (int) $row['paid'] === 0 && (string) ($row['source'] ?? '') !== 'shop'): ?>
+            <form method="post" action="<?= e(url('/admin/accounting/cancel')) ?>" class="user-actions">
+              <?= csrf_field() ?>
+              <input type="hidden" name="invoice_id" value="<?= e((string) $row['id']) ?>">
+              <input type="hidden" name="kind" value="<?= e($kind) ?>">
+              <label class="check"><input type="checkbox" name="confirm" value="1"> ابطال شود</label>
+              <button type="submit">ابطال</button>
+            </form>
           <?php endif; ?>
         </td>
         <td><?= e((string) $row['party_name']) ?></td>

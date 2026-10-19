@@ -144,6 +144,9 @@ function accounting_schema(Database $db): void
     accounting_add_column($db, 'ak_invoices', 'source_id', 'INT UNSIGNED NOT NULL DEFAULT 0');
     accounting_add_column($db, 'ak_invoices', 'visitor_id', 'INT UNSIGNED NOT NULL DEFAULT 0');
     accounting_add_column($db, 'ak_invoice_items', 'unit_cost', 'BIGINT NOT NULL DEFAULT 0');
+    accounting_add_column($db, 'ak_invoice_items', 'machine_id', 'INT UNSIGNED NOT NULL DEFAULT 0');
+    accounting_add_column($db, 'ak_invoice_items', 'warehouse_id', 'INT UNSIGNED NOT NULL DEFAULT 0');
+    accounting_add_column($db, 'ak_invoice_items', 'cost_total', 'BIGINT NOT NULL DEFAULT 0');
     accounting_add_column($db, 'ak_payroll', 'employer_share', 'BIGINT NOT NULL DEFAULT 0');
     $ready = true;
 }
@@ -152,7 +155,7 @@ function accounting_add_column(Database $db, string $table, string $column, stri
 {
     $allowed = [
         'ak_invoices' => ['kind' => true, 'source' => true, 'source_id' => true, 'visitor_id' => true],
-        'ak_invoice_items' => ['unit_cost' => true],
+        'ak_invoice_items' => ['unit_cost' => true, 'machine_id' => true, 'warehouse_id' => true, 'cost_total' => true],
         'ak_payroll' => ['employer_share' => true],
     ];
     if (!isset($allowed[$table][$column])) {
@@ -234,13 +237,15 @@ function accounting_party(App $app): int
     return (int) $app->db->id();
 }
 
-/** @return list<array{title: string, qty: int, unit_price: int, unit_cost: int}> */
+/** @return list<array{title: string, qty: int, unit_price: int, unit_cost: int, machine_id: int, warehouse_id: int}> */
 function accounting_items(string $kind): array
 {
     $titles = $_POST['item_title'] ?? [];
     $qtys = $_POST['item_qty'] ?? [];
     $prices = $_POST['item_price'] ?? [];
     $costs = $_POST['item_cost'] ?? [];
+    $machines = $_POST['item_machine'] ?? [];
+    $houses = $_POST['item_warehouse'] ?? [];
     if (!is_array($titles) || !is_array($qtys) || !is_array($prices)) {
         return [];
     }
@@ -250,20 +255,43 @@ function accounting_items(string $kind): array
         $qty = (int) en_digits((string) ($qtys[$i] ?? '0'));
         $price = accounting_amount((string) ($prices[$i] ?? '0'));
         $cost = accounting_amount(is_array($costs) ? (string) ($costs[$i] ?? '0') : '0');
+        $machineId = (int) en_digits(is_array($machines) ? (string) ($machines[$i] ?? '0') : '0');
+        $warehouseId = (int) en_digits(is_array($houses) ? (string) ($houses[$i] ?? '0') : '0');
         if ($title === '' || $qty < 1 || $price < 0) {
             continue;
         }
         if ($kind === 'purchase') {
             $cost = $price;
         }
+        if ($kind === 'proforma' || $machineId < 1) {
+            $machineId = 0;
+            $warehouseId = 0;
+        }
         $items[] = [
             'title' => mb_substr($title, 0, 180),
             'qty' => $qty,
             'unit_price' => $price,
             'unit_cost' => $cost,
+            'machine_id' => $machineId,
+            'warehouse_id' => max(0, $warehouseId),
         ];
     }
     return $items;
+}
+
+function accounting_cost_expr(string $alias = ''): string
+{
+    $prefix = $alias === 'it' ? 'it.' : '';
+    return 'CASE WHEN ' . $prefix . 'cost_total > 0 THEN ' . $prefix . 'cost_total ELSE ' . $prefix . 'qty * ' . $prefix . 'unit_cost END';
+}
+
+function accounting_line_cost(array $item): int
+{
+    $stored = (int) ($item['cost_total'] ?? 0);
+    if ($stored > 0) {
+        return $stored;
+    }
+    return (int) $item['qty'] * (int) $item['unit_cost'];
 }
 
 function accounting_save_document(App $app, string $kind): void
@@ -292,31 +320,116 @@ function accounting_save_document(App $app, string $kind): void
             $visitorId = $wanted;
         }
     }
-    $costSum = 0;
-    foreach ($items as $item) {
-        $costSum += $item['qty'] * $item['unit_cost'];
-    }
     $notes = post_string('notes', 500);
-    $invoiceId = (int) $app->db->transaction(function () use ($app, $number, $partyId, $kind, $status, $total, $items, $visitorId, $notes): int {
-        $app->db->run(
-            'INSERT INTO ak_invoices (number, party_id, kind, status, notes, total, source, source_id, visitor_id, created_at) VALUES (?, ?, ?, ?, ?, ?, "manual", 0, ?, NOW())',
-            [$number, $partyId, $kind, $status, $notes, $total, $visitorId]
-        );
-        $invoiceId = (int) $app->db->id();
-        foreach ($items as $item) {
-            $app->db->run(
-                'INSERT INTO ak_invoice_items (invoice_id, title, qty, unit_price, unit_cost) VALUES (?, ?, ?, ?, ?)',
-                [$invoiceId, $item['title'], $item['qty'], $item['unit_price'], $item['unit_cost']]
-            );
+    $linked = $app->pluginEnabled('warehouses') && ($kind === 'sale' || $kind === 'purchase') && function_exists('warehouse_apply_invoice');
+    if ($linked) {
+        warehouse_schema($app->db);
+    }
+    $moved = false;
+    foreach ($items as $item) {
+        if ($item['machine_id'] > 0) {
+            $moved = true;
         }
-        return $invoiceId;
-    });
+    }
+    try {
+        $saved = $app->db->transaction(function (Database $db) use ($number, $partyId, $kind, $status, $total, $items, $visitorId, $notes, $linked): array {
+            $db->run(
+                'INSERT INTO ak_invoices (number, party_id, kind, status, notes, total, source, source_id, visitor_id, created_at) VALUES (?, ?, ?, ?, ?, ?, "manual", 0, ?, NOW())',
+                [$number, $partyId, $kind, $status, $notes, $total, $visitorId]
+            );
+            $invoiceId = (int) $db->id();
+            foreach ($items as $item) {
+                $db->run(
+                    'INSERT INTO ak_invoice_items (invoice_id, title, qty, unit_price, unit_cost, machine_id, warehouse_id, cost_total) VALUES (?, ?, ?, ?, ?, ?, ?, 0)',
+                    [$invoiceId, $item['title'], $item['qty'], $item['unit_price'], $item['unit_cost'], $linked ? $item['machine_id'] : 0, $linked ? $item['warehouse_id'] : 0]
+                );
+            }
+            if ($linked) {
+                $costSum = warehouse_apply_invoice($db, $invoiceId, $kind, date('Y-m-d'));
+            } else {
+                $costSum = 0;
+                foreach ($items as $item) {
+                    $costSum += $item['qty'] * $item['unit_cost'];
+                }
+            }
+            return ['id' => $invoiceId, 'cost' => $costSum];
+        });
+    } catch (RuntimeException $e) {
+        flash('error', $e->getMessage());
+        redirect('/admin/accounting/' . $kind);
+    } catch (PDOException) {
+        flash('error', 'ثبت سند انبار تکراری شد و ذخیره نشد.');
+        redirect('/admin/accounting/' . $kind);
+    }
+    $invoiceId = (int) $saved['id'];
+    $costSum = (int) $saved['cost'];
     if ($kind === 'sale' && $visitorId > 0) {
         accounting_record_visitor_share($app, $visitorId, 'invoice', $invoiceId, $total, $costSum);
     }
-    ak_audit($app, $meta['label'], $number, 'مبلغ ' . (string) $total . ($visitorId > 0 ? '، با ویزیتور' : ''));
-    flash('success', $meta['label'] . ' ' . $number . ' ثبت شد.');
+    ak_audit($app, $meta['label'], $number, 'مبلغ ' . (string) $total . ($visitorId > 0 ? '، با ویزیتور' : '') . ($moved ? '، با انبار' : ''));
+    flash('success', $meta['label'] . ' ' . $number . ' ثبت شد.' . ($moved ? ' موجودی انبار هم به‌روز شد.' : ''));
     redirect('/admin/accounting/' . $kind);
+}
+
+function accounting_cancel_document(App $app): void
+{
+    $invoiceId = (int) post_string('invoice_id', 12);
+    $kind = post_string('kind', 20);
+    $back = accounting_kind($kind) !== null ? '/admin/accounting/' . $kind : '/admin/accounting';
+    if (!isset($_POST['confirm'])) {
+        flash('error', 'ابطال سند را تأیید کنید.');
+        redirect($back);
+    }
+    $invoice = $invoiceId > 0 ? $app->db->one('SELECT * FROM ak_invoices WHERE id = ?', [$invoiceId]) : null;
+    if (!$invoice || !in_array((string) $invoice['kind'], ['sale', 'purchase'], true)) {
+        flash('error', 'این فاکتور برای ابطال پیدا نشد.');
+        redirect($back);
+    }
+    $back = '/admin/accounting/' . (string) $invoice['kind'];
+    if ((string) $invoice['status'] === 'cancelled') {
+        flash('error', 'این سند قبلاً باطل شده است.');
+        redirect($back);
+    }
+    if ((string) $invoice['source'] === 'shop') {
+        flash('error', 'فاکتور فروشگاه از همین‌جا باطل نمی‌شود.');
+        redirect($back);
+    }
+    $paid = (int) ($app->db->one('SELECT COALESCE(SUM(amount),0) AS s FROM ak_payments WHERE invoice_id = ?', [$invoiceId])['s'] ?? 0);
+    if ($paid > 0) {
+        flash('error', 'این سند دریافت دارد و تا وقتی دریافتی مانده باطل نمی‌شود.');
+        redirect($back);
+    }
+    $linked = $app->pluginEnabled('warehouses') && function_exists('warehouse_reverse_invoice');
+    if ($linked) {
+        warehouse_schema($app->db);
+    }
+    try {
+        $app->db->transaction(function (Database $db) use ($invoiceId, $linked): void {
+            $row = $db->one('SELECT * FROM ak_invoices WHERE id = ? FOR UPDATE', [$invoiceId]);
+            if (!$row || (string) $row['status'] === 'cancelled' || (string) $row['source'] === 'shop') {
+                throw new RuntimeException('این سند را نمی‌توان باطل کرد.');
+            }
+            $paidNow = (int) ($db->one('SELECT COALESCE(SUM(amount),0) AS s FROM ak_payments WHERE invoice_id = ?', [$invoiceId])['s'] ?? 0);
+            if ($paidNow > 0) {
+                throw new RuntimeException('این سند دریافت دارد و باطل نمی‌شود.');
+            }
+            if ($linked) {
+                warehouse_reverse_invoice($db, $invoiceId, (string) $row['kind']);
+                warehouse_reverse_consign_commission($db, $invoiceId);
+            }
+            $db->run('UPDATE ak_invoices SET status = "cancelled" WHERE id = ?', [$invoiceId]);
+            $db->run('DELETE FROM ak_visitor_shares WHERE source = "invoice" AND ref_id = ?', [$invoiceId]);
+        });
+    } catch (RuntimeException $e) {
+        flash('error', $e->getMessage());
+        redirect($back);
+    } catch (PDOException) {
+        flash('error', 'برگشت انبار تکراری شد و سند باطل نشد.');
+        redirect($back);
+    }
+    ak_audit($app, 'ابطال', (string) $invoice['number'], 'سند باطل شد و گردش انبار برگشت');
+    flash('success', 'سند باطل شد. اگر به انبار وصل بود، همان مقدار و ارزش برگشت.');
+    redirect($back);
 }
 
 function accounting_refresh_status(App $app, int $invoiceId): void
@@ -328,6 +441,9 @@ function accounting_refresh_status(App $app, int $invoiceId): void
     $paid = (int) ($app->db->one('SELECT COALESCE(SUM(amount),0) AS s FROM ak_payments WHERE invoice_id = ?', [$invoiceId])['s'] ?? 0);
     $status = $paid <= 0 ? 'issued' : ($paid >= (int) $invoice['total'] ? 'paid' : 'partial');
     $app->db->run('UPDATE ak_invoices SET status = ? WHERE id = ?', [$status, $invoiceId]);
+    if ($status === 'paid' && function_exists('warehouse_earn_consign_commission')) {
+        warehouse_earn_consign_commission($app, $invoiceId);
+    }
 }
 
 /** @return list<array<string, mixed>> */
@@ -336,7 +452,7 @@ function accounting_documents(App $app, string $kind): array
     return $app->db->all(
         'SELECT i.*, p.name AS party_name,
             COALESCE((SELECT SUM(amount) FROM ak_payments WHERE invoice_id = i.id), 0) AS paid,
-            COALESCE((SELECT SUM(qty * unit_cost) FROM ak_invoice_items WHERE invoice_id = i.id), 0) AS cost
+            COALESCE((SELECT SUM(CASE WHEN cost_total > 0 THEN cost_total ELSE qty * unit_cost END) FROM ak_invoice_items WHERE invoice_id = i.id), 0) AS cost
          FROM ak_invoices i
          JOIN ak_parties p ON p.id = i.party_id
          WHERE i.kind = ?
@@ -358,7 +474,7 @@ function accounting_figures(App $app): array
     $sales = accounting_sum($app, 'SELECT COALESCE(SUM(total),0) AS s FROM ak_invoices WHERE kind = "sale" AND status != "cancelled"');
     $cogs = accounting_sum(
         $app,
-        'SELECT COALESCE(SUM(it.qty * it.unit_cost),0) AS s
+        'SELECT COALESCE(SUM(' . accounting_cost_expr('it') . '),0) AS s
          FROM ak_invoice_items it JOIN ak_invoices i ON i.id = it.invoice_id
          WHERE i.kind = "sale" AND i.status != "cancelled"'
     );
@@ -371,7 +487,7 @@ function accounting_figures(App $app): array
     $missingCost = accounting_sum(
         $app,
         'SELECT COUNT(*) AS s FROM ak_invoice_items it JOIN ak_invoices i ON i.id = it.invoice_id
-         WHERE i.kind = "sale" AND i.status != "cancelled" AND it.unit_cost = 0'
+         WHERE i.kind = "sale" AND i.status != "cancelled" AND it.unit_cost = 0 AND it.cost_total = 0'
     );
     $dealerCommission = accounting_optional_sum($app, 'ak_dealer_commissions', 'SELECT COALESCE(SUM(amount),0) AS s FROM ak_dealer_commissions WHERE status = "earned"');
     $dealerPending = accounting_optional_sum($app, 'ak_dealer_commissions', 'SELECT COALESCE(SUM(amount),0) AS s FROM ak_dealer_commissions WHERE status = "pending"');

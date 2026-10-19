@@ -82,7 +82,7 @@ foreach ($payments as $payment) {
       <?php
         $cost = 0;
         foreach ($items as $item) {
-            $cost += (int) $item['qty'] * (int) $item['unit_cost'];
+            $cost += accounting_line_cost($item);
         }
       ?>
       <div><span>بهای تمام‌شده</span><b><?= e(money($cost)) ?></b></div>

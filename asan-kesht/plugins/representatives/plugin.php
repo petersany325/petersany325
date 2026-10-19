@@ -268,7 +268,7 @@ return new class extends Plugin {
             dealer_require_finance($app);
             $app->view->plugin('representatives', 'commissions', [
                 'title' => 'پورسانت نمایندگان',
-                'rows' => $app->db->all('SELECT c.*, d.name, o.number FROM ak_dealer_commissions c JOIN ak_dealers d ON d.id = c.dealer_id JOIN ak_dealer_orders o ON o.id = c.order_id ORDER BY c.id DESC LIMIT 200'),
+                'rows' => $app->db->all('SELECT c.*, d.name, o.number FROM ak_dealer_commissions c JOIN ak_dealers d ON d.id = c.dealer_id LEFT JOIN ak_dealer_orders o ON o.id = c.order_id AND c.order_id > 0 ORDER BY c.id DESC LIMIT 200'),
             ]);
         });
 

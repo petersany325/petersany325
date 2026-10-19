@@ -202,6 +202,18 @@ return new class extends Plugin {
             if ($meta === null) {
                 redirect('/admin/accounting');
             }
+            $machines = [];
+            $houses = [];
+            if ($app->pluginEnabled('warehouses') && function_exists('warehouse_machines')) {
+                warehouse_schema($app->db);
+                $machines = warehouse_machines($app);
+                $houses = array_values(array_filter(
+                    warehouse_houses($app),
+                    static function (array $house): bool {
+                        return (int) $house['active'] === 1;
+                    }
+                ));
+            }
             $app->view->plugin('accounting', 'documents', [
                 'title' => $meta['label'],
                 'kind' => $kind,
@@ -209,12 +221,19 @@ return new class extends Plugin {
                 'rows' => accounting_documents($app, $kind),
                 'parties' => $app->db->all('SELECT * FROM ak_parties ORDER BY name'),
                 'visitors' => $kind === 'sale' ? $app->db->all('SELECT id, name, percent, basis FROM ak_visitors WHERE active = 1 ORDER BY name') : [],
+                'machines' => $machines,
+                'houses' => $houses,
             ]);
         });
         $app->router->post('/admin/accounting/documents', function () use ($app): void {
             csrf_check();
             require_role($app, accounting_roles());
             accounting_save_document($app, post_string('kind', 20));
+        });
+        $app->router->post('/admin/accounting/cancel', function () use ($app): void {
+            csrf_check();
+            require_role($app, accounting_roles());
+            accounting_cancel_document($app);
         });
         $app->router->post('/admin/accounting/payments', function () use ($app): void {
             csrf_check();
