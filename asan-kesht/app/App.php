@@ -148,7 +148,7 @@ final class App
         $this->router->get('/login', function () use ($app): void {
             $user = $app->auth->user();
             if ($user) {
-                redirect(home_for_role((string) $user['role']));
+                redirect(landing_for_role((string) $user['role']));
             }
             $app->view->render('auth/login', ['title' => 'ورود']);
         });
@@ -162,7 +162,7 @@ final class App
                 redirect('/login');
             }
             $app->auth->login($user);
-            redirect(home_for_role((string) $user['role']));
+            redirect(landing_for_role((string) $user['role']));
         });
         $this->router->post('/logout', function () use ($app): void {
             csrf_check();

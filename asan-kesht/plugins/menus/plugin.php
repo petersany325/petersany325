@@ -29,6 +29,10 @@ return new class extends Plugin {
             $items[] = ['href' => '/admin/menus', 'label' => 'مگا منو', 'roles' => ['admin']];
             return $items;
         });
+        $app->listen('site.toolbar', function (array $items): array {
+            $items[] = ['href' => '/admin/menus', 'label' => 'مگا منو'];
+            return $items;
+        });
         $app->listen('admin.settings', function (array $items) use ($app): array {
             $count = $app->db->one('SELECT COUNT(*) AS c FROM ak_menu_items WHERE visible = 1');
             $items[] = [

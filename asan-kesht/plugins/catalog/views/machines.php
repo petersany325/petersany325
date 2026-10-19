@@ -1,4 +1,4 @@
-<?php /** @var array $rows */ /** @var string $line */ /** @var array $lines */ ?>
+<?php /** @var App $app */ /** @var array $rows */ /** @var string $line */ /** @var array $lines */ ?>
 <section class="page-hero">
   <div class="wrap">
     <p class="kicker">کاتالوگ</p>
@@ -25,8 +25,24 @@
             <div><dt>توان تراکتور</dt><dd><?= e((string) $row['hp']) ?></dd></div>
             <div><dt>عرض کار</dt><dd><?= e((string) $row['width']) ?></dd></div>
           </dl>
+          <?php
+            $bits = $app->filter('shop.machine.bits', [
+                'machine' => $row,
+                'price_html' => '',
+                'stock_html' => '',
+                'actions_html' => '',
+            ]);
+            if (!is_array($bits)) {
+                $bits = [];
+            }
+          ?>
+          <?= (string) ($bits['price_html'] ?? '') ?>
+          <?= (string) ($bits['stock_html'] ?? '') ?>
         </div>
-        <a class="btn" href="<?= e(url('/contact?model=' . rawurlencode((string) $row['code']))) ?>">درخواست این مدل</a>
+        <div class="machine-actions">
+          <a class="btn" href="<?= e(url('/contact?model=' . rawurlencode((string) $row['code']))) ?>">درخواست این مدل</a>
+          <?= (string) ($bits['actions_html'] ?? '') ?>
+        </div>
       </article>
     <?php endforeach; ?>
   </div>

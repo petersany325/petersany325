@@ -262,6 +262,11 @@ function home_for_role(string $role): string
     };
 }
 
+function landing_for_role(string $role): string
+{
+    return $role === 'admin' ? '/' : home_for_role($role);
+}
+
 function nav_href(string $href): string
 {
     if (preg_match('#^https?://#i', $href) === 1) {
@@ -277,6 +282,6 @@ function reserved_slug(string $slug): bool
 {
     return in_array($slug, [
         'admin', 'account', 'login', 'logout', 'machines', 'quote', 'assets',
-        'install', 'p', 'index.php', 'api', 'estelam', 'rep', 'register',
+        'install', 'p', 'index.php', 'api', 'estelam', 'rep', 'register', 'cart', 'checkout',
     ], true);
 }

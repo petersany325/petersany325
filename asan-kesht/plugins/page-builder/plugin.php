@@ -102,6 +102,23 @@ return new class extends Plugin {
             $items[] = ['href' => '/admin/pages', 'label' => 'صفحه‌ساز', 'roles' => ['admin']];
             return $items;
         });
+        $app->listen('site.toolbar', function (array $items) use ($app): array {
+            $path = trim(request_path(), '/');
+            $slug = $path === '' ? 'home' : $path;
+            if (str_contains($slug, '/')) {
+                return $items;
+            }
+            $page = $app->db->one('SELECT id FROM ak_pages WHERE slug = ?', [$slug]);
+            if (!$page) {
+                return $items;
+            }
+            array_unshift($items, [
+                'href' => '/admin/pages/' . (int) $page['id'],
+                'label' => 'ویرایش این صفحه',
+                'primary' => true,
+            ]);
+            return $items;
+        });
         $app->listen('site.nav', function (array $items) use ($app): array {
             $pages = $app->db->all('SELECT title, slug FROM ak_pages WHERE status = "published" AND in_menu = 1 ORDER BY menu_order, id');
             foreach ($pages as $page) {

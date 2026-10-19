@@ -76,6 +76,12 @@ return new class extends Plugin {
             $items[] = ['href' => '/admin/quotes', 'label' => 'پیش‌فاکتورها', 'roles' => ['admin', 'employee']];
             return $items;
         });
+        $app->listen('site.toolbar', function (array $items): array {
+            if (request_path() === '/machines') {
+                $items[] = ['href' => '/admin/machines', 'label' => 'ویرایش ماشین‌ها', 'primary' => true];
+            }
+            return $items;
+        });
         $app->listen('dashboard.cards', function (array $cards) use ($app): array {
             $row = $app->db->one('SELECT COUNT(*) AS c FROM ak_quote_requests WHERE status = "new"');
             $cards[] = ['label' => 'درخواست تازه', 'value' => fa_digits((string) ($row['c'] ?? 0)), 'href' => '/admin/quotes'];
@@ -87,7 +93,7 @@ return new class extends Plugin {
             if ($type === 'machines') {
                 $limit = max(1, min(12, (int) ($block['data']['limit'] ?? 4)));
                 $rows = $app->db->all('SELECT * FROM ak_machines WHERE active = 1 ORDER BY sort_order, id LIMIT ' . $limit);
-                $payload['html'] = $this->machineSheets((string) ($block['data']['title'] ?? 'ماشین‌ها'), $rows);
+                $payload['html'] = $this->machineSheets($app, (string) ($block['data']['title'] ?? 'ماشین‌ها'), $rows);
             }
             if ($type === 'quote') {
                 $payload['html'] = $this->quoteForm($block);
@@ -197,11 +203,23 @@ return new class extends Plugin {
         ];
     }
 
-    private function machineSheets(string $title, array $rows): string
+    private function machineSheets(App $app, string $title, array $rows): string
     {
         $html = '<section class="section"><div class="wrap"><div class="section-head"><h2>' . e($title) . '</h2><a href="' . e(url('/machines')) . '">همه مدل‌ها</a></div><div class="sheets">';
         foreach ($rows as $row) {
-            $html .= '<a class="sheet" href="' . e(url('/contact?model=' . rawurlencode((string) $row['code']))) . '"><span class="code">' . e((string) $row['code']) . '</span><div><h3>' . e((string) $row['name']) . '</h3><p>' . e((string) $row['summary']) . '</p></div><dl class="specs"><div><dt>توان</dt><dd>' . e((string) $row['hp']) . '</dd></div><div><dt>عرض</dt><dd>' . e((string) $row['width']) . '</dd></div></dl><span class="linkish">درخواست</span></a>';
+            $bits = $app->filter('shop.machine.bits', [
+                'machine' => $row,
+                'price_html' => '',
+                'stock_html' => '',
+                'actions_html' => '',
+            ]);
+            if (!is_array($bits)) {
+                $bits = [];
+            }
+            $html .= '<a class="sheet" href="' . e(url('/contact?model=' . rawurlencode((string) $row['code']))) . '"><span class="code">' . e((string) $row['code']) . '</span><div><h3>' . e((string) $row['name']) . '</h3><p>' . e((string) $row['summary']) . '</p>'
+                . (string) ($bits['price_html'] ?? '')
+                . (string) ($bits['stock_html'] ?? '')
+                . '</div><dl class="specs"><div><dt>توان</dt><dd>' . e((string) $row['hp']) . '</dd></div><div><dt>عرض</dt><dd>' . e((string) $row['width']) . '</dd></div></dl><span class="linkish">درخواست</span></a>';
         }
         return $html . '</div></div></section>';
     }

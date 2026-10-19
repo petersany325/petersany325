@@ -129,7 +129,7 @@ return new class extends Plugin {
                 redirect('/login');
             }
             $app->auth->login($user);
-            redirect(home_for_role((string) $user['role']));
+            redirect(landing_for_role((string) $user['role']));
         });
     }
 };

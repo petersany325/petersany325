@@ -30,6 +30,15 @@ if (is_array($ready)) {
     $nav = $ready;
 }
 $description = $tagline . ' — ' . $siteName;
+$editTools = [];
+if ($user && (string) $user['role'] === 'admin') {
+    $filteredTools = $app->filter('site.toolbar', []);
+    $editTools = is_array($filteredTools) ? $filteredTools : [];
+}
+$aside = $app->filter('site.aside', []);
+if (!is_array($aside)) {
+    $aside = [];
+}
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -48,6 +57,19 @@ $description = $tagline . ' — ' . $siteName;
 <body>
   <a class="skip" href="#main">رفتن به محتوا</a>
   <header class="top">
+    <?php if ($editTools !== [] || ($user && (string) $user['role'] === 'admin')): ?>
+      <nav class="editbar" aria-label="ویرایش">
+        <div class="wrap editbar-row">
+          <strong>ویرایش</strong>
+          <?php foreach ($editTools as $tool): ?>
+            <?php if (!is_array($tool)) { continue; } ?>
+            <a href="<?= e(url((string) ($tool['href'] ?? '/'))) ?>"<?= !empty($tool['primary']) ? ' class="is-primary"' : '' ?>><?= e((string) ($tool['label'] ?? '')) ?></a>
+          <?php endforeach; ?>
+          <a href="<?= e(url('/admin')) ?>">پیشخوان</a>
+          <a href="<?= e(url('/admin/settings')) ?>">تنظیمات</a>
+        </div>
+      </nav>
+    <?php endif; ?>
     <div class="stripe" aria-hidden="true"></div>
     <div class="wrap bar">
       <a class="brand" href="<?= e(url('/')) ?>">
@@ -134,6 +156,10 @@ $description = $tagline . ' — ' . $siteName;
               </div>
             </div>
           <?php endif; ?>
+        <?php endforeach; ?>
+        <?php foreach ($aside as $item): ?>
+          <?php if (!is_array($item)) { continue; } ?>
+          <a href="<?= e(url((string) ($item['href'] ?? '/'))) ?>"><?= e((string) ($item['label'] ?? '')) ?></a>
         <?php endforeach; ?>
         <?php if ($user): ?>
           <a href="<?= e(url(home_for_role((string) $user['role']))) ?>">حساب</a>
