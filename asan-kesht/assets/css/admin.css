@@ -322,8 +322,19 @@ th, td { border-bottom: 1px solid var(--line); padding: 0.55rem; text-align: rig
   font-size: 12px;
 }
 
+.nav-toggle { display: none; }
+
 @media (max-width: 800px) {
   .shell { grid-template-columns: 1fr; }
+  .side { display: none; }
+  .shell.is-nav .side { display: block; }
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 0 0.7rem;
+    background: var(--dark);
+    color: #fff;
+  }
   .ticket-layout.has-aside { grid-template-columns: 1fr; }
   .ticket-toolbar .btn { width: 100%; text-align: center; }
   .ticket-form .btn { width: 100%; }

@@ -61,6 +61,7 @@ $current = request_path();
       </form>
     </aside>
     <section class="main">
+      <button class="nav-toggle" type="button">منوی کارتابل</button>
       <h1><?= e($title ?? '') ?></h1>
       <?php foreach (take_flashes() as $flash): ?>
         <p class="flash flash-<?= e($flash['type']) ?>"><?= e($flash['message']) ?></p>
@@ -68,5 +69,27 @@ $current = request_path();
       <?= $content ?>
     </section>
   </div>
+  <script>
+    (function () {
+      var shell = document.querySelector('.shell');
+      var narrow = window.matchMedia('(max-width: 800px)');
+      function fold() {
+        document.querySelectorAll('.side-group').forEach(function (group) {
+          group.open = !narrow.matches || !!group.querySelector('.is-current');
+        });
+      }
+      fold();
+      narrow.addEventListener('change', function () {
+        if (shell) shell.classList.remove('is-nav');
+        fold();
+      });
+      var toggle = document.querySelector('.nav-toggle');
+      if (toggle) {
+        toggle.addEventListener('click', function () {
+          if (shell) shell.classList.toggle('is-nav');
+        });
+      }
+    })();
+  </script>
 </body>
 </html>
