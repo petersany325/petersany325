@@ -10,7 +10,7 @@ return new class extends Plugin {
         return [
             'id' => 'menus',
             'name' => 'مگا منو',
-            'description' => 'منو، ستون و زیرمنوی سایت با دسترسی کامل مدیر',
+            'description' => 'ساخت منو و زیرمنو، پیوند، مگا پنل و افکت باز شدن',
         ];
     }
 
@@ -49,7 +49,14 @@ return new class extends Plugin {
                 'title' => 'مگا منو',
                 'rows' => $rows,
                 'tree' => menu_tree_from($rows, 0, false),
+                'options' => menu_options($app),
+                'parent' => (int) ($_GET['parent'] ?? 0),
             ]);
+        });
+        $app->router->post('/admin/menus/settings', function () use ($app): void {
+            csrf_check();
+            require_role($app, ['admin']);
+            menu_save_options($app);
         });
         $app->router->post('/admin/menus', function () use ($app): void {
             csrf_check();

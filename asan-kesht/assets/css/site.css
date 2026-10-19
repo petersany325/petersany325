@@ -271,9 +271,51 @@ textarea {
     padding: 0.35rem 0;
   }
 
-  .nav-sub a {
+  .nav-sub a,
+  .nav-sub-label {
     display: block;
     padding: 0.45rem 0.8rem;
+  }
+
+  .nav-sub-label {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+  }
+
+  .nav-nested {
+    display: grid;
+    padding-inline-start: 0.6rem;
+  }
+
+  .nav[data-open="click"] .nav-more {
+    display: inline-flex;
+    margin-inline-start: 0.2rem;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .nav[data-open="click"] .nav-item:hover > .nav-panel {
+    display: none;
+  }
+
+  .nav[data-open="click"] .nav-item.is-open > .nav-panel,
+  .nav[data-open="click"] .nav-item:focus-within > .nav-panel {
+    display: block;
+  }
+
+  .nav[data-effect="fade"] .nav-item.is-open > .nav-panel,
+  .nav[data-effect="fade"] .nav-item:hover > .nav-panel,
+  .nav[data-effect="fade"] .nav-item:focus-within > .nav-panel {
+    animation: menu-fade 0.18s ease;
+  }
+
+  .nav[data-effect="slide"] .nav-item.is-open > .nav-panel,
+  .nav[data-effect="slide"] .nav-item:hover > .nav-panel,
+  .nav[data-effect="slide"] .nav-item:focus-within > .nav-panel {
+    animation: menu-slide 0.18s ease;
   }
 
   .is-mega > .nav-panel {
@@ -1542,8 +1584,23 @@ form.cart-add input {
   }
 }
 
+@keyframes menu-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes menu-slide {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  .nav[data-effect="fade"] .nav-panel,
+  .nav[data-effect="slide"] .nav-panel {
+    animation: none;
   }
 }

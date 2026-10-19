@@ -15,6 +15,16 @@ if (is_array($extra)) {
     $items = array_merge($items, $extra);
 }
 $role = $user['role'] ?? '';
+$groups = [];
+$order = ['مدیریت', 'کاربران', 'فروشگاه', 'نمایندگان', 'حسابداری', 'محتوا', 'پیام‌ها'];
+foreach ($items as $item) {
+    if (!is_array($item) || !in_array($role, $item['roles'] ?? [], true)) {
+        continue;
+    }
+    $bucket = admin_bucket((string) ($item['href'] ?? ''));
+    $groups[$bucket][] = $item;
+}
+$current = request_path();
 ?>
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
@@ -30,14 +40,20 @@ $role = $user['role'] ?? '';
 <body>
   <div class="shell">
     <aside class="side">
-      <a class="side-brand" href="<?= e(url('/admin')) ?>">آسان‌کشت</a>
+      <a class="side-brand" href="<?= e(url('/admin')) ?>"><?= ui_icon('home') ?><span>آسان‌کشت</span></a>
       <p class="side-user"><?= e((string) ($user['name'] ?? '')) ?></p>
-      <nav>
-        <?php foreach ($items as $item): ?>
-          <?php if (!in_array($role, $item['roles'], true)) { continue; } ?>
-          <a href="<?= e(url((string) $item['href'])) ?>"><?= e((string) $item['label']) ?></a>
+      <nav class="side-nav">
+        <?php foreach ($order as $name): ?>
+          <?php if (empty($groups[$name])) { continue; } ?>
+          <details class="side-group" open>
+            <summary><?= e($name) ?></summary>
+            <?php foreach ($groups[$name] as $item): ?>
+              <?php $href = (string) $item['href']; ?>
+              <a href="<?= e(url($href)) ?>"<?= $current === rtrim($href, '/') ? ' class="is-current"' : '' ?>><?= ui_icon(admin_glyph($href)) ?><span><?= e((string) $item['label']) ?></span></a>
+            <?php endforeach; ?>
+          </details>
         <?php endforeach; ?>
-        <a href="<?= e(url('/')) ?>">نمایش سایت</a>
+        <a class="side-site" href="<?= e(url('/')) ?>"><?= ui_icon('chevron') ?><span>نمایش سایت</span></a>
       </nav>
       <form method="post" action="<?= e(url('/logout')) ?>">
         <?= csrf_field() ?>

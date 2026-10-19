@@ -1,11 +1,21 @@
-<?php /** @var int $paid */ /** @var int $expense */ /** @var array $open */ /** @var array $months */ ?>
+<?php
+/** @var array<string, int> $figures */
+/** @var list<array<string, mixed>> $open */
+/** @var list<array<string, mixed>> $checks */
+require __DIR__ . '/nav.php';
+?>
 <div class="cards">
-  <div class="card"><span>دریافت‌ها</span><strong><?= e(money($paid)) ?></strong></div>
-  <div class="card"><span>هزینه‌ها</span><strong><?= e(money($expense)) ?></strong></div>
-  <div class="card"><span>مابه‌التفاوت ثبت‌شده</span><strong><?= e(money($paid - $expense)) ?></strong></div>
+  <div class="card"><span>فروش</span><strong><?= e(money($figures['sales'])) ?></strong></div>
+  <div class="card"><span>بهای تمام‌شده</span><strong><?= e(money($figures['cogs'])) ?></strong></div>
+  <div class="card"><span>سود ناخالص</span><strong><?= e(money($figures['gross'])) ?></strong></div>
+  <div class="card"><span>خرید</span><strong><?= e(money($figures['purchases'])) ?></strong></div>
+  <div class="card"><span>هزینه</span><strong><?= e(money($figures['expenses'])) ?></strong></div>
+  <div class="card"><span>حقوق</span><strong><?= e(money($figures['payroll'])) ?></strong></div>
+  <div class="card"><span>سود عملیاتی</span><strong><?= e(money($figures['operating'])) ?></strong></div>
 </div>
 <p><button type="button" onclick="window.print()">چاپ گزارش</button></p>
-<h2>مانده فاکتورها</h2>
+<p class="muted">اگر بهای تمام‌شده ردیف فروش صفر باشد، سود ناخالص با فروش یکی دیده می‌شود. مبلغ خرید جداست و داخل سود تکرار نمی‌شود.</p>
+<h2>مانده فاکتورهای فروش</h2>
 <div class="table-wrap">
   <table>
     <thead><tr><th>شماره</th><th>طرف</th><th>جمع</th><th>دریافت</th><th>مانده</th></tr></thead>
@@ -22,14 +32,9 @@
     </tbody>
   </table>
 </div>
-<h2>دریافت شش ماه اخیر</h2>
-<?php $max = 1; foreach ($months as $month) { $max = max($max, (int) $month['total']); } ?>
-<ul class="bars">
-  <?php foreach ($months as $month): ?>
-    <li>
-      <span><?= e((string) $month['ym']) ?></span>
-      <span class="bar" style="width: <?= e((string) max(4, (int) round(((int) $month['total'] / $max) * 100))) ?>%"></span>
-      <span><?= e(money((int) $month['total'])) ?></span>
-    </li>
+<h2>چک‌های در جریان</h2>
+<ul>
+  <?php foreach ($checks as $check): ?>
+    <li><?= e((string) $check['due_on']) ?> — <?= e((string) $check['number']) ?> — <?= e((string) $check['party_name']) ?> — <?= e(money((int) $check['amount'])) ?></li>
   <?php endforeach; ?>
 </ul>

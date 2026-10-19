@@ -137,6 +137,36 @@ function menu_public_tree(App $app): array
     return menu_tree_from(menu_rows($app), 0, true);
 }
 
+/** @return array{effect: string, open: string} */
+function menu_options(App $app): array
+{
+    $effect = setting($app, 'menus', 'effect', 'fade');
+    $open = setting($app, 'menus', 'open', 'hover');
+    if (!in_array($effect, ['none', 'fade', 'slide'], true)) {
+        $effect = 'fade';
+    }
+    if (!in_array($open, ['hover', 'click'], true)) {
+        $open = 'hover';
+    }
+    return ['effect' => $effect, 'open' => $open];
+}
+
+function menu_save_options(App $app): void
+{
+    $effect = post_string('effect', 12);
+    $open = post_string('open', 12);
+    if (!in_array($effect, ['none', 'fade', 'slide'], true)) {
+        $effect = 'fade';
+    }
+    if (!in_array($open, ['hover', 'click'], true)) {
+        $open = 'hover';
+    }
+    save_setting($app, 'menus', 'effect', $effect);
+    save_setting($app, 'menus', 'open', $open);
+    flash('success', 'تنظیم منو ذخیره شد.');
+    redirect('/admin/menus');
+}
+
 function menu_save(App $app): void
 {
     $rows = menu_rows($app);

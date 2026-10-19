@@ -271,6 +271,43 @@ function contrast_on(string $hex): string
     return $luma > 0.62 ? '#172033' : '#ffffff';
 }
 
+function admin_bucket(string $href): string
+{
+    if (str_starts_with($href, '/admin/accounting')) {
+        return 'حسابداری';
+    }
+    if (str_contains($href, '/dealers') || $href === '/rep' || str_starts_with($href, '/rep/')) {
+        return 'نمایندگان';
+    }
+    if (str_contains($href, '/shop') || str_contains($href, 'machines') || str_contains($href, 'quotes')) {
+        return 'فروشگاه';
+    }
+    if (str_contains($href, '/pages') || str_contains($href, '/menus') || str_contains($href, '/theme')) {
+        return 'محتوا';
+    }
+    if (str_contains($href, 'ticket') || str_contains($href, 'sms') || str_contains($href, 'niaz')) {
+        return 'پیام‌ها';
+    }
+    if (str_contains($href, 'register') || str_contains($href, '/users')) {
+        return 'کاربران';
+    }
+    return 'مدیریت';
+}
+
+function admin_glyph(string $href): string
+{
+    return match (admin_bucket($href)) {
+        'حسابداری' => 'file',
+        'نمایندگان' => 'pin',
+        'فروشگاه' => 'box',
+        'محتوا' => 'home',
+        'پیام‌ها' => 'phone',
+        'کاربران' => 'user',
+        'مدیریت' => 'key',
+        default => 'chevron',
+    };
+}
+
 function slugify(string $value): string
 {
     $value = strtolower(trim($value));

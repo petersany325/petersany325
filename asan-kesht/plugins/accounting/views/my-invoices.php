@@ -7,7 +7,8 @@
         <article class="sheet">
           <span class="code"><?= e((string) $row['number']) ?></span>
           <div><h3><?= e(money((int) $row['total'])) ?></h3><p><?= e(jalali_date((string) $row['created_at'])) ?></p></div>
-          <span><?= e((string) $row['status']) ?></span>
+          <?php $kindMeta = accounting_kind((string) ($row['kind'] ?? 'sale')); ?>
+          <span><?= e($kindMeta['label'] ?? 'فاکتور') ?> — <?= e(accounting_status_label((string) $row['status'])) ?></span>
         </article>
       <?php endforeach; ?>
     </div>

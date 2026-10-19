@@ -29,6 +29,14 @@ $ready = $app->filter('site.nav.ready', $nav);
 if (is_array($ready)) {
     $nav = $ready;
 }
+$menuEffect = 'fade';
+$menuOpen = 'hover';
+if ($app->pluginEnabled('menus')) {
+    $effect = setting($app, 'menus', 'effect', 'fade');
+    $open = setting($app, 'menus', 'open', 'hover');
+    $menuEffect = in_array($effect, ['none', 'fade', 'slide'], true) ? $effect : 'fade';
+    $menuOpen = in_array($open, ['hover', 'click'], true) ? $open : 'hover';
+}
 $description = $tagline . ' — ' . $siteName;
 $editTools = [];
 if ($user && (string) $user['role'] === 'admin') {
@@ -84,7 +92,7 @@ if (!is_array($aside)) {
         </span>
       </a>
       <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">فهرست</button>
-      <nav class="nav" id="site-nav">
+      <nav class="nav" id="site-nav" data-effect="<?= e($menuEffect) ?>" data-open="<?= e($menuOpen) ?>">
         <?php foreach ($nav as $item): ?>
           <?php if (!is_array($item)) { continue; } ?>
           <?php
@@ -148,8 +156,23 @@ if (!is_array($aside)) {
                 <?php else: ?>
                   <div class="nav-sub">
                     <?php foreach ($children as $child): ?>
-                      <?php if (!is_array($child) || (string) ($child['href'] ?? '') === '') { continue; } ?>
-                      <a href="<?= e(nav_href((string) $child['href'])) ?>"<?= !empty($child['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>><?= e((string) ($child['label'] ?? '')) ?></a>
+                      <?php if (!is_array($child)) { continue; } ?>
+                      <?php $grand = is_array($child['children'] ?? null) ? $child['children'] : []; ?>
+                      <div class="nav-sub-item">
+                        <?php if ((string) ($child['href'] ?? '') !== ''): ?>
+                          <a href="<?= e(nav_href((string) $child['href'])) ?>"<?= !empty($child['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>><?= e((string) ($child['label'] ?? '')) ?></a>
+                        <?php else: ?>
+                          <strong class="nav-sub-label"><?= e((string) ($child['label'] ?? '')) ?></strong>
+                        <?php endif; ?>
+                        <?php if ($grand !== []): ?>
+                          <div class="nav-nested">
+                            <?php foreach ($grand as $link): ?>
+                              <?php if (!is_array($link) || (string) ($link['href'] ?? '') === '') { continue; } ?>
+                              <a href="<?= e(nav_href((string) $link['href'])) ?>"<?= !empty($link['new_tab']) ? ' target="_blank" rel="noopener"' : '' ?>><?= e((string) ($link['label'] ?? '')) ?></a>
+                            <?php endforeach; ?>
+                          </div>
+                        <?php endif; ?>
+                      </div>
                     <?php endforeach; ?>
                   </div>
                 <?php endif; ?>
