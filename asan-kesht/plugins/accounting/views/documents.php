@@ -49,7 +49,14 @@ require __DIR__ . '/nav.php';
         $profit = $kind === 'sale' ? (int) $row['total'] - $cost : 0;
       ?>
       <tr>
-        <td><?= e((string) $row['number']) ?><div class="muted"><?= e(jalali_date((string) $row['created_at'])) ?></div></td>
+        <td>
+          <?= e((string) $row['number']) ?>
+          <div class="muted"><?= e(jalali_date((string) $row['created_at'])) ?></div>
+          <a href="<?= e(url('/admin/accounting/print/' . (string) $row['id'])) ?>" target="_blank">چاپ</a>
+          <?php if ($kind === 'sale'): ?>
+            <a href="<?= e(url('/admin/accounting/print/' . (string) $row['id'] . '?internal=1')) ?>" target="_blank">چاپ داخلی</a>
+          <?php endif; ?>
+        </td>
         <td><?= e((string) $row['party_name']) ?></td>
         <td><?= e(money((int) $row['total'])) ?></td>
         <td><?= e($kind === 'sale' ? money($cost) : '—') ?></td>

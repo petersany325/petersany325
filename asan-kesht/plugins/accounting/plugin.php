@@ -32,6 +32,7 @@ return new class extends Plugin {
             $items[] = ['href' => '/admin/accounting/checks', 'label' => 'چک و دسته‌چک', 'roles' => $roles];
             $items[] = ['href' => '/admin/accounting/payroll', 'label' => 'حقوق و مزایا', 'roles' => $roles];
             $items[] = ['href' => '/admin/accounting/expenses', 'label' => 'هزینه‌ها', 'roles' => $roles];
+            $items[] = ['href' => '/admin/accounting/invoice-settings', 'label' => 'تنظیم فاکتور', 'roles' => $roles];
             return $items;
         });
         $app->listen('dashboard.cards', function (array $cards) use ($app): array {
@@ -100,6 +101,37 @@ return new class extends Plugin {
                 'title' => 'حقوق و مزایا',
                 'rows' => $app->db->all('SELECT * FROM ak_payroll ORDER BY period DESC, id DESC LIMIT 80'),
             ]);
+        });
+        $app->router->get('/admin/accounting/invoice-settings', function () use ($app): void {
+            require_role($app, accounting_roles());
+            $app->view->plugin('accounting', 'settings', [
+                'title' => 'تنظیم فاکتور و سربرگ',
+                'sheet' => accounting_sheet($app),
+            ]);
+        });
+        $app->router->post('/admin/accounting/invoice-settings', function () use ($app): void {
+            csrf_check();
+            require_role($app, accounting_roles());
+            accounting_save_sheet($app);
+        });
+        $app->router->get('/admin/accounting/print/{id}', function (array $params) use ($app): void {
+            require_role($app, accounting_roles());
+            $bundle = accounting_invoice_bundle($app, (int) $params['id']);
+            if ($bundle === null) {
+                flash('error', 'این فاکتور پیدا نشد.');
+                redirect('/admin/accounting');
+            }
+            $kind = (string) $bundle['invoice']['kind'];
+            $internal = $kind === 'sale' && (string) ($_GET['internal'] ?? '') === '1';
+            $app->view->plugin('accounting', 'print', [
+                'title' => (string) $bundle['invoice']['number'],
+                'sheet' => accounting_sheet($app),
+                'invoice' => $bundle['invoice'],
+                'items' => $bundle['items'],
+                'payments' => $bundle['payments'],
+                'internal' => $internal,
+                'back' => '/admin/accounting/' . $kind,
+            ], 'layouts/print');
         });
         $app->router->get('/admin/accounting/{kind}', function (array $params) use ($app): void {
             require_role($app, accounting_roles());
@@ -263,6 +295,25 @@ return new class extends Plugin {
                 'title' => 'فاکتورهای من',
                 'rows' => $rows,
             ], 'layouts/site');
+        });
+        $app->router->get('/account/invoices/{id}/print', function (array $params) use ($app): void {
+            $user = require_user($app);
+            $bundle = accounting_invoice_bundle($app, (int) $params['id']);
+            $phone = (string) ($user['phone'] ?? '');
+            $kind = $bundle === null ? '' : (string) $bundle['invoice']['kind'];
+            if ($bundle === null || $phone === '' || (string) $bundle['invoice']['party_phone'] !== $phone || !in_array($kind, ['sale', 'proforma'], true)) {
+                flash('error', 'این فاکتور برای حساب شما نیست.');
+                redirect('/account/invoices');
+            }
+            $app->view->plugin('accounting', 'print', [
+                'title' => (string) $bundle['invoice']['number'],
+                'sheet' => accounting_sheet($app),
+                'invoice' => $bundle['invoice'],
+                'items' => $bundle['items'],
+                'payments' => $bundle['payments'],
+                'internal' => false,
+                'back' => '/account/invoices',
+            ], 'layouts/print');
         });
     }
 

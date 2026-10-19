@@ -157,6 +157,14 @@ button, .btn {
   border-color: var(--dark);
 }
 
+.letterhead {
+  display: grid;
+  gap: 0.15rem;
+  background: white;
+  border-top: 3px solid var(--dark);
+  padding: 0.7rem 0.2rem 0.2rem;
+}
+
 fieldset { border: 1px solid var(--line); margin: 0.8rem 0; padding: 0.8rem; }
 .muted { color: #5e675c; font-size: 0.9rem; }
 

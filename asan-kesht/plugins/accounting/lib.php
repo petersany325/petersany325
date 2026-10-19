@@ -247,7 +247,7 @@ function accounting_save_document(App $app, string $kind): void
     foreach ($items as $item) {
         $total += $item['qty'] * $item['unit_price'];
     }
-    $number = $meta['prefix'] . '-' . date('ymd') . '-' . random_int(100, 999);
+    $number = accounting_prefix($app, $kind) . '-' . date('ymd') . '-' . random_int(100, 999);
     $status = $kind === 'proforma' ? 'draft' : 'issued';
     $app->db->transaction(function () use ($app, $number, $partyId, $kind, $status, $total, $items): void {
         $app->db->run(
@@ -321,5 +321,122 @@ function accounting_figures(App $app): array
         'payroll' => $payroll,
         'operating' => $sales - $cogs - $expenses - $payroll,
         'proforma' => $proforma,
+    ];
+}
+
+function accounting_prefix(App $app, string $kind): string
+{
+    $meta = accounting_kind($kind);
+    $fallback = $meta['prefix'] ?? 'AK';
+    $custom = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', setting($app, 'accounting', 'prefix_' . $kind, '')) ?? '');
+    if ($custom === '' || strlen($custom) > 6) {
+        return $fallback;
+    }
+    return $custom;
+}
+
+/** @return array<string, string> */
+function accounting_sheet(App $app): array
+{
+    $tax = (int) setting($app, 'accounting', 'sheet_tax_percent', '0');
+    if ($tax < 0 || $tax > 100) {
+        $tax = 0;
+    }
+    $days = (int) setting($app, 'accounting', 'sheet_proforma_days', '7');
+    if ($days < 0 || $days > 365) {
+        $days = 7;
+    }
+    $title = setting($app, 'accounting', 'sheet_title', '');
+    if ($title === '') {
+        $title = setting($app, 'theme-settings', 'site_name', 'آسان‌کشت');
+    }
+    $phone = setting($app, 'accounting', 'sheet_phone', '');
+    if ($phone === '') {
+        $phone = setting($app, 'theme-settings', 'phone', '');
+    }
+    $address = setting($app, 'accounting', 'sheet_address', '');
+    if ($address === '') {
+        $address = setting($app, 'theme-settings', 'address', '');
+    }
+    return [
+        'title' => $title,
+        'subtitle' => setting($app, 'accounting', 'sheet_subtitle', setting($app, 'theme-settings', 'tagline', 'ماشین‌آلات صنعتی کشاورزی')),
+        'phone' => $phone,
+        'address' => $address,
+        'email' => setting($app, 'accounting', 'sheet_email', setting($app, 'theme-settings', 'email', '')),
+        'economic' => setting($app, 'accounting', 'sheet_economic', ''),
+        'national' => setting($app, 'accounting', 'sheet_national', ''),
+        'postal' => setting($app, 'accounting', 'sheet_postal', ''),
+        'header' => setting($app, 'accounting', 'sheet_header', ''),
+        'footer' => setting($app, 'accounting', 'sheet_footer', ''),
+        'tax_on' => setting($app, 'accounting', 'sheet_tax', '0') === '1' ? '1' : '0',
+        'tax_percent' => (string) $tax,
+        'show_paid' => setting($app, 'accounting', 'sheet_show_paid', '1') === '0' ? '0' : '1',
+        'show_status' => setting($app, 'accounting', 'sheet_show_status', '1') === '0' ? '0' : '1',
+        'proforma_days' => (string) $days,
+        'sign_seller' => setting($app, 'accounting', 'sheet_sign_seller', 'مهر و امضای فروشنده'),
+        'sign_buyer' => setting($app, 'accounting', 'sheet_sign_buyer', 'مهر و امضای خریدار'),
+        'prefix_proforma' => accounting_prefix($app, 'proforma'),
+        'prefix_sale' => accounting_prefix($app, 'sale'),
+        'prefix_purchase' => accounting_prefix($app, 'purchase'),
+    ];
+}
+
+function accounting_save_sheet(App $app): void
+{
+    $text = [
+        'sheet_title' => post_string('sheet_title', 120),
+        'sheet_subtitle' => post_string('sheet_subtitle', 160),
+        'sheet_phone' => post_string('sheet_phone', 40),
+        'sheet_address' => post_string('sheet_address', 240),
+        'sheet_email' => post_string('sheet_email', 120),
+        'sheet_economic' => post_string('sheet_economic', 40),
+        'sheet_national' => post_string('sheet_national', 40),
+        'sheet_postal' => post_string('sheet_postal', 20),
+        'sheet_header' => post_string('sheet_header', 300),
+        'sheet_footer' => post_string('sheet_footer', 400),
+        'sheet_sign_seller' => post_string('sheet_sign_seller', 80),
+        'sheet_sign_buyer' => post_string('sheet_sign_buyer', 80),
+    ];
+    if ($text['sheet_title'] === '') {
+        flash('error', 'نام فروشنده در سربرگ خالی نماند.');
+        redirect('/admin/accounting/invoice-settings');
+    }
+    foreach ($text as $key => $value) {
+        save_setting($app, 'accounting', $key, $value);
+    }
+    $tax = (int) post_string('sheet_tax_percent', 3);
+    $days = (int) post_string('sheet_proforma_days', 3);
+    save_setting($app, 'accounting', 'sheet_tax_percent', (string) max(0, min(100, $tax)));
+    save_setting($app, 'accounting', 'sheet_proforma_days', (string) max(0, min(365, $days)));
+    save_setting($app, 'accounting', 'sheet_tax', isset($_POST['sheet_tax']) ? '1' : '0');
+    save_setting($app, 'accounting', 'sheet_show_paid', isset($_POST['sheet_show_paid']) ? '1' : '0');
+    save_setting($app, 'accounting', 'sheet_show_status', isset($_POST['sheet_show_status']) ? '1' : '0');
+    foreach (['proforma', 'sale', 'purchase'] as $kind) {
+        $prefix = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', post_string('prefix_' . $kind, 6)) ?? '');
+        save_setting($app, 'accounting', 'prefix_' . $kind, $prefix);
+    }
+    flash('success', 'سربرگ و تنظیم فاکتور ذخیره شد.');
+    redirect('/admin/accounting/invoice-settings');
+}
+
+/** @return array{invoice: array<string, mixed>, items: list<array<string, mixed>>, payments: list<array<string, mixed>>}|null */
+function accounting_invoice_bundle(App $app, int $id): ?array
+{
+    if ($id < 1) {
+        return null;
+    }
+    $invoice = $app->db->one(
+        'SELECT i.*, p.name AS party_name, p.phone AS party_phone
+         FROM ak_invoices i JOIN ak_parties p ON p.id = i.party_id WHERE i.id = ?',
+        [$id]
+    );
+    if (!$invoice) {
+        return null;
+    }
+    return [
+        'invoice' => $invoice,
+        'items' => $app->db->all('SELECT * FROM ak_invoice_items WHERE invoice_id = ? ORDER BY id', [$id]),
+        'payments' => $app->db->all('SELECT * FROM ak_payments WHERE invoice_id = ? ORDER BY paid_at, id', [$id]),
     ];
 }

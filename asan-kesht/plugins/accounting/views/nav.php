@@ -8,6 +8,7 @@ $links = [
     '/admin/accounting/checks' => 'چک و دسته‌چک',
     '/admin/accounting/payroll' => 'حقوق و مزایا',
     '/admin/accounting/expenses' => 'هزینه‌ها',
+    '/admin/accounting/invoice-settings' => 'تنظیم فاکتور',
 ];
 $current = rtrim(request_path(), '/') ?: '/';
 ?>
