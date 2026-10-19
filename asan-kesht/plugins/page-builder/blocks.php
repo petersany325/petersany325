@@ -107,12 +107,12 @@ function pb_render(App $app, array $blocks): string
             $html .= $filtered['html'];
             continue;
         }
-        $html .= pb_render_builtin($block);
+        $html .= pb_render_builtin($app, $block);
     }
     return $html;
 }
 
-function pb_render_builtin(array $block): string
+function pb_render_builtin(App $app, array $block): string
 {
     $type = (string) ($block['type'] ?? '');
     $data = is_array($block['data'] ?? null) ? $block['data'] : [];
@@ -120,7 +120,7 @@ function pb_render_builtin(array $block): string
     $id = $anchor !== '' ? ' id="' . e($anchor) . '"' : '';
     $title = (string) ($data['title'] ?? '');
     if ($type === 'catalog') {
-        return pb_render_catalog($data, $id);
+        return pb_render_catalog($app, $data, $id);
     }
     if ($type === 'hero') {
         return '<section class="wrap hero"' . $id . '><div><p class="kicker">خط تولید ادوات</p><h1>' . e($title) . '</h1><p class="lead">' . e((string) ($data['text'] ?? '')) . '</p>'
@@ -214,24 +214,40 @@ function pb_catalog_data(): array
     ];
 }
 
-function pb_render_catalog(array $data, string $id): string
+function pb_render_catalog(App $app, array $data, string $id): string
 {
     $button = pb_safe_href((string) ($data['button_url'] ?? ''));
     $buttonLabel = (string) ($data['button_label'] ?? '');
     $cards = '';
     $arts = [pb_art_tillage(), pb_art_seeder(), pb_art_sprayer()];
+    $fallbackLines = ['tillage', 'seeding', 'care', 'harvest'];
+    $lineByTitle = [
+        'خاک‌ورزی' => 'tillage',
+        'کاشت' => 'seeding',
+        'داشت' => 'care',
+        'داشت و برداشت' => 'care',
+        'برداشت' => 'harvest',
+        'برداشت و حمل' => 'harvest',
+    ];
     $index = 0;
     foreach ($data['items'] ?? [] as $item) {
         if (!is_array($item) || (($item['title'] ?? '') === '' && ($item['text'] ?? '') === '')) {
             $index++;
             continue;
         }
-        $art = $arts[$index] ?? pb_art_tillage();
+        $title = (string) ($item['title'] ?? '');
+        $line = $lineByTitle[$title] ?? ($fallbackLines[$index] ?? 'tillage');
+        $image = function_exists('catalog_line_image') ? catalog_line_image($app, $line) : '';
+        if ($image !== '') {
+            $art = '<img src="' . e(url('/catalog/photo/' . $image)) . '" alt="' . e($title) . '">';
+        } else {
+            $art = $arts[$index] ?? pb_art_tillage();
+        }
         $link = '';
         if ($button !== '' && $buttonLabel !== '') {
             $link = '<a href="' . e($button) . '">' . e($buttonLabel) . '</a>';
         }
-        $cards .= '<article class="yard-card"><div class="yard-art">' . $art . '</div><h3>' . e((string) $item['title']) . '</h3><p>' . e((string) $item['text']) . '</p>' . $link . '</article>';
+        $cards .= '<article class="yard-card"><div class="yard-art">' . $art . '</div><h3>' . e($title) . '</h3><p>' . e((string) $item['text']) . '</p>' . $link . '</article>';
         $index++;
     }
     $partsHref = pb_safe_href((string) ($data['parts_url'] ?? ''));

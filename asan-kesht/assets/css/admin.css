@@ -331,6 +331,40 @@ th, td { border-bottom: 1px solid var(--line); padding: 0.55rem; text-align: rig
 
 .access-user summary { cursor: pointer; font-weight: 800; }
 
+.line-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.8rem;
+  align-items: stretch;
+}
+
+.line-card { height: 100%; }
+
+.edit-machine {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 0.8rem;
+  align-items: start;
+}
+
+.shop-frame {
+  aspect-ratio: 4 / 3;
+  width: 220px;
+  max-width: 100%;
+  background: #eef2f6;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  overflow: hidden;
+}
+
+.shop-frame img,
+.shop-frame svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .nav-toggle { display: none; }
 
 @media (max-width: 800px) {
@@ -347,4 +381,6 @@ th, td { border-bottom: 1px solid var(--line); padding: 0.55rem; text-align: rig
   .ticket-layout.has-aside { grid-template-columns: 1fr; }
   .ticket-toolbar .btn { width: 100%; text-align: center; }
   .ticket-form .btn { width: 100%; }
+  .edit-machine { grid-template-columns: 1fr; }
+  .shop-frame { width: 100%; }
 }

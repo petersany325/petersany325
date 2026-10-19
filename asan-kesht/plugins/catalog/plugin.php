@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/lib.php';
+
 return new class extends Plugin {
     public function meta(): array
     {
@@ -25,6 +27,7 @@ return new class extends Plugin {
                 width VARCHAR(80) NOT NULL,
                 active TINYINT(1) NOT NULL DEFAULT 1,
                 sort_order INT NOT NULL DEFAULT 0,
+                image VARCHAR(80) NOT NULL DEFAULT \'\'
                 UNIQUE KEY code (code)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
         );
@@ -67,6 +70,7 @@ return new class extends Plugin {
 
     public function boot(App $app): void
     {
+        catalog_extend($app);
         $app->listen('site.nav', function (array $items): array {
             array_splice($items, 1, 0, [['href' => '/machines', 'label' => 'ماشین‌ها']]);
             return $items;
@@ -113,12 +117,20 @@ return new class extends Plugin {
                 $params[] = $line;
             }
             $sql .= ' ORDER BY sort_order, id';
+            $images = [];
+            foreach (array_keys(catalog_lines()) as $key) {
+                $images[$key] = catalog_line_image($app, $key);
+            }
             $app->view->plugin('catalog', 'machines', [
                 'title' => 'ماشین‌آلات',
                 'rows' => $app->db->all($sql, $params),
                 'line' => $line,
-                'lines' => $this->lines(),
+                'lines' => catalog_lines(),
+                'line_images' => $images,
             ], 'layouts/site');
+        });
+        $app->router->get('/catalog/photo/{name}', function (array $params) use ($app): void {
+            catalog_send_photo($app, (string) ($params['name'] ?? ''));
         });
         $app->router->post('/quote', function () use ($app): void {
             csrf_check();
@@ -144,30 +156,82 @@ return new class extends Plugin {
         });
         $app->router->get('/admin/machines', function () use ($app): void {
             require_role($app, ['admin', 'employee']);
+            $images = [];
+            foreach (array_keys(catalog_lines()) as $key) {
+                $images[$key] = catalog_line_image($app, $key);
+            }
             $app->view->plugin('catalog', 'admin-machines', [
                 'title' => 'ماشین‌ها',
                 'rows' => $app->db->all('SELECT * FROM ak_machines ORDER BY sort_order, id'),
-                'lines' => $this->lines(),
+                'lines' => catalog_lines(),
+                'line_images' => $images,
             ]);
+        });
+        $app->router->post('/admin/machines/line', function () use ($app): void {
+            csrf_check();
+            require_role($app, ['admin', 'employee']);
+            catalog_extend($app);
+            $line = post_string('line', 20);
+            if (!isset(catalog_lines()[$line])) {
+                flash('error', 'دسته‌بندی نامعتبر است.');
+                redirect('/admin/machines');
+            }
+            $previous = catalog_line_image($app, $line);
+            try {
+                $photo = isset($_POST['clear_image']) ? '' : catalog_store_photo($app, 'photo');
+            } catch (RuntimeException $e) {
+                flash('error', $e->getMessage());
+                redirect('/admin/machines');
+            }
+            if (!isset($_POST['clear_image']) && $photo === '') {
+                flash($previous === '' ? 'error' : 'success', $previous === '' ? 'یک عکس برای کادر انتخاب کنید.' : 'کادر دسته‌بندی بدون تغییر ماند.');
+                redirect('/admin/machines');
+            }
+            save_setting($app, 'catalog', 'line_image_' . $line, $photo);
+            if ($previous !== '' && $previous !== $photo) {
+                catalog_drop_photo($app, $previous);
+            }
+            flash('success', 'کادر دسته‌بندی ذخیره شد.');
+            redirect('/admin/machines');
         });
         $app->router->post('/admin/machines', function () use ($app): void {
             csrf_check();
             require_role($app, ['admin', 'employee']);
+            catalog_extend($app);
             $id = (int) post_string('id', 12);
             $code = strtoupper(slugify(post_string('code', 40)));
-            $code = str_replace('-', '-', $code);
             $line = post_string('line', 20);
             $name = post_string('name', 180);
-            if ($code === '' || $name === '' || !isset($this->lines()[$line])) {
+            if ($code === '' || $name === '' || !isset(catalog_lines()[$line])) {
                 flash('error', 'کد، نام و خط تولید را کامل کنید.');
                 redirect('/admin/machines');
             }
-            $params = [$code, $line, $name, post_string('summary', 400), post_string('hp', 80), post_string('width', 80), isset($_POST['active']) ? 1 : 0, (int) post_string('sort_order', 6)];
+            $previous = '';
+            if ($id > 0) {
+                $current = $app->db->one('SELECT image FROM ak_machines WHERE id = ?', [$id]);
+                $previous = (string) ($current['image'] ?? '');
+            }
+            try {
+                $photo = isset($_POST['clear_image']) ? '' : catalog_store_photo($app, 'photo');
+            } catch (RuntimeException $e) {
+                flash('error', $e->getMessage());
+                redirect('/admin/machines');
+            }
+            $image = $previous;
+            if (isset($_POST['clear_image'])) {
+                $image = '';
+            } elseif ($photo !== '') {
+                $image = $photo;
+            }
+            $params = [$code, $line, $name, post_string('summary', 400), post_string('hp', 80), post_string('width', 80), isset($_POST['active']) ? 1 : 0, (int) post_string('sort_order', 6), $image];
             if ($id > 0) {
                 $params[] = $id;
-                $app->db->run('UPDATE ak_machines SET code=?, line=?, name=?, summary=?, hp=?, width=?, active=?, sort_order=? WHERE id=?', $params);
+                $app->db->run('UPDATE ak_machines SET code=?, line=?, name=?, summary=?, hp=?, width=?, active=?, sort_order=?, image=? WHERE id=?', $params);
             } else {
-                $app->db->run('INSERT INTO ak_machines (code, line, name, summary, hp, width, active, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', $params);
+                $app->db->run('INSERT INTO ak_machines (code, line, name, summary, hp, width, active, sort_order, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', $params);
+            }
+            if ($previous !== '' && $previous !== $image) {
+                catalog_drop_photo($app, $previous);
             }
             flash('success', 'ماشین ذخیره شد.');
             redirect('/admin/machines');
@@ -193,19 +257,9 @@ return new class extends Plugin {
         });
     }
 
-    private function lines(): array
-    {
-        return [
-            'tillage' => 'خاک‌ورزی',
-            'seeding' => 'کاشت',
-            'care' => 'داشت',
-            'harvest' => 'برداشت و حمل',
-        ];
-    }
-
     private function machineSheets(App $app, string $title, array $rows): string
     {
-        $html = '<section class="section"><div class="wrap"><div class="section-head"><h2>' . e($title) . '</h2><a href="' . e(url('/machines')) . '">همه مدل‌ها</a></div><div class="sheets">';
+        $html = '<section class="section"><div class="wrap"><div class="section-head"><h2>' . e($title) . '</h2><a href="' . e(url('/machines')) . '">همه مدل‌ها</a></div><div class="shop-grid">';
         foreach ($rows as $row) {
             $bits = $app->filter('shop.machine.bits', [
                 'machine' => $row,
@@ -216,10 +270,16 @@ return new class extends Plugin {
             if (!is_array($bits)) {
                 $bits = [];
             }
-            $html .= '<a class="sheet" href="' . e(url('/contact?model=' . rawurlencode((string) $row['code']))) . '"><span class="code">' . e((string) $row['code']) . '</span><div><h3>' . e((string) $row['name']) . '</h3><p>' . e((string) $row['summary']) . '</p>'
+            $line = (string) ($row['line'] ?? '');
+            $html .= '<article class="shop-card">'
+                . catalog_frame((string) ($row['image'] ?? ''), $line, (string) $row['name'])
+                . '<div class="shop-body"><p class="code">' . e((string) $row['code']) . '</p><h3>' . e((string) $row['name']) . '</h3><p class="meta">' . e((string) $row['summary']) . '</p>'
                 . (string) ($bits['price_html'] ?? '')
                 . (string) ($bits['stock_html'] ?? '')
-                . '</div><dl class="specs"><div><dt>توان</dt><dd>' . e((string) $row['hp']) . '</dd></div><div><dt>عرض</dt><dd>' . e((string) $row['width']) . '</dd></div></dl><span class="linkish">درخواست</span></a>';
+                . '<dl class="specs"><div><dt>توان</dt><dd>' . e((string) $row['hp']) . '</dd></div><div><dt>عرض</dt><dd>' . e((string) $row['width']) . '</dd></div></dl>'
+                . '<div class="machine-actions"><a class="btn" href="' . e(url('/contact?model=' . rawurlencode((string) $row['code']))) . '">درخواست</a>'
+                . (string) ($bits['actions_html'] ?? '')
+                . '</div></div></article>';
         }
         return $html . '</div></div></section>';
     }
