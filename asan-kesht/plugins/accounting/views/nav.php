@@ -20,6 +20,7 @@ if (!is_array($actor) || !access_can($app, $actor, 'audit', ['admin', 'accountan
 ?>
 <nav class="acct-nav" aria-label="حسابداری">
   <?php foreach ($links as $href => $label): ?>
-    <a href="<?= e(url($href)) ?>"<?= $current === $href ? ' class="is-current"' : '' ?>><?= e($label) ?></a>
+    <?php $on = $current === $href || ($href === '/admin/accounting/visitors' && str_starts_with($current, '/admin/accounting/visitors/')); ?>
+    <a href="<?= e(url($href)) ?>"<?= $on ? ' class="is-current"' : '' ?>><?= e($label) ?></a>
   <?php endforeach; ?>
 </nav>

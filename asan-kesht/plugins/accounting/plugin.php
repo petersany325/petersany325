@@ -116,21 +116,41 @@ return new class extends Plugin {
         $app->router->get('/admin/accounting/visitors', function () use ($app): void {
             require_role($app, accounting_roles());
             $editId = (int) ($_GET['id'] ?? 0);
+            if ($editId > 0) {
+                redirect('/admin/accounting/visitors/' . $editId);
+            }
             $app->view->plugin('accounting', 'visitors', [
                 'title' => 'ویزیتورها',
                 'rows' => accounting_visitors($app),
-                'edit' => $editId > 0 ? $app->db->one('SELECT * FROM ak_visitors WHERE id = ?', [$editId]) : null,
             ]);
         });
         $app->router->post('/admin/accounting/visitors', function () use ($app): void {
             csrf_check();
             require_role($app, accounting_roles());
-            try {
-                accounting_save_visitor($app);
-            } catch (Throwable) {
-                flash('error', 'این کد ویزیتور قبلاً ثبت شده است.');
+            accounting_save_visitor($app, 0);
+        });
+        $app->router->post('/admin/accounting/visitors/{id}/delete', function (array $params) use ($app): void {
+            csrf_check();
+            require_role($app, accounting_roles());
+            accounting_delete_visitor($app, (int) ($params['id'] ?? 0));
+        });
+        $app->router->get('/admin/accounting/visitors/{id}', function (array $params) use ($app): void {
+            require_role($app, accounting_roles());
+            $id = (int) ($params['id'] ?? 0);
+            $person = $id > 0 ? $app->db->one('SELECT * FROM ak_visitors WHERE id = ?', [$id]) : null;
+            if (!$person) {
+                flash('error', 'این ویزیتور پیدا نشد.');
                 redirect('/admin/accounting/visitors');
             }
+            $app->view->plugin('accounting', 'visitor-form', [
+                'title' => 'ویرایش ویزیتور',
+                'person' => $person,
+            ]);
+        });
+        $app->router->post('/admin/accounting/visitors/{id}', function (array $params) use ($app): void {
+            csrf_check();
+            require_role($app, accounting_roles());
+            accounting_save_visitor($app, (int) ($params['id'] ?? 0));
         });
         $app->router->get('/admin/accounting/payroll', function () use ($app): void {
             require_role($app, accounting_roles());

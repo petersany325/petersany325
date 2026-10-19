@@ -584,32 +584,89 @@ function accounting_visitor_by_code(App $app, string $code): ?array
     return $app->db->one('SELECT * FROM ak_visitors WHERE code = ? AND active = 1', [$code]);
 }
 
-function accounting_save_visitor(App $app): void
+function accounting_visitor_back(int $id): string
 {
+    return $id > 0 ? '/admin/accounting/visitors/' . $id : '/admin/accounting/visitors';
+}
+
+function accounting_visitor_hold(App $app, int $id): string
+{
+    $bits = [];
+    if ($app->db->one('SELECT id FROM ak_visitor_shares WHERE visitor_id = ? LIMIT 1', [$id])) {
+        $bits[] = 'سهم ثبت‌شده';
+    }
+    if ($app->db->one('SELECT id FROM ak_invoices WHERE visitor_id = ? LIMIT 1', [$id])) {
+        $bits[] = 'فاکتور';
+    }
+    $shop = $app->db->one(
+        'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "ak_shop_orders"'
+    );
+    if ($shop && $app->db->one('SELECT id FROM ak_shop_orders WHERE visitor_id = ? LIMIT 1', [$id])) {
+        $bits[] = 'سفارش فروشگاه';
+    }
+    return implode('، ', $bits);
+}
+
+function accounting_save_visitor(App $app, int $id): void
+{
+    $back = accounting_visitor_back($id);
     $name = post_string('name', 120);
     $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', post_string('code', 16)) ?? '');
     $percent = (int) post_string('percent', 3);
     $basis = post_string('basis', 12) === 'gross' ? 'gross' : 'sale';
     if (mb_strlen($name) < 2 || strlen($code) < 3 || $percent < 0 || $percent > 100) {
         flash('error', 'نام، کد حداقل ۳ نویسه و درصد صفر تا ۱۰۰ لازم است.');
-        redirect('/admin/accounting/visitors');
+        redirect($back);
     }
     $phone = normalize_phone(post_string('phone', 20));
     $active = isset($_POST['active']) ? 1 : 0;
-    $id = (int) post_string('id', 12);
+    $taken = $app->db->one('SELECT id FROM ak_visitors WHERE code = ? AND id != ?', [$code, max(0, $id)]);
+    if ($taken) {
+        flash('error', 'این کد ویزیتور قبلاً ثبت شده است.');
+        redirect($back);
+    }
     if ($id > 0) {
+        $existing = $app->db->one('SELECT id FROM ak_visitors WHERE id = ?', [$id]);
+        if (!$existing) {
+            flash('error', 'این ویزیتور پیدا نشد.');
+            redirect('/admin/accounting/visitors');
+        }
         $app->db->run(
             'UPDATE ak_visitors SET name = ?, phone = ?, code = ?, percent = ?, basis = ?, active = ? WHERE id = ?',
             [$name, $phone, $code, $percent, $basis, $active, $id]
         );
-    } else {
-        $app->db->run(
-            'INSERT INTO ak_visitors (name, phone, code, percent, basis, active, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-            [$name, $phone, $code, $percent, $basis, $active]
-        );
+        ak_audit($app, 'ویزیتور', $name, 'ویرایش ' . $code . ' — ' . (string) $percent . '٪ از ' . ($basis === 'gross' ? 'سود' : 'فروش'));
+        flash('success', 'ویرایش ویزیتور ذخیره شد. سهم‌های قبلی عوض نشدند.');
+        redirect('/admin/accounting/visitors/' . $id);
     }
+    $app->db->run(
+        'INSERT INTO ak_visitors (name, phone, code, percent, basis, active, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+        [$name, $phone, $code, $percent, $basis, $active]
+    );
     ak_audit($app, 'ویزیتور', $name, $code . ' — ' . (string) $percent . '٪ از ' . ($basis === 'gross' ? 'سود' : 'فروش'));
     flash('success', 'ویزیتور ذخیره شد.');
+    redirect('/admin/accounting/visitors');
+}
+
+function accounting_delete_visitor(App $app, int $id): void
+{
+    if (!isset($_POST['confirm'])) {
+        flash('error', 'حذف ویزیتور را تأیید کنید.');
+        redirect('/admin/accounting/visitors');
+    }
+    $existing = $id > 0 ? $app->db->one('SELECT id, name, code FROM ak_visitors WHERE id = ?', [$id]) : null;
+    if (!$existing) {
+        flash('error', 'این ویزیتور پیدا نشد.');
+        redirect('/admin/accounting/visitors');
+    }
+    $hold = accounting_visitor_hold($app, $id);
+    if ($hold !== '') {
+        flash('error', 'این ویزیتور حذف نمی‌شود چون ' . $hold . ' دارد. از ویرایش می‌توانید او را غیرفعال کنید. سهم‌های ثبت‌شده در سود و زیان می‌مانند.');
+        redirect('/admin/accounting/visitors/' . $id);
+    }
+    $app->db->run('DELETE FROM ak_visitors WHERE id = ?', [$id]);
+    ak_audit($app, 'ویزیتور', (string) $existing['name'], 'حذف شد؛ کد ' . (string) $existing['code']);
+    flash('success', 'ویزیتور حذف شد.');
     redirect('/admin/accounting/visitors');
 }
 
