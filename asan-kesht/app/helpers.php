@@ -614,6 +614,52 @@ function contrast_on(string $hex): string
     return $luma > 0.62 ? '#172033' : '#ffffff';
 }
 
+/** @return list<array{name:string, items:list<array{href:string, label:string}>}> */
+function admin_nav_groups(App $app): array
+{
+    $user = $app->auth->user();
+    $items = [
+        ['href' => '/admin', 'label' => 'پیشخوان', 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
+        ['href' => '/admin/profile', 'label' => 'نمایه', 'roles' => ['admin', 'employee', 'accountant', 'region_manager', 'representative']],
+        ['href' => '/admin/users', 'label' => 'کاربران', 'roles' => ['admin']],
+        ['href' => '/admin/access', 'label' => 'دسترسی‌ها', 'roles' => ['admin']],
+        ['href' => '/admin/plugins', 'label' => 'افزونه‌ها', 'roles' => ['admin']],
+        ['href' => '/admin/settings', 'label' => 'تنظیمات', 'roles' => ['admin']],
+    ];
+    $extra = $app->filter('admin.menu', []);
+    if (is_array($extra)) {
+        $items = array_merge($items, $extra);
+    }
+    $role = is_array($user) ? (string) ($user['role'] ?? '') : '';
+    $groups = [];
+    foreach ($items as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $itemRoles = $item['roles'] ?? [];
+        if (!is_array($itemRoles)) {
+            continue;
+        }
+        $href = (string) ($item['href'] ?? '');
+        $section = access_section_for($href);
+        $allowed = $section !== null
+            ? access_can($app, is_array($user) ? $user : [], $section, $itemRoles)
+            : in_array($role, $itemRoles, true);
+        if (!$allowed || $href === '') {
+            continue;
+        }
+        $bucket = admin_bucket($href);
+        $groups[$bucket][] = ['href' => $href, 'label' => (string) ($item['label'] ?? '')];
+    }
+    $ordered = [];
+    foreach (['مدیریت', 'کاربران', 'فروشگاه', 'نمایندگان', 'حسابداری', 'محتوا', 'پیام‌ها'] as $name) {
+        if (!empty($groups[$name])) {
+            $ordered[] = ['name' => $name, 'items' => $groups[$name]];
+        }
+    }
+    return $ordered;
+}
+
 function admin_bucket(string $href): string
 {
     if (str_starts_with($href, '/admin/accounting')) {

@@ -1233,10 +1233,30 @@ fieldset {
   text-decoration: none;
 }
 
-.editbar a.is-primary {
+.editbar a.is-primary,
+.editbar a.is-current {
   background: var(--oxide);
   color: var(--on-oxide);
   padding: 0.12rem 0.55rem;
+}
+
+.editbar-menus {
+  align-items: flex-start;
+}
+
+.editbar-set {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem 0.55rem;
+  padding: 0.12rem 0.45rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.editbar-set b {
+  color: var(--oxide);
+  font-size: 0.75rem;
+  font-weight: 800;
 }
 
 .machine-actions {

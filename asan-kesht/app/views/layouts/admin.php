@@ -3,40 +3,7 @@
 /** @var string $content */
 /** @var string $title */
 $user = $app->auth->user();
-$items = [
-    ['href' => '/admin', 'label' => 'پیشخوان', 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
-    ['href' => '/admin/profile', 'label' => 'نمایه', 'roles' => ['admin', 'employee', 'accountant', 'region_manager', 'representative']],
-    ['href' => '/admin/users', 'label' => 'کاربران', 'roles' => ['admin']],
-    ['href' => '/admin/access', 'label' => 'دسترسی‌ها', 'roles' => ['admin']],
-    ['href' => '/admin/plugins', 'label' => 'افزونه‌ها', 'roles' => ['admin']],
-    ['href' => '/admin/settings', 'label' => 'تنظیمات', 'roles' => ['admin']],
-];
-$extra = $app->filter('admin.menu', []);
-if (is_array($extra)) {
-    $items = array_merge($items, $extra);
-}
-$role = $user['role'] ?? '';
-$groups = [];
-$order = ['مدیریت', 'کاربران', 'فروشگاه', 'نمایندگان', 'حسابداری', 'محتوا', 'پیام‌ها'];
-foreach ($items as $item) {
-    if (!is_array($item)) {
-        continue;
-    }
-    $itemRoles = $item['roles'] ?? [];
-    if (!is_array($itemRoles)) {
-        continue;
-    }
-    $href = (string) ($item['href'] ?? '');
-    $section = access_section_for($href);
-    $allowed = $section !== null
-        ? access_can($app, $user ?? [], $section, $itemRoles)
-        : in_array($role, $itemRoles, true);
-    if (!$allowed) {
-        continue;
-    }
-    $bucket = admin_bucket($href);
-    $groups[$bucket][] = $item;
-}
+$groups = admin_nav_groups($app);
 $current = request_path();
 ?>
 <!DOCTYPE html>
@@ -56,11 +23,10 @@ $current = request_path();
       <a class="side-brand" href="<?= e(url('/admin')) ?>"><?= ui_icon('home') ?><span>آسان‌کشت</span></a>
       <p class="side-user"><?= e((string) ($user['name'] ?? '')) ?></p>
       <nav class="side-nav">
-        <?php foreach ($order as $name): ?>
-          <?php if (empty($groups[$name])) { continue; } ?>
+        <?php foreach ($groups as $group): ?>
           <details class="side-group" open>
-            <summary><?= e($name) ?></summary>
-            <?php foreach ($groups[$name] as $item): ?>
+            <summary><?= e($group['name']) ?></summary>
+            <?php foreach ($group['items'] as $item): ?>
               <?php $href = (string) $item['href']; ?>
               <a href="<?= e(url($href)) ?>"<?= $current === rtrim($href, '/') ? ' class="is-current"' : '' ?>><?= ui_icon(admin_glyph($href)) ?><span><?= e((string) $item['label']) ?></span></a>
             <?php endforeach; ?>

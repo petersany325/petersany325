@@ -29,6 +29,11 @@ button, input, select, textarea { font: inherit; color: inherit; }
 }
 
 .side {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow: auto;
   background: #e8edf3;
   color: var(--ink);
   padding: 0 0 1rem;

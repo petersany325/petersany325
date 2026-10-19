@@ -39,41 +39,15 @@ if ($app->pluginEnabled('menus')) {
 }
 $description = $tagline . ' — ' . $siteName;
 $editTools = [];
-$staffLinks = [];
+$menuGroups = [];
 if ($user) {
-    $role = (string) $user['role'];
     if (access_can($app, $user, 'content', ['admin'])) {
         $filteredTools = $app->filter('site.toolbar', []);
         $editTools = is_array($filteredTools) ? $filteredTools : [];
     }
-    $work = [
-        ['href' => '/admin', 'label' => 'پیشخوان', 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
-        ['href' => '/admin/accounting', 'label' => 'حسابداری', 'roles' => ['admin', 'employee', 'accountant']],
-        ['href' => '/admin/accounting/visitors', 'label' => 'ویزیتورها', 'roles' => ['admin', 'employee', 'accountant']],
-        ['href' => '/admin/accounting/reports', 'label' => 'سود و زیان', 'roles' => ['admin', 'employee', 'accountant']],
-        ['href' => '/admin/accounting/audit', 'label' => 'حسابرسی', 'roles' => ['admin', 'accountant']],
-        ['href' => '/admin/dealers', 'label' => 'نمایندگان', 'roles' => ['admin', 'employee', 'accountant', 'region_manager']],
-        ['href' => '/admin/access', 'label' => 'دسترسی‌ها', 'roles' => ['admin']],
-        ['href' => '/admin/layout', 'label' => 'چیدمان', 'roles' => ['admin']],
-        ['href' => '/admin/settings', 'label' => 'تنظیمات', 'roles' => ['admin']],
-        ['href' => '/rep', 'label' => 'پنل نمایندگی', 'roles' => ['representative']],
-    ];
-    if ($app->pluginEnabled('warehouses')) {
-        $work[] = ['href' => '/admin/accounting/warehouses', 'label' => 'انبارها', 'roles' => ['admin', 'employee', 'accountant']];
-    }
-    if ($app->pluginEnabled('maintain')) {
-        $work[] = ['href' => '/admin/maintain', 'label' => 'نگهداری', 'roles' => ['admin']];
-    }
-    foreach ($work as $link) {
-        $section = access_section_for((string) $link['href']);
-        $allowed = $section !== null
-            ? access_can($app, $user, $section, $link['roles'])
-            : in_array($role, $link['roles'], true);
-        if ($allowed) {
-            $staffLinks[] = $link;
-        }
-    }
+    $menuGroups = admin_nav_groups($app);
 }
+$current = rtrim(request_path(), '/') ?: '/';
 $layoutPack = function_exists('layout_public') ? layout_public($app) : null;
 $homeClass = request_path() === '/' && is_array($layoutPack) ? ' is-home-' . $layoutPack['structure'] : '';
 $aside = $app->filter('site.aside', []);
@@ -98,7 +72,7 @@ if (!is_array($aside)) {
 <body>
   <a class="skip" href="#main">رفتن به محتوا</a>
   <header class="top">
-    <?php if ($editTools !== [] || $staffLinks !== []): ?>
+    <?php if ($editTools !== [] || $menuGroups !== []): ?>
       <nav class="editbar" aria-label="کارتابل">
         <?php if ($editTools !== []): ?>
           <div class="wrap editbar-row">
@@ -109,11 +83,17 @@ if (!is_array($aside)) {
             <?php endforeach; ?>
           </div>
         <?php endif; ?>
-        <?php if ($staffLinks !== []): ?>
-          <div class="wrap editbar-row">
+        <?php if ($menuGroups !== []): ?>
+          <div class="wrap editbar-row editbar-menus">
             <strong>کارتابل</strong>
-            <?php foreach ($staffLinks as $link): ?>
-              <a href="<?= e(url((string) $link['href'])) ?>"><?= e((string) $link['label']) ?></a>
+            <?php foreach ($menuGroups as $group): ?>
+              <div class="editbar-set">
+                <b><?= e($group['name']) ?></b>
+                <?php foreach ($group['items'] as $link): ?>
+                  <?php $href = (string) $link['href']; ?>
+                  <a href="<?= e(url($href)) ?>"<?= $current === rtrim($href, '/') ? ' class="is-current"' : '' ?>><?= e((string) $link['label']) ?></a>
+                <?php endforeach; ?>
+              </div>
             <?php endforeach; ?>
           </div>
         <?php endif; ?>
