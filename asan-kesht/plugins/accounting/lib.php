@@ -110,16 +110,52 @@ function accounting_schema(Database $db): void
             INDEX (period)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
     );
+    $db->exec(
+        'CREATE TABLE IF NOT EXISTS ak_visitors (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(120) NOT NULL,
+            phone VARCHAR(20) NOT NULL DEFAULT "",
+            code VARCHAR(16) NOT NULL,
+            percent TINYINT UNSIGNED NOT NULL,
+            basis VARCHAR(12) NOT NULL,
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at DATETIME NOT NULL,
+            UNIQUE KEY code (code)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
+    $db->exec(
+        'CREATE TABLE IF NOT EXISTS ak_visitor_shares (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            visitor_id INT UNSIGNED NOT NULL,
+            source VARCHAR(16) NOT NULL,
+            ref_id INT UNSIGNED NOT NULL,
+            sale_amount BIGINT NOT NULL,
+            cost_amount BIGINT NOT NULL,
+            percent TINYINT UNSIGNED NOT NULL,
+            basis VARCHAR(12) NOT NULL,
+            amount BIGINT NOT NULL,
+            created_at DATETIME NOT NULL,
+            UNIQUE KEY source_ref (source, ref_id),
+            INDEX (visitor_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+    );
     accounting_add_column($db, 'ak_invoices', 'kind', 'VARCHAR(20) NOT NULL DEFAULT "sale"');
+    accounting_add_column($db, 'ak_invoices', 'source', 'VARCHAR(20) NOT NULL DEFAULT "manual"');
+    accounting_add_column($db, 'ak_invoices', 'source_id', 'INT UNSIGNED NOT NULL DEFAULT 0');
+    accounting_add_column($db, 'ak_invoices', 'visitor_id', 'INT UNSIGNED NOT NULL DEFAULT 0');
     accounting_add_column($db, 'ak_invoice_items', 'unit_cost', 'BIGINT NOT NULL DEFAULT 0');
+    accounting_add_column($db, 'ak_payroll', 'employer_share', 'BIGINT NOT NULL DEFAULT 0');
     $ready = true;
 }
 
 function accounting_add_column(Database $db, string $table, string $column, string $definition): void
 {
-    $tables = ['ak_invoices' => true, 'ak_invoice_items' => true];
-    $columns = ['kind' => true, 'unit_cost' => true];
-    if (!isset($tables[$table], $columns[$column])) {
+    $allowed = [
+        'ak_invoices' => ['kind' => true, 'source' => true, 'source_id' => true, 'visitor_id' => true],
+        'ak_invoice_items' => ['unit_cost' => true],
+        'ak_payroll' => ['employer_share' => true],
+    ];
+    if (!isset($allowed[$table][$column])) {
         return;
     }
     $row = $db->one(
@@ -249,10 +285,22 @@ function accounting_save_document(App $app, string $kind): void
     }
     $number = accounting_prefix($app, $kind) . '-' . date('ymd') . '-' . random_int(100, 999);
     $status = $kind === 'proforma' ? 'draft' : 'issued';
-    $app->db->transaction(function () use ($app, $number, $partyId, $kind, $status, $total, $items): void {
+    $visitorId = 0;
+    if ($kind === 'sale') {
+        $wanted = (int) post_string('visitor_id', 12);
+        if ($wanted > 0 && $app->db->one('SELECT id FROM ak_visitors WHERE id = ? AND active = 1', [$wanted])) {
+            $visitorId = $wanted;
+        }
+    }
+    $costSum = 0;
+    foreach ($items as $item) {
+        $costSum += $item['qty'] * $item['unit_cost'];
+    }
+    $notes = post_string('notes', 500);
+    $invoiceId = (int) $app->db->transaction(function () use ($app, $number, $partyId, $kind, $status, $total, $items, $visitorId, $notes): int {
         $app->db->run(
-            'INSERT INTO ak_invoices (number, party_id, kind, status, notes, total, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
-            [$number, $partyId, $kind, $status, post_string('notes', 500), $total]
+            'INSERT INTO ak_invoices (number, party_id, kind, status, notes, total, source, source_id, visitor_id, created_at) VALUES (?, ?, ?, ?, ?, ?, "manual", 0, ?, NOW())',
+            [$number, $partyId, $kind, $status, $notes, $total, $visitorId]
         );
         $invoiceId = (int) $app->db->id();
         foreach ($items as $item) {
@@ -261,7 +309,11 @@ function accounting_save_document(App $app, string $kind): void
                 [$invoiceId, $item['title'], $item['qty'], $item['unit_price'], $item['unit_cost']]
             );
         }
+        return $invoiceId;
     });
+    if ($kind === 'sale' && $visitorId > 0) {
+        accounting_record_visitor_share($app, $visitorId, 'invoice', $invoiceId, $total, $costSum);
+    }
     flash('success', $meta['label'] . ' ' . $number . ' ثبت شد.');
     redirect('/admin/accounting/' . $kind);
 }
@@ -301,6 +353,7 @@ function accounting_sum(App $app, string $sql, array $params = []): int
 /** @return array<string, int> */
 function accounting_figures(App $app): array
 {
+    accounting_sync_shop($app);
     $sales = accounting_sum($app, 'SELECT COALESCE(SUM(total),0) AS s FROM ak_invoices WHERE kind = "sale" AND status != "cancelled"');
     $cogs = accounting_sum(
         $app,
@@ -308,20 +361,78 @@ function accounting_figures(App $app): array
          FROM ak_invoice_items it JOIN ak_invoices i ON i.id = it.invoice_id
          WHERE i.kind = "sale" AND i.status != "cancelled"'
     );
+    $shopSales = accounting_sum($app, 'SELECT COALESCE(SUM(total),0) AS s FROM ak_invoices WHERE kind = "sale" AND source = "shop" AND status != "cancelled"');
     $purchases = accounting_sum($app, 'SELECT COALESCE(SUM(total),0) AS s FROM ak_invoices WHERE kind = "purchase" AND status != "cancelled"');
     $expenses = accounting_sum($app, 'SELECT COALESCE(SUM(amount),0) AS s FROM ak_expenses');
-    $payroll = accounting_sum($app, 'SELECT COALESCE(SUM(base_pay + benefit - deduction),0) AS s FROM ak_payroll');
-    $proforma = accounting_sum($app, 'SELECT COALESCE(SUM(total),0) AS s FROM ak_invoices WHERE kind = "proforma" AND status NOT IN ("cancelled")');
+    $payroll = accounting_sum($app, 'SELECT COALESCE(SUM(base_pay + benefit + employer_share),0) AS s FROM ak_payroll');
+    $payrollNet = accounting_sum($app, 'SELECT COALESCE(SUM(base_pay + benefit - deduction),0) AS s FROM ak_payroll');
+    $proforma = accounting_sum($app, 'SELECT COALESCE(SUM(total),0) AS s FROM ak_invoices WHERE kind = "proforma" AND status != "cancelled"');
+    $missingCost = accounting_sum(
+        $app,
+        'SELECT COUNT(*) AS s FROM ak_invoice_items it JOIN ak_invoices i ON i.id = it.invoice_id
+         WHERE i.kind = "sale" AND i.status != "cancelled" AND it.unit_cost = 0'
+    );
+    $dealerCommission = accounting_optional_sum($app, 'ak_dealer_commissions', 'SELECT COALESCE(SUM(amount),0) AS s FROM ak_dealer_commissions WHERE status = "earned"');
+    $dealerPending = accounting_optional_sum($app, 'ak_dealer_commissions', 'SELECT COALESCE(SUM(amount),0) AS s FROM ak_dealer_commissions WHERE status = "pending"');
+    $dealerSales = accounting_optional_sum($app, 'ak_dealer_orders', 'SELECT COALESCE(SUM(total),0) AS s FROM ak_dealer_orders WHERE status NOT IN ("submitted","cancelled")');
+    $visitorCommission = accounting_sum($app, 'SELECT COALESCE(SUM(amount),0) AS s FROM ak_visitor_shares');
+    $onlinePaid = accounting_optional_sum($app, 'ak_shop_orders', 'SELECT COALESCE(SUM(total),0) AS s FROM ak_shop_orders WHERE payment_status = "paid" AND status != "cancelled"');
+    $shopCount = accounting_optional_sum($app, 'ak_shop_orders', 'SELECT COUNT(*) AS s FROM ak_shop_orders WHERE invoice_id > 0 AND status != "cancelled"');
+    $gross = $sales - $cogs;
+    $selling = $dealerCommission + $visitorCommission;
     return [
         'sales' => $sales,
         'cogs' => $cogs,
-        'gross' => $sales - $cogs,
+        'gross' => $gross,
         'purchases' => $purchases,
         'expenses' => $expenses,
         'payroll' => $payroll,
-        'operating' => $sales - $cogs - $expenses - $payroll,
+        'payroll_net' => $payrollNet,
+        'dealer_commission' => $dealerCommission,
+        'dealer_pending' => $dealerPending,
+        'dealer_sales' => $dealerSales,
+        'visitor_commission' => $visitorCommission,
+        'shop_sales' => $shopSales,
+        'shop_count' => $shopCount,
+        'online_paid' => $onlinePaid,
         'proforma' => $proforma,
+        'missing_cost' => $missingCost,
+        'selling' => $selling,
+        'operating' => $gross - $selling - $payroll - $expenses,
     ];
+}
+
+function accounting_rate(int $part, int $whole): string
+{
+    if ($whole === 0) {
+        return '—';
+    }
+    $negative = ($part < 0) !== ($whole < 0);
+    $bp = intdiv(abs($part) * 10000, abs($whole));
+    $major = intdiv($bp, 100);
+    $minor = $bp % 100;
+    $text = fa_digits((string) $major) . '.' . fa_digits(str_pad((string) $minor, 2, '0', STR_PAD_LEFT)) . '٪';
+    return $negative ? '−' . $text : $text;
+}
+
+function accounting_optional_sum(App $app, string $table, string $sql): int
+{
+    $known = ['ak_dealer_commissions' => true, 'ak_dealer_orders' => true, 'ak_shop_orders' => true];
+    if (!isset($known[$table])) {
+        return 0;
+    }
+    $found = $app->db->one(
+        'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+        [$table]
+    );
+    if (!$found) {
+        return 0;
+    }
+    try {
+        return accounting_sum($app, $sql);
+    } catch (Throwable) {
+        return 0;
+    }
 }
 
 function accounting_prefix(App $app, string $kind): string
@@ -439,4 +550,208 @@ function accounting_invoice_bundle(App $app, int $id): ?array
         'items' => $app->db->all('SELECT * FROM ak_invoice_items WHERE invoice_id = ? ORDER BY id', [$id]),
         'payments' => $app->db->all('SELECT * FROM ak_payments WHERE invoice_id = ? ORDER BY paid_at, id', [$id]),
     ];
+}
+
+/** @return list<array<string, mixed>> */
+function accounting_visitors(App $app): array
+{
+    return $app->db->all(
+        'SELECT v.id, v.name, v.phone, v.code, v.percent, v.basis, v.active, v.created_at,
+            COALESCE(SUM(s.amount),0) AS earned
+         FROM ak_visitors v
+         LEFT JOIN ak_visitor_shares s ON s.visitor_id = v.id
+         GROUP BY v.id, v.name, v.phone, v.code, v.percent, v.basis, v.active, v.created_at
+         ORDER BY v.active DESC, v.name'
+    );
+}
+
+function accounting_visitor_count(App $app): int
+{
+    return accounting_sum($app, 'SELECT COUNT(*) AS s FROM ak_visitors WHERE active = 1');
+}
+
+function accounting_visitor_by_code(App $app, string $code): ?array
+{
+    $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $code) ?? '');
+    if ($code === '') {
+        return null;
+    }
+    return $app->db->one('SELECT * FROM ak_visitors WHERE code = ? AND active = 1', [$code]);
+}
+
+function accounting_save_visitor(App $app): void
+{
+    $name = post_string('name', 120);
+    $code = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', post_string('code', 16)) ?? '');
+    $percent = (int) post_string('percent', 3);
+    $basis = post_string('basis', 12) === 'gross' ? 'gross' : 'sale';
+    if (mb_strlen($name) < 2 || strlen($code) < 3 || $percent < 0 || $percent > 100) {
+        flash('error', 'نام، کد حداقل ۳ نویسه و درصد صفر تا ۱۰۰ لازم است.');
+        redirect('/admin/accounting/visitors');
+    }
+    $phone = normalize_phone(post_string('phone', 20));
+    $active = isset($_POST['active']) ? 1 : 0;
+    $id = (int) post_string('id', 12);
+    if ($id > 0) {
+        $app->db->run(
+            'UPDATE ak_visitors SET name = ?, phone = ?, code = ?, percent = ?, basis = ?, active = ? WHERE id = ?',
+            [$name, $phone, $code, $percent, $basis, $active, $id]
+        );
+    } else {
+        $app->db->run(
+            'INSERT INTO ak_visitors (name, phone, code, percent, basis, active, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())',
+            [$name, $phone, $code, $percent, $basis, $active]
+        );
+    }
+    flash('success', 'ویزیتور ذخیره شد.');
+    redirect('/admin/accounting/visitors');
+}
+
+function accounting_record_visitor_share(App $app, int $visitorId, string $source, int $refId, int $sale, int $cost): void
+{
+    if (!in_array($source, ['invoice', 'shop'], true) || $visitorId < 1 || $refId < 1) {
+        return;
+    }
+    $visitor = $app->db->one('SELECT * FROM ak_visitors WHERE id = ? AND active = 1', [$visitorId]);
+    if (!$visitor) {
+        return;
+    }
+    $exists = $app->db->one('SELECT id FROM ak_visitor_shares WHERE source = ? AND ref_id = ?', [$source, $refId]);
+    if ($exists) {
+        return;
+    }
+    $basis = (string) $visitor['basis'] === 'gross' ? 'gross' : 'sale';
+    $base = $basis === 'gross' ? max(0, $sale - $cost) : max(0, $sale);
+    $amount = intdiv($base * (int) $visitor['percent'], 100);
+    $app->db->run(
+        'INSERT INTO ak_visitor_shares (visitor_id, source, ref_id, sale_amount, cost_amount, percent, basis, amount, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+        [$visitorId, $source, $refId, $sale, $cost, (int) $visitor['percent'], $basis, $amount]
+    );
+}
+
+function accounting_sync_shop(App $app): void
+{
+    $found = $app->db->one(
+        'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = "ak_shop_orders"'
+    );
+    if (!$found) {
+        return;
+    }
+    try {
+        $rows = $app->db->all('SELECT id FROM ak_shop_orders WHERE status != "cancelled" AND invoice_id = 0 ORDER BY id LIMIT 80');
+    } catch (Throwable) {
+        return;
+    }
+    foreach ($rows as $row) {
+        accounting_sync_shop_order($app, (int) $row['id']);
+    }
+}
+
+function accounting_sync_shop_order(App $app, int $orderId): void
+{
+    $order = $app->db->one('SELECT * FROM ak_shop_orders WHERE id = ?', [$orderId]);
+    if (!$order) {
+        return;
+    }
+    if ((string) $order['status'] === 'cancelled') {
+        accounting_void_shop_order($app, $order);
+        return;
+    }
+    accounting_recognize_shop_order($app, $order);
+}
+
+/** @param array<string, mixed> $order */
+function accounting_recognize_shop_order(App $app, array $order): void
+{
+    if ((int) ($order['invoice_id'] ?? 0) > 0 || (string) $order['status'] === 'cancelled') {
+        return;
+    }
+    $method = (string) ($order['payment_method'] ?? '');
+    $online = in_array($method, ['zarinpal', 'zibal', 'saman'], true);
+    $accepted = in_array((string) $order['status'], ['confirmed', 'preparing', 'shipped', 'delivered'], true);
+    $paid = (string) ($order['payment_status'] ?? '') === 'paid';
+    if ($online && !$paid) {
+        return;
+    }
+    if (!$online && !$accepted) {
+        return;
+    }
+    $existing = $app->db->one('SELECT id FROM ak_invoices WHERE source = "shop" AND source_id = ?', [(int) $order['id']]);
+    if ($existing) {
+        $app->db->run('UPDATE ak_shop_orders SET invoice_id = ? WHERE id = ?', [(int) $existing['id'], (int) $order['id']]);
+        return;
+    }
+    $items = $app->db->all('SELECT * FROM ak_shop_order_items WHERE order_id = ? ORDER BY id', [(int) $order['id']]);
+    if ($items === []) {
+        return;
+    }
+    $phone = (string) ($order['phone'] ?? '');
+    $party = $phone !== '' ? $app->db->one('SELECT id FROM ak_parties WHERE phone = ? ORDER BY id DESC LIMIT 1', [$phone]) : null;
+    if (!$party) {
+        $app->db->run('INSERT INTO ak_parties (name, phone, created_at) VALUES (?, ?, NOW())', [(string) $order['name'], $phone]);
+        $partyId = (int) $app->db->id();
+    } else {
+        $partyId = (int) $party['id'];
+    }
+    $goods = 0;
+    $cost = 0;
+    foreach ($items as $item) {
+        $goods += (int) $item['line_total'];
+        $cost += (int) ($item['unit_cost'] ?? 0) * (int) $item['qty'];
+    }
+    $shipping = (int) $order['shipping'];
+    $tax = (int) $order['tax'];
+    $total = $goods + $shipping + $tax;
+    $number = accounting_prefix($app, 'sale') . '-' . date('ymd') . '-' . random_int(100, 999);
+    $visitorId = (int) ($order['visitor_id'] ?? 0);
+    $status = $paid ? 'paid' : 'issued';
+    $invoiceId = (int) $app->db->transaction(function () use ($app, $order, $items, $partyId, $number, $total, $visitorId, $status, $shipping, $tax, $paid, $method): int {
+        $app->db->run(
+            'INSERT INTO ak_invoices (number, party_id, kind, status, notes, total, source, source_id, visitor_id, created_at)
+             VALUES (?, ?, "sale", ?, ?, ?, "shop", ?, ?, NOW())',
+            [$number, $partyId, $status, 'سفارش فروشگاه ' . $order['number'], $total, (int) $order['id'], $visitorId]
+        );
+        $invoiceId = (int) $app->db->id();
+        foreach ($items as $item) {
+            $qty = max(1, (int) $item['qty']);
+            $app->db->run(
+                'INSERT INTO ak_invoice_items (invoice_id, title, qty, unit_price, unit_cost) VALUES (?, ?, ?, ?, ?)',
+                [$invoiceId, (string) $item['name'], $qty, (int) $item['unit_price'], (int) ($item['unit_cost'] ?? 0)]
+            );
+        }
+        if ($shipping > 0) {
+            $app->db->run(
+                'INSERT INTO ak_invoice_items (invoice_id, title, qty, unit_price, unit_cost) VALUES (?, "هزینه ارسال", 1, ?, ?)',
+                [$invoiceId, $shipping, $shipping]
+            );
+        }
+        if ($tax > 0) {
+            $app->db->run(
+                'INSERT INTO ak_invoice_items (invoice_id, title, qty, unit_price, unit_cost) VALUES (?, "مالیات ارزش افزوده", 1, ?, ?)',
+                [$invoiceId, $tax, $tax]
+            );
+        }
+        if ($paid) {
+            $app->db->run(
+                'INSERT INTO ak_payments (invoice_id, amount, method, note, paid_at) VALUES (?, ?, ?, ?, CURDATE())',
+                [$invoiceId, $total, $method, 'پرداخت سفارش ' . $order['number']]
+            );
+        }
+        $app->db->run('UPDATE ak_shop_orders SET invoice_id = ? WHERE id = ?', [$invoiceId, (int) $order['id']]);
+        return $invoiceId;
+    });
+    if ($visitorId > 0) {
+        accounting_record_visitor_share($app, $visitorId, 'shop', (int) $order['id'], $goods, $cost);
+    }
+}
+
+/** @param array<string, mixed> $order */
+function accounting_void_shop_order(App $app, array $order): void
+{
+    $invoiceId = (int) ($order['invoice_id'] ?? 0);
+    if ($invoiceId > 0) {
+        $app->db->run('UPDATE ak_invoices SET status = "cancelled" WHERE id = ? AND source = "shop"', [$invoiceId]);
+    }
+    $app->db->run('DELETE FROM ak_visitor_shares WHERE source = "shop" AND ref_id = ?', [(int) $order['id']]);
 }

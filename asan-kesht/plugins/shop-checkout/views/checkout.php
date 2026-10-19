@@ -5,12 +5,23 @@
 /** @var array $access */
 /** @var string $name */
 /** @var string $phone */
+/** @var bool $askVisitor */
+$askVisitor = $askVisitor ?? false;
+$hasOnline = false;
+foreach ($methods as $key => $_label) {
+    if (shop_online_is((string) $key)) {
+        $hasOnline = true;
+        break;
+    }
+}
 ?>
 <section class="page-hero">
   <div class="wrap">
     <p class="kicker">فروشگاه</p>
     <h1>ثبت سفارش</h1>
-    <p class="lead">مبلغ همین‌جا پرداخت نمی‌شود. روش را انتخاب کنید تا سفارش برای کارخانه بماند.</p>
+    <p class="lead"><?= $hasOnline
+        ? 'با زرین‌پال، زیبال یا سپ، بعد از ثبت سفارش به درگاه بانک می‌روید. نقد، کارت‌به‌کارت و چک پس از تأیید سفارش در فروش شناسایی می‌شود.'
+        : 'روش را انتخاب کنید تا سفارش برای کارخانه بماند. پرداخت آنلاین پس از ذخیره شناسه پذیرنده در تنظیمات فروشگاه به این فهرست اضافه می‌شود.' ?></p>
   </div>
 </section>
 <section class="section">
@@ -50,6 +61,9 @@
           </div>
           <label>نشانی <textarea name="address" required maxlength="300"></textarea></label>
           <label>توضیح <textarea name="note" maxlength="500"></textarea></label>
+          <?php if ($askVisitor): ?>
+            <label>کد ویزیتور، اگر دارید <input name="visitor_code" maxlength="16" autocomplete="off"></label>
+          <?php endif; ?>
           <fieldset>
             <legend>روش پرداخت</legend>
             <?php $first = true; ?>

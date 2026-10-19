@@ -10,7 +10,7 @@ return new class extends Plugin {
         return [
             'id' => 'shop-checkout',
             'name' => 'فروشگاه: ثبت سفارش',
-            'description' => 'تسویه سبد و پیگیری سفارش مشتری. پرداخت آنلاین انجام نمی‌شود',
+            'description' => 'تسویه سبد، پیگیری سفارش مشتری و اتصال پرداخت آنلاین به حسابداری',
         ];
     }
 
@@ -61,6 +61,7 @@ return new class extends Plugin {
 
     public function boot(App $app): void
     {
+        shop_extend_schema($app->db);
         $app->listen('admin.menu', function (array $items): array {
             $items[] = ['href' => '/admin/shop/orders', 'label' => 'سفارش فروشگاه', 'roles' => ['admin', 'employee']];
             return $items;
@@ -86,7 +87,7 @@ return new class extends Plugin {
             );
             $cards[] = [
                 'href' => '/account/orders',
-                'label' => 'سفارش‌های فروشگاه',
+                'label' => 'خریدهای من',
                 'value' => fa_digits((string) ($row['c'] ?? 0)),
             ];
             return $cards;
@@ -103,7 +104,6 @@ return new class extends Plugin {
             }
             try {
                 shop_place_order($app, $access['user']);
-                redirect('/checkout/thanks');
             } catch (ShopException $e) {
                 flash('error', $e->getMessage());
                 redirect('/checkout');
@@ -112,6 +112,26 @@ return new class extends Plugin {
                 flash('error', 'سفارش ثبت نشد.');
                 redirect('/checkout');
             }
+            $thanks = $_SESSION['ak_shop_thanks'] ?? [];
+            $method = is_array($thanks) ? (string) ($thanks['payment'] ?? '') : '';
+            if (shop_online_is($method) && is_array($thanks)) {
+                try {
+                    $online = dirname(__DIR__) . '/shop-pay-online/lib.php';
+                    if (!is_file($online)) {
+                        throw new ShopException('پرداخت آنلاین آماده نیست. سفارش ثبت شده و از خریدهای من قابل پرداخت است.');
+                    }
+                    require_once $online;
+                    shop_online_begin($app, (string) $thanks['number']);
+                } catch (ShopException $e) {
+                    flash('error', $e->getMessage());
+                    redirect('/checkout/thanks');
+                } catch (Throwable $e) {
+                    log_line($app->root, 'shop gateway ' . $e->getMessage());
+                    flash('error', 'اتصال به درگاه برقرار نشد. سفارش ثبت شده است.');
+                    redirect('/checkout/thanks');
+                }
+            }
+            redirect('/checkout/thanks');
         });
         $app->router->get('/checkout/thanks', function () use ($app): void {
             $thanks = $_SESSION['ak_shop_thanks'] ?? null;
@@ -129,6 +149,9 @@ return new class extends Plugin {
                 'thanks' => $thanks,
                 'method' => shop_payment_methods($app)[$method] ?? $method,
                 'note' => $note,
+                'paid' => !empty($thanks['paid']),
+                'online' => shop_online_is($method),
+                'orderId' => (int) ($thanks['id'] ?? 0),
             ], 'layouts/site');
         });
         $app->router->get('/account/orders', function () use ($app): void {
@@ -182,6 +205,7 @@ return new class extends Plugin {
             $subtotal += $line['line'];
         }
         $user = $access['user'];
+        $askVisitor = function_exists('accounting_visitor_count') && accounting_visitor_count($app) > 0;
         $app->view->plugin('shop-checkout', 'checkout', [
             'title' => 'ثبت سفارش',
             'lines' => $lines,
@@ -190,6 +214,7 @@ return new class extends Plugin {
             'access' => $access,
             'name' => $user ? (string) $user['name'] : '',
             'phone' => $user ? (string) ($user['phone'] ?? '') : '',
+            'askVisitor' => $askVisitor,
         ], 'layouts/site');
     }
 };

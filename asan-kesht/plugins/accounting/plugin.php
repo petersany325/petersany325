@@ -28,7 +28,8 @@ return new class extends Plugin {
             $items[] = ['href' => '/admin/accounting/proforma', 'label' => 'پیش‌فاکتور', 'roles' => $roles];
             $items[] = ['href' => '/admin/accounting/sale', 'label' => 'فاکتور فروش', 'roles' => $roles];
             $items[] = ['href' => '/admin/accounting/purchase', 'label' => 'فاکتور خرید', 'roles' => $roles];
-            $items[] = ['href' => '/admin/accounting/reports', 'label' => 'گزارش سود', 'roles' => $roles];
+            $items[] = ['href' => '/admin/accounting/reports', 'label' => 'سود و زیان', 'roles' => $roles];
+            $items[] = ['href' => '/admin/accounting/visitors', 'label' => 'ویزیتورها', 'roles' => $roles];
             $items[] = ['href' => '/admin/accounting/checks', 'label' => 'چک و دسته‌چک', 'roles' => $roles];
             $items[] = ['href' => '/admin/accounting/payroll', 'label' => 'حقوق و مزایا', 'roles' => $roles];
             $items[] = ['href' => '/admin/accounting/expenses', 'label' => 'هزینه‌ها', 'roles' => $roles];
@@ -38,7 +39,7 @@ return new class extends Plugin {
         $app->listen('dashboard.cards', function (array $cards) use ($app): array {
             $figures = accounting_figures($app);
             $cards[] = ['label' => 'فروش', 'value' => money($figures['sales']), 'href' => '/admin/accounting/sale'];
-            $cards[] = ['label' => 'سود ناخالص', 'value' => money($figures['gross']), 'href' => '/admin/accounting/reports'];
+            $cards[] = ['label' => 'سود ناخالص', 'value' => money($figures['gross']) . ' (' . accounting_rate($figures['gross'], $figures['sales']) . ')', 'href' => '/admin/accounting/reports'];
             return $cards;
         });
         $app->listen('account.cards', function (array $cards) use ($app): array {
@@ -74,7 +75,7 @@ return new class extends Plugin {
             );
             $checks = $app->db->all('SELECT * FROM ak_checks WHERE status = "pending" ORDER BY due_on, id LIMIT 30');
             $app->view->plugin('accounting', 'reports', [
-                'title' => 'گزارش سود و بهای تمام‌شده',
+                'title' => 'سود و زیان',
                 'figures' => accounting_figures($app),
                 'open' => $open,
                 'checks' => $checks,
@@ -94,6 +95,23 @@ return new class extends Plugin {
                 'books' => $app->db->all('SELECT * FROM ak_checkbooks ORDER BY id DESC'),
                 'rows' => $app->db->all('SELECT * FROM ak_checks ORDER BY due_on DESC, id DESC LIMIT 80'),
             ]);
+        });
+        $app->router->get('/admin/accounting/visitors', function () use ($app): void {
+            require_role($app, accounting_roles());
+            $app->view->plugin('accounting', 'visitors', [
+                'title' => 'ویزیتورها',
+                'rows' => accounting_visitors($app),
+            ]);
+        });
+        $app->router->post('/admin/accounting/visitors', function () use ($app): void {
+            csrf_check();
+            require_role($app, accounting_roles());
+            try {
+                accounting_save_visitor($app);
+            } catch (Throwable) {
+                flash('error', 'این کد ویزیتور قبلاً ثبت شده است.');
+                redirect('/admin/accounting/visitors');
+            }
         });
         $app->router->get('/admin/accounting/payroll', function () use ($app): void {
             require_role($app, accounting_roles());
@@ -146,6 +164,7 @@ return new class extends Plugin {
                 'meta' => $meta,
                 'rows' => accounting_documents($app, $kind),
                 'parties' => $app->db->all('SELECT * FROM ak_parties ORDER BY name'),
+                'visitors' => $kind === 'sale' ? $app->db->all('SELECT id, name, percent, basis FROM ak_visitors WHERE active = 1 ORDER BY name') : [],
             ]);
         });
         $app->router->post('/admin/accounting/documents', function () use ($app): void {
@@ -252,7 +271,7 @@ return new class extends Plugin {
             }
             $paid = accounting_date(post_string('paid_on', 10));
             $app->db->run(
-                'INSERT INTO ak_payroll (person, job_title, period, base_pay, benefit, deduction, paid_on, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+                'INSERT INTO ak_payroll (person, job_title, period, base_pay, benefit, deduction, employer_share, paid_on, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
                 [
                     $person,
                     post_string('job_title', 80),
@@ -260,6 +279,7 @@ return new class extends Plugin {
                     $base,
                     accounting_amount(post_string('benefit', 16)),
                     accounting_amount(post_string('deduction', 16)),
+                    accounting_amount(post_string('employer_share', 16)),
                     $paid,
                     post_string('note', 240),
                 ]

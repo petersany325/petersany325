@@ -3,6 +3,8 @@
 /** @var array{label: string, prefix: string} $meta */
 /** @var list<array<string, mixed>> $rows */
 /** @var list<array<string, mixed>> $parties */
+/** @var list<array<string, mixed>> $visitors */
+$visitors = $visitors ?? [];
 require __DIR__ . '/nav.php';
 ?>
 <h2><?= e($meta['label']) ?> تازه</h2>
@@ -21,6 +23,16 @@ require __DIR__ . '/nav.php';
     <label>نام تازه <input name="party_name"></label>
     <label>موبایل تازه <input name="party_phone"></label>
   </div>
+  <?php if ($kind === 'sale' && $visitors !== []): ?>
+    <label>ویزیتور
+      <select name="visitor_id">
+        <option value="0">بدون ویزیتور</option>
+        <?php foreach ($visitors as $visitor): ?>
+          <option value="<?= e((string) $visitor['id']) ?>"><?= e((string) $visitor['name']) ?> — <?= e(fa_digits((string) $visitor['percent'])) ?>٪ <?= (string) $visitor['basis'] === 'gross' ? 'از سود' : 'از فروش' ?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+  <?php endif; ?>
   <label>یادداشت <input name="notes"></label>
   <?php for ($i = 0; $i < 4; $i++): ?>
     <div class="grid">
@@ -47,6 +59,7 @@ require __DIR__ . '/nav.php';
       <?php
         $cost = (int) $row['cost'];
         $profit = $kind === 'sale' ? (int) $row['total'] - $cost : 0;
+        $rate = $kind === 'sale' ? accounting_rate($profit, (int) $row['total']) : '';
       ?>
       <tr>
         <td>
@@ -60,7 +73,7 @@ require __DIR__ . '/nav.php';
         <td><?= e((string) $row['party_name']) ?></td>
         <td><?= e(money((int) $row['total'])) ?></td>
         <td><?= e($kind === 'sale' ? money($cost) : '—') ?></td>
-        <td><?= e($kind === 'sale' ? money($profit) : '—') ?></td>
+        <td><?= e($kind === 'sale' ? money($profit) : '—') ?><?php if ($rate !== ''): ?><div class="muted"><?= e($rate) ?></div><?php endif; ?></td>
         <td><?= e(accounting_status_label((string) $row['status'])) ?></td>
         <td>
           <?php if ($kind !== 'proforma' && $row['status'] !== 'cancelled'): ?>

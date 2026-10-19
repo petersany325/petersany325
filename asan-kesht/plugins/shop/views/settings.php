@@ -34,6 +34,15 @@
           <label>حداقل مبلغ سفارش، ریال (صفر یعنی بدون حداقل)
             <input name="min_total" inputmode="numeric" value="<?= e((string) $values['min_total']) ?>">
           </label>
+        <?php elseif ($id === 'shop-pay-online'): ?>
+          <label class="check"><input type="checkbox" name="zarinpal_on" <?= $values['zarinpal_on'] ? 'checked' : '' ?>> زرین‌پال</label>
+          <label class="check"><input type="checkbox" name="zarinpal_sandbox" <?= $values['zarinpal_sandbox'] ? 'checked' : '' ?>> حالت آزمایش زرین‌پال</label>
+          <label>شناسه مرچنت زرین‌پال <input name="zarinpal_merchant" value="<?= e((string) $values['zarinpal_merchant']) ?>" autocomplete="off"></label>
+          <label class="check"><input type="checkbox" name="zibal_on" <?= $values['zibal_on'] ? 'checked' : '' ?>> زیبال</label>
+          <label class="check"><input type="checkbox" name="zibal_sandbox" <?= $values['zibal_sandbox'] ? 'checked' : '' ?>> حالت آزمایش زیبال</label>
+          <label>مرچنت زیبال <input name="zibal_merchant" value="<?= e((string) $values['zibal_merchant']) ?>" autocomplete="off"></label>
+          <label class="check"><input type="checkbox" name="saman_on" <?= $values['saman_on'] ? 'checked' : '' ?>> سپ، بانک سامان</label>
+          <label>شماره پایانه سامان <input name="saman_terminal" value="<?= e((string) $values['saman_terminal']) ?>" autocomplete="off"></label>
         <?php elseif ($id === 'shop-pay-transfer'): ?>
           <label>توضیح واریز برای مشتری
             <textarea name="transfer_note"><?= e((string) $values['transfer_note']) ?></textarea>
@@ -66,7 +75,7 @@
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>مدل</th><th>قیمت ریال</th><th>قیمت قبل</th><th>موجودی</th><th>کنترل موجودی</th></tr>
+          <tr><th>مدل</th><th>قیمت ریال</th><th>بهای تمام‌شده</th><th>قیمت قبل</th><th>موجودی</th><th>کنترل موجودی</th></tr>
         </thead>
         <tbody>
           <?php foreach ($machines as $machine): ?>
@@ -79,6 +88,7 @@
             <tr>
               <td><?= e((string) $machine['name']) ?><div class="muted"><?= e((string) $machine['code']) ?></div></td>
               <td><input name="price[<?= e((string) $id) ?>]" inputmode="numeric" value="<?= e((string) ($price['price'] ?? '0')) ?>"></td>
+              <td><input name="cost[<?= e((string) $id) ?>]" inputmode="numeric" value="<?= e((string) ($price['cost'] ?? '0')) ?>"></td>
               <td><input name="compare[<?= e((string) $id) ?>]" inputmode="numeric" value="<?= e((string) ($price['compare_at'] ?? '0')) ?>"></td>
               <td><input name="qty[<?= e((string) $id) ?>]" inputmode="numeric" value="<?= e((string) ($stock['qty'] ?? '0')) ?>"></td>
               <td><label class="check"><input type="checkbox" name="track[<?= e((string) $id) ?>]" <?= $tracked ? 'checked' : '' ?>> بله</label></td>

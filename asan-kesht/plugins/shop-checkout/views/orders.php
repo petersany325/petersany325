@@ -20,7 +20,7 @@
             <?= e((string) $order['name']) ?>
             <div class="muted"><?= e(fa_digits((string) $order['phone'])) ?></div>
             <div class="muted"><?= e((string) $order['province']) ?>، <?= e((string) $order['city']) ?></div>
-            <div class="muted"><?= e((string) $methods[(string) $order['payment_method']] ?? (string) $order['payment_method']) ?></div>
+            <div class="muted"><?= e((string) $methods[(string) $order['payment_method']] ?? (string) $order['payment_method']) ?> — <?= e(shop_payment_label((string) ($order['payment_status'] ?? 'offline'))) ?></div>
           </td>
           <td>
             <?php foreach ($order['items'] as $item): ?>

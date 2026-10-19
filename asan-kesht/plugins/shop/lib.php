@@ -45,7 +45,11 @@ function shop_feature_groups(): array
             'items' => [
                 'shop-pay-cash' => [
                     'title' => 'نقد هنگام تحویل',
-                    'text' => 'پرداخت نقدی. درگاه بانکی در این فروشگاه نیست.',
+                    'text' => 'پرداخت نقدی بعد از تحویل. تا تأیید سفارش، در فروش شناسایی نمی‌شود.',
+                ],
+                'shop-pay-online' => [
+                    'title' => 'پرداخت آنلاین',
+                    'text' => 'زرین‌پال، زیبال و درگاه سپ (بانک سامان). روشی که شناسه پذیرنده ندارد در تسویه دیده نمی‌شود. فروش آنلاین بعد از تأیید بانک، با یک فاکتور فروش، در سود و زیان می‌آید.',
                 ],
                 'shop-pay-transfer' => [
                     'title' => 'کارت به کارت',
@@ -111,6 +115,74 @@ function shop_money_setting(App $app, string $plugin, string $key, int $default)
         return $default;
     }
     return (int) $raw;
+}
+
+function shop_extend_schema(Database $db): void
+{
+    static $ready = false;
+    if ($ready) {
+        return;
+    }
+    $columns = [
+        'ak_shop_orders' => [
+            'payment_status' => 'VARCHAR(20) NOT NULL DEFAULT "offline"',
+            'payment_ref' => 'VARCHAR(80) NOT NULL DEFAULT ""',
+            'visitor_id' => 'INT UNSIGNED NOT NULL DEFAULT 0',
+            'invoice_id' => 'INT UNSIGNED NOT NULL DEFAULT 0',
+        ],
+        'ak_shop_order_items' => [
+            'unit_cost' => 'BIGINT NOT NULL DEFAULT 0',
+        ],
+        'ak_shop_prices' => [
+            'cost' => 'BIGINT NOT NULL DEFAULT 0',
+        ],
+    ];
+    foreach ($columns as $table => $defs) {
+        $exists = $db->one(
+            'SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?',
+            [$table]
+        );
+        if (!$exists) {
+            continue;
+        }
+        foreach ($defs as $column => $definition) {
+            $row = $db->one(
+                'SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+                [$table, $column]
+            );
+            if ($row) {
+                continue;
+            }
+            $db->exec('ALTER TABLE `' . $table . '` ADD COLUMN `' . $column . '` ' . $definition);
+        }
+    }
+    $ready = true;
+}
+
+function shop_online_is(string $method): bool
+{
+    return in_array($method, ['zarinpal', 'zibal', 'saman'], true);
+}
+
+function shop_payment_label(string $status): string
+{
+    return match ($status) {
+        'pending' => 'در انتظار پرداخت',
+        'paid' => 'پرداخت شد',
+        'failed' => 'پرداخت ناموفق',
+        'offline' => 'غیردرگاهی',
+        default => $status,
+    };
+}
+
+function shop_unit_cost(App $app, int $machineId): int
+{
+    try {
+        $row = $app->db->one('SELECT cost FROM ak_shop_prices WHERE machine_id = ?', [$machineId]);
+    } catch (Throwable) {
+        return 0;
+    }
+    return $row ? max(0, (int) $row['cost']) : 0;
 }
 
 function shop_money_input(string $raw): int
@@ -330,6 +402,13 @@ function shop_payment_methods(App $app): array
             $out[$key] = $meta['label'];
         }
     }
+    $online = dirname(__DIR__) . '/shop-pay-online/lib.php';
+    if (shop_ready($app, 'shop-pay-online') && is_file($online)) {
+        require_once $online;
+        foreach (shop_online_methods($app) as $key => $label) {
+            $out[$key] = $label;
+        }
+    }
     return $out;
 }
 
@@ -385,6 +464,16 @@ function shop_place_order(App $app, ?array $buyer): string
     if (!isset($methods[$method])) {
         throw new ShopException('روش پرداخت را انتخاب کنید.');
     }
+    shop_extend_schema($app->db);
+    $visitorId = 0;
+    $visitorCode = post_string('visitor_code', 16);
+    if ($visitorCode !== '' && function_exists('accounting_visitor_by_code')) {
+        $visitor = accounting_visitor_by_code($app, $visitorCode);
+        if (!$visitor) {
+            throw new ShopException('کد ویزیتور پیدا نشد.');
+        }
+        $visitorId = (int) $visitor['id'];
+    }
     $name = post_string('name', 120);
     $phone = normalize_phone(post_string('phone', 20));
     $province = post_string('province', 80);
@@ -415,11 +504,12 @@ function shop_place_order(App $app, ?array $buyer): string
             throw new ShopException('تعداد سفارش از این شبکه در این ساعت زیاد است.');
         }
     }
-    $number = $app->db->transaction(function (Database $db) use ($app, $lines, $totals, $method, $name, $phone, $province, $city, $address, $note, $userId, $stockOn, $ip): string {
+    $payStatus = shop_online_is($method) ? 'pending' : 'offline';
+    $number = $app->db->transaction(function (Database $db) use ($app, $lines, $totals, $method, $name, $phone, $province, $city, $address, $note, $userId, $stockOn, $ip, $visitorId, $payStatus): string {
         $number = shop_new_number($db);
         $db->run(
-            'INSERT INTO ak_shop_orders (number, user_id, name, phone, province, city, address, note, status, payment_method, subtotal, shipping, tax, total, stock_applied, ip, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, "submitted", ?, ?, ?, ?, ?, ?, ?, NOW())',
+            'INSERT INTO ak_shop_orders (number, user_id, name, phone, province, city, address, note, status, payment_method, payment_status, visitor_id, subtotal, shipping, tax, total, stock_applied, ip, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, "submitted", ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())',
             [
                 $number,
                 $userId,
@@ -430,6 +520,8 @@ function shop_place_order(App $app, ?array $buyer): string
                 $address,
                 $note,
                 $method,
+                $payStatus,
+                $visitorId,
                 $totals['subtotal'],
                 $totals['shipping'],
                 $totals['tax'],
@@ -443,8 +535,8 @@ function shop_place_order(App $app, ?array $buyer): string
             $machine = $line['machine'];
             $machineId = (int) $machine['id'];
             $db->run(
-                'INSERT INTO ak_shop_order_items (order_id, machine_id, code, name, qty, unit_price, line_total) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                [$orderId, $machineId, (string) $machine['code'], (string) $machine['name'], $line['qty'], $line['price'], $line['line']]
+                'INSERT INTO ak_shop_order_items (order_id, machine_id, code, name, qty, unit_price, unit_cost, line_total) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [$orderId, $machineId, (string) $machine['code'], (string) $machine['name'], $line['qty'], $line['price'], shop_unit_cost($app, $machineId), $line['line']]
             );
             if (!$stockOn) {
                 continue;
@@ -468,10 +560,12 @@ function shop_place_order(App $app, ?array $buyer): string
         return $number;
     });
     shop_cart_set([]);
+    $saved = $app->db->one('SELECT id FROM ak_shop_orders WHERE number = ?', [$number]);
     $_SESSION['ak_shop_thanks'] = [
         'number' => $number,
         'total' => $totals['total'],
         'payment' => $method,
+        'id' => $saved ? (int) $saved['id'] : 0,
     ];
     return $number;
 }
@@ -514,6 +608,9 @@ function shop_set_order_status(App $app, int $id, string $status): void
         }
         $db->run('UPDATE ak_shop_orders SET status = ? WHERE id = ?', [$status, $id]);
     });
+    if (function_exists('accounting_sync_shop_order')) {
+        accounting_sync_shop_order($app, $id);
+    }
 }
 
 /**
@@ -550,6 +647,7 @@ function shop_orders(App $app, string $where, array $params, int $limit): array
 
 function shop_save(App $app): void
 {
+    shop_extend_schema($app->db);
     $posted = $_POST['plugins'] ?? [];
     $wanted = is_array($posted) ? $posted : [];
     foreach (shop_feature_ids() as $id) {
@@ -571,6 +669,14 @@ function shop_save(App $app): void
     save_setting($app, 'shop-tax', 'percent', (string) max(0, min(100, $percent)));
     save_setting($app, 'shop-tax', 'on_shipping', isset($_POST['on_shipping']) ? '1' : '0');
     save_setting($app, 'shop-pay-transfer', 'transfer_note', post_string('transfer_note', 400));
+    save_setting($app, 'shop-pay-online', 'zarinpal_on', isset($_POST['zarinpal_on']) ? '1' : '0');
+    save_setting($app, 'shop-pay-online', 'zarinpal_sandbox', isset($_POST['zarinpal_sandbox']) ? '1' : '0');
+    save_setting($app, 'shop-pay-online', 'zarinpal_merchant', post_string('zarinpal_merchant', 80));
+    save_setting($app, 'shop-pay-online', 'zibal_on', isset($_POST['zibal_on']) ? '1' : '0');
+    save_setting($app, 'shop-pay-online', 'zibal_sandbox', isset($_POST['zibal_sandbox']) ? '1' : '0');
+    save_setting($app, 'shop-pay-online', 'zibal_merchant', post_string('zibal_merchant', 80));
+    save_setting($app, 'shop-pay-online', 'saman_on', isset($_POST['saman_on']) ? '1' : '0');
+    save_setting($app, 'shop-pay-online', 'saman_terminal', post_string('saman_terminal', 20));
     $machines = shop_machines($app);
     $prices = $_POST['price'] ?? [];
     $compares = $_POST['compare'] ?? [];
@@ -583,9 +689,14 @@ function shop_save(App $app): void
         $id = (int) $machine['id'];
         $key = (string) $id;
         $app->db->run(
-            'INSERT INTO ak_shop_prices (machine_id, price, compare_at) VALUES (?, ?, ?)
-             ON DUPLICATE KEY UPDATE price = VALUES(price), compare_at = VALUES(compare_at)',
-            [$id, shop_money_input((string) ($prices[$key] ?? '0')), shop_money_input((string) ($compares[$key] ?? '0'))]
+            'INSERT INTO ak_shop_prices (machine_id, price, compare_at, cost) VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE price = VALUES(price), compare_at = VALUES(compare_at), cost = VALUES(cost)',
+            [
+                $id,
+                shop_money_input((string) ($prices[$key] ?? '0')),
+                shop_money_input((string) ($compares[$key] ?? '0')),
+                shop_money_input((string) (is_array($_POST['cost'] ?? null) ? (string) ($_POST['cost'][$key] ?? '0') : '0')),
+            ]
         );
         $qty = (int) preg_replace('/\D+/', '', en_digits((string) ($qtys[$key] ?? '0')));
         $qty = max(0, min(100000, $qty));

@@ -51,6 +51,7 @@ return new class extends Plugin {
             foreach ($app->db->all('SELECT id, enabled FROM ak_plugins') as $row) {
                 $enabled[(string) $row['id']] = (int) $row['enabled'] === 1;
             }
+            shop_extend_schema($app->db);
             $prices = [];
             $stocks = [];
             try {
@@ -83,6 +84,14 @@ return new class extends Plugin {
                     'tax_percent' => (string) shop_int($app, 'shop-tax', 'percent', 10, 0, 100),
                     'on_shipping' => shop_flag($app, 'shop-tax', 'on_shipping', '0'),
                     'transfer_note' => setting($app, 'shop-pay-transfer', 'transfer_note', ''),
+                    'zarinpal_on' => shop_flag($app, 'shop-pay-online', 'zarinpal_on', '0'),
+                    'zarinpal_sandbox' => shop_flag($app, 'shop-pay-online', 'zarinpal_sandbox', '1'),
+                    'zarinpal_merchant' => setting($app, 'shop-pay-online', 'zarinpal_merchant', ''),
+                    'zibal_on' => shop_flag($app, 'shop-pay-online', 'zibal_on', '0'),
+                    'zibal_sandbox' => shop_flag($app, 'shop-pay-online', 'zibal_sandbox', '0'),
+                    'zibal_merchant' => setting($app, 'shop-pay-online', 'zibal_merchant', ''),
+                    'saman_on' => shop_flag($app, 'shop-pay-online', 'saman_on', '0'),
+                    'saman_terminal' => setting($app, 'shop-pay-online', 'saman_terminal', ''),
                 ],
             ]);
         });
