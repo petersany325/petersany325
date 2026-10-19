@@ -181,6 +181,100 @@ textarea {
   color: white;
 }
 
+.nav-item {
+  position: static;
+}
+
+.nav-more {
+  display: none;
+}
+
+.nav-panel {
+  display: none;
+}
+
+.mega-grid {
+  display: grid;
+  grid-template-columns: 16rem 1fr;
+  gap: 1.4rem;
+  align-items: start;
+}
+
+.mega-intro p,
+.mega-col p {
+  margin: 0.3rem 0 0.6rem;
+  color: var(--ink-soft);
+}
+
+.mega-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 1rem;
+}
+
+.mega-col,
+.mega-col a {
+  display: grid;
+  gap: 0.2rem;
+  align-content: start;
+  text-decoration: none;
+}
+
+.mega-title {
+  font-weight: 800;
+}
+
+.mega-col small {
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+.nav-sub {
+  display: grid;
+}
+
+@media (min-width: 961px) {
+  .nav-more {
+    display: none;
+  }
+
+  .nav-item:not(.is-mega) {
+    position: relative;
+  }
+
+  .nav-item:hover > .nav-panel,
+  .nav-item:focus-within > .nav-panel {
+    display: block;
+  }
+
+  .nav-item:not(.is-mega) > .nav-panel {
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    min-width: 14rem;
+    background: white;
+    border: 1px solid var(--line);
+    z-index: 30;
+    padding: 0.35rem 0;
+  }
+
+  .nav-sub a {
+    display: block;
+    padding: 0.45rem 0.8rem;
+  }
+
+  .is-mega > .nav-panel {
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    background: white;
+    border-top: 3px solid var(--oxide);
+    box-shadow: 0 18px 40px rgba(18, 20, 16, 0.12);
+    z-index: 30;
+    padding: 1.1rem 0 1.3rem;
+  }
+}
+
 .hero {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
@@ -776,6 +870,32 @@ textarea {
   .nav a {
     padding: 0.7rem 0;
     border-bottom: 1px solid var(--line);
+  }
+
+  .nav-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+
+  .nav-more {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    background: white;
+    padding: 0.25rem 0.45rem;
+  }
+
+  .nav-panel {
+    grid-column: 1 / -1;
+  }
+
+  .nav-item.is-open > .nav-panel {
+    display: block;
+  }
+
+  .mega-grid,
+  .mega-cols {
+    grid-template-columns: 1fr;
   }
 
   .nav-quote {

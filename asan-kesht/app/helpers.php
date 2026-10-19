@@ -262,6 +262,17 @@ function home_for_role(string $role): string
     };
 }
 
+function nav_href(string $href): string
+{
+    if (preg_match('#^https?://#i', $href) === 1) {
+        return $href;
+    }
+    if ($href === '' || $href === '#') {
+        return '#';
+    }
+    return url(str_starts_with($href, '/') ? $href : '/' . $href);
+}
+
 function reserved_slug(string $slug): bool
 {
     return in_array($slug, [
