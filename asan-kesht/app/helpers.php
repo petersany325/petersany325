@@ -233,6 +233,44 @@ function hex_color(string $value, string $fallback): string
     return preg_match('/^#[0-9a-fA-F]{6}$/', $value) ? $value : $fallback;
 }
 
+/** @return array{0:int,1:int,2:int} */
+function hex_rgb(string $hex): array
+{
+    $hex = ltrim($hex, '#');
+    if (strlen($hex) !== 6 || !ctype_xdigit($hex)) {
+        return [23, 32, 51];
+    }
+    return [hexdec(substr($hex, 0, 2)), hexdec(substr($hex, 2, 2)), hexdec(substr($hex, 4, 2))];
+}
+
+function shade_hex(string $hex, float $factor): string
+{
+    $out = '#';
+    foreach (hex_rgb($hex) as $channel) {
+        $out .= sprintf('%02x', (int) max(0, min(255, round($channel * $factor))));
+    }
+    return $out;
+}
+
+function mix_hex(string $from, string $to, float $amount): string
+{
+    $a = hex_rgb($from);
+    $b = hex_rgb($to);
+    $out = '#';
+    foreach ($a as $index => $channel) {
+        $mixed = $channel + ($b[$index] - $channel) * $amount;
+        $out .= sprintf('%02x', (int) max(0, min(255, round($mixed))));
+    }
+    return $out;
+}
+
+function contrast_on(string $hex): string
+{
+    [$red, $green, $blue] = hex_rgb($hex);
+    $luma = (0.2126 * $red + 0.7152 * $green + 0.0722 * $blue) / 255;
+    return $luma > 0.62 ? '#172033' : '#ffffff';
+}
+
 function slugify(string $value): string
 {
     $value = strtolower(trim($value));
@@ -287,6 +325,11 @@ function ui_icon(string $name): string
         'user' => '<circle cx="12" cy="8" r="3"/><path d="M5.5 19.5c1.3-3.2 3.5-4.7 6.5-4.7s5.2 1.5 6.5 4.7"/>',
         'plus' => '<path d="M12 5v14M5 12h14"/>',
         'chevron' => '<path d="M7 10l5 5 5-5"/>',
+        'home' => '<path d="M4 11.5 12 5l8 6.5"/><path d="M7 10.5V19h10v-8.5"/>',
+        'box' => '<path d="M4 8l8-4 8 4-8 4-8-4z"/><path d="M4 8v8l8 4 8-4V8"/><path d="M12 12v8"/>',
+        'factory' => '<path d="M3 20h18"/><path d="M5 20V10l5 3V10l5 3V8l5 3v9"/>',
+        'pin' => '<path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10z"/><circle cx="12" cy="11" r="1.6"/>',
+        'file' => '<path d="M7 3.5h7l4 4V20H7z"/><path d="M14 3.5V8h4"/>',
         default => '',
     };
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . $path . '</svg>';

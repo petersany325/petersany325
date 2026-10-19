@@ -11,6 +11,20 @@ function pb_definitions(): array
             'title' => $text('عنوان'), 'text' => $area('متن'),
             'button_label' => $text('متن دکمه'), 'button_url' => $text('پیوند دکمه'),
         ]],
+        'catalog' => ['label' => 'ویترین محصولات', 'fields' => [
+            'kicker' => $text('شعار کوتاه'),
+            'title' => $text('عنوان'),
+            'text' => $area('متن'),
+            'button_label' => $text('متن دکمه'),
+            'button_url' => $text('پیوند دکمه'),
+            'items' => ['label' => 'سه گروه محصول', 'type' => 'pairs', 'count' => 3],
+            'parts_title' => $text('عنوان قطعات'),
+            'parts_text' => $text('توضیح قطعات'),
+            'parts_url' => $text('پیوند قطعات'),
+            'dealers_title' => $text('عنوان نمایندگی'),
+            'dealers_text' => $text('توضیح نمایندگی'),
+            'dealers_url' => $text('پیوند نمایندگی'),
+        ]],
         'text' => ['label' => 'متن', 'fields' => ['title' => $text('عنوان'), 'body' => $area('متن')]],
         'features' => ['label' => 'چهار قابلیت', 'fields' => ['title' => $text('عنوان'), 'items' => ['label' => 'موارد', 'type' => 'pairs', 'count' => 4]]],
         'machines' => ['label' => 'ماشین‌ها', 'fields' => ['title' => $text('عنوان'), 'limit' => $text('تعداد')]],
@@ -105,6 +119,9 @@ function pb_render_builtin(array $block): string
     $anchor = (string) ($block['anchor'] ?? '');
     $id = $anchor !== '' ? ' id="' . e($anchor) . '"' : '';
     $title = (string) ($data['title'] ?? '');
+    if ($type === 'catalog') {
+        return pb_render_catalog($data, $id);
+    }
     if ($type === 'hero') {
         return '<section class="wrap hero"' . $id . '><div><p class="kicker">خط تولید ادوات</p><h1>' . e($title) . '</h1><p class="lead">' . e((string) ($data['text'] ?? '')) . '</p>'
             . pb_button((string) ($data['button_label'] ?? ''), (string) ($data['button_url'] ?? ''))
@@ -154,12 +171,148 @@ function pb_render_builtin(array $block): string
 
 function pb_button(string $label, string $href): string
 {
-    if ($label === '' || $href === '') {
-        return '';
-    }
-    $safe = str_starts_with($href, '/') ? url($href) : $href;
-    if (!str_starts_with($href, '/') && !preg_match('#^https?://#', $href)) {
+    $safe = pb_safe_href($href);
+    if ($label === '' || $safe === '') {
         return '';
     }
     return '<p class="actions"><a class="btn" href="' . e($safe) . '">' . e($label) . '</a></p>';
+}
+
+function pb_safe_href(string $href): string
+{
+    if ($href === '') {
+        return '';
+    }
+    if (str_starts_with($href, '/')) {
+        return url($href);
+    }
+    if (preg_match('#^https?://#', $href)) {
+        return $href;
+    }
+    return '';
+}
+
+function pb_catalog_data(): array
+{
+    return [
+        'kicker' => 'قدرت امروز، آبادانی فردا',
+        'title' => 'ماشین‌آلات کشاورزی و صنعتی',
+        'text' => 'ادوات خاک‌ورزی، کاشت، داشت و برداشت برای تراکتورهای رایج. شاسی، عرض کار و توان، پیش از ساخت مشخص می‌شود.',
+        'button_label' => 'مشاهده محصولات',
+        'button_url' => '/machines',
+        'items' => [
+            ['title' => 'خاک‌ورزی', 'text' => 'گاوآهن، دیسک، چیزل و زیرشکن'],
+            ['title' => 'کاشت', 'text' => 'خطی‌کار غلات و ردیف‌کار'],
+            ['title' => 'داشت و برداشت', 'text' => 'سمپاش بوم‌دار، کودپاش و دروگر'],
+        ],
+        'parts_title' => 'قطعات و خدمات پس از فروش',
+        'parts_text' => 'قطعه سایشی مدل‌های جاری و پاسخ به درخواست سرویس',
+        'parts_url' => '/contact',
+        'dealers_title' => 'شبکه نمایندگی‌ها',
+        'dealers_text' => 'تأمین ادوات در سراسر کشور',
+        'dealers_url' => '/estelam',
+    ];
+}
+
+function pb_render_catalog(array $data, string $id): string
+{
+    $button = pb_safe_href((string) ($data['button_url'] ?? ''));
+    $buttonLabel = (string) ($data['button_label'] ?? '');
+    $cards = '';
+    $arts = [pb_art_tillage(), pb_art_seeder(), pb_art_sprayer()];
+    $index = 0;
+    foreach ($data['items'] ?? [] as $item) {
+        if (!is_array($item) || (($item['title'] ?? '') === '' && ($item['text'] ?? '') === '')) {
+            $index++;
+            continue;
+        }
+        $art = $arts[$index] ?? pb_art_tillage();
+        $link = '';
+        if ($button !== '' && $buttonLabel !== '') {
+            $link = '<a href="' . e($button) . '">' . e($buttonLabel) . '</a>';
+        }
+        $cards .= '<article class="yard-card"><div class="yard-art">' . $art . '</div><h3>' . e((string) $item['title']) . '</h3><p>' . e((string) $item['text']) . '</p>' . $link . '</article>';
+        $index++;
+    }
+    $partsHref = pb_safe_href((string) ($data['parts_url'] ?? ''));
+    $dealersHref = pb_safe_href((string) ($data['dealers_url'] ?? ''));
+    $partsLink = $partsHref !== '' ? '<a href="' . e($partsHref) . '">مشاهده قطعات و خدمات</a>' : '';
+    $dealersLink = $dealersHref !== '' ? '<a href="' . e($dealersHref) . '">مشاهده نمایندگی‌ها</a>' : '';
+    $heroBtn = ($button !== '' && $buttonLabel !== '')
+        ? '<p class="actions"><a class="btn" href="' . e($button) . '">' . e($buttonLabel) . '</a></p>'
+        : '';
+    return '<section class="yard"' . $id . '>'
+        . '<div class="yard-hero"><div class="yard-scene" aria-hidden="true">' . pb_art_field() . '</div>'
+        . '<div class="wrap yard-copy"><p class="yard-kicker">' . e((string) ($data['kicker'] ?? '')) . '</p><h1>' . e((string) ($data['title'] ?? '')) . '</h1><p class="lead">' . e((string) ($data['text'] ?? '')) . '</p>' . $heroBtn . '</div></div>'
+        . '<div class="wrap yard-cards">' . $cards . '</div>'
+        . '<div class="wrap yard-lower">'
+        . '<article class="yard-panel"><div class="yard-art">' . pb_art_parts() . '</div><div><h3>' . e((string) ($data['parts_title'] ?? '')) . '</h3><p>' . e((string) ($data['parts_text'] ?? '')) . '</p>' . $partsLink . '</div></article>'
+        . '<article class="yard-panel"><div class="yard-art">' . pb_art_map() . '</div><div><h3>' . e((string) ($data['dealers_title'] ?? '')) . '</h3><p>' . e((string) ($data['dealers_text'] ?? '')) . '</p>' . $dealersLink . '</div></article>'
+        . '</div></section>';
+}
+
+function pb_art_field(): string
+{
+    return '<svg viewBox="0 0 1200 480" preserveAspectRatio="xMidYMid slice" role="img"><defs><linearGradient id="yardSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7ea6c8"/><stop offset="1" stop-color="#e7eef5"/></linearGradient><linearGradient id="yardGround" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d2bc86"/><stop offset="1" stop-color="#7f8f58"/></linearGradient></defs>'
+        . '<rect width="1200" height="480" fill="url(#yardSky)"/>'
+        . '<circle cx="210" cy="78" r="34" fill="#e2b000"/>'
+        . '<ellipse cx="390" cy="70" rx="54" ry="16" fill="#fff" opacity=".75"/><ellipse cx="430" cy="62" rx="36" ry="14" fill="#fff" opacity=".8"/>'
+        . '<g fill="#d7dee6" stroke="#17304f" stroke-width="2"><rect x="64" y="168" width="42" height="132"/><rect x="118" y="132" width="52" height="168"/><rect x="182" y="176" width="40" height="124"/><path d="M118 132 L144 96 L170 132" fill="#e2b000"/></g>'
+        . '<path d="M0 292 C220 250 420 330 700 286 C920 252 1060 310 1200 268 L1200 480 L0 480 Z" fill="url(#yardGround)"/>'
+        . '<path d="M0 348 H1200 M0 382 H1200" stroke="#5e6c40" stroke-width="3" opacity=".28"/>'
+        . '<g transform="translate(390 236)"><rect x="8" y="46" width="300" height="12" rx="3" fill="#17304f"/><rect x="48" y="8" width="14" height="48" fill="#e2b000"/><rect x="230" y="14" width="14" height="42" fill="#e2b000"/>'
+        . '<g fill="#3e4856"><ellipse cx="36" cy="78" rx="9" ry="26"/><ellipse cx="64" cy="78" rx="9" ry="26"/><ellipse cx="92" cy="78" rx="9" ry="26"/><ellipse cx="120" cy="78" rx="9" ry="26"/><ellipse cx="168" cy="78" rx="9" ry="26"/><ellipse cx="196" cy="78" rx="9" ry="26"/><ellipse cx="224" cy="78" rx="9" ry="26"/><ellipse cx="252" cy="78" rx="9" ry="26"/></g>'
+        . '<circle cx="28" cy="96" r="16" fill="#e2b000" stroke="#172033" stroke-width="3"/><circle cx="286" cy="96" r="16" fill="#e2b000" stroke="#172033" stroke-width="3"/></g>'
+        . '<g transform="translate(760 228)" stroke-linecap="round"><path d="M24 28 H210" stroke="#17304f" stroke-width="10"/><path d="M48 28 L30 118" stroke="#e2b000" stroke-width="8"/><path d="M92 28 L78 124" stroke="#17304f" stroke-width="8"/><path d="M136 28 L128 124" stroke="#17304f" stroke-width="8"/><path d="M180 28 L176 112" stroke="#e2b000" stroke-width="8"/>'
+        . '<circle cx="36" cy="124" r="16" fill="#e2b000" stroke="#172033" stroke-width="3"/><circle cx="196" cy="120" r="16" fill="#e2b000" stroke="#172033" stroke-width="3"/></g></svg>';
+}
+
+function pb_art_tillage(): string
+{
+    return '<svg viewBox="0 0 320 150" role="img"><rect width="320" height="150" fill="#eef2f6"/>'
+        . '<path d="M36 96 H168" stroke="#17304f" stroke-width="8" stroke-linecap="round"/>'
+        . '<path d="M168 96 L214 52" stroke="#e2b000" stroke-width="8" stroke-linecap="round"/>'
+        . '<path d="M78 96 L62 118 H156 L176 96 Z" fill="#3e4856"/>'
+        . '<path d="M214 52 L248 78 L214 96 Z" fill="#e2b000" stroke="#172033" stroke-width="2"/>'
+        . '<circle cx="58" cy="118" r="16" fill="#e2b000" stroke="#172033" stroke-width="3"/>'
+        . '<circle cx="248" cy="104" r="14" fill="#e2b000" stroke="#172033" stroke-width="3"/></svg>';
+}
+
+function pb_art_seeder(): string
+{
+    return '<svg viewBox="0 0 320 150" role="img"><rect width="320" height="150" fill="#eef2f6"/>'
+        . '<rect x="40" y="78" width="230" height="10" rx="3" fill="#17304f"/>'
+        . '<path d="M78 78 L70 42 H118 L110 78 Z" fill="#e2b000" stroke="#172033" stroke-width="2"/>'
+        . '<path d="M132 78 L124 36 H176 L168 78 Z" fill="#e2b000" stroke="#172033" stroke-width="2"/>'
+        . '<path d="M190 78 L182 42 H230 L222 78 Z" fill="#e2b000" stroke="#172033" stroke-width="2"/>'
+        . '<path d="M94 88 V118 M154 88 V118 M206 88 V118" stroke="#3e4856" stroke-width="4"/>'
+        . '<circle cx="52" cy="112" r="16" fill="#e2b000" stroke="#172033" stroke-width="3"/>'
+        . '<circle cx="258" cy="112" r="16" fill="#e2b000" stroke="#172033" stroke-width="3"/></svg>';
+}
+
+function pb_art_sprayer(): string
+{
+    return '<svg viewBox="0 0 320 150" role="img"><rect width="320" height="150" fill="#eef2f6"/>'
+        . '<rect x="118" y="48" width="78" height="48" rx="16" fill="#e2b000" stroke="#172033" stroke-width="2"/>'
+        . '<rect x="28" y="62" width="250" height="8" rx="3" fill="#17304f"/>'
+        . '<path d="M48 70 V96 M92 70 V96 M156 96 V118 M210 70 V96 M258 70 V96" stroke="#3e4856" stroke-width="4"/>'
+        . '<circle cx="48" cy="100" r="5" fill="#17304f"/><circle cx="92" cy="100" r="5" fill="#17304f"/><circle cx="210" cy="100" r="5" fill="#17304f"/><circle cx="258" cy="100" r="5" fill="#17304f"/>'
+        . '<circle cx="70" cy="118" r="15" fill="#e2b000" stroke="#172033" stroke-width="3"/>'
+        . '<circle cx="236" cy="118" r="15" fill="#e2b000" stroke="#172033" stroke-width="3"/></svg>';
+}
+
+function pb_art_parts(): string
+{
+    return '<svg viewBox="0 0 200 140" role="img"><rect width="200" height="140" fill="#eef2f6"/>'
+        . '<ellipse cx="58" cy="70" rx="28" ry="28" fill="none" stroke="#17304f" stroke-width="10"/>'
+        . '<ellipse cx="58" cy="70" rx="10" ry="10" fill="#e2b000"/>'
+        . '<rect x="108" y="42" width="28" height="62" rx="8" fill="#3e4856"/>'
+        . '<rect x="146" y="34" width="22" height="74" rx="8" fill="#e2b000" stroke="#172033" stroke-width="2"/></svg>';
+}
+
+function pb_art_map(): string
+{
+    return '<svg viewBox="0 0 200 140" role="img"><rect width="200" height="140" fill="#eef2f6"/>'
+        . '<path d="M108 16 L132 22 L148 18 L164 36 L176 48 L170 70 L156 78 L162 98 L146 112 L124 124 L108 112 L96 96 L78 92 L62 78 L54 58 L66 40 L84 30 L100 22 Z" fill="#d5dde6" stroke="#17304f" stroke-width="2"/>'
+        . '<g fill="#e2b000" stroke="#172033" stroke-width="1.4"><circle cx="118" cy="62" r="4"/><circle cx="132" cy="78" r="4"/><circle cx="108" cy="96" r="4"/><circle cx="146" cy="48" r="4"/><circle cx="96" cy="58" r="4"/></g></svg>';
 }

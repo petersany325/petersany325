@@ -7,10 +7,10 @@ $siteName = 'آسان‌کشت';
 $tagline = 'ماشین‌آلات صنعتی کشاورزی';
 $phone = '';
 $address = '';
-$oxide = '#d24a1a';
-$ink = '#161814';
-$paper = '#f3efe4';
-$dark = '#121410';
+$oxide = '#e2b000';
+$ink = '#172033';
+$paper = '#f4f6f8';
+$dark = '#0e1c33';
 if ($app->pluginEnabled('theme-settings')) {
     $siteName = setting($app, 'theme-settings', 'site_name', $siteName);
     $tagline = setting($app, 'theme-settings', 'tagline', $tagline);
@@ -52,7 +52,7 @@ if (!is_array($aside)) {
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="<?= e(url('/assets/css/site.css')) ?>?v=<?= e((string) (@filemtime($app->root . '/assets/css/site.css') ?: 1)) ?>">
-  <style>:root{--oxide:<?= e($oxide) ?>;--ink:<?= e($ink) ?>;--paper:<?= e($paper) ?>;--dark:<?= e($dark) ?>}</style>
+  <style>:root{--oxide:<?= e($oxide) ?>;--ink:<?= e($ink) ?>;--paper:<?= e($paper) ?>;--dark:<?= e($dark) ?>;--on-oxide:<?= e(contrast_on($oxide)) ?>;--oxide-deep:<?= e(shade_hex($oxide, 0.78)) ?>;--paper-2:<?= e(shade_hex($paper, 0.94)) ?>;--dark-2:<?= e(shade_hex($dark, 1.55)) ?>;--field:<?= e(mix_hex($paper, '#e7eef6', 0.55)) ?>;--white:#ffffff;--brass:<?= e($oxide) ?>;--ink-soft:<?= e(mix_hex($ink, '#ffffff', 0.28)) ?>;--muted:<?= e(mix_hex($ink, '#ffffff', 0.46)) ?>}</style>
 </head>
 <body>
   <a class="skip" href="#main">رفتن به محتوا</a>
@@ -75,8 +75,8 @@ if (!is_array($aside)) {
       <a class="brand" href="<?= e(url('/')) ?>">
         <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
           <rect width="32" height="32" rx="4" fill="currentColor"/>
-          <path d="M7 22h18M9 22c1.2-6 3-9 7-12 2.2 2.4 3.2 5.2 3.6 8" fill="none" stroke="#f3efe4" stroke-width="1.7" stroke-linecap="round"/>
-          <path d="M16 10l5 2.2-1.2 4.2" fill="none" stroke="<?= e($oxide) ?>" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M7 22h18M9 22c1.2-6 3-9 7-12 2.2 2.4 3.2 5.2 3.6 8" fill="none" stroke="#172033" stroke-width="1.7" stroke-linecap="round"/>
+          <path d="M16 10l5 2.2-1.2 4.2" fill="none" stroke="#172033" stroke-width="1.7" stroke-linecap="round"/>
         </svg>
         <span>
           <strong><?= e($siteName) ?></strong>
@@ -180,7 +180,7 @@ if (!is_array($aside)) {
             }
           ?>
           <div class="nav-item auth-nav">
-            <a class="nav-quote auth-chip" href="<?= e(url('/login')) ?>"><?= ui_icon('user') ?><span>ورود</span></a>
+            <a class="nav-quote auth-chip" href="<?= e(url('/login')) ?>"><?= ui_icon('user') ?><span>ورود نمایندگان</span></a>
             <button class="nav-more" type="button" aria-expanded="false" aria-label="روش ورود"><?= ui_icon('chevron') ?></button>
             <div class="nav-panel">
               <div class="nav-sub auth-menu">

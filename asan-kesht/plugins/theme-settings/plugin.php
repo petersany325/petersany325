@@ -20,10 +20,10 @@ return new class extends Plugin {
             'phone' => '',
             'address' => '',
             'email' => '',
-            'color_oxide' => '#d24a1a',
-            'color_ink' => '#161814',
-            'color_paper' => '#f3efe4',
-            'color_dark' => '#121410',
+            'color_oxide' => '#e2b000',
+            'color_ink' => '#172033',
+            'color_paper' => '#f4f6f8',
+            'color_dark' => '#0e1c33',
         ];
         foreach ($defaults as $key => $value) {
             $db->run(
@@ -36,6 +36,14 @@ return new class extends Plugin {
 
     public function boot(App $app): void
     {
+        $oxide = strtolower(setting($app, 'theme-settings', 'color_oxide', ''));
+        $ink = strtolower(setting($app, 'theme-settings', 'color_ink', ''));
+        if ($oxide === '#d24a1a' && ($ink === '' || $ink === '#161814')) {
+            save_setting($app, 'theme-settings', 'color_oxide', '#e2b000');
+            save_setting($app, 'theme-settings', 'color_ink', '#172033');
+            save_setting($app, 'theme-settings', 'color_paper', '#f4f6f8');
+            save_setting($app, 'theme-settings', 'color_dark', '#0e1c33');
+        }
         $app->listen('admin.menu', function (array $items): array {
             $items[] = ['href' => '/admin/theme', 'label' => 'قالب', 'roles' => ['admin']];
             return $items;

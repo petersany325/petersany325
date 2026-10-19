@@ -30,21 +30,7 @@ return new class extends Plugin {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
         );
         $home = [
-            pb_block('hero', [
-                'title' => 'ماشین‌آلات صنعتی کشاورزی، ساخته‌شده برای زمین شما',
-                'text' => 'آسان‌کشت ادوات خاک‌ورزی، کاشت، داشت و حمل را برای تراکتورهای رایج می‌سازد. مدل را با توان تراکتور و عرض کار انتخاب می‌کنید.',
-                'button_label' => 'مشاهده ماشین‌ها',
-                'button_url' => '/machines',
-            ]),
-            pb_block('features', [
-                'title' => 'چهار خط تولید',
-                'items' => [
-                    ['title' => 'خاک‌ورزی', 'text' => 'گاوآهن، دیسک، چیزل، زیرشکن و روتیواتور'],
-                    ['title' => 'کاشت', 'text' => 'خطی‌کار غلات و ردیف‌کار'],
-                    ['title' => 'داشت', 'text' => 'سمپاش بوم‌دار، سمپاش باغی و کودپاش'],
-                    ['title' => 'برداشت و حمل', 'text' => 'دروگر بشقابی و تریلر'],
-                ],
-            ]),
+            pb_block('catalog', pb_catalog_data()),
             pb_block('machines', ['title' => 'مدل‌های آماده', 'limit' => '4']),
             pb_block('steps', [
                 'title' => 'از سفارش تا تحویل',
@@ -98,6 +84,7 @@ return new class extends Plugin {
 
     public function boot(App $app): void
     {
+        $this->applyNavyHome($app);
         $app->listen('admin.menu', function (array $items): array {
             $items[] = ['href' => '/admin/pages', 'label' => 'صفحه‌ساز', 'roles' => ['admin']];
             return $items;
@@ -224,6 +211,46 @@ return new class extends Plugin {
             flash('success', 'صفحه ذخیره شد.');
             redirect('/admin/pages/' . $id);
         });
+    }
+
+    private function applyNavyHome(App $app): void
+    {
+        if (setting($app, 'page-builder', 'home_layout', '') === 'navy-catalog') {
+            return;
+        }
+        $home = $app->db->one('SELECT id, blocks_json FROM ak_pages WHERE slug = ?', ['home']);
+        if ($home) {
+            $blocks = json_decode((string) $home['blocks_json'], true);
+            if (!is_array($blocks)) {
+                $blocks = [];
+            }
+            $hasCatalog = false;
+            foreach ($blocks as $block) {
+                if (is_array($block) && (string) ($block['type'] ?? '') === 'catalog') {
+                    $hasCatalog = true;
+                }
+            }
+            if (!$hasCatalog) {
+                $next = [];
+                foreach ($blocks as $block) {
+                    if (!is_array($block)) {
+                        continue;
+                    }
+                    $type = (string) ($block['type'] ?? '');
+                    $title = (string) ($block['data']['title'] ?? '');
+                    if ($type === 'hero' || ($type === 'features' && $title === 'چهار خط تولید')) {
+                        continue;
+                    }
+                    $next[] = $block;
+                }
+                array_unshift($next, pb_block('catalog', pb_catalog_data()));
+                $app->db->run(
+                    'UPDATE ak_pages SET blocks_json = ?, updated_at = NOW() WHERE id = ?',
+                    [json_encode($next, JSON_UNESCAPED_UNICODE), (int) $home['id']]
+                );
+            }
+        }
+        save_setting($app, 'page-builder', 'home_layout', 'navy-catalog');
     }
 
     private function page(App $app, string $id): array
