@@ -11,5 +11,8 @@
   <a class="card" href="<?= e(url('/admin/accounting/payroll')) ?>"><span>حقوق و مزایا</span><strong><?= e(money($figures['payroll'])) ?></strong></a>
   <a class="card" href="<?= e(url('/admin/accounting/reports')) ?>"><span>سود (زیان) عملیاتی</span><strong><?= e(money($figures['operating'])) ?></strong></a>
   <a class="card" href="<?= e(url('/admin/accounting/proforma')) ?>"><span>پیش‌فاکتور باز</span><strong><?= e(money($figures['proforma'])) ?></strong></a>
+  <?php if ($app->pluginEnabled('warehouses')): ?>
+    <a class="card" href="<?= e(url('/admin/accounting/warehouses')) ?>"><span>ارزش انبار</span><strong><?= e(money((int) $figures['warehouse_value'])) ?></strong></a>
+  <?php endif; ?>
 </div>
 <p class="muted">سود ناخالص برابر فروش فاکتورشده منهای بهای تمام‌شده است. سود عملیاتی، پورسانت قطعی نماینده، سهم ویزیتور، حقوق با سهم کارفرما و سایر هزینه‌ها را هم کم می‌کند. پورسانت در جریان و مدل خرید و فروش دوباره در این هزینه نیست. جزئیات و درصدها در سود و زیان است.</p>

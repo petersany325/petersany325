@@ -58,6 +58,9 @@ if ($user) {
         ['href' => '/admin/settings', 'label' => 'تنظیمات', 'roles' => ['admin']],
         ['href' => '/rep', 'label' => 'پنل نمایندگی', 'roles' => ['representative']],
     ];
+    if ($app->pluginEnabled('warehouses')) {
+        $work[] = ['href' => '/admin/accounting/warehouses', 'label' => 'انبارها', 'roles' => ['admin', 'employee', 'accountant']];
+    }
     if ($app->pluginEnabled('maintain')) {
         $work[] = ['href' => '/admin/maintain', 'label' => 'نگهداری', 'roles' => ['admin']];
     }

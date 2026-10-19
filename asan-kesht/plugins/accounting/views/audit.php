@@ -14,6 +14,9 @@ $checks = [
     ['فروشگاه داخل فاکتور فروش', money($figures['shop_sales']) . ' در ' . fa_digits((string) $figures['shop_count']) . ' فاکتور', true],
     ['آنلاین پرداخت‌شده', money($figures['online_paid']), true],
 ];
+if ($app->pluginEnabled('warehouses') || (int) $figures['warehouse_value'] !== 0 || (int) $figures['warehouse_qty'] !== 0) {
+    $checks[] = ['ارزش انبار خارج از سود', money((int) $figures['warehouse_value']) . ' برای ' . fa_digits((string) $figures['warehouse_qty']) . ' عدد', true];
+}
 ?>
 <p class="muted">حسابرسی همین تعریف‌ها را با سندها مقابله می‌کند. خرید دوباره از سود کم نشده، پیش‌فاکتور فروش نیست، و سهم ویزیتور و پورسانت وصول‌شده هزینه فروش‌اند.</p>
 <div class="table-wrap">

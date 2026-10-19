@@ -190,6 +190,11 @@ return new class extends Plugin {
                 'back' => '/admin/accounting/' . $kind,
             ], 'layouts/print');
         });
+        $warehouseLib = dirname(__DIR__) . '/warehouses/lib.php';
+        if (is_file($warehouseLib)) {
+            require_once $warehouseLib;
+            warehouse_routes($app);
+        }
         $app->router->get('/admin/accounting/{kind}', function (array $params) use ($app): void {
             require_role($app, accounting_roles());
             $kind = (string) $params['kind'];

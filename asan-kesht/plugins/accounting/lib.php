@@ -379,6 +379,8 @@ function accounting_figures(App $app): array
     $dealerCommissionSales = accounting_optional_sum($app, 'ak_dealer_orders', 'SELECT COALESCE(SUM(o.total),0) AS s FROM ak_dealer_orders o JOIN ak_dealers d ON d.id = o.dealer_id WHERE d.sale_model = "commission" AND o.status NOT IN ("submitted","cancelled")');
     $dealerGrossGap = accounting_optional_sum($app, 'ak_dealer_commissions', 'SELECT COUNT(*) AS s FROM ak_dealer_commissions WHERE status IN ("pending","earned") AND note LIKE "%بهای تمام‌شده ثبت نشده%"');
     $visitorCommission = accounting_sum($app, 'SELECT COALESCE(SUM(amount),0) AS s FROM ak_visitor_shares');
+    $warehouseValue = accounting_optional_sum($app, 'ak_warehouse_stock', 'SELECT COALESCE(SUM(value),0) AS s FROM ak_warehouse_stock');
+    $warehouseQty = accounting_optional_sum($app, 'ak_warehouse_stock', 'SELECT COALESCE(SUM(qty),0) AS s FROM ak_warehouse_stock');
     $onlinePaid = accounting_optional_sum($app, 'ak_shop_orders', 'SELECT COALESCE(SUM(total),0) AS s FROM ak_shop_orders WHERE payment_status = "paid" AND status != "cancelled"');
     $shopCount = accounting_optional_sum($app, 'ak_shop_orders', 'SELECT COUNT(*) AS s FROM ak_shop_orders WHERE invoice_id > 0 AND status != "cancelled"');
     $gross = $sales - $cogs;
@@ -397,6 +399,8 @@ function accounting_figures(App $app): array
         'dealer_commission_sales' => $dealerCommissionSales,
         'dealer_gross_gap' => $dealerGrossGap,
         'visitor_commission' => $visitorCommission,
+        'warehouse_value' => $warehouseValue,
+        'warehouse_qty' => $warehouseQty,
         'shop_sales' => $shopSales,
         'shop_count' => $shopCount,
         'online_paid' => $onlinePaid,
@@ -422,7 +426,7 @@ function accounting_rate(int $part, int $whole): string
 
 function accounting_optional_sum(App $app, string $table, string $sql): int
 {
-    $known = ['ak_dealer_commissions' => true, 'ak_dealer_orders' => true, 'ak_shop_orders' => true];
+    $known = ['ak_dealer_commissions' => true, 'ak_dealer_orders' => true, 'ak_shop_orders' => true, 'ak_warehouse_stock' => true];
     if (!isset($known[$table])) {
         return 0;
     }
