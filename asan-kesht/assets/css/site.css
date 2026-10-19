@@ -16,7 +16,7 @@
   --header: 4.6rem;
   --max: 1120px;
   --font: Vazirmatn, "Segoe UI", Tahoma, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --mono: Vazirmatn, Tahoma, sans-serif;
 }
 
 *,
