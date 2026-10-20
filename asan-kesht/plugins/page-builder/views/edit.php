@@ -13,6 +13,7 @@
     <label>ترتیب منو <input name="menu_order" value="<?= e((string) ($page['menu_order'] ?? 0)) ?>"></label>
     <label class="check"><input type="checkbox" name="in_menu" <?= (int) ($page['in_menu'] ?? 0) === 1 ? 'checked' : '' ?>> در منو</label>
   </div>
+  <p class="muted">متن بلوک‌ها با ذخیره، روی همان نشانی صفحه دیده می‌شود. «در منو» صفحه منتشرشده را به منوی زنده اضافه می‌کند و اگر آیتم منو همان عنوان قبلی را داشته باشد، عنوان تازه را آنجا هم می‌نویسد. پیش‌نویس روی سایت دیده نمی‌شود.</p>
   <?php foreach ($blocks as $i => $block): ?>
     <?php $def = $definitions[$block['type']] ?? null; if (!$def) { continue; } ?>
     <fieldset>

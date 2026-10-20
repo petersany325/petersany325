@@ -193,7 +193,105 @@ function menu_tree_from(array $rows, int $parent, bool $onlyVisible): array
 /** @return list<array<string, mixed>> */
 function menu_public_tree(App $app): array
 {
-    return menu_tree_from(menu_rows($app), 0, true);
+    return menu_merge_pages($app, menu_tree_from(menu_rows($app), 0, true));
+}
+
+function menu_page_href(string $slug): string
+{
+    if ($slug === '' || $slug === 'home') {
+        return '/';
+    }
+    return '/' . $slug;
+}
+
+/** @param list<array<string, mixed>> $nodes @param array<string, true> $known */
+function menu_collect_hrefs(array $nodes, array &$known): void
+{
+    foreach ($nodes as $node) {
+        if (!is_array($node)) {
+            continue;
+        }
+        $href = (string) ($node['href'] ?? '');
+        if ($href !== '') {
+            $known[$href] = true;
+        }
+        $children = $node['children'] ?? [];
+        if (is_array($children)) {
+            menu_collect_hrefs($children, $known);
+        }
+    }
+}
+
+/** @param list<array<string, mixed>> $tree @return list<array<string, mixed>> */
+function menu_merge_pages(App $app, array $tree): array
+{
+    try {
+        $pages = $app->db->all(
+            'SELECT title, slug FROM ak_pages WHERE status = "published" AND in_menu = 1 ORDER BY menu_order, id'
+        );
+    } catch (Throwable) {
+        return $tree;
+    }
+    $known = [];
+    menu_collect_hrefs($tree, $known);
+    foreach ($pages as $page) {
+        $href = menu_page_href((string) $page['slug']);
+        if (isset($known[$href])) {
+            continue;
+        }
+        $tree[] = [
+            'label' => (string) $page['title'],
+            'href' => $href,
+            'description' => '',
+            'children' => [],
+            'visible' => 1,
+            'new_tab' => 0,
+            'mega' => 0,
+            'icon' => '',
+            'badge' => '',
+            'featured' => 0,
+        ];
+        $known[$href] = true;
+    }
+    return $tree;
+}
+
+function menu_sync_page(App $app, string $oldSlug, string $newSlug, string $oldTitle, string $newTitle, bool $show, int $order): void
+{
+    menu_extend($app);
+    $newHref = menu_page_href($newSlug);
+    if ($oldSlug !== '' && $oldSlug !== $newSlug && $oldSlug !== 'home') {
+        $app->db->run(
+            'UPDATE ak_menu_items SET href = ? WHERE href = ?',
+            [$newHref, menu_page_href($oldSlug)]
+        );
+    }
+    if (!$show) {
+        return;
+    }
+    $rows = menu_rows($app);
+    $hrefTaken = false;
+    foreach ($rows as $row) {
+        if ((string) $row['href'] !== $newHref) {
+            continue;
+        }
+        $hrefTaken = true;
+        $label = (string) $row['label'];
+        if ($newTitle === '' || $label !== $oldTitle || $newTitle === $oldTitle) {
+            continue;
+        }
+        $app->db->run(
+            'UPDATE ak_menu_items SET label = ?, href = ? WHERE id = ?',
+            [$newTitle, $newHref, (int) $row['id']]
+        );
+    }
+    if ($hrefTaken) {
+        return;
+    }
+    $app->db->run(
+        'INSERT INTO ak_menu_items (parent_id, label, href, description, sort_order, visible, new_tab, mega) VALUES (NULL, ?, ?, "", ?, 1, 0, 0)',
+        [$newTitle, $newHref, $order]
+    );
 }
 
 /** @return array{effect: string, open: string} */

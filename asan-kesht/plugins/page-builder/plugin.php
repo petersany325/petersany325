@@ -194,6 +194,7 @@ return new class extends Plugin {
                 flash('error', 'عنوان و نامک انگلیسی لازم است و نامک نباید رزرو شده باشد.');
                 redirect($id > 0 ? '/admin/pages/' . $id : '/admin/pages/new');
             }
+            $previous = $id > 0 ? $this->page($app, (string) $id) : null;
             $json = json_encode($blocks, JSON_UNESCAPED_UNICODE);
             if ($id === 0) {
                 $app->db->run(
@@ -202,13 +203,25 @@ return new class extends Plugin {
                 );
                 $id = (int) $app->db->id();
             } else {
-                $this->page($app, (string) $id);
                 $app->db->run(
                     'UPDATE ak_pages SET title = ?, slug = ?, status = ?, in_menu = ?, menu_order = ?, blocks_json = ?, updated_at = NOW() WHERE id = ?',
                     [$title, $slug, $status, $inMenu, $order, $json, $id]
                 );
             }
-            flash('success', 'صفحه ذخیره شد.');
+            if ($app->pluginEnabled('menus') && function_exists('menu_sync_page')) {
+                menu_sync_page(
+                    $app,
+                    $previous ? (string) $previous['slug'] : '',
+                    $slug,
+                    $previous ? (string) $previous['title'] : '',
+                    $title,
+                    $status === 'published' && $inMenu === 1,
+                    $order
+                );
+            }
+            flash('success', $status === 'published'
+                ? 'صفحه ذخیره شد و روی سایت زنده دیده می‌شود.'
+                : 'صفحه به‌صورت پیش‌نویس ذخیره شد و تا انتشار روی سایت زنده دیده نمی‌شود.');
             redirect('/admin/pages/' . $id);
         });
     }
@@ -219,36 +232,20 @@ return new class extends Plugin {
             return;
         }
         $home = $app->db->one('SELECT id, blocks_json FROM ak_pages WHERE slug = ?', ['home']);
+        $blocks = [];
         if ($home) {
-            $blocks = json_decode((string) $home['blocks_json'], true);
-            if (!is_array($blocks)) {
-                $blocks = [];
-            }
-            $hasCatalog = false;
-            foreach ($blocks as $block) {
-                if (is_array($block) && (string) ($block['type'] ?? '') === 'catalog') {
-                    $hasCatalog = true;
-                }
-            }
-            if (!$hasCatalog) {
-                $next = [];
-                foreach ($blocks as $block) {
-                    if (!is_array($block)) {
-                        continue;
-                    }
-                    $type = (string) ($block['type'] ?? '');
-                    $title = (string) ($block['data']['title'] ?? '');
-                    if ($type === 'hero' || ($type === 'features' && $title === 'چهار خط تولید')) {
-                        continue;
-                    }
-                    $next[] = $block;
-                }
-                array_unshift($next, pb_block('catalog', pb_catalog_data()));
-                $app->db->run(
-                    'UPDATE ak_pages SET blocks_json = ?, updated_at = NOW() WHERE id = ?',
-                    [json_encode($next, JSON_UNESCAPED_UNICODE), (int) $home['id']]
-                );
-            }
+            $decoded = json_decode((string) $home['blocks_json'], true);
+            $blocks = is_array($decoded) ? $decoded : [];
+        }
+        if ($blocks !== []) {
+            save_setting($app, 'page-builder', 'home_layout', 'navy-catalog');
+            return;
+        }
+        if ($home) {
+            $app->db->run(
+                'UPDATE ak_pages SET blocks_json = ?, updated_at = NOW() WHERE id = ?',
+                [json_encode([pb_block('catalog', pb_catalog_data())], JSON_UNESCAPED_UNICODE), (int) $home['id']]
+            );
         }
         save_setting($app, 'page-builder', 'home_layout', 'navy-catalog');
     }

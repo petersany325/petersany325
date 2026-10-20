@@ -165,16 +165,16 @@ function layout_save_home(App $app, string $catalogUrl): void
     if ($home['id'] < 1) {
         return;
     }
-    $posted = $_POST['blocks'] ?? [];
-    if (!is_array($posted)) {
-        $posted = [];
-    }
+    $posted = $_POST['blocks'] ?? null;
+    $postedRows = is_array($posted) ? $posted : [];
     $ordered = [];
     foreach ($home['blocks'] as $index => $block) {
-        $row = is_array($posted[$index] ?? null) ? $posted[$index] : [];
-        $block['hidden'] = isset($row['show']) ? 0 : 1;
+        $row = is_array($postedRows[$index] ?? null) ? $postedRows[$index] : null;
+        if (is_array($row)) {
+            $block['hidden'] = isset($row['show']) ? 0 : 1;
+        }
         $ordered[] = [
-            'order' => (int) ($row['order'] ?? $index),
+            'order' => (int) (is_array($row) ? ($row['order'] ?? $index) : $index),
             'index' => $index,
             'block' => $block,
         ];

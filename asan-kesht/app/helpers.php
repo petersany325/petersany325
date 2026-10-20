@@ -665,9 +665,14 @@ function admin_nav_groups(App $app): array
 
 function ak_menu_ensure(App $app, string $href, string $label, string $description, string $parentHref): void
 {
+    $flag = 'linked:' . $href;
     try {
+        if (setting($app, 'menus', $flag, '') === '1') {
+            return;
+        }
         $found = $app->db->one('SELECT id FROM ak_menu_items WHERE href = ? LIMIT 1', [$href]);
         if ($found) {
+            save_setting($app, 'menus', $flag, '1');
             return;
         }
         $parent = $app->db->one(
@@ -678,6 +683,7 @@ function ak_menu_ensure(App $app, string $href, string $label, string $descripti
             'INSERT INTO ak_menu_items (parent_id, label, href, description, sort_order, visible, new_tab, mega) VALUES (?, ?, ?, ?, 55, 1, 0, 0)',
             [$parent ? (int) $parent['id'] : null, $label, $href, $description]
         );
+        save_setting($app, 'menus', $flag, '1');
     } catch (Throwable) {
         return;
     }

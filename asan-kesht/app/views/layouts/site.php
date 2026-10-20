@@ -132,20 +132,11 @@ if (!is_array($aside)) {
                 <?php if ($mega): ?>
                   <?php
                     $columns = [];
-                    $loose = [];
                     foreach ($children as $child) {
                         if (!is_array($child)) {
                             continue;
                         }
-                        $grand = is_array($child['children'] ?? null) ? $child['children'] : [];
-                        if ($grand !== []) {
-                            $columns[] = $child;
-                        } else {
-                            $loose[] = $child;
-                        }
-                    }
-                    if ($loose !== []) {
-                        array_unshift($columns, ['label' => 'پیوندها', 'href' => '', 'description' => '', 'children' => $loose]);
+                        $columns[] = $child;
                     }
                   ?>
                   <div class="wrap mega-grid">
