@@ -1,5 +1,13 @@
 @php
   try {
+    if (class_exists(\App\Support\SiteHost::class) && \App\Support\SiteHost::isStudio()) {
+      \Plugins\Studio\Plugin::registerViews();
+      echo view('studio::nav')->render();
+      return;
+    }
+  } catch (\Throwable $e) {
+  }
+  try {
     $menuTree = \Plugins\MegaMenu\src\Models\MegaMenuItem::tree();
     $mm = \Plugins\MegaMenu\Plugin::settings();
   } catch (\Throwable $e) {
