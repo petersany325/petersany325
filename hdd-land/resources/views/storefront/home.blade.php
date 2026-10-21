@@ -1,7 +1,27 @@
-@extends('layouts.storefront')
-@section('title', ($page?->seo_title) ?: 'خانه')
+@php
+  $studioHome = false;
+  try {
+    $hostFile = app_path('Support/SiteHost.php');
+    if (is_file($hostFile)) {
+      require_once $hostFile;
+    }
+    $studioPlugin = base_path('plugins/Studio/Plugin.php');
+    if (is_file($studioPlugin)) {
+      require_once $studioPlugin;
+      \Plugins\Studio\Plugin::ensureBooted();
+    }
+    $studioHome = class_exists(\App\Support\SiteHost::class) && \App\Support\SiteHost::isStudio();
+  } catch (\Throwable) {
+    $studioHome = false;
+  }
+@endphp
+@extends($studioHome ? 'studio::layout' : 'layouts.storefront')
+@section('title', $studioHome ? 'نرم‌افزار پیشرفته حسابداری هوش مصنوعی' : (($page?->seo_title) ?: 'خانه'))
 @section('content')
-{{-- اتصال قطعی بنرساز ThemeBuilder/Revolution به صفحه اول --}}
+@if($studioHome)
+  @include('studio::bodies', ['slug' => 'home'])
+@else
+{{-- اتصال قطعی بنرساز ThemeBuilder/Revolution به صفحه اول فروشگاه — نه دامنه استودیو --}}
 @php
   $bannerBridge = ['live' => false, 'banner' => []];
   try {
@@ -54,4 +74,5 @@
     @include('storefront.partials.home-corporate-sections')
   @endif
 </div>
+@endif
 @endsection

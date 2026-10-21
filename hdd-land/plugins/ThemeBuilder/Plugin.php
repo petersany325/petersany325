@@ -40,6 +40,13 @@ class Plugin extends BasePlugin
     {
         self::registerViews();
         parent::boot();
+        try {
+            if (is_file(base_path('plugins/Studio/Plugin.php'))) {
+                require_once base_path('plugins/Studio/Plugin.php');
+                \Plugins\Studio\Plugin::ensureBooted();
+            }
+        } catch (\Throwable) {
+        }
     }
 
     /** Safe to call from blades/helpers even if plugin boot order is late. */
