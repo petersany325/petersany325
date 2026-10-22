@@ -21,7 +21,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>@yield('title', ($studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار').' | سرزمین هارد')</title>
+  <title>@if(request()->is('contact'))تماس و مشاوره | سرزمین هارد@else@yield('title', ($studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار').' | سرزمین هارد')@endif</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
   <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=16">
   <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=4">
