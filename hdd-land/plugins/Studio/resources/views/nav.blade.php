@@ -7,8 +7,11 @@
 <header class="st-head">
   <div class="st-wrap st-head__bar">
     <a class="st-brand" href="{{ url('/') }}">
-      <b>سرزمین هارد</b>
-      <span>استودیو سایت و نرم‌افزار</span>
+      <i class="st-mark" aria-hidden="true"></i>
+      <span>
+        <b>سرزمین هارد</b>
+        <span>استودیو سایت و نرم‌افزار</span>
+      </span>
     </a>
     <nav class="st-nav" aria-label="منوی استودیو">
       @foreach($menu as $item)

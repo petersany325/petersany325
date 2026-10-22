@@ -4,6 +4,8 @@
 @endphp
 <section class="acc-hero">
   <div class="acc-hero__grid" aria-hidden="true"></div>
+  <div class="acc-hero__glow acc-hero__glow--steel" aria-hidden="true"></div>
+  <div class="acc-hero__glow acc-hero__glow--amber" aria-hidden="true"></div>
   <div class="st-wrap acc-hero__in">
     <div class="acc-copy">
       <p class="acc-kicker">محصول پرچم استودیو</p>

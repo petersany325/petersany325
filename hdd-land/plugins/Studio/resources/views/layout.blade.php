@@ -6,7 +6,7 @@
   <title>@yield('title', 'نرم‌افزار پیشرفته حسابداری هوش مصنوعی')</title>
   <meta name="description" content="@yield('description', 'نرم‌افزار پیشرفته حسابداری هوش مصنوعی: دفتر سند و فاکتور با پیش‌نویس هوشمند. طراحی سایت و سامانه قبض جدا.')">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-  <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=12">
+  <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=13">
 </head>
 <body class="st-body">
 @include('studio::nav')

@@ -19,7 +19,10 @@
 @endif
 
 @if($slug === 'design')
-<section class="st-hero"><div class="st-wrap">
+<section class="st-hero">
+  <div class="st-hero__glow st-hero__glow--steel" aria-hidden="true"></div>
+  <div class="st-hero__glow st-hero__glow--amber" aria-hidden="true"></div>
+  <div class="st-wrap">
   <p class="st-kicker">طراحی سایت</p>
   <h1>سایت کسب‌وکار، نه قالب آماده</h1>
   <p>سه مدل: فروشگاهی، شرکتی، خدماتی. همه به پنل ادمین و در صورت نیاز به حسابداری وصل می‌شوند.</p>
@@ -35,7 +38,10 @@
 @endif
 
 @if($slug === 'ai')
-<section class="st-hero"><div class="st-wrap">
+<section class="st-hero">
+  <div class="st-hero__glow st-hero__glow--steel" aria-hidden="true"></div>
+  <div class="st-hero__glow st-hero__glow--amber" aria-hidden="true"></div>
+  <div class="st-wrap">
   <p class="st-kicker">پروژه هوش مصنوعی</p>
   <h1>AI روی کار واقعی حسابداری و پشتیبانی</h1>
   <p>شعار راه‌اندازی هوش مصنوعی نیست. هر قابلیت یک کار مشخص دارد.</p>
@@ -55,7 +61,10 @@
 @endif
 
 @if($slug === 'projects')
-<section class="st-hero"><div class="st-wrap">
+<section class="st-hero">
+  <div class="st-hero__glow st-hero__glow--steel" aria-hidden="true"></div>
+  <div class="st-hero__glow st-hero__glow--amber" aria-hidden="true"></div>
+  <div class="st-wrap">
   <p class="st-kicker">پروژه‌های سایت</p>
   <h1>نمونه از همین سیستم</h1>
   <p>پروژه‌هایی که استقرار شده‌اند؛ قالب تزئینی نیستند.</p>
@@ -70,7 +79,10 @@
 @endif
 
 @if($slug === 'receipt')
-<section class="st-hero"><div class="st-wrap">
+<section class="st-hero">
+  <div class="st-hero__glow st-hero__glow--steel" aria-hidden="true"></div>
+  <div class="st-hero__glow st-hero__glow--amber" aria-hidden="true"></div>
+  <div class="st-wrap">
   <p class="st-kicker">نرم‌افزار قبض تحت وب</p>
   <h1>پذیرش، پیگیری و تحویل روی قبض</h1>
   <p>سامانه زنده قبض جدا است. داده و دیتابیس آن از این سایت جابه‌جا یا پاک نمی‌شود.</p>
