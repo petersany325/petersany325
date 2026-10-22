@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
   <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=16">
   @if($agency)
-    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=2">
+    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=3">
   @endif
 </head>
 <body class="st-body{{ $agency ? ' ag-body' : '' }}"@if($agency) style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}"@endif>
