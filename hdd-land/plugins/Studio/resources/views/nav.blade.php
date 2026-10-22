@@ -79,6 +79,23 @@
           </button>
         </form>
       @endif
+      <button class="ag-burger" type="button" aria-label="منوی موبایل" aria-expanded="false" data-ag-burger>
+        <i></i><i></i><i></i>
+      </button>
+    </div>
+  </div>
+  <div class="ag-drawer" id="agDrawer" hidden>
+    <div class="ag-drawer__in">
+      @foreach($items as $item)
+        @php $url = $item['url'] ?? '#'; $kids = $item['children'] ?? []; @endphp
+        <a class="ag-drawer__h" href="{{ url($url) }}">{{ $item['label'] }}</a>
+        @foreach($kids as $col)
+          <a href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
+          @foreach($col['children'] ?? [] as $leaf)
+            <a class="ag-drawer__sub" href="{{ url($leaf['url'] ?? '#') }}">{{ $leaf['label'] }}</a>
+          @endforeach
+        @endforeach
+      @endforeach
     </div>
   </div>
 </header>

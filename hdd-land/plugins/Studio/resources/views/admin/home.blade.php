@@ -34,6 +34,7 @@
       <h2>نمایش</h2>
       <label class="sw"><span>فعال بودن این قالب روی دامنه استودیو</span><input type="checkbox" name="enabled" value="1" @checked($on('enabled'))></label>
       <label class="sw"><span>نمایش جستجو در هدر</span><input type="checkbox" name="show_search" value="1" @checked($on('show_search'))></label>
+      <label class="sw"><span>وب‌اپ موبایل (نوار پایین + نصب روی گوشی)</span><input type="checkbox" name="mobile_webapp" value="1" @checked($on('mobile_webapp'))></label>
       <label class="sw"><span>کارت‌های خدمات</span><input type="checkbox" name="services_enabled" value="1" @checked($on('services_enabled'))></label>
       <label class="sw"><span>ردیف آمار</span><input type="checkbox" name="stats_enabled" value="1" @checked($on('stats_enabled'))></label>
       <label class="sw"><span>نمونه کارها</span><input type="checkbox" name="works_enabled" value="1" @checked($on('works_enabled'))></label>
@@ -50,7 +51,7 @@
           <label>متن جستجو<input name="search_placeholder" value="{{ $f('search_placeholder') }}"></label>
         </div>
         <label>منوی هدر — هر خط: عنوان|آدرس<textarea name="nav" rows="7">{{ $f('nav') }}</textarea></label>
-        <p class="hint">منوهای «حسابداری وب» و «تعمیرگاه» با زیرمنوی کامل (فاکتور، سند، پذیرش، ارجاع، کارمندان…) همیشه به هدر اضافه می‌شوند؛ حتی اگر در این جعبه نباشند.</p>
+        <p class="hint">منوی «طراحی سایت» زیرمنوی خدمات فراز نت آمل را می‌گیرد. «حسابداری وب» و «تعمیرگاه» هم با زیرمنوی کامل همیشه به هدر اضافه می‌شوند.</p>
         <div class="row2">
           <label>رنگ تأکید
             <span class="color">

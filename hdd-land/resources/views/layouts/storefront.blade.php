@@ -19,19 +19,29 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>@if(request()->is('contact'))تماس و مشاوره | سرزمین هارد@else@yield('title', ($studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار').' | سرزمین هارد')@endif</title>
+  <title>@if(request()->is('contact')){{ \App\Support\StudioDesignCopy::seoTitle('contact') }}@elseif(request()->is('about')){{ \App\Support\StudioDesignCopy::seoTitle('about') }}@else@yield('title', ($studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار').' | فراز نت آمل')@endif</title>
+  <meta name="description" content="@if(request()->is('contact')){{ \App\Support\StudioDesignCopy::seoDescription('contact') }}@elseif(request()->is('about')){{ \App\Support\StudioDesignCopy::seoDescription('about') }}@else{{ $studioHome['hero_text'] ?? 'طراحی سایت حرفه‌ای با فراز نت آمل.' }}@endif">
+  @if(\App\Support\StudioHomeConfig::mobileWebAppOn($studioHome))
+    <link rel="manifest" href="{{ url('/studio-manifest.webmanifest') }}">
+    <meta name="theme-color" content="{{ $studioHome['accent'] ?? '#7c5cff' }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="فرازنت">
+    <link rel="apple-touch-icon" href="{{ asset('images/hdd-land-icon-192.png') }}">
+  @endif
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
   <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=16">
-  <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=5">
+  <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=7">
 </head>
-<body class="st-body ag-body" style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}">
+<body class="st-body ag-body{{ \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome) ? ' has-ag-tabbar' : '' }}" style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}">
 @include('studio::nav', ['studioHome' => $studioHome, 'agency' => true])
 <main class="site-main">
   @if(session('success'))<div class="ag-note" style="margin:1rem auto;width:min(1180px,calc(100% - 2.2rem))">{{ session('success') }}</div>@endif
   @if(request()->is('contact'))
-    @include('studio::bodies', ['slug' => 'contact', 'studioHome' => $studioHome])
+    @include('studio::bodies', ['slug' => 'contact', 'studioHome' => $studioHome, 'contactCopy' => \App\Support\StudioDesignCopy::contact()])
+  @elseif(request()->is('about'))
+    @include('studio::bodies', ['slug' => 'about', 'studioHome' => $studioHome, 'aboutPage' => \App\Support\StudioDesignCopy::about(), 'reasons' => \App\Support\StudioDesignCopy::reasons()])
   @else
     @yield('content')
   @endif
@@ -40,6 +50,10 @@
   <div class="ag-wrap">
     <span>hdd-land.ir — {{ $studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار' }}</span>
     <span>
+      <a href="{{ url('/design') }}">طراحی سایت</a>
+      ·
+      <a href="{{ url('/about') }}">درباره ما</a>
+      ·
       <a href="{{ url('/accounting') }}">حسابداری وب</a>
       ·
       <a href="{{ url('/repair-shop') }}">تعمیرگاه</a>
@@ -50,6 +64,20 @@
     </span>
   </div>
 </footer>
+@include('studio::mobile', ['studioHome' => $studioHome])
+<script>
+(function(){
+  var btn=document.querySelector('[data-ag-burger]');
+  var drawer=document.getElementById('agDrawer');
+  if(!btn||!drawer) return;
+  btn.addEventListener('click', function(){
+    var open=drawer.hidden;
+    drawer.hidden=!open;
+    btn.setAttribute('aria-expanded', open?'true':'false');
+    document.body.classList.toggle('ag-drawer-on', open);
+  });
+})();
+</script>
 </body>
 </html>
 @else

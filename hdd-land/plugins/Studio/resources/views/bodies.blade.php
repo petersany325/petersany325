@@ -15,29 +15,15 @@
 @endif
 
 @if($slug === 'design')
-<section class="{{ $agency ? 'ag-page' : 'st-hero' }}">
-  @unless($agency)
-    <div class="st-hero__glow st-hero__glow--steel" aria-hidden="true"></div>
-    <div class="st-hero__glow st-hero__glow--amber" aria-hidden="true"></div>
-  @endunless
-  <div class="{{ $agency ? 'ag-wrap' : 'st-wrap' }}">
-    <p class="{{ $agency ? 'ag-kicker' : 'st-kicker' }}">طراحی سایت</p>
-    <h1>سایت کسب‌وکار، نه قالب آماده</h1>
-    <p class="{{ $agency ? 'ag-lead' : '' }}">سه مدل: فروشگاهی، شرکتی، خدماتی. همه به پنل ادمین و در صورت نیاز به حسابداری وصل می‌شوند.</p>
-    @if($agency)
-      <div class="ag-actions">
-        <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست مشاوره رایگان<i>←</i></a>
-        <a class="ag-btn ag-btn--line" href="{{ url('/projects') }}">مشاهده نمونه کارها<i>←</i></a>
-      </div>
-    @endif
-    <ul class="{{ $agency ? 'ag-list' : 'st-list' }}">
-      <li>سایت فروشگاهی با سبد و حساب مشتری</li>
-      <li>سایت شرکتی با خدمات و تماس</li>
-      <li>سایت خدماتی / نوبت‌دهی</li>
-      <li>منوی سبک و قابل ویرایش از ادمین</li>
-    </ul>
-  </div>
-</section>
+@include('studio::design')
+@endif
+
+@if($slug === 'design-service')
+@include('studio::design-service')
+@endif
+
+@if($slug === 'about')
+@include('studio::about')
 @endif
 
 @if($slug === 'ai')
@@ -126,11 +112,12 @@
 @endif
 
 @if($slug === 'contact')
+@php $contactCopy = $contactCopy ?? \App\Support\StudioDesignCopy::contact(); @endphp
 <section class="ag-page">
   <div class="ag-wrap">
-    <p class="ag-kicker">تماس</p>
-    <h1>درخواست مشاوره رایگان</h1>
-    <p class="ag-lead">برای طراحی سایت، نرم‌افزار هوشمند یا استقرار حسابداری، مستقیم با استودیو در ارتباط باشید.</p>
+    <p class="ag-kicker">تماس با فراز نت آمل</p>
+    <h1>{{ $contactCopy['title'] }}</h1>
+    <p class="ag-lead ag-lead--wide">{{ $contactCopy['lead'] }}</p>
     <div class="ag-actions">
       @if(!empty($studioHome['phone']))
         <a class="ag-btn ag-btn--on" href="tel:{{ preg_replace('/\s+/', '', $studioHome['phone']) }}">تماس {{ $studioHome['phone'] }}<i>←</i></a>

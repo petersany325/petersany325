@@ -14,6 +14,7 @@ class StudioHomeConfig
             'tagline' => 'تخصصی طراحی سایت و نرم‌افزار',
             'phone' => '01144447220',
             'show_search' => true,
+            'mobile_webapp' => true,
             'search_placeholder' => 'جستجو',
             'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nحسابداری وب|/accounting\nتعمیرگاه|/repair-shop\nنمونه کارها|/projects\nتماس|/contact",
             'hero_title' => 'طراحی سایت و نرم‌افزار',
@@ -97,7 +98,7 @@ class StudioHomeConfig
     public static function save(array $d): array
     {
         $s = self::get();
-        foreach (['enabled', 'show_search', 'services_enabled', 'stats_enabled', 'works_enabled'] as $k) {
+        foreach (['enabled', 'show_search', 'services_enabled', 'stats_enabled', 'works_enabled', 'mobile_webapp'] as $k) {
             $s[$k] = ! empty($d[$k]);
         }
         foreach ([
@@ -232,6 +233,25 @@ class StudioHomeConfig
         }
 
         return asset(ltrim($path, '/'));
+    }
+
+    public static function mobileWebAppOn(?array $s = null): bool
+    {
+        $s = $s ?? self::get();
+
+        return ! empty($s['enabled']) && ! empty($s['mobile_webapp']);
+    }
+
+    /** @return list<array{label:string,url:string,icon:string}> */
+    public static function mobileTabs(?array $s = null): array
+    {
+        return [
+            ['label' => 'خانه', 'url' => '/', 'icon' => '⌂'],
+            ['label' => 'طراحی', 'url' => '/design', 'icon' => '✎'],
+            ['label' => 'حسابداری', 'url' => '/accounting', 'icon' => '▤'],
+            ['label' => 'تعمیرگاه', 'url' => '/repair-shop', 'icon' => '⚒'],
+            ['label' => 'تماس', 'url' => '/contact', 'icon' => '☎'],
+        ];
     }
 
     /** @return list<array{label:string,url:string}> */

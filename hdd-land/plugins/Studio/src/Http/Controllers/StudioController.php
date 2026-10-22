@@ -3,10 +3,14 @@
 namespace Plugins\Studio\src\Http\Controllers;
 
 use App\Support\SiteHost;
+use App\Support\StudioDesignCopy;
+use App\Support\StudioHomeConfig;
 use App\Support\StudioProductMenus;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Plugins\Studio\Plugin as StudioPlugin;
+use Symfony\Component\HttpFoundation\Response;
 
 class StudioController
 {
@@ -23,7 +27,36 @@ class StudioController
 
     public function design(): View
     {
-        return $this->page('design', 'طراحی سایت');
+        return $this->page('design', StudioDesignCopy::seoTitle('design'), [
+            'description' => StudioDesignCopy::seoDescription('design'),
+            'hero' => StudioDesignCopy::hero(),
+            'aboutBlurb' => StudioDesignCopy::aboutBlurb(),
+            'services' => StudioDesignCopy::services(),
+            'reasons' => StudioDesignCopy::reasons(),
+            'steps' => StudioDesignCopy::steps(),
+        ]);
+    }
+
+    public function designService(string $slug): View|RedirectResponse
+    {
+        $item = StudioDesignCopy::service($slug);
+        if ($item === null) {
+            return redirect()->to(url('/design'));
+        }
+
+        return $this->page('design-service', $item['seo_title'], [
+            'description' => $item['seo_description'],
+            'service' => $item,
+        ]);
+    }
+
+    public function about(): View
+    {
+        return $this->page('about', StudioDesignCopy::seoTitle('about'), [
+            'description' => StudioDesignCopy::seoDescription('about'),
+            'aboutPage' => StudioDesignCopy::about(),
+            'reasons' => StudioDesignCopy::reasons(),
+        ]);
     }
 
     public function ai(): View
@@ -65,7 +98,10 @@ class StudioController
 
     public function contact(): View
     {
-        return $this->page('contact', 'تماس و مشاوره');
+        return $this->page('contact', StudioDesignCopy::seoTitle('contact'), [
+            'description' => StudioDesignCopy::seoDescription('contact'),
+            'contactCopy' => StudioDesignCopy::contact(),
+        ]);
     }
 
     public function sites(): View
@@ -125,6 +161,78 @@ class StudioController
         ]);
     }
 
+    public function manifest(): Response
+    {
+        $home = StudioHomeConfig::get();
+        $icon = url('images/hdd-land-icon-192.png');
+        $icon512 = url('images/hdd-land-icon-512.png');
+        $payload = [
+            'name' => 'فراز نت آمل',
+            'short_name' => 'فرازنت',
+            'description' => 'طراحی سایت حرفه‌ای، حسابداری وب و نرم‌افزار تعمیرگاه — فراز نت آمل',
+            'start_url' => url('/'),
+            'scope' => url('/'),
+            'display' => 'standalone',
+            'orientation' => 'portrait-primary',
+            'background_color' => $home['bg'] ?? '#070b18',
+            'theme_color' => $home['accent'] ?? '#7c5cff',
+            'lang' => 'fa',
+            'dir' => 'rtl',
+            'icons' => [
+                ['src' => $icon, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => $icon, 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'maskable'],
+                ['src' => $icon512, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => $icon512, 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+            ],
+            'shortcuts' => [
+                ['name' => 'طراحی سایت', 'url' => url('/design')],
+                ['name' => 'حسابداری وب', 'url' => url('/accounting')],
+                ['name' => 'تعمیرگاه', 'url' => url('/repair-shop')],
+                ['name' => 'تماس', 'url' => url('/contact')],
+            ],
+        ];
+
+        return response(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 200)
+            ->header('Content-Type', 'application/manifest+json; charset=UTF-8')
+            ->header('Cache-Control', 'no-cache');
+    }
+
+    public function serviceWorker(): Response
+    {
+        $js = <<<'JS'
+const CACHE = 'studio-wa-v1';
+const PRECACHE = ['/','/design','/accounting','/repair-shop','/contact','/about','/css/studio-agency.css'];
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE).catch(() => {})).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+});
+self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  if (url.origin !== self.location.origin) return;
+  e.respondWith(fetch(e.request).then((res) => {
+    const copy = res.clone();
+    caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+    return res;
+  }).catch(() => caches.match(e.request).then((hit) => hit || caches.match('/'))));
+});
+JS;
+
+        return response($js, 200)
+            ->header('Content-Type', 'application/javascript; charset=UTF-8')
+            ->header('Service-Worker-Allowed', '/')
+            ->header('Cache-Control', 'no-cache');
+    }
+
+    public function dismissBanner(Request $request): Response
+    {
+        $request->session()->put('studio_webapp_banner_dismissed', true);
+
+        return response()->json(['ok' => true]);
+    }
+
     /** @param  array<string, mixed>  $extra */
     protected function page(string $slug, string $title, array $extra = []): View
     {
@@ -133,6 +241,7 @@ class StudioController
         return view('studio::page', array_merge([
             'slug' => $slug,
             'title' => $title,
+            'description' => $extra['description'] ?? null,
             'menu' => SiteHost::studioMenu(),
             'receiptUrl' => SiteHost::receiptUrl(),
             'shopUrl' => SiteHost::shopUrl('/'),

@@ -73,15 +73,25 @@ class StudioProductMenus
 
         $products = self::headerItems();
         $insertAt = 1;
+        $hasDesign = false;
         foreach ($kept as $i => $item) {
             $url = rtrim((string) ($item['url'] ?? ''), '/') ?: '/';
-            if ($url === '/design') {
+            $label = trim((string) ($item['label'] ?? ''));
+            if ($url === '/design' || $label === 'طراحی سایت') {
+                if (class_exists(StudioDesignCopy::class)) {
+                    $kept[$i] = StudioDesignCopy::navItem();
+                }
                 $insertAt = $i + 1;
+                $hasDesign = true;
                 break;
             }
             if ($url === '/') {
                 $insertAt = $i + 1;
             }
+        }
+        if (! $hasDesign && class_exists(StudioDesignCopy::class)) {
+            array_splice($kept, $insertAt, 0, [StudioDesignCopy::navItem()]);
+            $insertAt++;
         }
 
         array_splice($kept, $insertAt, 0, $products);

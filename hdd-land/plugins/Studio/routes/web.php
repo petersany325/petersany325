@@ -3,7 +3,12 @@
 use Illuminate\Support\Facades\Route;
 use Plugins\Studio\src\Http\Controllers\StudioController;
 
+Route::get('/studio-manifest.webmanifest', [StudioController::class, 'manifest'])->name('studio.manifest');
+Route::get('/studio-sw.js', [StudioController::class, 'serviceWorker'])->name('studio.sw');
+Route::post('/studio-webapp/dismiss', [StudioController::class, 'dismissBanner'])->name('studio.webapp.dismiss');
 Route::get('/design', [StudioController::class, 'design'])->name('studio.design');
+Route::get('/design/{slug}', [StudioController::class, 'designService'])->name('studio.design.service');
+Route::get('/about', [StudioController::class, 'about'])->name('studio.about');
 Route::get('/ai', [StudioController::class, 'ai'])->name('studio.ai');
 Route::get('/accounting', [StudioController::class, 'accounting'])->name('studio.accounting');
 Route::get('/accounting/m/{slug}', [StudioController::class, 'accountingItem'])->name('studio.accounting.item');
