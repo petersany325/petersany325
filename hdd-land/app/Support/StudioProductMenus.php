@@ -33,25 +33,6 @@ class StudioProductMenus
                         ];
                     }, self::accountingGroups()),
             ],
-            [
-                'label' => 'تعمیرگاه',
-                'url' => '/repair-shop',
-                'children' => array_map(static function (array $section): array {
-                    $kids = [];
-                    foreach ($section['children'] ?? [] as $child) {
-                        $kids[] = [
-                            'label' => $child['title'],
-                            'url' => '/repair-shop/m/'.$child['slug'],
-                        ];
-                    }
-
-                    return [
-                        'label' => $section['title'],
-                        'url' => '/repair-shop/m/'.$section['slug'],
-                        'children' => $kids,
-                    ];
-                }, self::repairStaffTree()),
-            ],
         ];
     }
 
@@ -107,47 +88,63 @@ class StudioProductMenus
     }
 
     /**
-     * Web accounting is only the repair-shop technician ledger — not trade/desktop suites.
+     * Web accounting includes the full repair-shop menu (staff + customer).
      *
-     * @return list<array{label:string,url:string,children:list<array{label:string,url:string}>}>
+     * @return list<array{label:string,url:string,children:list<array{label:string,url:string,short?:string}>}>
      */
     public static function webAccountingNav(): array
     {
-        $accKids = [];
-        foreach (self::repairStaffTree() as $section) {
-            if (($section['slug'] ?? '') !== 'accounting') {
-                continue;
-            }
-            $accKids[] = [
-                'label' => 'میز حسابداری تعمیرگاه',
-                'url' => '/repair-shop/m/'.$section['slug'],
-            ];
-            foreach ($section['children'] ?? [] as $child) {
-                $accKids[] = [
-                    'label' => $child['title'],
-                    'url' => '/repair-shop/m/'.$child['slug'],
-                ];
-            }
-        }
-
-        return [
+        $groups = [
             [
-                'label' => 'حسابداری تعمیرکاران',
+                'label' => 'حسابداری وب تعمیرگاه',
                 'url' => '/accounting',
-                'children' => $accKids,
-            ],
-            [
-                'label' => 'قبض و صندوق وب',
-                'url' => '/repair-shop',
                 'children' => [
-                    ['label' => 'پذیرش جدید', 'url' => '/repair-shop/m/reception-new'],
-                    ['label' => 'جستجوی قبض', 'url' => '/repair-shop/m/receipt-search'],
-                    ['label' => 'لیست قبض‌ها', 'url' => '/repair-shop/m/receipt-list'],
-                    ['label' => 'تأیید هزینه', 'url' => '/repair-shop/m/cost-approval'],
-                    ['label' => 'صندوق و دریافت‌ها', 'url' => '/repair-shop/m/report-cash'],
+                    ['label' => 'معرفی حسابداری وب', 'url' => '/accounting', 'short' => 'دفتر تحت وب تعمیرکاران و وصل به قبض'],
+                    ['label' => 'سایت مدیریت تعمیرگاه', 'url' => '/repair-shop', 'short' => 'پذیرش، ارجاع، انبار و کارتابل نیرو'],
+                    ['label' => 'منوی کارکنان', 'url' => '/repair-shop/staff-menu', 'short' => 'همه بخش‌های کارتابل نیرو'],
+                    ['label' => 'کارتابل مشتری', 'url' => '/repair-shop/customer-menu', 'short' => 'پیگیری قبض، تأیید هزینه و پرداخت'],
                 ],
             ],
         ];
+
+        foreach (self::repairStaffTree() as $section) {
+            $kids = [];
+            foreach ($section['children'] ?? [] as $child) {
+                $kids[] = [
+                    'label' => $child['title'],
+                    'url' => '/repair-shop/m/'.$child['slug'],
+                    'short' => (string) ($child['short'] ?? $child['title']),
+                ];
+            }
+            if ($kids === []) {
+                $kids[] = [
+                    'label' => $section['title'],
+                    'url' => '/repair-shop/m/'.$section['slug'],
+                    'short' => (string) ($section['short'] ?? $section['title']),
+                ];
+            }
+            $groups[] = [
+                'label' => $section['title'],
+                'url' => '/repair-shop/m/'.$section['slug'],
+                'children' => $kids,
+            ];
+        }
+
+        $cust = [];
+        foreach (self::repairCustomerTree() as $row) {
+            $cust[] = [
+                'label' => $row['title'],
+                'url' => '/repair-shop/m/'.$row['slug'],
+                'short' => (string) ($row['short'] ?? $row['title']),
+            ];
+        }
+        $groups[] = [
+            'label' => 'کارتابل مشتری',
+            'url' => '/repair-shop/customer-menu',
+            'children' => $cust,
+        ];
+
+        return $groups;
     }
 
     /** @return list<array{slug:string,title:string,items:list<array{slug:string,title:string,short:string}>}> */
@@ -382,8 +379,8 @@ class StudioProductMenus
         return [
             [
                 'slug' => 'accounting',
-                'title' => 'حسابداری وب تعمیرکاران',
-                'short' => 'دفتر تحت وب تعمیرگاه: سند، معین، بدهکاران و وصل به قبض',
+                'title' => 'حسابداری وب و تعمیرگاه',
+                'short' => 'دفتر تحت وب تعمیرکاران به‌همراه پذیرش، قبض، ارجاع و کارتابل نیرو',
                 'url' => '/accounting',
             ],
             [

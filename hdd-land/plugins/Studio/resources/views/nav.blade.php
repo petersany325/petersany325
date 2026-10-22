@@ -35,6 +35,9 @@
           $url = $item['url'] ?? '#';
           $kids = $item['children'] ?? [];
           $on = $path === $url || ($url !== '/' && str_starts_with($path, rtrim($url, '/').'/'));
+          if (! $on && $url === '/accounting' && str_starts_with($path, '/repair-shop')) {
+            $on = true;
+          }
           if (! $on) {
             foreach ($kids as $col) {
               $cu = $col['url'] ?? '';

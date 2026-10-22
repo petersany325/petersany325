@@ -69,8 +69,8 @@ class StudioController
     {
         $web = StudioProductMenus::webAccountingNav();
 
-        return $this->page('accounting-web', 'حسابداری وب تعمیرکاران | فراز نت آمل', [
-            'description' => 'حسابداری تحت وب فقط برای تعمیرکاران و قبض تعمیرگاه. بقیه صنوف حسابداری کامپیوتری با SQL Server 2022 هستند.',
+        return $this->page('accounting-web', 'حسابداری وب و تعمیرگاه | فراز نت آمل', [
+            'description' => 'حسابداری وب تعمیرکاران به‌همراه منوی کامل تعمیرگاه: پذیرش، قبض، ارجاع و صندوق. بقیه صنوف حسابداری کامپیوتری با SQL Server 2022 هستند.',
             'webGroups' => $web,
         ]);
     }

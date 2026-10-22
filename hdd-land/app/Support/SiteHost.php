@@ -104,7 +104,6 @@ class SiteHost
             ['label' => 'درباره ما', 'url' => '/about'],
             ['label' => 'حسابداری وب', 'url' => '/accounting'],
             ['label' => 'حسابداری کامپیوتر', 'url' => '/computer-accounting'],
-            ['label' => 'تعمیرگاه', 'url' => '/repair-shop'],
             ['label' => 'پروژه AI', 'url' => '/ai'],
             ['label' => 'پروژه‌های سایت', 'url' => '/projects'],
             ['label' => 'نرم‌افزار قبض تحت وب', 'url' => '/receipt-software'],
