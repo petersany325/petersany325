@@ -98,6 +98,64 @@
 .ag-foot{margin-top:0 !important;background:#050814;border-top:1px solid rgba(255,255,255,.06);color:#8e97b8}
 .ag-foot .ag-wrap{display:flex;justify-content:space-between;gap:.8rem;flex-wrap:wrap;font-size:.78rem;padding:1.15rem 0}
 .ag-foot a{color:#c9d0ea}
+
+/* Inner studio pages — same navy / purple as the first page */
+.ag-page{padding:3.2rem 0 2.8rem}
+.ag-page h1{margin:0 0 .8rem;font-size:clamp(2rem,5vw,3.2rem);line-height:1.18;color:#fff;font-weight:850}
+.ag-kicker{margin:0 0 .55rem;color:var(--ag-accent);font-size:.78rem;font-weight:800}
+.ag-lead{margin:0 0 1.3rem;color:#9aa3c7;line-height:1.9;max-width:48ch}
+.ag-list{margin:1.35rem 0 0;padding:0;list-style:none;display:grid;gap:.7rem}
+.ag-list li{
+  background:#101628;border:1px solid rgba(255,255,255,.06);border-radius:18px;
+  padding:1rem 1.15rem;color:#eef2ff;font-weight:750;
+}
+.ag-note{margin:1.2rem 0 0;background:#101628;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:1rem 1.1rem;color:#9aa3c7;line-height:1.8}
+.ag-note a{color:#c9d0ea}
+.ag-body .st-hero,.ag-body .acc-hero{
+  padding:3.2rem 0 1.4rem;
+  background:transparent;
+}
+.ag-body .st-hero__glow,.ag-body .acc-hero__glow,.ag-body .acc-hero__grid{display:none}
+.ag-body .st-kicker,.ag-body .acc-kicker{color:var(--ag-accent) !important}
+.ag-body .st-hero h1,.ag-body .acc-copy h1{color:#fff;text-shadow:none;max-width:16ch}
+.ag-body .st-hero p,.ag-body .st-lead,.ag-body .acc-lead,.ag-body .acc-sub,.ag-body .acc-rule{color:#9aa3c7}
+.ag-body .st-cta{display:inline-flex;align-items:center;gap:.45rem;border-radius:999px;padding:.68rem 1.2rem;font-weight:800;font-size:.84rem;text-decoration:none;border:0}
+.ag-body .st-cta--on{background:var(--ag-accent);color:#fff;box-shadow:0 10px 24px rgba(124,92,255,.35)}
+.ag-body .st-cta--line{background:transparent;color:#d7ddf5;border:1px solid rgba(255,255,255,.16)}
+.ag-body .st-card,.ag-body .st-list li,.ag-body .st-note,.ag-body .acc-jobs article,.ag-body .acc-mods li,.ag-body .acc-ledger{
+  background:#101628 !important;
+  border:1px solid rgba(255,255,255,.06) !important;
+  box-shadow:none;
+  color:#eef2ff;
+}
+.ag-body .st-card small,.ag-body .acc-jobs small{color:var(--ag-accent)}
+.ag-body .st-card:hover{border-color:rgba(124,92,255,.45);box-shadow:0 10px 24px rgba(124,92,255,.16);transform:translateY(-2px)}
+.ag-body .st-note a,.ag-body .acc-mods li{color:#c9d0ea}
+.ag-body .acc-sec h2,.ag-body .st-sec h2{color:#fff}
+.ag-body .acc-ledger__bar{background:linear-gradient(180deg,#1a2140,#12182b);color:#eef2ff}
+.ag-body .acc-ledger__bar em{background:var(--ag-accent);color:#fff}
+.ag-body .acc-ledger th{color:#8e97b8}
+.ag-body .acc-ledger td:nth-child(2),.ag-body .acc-ledger td:nth-child(3){color:#c9d0ea}
+.ag-body .acc-ledger__ai{background:rgba(124,92,255,.08);border-top:1px solid rgba(124,92,255,.22)}
+.ag-body .acc-ledger__ai small{color:#c4b5ff}
+.ag-body .acc-ledger__ai p{color:#d7ddf5}
+
+/* Storefront / contact / about when they sit on the studio host */
+.ag-body .site-main,.ag-body .container{color:#eef2ff}
+.ag-body .site-main h1,.ag-body .site-main h2,.ag-body .site-main h3{color:#fff}
+.ag-body .site-main p,.ag-body .muted,.ag-body .breadcrumb,.ag-body nav[aria-label="مسیر"]{color:#9aa3c7}
+.ag-body .site-main a{color:#c9d0ea}
+.ag-body .site-main .btn,.ag-body .site-main button[type=submit],.ag-body .site-main .btn-hl-primary{
+  background:var(--ag-accent);color:#fff;border:0;border-radius:999px;
+}
+.ag-body input,.ag-body textarea,.ag-body select{
+  background:#101628;color:#eef2ff;border:1px solid rgba(255,255,255,.12);border-radius:12px;
+}
+.ag-body .card,.ag-body .panel,.ag-body .box,.ag-body .contact-card,.ag-body .ticket-card{
+  background:#101628;border:1px solid rgba(255,255,255,.06);color:#eef2ff;
+}
+.ag-body.has-wa-tabbar{padding-bottom:0}
+.ag-body .wa-tabbar,.ag-body .wa-install,.ag-body .topbar,.ag-body .hl-searchbar{display:none !important}
 @media (max-width:980px){
   .ag-head__bar{flex-wrap:wrap}
   .ag-hero__grid,.ag-cards,.ag-stats,.ag-works__grid{grid-template-columns:1fr 1fr}

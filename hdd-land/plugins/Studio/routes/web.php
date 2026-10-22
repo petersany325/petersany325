@@ -8,3 +8,4 @@ Route::get('/ai', [StudioController::class, 'ai'])->name('studio.ai');
 Route::get('/accounting', [StudioController::class, 'accounting'])->name('studio.accounting');
 Route::get('/projects', [StudioController::class, 'projects'])->name('studio.projects');
 Route::get('/receipt-software', [StudioController::class, 'receiptSoftware'])->name('studio.receipt');
+Route::get('/contact', [StudioController::class, 'contact'])->name('studio.contact');

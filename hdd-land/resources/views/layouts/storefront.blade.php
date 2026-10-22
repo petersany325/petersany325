@@ -1,3 +1,50 @@
+@php
+  $studioAgency = false;
+  $studioHome = [];
+  try {
+      $studioAgency = class_exists(\App\Support\SiteHost::class)
+          && \App\Support\SiteHost::isStudio()
+          && class_exists(\App\Support\StudioHomeConfig::class)
+          && ! empty(\App\Support\StudioHomeConfig::get()['enabled']);
+      if ($studioAgency) {
+          $studioHome = \App\Support\StudioHomeConfig::get();
+          \Plugins\Studio\Plugin::registerViews();
+      }
+  } catch (\Throwable $e) {
+      $studioAgency = false;
+  }
+@endphp
+@if($studioAgency)
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>@yield('title', ($studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار').' | سرزمین هارد')</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
+  <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=16">
+  <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=4">
+</head>
+<body class="st-body ag-body" style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}">
+@include('studio::nav', ['studioHome' => $studioHome, 'agency' => true])
+<main class="site-main">
+  @if(session('success'))<div class="ag-note" style="margin:1rem auto;width:min(1180px,calc(100% - 2.2rem))">{{ session('success') }}</div>@endif
+  @yield('content')
+</main>
+<footer class="st-foot ag-foot">
+  <div class="ag-wrap">
+    <span>hdd-land.ir — {{ $studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار' }}</span>
+    <span>
+      <a href="{{ \App\Support\SiteHost::shopUrl('/') }}">فروشگاه قطعات</a>
+      ·
+      <a href="{{ \App\Support\SiteHost::receiptUrl() }}" rel="noopener">سامانه قبض</a>
+    </span>
+  </div>
+</footer>
+</body>
+</html>
+@else
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head><meta charset="utf-8">
@@ -210,3 +257,4 @@
 @endif
 </body>
 </html>
+@endif

@@ -6,14 +6,14 @@
   <div class="acc-hero__grid" aria-hidden="true"></div>
   <div class="acc-hero__glow acc-hero__glow--steel" aria-hidden="true"></div>
   <div class="acc-hero__glow acc-hero__glow--amber" aria-hidden="true"></div>
-  <div class="st-wrap acc-hero__in">
+  <div class="ag-wrap st-wrap acc-hero__in">
     <div class="acc-copy">
       <p class="acc-kicker">محصول پرچم استودیو</p>
       <h1>نرم‌افزار پیشرفته حسابداری هوش مصنوعی</h1>
       <p class="acc-lead">دفتر واقعی برای فاکتور، سند، انبار و گزارش. هوش مصنوعی فقط پیش‌نویس می‌دهد؛ سند وقتی قطعی است که حسابدار تأیید کند.</p>
-      <div class="st-actions">
-        <a class="st-cta st-cta--on" href="{{ url('/contact') }}">درخواست دمو حسابداری</a>
-        <a class="st-cta st-cta--line" href="{{ url('/ai') }}">لایه AI جداگانه</a>
+      <div class="ag-actions st-actions">
+        <a class="ag-btn ag-btn--on st-cta st-cta--on" href="{{ url('/contact') }}">درخواست دمو حسابداری<i>←</i></a>
+        <a class="ag-btn ag-btn--line st-cta st-cta--line" href="{{ url('/ai') }}">لایه AI جداگانه<i>←</i></a>
       </div>
       <p class="acc-rule">ادعای بستن خودکار دفاتر مالیاتی نداریم. این نرم‌افزار کمک‌حسابدار است، نه جایگزین ممیز.</p>
     </div>
@@ -47,7 +47,7 @@
   </div>
 </section>
 
-<section class="st-wrap acc-sec">
+<section class="ag-wrap st-wrap acc-sec">
   <h2>هوش مصنوعی کجا حق دارد وارد شود</h2>
   <p class="acc-sub">چهار کار مشخص. بدون شعار «هوش مصنوعی همه‌کاره».</p>
   <div class="acc-jobs">
@@ -74,7 +74,7 @@
   </div>
 </section>
 
-<section class="st-wrap acc-sec">
+<section class="ag-wrap st-wrap acc-sec">
   <h2>دفتر حسابداری، کامل</h2>
   <p class="acc-sub">هوش مصنوعی روی همین دفتر سوار است. اگر سند و انبار نباشد، AI تزئین است.</p>
   <ul class="acc-mods">
@@ -87,7 +87,7 @@
   </ul>
 </section>
 
-<section class="st-wrap acc-sec acc-sec--last">
+<section class="ag-wrap st-wrap acc-sec acc-sec--last">
   <div class="acc-split">
     <div>
       <h2>برای چه کسی است</h2>

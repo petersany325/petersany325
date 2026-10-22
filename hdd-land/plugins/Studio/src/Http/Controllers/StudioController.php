@@ -44,6 +44,11 @@ class StudioController
         return $this->page('receipt', 'نرم‌افزار قبض تحت وب');
     }
 
+    public function contact(): View
+    {
+        return $this->page('contact', 'تماس و مشاوره');
+    }
+
     protected function page(string $slug, string $title): View
     {
         StudioPlugin::ensureBooted();
