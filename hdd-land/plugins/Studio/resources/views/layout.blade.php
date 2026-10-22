@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
   <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=16">
   @if($agency)
-    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=7">
+    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=8">
   @endif
 </head>
 <body class="st-body{{ $agency ? ' ag-body' : '' }}{{ ($agency && class_exists(\App\Support\StudioHomeConfig::class) && \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome)) ? ' has-ag-tabbar' : '' }}"@if($agency) style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}"@endif>

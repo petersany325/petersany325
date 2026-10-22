@@ -70,7 +70,7 @@
       <div class="ag-actions">
         <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">شروع پروژه مشابه<i>←</i></a>
       </div>
-      <div class="ag-cards" style="margin-top:1.6rem">
+      <div class="ag-cards ag-cards--dense" style="margin-top:1rem">
         <div class="ag-card"><i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11 12 4l8 7v9H4z"/><path d="M9 20v-6h6v6"/></svg></i><div><b>مدیریت تعمیرگاه</b><p>پذیرش، قبض، ارجاع و تحویل.</p></div></div>
         <div class="ag-card"><i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 18V6M4 18h16"/><path d="m8 14 3-4 3 3 5-7"/></svg></i><div><b>دفتر متصل به فروش</b><p>یک فروش = یک سند.</p></div></div>
         <div class="ag-card"><i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></i><div><b>وب‌اپ و کارت ویزیت</b><p>نصب روی گوشی و عضویت پیامکی.</p></div></div>
@@ -124,7 +124,7 @@
       @endif
       <a class="ag-btn ag-btn--line" href="{{ $shopUrl }}">فروشگاه قطعات<i>←</i></a>
     </div>
-    <div class="ag-cards" style="margin-top:1.6rem">
+    <div class="ag-cards ag-cards--dense" style="margin-top:1rem">
       <a class="ag-card" href="tel:{{ preg_replace('/\s+/', '', $studioHome['phone'] ?? '01144447220') }}">
         <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h3l1.5 4-2 1.5a12 12 0 0 0 6 6L17 13l4 1.5V18a2 2 0 0 1-2 2A16 16 0 0 1 5 6a2 2 0 0 1 2-2z"/></svg></i>
         <div><b>تلفن استودیو</b><p>{{ $studioHome['phone'] ?? '01144447220' }}</p></div>
@@ -152,7 +152,7 @@
     <p class="ag-kicker">نرم‌افزار تحت وب</p>
     <h1>حسابداری وب و مدیریت تعمیرگاه</h1>
     <p class="ag-lead">همان منوهایی که در سایت قبلی بود؛ هر مورد صفحه معرفی خودش را دارد.</p>
-    <div class="ag-cards" style="margin-top:1.4rem">
+    <div class="ag-cards ag-cards--dense" style="margin-top:1rem">
       @foreach(($catalog ?? []) as $row)
         <a class="ag-card" href="{{ url($row['url']) }}">
           <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v12H4z"/><path d="M8 7V5h8v2"/></svg></i>

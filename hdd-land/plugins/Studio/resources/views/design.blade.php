@@ -30,7 +30,7 @@
   <div class="ag-wrap">
     <p class="ag-kicker">خدمات ما</p>
     <h2>از سایت شرکتی تا سامانه اختصاصی لاراول</h2>
-    <div class="ag-cards">
+    <div class="ag-cards ag-cards--dense">
       @foreach($services as $row)
         <a class="ag-card" href="{{ url('/design/'.$row['slug']) }}">
           <div>
