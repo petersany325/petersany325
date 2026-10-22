@@ -7,6 +7,15 @@
   $items = $agency && class_exists(\App\Support\StudioHomeConfig::class)
     ? \App\Support\StudioHomeConfig::navItems($studioHome)
     : ($menu ?? \App\Support\SiteHost::studioMenu());
+  if ($agency && class_exists(\App\Support\StudioProductMenus::class)) {
+    $hasKids = false;
+    foreach ($items as $it) {
+      if (! empty($it['children'])) { $hasKids = true; break; }
+    }
+    if (! $hasKids) {
+      $items = \App\Support\StudioProductMenus::attachToNav($items);
+    }
+  }
 @endphp
 @if($agency)
 <header class="ag-head">
@@ -22,8 +31,38 @@
     </a>
     <nav class="ag-nav" aria-label="منوی استودیو">
       @foreach($items as $item)
-        @php $url = $item['url'] ?? '#'; $on = $path === $url || ($url !== '/' && str_starts_with($path, rtrim($url, '/').'/')); @endphp
-        <a href="{{ url($url) }}" class="{{ $on ? 'is-on' : '' }}">{{ $item['label'] }}</a>
+        @php
+          $url = $item['url'] ?? '#';
+          $kids = $item['children'] ?? [];
+          $on = $path === $url || ($url !== '/' && str_starts_with($path, rtrim($url, '/').'/'));
+          if (! $on) {
+            foreach ($kids as $col) {
+              $cu = $col['url'] ?? '';
+              if ($cu && ($path === $cu || str_starts_with($path, rtrim($cu, '/').'/'))) { $on = true; break; }
+              foreach ($col['children'] ?? [] as $leaf) {
+                $lu = $leaf['url'] ?? '';
+                if ($lu && ($path === $lu || str_starts_with($path, rtrim($lu, '/').'/'))) { $on = true; break 2; }
+              }
+            }
+          }
+        @endphp
+        @if(count($kids))
+          <div class="ag-drop">
+            <a href="{{ url($url) }}" class="ag-drop__btn {{ $on ? 'is-on' : '' }}" aria-haspopup="true">{{ $item['label'] }} <i>▾</i></a>
+            <div class="ag-drop__panel" role="menu">
+              @foreach($kids as $col)
+                <div class="ag-drop__col">
+                  <a class="ag-drop__h" href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
+                  @foreach($col['children'] ?? [] as $leaf)
+                    <a href="{{ url($leaf['url'] ?? '#') }}">{{ $leaf['label'] }}</a>
+                  @endforeach
+                </div>
+              @endforeach
+            </div>
+          </div>
+        @else
+          <a href="{{ url($url) }}" class="{{ $on ? 'is-on' : '' }}">{{ $item['label'] }}</a>
+        @endif
       @endforeach
     </nav>
     <div class="ag-tools">

@@ -148,9 +148,47 @@
       </a>
       <a class="ag-card" href="{{ url('/accounting') }}">
         <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11 12 4l8 7v9H4z"/></svg></i>
-        <div><b>نرم‌افزار هوشمند</b><p>حسابداری و پنل با لایه هوش مصنوعی</p></div>
+        <div><b>حسابداری وب</b><p>فاکتور، سند، انبار و گزارش با لایه هوش مصنوعی</p></div>
+      </a>
+      <a class="ag-card" href="{{ url('/repair-shop') }}">
+        <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v12H4z"/><path d="M8 7V5h8v2"/></svg></i>
+        <div><b>تعمیرگاه</b><p>پذیرش، ارجاع تعمیرکار و کارتابل مشتری</p></div>
       </a>
     </div>
   </div>
 </section>
+@endif
+
+@if($slug === 'sites')
+<section class="ag-page">
+  <div class="ag-wrap">
+    <p class="ag-kicker">نرم‌افزار تحت وب</p>
+    <h1>حسابداری وب و مدیریت تعمیرگاه</h1>
+    <p class="ag-lead">همان منوهایی که در سایت قبلی بود؛ هر مورد صفحه معرفی خودش را دارد.</p>
+    <div class="ag-cards" style="margin-top:1.4rem">
+      @foreach(($catalog ?? []) as $row)
+        <a class="ag-card" href="{{ url($row['url']) }}">
+          <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v12H4z"/><path d="M8 7V5h8v2"/></svg></i>
+          <div><b>{{ $row['title'] }}</b><p>{{ $row['short'] }}</p><small>مشاهده منوها ←</small></div>
+        </a>
+      @endforeach
+    </div>
+  </div>
+</section>
+@endif
+
+@if($slug === 'repair')
+@include('studio::repair-hub')
+@endif
+
+@if($slug === 'repair-staff')
+@include('studio::repair-tree', ['kind' => 'staff'])
+@endif
+
+@if($slug === 'repair-customer')
+@include('studio::repair-tree', ['kind' => 'customer'])
+@endif
+
+@if($slug === 'product-item')
+@include('studio::product-item')
 @endif

@@ -49,7 +49,8 @@
           <label>تلفن<input name="phone" value="{{ $f('phone') }}"></label>
           <label>متن جستجو<input name="search_placeholder" value="{{ $f('search_placeholder') }}"></label>
         </div>
-        <label>منوی هدر — هر خط: عنوان|آدرس<textarea name="nav" rows="6">{{ $f('nav') }}</textarea></label>
+        <label>منوی هدر — هر خط: عنوان|آدرس<textarea name="nav" rows="7">{{ $f('nav') }}</textarea></label>
+        <p class="hint">منوهای «حسابداری وب» و «تعمیرگاه» با زیرمنوی کامل (فاکتور، سند، پذیرش، ارجاع، کارمندان…) همیشه به هدر اضافه می‌شوند؛ حتی اگر در این جعبه نباشند.</p>
         <div class="row2">
           <label>رنگ تأکید
             <span class="color">

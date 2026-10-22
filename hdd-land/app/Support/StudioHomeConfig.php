@@ -15,7 +15,7 @@ class StudioHomeConfig
             'phone' => '01144447220',
             'show_search' => true,
             'search_placeholder' => 'جستجو',
-            'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nنمونه کارها|/projects\nنرم‌افزار|/accounting\nتماس|/contact",
+            'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nحسابداری وب|/accounting\nتعمیرگاه|/repair-shop\nنمونه کارها|/projects\nتماس|/contact",
             'hero_title' => 'طراحی سایت و نرم‌افزار',
             'hero_em' => 'نرم‌افزار',
             'hero_text' => 'طراحی حرفه‌ای وب‌سایت مدرن و نرم‌افزار هوشمند برای کسب‌وکار، فروشگاه و سازمان — با لایه هوش مصنوعی.',
@@ -133,10 +133,15 @@ class StudioHomeConfig
         return $s;
     }
 
-    /** @return list<array{label:string,url:string}> */
+    /** @return list<array{label:string,url:string,children?:list<array<string,mixed>>}> */
     public static function navItems(?array $s = null): array
     {
-        return self::lines(($s ?? self::get())['nav'] ?? '');
+        $items = self::lines(($s ?? self::get())['nav'] ?? '');
+        if (class_exists(StudioProductMenus::class)) {
+            return StudioProductMenus::attachToNav($items);
+        }
+
+        return $items;
     }
 
     /** @return list<array{title:string,text:string,url:string}> */

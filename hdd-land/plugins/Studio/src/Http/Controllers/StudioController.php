@@ -3,7 +3,9 @@
 namespace Plugins\Studio\src\Http\Controllers;
 
 use App\Support\SiteHost;
+use App\Support\StudioProductMenus;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Plugins\Studio\Plugin as StudioPlugin;
 
 class StudioController
@@ -31,7 +33,24 @@ class StudioController
 
     public function accounting(): View
     {
-        return $this->page('accounting', 'نرم‌افزار پیشرفته حسابداری هوش مصنوعی');
+        return $this->page('accounting', 'حسابداری وب', [
+            'groups' => StudioProductMenus::accountingGroups(),
+        ]);
+    }
+
+    public function accountingItem(string $slug): View|RedirectResponse
+    {
+        $item = StudioProductMenus::find('accounting', $slug);
+        if ($item === null) {
+            return redirect()->to(url('/accounting'));
+        }
+
+        return $this->page('product-item', $item['title'].' | حسابداری وب', [
+            'item' => $item,
+            'hubUrl' => '/accounting',
+            'hubLabel' => 'حسابداری وب',
+            'groups' => StudioProductMenus::accountingGroups(),
+        ]);
     }
 
     public function projects(): View
@@ -49,16 +68,71 @@ class StudioController
         return $this->page('contact', 'تماس و مشاوره');
     }
 
-    protected function page(string $slug, string $title): View
+    public function sites(): View
+    {
+        return $this->page('sites', 'نرم‌افزار حسابداری وب و تعمیرگاه', [
+            'catalog' => StudioProductMenus::catalog(),
+        ]);
+    }
+
+    public function sitesSlug(string $slug): View|RedirectResponse
+    {
+        if ($slug === 'accounting') {
+            return redirect()->to(url('/accounting'));
+        }
+
+        return $this->sites();
+    }
+
+    public function repairShop(): View
+    {
+        return $this->page('repair', 'سایت مدیریت تعمیرگاه', [
+            'staff' => StudioProductMenus::repairStaffTree(),
+            'customer' => StudioProductMenus::repairCustomerTree(),
+        ]);
+    }
+
+    public function repairStaffMenu(): View
+    {
+        return $this->page('repair-staff', 'منوی کارکنان تعمیرگاه', [
+            'staff' => StudioProductMenus::repairStaffTree(),
+        ]);
+    }
+
+    public function repairCustomerMenu(): View
+    {
+        return $this->page('repair-customer', 'منوی کارتابل مشتری', [
+            'customer' => StudioProductMenus::repairCustomerTree(),
+        ]);
+    }
+
+    public function repairItem(string $slug): View|RedirectResponse
+    {
+        $item = StudioProductMenus::find('repair', $slug);
+        if ($item === null) {
+            return redirect()->to(url('/repair-shop'));
+        }
+
+        return $this->page('product-item', $item['title'].' | تعمیرگاه', [
+            'item' => $item,
+            'hubUrl' => ($item['menu'] ?? '') === 'customer' ? '/repair-shop/customer-menu' : '/repair-shop/staff-menu',
+            'hubLabel' => ($item['menu'] ?? '') === 'customer' ? 'منوی کارتابل مشتری' : 'منوی کارکنان',
+            'staff' => StudioProductMenus::repairStaffTree(),
+            'customer' => StudioProductMenus::repairCustomerTree(),
+        ]);
+    }
+
+    /** @param  array<string, mixed>  $extra */
+    protected function page(string $slug, string $title, array $extra = []): View
     {
         StudioPlugin::ensureBooted();
 
-        return view('studio::page', [
+        return view('studio::page', array_merge([
             'slug' => $slug,
             'title' => $title,
             'menu' => SiteHost::studioMenu(),
             'receiptUrl' => SiteHost::receiptUrl(),
             'shopUrl' => SiteHost::shopUrl('/'),
-        ]);
+        ], $extra));
     }
 }

@@ -76,15 +76,20 @@
 
 <section class="ag-wrap st-wrap acc-sec">
   <h2>دفتر حسابداری، کامل</h2>
-  <p class="acc-sub">هوش مصنوعی روی همین دفتر سوار است. اگر سند و انبار نباشد، AI تزئین است.</p>
-  <ul class="acc-mods">
-    <li>کدینگ حساب و سند روزانه</li>
-    <li>فاکتور فروش، خرید و پیش‌فاکتور</li>
-    <li>انبار، سریال کالا و کاردکس</li>
-    <li>اقساط، دسته چک و خزانه</li>
-    <li>تراز آزمایشی، سود و زیان، ترازنامه</li>
-    <li>اتصال فروش سایت به همان سند</li>
-  </ul>
+  <p class="acc-sub">هوش مصنوعی روی همین دفتر سوار است. اگر سند و انبار نباشد، AI تزئین است. منوهای حسابداری وب مثل سایت قبلی این‌جا هستند.</p>
+  <div class="ag-menu-grid">
+    @foreach(($groups ?? []) as $group)
+      <article class="ag-menu-card" id="{{ $group['slug'] }}">
+        <small>حسابداری وب</small>
+        <b>{{ $group['title'] }}</b>
+        <ul>
+          @foreach($group['items'] as $mod)
+            <li><a href="{{ url('/accounting/m/'.$mod['slug']) }}">{{ $mod['title'] }}</a></li>
+          @endforeach
+        </ul>
+      </article>
+    @endforeach
+  </div>
 </section>
 
 <section class="ag-wrap st-wrap acc-sec acc-sec--last">

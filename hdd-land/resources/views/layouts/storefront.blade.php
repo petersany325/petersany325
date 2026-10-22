@@ -24,7 +24,7 @@
   <title>@if(request()->is('contact'))تماس و مشاوره | سرزمین هارد@else@yield('title', ($studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار').' | سرزمین هارد')@endif</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
   <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=16">
-  <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=4">
+  <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=5">
 </head>
 <body class="st-body ag-body" style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}">
 @include('studio::nav', ['studioHome' => $studioHome, 'agency' => true])
@@ -40,6 +40,10 @@
   <div class="ag-wrap">
     <span>hdd-land.ir — {{ $studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار' }}</span>
     <span>
+      <a href="{{ url('/accounting') }}">حسابداری وب</a>
+      ·
+      <a href="{{ url('/repair-shop') }}">تعمیرگاه</a>
+      ·
       <a href="{{ \App\Support\SiteHost::shopUrl('/') }}">فروشگاه قطعات</a>
       ·
       <a href="{{ \App\Support\SiteHost::receiptUrl() }}" rel="noopener">سامانه قبض</a>
