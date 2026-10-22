@@ -17,7 +17,7 @@ class Plugin extends BasePlugin
 
     public function name(): string
     {
-        return 'استودیو سایت و نرم‌افزار';
+        return 'تخصصی طراحی سایت و نرم‌افزار';
     }
 
     public function description(): string

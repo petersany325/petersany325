@@ -6,7 +6,7 @@
   <title>@yield('title', 'تخصصی طراحی سایت و نرم‌افزار | سرزمین هارد')</title>
   <meta name="description" content="@yield('description', 'شرکت تخصصی طراحی سایت و نرم‌افزار سرزمین هارد، با لایه هوش مصنوعی.')">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-  <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=14">
+  <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=15">
 </head>
 <body class="st-body">
 @include('studio::nav')
