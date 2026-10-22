@@ -6,11 +6,13 @@ class StudioHomeConfig
 {
     public const KEY = 'studio_agency_home';
 
+    public const BRAND = 'شرکت فراز نت آمل (سرزمین هارد)';
+
     public static function defaults(): array
     {
         return [
             'enabled' => true,
-            'brand' => 'سرزمین هارد',
+            'brand' => self::BRAND,
             'tagline' => 'تخصصی طراحی سایت و نرم‌افزار',
             'phone' => '01144447220',
             'show_search' => true,
@@ -91,7 +93,14 @@ class StudioHomeConfig
             $raw = json_decode($raw, true) ?: [];
         }
 
-        return array_merge(self::defaults(), is_array($raw) ? $raw : []);
+        $merged = array_merge(self::defaults(), is_array($raw) ? $raw : []);
+        $brand = trim((string) ($merged['brand'] ?? ''));
+        $legacy = ['', 'سرزمین هارد', 'سرزمین‌هارد', 'HDD Land', 'hdd land', 'Hdd Land'];
+        if (in_array($brand, $legacy, true)) {
+            $merged['brand'] = self::BRAND;
+        }
+
+        return $merged;
     }
 
     /** @param  array<string, mixed>  $d */
@@ -102,7 +111,7 @@ class StudioHomeConfig
             $s[$k] = ! empty($d[$k]);
         }
         foreach ([
-            'brand' => 80, 'tagline' => 120, 'phone' => 40, 'search_placeholder' => 80,
+            'brand' => 90, 'tagline' => 120, 'phone' => 40, 'search_placeholder' => 80,
             'nav' => 2000,
             'hero_title' => 160, 'hero_em' => 80, 'hero_text' => 500,
             'cta1_label' => 60, 'cta1_url' => 300, 'cta2_label' => 60, 'cta2_url' => 300,

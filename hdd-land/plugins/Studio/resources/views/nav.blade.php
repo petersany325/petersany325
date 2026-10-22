@@ -25,7 +25,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11 12 3l8 8v9H4z"/><path d="M9 20v-7h6v7"/></svg>
       </span>
       <span>
-        <b>{{ $studioHome['brand'] ?? 'سرزمین هارد' }}</b>
+        <b>{{ $studioHome['brand'] ?? 'شرکت فراز نت آمل (سرزمین هارد)' }}</b>
         <span>{{ $studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار' }}</span>
       </span>
     </a>
@@ -108,7 +108,7 @@
     <a class="st-brand" href="{{ url('/') }}">
       <i class="st-mark" aria-hidden="true"></i>
       <span>
-        <b>سرزمین هارد</b>
+        <b>شرکت فراز نت آمل (سرزمین هارد)</b>
         <span>تخصصی طراحی سایت و نرم‌افزار</span>
       </span>
     </a>

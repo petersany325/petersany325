@@ -13,9 +13,10 @@
   <link rel="apple-touch-icon" href="{{ $iconSrc }}">
   <link rel="icon" type="image/png" sizes="192x192" href="{{ $iconSrc }}">
   <title>{{ $title ?? ($s['app_name'] ?? 'سرزمین هارد') }}</title>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=21">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=24">
 </head>
 @php
   $anim = !empty($s['animations']);

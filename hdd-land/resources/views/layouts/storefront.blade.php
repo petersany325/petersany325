@@ -30,9 +30,11 @@
     <meta name="apple-mobile-web-app-title" content="فرازنت">
     <link rel="apple-touch-icon" href="{{ asset('images/hdd-land-icon-192.png') }}">
   @endif
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-  <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=16">
-  <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=10">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap">
+  <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=17">
+  <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=12">
 </head>
 <body class="st-body ag-body{{ \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome) ? ' has-ag-tabbar' : '' }}" style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}">
 @include('studio::nav', ['studioHome' => $studioHome, 'agency' => true])
@@ -102,13 +104,14 @@
       <meta property="og:url" content="{{ url()->current() }}"><meta property="og:type" content="website">
     @endif
     <title>@yield('title', \App\Models\Setting::getValue('shop_name', config('app.name', 'فروشگاه'))) </title>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=67">
-    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=49">
-    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=9">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=68">
+    <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=50">
+    <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=10">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=4">
-    <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=23">
+    <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=24">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
     @endif

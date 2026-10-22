@@ -18,10 +18,12 @@
     <meta name="apple-mobile-web-app-title" content="فرازنت">
     <link rel="apple-touch-icon" href="{{ asset('images/hdd-land-icon-192.png') }}">
   @endif
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/estedad-font@v7.0.0/dist/Estedad-Variable.css">
-  <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=16">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap">
+  <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=17">
   @if($agency)
-    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=10">
+    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=12">
   @endif
 </head>
 <body class="st-body{{ $agency ? ' ag-body' : '' }}{{ ($agency && class_exists(\App\Support\StudioHomeConfig::class) && \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome)) ? ' has-ag-tabbar' : '' }}"@if($agency) style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}"@endif>
@@ -31,7 +33,7 @@
 </main>
 <footer class="st-foot{{ $agency ? ' ag-foot' : '' }}">
   <div class="{{ $agency ? 'ag-wrap' : 'st-wrap' }}">
-    <span>hdd-land.ir — {{ $studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار' }}</span>
+    <span>{{ $studioHome['brand'] ?? 'شرکت فراز نت آمل (سرزمین هارد)' }} — {{ $studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار' }}</span>
     <span>
       <a href="{{ url('/design') }}">طراحی سایت</a>
       ·

@@ -8,7 +8,7 @@
 @endphp
 @if($waOn)
   @if($showBanner)
-    <div class="ag-install" id="agInstall" hidden>
+    <div class="ag-install" id="agInstall" hidden dir="rtl" lang="fa">
       <div>
         <b>نصب وب‌اپ فراز نت آمل</b>
         <small>روی صفحه اصلی گوشی — طراحی سایت، حسابداری و تعمیرگاه</small>
@@ -43,14 +43,15 @@
       var btn = document.getElementById('agInstallBtn');
       var hide = document.getElementById('agInstallDismiss');
       var standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
-      var mobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') ||
-        (window.matchMedia && window.matchMedia('(max-width: 860px)').matches);
-      if (d.swUrl && 'serviceWorker' in navigator) {
+      var ua = navigator.userAgent || '';
+      var phone = /Android|iPhone|iPad|iPod/i.test(ua);
+      if (phone && d.swUrl && 'serviceWorker' in navigator) {
         navigator.serviceWorker.register(d.swUrl, { scope: '/' }).catch(function () {});
       }
-      if (standalone && installed) { installed.hidden = false; }
-      else if (mobile && banner) { banner.hidden = false; }
+      if (phone && standalone && installed) { installed.hidden = false; }
+      else if (phone && banner) { banner.hidden = false; }
       window.addEventListener('beforeinstallprompt', function (e) {
+        if (!phone) return;
         e.preventDefault();
         deferred = e;
         if (banner) banner.hidden = false;

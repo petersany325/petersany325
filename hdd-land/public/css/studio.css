@@ -16,6 +16,7 @@
   --st-glass:rgba(8,14,24,.68);
 }
 *{box-sizing:border-box}
+html{font-family:"Vazirmatn",Tahoma,sans-serif}
 .st-body{
   margin:0;
   min-height:100vh;
@@ -24,7 +25,7 @@
     radial-gradient(900px 420px at -10% 110%,rgba(255,122,51,.08),transparent 52%),
     var(--st-bg);
   color:var(--st-ink);
-  font-family:Estedad,Vazirmatn,Tahoma,sans-serif;
+  font-family:"Vazirmatn",Tahoma,sans-serif;
 }
 .st-wrap{width:min(1120px,calc(100% - 2rem));margin-inline:auto}
 .st-head{

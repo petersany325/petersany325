@@ -3,7 +3,7 @@
   position:relative;z-index:80;gap:.28rem;flex-wrap:wrap;
   display:flex;align-items:center;justify-content:flex-start;
   direction:rtl;text-align:right;
-  font-family:var(--mega-font, "Estedad", "Estedad Variable", Tahoma, sans-serif);
+  font-family:var(--mega-font, "Vazirmatn", Tahoma, sans-serif);
   font-optical-sizing:auto;
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;

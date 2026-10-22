@@ -2,6 +2,7 @@
 .ag-body{
   --ag-accent: #7c5cff;
   --ag-bg: #070b18;
+  font-family: "Vazirmatn", Tahoma, sans-serif;
   background:
     radial-gradient(720px 340px at 82% 8%, rgba(124,92,255,.18), transparent 58%),
     radial-gradient(640px 280px at 12% 42%, rgba(80,140,255,.08), transparent 62%),
@@ -11,12 +12,12 @@
 .ag-wrap{width:min(1180px,calc(100% - 2.2rem));margin-inline:auto}
 .ag-head{position:sticky;top:0;z-index:30;background:rgba(7,11,24,.82);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.06)}
 .ag-head__bar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.9rem 0}
-.ag-brand{display:flex;align-items:center;gap:.65rem;text-decoration:none;color:#fff;flex:0 0 auto}
-.ag-logo{width:2.15rem;height:2.15rem;color:var(--ag-accent);display:grid;place-items:center}
+.ag-brand{display:flex;align-items:center;gap:.55rem;text-decoration:none;color:#fff;flex:0 1 auto;min-width:0}
+.ag-logo{width:2.15rem;height:2.15rem;color:var(--ag-accent);display:grid;place-items:center;flex:0 0 auto}
 .ag-logo svg{width:1.55rem;height:1.55rem}
-.ag-brand > span{white-space:nowrap}
-.ag-brand b{display:block;font-size:1.12rem;line-height:1.1}
-.ag-brand span span{display:block;font-size:.68rem;color:#9aa3c7;margin-top:.12rem;white-space:nowrap}
+.ag-brand > span{white-space:nowrap;min-width:0}
+.ag-brand b{display:block;font-size:.92rem;line-height:1.3;font-weight:850}
+.ag-brand span span{display:block;font-size:.64rem;color:#9aa3c7;margin-top:.1rem;white-space:nowrap}
 .ag-nav{display:flex;flex-wrap:wrap;align-items:center;gap:.15rem 1.05rem}
 .ag-nav a{color:#c9d0ea;text-decoration:none;font-weight:750;font-size:.86rem}
 .ag-nav a.is-on,.ag-nav a:hover{color:#fff}
@@ -221,10 +222,11 @@
 .ag-drawer__h{color:#fff !important;font-weight:800;margin-top:.55rem}
 .ag-drawer__sub{padding-right:.7rem !important;color:#8e97b8 !important;font-size:.8rem !important}
 .ag-install{
-  display:flex;justify-content:space-between;align-items:center;gap:.7rem;
+  display:none;justify-content:space-between;align-items:center;gap:.7rem;
   width:min(1180px,calc(100% - 1.4rem));margin:.65rem auto 0;
   background:#101628;border:1px solid rgba(124,92,255,.35);border-radius:16px;
   padding:.7rem .85rem;color:#eef2ff;
+  font-family:"Vazirmatn",Tahoma,sans-serif;direction:rtl;text-align:right;
 }
 .ag-install[hidden],.ag-install--on[hidden]{display:none !important}
 .ag-install b{display:block;font-size:.86rem}
@@ -234,12 +236,14 @@
 #agInstallDismiss{background:transparent;color:#9aa3c7;font-size:1.1rem;padding:.2rem .45rem}
 .ag-install--on{justify-content:center;color:#b7f0cc;border-color:rgba(80,200,140,.3)}
 .ag-tabbar{display:none}
-.has-ag-tabbar{padding-bottom:4.6rem}
+.has-ag-tabbar{padding-bottom:0}
 @media (max-width:1100px){
   .ag-steps{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media (max-width:980px){
   .ag-head__bar{flex-wrap:wrap}
+  .ag-brand > span{white-space:normal;max-width:15rem}
+  .ag-brand b{font-size:.82rem}
   .ag-hero__grid,.ag-cards,.ag-stats,.ag-works__grid,.ag-menu-grid,.ag-drop__panel,.ag-steps{grid-template-columns:1fr 1fr}
   .ag-scene{min-height:240px}
 }
@@ -254,11 +258,14 @@
   .ag-burger{display:grid}
   .ag-drawer:not([hidden]){display:block}
   .ag-copy h1{font-size:2.05rem}
+  .has-ag-tabbar{padding-bottom:4.6rem}
+  .ag-install:not([hidden]){display:flex}
   .ag-tabbar{
     display:flex;position:fixed;bottom:0;left:0;right:0;z-index:40;
     background:rgba(7,11,24,.94);backdrop-filter:blur(16px);
     border-top:1px solid rgba(255,255,255,.08);
     padding:.35rem .3rem calc(.45rem + env(safe-area-inset-bottom));
+    font-family:"Vazirmatn",Tahoma,sans-serif;
   }
   .ag-tabbar a{
     flex:1;display:flex;flex-direction:column;align-items:center;gap:.12rem;
