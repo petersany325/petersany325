@@ -15,16 +15,18 @@ class StudioProductMenus
             [
                 'label' => 'حسابداری وب',
                 'url' => '/accounting',
-                'children' => array_map(static function (array $group): array {
-                    return [
-                        'label' => $group['title'],
-                        'url' => '/accounting#'.$group['slug'],
-                        'children' => array_map(static fn (array $item): array => [
-                            'label' => $item['title'],
-                            'url' => '/accounting/m/'.$item['slug'],
-                        ], $group['items']),
-                    ];
-                }, self::accountingGroups()),
+                'children' => class_exists(StudioAccountingCopy::class)
+                    ? StudioAccountingCopy::navGroups()
+                    : array_map(static function (array $group): array {
+                        return [
+                            'label' => $group['title'],
+                            'url' => '/accounting#'.$group['slug'],
+                            'children' => array_map(static fn (array $item): array => [
+                                'label' => $item['title'],
+                                'url' => '/accounting/m/'.$item['slug'],
+                            ], $group['items']),
+                        ];
+                    }, self::accountingGroups()),
             ],
             [
                 'label' => 'تعمیرگاه',

@@ -56,6 +56,10 @@
 @include('studio::acc-ai')
 @endif
 
+@if($slug === 'accounting-type')
+@include('studio::accounting-type')
+@endif
+
 @if($slug === 'projects')
 <section class="{{ $agency ? 'ag-page' : 'st-hero' }}">
   @unless($agency)

@@ -3,6 +3,7 @@
 namespace Plugins\Studio\src\Http\Controllers;
 
 use App\Support\SiteHost;
+use App\Support\StudioAccountingCopy;
 use App\Support\StudioDesignCopy;
 use App\Support\StudioHomeConfig;
 use App\Support\StudioProductMenus;
@@ -66,8 +67,26 @@ class StudioController
 
     public function accounting(): View
     {
-        return $this->page('accounting', 'حسابداری وب', [
+        return $this->page('accounting', 'حسابداری وب با لاراول | فراز نت آمل', [
+            'description' => 'نرم‌افزار حسابداری شرکتی، فروشگاهی، رستوران، پخش، پیمانکاری و تولیدی — پروژه اختصاصی با لاراول توسط فراز نت آمل.',
             'groups' => StudioProductMenus::accountingGroups(),
+            'industries' => StudioAccountingCopy::industries(),
+            'laravelNote' => StudioAccountingCopy::laravelNote(),
+        ]);
+    }
+
+    public function accountingType(string $slug): View|RedirectResponse
+    {
+        $industry = StudioAccountingCopy::industry($slug);
+        if ($industry === null) {
+            return redirect()->to(url('/accounting'));
+        }
+
+        return $this->page('accounting-type', $industry['seo_title'], [
+            'description' => $industry['seo_description'],
+            'industry' => $industry,
+            'industries' => StudioAccountingCopy::industries(),
+            'laravelNote' => StudioAccountingCopy::laravelNote(),
         ]);
     }
 

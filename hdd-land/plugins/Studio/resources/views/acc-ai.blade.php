@@ -15,7 +15,7 @@
         <a class="ag-btn ag-btn--on st-cta st-cta--on" href="{{ url('/contact') }}">درخواست دمو حسابداری<i>←</i></a>
         <a class="ag-btn ag-btn--line st-cta st-cta--line" href="{{ url('/ai') }}">لایه AI جداگانه<i>←</i></a>
       </div>
-      <p class="acc-rule">ادعای بستن خودکار دفاتر مالیاتی نداریم. این نرم‌افزار کمک‌حسابدار است، نه جایگزین ممیز.</p>
+      <p class="acc-rule">پروژه از پایه با لاراول طراحی و برنامه‌نویسی می‌شود. ادعای بستن خودکار دفاتر مالیاتی نداریم؛ هوش مصنوعی فقط پیش‌نویس می‌دهد.</p>
     </div>
     <aside class="acc-ledger" aria-label="پیش‌نمایش سند و پیشنهاد هوش مصنوعی">
       <header class="acc-ledger__bar">
@@ -72,6 +72,25 @@
       <p>پیش‌نویس جواب تیکت مشتری. ارسال با دست اپراتور است.</p>
     </article>
   </div>
+</section>
+
+<section class="ag-wrap st-wrap acc-sec" id="industries">
+  <h2>حسابداری به تفکیک صنف</h2>
+  <p class="acc-sub">هر نسخه منو و گردش کار همان کسب‌وکار را دارد. همه پروژه‌ها با لاراول نوشته می‌شوند.</p>
+  <div class="ag-cards ag-cards--dense">
+    @foreach(($industries ?? []) as $row)
+      <a class="ag-card" href="{{ url('/accounting/'.$row['slug']) }}">
+        <div>
+          <b>{{ $row['title'] }}</b>
+          <p>{{ $row['short'] }}</p>
+          <small>توضیحات و منوها ←</small>
+        </div>
+      </a>
+    @endforeach
+  </div>
+  @if(!empty($laravelNote))
+    <p class="ag-note" style="margin-top:1rem">{{ $laravelNote }}</p>
+  @endif
 </section>
 
 <section class="ag-wrap st-wrap acc-sec">

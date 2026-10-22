@@ -12,6 +12,7 @@ Route::get('/about', [StudioController::class, 'about'])->name('studio.about');
 Route::get('/ai', [StudioController::class, 'ai'])->name('studio.ai');
 Route::get('/accounting', [StudioController::class, 'accounting'])->name('studio.accounting');
 Route::get('/accounting/m/{slug}', [StudioController::class, 'accountingItem'])->name('studio.accounting.item');
+Route::get('/accounting/{slug}', [StudioController::class, 'accountingType'])->name('studio.accounting.type');
 Route::get('/projects', [StudioController::class, 'projects'])->name('studio.projects');
 Route::get('/receipt-software', [StudioController::class, 'receiptSoftware'])->name('studio.receipt');
 Route::get('/contact', [StudioController::class, 'contact'])->name('studio.contact');

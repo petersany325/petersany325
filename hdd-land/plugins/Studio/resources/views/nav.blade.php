@@ -120,3 +120,25 @@
   </div>
 </header>
 @endif
+@if($agency)
+<script>
+(function(){
+  document.querySelectorAll('.ag-drop').forEach(function(drop){
+    if (drop.dataset.agDropReady) return;
+    drop.dataset.agDropReady = '1';
+    var hide;
+    drop.addEventListener('mouseenter', function(){
+      clearTimeout(hide);
+      drop.classList.add('is-open');
+    });
+    drop.addEventListener('mouseleave', function(){
+      hide=setTimeout(function(){ drop.classList.remove('is-open'); }, 260);
+    });
+    drop.addEventListener('focusin', function(){ clearTimeout(hide); drop.classList.add('is-open'); });
+    drop.addEventListener('focusout', function(){
+      hide=setTimeout(function(){ drop.classList.remove('is-open'); }, 260);
+    });
+  });
+})();
+</script>
+@endif
