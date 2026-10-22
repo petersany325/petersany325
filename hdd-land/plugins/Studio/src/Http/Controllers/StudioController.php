@@ -77,6 +77,9 @@ class StudioController
 
     public function sitesSlug(string $slug): View|RedirectResponse
     {
+        if ($slug === 'repair-shop') {
+            return $this->repairShop();
+        }
         if ($slug === 'accounting') {
             return redirect()->to(url('/accounting'));
         }
