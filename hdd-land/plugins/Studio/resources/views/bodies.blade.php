@@ -5,7 +5,12 @@
 @endphp
 
 @if($slug === 'home')
-@include('studio::home-atelier')
+  @php $studioHome = class_exists(\App\Support\StudioHomeConfig::class) ? \App\Support\StudioHomeConfig::get() : []; @endphp
+  @if(!empty($studioHome['enabled']))
+    @include('studio::home-agency', ['studioHome' => $studioHome])
+  @else
+    @include('studio::home-atelier')
+  @endif
 @endif
 
 @if($slug === 'design')

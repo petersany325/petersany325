@@ -249,7 +249,7 @@ if (! class_exists(StaffAcl::class, false)) {
                 'site.theme_builder' => 'استودیو قالب و بنرساز',
                 'site.theme_templates' => 'نصب و به‌روزرسانی قالب',
                 'site.page_builder' => 'صفحه‌ساز Elementor',
-                'site.homepage' => 'بنر و تنظیمات صفحه اول',
+                'site.homepage' => 'صفحه اول فروشگاه و استودیو',
                 'site.footer' => 'تنظیمات فوتر',
                 'site.webapp' => 'تنظیمات وب‌اپ / PWA',
                 'site.shop_settings' => 'تنظیمات عمومی فروشگاه',

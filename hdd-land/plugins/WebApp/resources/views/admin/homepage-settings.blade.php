@@ -104,6 +104,7 @@
     <p>سایز، فونت، رنگ، درگ‌ودراپ متن/منو/عکس، ریسایز بنر و ادغام تصویر — به‌همراه همه بلوک‌های صفحه اول.</p>
   </div>
   <div style="display:flex;gap:.45rem;flex-wrap:wrap">
+    <a class="btn" href="{{ url('/admin/studio-home') }}">صفحه اول استودیو</a>
     <a class="btn" href="{{ url('/') }}" target="_blank" rel="noopener">صفحه اول سایت</a>
     <a class="btn" href="{{ url('/app') }}" target="_blank" rel="noopener">خانه وب‌اپ</a>
     <a class="btn" href="{{ url('/admin/mega-menu') }}">مگامنو</a>

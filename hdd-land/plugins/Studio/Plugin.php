@@ -35,6 +35,13 @@ class Plugin extends BasePlugin
         return true;
     }
 
+    public function adminMenu(): array
+    {
+        return [
+            ['label' => 'صفحه اول استودیو', 'url' => '/admin/studio-home'],
+        ];
+    }
+
     public function boot(): void
     {
         if (self::$booted) {
@@ -64,8 +71,10 @@ class Plugin extends BasePlugin
     {
         $files = [
             base_path('app/Support/SiteHost.php'),
+            base_path('app/Support/StudioHomeConfig.php'),
             base_path('app/Http/Middleware/SiteHostSplit.php'),
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioController.php',
+            __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'Admin'.DIRECTORY_SEPARATOR.'StudioHomeController.php',
         ];
         foreach ($files as $file) {
             if (is_file($file)) {

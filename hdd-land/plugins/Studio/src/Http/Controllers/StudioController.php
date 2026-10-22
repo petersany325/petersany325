@@ -10,7 +10,13 @@ class StudioController
 {
     public function home(): View
     {
-        return $this->page('home', 'تخصصی طراحی سایت و نرم‌افزار');
+        $homeTitle = 'تخصصی طراحی سایت و نرم‌افزار';
+        if (class_exists(\App\Support\StudioHomeConfig::class)) {
+            $cfg = \App\Support\StudioHomeConfig::get();
+            $homeTitle = trim((string) ($cfg['hero_title'] ?? '')) ?: trim((string) ($cfg['tagline'] ?? '')) ?: $homeTitle;
+        }
+
+        return $this->page('home', $homeTitle);
     }
 
     public function design(): View
