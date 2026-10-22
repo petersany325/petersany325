@@ -15,15 +15,20 @@ class StudioProductMenus
             [
                 'label' => 'حسابداری وب',
                 'url' => '/accounting',
+                'children' => self::webAccountingNav(),
+            ],
+            [
+                'label' => 'حسابداری کامپیوتر',
+                'url' => '/computer-accounting',
                 'children' => class_exists(StudioAccountingCopy::class)
                     ? StudioAccountingCopy::navGroups()
                     : array_map(static function (array $group): array {
                         return [
                             'label' => $group['title'],
-                            'url' => '/accounting#'.$group['slug'],
+                            'url' => '/computer-accounting#'.$group['slug'],
                             'children' => array_map(static fn (array $item): array => [
                                 'label' => $item['title'],
-                                'url' => '/accounting/m/'.$item['slug'],
+                                'url' => '/computer-accounting/m/'.$item['slug'],
                             ], $group['items']),
                         ];
                     }, self::accountingGroups()),
@@ -59,10 +64,10 @@ class StudioProductMenus
     public static function attachToNav(array $items): array
     {
         $dropUrls = [
-            '/accounting', '/repair-shop', '/sites/repair-shop',
+            '/accounting', '/computer-accounting', '/repair-shop', '/sites/repair-shop',
             '/receipt-software', '/sites',
         ];
-        $dropLabels = ['نرم‌افزار', 'حسابداری وب', 'تعمیرگاه', 'تعمیرکاران', 'حسابداری هوش مصنوعی', 'نرم‌افزار قبض تحت وب'];
+        $dropLabels = ['نرم‌افزار', 'حسابداری وب', 'حسابداری کامپیوتر', 'تعمیرگاه', 'تعمیرکاران', 'حسابداری هوش مصنوعی', 'نرم‌افزار قبض تحت وب'];
         $kept = [];
         foreach ($items as $item) {
             $url = rtrim((string) ($item['url'] ?? ''), '/') ?: '/';
@@ -99,6 +104,50 @@ class StudioProductMenus
         array_splice($kept, $insertAt, 0, $products);
 
         return $kept;
+    }
+
+    /**
+     * Web accounting is only the repair-shop technician ledger — not trade/desktop suites.
+     *
+     * @return list<array{label:string,url:string,children:list<array{label:string,url:string}>}>
+     */
+    public static function webAccountingNav(): array
+    {
+        $accKids = [];
+        foreach (self::repairStaffTree() as $section) {
+            if (($section['slug'] ?? '') !== 'accounting') {
+                continue;
+            }
+            $accKids[] = [
+                'label' => 'میز حسابداری تعمیرگاه',
+                'url' => '/repair-shop/m/'.$section['slug'],
+            ];
+            foreach ($section['children'] ?? [] as $child) {
+                $accKids[] = [
+                    'label' => $child['title'],
+                    'url' => '/repair-shop/m/'.$child['slug'],
+                ];
+            }
+        }
+
+        return [
+            [
+                'label' => 'حسابداری تعمیرکاران',
+                'url' => '/accounting',
+                'children' => $accKids,
+            ],
+            [
+                'label' => 'قبض و صندوق وب',
+                'url' => '/repair-shop',
+                'children' => [
+                    ['label' => 'پذیرش جدید', 'url' => '/repair-shop/m/reception-new'],
+                    ['label' => 'جستجوی قبض', 'url' => '/repair-shop/m/receipt-search'],
+                    ['label' => 'لیست قبض‌ها', 'url' => '/repair-shop/m/receipt-list'],
+                    ['label' => 'تأیید هزینه', 'url' => '/repair-shop/m/cost-approval'],
+                    ['label' => 'صندوق و دریافت‌ها', 'url' => '/repair-shop/m/report-cash'],
+                ],
+            ],
+        ];
     }
 
     /** @return list<array{slug:string,title:string,items:list<array{slug:string,title:string,short:string}>}> */
@@ -333,9 +382,15 @@ class StudioProductMenus
         return [
             [
                 'slug' => 'accounting',
-                'title' => 'حسابداری وب',
-                'short' => 'دفتر فاکتور، سند، انبار، خزانه و گزارش — با لایه هوش مصنوعی',
+                'title' => 'حسابداری وب تعمیرکاران',
+                'short' => 'دفتر تحت وب تعمیرگاه: سند، معین، بدهکاران و وصل به قبض',
                 'url' => '/accounting',
+            ],
+            [
+                'slug' => 'computer-accounting',
+                'title' => 'حسابداری کامپیوتر',
+                'short' => 'حسابداری صنوف روی SQL Server 2022 — شرکتی، فروشگاهی، رستوران و تولیدی',
+                'url' => '/computer-accounting',
             ],
             [
                 'slug' => 'repair-shop',

@@ -1,21 +1,21 @@
 @php
   $industry = $industry ?? [];
   $industries = $industries ?? [];
-  $laravelNote = $laravelNote ?? \App\Support\StudioAccountingCopy::laravelNote();
+  $sqlNote = $sqlNote ?? ($laravelNote ?? \App\Support\StudioAccountingCopy::sqlNote());
 @endphp
 <section class="ag-page">
   <div class="ag-wrap">
     <p class="ag-crumb">
-      <a href="{{ url('/accounting') }}">حسابداری وب</a>
+      <a href="{{ url('/computer-accounting') }}">حسابداری کامپیوتر</a>
       <span>/</span>
       <span>{{ $industry['title'] ?? '' }}</span>
     </p>
-    <p class="ag-kicker">{{ $industry['kicker'] ?? 'حسابداری وب' }}</p>
+    <p class="ag-kicker">{{ $industry['kicker'] ?? 'حسابداری کامپیوتر' }}</p>
     <h1>{{ $industry['title'] ?? '' }}</h1>
     <p class="ag-lead ag-lead--wide">{{ $industry['lead'] ?? '' }}</p>
     <div class="ag-actions">
       <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست مشاوره و دمو<i>←</i></a>
-      <a class="ag-btn ag-btn--line" href="{{ url('/accounting') }}">→ همه انواع حسابداری</a>
+      <a class="ag-btn ag-btn--line" href="{{ url('/computer-accounting') }}">→ همه حسابداری‌های کامپیوتر</a>
     </div>
   </div>
 </section>
@@ -27,7 +27,7 @@
     @foreach(($industry['body'] ?? []) as $para)
       <p class="ag-lead ag-lead--wide">{{ $para }}</p>
     @endforeach
-    <p class="ag-note">{{ $laravelNote }}</p>
+    <p class="ag-note">{{ $sqlNote }}</p>
   </div>
 </section>
 
@@ -71,7 +71,7 @@
 <section class="ag-sec" id="steps">
   <div class="ag-wrap">
     <p class="ag-kicker">مسیر پروژه</p>
-    <h2>از تحلیل تا استقرار با لاراول</h2>
+    <h2>از تحلیل تا نصب روی SQL Server 2022</h2>
     <ol class="ag-steps">
       @foreach($industry['steps'] as $row)
         <li>
@@ -88,7 +88,7 @@
 <section class="ag-sec" id="why">
   <div class="ag-wrap">
     <p class="ag-kicker">چرا این پروژه</p>
-    <h2>با لاراول، مخصوص کار شما نوشته می‌شود</h2>
+    <h2>روی SQL Server 2022، مخصوص صنف شما</h2>
     <ul class="ag-list">
       @foreach(($industry['benefits'] ?? []) as $row)
         <li>{{ $row }}</li>
@@ -117,13 +117,13 @@
 <section class="ag-sec ag-sec--last" id="more">
   <div class="ag-wrap">
     <p class="ag-kicker">سایر صنوف</p>
-    <h2>حسابداری وب برای کسب‌وکارهای دیگر</h2>
+    <h2>حسابداری کامپیوتر برای صنوف دیگر</h2>
     <div class="ag-cards ag-cards--dense">
       @foreach($industries as $row)
         @if(($row['slug'] ?? '') === ($industry['slug'] ?? ''))
           @continue
         @endif
-        <a class="ag-card" href="{{ url('/accounting/'.$row['slug']) }}">
+        <a class="ag-card" href="{{ url('/computer-accounting/'.$row['slug']) }}">
           <div>
             <b>{{ $row['title'] }}</b>
             <p>{{ $row['short'] }}</p>
@@ -133,7 +133,7 @@
       @endforeach
     </div>
     <div class="ag-actions" style="margin-top:1rem">
-      <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">شروع پروژه لاراول<i>←</i></a>
+      <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست حسابداری کامپیوتر<i>←</i></a>
     </div>
   </div>
 </section>

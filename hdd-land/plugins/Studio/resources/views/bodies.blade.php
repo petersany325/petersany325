@@ -39,7 +39,7 @@
     @if($agency)
       <div class="ag-actions">
         <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست مشاوره رایگان<i>←</i></a>
-        <a class="ag-btn ag-btn--line" href="{{ url('/accounting') }}">نرم‌افزار حسابداری<i>←</i></a>
+        <a class="ag-btn ag-btn--line" href="{{ url('/computer-accounting') }}">حسابداری کامپیوتر<i>←</i></a>
       </div>
     @endif
     <ul class="{{ $agency ? 'ag-list' : 'st-list' }}">
@@ -52,8 +52,12 @@
 </section>
 @endif
 
-@if($slug === 'accounting')
-@include('studio::acc-ai')
+@if($slug === 'accounting' || $slug === 'accounting-web')
+@include('studio::accounting-web')
+@endif
+
+@if($slug === 'computer-accounting')
+@include('studio::computer-accounting')
 @endif
 
 @if($slug === 'accounting-type')
@@ -139,7 +143,11 @@
       </a>
       <a class="ag-card" href="{{ url('/accounting') }}">
         <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11 12 4l8 7v9H4z"/></svg></i>
-        <div><b>حسابداری وب</b><p>فاکتور، سند، انبار و گزارش با لایه هوش مصنوعی</p></div>
+        <div><b>حسابداری وب</b><p>فقط تعمیرکاران: سند قبض، معین و صندوق تعمیرگاه</p></div>
+      </a>
+      <a class="ag-card" href="{{ url('/computer-accounting') }}">
+        <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 18V6M4 18h16"/><path d="m8 14 3-4 3 3 5-7"/></svg></i>
+        <div><b>حسابداری کامپیوتر</b><p>صنوف روی SQL Server 2022: شرکتی، فروشگاهی، رستوران</p></div>
       </a>
       <a class="ag-card" href="{{ url('/repair-shop') }}">
         <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v12H4z"/><path d="M8 7V5h8v2"/></svg></i>
@@ -154,8 +162,8 @@
 <section class="ag-page">
   <div class="ag-wrap">
     <p class="ag-kicker">نرم‌افزار تحت وب</p>
-    <h1>حسابداری وب و مدیریت تعمیرگاه</h1>
-    <p class="ag-lead">همان منوهایی که در سایت قبلی بود؛ هر مورد صفحه معرفی خودش را دارد.</p>
+    <h1>حسابداری وب، حسابداری کامپیوتر و تعمیرگاه</h1>
+    <p class="ag-lead">حسابداری وب فقط تعمیرکاران است. صنوف دیگر روی حسابداری کامپیوتر با SQL Server 2022 هستند.</p>
     <div class="ag-cards ag-cards--dense" style="margin-top:1rem">
       @foreach(($catalog ?? []) as $row)
         <a class="ag-card" href="{{ url($row['url']) }}">

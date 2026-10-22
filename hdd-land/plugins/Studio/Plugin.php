@@ -22,7 +22,7 @@ class Plugin extends BasePlugin
 
     public function description(): string
     {
-        return 'صفحه و منوی سبک دامنه اصلی: طراحی سایت، حسابداری وب، تعمیرگاه، AI و نرم‌افزار قبض';
+        return 'صفحه و منوی سبک دامنه اصلی: طراحی سایت، حسابداری وب تعمیرکاران، حسابداری کامپیوتر SQL2022، تعمیرگاه و قبض';
     }
 
     public function version(): string

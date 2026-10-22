@@ -67,40 +67,68 @@ class StudioController
 
     public function accounting(): View
     {
-        return $this->page('accounting', 'حسابداری وب با لاراول | فراز نت آمل', [
-            'description' => 'نرم‌افزار حسابداری شرکتی، فروشگاهی، رستوران، پخش، پیمانکاری و تولیدی — پروژه اختصاصی با لاراول توسط فراز نت آمل.',
+        $web = StudioProductMenus::webAccountingNav();
+
+        return $this->page('accounting-web', 'حسابداری وب تعمیرکاران | فراز نت آمل', [
+            'description' => 'حسابداری تحت وب فقط برای تعمیرکاران و قبض تعمیرگاه. بقیه صنوف حسابداری کامپیوتری با SQL Server 2022 هستند.',
+            'webGroups' => $web,
+        ]);
+    }
+
+    public function computerAccounting(): View
+    {
+        return $this->page('computer-accounting', 'حسابداری کامپیوتر با SQL Server 2022 | فراز نت آمل', [
+            'description' => 'حسابداری کامپیوتری صنوف روی SQL Server 2022: شرکتی، فروشگاهی، سوپرمارکت، پخش، رستوران، تولیدی و پیمانکاری.',
             'groups' => StudioProductMenus::accountingGroups(),
             'industries' => StudioAccountingCopy::industries(),
-            'laravelNote' => StudioAccountingCopy::laravelNote(),
+            'sqlNote' => StudioAccountingCopy::sqlNote(),
         ]);
     }
 
     public function accountingType(string $slug): View|RedirectResponse
     {
+        if (StudioAccountingCopy::industry($slug) !== null) {
+            return redirect()->to(url('/computer-accounting/'.$slug), 301);
+        }
+
+        return redirect()->to(url('/accounting'));
+    }
+
+    public function computerAccountingType(string $slug): View|RedirectResponse
+    {
         $industry = StudioAccountingCopy::industry($slug);
         if ($industry === null) {
-            return redirect()->to(url('/accounting'));
+            return redirect()->to(url('/computer-accounting'));
         }
 
         return $this->page('accounting-type', $industry['seo_title'], [
             'description' => $industry['seo_description'],
             'industry' => $industry,
             'industries' => StudioAccountingCopy::industries(),
-            'laravelNote' => StudioAccountingCopy::laravelNote(),
+            'sqlNote' => StudioAccountingCopy::sqlNote(),
         ]);
     }
 
     public function accountingItem(string $slug): View|RedirectResponse
     {
-        $item = StudioProductMenus::find('accounting', $slug);
-        if ($item === null) {
-            return redirect()->to(url('/accounting'));
+        if (StudioProductMenus::find('accounting', $slug) !== null) {
+            return redirect()->to(url('/computer-accounting/m/'.$slug), 301);
         }
 
-        return $this->page('product-item', $item['title'].' | حسابداری وب', [
+        return redirect()->to(url('/accounting'));
+    }
+
+    public function computerAccountingItem(string $slug): View|RedirectResponse
+    {
+        $item = StudioProductMenus::find('accounting', $slug);
+        if ($item === null) {
+            return redirect()->to(url('/computer-accounting'));
+        }
+
+        return $this->page('product-item', $item['title'].' | حسابداری کامپیوتر', [
             'item' => $item,
-            'hubUrl' => '/accounting',
-            'hubLabel' => 'حسابداری وب',
+            'hubUrl' => '/computer-accounting',
+            'hubLabel' => 'حسابداری کامپیوتر',
             'groups' => StudioProductMenus::accountingGroups(),
         ]);
     }
@@ -125,7 +153,7 @@ class StudioController
 
     public function sites(): View
     {
-        return $this->page('sites', 'نرم‌افزار حسابداری وب و تعمیرگاه', [
+        return $this->page('sites', 'نرم‌افزار حسابداری و تعمیرگاه', [
             'catalog' => StudioProductMenus::catalog(),
         ]);
     }
@@ -188,7 +216,7 @@ class StudioController
         $payload = [
             'name' => 'فراز نت آمل',
             'short_name' => 'فرازنت',
-            'description' => 'طراحی سایت حرفه‌ای، حسابداری وب و نرم‌افزار تعمیرگاه — فراز نت آمل',
+            'description' => 'طراحی سایت حرفه‌ای، حسابداری وب تعمیرکاران، حسابداری کامپیوتر و نرم‌افزار تعمیرگاه — فراز نت آمل',
             'start_url' => url('/'),
             'scope' => url('/'),
             'display' => 'standalone',
@@ -206,6 +234,7 @@ class StudioController
             'shortcuts' => [
                 ['name' => 'طراحی سایت', 'url' => url('/design')],
                 ['name' => 'حسابداری وب', 'url' => url('/accounting')],
+                ['name' => 'حسابداری کامپیوتر', 'url' => url('/computer-accounting')],
                 ['name' => 'تعمیرگاه', 'url' => url('/repair-shop')],
                 ['name' => 'تماس', 'url' => url('/contact')],
             ],
@@ -219,8 +248,8 @@ class StudioController
     public function serviceWorker(): Response
     {
         $js = <<<'JS'
-const CACHE = 'studio-wa-v1';
-const PRECACHE = ['/','/design','/accounting','/repair-shop','/contact','/about','/css/studio-agency.css'];
+const CACHE = 'studio-wa-v2';
+const PRECACHE = ['/','/design','/accounting','/computer-accounting','/repair-shop','/contact','/about','/css/studio-agency.css'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE).catch(() => {})).then(() => self.skipWaiting()));
 });

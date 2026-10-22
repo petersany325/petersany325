@@ -16,7 +16,7 @@ class StudioHomeConfig
             'show_search' => true,
             'mobile_webapp' => true,
             'search_placeholder' => 'جستجو',
-            'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nحسابداری وب|/accounting\nتعمیرگاه|/repair-shop\nنمونه کارها|/projects\nتماس|/contact",
+            'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nحسابداری وب|/accounting\nحسابداری کامپیوتر|/computer-accounting\nتعمیرگاه|/repair-shop\nنمونه کارها|/projects\nتماس|/contact",
             'hero_title' => 'طراحی سایت و نرم‌افزار',
             'hero_em' => 'نرم‌افزار',
             'hero_text' => 'طراحی حرفه‌ای وب‌سایت مدرن و نرم‌افزار هوشمند برای کسب‌وکار، فروشگاه و سازمان — با لایه هوش مصنوعی.',

@@ -56,6 +56,8 @@
       ·
       <a href="{{ url('/accounting') }}">حسابداری وب</a>
       ·
+      <a href="{{ url('/computer-accounting') }}">حسابداری کامپیوتر</a>
+      ·
       <a href="{{ url('/repair-shop') }}">تعمیرگاه</a>
       ·
       <a href="{{ \App\Support\SiteHost::shopUrl('/') }}">فروشگاه قطعات</a>
