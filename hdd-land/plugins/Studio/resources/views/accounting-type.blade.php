@@ -20,22 +20,40 @@
   </div>
 </section>
 
+<section class="ag-sec" id="about">
+  <div class="ag-wrap">
+    <p class="ag-kicker">توضیح کامل</p>
+    <h2>{{ $industry['title'] ?? '' }} چیست و چه کاری انجام می‌دهد؟</h2>
+    @foreach(($industry['body'] ?? []) as $para)
+      <p class="ag-lead ag-lead--wide">{{ $para }}</p>
+    @endforeach
+    <p class="ag-note">{{ $laravelNote }}</p>
+  </div>
+</section>
+
 <section class="ag-sec" id="use">
   <div class="ag-wrap">
-    <p class="ag-kicker">این حسابداری برای چه کاری است؟</p>
-    <h2>{{ $industry['title'] ?? '' }} دقیقاً چه کاری را حل می‌کند</h2>
+    <p class="ag-kicker">کاربرد</p>
+    <h2>این حسابداری برای چه کسی و چه کاری است؟</h2>
     <p class="ag-lead ag-lead--wide">{{ $industry['used_for'] ?? '' }}</p>
     @if(!empty($industry['who']))
-      <p class="ag-lead ag-lead--wide">مخاطب اصلی: {{ $industry['who'] }}</p>
+      <p class="ag-lead ag-lead--wide"><strong>مخاطب اصلی:</strong> {{ $industry['who'] }}</p>
     @endif
-    <p class="ag-note">{{ $laravelNote }}</p>
+    @if(!empty($industry['problems']))
+      <h2 class="ag-sec-title">چه مشکلی را حل می‌کند</h2>
+      <ul class="ag-list">
+        @foreach($industry['problems'] as $row)
+          <li>{{ $row }}</li>
+        @endforeach
+      </ul>
+    @endif
   </div>
 </section>
 
 <section class="ag-sec" id="menus">
   <div class="ag-wrap">
     <p class="ag-kicker">منوی نرم‌افزار</p>
-    <h2>امکانات و منوهای این نسخه</h2>
+    <h2>امکانات و منوهای این نسخه — با توضیح هر بخش</h2>
     <div class="ag-cards ag-cards--dense">
       @foreach(($industry['menus'] ?? []) as $row)
         <article class="ag-card">
@@ -49,6 +67,24 @@
   </div>
 </section>
 
+@if(!empty($industry['steps']))
+<section class="ag-sec" id="steps">
+  <div class="ag-wrap">
+    <p class="ag-kicker">مسیر پروژه</p>
+    <h2>از تحلیل تا استقرار با لاراول</h2>
+    <ol class="ag-steps">
+      @foreach($industry['steps'] as $row)
+        <li>
+          <small>{{ $row['num'] }}</small>
+          <b>{{ $row['title'] }}</b>
+          <p>{{ $row['text'] }}</p>
+        </li>
+      @endforeach
+    </ol>
+  </div>
+</section>
+@endif
+
 <section class="ag-sec" id="why">
   <div class="ag-wrap">
     <p class="ag-kicker">چرا این پروژه</p>
@@ -57,10 +93,26 @@
       @foreach(($industry['benefits'] ?? []) as $row)
         <li>{{ $row }}</li>
       @endforeach
-      <li>پروژه حسابداری شما از پایه با لاراول طراحی و برنامه‌نویسی می‌شود؛ وابسته به نرم‌افزار ویندوزی آماده نیستید.</li>
     </ul>
   </div>
 </section>
+
+@if(!empty($industry['faqs']))
+<section class="ag-sec" id="faq">
+  <div class="ag-wrap">
+    <p class="ag-kicker">پرسش‌های رایج</p>
+    <h2>قبل از شروع پروژه</h2>
+    <ul class="ag-steps" style="grid-template-columns:1fr">
+      @foreach($industry['faqs'] as $row)
+        <li>
+          <b>{{ $row['q'] }}</b>
+          <p>{{ $row['a'] }}</p>
+        </li>
+      @endforeach
+    </ul>
+  </div>
+</section>
+@endif
 
 <section class="ag-sec ag-sec--last" id="more">
   <div class="ag-wrap">
@@ -75,7 +127,7 @@
           <div>
             <b>{{ $row['title'] }}</b>
             <p>{{ $row['short'] }}</p>
-            <small>مشاهده توضیحات ←</small>
+            <small>توضیحات کامل ←</small>
           </div>
         </a>
       @endforeach
