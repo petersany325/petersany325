@@ -17,6 +17,13 @@
       <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست مشاوره و دمو<i>←</i></a>
       <a class="ag-btn ag-btn--line" href="{{ url('/computer-accounting') }}">→ همه حسابداری‌های کامپیوتر</a>
     </div>
+    @if(!empty($industry['highlights']))
+      <ul class="ag-list" style="margin-top:1.1rem">
+        @foreach($industry['highlights'] as $row)
+          <li>{{ $row }}</li>
+        @endforeach
+      </ul>
+    @endif
   </div>
 </section>
 
@@ -30,6 +37,43 @@
     <p class="ag-note">{{ $sqlNote }}</p>
   </div>
 </section>
+
+@php $ai = $industry['ai'] ?? null; @endphp
+@if(!empty($ai))
+<section class="ag-sec" id="ai">
+  <div class="ag-wrap">
+    <p class="ag-kicker">هوش مصنوعی داخل نرم‌افزار</p>
+    <h2>{{ $ai['title'] ?? 'تحلیل و گفتگو با هوش مصنوعی — آفلاین' }}</h2>
+    <p class="ag-lead ag-lead--wide">{{ $ai['lead'] ?? \App\Support\StudioAccountingCopy::aiNote() }}</p>
+    <div class="ag-cards ag-cards--dense">
+      @foreach(($ai['items'] ?? \App\Support\StudioAccountingCopy::aiMenus()) as $row)
+        <article class="ag-card">
+          <div>
+            <b>{{ $row['title'] }}</b>
+            <p>{{ $row['text'] }}</p>
+          </div>
+        </article>
+      @endforeach
+    </div>
+    <p class="ag-note">{{ \App\Support\StudioAccountingCopy::aiNote() }}</p>
+  </div>
+</section>
+@endif
+
+@if(!empty($industry['buy']))
+<section class="ag-sec" id="buy">
+  <div class="ag-wrap">
+    <p class="ag-kicker">چه می‌خرید</p>
+    <h2>{{ $industry['buy']['title'] ?? 'با خرید این نسخه چه چیزی دستتان می‌آید' }}</h2>
+    <p class="ag-lead ag-lead--wide">{{ $industry['buy']['lead'] ?? '' }}</p>
+    <ul class="ag-list">
+      @foreach(($industry['buy']['items'] ?? []) as $row)
+        <li>{{ $row }}</li>
+      @endforeach
+    </ul>
+  </div>
+</section>
+@endif
 
 <section class="ag-sec" id="use">
   <div class="ag-wrap">

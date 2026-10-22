@@ -78,7 +78,7 @@ class StudioController
     public function computerAccounting(): View
     {
         return $this->page('computer-accounting', 'حسابداری کامپیوتر با SQL Server 2022 | فراز نت آمل', [
-            'description' => 'حسابداری کامپیوتری صنوف روی SQL Server 2022: شرکتی، فروشگاهی، سوپرمارکت، پخش، رستوران، تولیدی و پیمانکاری.',
+            'description' => 'حسابداری کامپیوتری صنوف روی SQL Server 2022 با هوش مصنوعی آفلاین داخل نرم‌افزار: شرکتی، فروشگاهی، سوپرمارکت، پخش، رستوران، تولیدی و پیمانکاری.',
             'groups' => StudioProductMenus::accountingGroups(),
             'industries' => StudioAccountingCopy::industries(),
             'sqlNote' => StudioAccountingCopy::sqlNote(),

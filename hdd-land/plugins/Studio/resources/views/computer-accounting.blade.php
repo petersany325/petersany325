@@ -7,12 +7,30 @@
   <div class="ag-wrap">
     <p class="ag-kicker">حسابداری کامپیوتر · SQL Server 2022</p>
     <h1>حسابداری کامپیوتری صنوف</h1>
-    <p class="ag-lead ag-lead--wide">منوهای شرکتی، فروشگاهی، سوپرمارکت، پخش، رستوران و تولیدی مال حسابداری کامپیوتر هستند و روی SQL Server 2022 نصب می‌شوند. حسابداری وب فقط تعمیرکاران است.</p>
+    <p class="ag-lead ag-lead--wide">هر صنف منوی خودش را دارد: شرکتی، فروشگاهی، سوپرمارکت، پخش، رستوران، تولیدی و بقیه. روی SQL Server 2022 نصب می‌شود و هوش مصنوعی تحلیل و گفتگو را آفلاین، داخل خود نرم‌افزار انجام می‌دهد. حسابداری وب فقط تعمیرکاران است.</p>
     <div class="ag-actions">
       <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست نصب و دمو<i>←</i></a>
       <a class="ag-btn ag-btn--line" href="{{ url('/accounting') }}">حسابداری وب تعمیرکاران</a>
     </div>
     <p class="ag-note">{{ $sqlNote }}</p>
+  </div>
+</section>
+
+<section class="ag-sec" id="ai">
+  <div class="ag-wrap">
+    <p class="ag-kicker">هوش مصنوعی داخل نرم‌افزار</p>
+    <h2>تحلیل و گفتگو با هوش مصنوعی — آفلاین</h2>
+    <p class="ag-lead ag-lead--wide">{{ \App\Support\StudioAccountingCopy::aiNote() }}</p>
+    <div class="ag-cards ag-cards--dense">
+      @foreach(\App\Support\StudioAccountingCopy::aiMenus() as $row)
+        <article class="ag-card">
+          <div>
+            <b>{{ $row['title'] }}</b>
+            <p>{{ $row['text'] }}</p>
+          </div>
+        </article>
+      @endforeach
+    </div>
   </div>
 </section>
 
