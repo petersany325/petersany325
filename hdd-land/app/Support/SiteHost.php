@@ -101,8 +101,10 @@ class SiteHost
     {
         return [
             ['label' => 'طراحی سایت', 'url' => '/design'],
+            ['label' => 'درباره ما', 'url' => '/about'],
+            ['label' => 'حسابداری وب', 'url' => '/accounting'],
+            ['label' => 'حسابداری کامپیوتر', 'url' => '/computer-accounting'],
             ['label' => 'پروژه AI', 'url' => '/ai'],
-            ['label' => 'حسابداری هوش مصنوعی', 'url' => '/accounting'],
             ['label' => 'پروژه‌های سایت', 'url' => '/projects'],
             ['label' => 'نرم‌افزار قبض تحت وب', 'url' => '/receipt-software'],
         ];
@@ -144,7 +146,7 @@ class SiteHost
     {
         $path = '/'.ltrim(strtolower($path), '/');
 
-        foreach (['/design', '/ai', '/accounting', '/projects', '/receipt-software'] as $prefix) {
+        foreach (['/design', '/ai', '/accounting', '/computer-accounting', '/projects', '/receipt-software', '/repair-shop', '/sites', '/about'] as $prefix) {
             if ($path === $prefix || str_starts_with($path, $prefix.'/')) {
                 return true;
             }

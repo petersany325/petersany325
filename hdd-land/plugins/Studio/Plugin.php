@@ -17,12 +17,12 @@ class Plugin extends BasePlugin
 
     public function name(): string
     {
-        return 'استودیو سایت و نرم‌افزار';
+        return 'تخصصی طراحی سایت و نرم‌افزار';
     }
 
     public function description(): string
     {
-        return 'صفحه و منوی سبک دامنه اصلی: طراحی سایت، حسابداری، AI و نرم‌افزار قبض';
+        return 'صفحه و منوی سبک دامنه اصلی: طراحی سایت، حسابداری وب+تعمیرگاه، حسابداری کامپیوتر SQL2022 و قبض';
     }
 
     public function version(): string
@@ -33,6 +33,13 @@ class Plugin extends BasePlugin
     public function isCore(): bool
     {
         return true;
+    }
+
+    public function adminMenu(): array
+    {
+        return [
+            ['label' => 'صفحه اول استودیو', 'url' => '/admin/studio-home'],
+        ];
     }
 
     public function boot(): void
@@ -64,8 +71,12 @@ class Plugin extends BasePlugin
     {
         $files = [
             base_path('app/Support/SiteHost.php'),
+            base_path('app/Support/StudioHomeConfig.php'),
+            base_path('app/Support/StudioProductMenus.php'),
+            base_path('app/Support/StudioDesignCopy.php'),
             base_path('app/Http/Middleware/SiteHostSplit.php'),
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioController.php',
+            __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'Admin'.DIRECTORY_SEPARATOR.'StudioHomeController.php',
         ];
         foreach ($files as $file) {
             if (is_file($file)) {

@@ -6,7 +6,7 @@
   --hl-red-dark:#c4330e;
 }
 body{
-  font-family:"Estedad","Estedad Variable",Tahoma,sans-serif;
+  font-family:"Vazirmatn",Tahoma,sans-serif;
 }
 .hl-home .online-bar,
 .hl-home .home-cta-panel,
@@ -477,7 +477,7 @@ body{
 .btn-blue,.btn.btn-blue{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:.55rem 1rem;border-radius:12px;background:var(--hl-navy);color:#fff;font-weight:800}
 .btn-ghost,.btn.btn-ghost{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:.55rem 1rem;border-radius:12px;border:1.5px solid var(--hl-navy);color:var(--hl-navy);font-weight:800}
 
-.modern-footer{font-family:"Estedad","Estedad Variable",Tahoma,sans-serif}
+.modern-footer{font-family:"Vazirmatn",Tahoma,sans-serif}
 
 @media (max-width:1080px){
   .home-cats{grid-template-columns:repeat(3,minmax(0,1fr))!important}

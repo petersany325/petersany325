@@ -71,6 +71,7 @@ class EnsureUserIsAdmin
             || $path === 'admin/homepage-settings' || str_starts_with($path, 'admin/homepage-settings/')
             || $path === 'admin/online-home' || str_starts_with($path, 'admin/online-home/')
             || $path === 'admin/banner-settings' || str_starts_with($path, 'admin/banner-settings/')
+            || $path === 'admin/studio-home' || str_starts_with($path, 'admin/studio-home/')
         ) {
             return 'site.homepage';
         }

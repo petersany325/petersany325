@@ -4,16 +4,18 @@
 @endphp
 <section class="acc-hero">
   <div class="acc-hero__grid" aria-hidden="true"></div>
-  <div class="st-wrap acc-hero__in">
+  <div class="acc-hero__glow acc-hero__glow--steel" aria-hidden="true"></div>
+  <div class="acc-hero__glow acc-hero__glow--amber" aria-hidden="true"></div>
+  <div class="ag-wrap st-wrap acc-hero__in">
     <div class="acc-copy">
       <p class="acc-kicker">محصول پرچم استودیو</p>
       <h1>نرم‌افزار پیشرفته حسابداری هوش مصنوعی</h1>
       <p class="acc-lead">دفتر واقعی برای فاکتور، سند، انبار و گزارش. هوش مصنوعی فقط پیش‌نویس می‌دهد؛ سند وقتی قطعی است که حسابدار تأیید کند.</p>
-      <div class="st-actions">
-        <a class="st-cta st-cta--on" href="{{ url('/contact') }}">درخواست دمو حسابداری</a>
-        <a class="st-cta st-cta--line" href="{{ url('/ai') }}">لایه AI جداگانه</a>
+      <div class="ag-actions st-actions">
+        <a class="ag-btn ag-btn--on st-cta st-cta--on" href="{{ url('/contact') }}">درخواست دمو حسابداری<i>←</i></a>
+        <a class="ag-btn ag-btn--line st-cta st-cta--line" href="{{ url('/ai') }}">لایه AI جداگانه<i>←</i></a>
       </div>
-      <p class="acc-rule">ادعای بستن خودکار دفاتر مالیاتی نداریم. این نرم‌افزار کمک‌حسابدار است، نه جایگزین ممیز.</p>
+      <p class="acc-rule">پروژه از پایه با لاراول طراحی و برنامه‌نویسی می‌شود. ادعای بستن خودکار دفاتر مالیاتی نداریم؛ هوش مصنوعی فقط پیش‌نویس می‌دهد.</p>
     </div>
     <aside class="acc-ledger" aria-label="پیش‌نمایش سند و پیشنهاد هوش مصنوعی">
       <header class="acc-ledger__bar">
@@ -45,7 +47,7 @@
   </div>
 </section>
 
-<section class="st-wrap acc-sec">
+<section class="ag-wrap st-wrap acc-sec">
   <h2>هوش مصنوعی کجا حق دارد وارد شود</h2>
   <p class="acc-sub">چهار کار مشخص. بدون شعار «هوش مصنوعی همه‌کاره».</p>
   <div class="acc-jobs">
@@ -72,20 +74,44 @@
   </div>
 </section>
 
-<section class="st-wrap acc-sec">
-  <h2>دفتر حسابداری، کامل</h2>
-  <p class="acc-sub">هوش مصنوعی روی همین دفتر سوار است. اگر سند و انبار نباشد، AI تزئین است.</p>
-  <ul class="acc-mods">
-    <li>کدینگ حساب و سند روزانه</li>
-    <li>فاکتور فروش، خرید و پیش‌فاکتور</li>
-    <li>انبار، سریال کالا و کاردکس</li>
-    <li>اقساط، دسته چک و خزانه</li>
-    <li>تراز آزمایشی، سود و زیان، ترازنامه</li>
-    <li>اتصال فروش سایت به همان سند</li>
-  </ul>
+<section class="ag-wrap st-wrap acc-sec" id="industries">
+  <h2>حسابداری به تفکیک صنف</h2>
+  <p class="acc-sub">هر نسخه منو و گردش کار همان کسب‌وکار را دارد. همه پروژه‌ها با لاراول نوشته می‌شوند.</p>
+  <div class="ag-cards ag-cards--dense">
+    @foreach(($industries ?? []) as $row)
+      <a class="ag-card" href="{{ url('/accounting/'.$row['slug']) }}">
+        <div>
+          <b>{{ $row['title'] }}</b>
+          <p>{{ $row['short'] }}</p>
+          <small>توضیحات و منوها ←</small>
+        </div>
+      </a>
+    @endforeach
+  </div>
+  @if(!empty($laravelNote))
+    <p class="ag-note" style="margin-top:1rem">{{ $laravelNote }}</p>
+  @endif
 </section>
 
-<section class="st-wrap acc-sec acc-sec--last">
+<section class="ag-wrap st-wrap acc-sec">
+  <h2>دفتر حسابداری، کامل</h2>
+  <p class="acc-sub">هوش مصنوعی روی همین دفتر سوار است. اگر سند و انبار نباشد، AI تزئین است. منوهای حسابداری وب مثل سایت قبلی این‌جا هستند.</p>
+  <div class="ag-menu-grid">
+    @foreach(($groups ?? []) as $group)
+      <article class="ag-menu-card" id="{{ $group['slug'] }}">
+        <small>حسابداری وب</small>
+        <b>{{ $group['title'] }}</b>
+        <ul>
+          @foreach($group['items'] as $mod)
+            <li><a href="{{ url('/accounting/m/'.$mod['slug']) }}">{{ $mod['title'] }}</a></li>
+          @endforeach
+        </ul>
+      </article>
+    @endforeach
+  </div>
+</section>
+
+<section class="ag-wrap st-wrap acc-sec acc-sec--last">
   <div class="acc-split">
     <div>
       <h2>برای چه کسی است</h2>
