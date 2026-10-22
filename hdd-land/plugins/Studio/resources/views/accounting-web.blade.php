@@ -14,6 +14,24 @@
   </div>
 </section>
 
+<section class="ag-sec" id="ai">
+  <div class="ag-wrap">
+    <p class="ag-kicker">هوش مصنوعی داخل نرم‌افزار</p>
+    <h2>تحلیل قبض و گفتگو آفلاین</h2>
+    <p class="ag-lead ag-lead--wide">{{ \App\Support\StudioAccountingCopy::aiNote() }}</p>
+    <div class="ag-cards ag-cards--dense">
+      @foreach(\App\Support\StudioAccountingCopy::aiMenus() as $row)
+        <article class="ag-card">
+          <div>
+            <b>{{ $row['title'] }}</b>
+            <p>{{ $row['text'] }}</p>
+          </div>
+        </article>
+      @endforeach
+    </div>
+  </div>
+</section>
+
 @foreach($webGroups as $group)
 <section class="ag-sec" id="{{ \Illuminate\Support\Str::slug($group['label'] ?? 'web') }}">
   <div class="ag-wrap">
