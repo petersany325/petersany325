@@ -5,17 +5,7 @@
 @endphp
 
 @if($slug === 'home')
-@include('studio::acc-ai')
-<section class="st-wrap st-sec acc-sec--last">
-  <h2>بقیه خدمات استودیو</h2>
-  <div class="st-grid">
-    <a class="st-card" href="{{ url('/design') }}"><small>طراحی</small><b>طراحی سایت</b><p>فروشگاهی، شرکتی و خدماتی؛ در صورت نیاز به همین دفتر وصل می‌شود.</p></a>
-    <a class="st-card" href="{{ url('/ai') }}"><small>لایه</small><b>پروژه AI</b><p>همان چهار کار سند، فاکتور، گزارش و تیکت — جدا از شعار.</p></a>
-    <a class="st-card" href="{{ url('/projects') }}"><small>نمونه</small><b>پروژه‌های سایت</b><p>تعمیرگاه، دفتر فروش و وب‌اپ از همین سیستم.</p></a>
-    <a class="st-card" href="{{ url('/receipt-software') }}"><small>تعمیرگاه</small><b>نرم‌افزار قبض</b><p>پذیرش و پیگیری قبض روی سامانه جدا.</p></a>
-    <a class="st-card" href="{{ $shopUrl }}"><small>فروش</small><b>فروشگاه قطعات</b><p>کاتالوگ قطعه روی ساب‌دامین جدا است.</p></a>
-  </div>
-</section>
+@include('studio::home-atelier')
 @endif
 
 @if($slug === 'design')

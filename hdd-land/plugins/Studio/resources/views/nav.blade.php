@@ -10,7 +10,7 @@
       <i class="st-mark" aria-hidden="true"></i>
       <span>
         <b>سرزمین هارد</b>
-        <span>استودیو سایت و نرم‌افزار</span>
+        <span>تخصصی طراحی سایت و نرم‌افزار</span>
       </span>
     </a>
     <nav class="st-nav" aria-label="منوی استودیو">

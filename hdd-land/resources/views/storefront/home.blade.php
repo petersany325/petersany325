@@ -16,7 +16,7 @@
   }
 @endphp
 @extends($studioHome ? 'studio::layout' : 'layouts.storefront')
-@section('title', $studioHome ? 'نرم‌افزار پیشرفته حسابداری هوش مصنوعی' : (($page?->seo_title) ?: 'خانه'))
+@section('title', $studioHome ? 'تخصصی طراحی سایت و نرم‌افزار | سرزمین هارد' : (($page?->seo_title) ?: 'خانه'))
 @section('content')
 @if($studioHome)
   @include('studio::bodies', ['slug' => 'home'])

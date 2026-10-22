@@ -10,7 +10,7 @@ class StudioController
 {
     public function home(): View
     {
-        return $this->page('home', 'نرم‌افزار پیشرفته حسابداری هوش مصنوعی');
+        return $this->page('home', 'تخصصی طراحی سایت و نرم‌افزار');
     }
 
     public function design(): View
