@@ -30,7 +30,11 @@
 @include('studio::nav', ['studioHome' => $studioHome, 'agency' => true])
 <main class="site-main">
   @if(session('success'))<div class="ag-note" style="margin:1rem auto;width:min(1180px,calc(100% - 2.2rem))">{{ session('success') }}</div>@endif
-  @yield('content')
+  @if(request()->is('contact'))
+    @include('studio::bodies', ['slug' => 'contact', 'studioHome' => $studioHome])
+  @else
+    @yield('content')
+  @endif
 </main>
 <footer class="st-foot ag-foot">
   <div class="ag-wrap">
