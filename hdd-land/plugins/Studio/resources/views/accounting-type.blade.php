@@ -45,6 +45,9 @@
     <p class="ag-kicker">هوش مصنوعی داخل نرم‌افزار</p>
     <h2>{{ $ai['title'] ?? 'تحلیل و گفتگو با هوش مصنوعی — آفلاین' }}</h2>
     <p class="ag-lead ag-lead--wide">{{ $ai['lead'] ?? \App\Support\StudioAccountingCopy::aiNote() }}</p>
+    @if(!empty($industry['focus']))
+      <p class="ag-note">پرسش‌های پیشنهادی این نسخه: {{ $industry['focus'] }}</p>
+    @endif
     <div class="ag-cards ag-cards--dense">
       @foreach(($ai['items'] ?? \App\Support\StudioAccountingCopy::aiMenus()) as $row)
         <article class="ag-card">

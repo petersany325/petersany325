@@ -237,6 +237,13 @@
 .ag-install--on{justify-content:center;color:#b7f0cc;border-color:rgba(80,200,140,.3)}
 .ag-tabbar{display:none}
 .has-ag-tabbar{padding-bottom:0}
+.ag-table-wrap{overflow:auto;margin-top:.8rem;border:1px solid rgba(255,255,255,.08);border-radius:16px}
+.ag-cmp{width:100%;border-collapse:collapse;min-width:920px;font-size:.72rem}
+.ag-cmp th,.ag-cmp td{padding:.45rem .4rem;border-bottom:1px solid rgba(255,255,255,.06);text-align:center;white-space:nowrap}
+.ag-cmp thead th{color:#fff;background:#101628;font-weight:800}
+.ag-cmp tbody th{text-align:right;color:#eef2ff;font-weight:750;white-space:normal;min-width:9rem}
+.ag-cmp td{color:#9aa3c7}
+.ag-cmp a{color:#c9d0ea;text-decoration:none}
 @media (max-width:1100px){
   .ag-steps{grid-template-columns:repeat(3,minmax(0,1fr))}
 }

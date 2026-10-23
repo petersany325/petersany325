@@ -18,8 +18,8 @@
 
 <section class="ag-sec" id="ai">
   <div class="ag-wrap">
-    <p class="ag-kicker">هوش مصنوعی داخل نرم‌افزار</p>
-    <h2>تحلیل و گفتگو با هوش مصنوعی — آفلاین</h2>
+    <p class="ag-kicker">دستیار هوشمند آفلاین</p>
+    <h2>تحلیل و گفتگو با هوش مصنوعی — داخل نرم‌افزار</h2>
     <p class="ag-lead ag-lead--wide">{{ \App\Support\StudioAccountingCopy::aiNote() }}</p>
     <div class="ag-cards ag-cards--dense">
       @foreach(\App\Support\StudioAccountingCopy::aiMenus() as $row)
@@ -31,8 +31,49 @@
         </article>
       @endforeach
     </div>
+    @if(class_exists(\App\Support\StudioAccountingEditions::class))
+      <h2 class="ag-sec-title">۹ کنترل حسابرس هوشمند</h2>
+      <p class="ag-lead ag-lead--wide">حسابرس هوشمند کنترل خودکار را با ذکر دلیل اجرا می‌کند. ثبت قطعی فقط با تأیید شماست.</p>
+      <ul class="ag-list">
+        @foreach(\App\Support\StudioAccountingEditions::auditorChecks() as $row)
+          <li><strong>{{ $row['title'] }}:</strong> {{ $row['text'] }}</li>
+        @endforeach
+      </ul>
+    @endif
   </div>
 </section>
+
+@if(class_exists(\App\Support\StudioAccountingEditions::class))
+<section class="ag-sec" id="compare">
+  <div class="ag-wrap">
+    <p class="ag-kicker">نسخه‌ها در یک نگاه</p>
+    <h2>هر نسخه منوی همان کسب‌وکار را نشان می‌دهد</h2>
+    <p class="ag-lead ag-lead--wide">دستیار هوشمند در همه نسخه‌ها هست. تعمیرگاه حسابداری وب است، نه نسخه «به‌زودی».</p>
+    <div class="ag-table-wrap">
+      <table class="ag-cmp">
+        <thead>
+          <tr>
+            <th>امکان</th>
+            @foreach(\App\Support\StudioAccountingEditions::comparisonColumns() as $col)
+              <th><a href="{{ url('/computer-accounting/'.$col['slug']) }}">{{ $col['title'] }}</a></th>
+            @endforeach
+          </tr>
+        </thead>
+        <tbody>
+          @foreach(\App\Support\StudioAccountingEditions::comparison() as $row)
+            <tr>
+              <th>{{ $row['label'] }}</th>
+              @foreach(\App\Support\StudioAccountingEditions::comparisonColumns() as $col)
+                <td>{{ $row['cells'][$col['slug']] ?? '—' }}</td>
+              @endforeach
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+@endif
 
 <section class="ag-sec" id="industries">
   <div class="ag-wrap">
