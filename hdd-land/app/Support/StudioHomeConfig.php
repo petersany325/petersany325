@@ -13,15 +13,15 @@ class StudioHomeConfig
         return [
             'enabled' => true,
             'brand' => self::BRAND,
-            'tagline' => 'تخصصی طراحی سایت و نرم‌افزار',
+            'tagline' => 'طراحی سایت، نرم‌افزار و هوش مصنوعی',
             'phone' => '01144447220',
             'show_search' => true,
             'mobile_webapp' => true,
             'search_placeholder' => 'جستجو',
-            'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nحسابداری وب|/accounting\nحسابداری کامپیوتر|/computer-accounting\nنمونه کارها|/projects\nتماس|/contact",
-            'hero_title' => 'طراحی سایت و نرم‌افزار',
-            'hero_em' => 'نرم‌افزار',
-            'hero_text' => 'طراحی حرفه‌ای وب‌سایت مدرن و نرم‌افزار هوشمند برای کسب‌وکار، فروشگاه و سازمان — با لایه هوش مصنوعی.',
+            'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nهوش مصنوعی|/ai\nحسابداری وب|/accounting\nحسابداری کامپیوتر|/computer-accounting\nنمونه کارها|/projects\nتماس|/contact",
+            'hero_title' => 'طراحی سایت، نرم‌افزار و هوش مصنوعی',
+            'hero_em' => 'هوش مصنوعی',
+            'hero_text' => 'شرکت فراز نت آمل سایت حرفه‌ای، نرم‌افزار اختصاصی و هوش مصنوعی می‌سازد — برای کسب‌وکار، فروشگاه و سازمان.',
             'cta1_label' => 'درخواست مشاوره رایگان',
             'cta1_url' => '/contact',
             'cta2_label' => 'مشاهده نمونه کارها',
@@ -41,11 +41,11 @@ class StudioHomeConfig
             'svc_1_title' => 'طراحی سایت',
             'svc_1_text' => 'وب‌سایت حرفه‌ای، واکنش‌گرا و بهینه‌شده برای دیده شدن برند شما',
             'svc_1_url' => '/design',
-            'svc_2_title' => 'نرم‌افزار هوشمند',
-            'svc_2_text' => 'حسابداری، قبض و پنل اختصاصی با لایه هوش مصنوعی',
-            'svc_2_url' => '/accounting',
-            'svc_3_title' => 'سئو و پشتیبانی',
-            'svc_3_text' => 'بهینه‌سازی برای موتورهای جستجو و پشتیبانی مداوم و حرفه‌ای',
+            'svc_2_title' => 'ساخت نرم‌افزار',
+            'svc_2_text' => 'سامانه اختصاصی، حسابداری، تعمیرگاه و پنل سازمانی — کدنویسی واقعی روی کار شما',
+            'svc_2_url' => '/computer-accounting',
+            'svc_3_title' => 'هوش مصنوعی',
+            'svc_3_text' => 'دستیار آفلاین داخل نرم‌افزار و سایت: تحلیل، گفتگو و پیشنهاد کار بدون ارسال داده به اینترنت',
             'svc_3_url' => '/ai',
             'stats_enabled' => true,
             'stat_1_value' => '۳۵۰+',
@@ -98,6 +98,27 @@ class StudioHomeConfig
         $legacy = ['', 'سرزمین هارد', 'سرزمین‌هارد', 'HDD Land', 'hdd land', 'Hdd Land'];
         if (in_array($brand, $legacy, true)) {
             $merged['brand'] = self::BRAND;
+        }
+        $fresh = self::defaults();
+        $legacySwap = [
+            'tagline' => ['تخصصی طراحی سایت و نرم‌افزار'],
+            'hero_title' => ['طراحی سایت و نرم‌افزار'],
+            'hero_em' => ['نرم‌افزار'],
+            'hero_text' => ['طراحی حرفه‌ای وب‌سایت مدرن و نرم‌افزار هوشمند برای کسب‌وکار، فروشگاه و سازمان — با لایه هوش مصنوعی.'],
+            'svc_2_title' => ['نرم‌افزار هوشمند'],
+            'svc_2_text' => ['حسابداری، قبض و پنل اختصاصی با لایه هوش مصنوعی'],
+            'svc_2_url' => ['/accounting'],
+            'svc_3_title' => ['سئو و پشتیبانی'],
+            'svc_3_text' => ['بهینه‌سازی برای موتورهای جستجو و پشتیبانی مداوم و حرفه‌ای'],
+        ];
+        foreach ($legacySwap as $key => $olds) {
+            if (in_array(trim((string) ($merged[$key] ?? '')), $olds, true)) {
+                $merged[$key] = $fresh[$key];
+            }
+        }
+        $oldNav = "صفحه اصلی|/\nطراحی سایت|/design\nحسابداری وب|/accounting\nحسابداری کامپیوتر|/computer-accounting\nنمونه کارها|/projects\nتماس|/contact";
+        if (trim((string) ($merged['nav'] ?? '')) === $oldNav) {
+            $merged['nav'] = $fresh['nav'];
         }
 
         return $merged;

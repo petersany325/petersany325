@@ -16,7 +16,7 @@
   }
 @endphp
 @extends($studioHome ? 'studio::layout' : 'layouts.storefront')
-@section('title', $studioHome ? 'تخصصی طراحی سایت و نرم‌افزار | شرکت فراز نت آمل (سرزمین هارد)' : (($page?->seo_title) ?: 'خانه'))
+@section('title', $studioHome ? 'طراحی سایت، نرم‌افزار و هوش مصنوعی | شرکت فراز نت آمل (سرزمین هارد)' : (($page?->seo_title) ?: 'خانه'))
 @section('content')
 @if($studioHome)
   @include('studio::bodies', ['slug' => 'home'])

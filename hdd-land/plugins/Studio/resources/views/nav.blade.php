@@ -26,7 +26,7 @@
       </span>
       <span>
         <b>{{ $studioHome['brand'] ?? 'شرکت فراز نت آمل (سرزمین هارد)' }}</b>
-        <span>{{ $studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار' }}</span>
+        <span>{{ $studioHome['tagline'] ?? 'طراحی سایت، نرم‌افزار و هوش مصنوعی' }}</span>
       </span>
     </a>
     <nav class="ag-nav" aria-label="منوی استودیو">
@@ -109,7 +109,7 @@
       <i class="st-mark" aria-hidden="true"></i>
       <span>
         <b>شرکت فراز نت آمل (سرزمین هارد)</b>
-        <span>تخصصی طراحی سایت و نرم‌افزار</span>
+        <span>طراحی سایت، نرم‌افزار و هوش مصنوعی</span>
       </span>
     </a>
     <nav class="st-nav" aria-label="منوی استودیو">

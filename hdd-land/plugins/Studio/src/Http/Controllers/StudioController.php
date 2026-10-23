@@ -62,7 +62,7 @@ class StudioController
 
     public function ai(): View
     {
-        return $this->page('ai', 'پروژه هوش مصنوعی');
+        return $this->page('ai', 'هوش مصنوعی برای سایت و نرم‌افزار | فراز نت آمل');
     }
 
     public function accounting(): View

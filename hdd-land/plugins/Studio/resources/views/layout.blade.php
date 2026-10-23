@@ -9,7 +9,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>@yield('title', ($studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار').' | فراز نت آمل')</title>
+  <title>@yield('title', ($studioHome['tagline'] ?? 'طراحی سایت، نرم‌افزار و هوش مصنوعی').' | فراز نت آمل')</title>
   <meta name="description" content="@hasSection('description')@yield('description')@else{{ $studioHome['hero_text'] ?? 'طراحی سایت حرفه‌ای با فراز نت آمل؛ سایت شرکتی، فروشگاهی و سامانه‌های اختصاصی لاراول.' }}@endif">
   @if($agency && class_exists(\App\Support\StudioHomeConfig::class) && \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome))
     <link rel="manifest" href="{{ url('/studio-manifest.webmanifest') }}">
@@ -33,7 +33,7 @@
 </main>
 <footer class="st-foot{{ $agency ? ' ag-foot' : '' }}">
   <div class="{{ $agency ? 'ag-wrap' : 'st-wrap' }}">
-    <span>{{ $studioHome['brand'] ?? 'شرکت فراز نت آمل (سرزمین هارد)' }} — {{ $studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار' }}</span>
+    <span>{{ $studioHome['brand'] ?? 'شرکت فراز نت آمل (سرزمین هارد)' }} — {{ $studioHome['tagline'] ?? 'طراحی سایت، نرم‌افزار و هوش مصنوعی' }}</span>
     <span>
       <a href="{{ url('/design') }}">طراحی سایت</a>
       ·
