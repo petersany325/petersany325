@@ -152,6 +152,7 @@
       <button class="btn btn-primary" type="submit">ذخیره صفحه اول</button>
       <a class="btn" href="{{ url('/') }}" target="_blank" rel="noopener">مشاهده سایت</a>
       <a class="btn" href="{{ url('/admin/homepage-settings') }}">بنر فروشگاه</a>
+      <a class="btn" href="{{ url('/admin/studio-sms') }}">پیامک ورود / نیازپرداز</a>
     </div>
   </form>
 </div>
