@@ -66,8 +66,9 @@
     </div>
   </div>
   <div class="wa-auth-actions">
-    <a class="wa-btn wa-btn-primary wa-btn-block" href="{{ url('/login') }}">ورود</a>
-    <a class="wa-btn wa-btn-ghost wa-btn-block" href="{{ url('/register') }}">ثبت‌نام</a>
+    <a class="wa-btn wa-btn-primary wa-btn-block" href="{{ url('/auth/customer') }}">ورود با پیامک</a>
+    <a class="wa-btn wa-btn-ghost wa-btn-block" href="{{ url('/auth/customer?tab=register') }}">ثبت‌نام</a>
+    <a class="wa-btn wa-btn-ghost wa-btn-block" href="{{ url('/auth/staff') }}">ورود کارمند</a>
   </div>
   <div class="wa-menu" style="margin-top:1rem">
     @if(!empty($s['account_show_track']))

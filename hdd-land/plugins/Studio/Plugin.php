@@ -75,7 +75,9 @@ class Plugin extends BasePlugin
             base_path('app/Support/StudioProductMenus.php'),
             base_path('app/Support/StudioDesignCopy.php'),
             base_path('app/Http/Middleware/SiteHostSplit.php'),
+            __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Support'.DIRECTORY_SEPARATOR.'StudioSms.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioController.php',
+            __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioAuthController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'Admin'.DIRECTORY_SEPARATOR.'StudioHomeController.php',
         ];
         foreach ($files as $file) {

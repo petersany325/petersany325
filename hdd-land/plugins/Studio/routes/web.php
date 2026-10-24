@@ -1,7 +1,18 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Plugins\Studio\src\Http\Controllers\StudioAuthController;
 use Plugins\Studio\src\Http\Controllers\StudioController;
+
+Route::get('/auth/customer', [StudioAuthController::class, 'customer'])->name('studio.auth.customer');
+Route::get('/auth/customer/register', fn () => redirect()->to(url('/auth/customer?tab=register')));
+Route::post('/auth/customer/sms', [StudioAuthController::class, 'sendCustomer'])->name('studio.auth.customer.sms');
+Route::post('/auth/customer/verify', [StudioAuthController::class, 'verifyCustomer'])->name('studio.auth.customer.verify');
+Route::get('/auth/staff', [StudioAuthController::class, 'staff'])->name('studio.auth.staff');
+Route::post('/auth/staff/sms', [StudioAuthController::class, 'sendStaff'])->name('studio.auth.staff.sms');
+Route::post('/auth/staff/verify', [StudioAuthController::class, 'verifyStaff'])->name('studio.auth.staff.verify');
+Route::post('/auth/restart', [StudioAuthController::class, 'restart'])->name('studio.auth.restart');
+Route::post('/auth/logout', [StudioAuthController::class, 'logout'])->name('studio.auth.logout');
 
 Route::get('/studio-manifest.webmanifest', [StudioController::class, 'manifest'])->name('studio.manifest');
 Route::get('/studio-sw.js', [StudioController::class, 'serviceWorker'])->name('studio.sw');
