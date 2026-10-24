@@ -1,4 +1,8 @@
 @php
+  $hlAdminBar = null;
+  if (class_exists(\App\Support\AdminToolbar::class)) {
+    try { $hlAdminBar = \App\Support\AdminToolbar::current(); } catch (\Throwable $e) {}
+  }
   $studioAgency = false;
   $studioHome = [];
   try {
@@ -16,7 +20,7 @@
 @endphp
 @if($studioAgency)
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl"@if($hlAdminBar) class="has-hl-adminbar"@endif>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -36,7 +40,10 @@
   <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=17">
   <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=15">
 </head>
-<body class="st-body ag-body{{ \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome) ? ' has-ag-tabbar' : '' }}" style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}">
+<body class="st-body ag-body{{ \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome) ? ' has-ag-tabbar' : '' }}{{ $hlAdminBar ? ' has-hl-adminbar' : '' }}" style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}">
+@if(view()->exists('partials.admin-toolbar'))
+  @include('partials.admin-toolbar')
+@endif
 @include('studio::nav', ['studioHome' => $studioHome, 'agency' => true])
 <main class="site-main">
   @if(session('success'))<div class="ag-note" style="margin:1rem auto;width:min(1180px,calc(100% - 2.2rem))">{{ session('success') }}</div>@endif
@@ -86,7 +93,7 @@
 </html>
 @else
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl"@if($hlAdminBar) class="has-hl-adminbar"@endif>
 <head><meta charset="utf-8">
     
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -150,7 +157,10 @@
         }
     } catch (\Throwable $e) {}
 @endphp
-<body id="top" class="{{ request()->boolean('theme_preview') ? 'theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}">
+<body id="top" class="{{ request()->boolean('theme_preview') ? 'theme-preview' : '' }}{{ $waBodyClass }}{{ request()->routeIs('home') ? ' hl-home' : '' }}{{ $hlAdminBar ? ' has-hl-adminbar' : '' }}">
+@if(view()->exists('partials.admin-toolbar'))
+  @include('partials.admin-toolbar')
+@endif
 <div class="topbar">
     <div class="container">
         <div class="topbar-start">

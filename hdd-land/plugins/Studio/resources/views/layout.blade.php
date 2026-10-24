@@ -2,9 +2,13 @@
   \Plugins\Studio\Plugin::registerViews();
   $studioHome = class_exists(\App\Support\StudioHomeConfig::class) ? \App\Support\StudioHomeConfig::get() : [];
   $agency = ! empty($studioHome['enabled']);
+  $hlAdminBar = null;
+  if (class_exists(\App\Support\AdminToolbar::class)) {
+    try { $hlAdminBar = \App\Support\AdminToolbar::current(); } catch (\Throwable $e) {}
+  }
 @endphp
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl"@if($hlAdminBar) class="has-hl-adminbar"@endif>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -26,7 +30,10 @@
     <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=15">
   @endif
 </head>
-<body class="st-body{{ $agency ? ' ag-body' : '' }}{{ ($agency && class_exists(\App\Support\StudioHomeConfig::class) && \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome)) ? ' has-ag-tabbar' : '' }}"@if($agency) style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}"@endif>
+<body class="st-body{{ $agency ? ' ag-body' : '' }}{{ ($agency && class_exists(\App\Support\StudioHomeConfig::class) && \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome)) ? ' has-ag-tabbar' : '' }}{{ $hlAdminBar ? ' has-hl-adminbar' : '' }}"@if($agency) style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}"@endif>
+@if(view()->exists('partials.admin-toolbar'))
+  @include('partials.admin-toolbar')
+@endif
 @include('studio::nav', ['studioHome' => $studioHome, 'agency' => $agency])
 <main>
   @yield('content')

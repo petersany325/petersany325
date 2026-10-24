@@ -75,6 +75,7 @@ class Plugin extends BasePlugin
             base_path('app/Support/StudioHomeConfig.php'),
             base_path('app/Support/StudioProductMenus.php'),
             base_path('app/Support/StudioDesignCopy.php'),
+            base_path('app/Support/AdminToolbar.php'),
             base_path('app/Http/Middleware/SiteHostSplit.php'),
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Support'.DIRECTORY_SEPARATOR.'StudioSms.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioController.php',
