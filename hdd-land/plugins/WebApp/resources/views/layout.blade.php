@@ -1,5 +1,11 @@
+@php
+  $hlAdminBar = null;
+  if (class_exists(\App\Support\AdminToolbar::class)) {
+    try { $hlAdminBar = \App\Support\AdminToolbar::current(); } catch (\Throwable $e) {}
+  }
+@endphp
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl"@if($hlAdminBar) class="has-hl-adminbar"@endif>
 <head><meta charset="utf-8">
   
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -42,8 +48,11 @@
     'contact' => '☎',
   ];
 @endphp
-<body class="wa-body {{ $anim ? 'wa-anim' : '' }} {{ $compact ? 'wa-compact' : '' }} {{ $drawerOn ? 'has-wa-drawer' : '' }}"
+<body class="wa-body {{ $anim ? 'wa-anim' : '' }} {{ $compact ? 'wa-compact' : '' }} {{ $drawerOn ? 'has-wa-drawer' : '' }}{{ $hlAdminBar ? ' has-hl-adminbar' : '' }}"
   style="--wa-brand:{{ $s['theme_color'] ?? '#e23d12' }};--wa-bg:{{ $s['background_color'] ?? '#f4f6f9' }};--wa-surface:{{ $s['surface_color'] ?? '#ffffff' }};--wa-ink:{{ $s['text_color'] ?? '#1a1d23' }}">
+@if(view()->exists('partials.admin-toolbar'))
+  @include('partials.admin-toolbar')
+@endif
 
 <header class="wa-top">
   <div class="wa-top-start">
