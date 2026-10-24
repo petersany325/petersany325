@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap">
-  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=24">
+  <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=25">
 </head>
 @php
   $anim = !empty($s['animations']);
@@ -28,11 +28,14 @@
   $drawerOn = !empty($s['drawer_menu_enabled']) && !empty($drawerMenu);
   $drawerSide = (($s['drawer_side'] ?? 'right') === 'left') ? 'left' : 'right';
   $tab = $tab ?? 'home';
+  $reqPath = trim(request()->path(), '/');
+  $isTickets = str_contains($reqPath, 'ticket');
   $drawerIcons = [
     'home' => '⌂',
     'shop' => '▣',
     'cart' => '▢',
     'account' => '☺',
+    'staff' => '♟',
     'track' => '☰',
     'warranty' => '⛨',
     'support' => '✉',
@@ -87,20 +90,28 @@
     <button type="button" class="wa-drawer-close" id="waMenuClose" aria-label="بستن منو">×</button>
   </div>
   <nav class="wa-drawer-nav">
+    @php $prevSection = ''; @endphp
     @foreach($drawerMenu as $item)
       @php
         $href = str_starts_with($item['url'], 'http') ? $item['url'] : url($item['url']);
         $kids = collect($item['children'] ?? [])->filter(fn ($c) => !empty($c['label']) && !empty($c['url']))->values();
         $hasKids = $kids->isNotEmpty();
         $key = (string) ($item['key'] ?? '');
+        $section = trim((string) ($item['section'] ?? ''));
         $ico = trim((string) ($item['icon'] ?? '')) ?: ($drawerIcons[$key] ?? '•');
         $active = false;
         if ($key === 'home' && ($tab ?? '') === 'home') $active = true;
         if ($key === 'shop' && ($tab ?? '') === 'shop') $active = true;
         if ($key === 'cart' && ($tab ?? '') === 'cart') $active = true;
-        if ($key === 'account' && ($tab ?? '') === 'account') $active = true;
+        if ($key === 'account' && (($tab ?? '') === 'account' || str_starts_with($reqPath, 'account'))) $active = true;
+        if ($key === 'staff' && str_starts_with($reqPath, 'staff')) $active = true;
+        if ($key === 'support' && !empty($isTickets)) $active = true;
         $openByDefault = $active && $hasKids;
       @endphp
+      @if($section !== '' && $section !== $prevSection)
+        <span class="wa-drawer-section">{{ $section }}</span>
+        @php $prevSection = $section; @endphp
+      @endif
       @if($hasKids)
         <div class="wa-drawer-group {{ $openByDefault ? 'is-open' : '' }}" data-wa-sub>
           <button type="button" class="wa-drawer-parent {{ $active ? 'active' : '' }}" data-wa-sub-toggle aria-expanded="{{ $openByDefault ? 'true' : 'false' }}">
@@ -109,7 +120,7 @@
             <em class="wa-drawer-caret" aria-hidden="true">▾</em>
           </button>
           <div class="wa-drawer-sub" @if(!$openByDefault) hidden @endif>
-            <a href="{{ $href }}" class="wa-drawer-sub-all">{{ $key === 'warranty' ? 'استعلام گارانتی' : 'همهٔ '.$item['label'] }}</a>
+            <a href="{{ $href }}" class="wa-drawer-sub-all">همهٔ {{ $item['label'] }}</a>
             @php $shownCompanyHead = false; @endphp
             @foreach($kids as $child)
               @php
@@ -248,6 +259,9 @@
   @endif
   @if(!empty($s['show_nav_shop']))
     <a class="{{ $tab==='shop'?'active':'' }}" href="{{ url('/app/shop') }}"><span class="wa-ico">▣</span>{{ $s['nav_shop_label'] ?? 'فروشگاه' }}</a>
+  @endif
+  @if(!empty($s['show_nav_tickets']))
+    <a class="{{ !empty($isTickets)?'active':'' }}" href="{{ url('/account/tickets') }}"><span class="wa-ico">✉</span>{{ $s['nav_tickets_label'] ?? 'تیکت' }}</a>
   @endif
   @if(!empty($s['show_nav_cart']))
     <a class="{{ $tab==='cart'?'active':'' }}" href="{{ url('/app/cart') }}"><span class="wa-ico">▢</span>{{ $s['nav_cart_label'] ?? 'سبد' }}@if(($cartCount??0)>0)<i class="wa-dot"></i>@endif</a>

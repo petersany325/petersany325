@@ -206,8 +206,9 @@
       @endif
       <form action="{{ route('logout') }}" method="post" style="display:inline">@csrf<button class="btn btn-outline btn-sm" type="submit">خروج</button></form>
     @else
-      <a class="mega-util" href="{{ route('login') }}">ورود</a>
-      <a class="btn btn-primary btn-sm" href="{{ route('register') }}">ثبت‌نام</a>
+      <a class="mega-util" href="{{ url('/auth/customer') }}">ورود کاربر</a>
+      <a class="mega-util" href="{{ url('/auth/staff') }}">ورود کارمند</a>
+      <a class="btn btn-primary btn-sm" href="{{ url('/auth/customer?tab=register') }}">ثبت‌نام</a>
     @endauth
   </span>
 </nav>
@@ -227,8 +228,9 @@
     @endif
     <form action="{{ route('logout') }}" method="post" style="display:inline">@csrf<button class="btn btn-outline btn-sm" type="submit">خروج</button></form>
   @else
-    <a href="{{ route('login') }}">ورود</a>
-    <a class="btn btn-primary btn-sm" href="{{ route('register') }}">ثبت‌نام</a>
+    <a href="{{ url('/auth/customer') }}">ورود کاربر</a>
+    <a href="{{ url('/auth/staff') }}">ورود کارمند</a>
+    <a class="btn btn-primary btn-sm" href="{{ url('/auth/customer?tab=register') }}">ثبت‌نام</a>
   @endauth
 </nav>
 @endif

@@ -160,7 +160,7 @@ class SiteHost
         $path = '/'.ltrim(strtolower($path), '/');
 
         foreach ([
-            '/admin', '/staff', '/login', '/logout', '/register',
+            '/admin', '/staff', '/login', '/logout', '/register', '/auth',
             '/password', '/sanctum', '/livewire',
         ] as $prefix) {
             if ($path === $prefix || str_starts_with($path, $prefix.'/')) {

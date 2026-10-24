@@ -21,7 +21,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="csrf-token" content="{{ csrf_token() }}">
-  <title>@if(request()->is('contact')){{ \App\Support\StudioDesignCopy::seoTitle('contact') }}@elseif(request()->is('about')){{ \App\Support\StudioDesignCopy::seoTitle('about') }}@else@yield('title', ($studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار').' | فراز نت آمل')@endif</title>
+  <title>@if(request()->is('contact')){{ \App\Support\StudioDesignCopy::seoTitle('contact') }}@elseif(request()->is('about')){{ \App\Support\StudioDesignCopy::seoTitle('about') }}@else@yield('title', ($studioHome['tagline'] ?? 'طراحی سایت، نرم‌افزار و هوش مصنوعی').' | فراز نت آمل')@endif</title>
   <meta name="description" content="@if(request()->is('contact')){{ \App\Support\StudioDesignCopy::seoDescription('contact') }}@elseif(request()->is('about')){{ \App\Support\StudioDesignCopy::seoDescription('about') }}@else{{ $studioHome['hero_text'] ?? 'طراحی سایت حرفه‌ای با فراز نت آمل.' }}@endif">
   @if(\App\Support\StudioHomeConfig::mobileWebAppOn($studioHome))
     <link rel="manifest" href="{{ url('/studio-manifest.webmanifest') }}">
@@ -34,7 +34,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap">
   <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=17">
-  <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=12">
+  <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=15">
 </head>
 <body class="st-body ag-body{{ \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome) ? ' has-ag-tabbar' : '' }}" style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}">
 @include('studio::nav', ['studioHome' => $studioHome, 'agency' => true])
@@ -111,7 +111,7 @@
     <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=50">
     <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=10">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=4">
-    <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=24">
+    <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=25">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
     @endif
@@ -199,7 +199,8 @@
               <button type="submit">خروج</button>
             </form>
           @else
-            <a class="hdr-util" href="{{ route('login') }}">ورود</a>
+            <a class="hdr-util" href="{{ url('/auth/customer') }}">ورود کاربر</a>
+            <a class="hdr-util" href="{{ url('/auth/staff') }}">ورود کارمند</a>
           @endauth
         </div>
     </div>
@@ -257,8 +258,9 @@
                   <a href="{{ route('account.index') }}">حساب من</a>
                   <a href="{{ url('/app/account') }}">حساب وب‌اپ</a>
                 @else
-                  <a href="{{ route('login') }}">ورود مشتریان</a>
-                  <a href="{{ route('register') }}">ثبت‌نام</a>
+                  <a href="{{ url('/auth/customer') }}">ورود کاربر</a>
+                  <a href="{{ url('/auth/customer?tab=register') }}">ثبت‌نام</a>
+                  <a href="{{ url('/auth/staff') }}">ورود کارمند</a>
                 @endauth
             </div>
         </div>

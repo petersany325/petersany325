@@ -35,6 +35,7 @@
     <a href="{{ url('/account/serials') }}">سریال‌ها و گارانتی من <span>‹</span></a>
     <a href="{{ url('/serial-check') }}">استعلام گارانتی <span>‹</span></a>
     <a href="{{ url('/account') }}">کارتابل کامل مشتری <span>‹</span></a>
+    <a href="{{ url('/staff') }}">کارتابل کارمند <span>‹</span></a>
     @if(!empty($s['account_show_full_site']))
       <a href="{{ url('/') }}" target="_blank" rel="noopener">نسخه کامل سایت <span>‹</span></a>
     @endif
@@ -66,8 +67,9 @@
     </div>
   </div>
   <div class="wa-auth-actions">
-    <a class="wa-btn wa-btn-primary wa-btn-block" href="{{ url('/login') }}">ورود</a>
-    <a class="wa-btn wa-btn-ghost wa-btn-block" href="{{ url('/register') }}">ثبت‌نام</a>
+    <a class="wa-btn wa-btn-primary wa-btn-block" href="{{ url('/auth/customer') }}">ورود با پیامک</a>
+    <a class="wa-btn wa-btn-ghost wa-btn-block" href="{{ url('/auth/customer?tab=register') }}">ثبت‌نام</a>
+    <a class="wa-btn wa-btn-ghost wa-btn-block" href="{{ url('/auth/staff') }}">ورود کارمند</a>
   </div>
   <div class="wa-menu" style="margin-top:1rem">
     @if(!empty($s['account_show_track']))

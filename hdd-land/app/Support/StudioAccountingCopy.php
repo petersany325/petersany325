@@ -11,7 +11,7 @@ class StudioAccountingCopy
     /** @return list<array<string, mixed>> */
     public static function industries(): array
     {
-        return [
+        $rows = [
             self::corporate(),
             self::supermarket(),
             self::shop(),
@@ -23,6 +23,12 @@ class StudioAccountingCopy
             self::service(),
             self::automation(),
         ];
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = self::enrich($row);
+        }
+
+        return $out;
     }
 
     public static function laravelNote(): string
@@ -37,12 +43,20 @@ class StudioAccountingCopy
 
     public static function aiNote(): string
     {
+        if (class_exists(StudioAccountingEditions::class)) {
+            return StudioAccountingEditions::aiNote();
+        }
+
         return 'هوش مصنوعی داخل خود نرم‌افزار طراحی و راه‌اندازی شده است: تحلیل گزارش، توضیح سود و زیان و گفتگو با حسابدار به‌صورت آفلاین روی همان سیستم — بدون اینترنت و بدون ارسال سند به بیرون.';
     }
 
     /** @return list<array{title:string,text:string}> */
     public static function aiMenus(): array
     {
+        if (class_exists(StudioAccountingEditions::class)) {
+            return StudioAccountingEditions::aiMenus();
+        }
+
         return [
             ['title' => 'تحلیل هوش مصنوعی آفلاین', 'text' => 'گزارش فروش، سود، موجودی و مانده را روی همان سیستم می‌خواند و به زبان مدیر توضیح می‌دهد. اینترنت لازم نیست؛ داده از دفتر خارج نمی‌شود.'],
             ['title' => 'گفتگو با هوش مصنوعی داخل نرم‌افزار', 'text' => 'حسابدار یا صاحب کسب‌وکار می‌پرسد «چرا سود این ماه کم شد؟» یا «کدام کالا ضرر می‌دهد؟» و جواب از روی همان اسناد دفتر می‌آید — چت عمومی اینترنتی نیست.'],
@@ -65,11 +79,36 @@ class StudioAccountingCopy
     {
         foreach (self::industries() as $row) {
             if ($row['slug'] === $slug) {
-                return $row;
+                return self::enrich($row);
             }
         }
 
         return null;
+    }
+
+    /** @param  array<string, mixed>  $row */
+    private static function enrich(array $row): array
+    {
+        if (! class_exists(StudioAccountingEditions::class)) {
+            return $row;
+        }
+        $slug = (string) ($row['slug'] ?? '');
+        $row['focus'] = StudioAccountingEditions::focus($slug);
+        $extra = StudioAccountingEditions::extraMenus($slug);
+        $have = [];
+        foreach ($row['menus'] ?? [] as $item) {
+            $have[(string) ($item['title'] ?? '')] = true;
+        }
+        foreach ($extra as $item) {
+            $title = (string) ($item['title'] ?? '');
+            if ($title === '' || isset($have[$title])) {
+                continue;
+            }
+            $row['menus'][] = $item;
+            $have[$title] = true;
+        }
+
+        return $row;
     }
 
     /**

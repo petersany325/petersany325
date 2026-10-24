@@ -26,7 +26,7 @@
       </span>
       <span>
         <b>{{ $studioHome['brand'] ?? 'شرکت فراز نت آمل (سرزمین هارد)' }}</b>
-        <span>{{ $studioHome['tagline'] ?? 'تخصصی طراحی سایت و نرم‌افزار' }}</span>
+        <span>{{ $studioHome['tagline'] ?? 'طراحی سایت، نرم‌افزار و هوش مصنوعی' }}</span>
       </span>
     </a>
     <nav class="ag-nav" aria-label="منوی استودیو">
@@ -69,6 +69,15 @@
       @endforeach
     </nav>
     <div class="ag-tools">
+      <div class="ag-auth-tools">
+        @auth
+          <a class="ag-auth-link" href="{{ auth()->user()->isStaff() || auth()->user()->isAdmin() ? url('/staff') : url('/account') }}">{{ auth()->user()->name }}</a>
+          <form method="post" action="{{ url('/auth/logout') }}" class="ag-auth-out">@csrf<button type="submit">خروج</button></form>
+        @else
+          <a class="ag-auth-link{{ str_starts_with($path, '/auth/customer') ? ' is-on' : '' }}" href="{{ url('/auth/customer') }}">ورود کاربر</a>
+          <a class="ag-auth-btn{{ str_starts_with($path, '/auth/staff') ? ' is-on' : '' }}" href="{{ url('/auth/staff') }}">ورود کارمند</a>
+        @endauth
+      </div>
       @if(!empty($studioHome['phone']))
         <a class="ag-phone" href="tel:{{ preg_replace('/\s+/', '', $studioHome['phone']) }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h3l1.5 4-2 1.5a12 12 0 0 0 6 6L17 13l4 1.5V18a2 2 0 0 1-2 2A16 16 0 0 1 5 6a2 2 0 0 1 2-2z"/></svg>
@@ -89,15 +98,25 @@
   </div>
   <div class="ag-drawer" id="agDrawer" hidden>
     <div class="ag-drawer__in">
+      <div class="ag-drawer__auth">
+        @auth
+          <a class="ag-drawer__h" href="{{ auth()->user()->isStaff() || auth()->user()->isAdmin() ? url('/staff') : url('/account') }}">{{ auth()->user()->name }}</a>
+          <form method="post" action="{{ url('/auth/logout') }}">@csrf<button type="submit">خروج</button></form>
+        @else
+          <a class="ag-drawer__h" href="{{ url('/auth/customer') }}">ورود کاربر</a>
+          <a href="{{ url('/auth/customer?tab=register') }}">ثبت‌نام</a>
+          <a href="{{ url('/auth/staff') }}">ورود کارمند</a>
+        @endauth
+      </div>
+      <p class="ag-drawer__sec">حساب و پشتیبانی</p>
+      <a href="{{ url('/account/tickets') }}">تیکت</a>
+      <a href="{{ url('/account') }}">کارتابل مشتری</a>
+      <a href="{{ url('/staff') }}">کارتابل کارمند</a>
+      <a href="{{ url('/app') }}">وب موبایل</a>
+      <p class="ag-drawer__sec">صفحات</p>
       @foreach($items as $item)
-        @php $url = $item['url'] ?? '#'; $kids = $item['children'] ?? []; @endphp
+        @php $url = $item['url'] ?? '#'; @endphp
         <a class="ag-drawer__h" href="{{ url($url) }}">{{ $item['label'] }}</a>
-        @foreach($kids as $col)
-          <a href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
-          @foreach($col['children'] ?? [] as $leaf)
-            <a class="ag-drawer__sub" href="{{ url($leaf['url'] ?? '#') }}">{{ $leaf['label'] }}</a>
-          @endforeach
-        @endforeach
       @endforeach
     </div>
   </div>
@@ -109,7 +128,7 @@
       <i class="st-mark" aria-hidden="true"></i>
       <span>
         <b>شرکت فراز نت آمل (سرزمین هارد)</b>
-        <span>تخصصی طراحی سایت و نرم‌افزار</span>
+        <span>طراحی سایت، نرم‌افزار و هوش مصنوعی</span>
       </span>
     </a>
     <nav class="st-nav" aria-label="منوی استودیو">
@@ -118,6 +137,12 @@
         <a href="{{ url($item['url']) }}" class="{{ $on ? 'is-on' : '' }}">{{ $item['label'] }}</a>
       @endforeach
       <a href="{{ url('/contact') }}">تماس</a>
+      @auth
+        <a href="{{ auth()->user()->isStaff() || auth()->user()->isAdmin() ? url('/staff') : url('/account') }}">{{ auth()->user()->name }}</a>
+      @else
+        <a href="{{ url('/auth/customer') }}" class="{{ str_starts_with($path, '/auth/customer') ? 'is-on' : '' }}">ورود کاربر</a>
+        <a href="{{ url('/auth/staff') }}" class="{{ str_starts_with($path, '/auth/staff') ? 'is-on' : '' }}">ورود کارمند</a>
+      @endauth
     </nav>
     <a class="st-cta st-cta--on" href="{{ url('/contact') }}">درخواست مشاوره</a>
   </div>

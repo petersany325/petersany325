@@ -29,6 +29,19 @@
         </article>
       @endforeach
     </div>
+    @if(class_exists(\App\Support\StudioAccountingEditions::class))
+      <h2 class="ag-sec-title">منوی تعمیرکاران — الان فعال است</h2>
+      <div class="ag-cards ag-cards--dense">
+        @foreach(\App\Support\StudioAccountingEditions::technicianMenus() as $row)
+          <article class="ag-card">
+            <div>
+              <b>{{ $row['title'] }}</b>
+              <p>{{ $row['text'] }}</p>
+            </div>
+          </article>
+        @endforeach
+      </div>
+    @endif
   </div>
 </section>
 
