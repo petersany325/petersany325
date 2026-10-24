@@ -39,6 +39,7 @@ class Plugin extends BasePlugin
     {
         return [
             ['label' => 'صفحه اول استودیو', 'url' => '/admin/studio-home'],
+            ['label' => 'پیامک ورود سایت', 'url' => '/admin/studio-sms'],
         ];
     }
 
@@ -79,6 +80,7 @@ class Plugin extends BasePlugin
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioAuthController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'Admin'.DIRECTORY_SEPARATOR.'StudioHomeController.php',
+            __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'Admin'.DIRECTORY_SEPARATOR.'StudioSmsController.php',
         ];
         foreach ($files as $file) {
             if (is_file($file)) {

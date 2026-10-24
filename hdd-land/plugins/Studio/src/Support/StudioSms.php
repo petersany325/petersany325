@@ -2,13 +2,18 @@
 
 namespace Plugins\Studio\src\Support;
 
+use App\Support\SettingsStore;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use ReflectionMethod;
 use Throwable;
 
 class StudioSms
 {
+    public const SETTINGS_KEY = 'studio_niazpardaz';
+
     public static function normalizePhone(string $phone): string
     {
         if (class_exists(\Plugins\AuthCustomers\src\Services\SmsGateway::class)
@@ -75,14 +80,6 @@ class StudioSms
             return ['ok' => false, 'message' => 'تعداد پیامک این شماره به حد مجاز ساعت رسید. کمی بعد دوباره تلاش کنید.'];
         }
 
-        if (self::delegateOtpSend($phone, $purpose)) {
-            Cache::put($lock, 1, 60);
-            Cache::put(self::otpKey($purpose, $phone), ['via' => 'plugin', 'tries' => 0], 300);
-            Cache::put($hourKey, $hourCount + 1, 3600);
-
-            return ['ok' => true, 'message' => 'کد تایید به این شماره پیامک شد.'];
-        }
-
         $code = (string) random_int(100000, 999999);
         $sms = self::sendSms($phone, 'کد ورود فراز نت آمل: '.$code);
         if (! $sms['ok']) {
@@ -123,10 +120,7 @@ class StudioSms
         }
 
         $ok = false;
-        if (($row['via'] ?? '') === 'plugin' || self::hasPluginOtp()) {
-            $ok = self::delegateOtpVerify($phone, $code, $purpose);
-        }
-        if (! $ok && ! empty($row['hash'])) {
+        if (! empty($row['hash'])) {
             $ok = Hash::check($code, (string) $row['hash']);
         }
 
@@ -149,61 +143,387 @@ class StudioSms
     public static function sendSms(string $phone, string $message): array
     {
         $phone = self::normalizePhone($phone);
-        $targets = [
-            \Plugins\AuthCustomers\src\Services\SmsGateway::class,
-            \Plugins\AuthCustomers\src\Services\SmsSender::class,
+        $np = self::sendNiazpardaz($phone, $message);
+        if ($np['ok']) {
+            return $np;
+        }
+
+        if (self::authCustomersRealDriver()) {
+            $targets = [
+                \Plugins\AuthCustomers\src\Services\SmsGateway::class,
+                \Plugins\AuthCustomers\src\Services\SmsSender::class,
+            ];
+            foreach ($targets as $class) {
+                if (! class_exists($class)) {
+                    continue;
+                }
+                $result = self::invokeSender($class, $phone, $message);
+                if ($result['ok']) {
+                    return $result;
+                }
+            }
+        }
+
+        return $np;
+    }
+
+    /**
+     * @return array{username:string,password:string,from:string,api_key:string,has_password:bool,has_api_key:bool,source:string,ready:bool}
+     */
+    public static function adminStatus(): array
+    {
+        $cfg = self::niazpardazConfig();
+
+        return [
+            'username' => $cfg['username'],
+            'from' => $cfg['from'],
+            'has_password' => $cfg['password'] !== '',
+            'has_api_key' => $cfg['api_key'] !== '',
+            'source' => $cfg['source'],
+            'ready' => self::isReady($cfg),
         ];
-        foreach ($targets as $class) {
-            if (! class_exists($class)) {
-                continue;
+    }
+
+    /**
+     * @param  array<string,mixed>  $data
+     */
+    public static function saveAdminConfig(array $data): void
+    {
+        $cur = self::storedConfig();
+        $username = trim((string) ($data['username'] ?? $cur['username']));
+        $from = self::normalizePhone((string) ($data['from'] ?? $cur['from']));
+        if ($from === '') {
+            $from = trim((string) ($data['from'] ?? $cur['from']));
+        }
+        $password = (string) ($data['password'] ?? '');
+        if ($password === '') {
+            $password = $cur['password'];
+        }
+        $apiKey = trim((string) ($data['api_key'] ?? ''));
+        if ($apiKey === '' || $apiKey === '********') {
+            $apiKey = $cur['api_key'];
+        }
+
+        SettingsStore::set(self::SETTINGS_KEY, [
+            'username' => $username,
+            'password' => $password,
+            'from' => $from,
+            'api_key' => $apiKey,
+        ]);
+
+        self::syncAuthCustomersSms($username, $password, $from, $apiKey);
+    }
+
+    /**
+     * @return array{ok:bool,message:string}
+     */
+    protected static function sendNiazpardaz(string $phone, string $message): array
+    {
+        $cfg = self::niazpardazConfig();
+        $from = $cfg['from'];
+        $user = $cfg['username'];
+        $pass = $cfg['password'];
+        $key = $cfg['api_key'];
+
+        if ($from === '') {
+            return [
+                'ok' => false,
+                'message' => 'شماره خط نیازپرداز برای ورود سایت تنظیم نشده. از منوی استودیو → پیامک ورود همان خط پنل را ذخیره کنید.',
+            ];
+        }
+        if ($user === '' || $pass === '') {
+            if ($key === '') {
+                return [
+                    'ok' => false,
+                    'message' => 'یوزر و رمز پنل نیازپرداز برای ورود سایت تنظیم نشده. از منوی استودیو → پیامک ورود همان اطلاعات پنل قبض را ذخیره کنید.',
+                ];
             }
-            $result = self::invokeSender($class, $phone, $message);
-            if ($result['ok']) {
-                return $result;
+        }
+
+        if ($user !== '' && $pass !== '') {
+            $panel = self::niazpardazPanel($user, $pass, $from, $phone, $message);
+            if ($panel['ok']) {
+                return $panel;
             }
+            if ($key !== '') {
+                $rest = self::niazpardazRest($from, $phone, $message, $key, $user, $pass);
+                if ($rest['ok']) {
+                    return $rest;
+                }
+            }
+
+            return $panel;
+        }
+
+        return self::niazpardazRest($from, $phone, $message, $key, $user !== '' ? $user : null, $pass !== '' ? $pass : null);
+    }
+
+    /**
+     * @return array{ok:bool,message:string}
+     */
+    protected static function niazpardazPanel(string $username, string $password, string $from, string $to, string $message): array
+    {
+        try {
+            $response = Http::asForm()->timeout(8)->connectTimeout(4)->post('https://panel.niazpardaz-sms.com/SMSInOutBox/Send', [
+                'UserName' => $username,
+                'Password' => $password,
+                'From' => $from,
+                'To' => $to,
+                'Message' => $message,
+            ]);
+
+            if ($response->successful()) {
+                $body = trim((string) $response->body());
+                if ($body === '' || ! preg_match('/^-\d+$/', $body)) {
+                    Log::info('studio sms via niazpardaz panel-post');
+
+                    return ['ok' => true, 'message' => 'پیامک از پنل نیازپرداز ارسال شد.'];
+                }
+            }
+
+            $get = Http::timeout(20)->get('https://panel.niazpardaz-sms.com/SMSInOutBox/SendSms', [
+                'username' => $username,
+                'password' => $password,
+                'from' => $from,
+                'to' => $to,
+                'text' => $message,
+            ]);
+
+            if ($get->successful()) {
+                $body = trim((string) $get->body());
+                if ($body === '' || ! preg_match('/^-\d+$/', $body)) {
+                    Log::info('studio sms via niazpardaz panel-get');
+
+                    return ['ok' => true, 'message' => 'پیامک از پنل نیازپرداز ارسال شد.'];
+                }
+            }
+
+            Log::warning('studio niazpardaz panel failed', [
+                'status' => $response->status(),
+                'get_status' => $get->status(),
+            ]);
+
+            return [
+                'ok' => false,
+                'message' => 'ارسال از پنل نیازپرداز ناموفق بود. یوزر، رمز و خط را در پیامک ورود بررسی کنید.',
+            ];
+        } catch (Throwable $e) {
+            Log::warning('studio niazpardaz panel exception: '.$e->getMessage());
+
+            return ['ok' => false, 'message' => 'ارتباط با پنل نیازپرداز برقرار نشد.'];
+        }
+    }
+
+    /**
+     * @return array{ok:bool,message:string}
+     */
+    protected static function niazpardazRest(string $from, string $to, string $message, string $apiKey, ?string $username, ?string $password): array
+    {
+        try {
+            $payload = [
+                'fromNumber' => $from,
+                'toNumbers' => $to,
+                'messageContent' => $message,
+                'isFlash' => false,
+                'sendDelay' => 0,
+            ];
+            $headers = [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ];
+            if ($apiKey !== '') {
+                $payload['apiKey'] = $apiKey;
+                $headers['X-API-Key'] = $apiKey;
+            }
+            if ($username) {
+                $payload['userName'] = $username;
+            }
+            if ($password) {
+                $payload['password'] = $password;
+            }
+
+            $res = Http::withHeaders($headers)->timeout(20)->asJson()
+                ->post('https://login.niazpardaz.ir/api/v2/RestWebApi/SendBatchSms', $payload);
+
+            $json = $res->json();
+            if (! is_array($json)) {
+                $json = [];
+            }
+            $result = is_array($json['result'] ?? null) ? $json['result'] : $json;
+            $code = (int) ($result['resultCode'] ?? $result['ResultCode'] ?? $json['resultCode'] ?? -1);
+            $apiOk = in_array($json['success'] ?? null, [true, 1, '1', 'true'], true);
+            if ($res->successful() && ($code === 0 || $apiOk)) {
+                Log::info('studio sms via niazpardaz rest');
+
+                return ['ok' => true, 'message' => 'پیامک نیازپرداز ارسال شد.'];
+            }
+
+            return [
+                'ok' => false,
+                'message' => 'ارسال REST نیازپرداز ناموفق بود.'.($code >= 0 ? ' کد '.$code : ''),
+            ];
+        } catch (Throwable $e) {
+            Log::warning('studio niazpardaz rest exception: '.$e->getMessage());
+
+            return ['ok' => false, 'message' => 'ارتباط با وب‌سرویس نیازپرداز برقرار نشد.'];
+        }
+    }
+
+    /**
+     * @return array{username:string,password:string,from:string,api_key:string,source:string}
+     */
+    protected static function niazpardazConfig(): array
+    {
+        $stored = self::storedConfig();
+        $auth = self::authCustomersSettings();
+
+        $username = self::firstFilled([
+            $stored['username'],
+            env('NIAZPARDAZ_USERNAME'),
+            $auth['sms_username'] ?? '',
+            SettingsStore::get('niazpardaz_username'),
+        ]);
+        $password = self::firstFilled([
+            $stored['password'],
+            env('NIAZPARDAZ_PASSWORD'),
+            $auth['sms_password'] ?? '',
+            SettingsStore::get('niazpardaz_password'),
+        ]);
+        $from = self::firstFilled([
+            $stored['from'],
+            env('NIAZPARDAZ_FROM_NUMBER'),
+            env('NIAZPARDAZ_FROM'),
+            $auth['sms_sender'] ?? '',
+            SettingsStore::get('niazpardaz_from'),
+        ]);
+        $from = self::normalizePhone($from) ?: $from;
+        $apiKey = self::firstFilled([
+            $stored['api_key'],
+            env('NIAZPARDAZ_API_KEY'),
+            $auth['sms_api_key'] ?? '',
+            SettingsStore::get('niazpardaz_api_key'),
+        ]);
+
+        $source = 'missing';
+        if (($stored['username'] !== '' && $stored['password'] !== '') || $stored['from'] !== '') {
+            $source = 'studio';
+        } elseif (filled(env('NIAZPARDAZ_USERNAME')) || filled(env('NIAZPARDAZ_FROM_NUMBER'))) {
+            $source = 'env';
+        } elseif (trim((string) ($auth['sms_username'] ?? '')) !== '' || trim((string) ($auth['sms_sender'] ?? '')) !== '') {
+            $source = 'auth_customers';
         }
 
         return [
-            'ok' => false,
-            'message' => 'ارسال پیامک الان ممکن نیست. تنظیم درگاه پیامک را در پنل بررسی کنید.',
+            'username' => $username,
+            'password' => $password,
+            'from' => $from,
+            'api_key' => $apiKey,
+            'source' => $source,
         ];
     }
 
-    protected static function hasPluginOtp(): bool
+    /**
+     * @return array{username:string,password:string,from:string,api_key:string}
+     */
+    protected static function storedConfig(): array
     {
-        return class_exists(\Plugins\AuthCustomers\src\Services\OtpService::class);
+        $raw = SettingsStore::get(self::SETTINGS_KEY, []);
+        if (is_string($raw) && $raw !== '') {
+            $raw = json_decode($raw, true) ?: [];
+        }
+        if (! is_array($raw)) {
+            $raw = [];
+        }
+
+        return [
+            'username' => trim((string) ($raw['username'] ?? '')),
+            'password' => (string) ($raw['password'] ?? ''),
+            'from' => trim((string) ($raw['from'] ?? '')),
+            'api_key' => trim((string) ($raw['api_key'] ?? '')),
+        ];
     }
 
-    protected static function delegateOtpSend(string $phone, string $purpose): bool
+    /** @return array<string,mixed> */
+    protected static function authCustomersSettings(): array
     {
-        $class = \Plugins\AuthCustomers\src\Services\OtpService::class;
-        if (! class_exists($class)) {
+        if (! class_exists(\Plugins\AuthCustomers\Plugin::class)
+            || ! method_exists(\Plugins\AuthCustomers\Plugin::class, 'settings')) {
+            return [];
+        }
+        try {
+            $s = \Plugins\AuthCustomers\Plugin::settings();
+
+            return is_array($s) ? $s : [];
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    protected static function authCustomersRealDriver(): bool
+    {
+        $s = self::authCustomersSettings();
+        $driver = (string) ($s['sms_driver'] ?? 'log');
+
+        return in_array($driver, ['kavenegar', 'melipayamak', 'niazpardaz', 'farazsms', 'custom'], true);
+    }
+
+    /**
+     * @param  array{username:string,password:string,from:string,api_key:string,source?:string}  $cfg
+     */
+    protected static function isReady(array $cfg): bool
+    {
+        if (trim($cfg['from'] ?? '') === '') {
             return false;
         }
-        foreach (['send', 'sendOtp', 'request', 'issue', 'create', 'dispatch'] as $method) {
-            $out = self::tryCall($class, $method, [$phone, $purpose], [$phone]);
-            if ($out['called'] && self::truthy($out['value'])) {
-                return true;
+
+        return (trim($cfg['username'] ?? '') !== '' && ($cfg['password'] ?? '') !== '')
+            || trim($cfg['api_key'] ?? '') !== '';
+    }
+
+    protected static function syncAuthCustomersSms(string $username, string $password, string $from, string $apiKey): void
+    {
+        if (! class_exists(\Plugins\AuthCustomers\Plugin::class)
+            || ! method_exists(\Plugins\AuthCustomers\Plugin::class, 'saveSettings')) {
+            return;
+        }
+        try {
+            $cur = self::authCustomersSettings();
+            \Plugins\AuthCustomers\Plugin::saveSettings(array_merge($cur, [
+                'tab' => 'sms',
+                'sms_driver' => 'niazpardaz',
+                'sms_username' => $username,
+                'sms_password' => $password,
+                'sms_sender' => $from,
+                'sms_api_key' => $apiKey !== '' ? $apiKey : (string) ($cur['sms_api_key'] ?? ''),
+                'sms_api_secret' => (string) ($cur['sms_api_secret'] ?? ''),
+                'sms_url' => (string) ($cur['sms_url'] ?? ''),
+                'sms_pattern' => (string) ($cur['sms_pattern'] ?? 'کد تأیید شما: {code}'),
+                'sms_pattern_verify_phone' => (string) ($cur['sms_pattern_verify_phone'] ?? ''),
+                'sms_pattern_password_reset' => (string) ($cur['sms_pattern_password_reset'] ?? ''),
+                'sms_pattern_login_2fa' => (string) ($cur['sms_pattern_login_2fa'] ?? ''),
+                'sms_pattern_login_sms' => (string) ($cur['sms_pattern_login_sms'] ?? ''),
+                'sms_timeout' => (int) ($cur['sms_timeout'] ?? 15),
+                'sms_phone_format' => (string) ($cur['sms_phone_format'] ?? 'local'),
+                'sms_country_code' => (string) ($cur['sms_country_code'] ?? '98'),
+            ]));
+        } catch (Throwable) {
+        }
+    }
+
+    /** @param  list<mixed>  $values */
+    protected static function firstFilled(array $values): string
+    {
+        foreach ($values as $value) {
+            if ($value === null) {
+                continue;
+            }
+            $value = trim((string) $value);
+            if ($value !== '') {
+                return $value;
             }
         }
 
-        return false;
-    }
-
-    protected static function delegateOtpVerify(string $phone, string $code, string $purpose): bool
-    {
-        $class = \Plugins\AuthCustomers\src\Services\OtpService::class;
-        if (! class_exists($class)) {
-            return false;
-        }
-        foreach (['verify', 'check', 'consume', 'validate', 'confirm'] as $method) {
-            $out = self::tryCall($class, $method, [$phone, $code, $purpose], [$phone, $code]);
-            if ($out['called'] && self::truthy($out['value'])) {
-                return true;
-            }
-        }
-
-        return false;
+        return '';
     }
 
     /**
