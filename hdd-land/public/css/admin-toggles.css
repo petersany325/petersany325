@@ -1,0 +1,34 @@
+/* کلید روشن/خاموش ادمین — به‌جای تیک */
+.hl-tog{
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;
+  padding:.7rem 0;border-bottom:1px dashed #e8eef5;
+}
+.hl-tog:last-child{border-bottom:0}
+.hl-tog__txt{min-width:0}
+.hl-tog__txt strong,.hl-tog__txt .hl-tog__title{
+  display:block;font-size:.9rem;font-weight:800;color:#0f172a;line-height:1.45;
+}
+.hl-tog__txt small{
+  display:block;margin-top:.15rem;color:#64748b;font-size:.76rem;font-weight:600;line-height:1.55;
+}
+.hl-sw{position:relative;width:64px;height:30px;flex:0 0 auto;cursor:pointer}
+.hl-sw input{position:absolute;opacity:0;width:0;height:0}
+.hl-sw__track{
+  position:absolute;inset:0;border-radius:999px;background:#cbd5e1;
+  box-shadow:inset 0 0 0 1px rgba(15,23,42,.06);transition:.2s;
+}
+.hl-sw__track:before{
+  content:attr(data-off);position:absolute;left:8px;top:50%;transform:translateY(-50%);
+  font-size:9px;font-weight:800;color:#475569;letter-spacing:.02em;
+}
+.hl-sw__track i{
+  position:absolute;width:24px;height:24px;right:3px;top:3px;
+  background:#fff;border-radius:50%;box-shadow:0 1px 4px rgba(15,23,42,.2);transition:.2s;
+}
+.hl-sw input:checked + .hl-sw__track{background:#0f766e}
+.hl-sw input:checked + .hl-sw__track:before{content:attr(data-on);left:auto;right:8px;color:#ecfdf5}
+.hl-sw input:checked + .hl-sw__track i{transform:translateX(-34px)}
+.hl-sw input:focus-visible + .hl-sw__track{outline:2px solid #0f766e;outline-offset:2px}
+.hl-perm-group{margin:0 0 .85rem;padding:.2rem .85rem .35rem;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
+.hl-perm-group h4{margin:.7rem 0 .15rem;font-size:.78rem;font-weight:800;color:#64748b;letter-spacing:.02em}
+.mm-inline .hl-tog,.mm-checks .hl-tog{width:100%;padding:.55rem 0}

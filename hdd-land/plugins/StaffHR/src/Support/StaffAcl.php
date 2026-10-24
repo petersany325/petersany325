@@ -28,7 +28,7 @@ class StaffAcl
             'reports' => 'گزارش فروش و کار',
             'media' => 'کتابخانه رسانه',
             'system_tools' => 'تعمیر و نگهداری',
-            'site.mega_menu' => 'مدیریت مگامenu',
+            'site.mega_menu' => 'مدیریت مگامنو',
             'site.theme_builder' => 'استودیو قالب و بنرساز',
             'site.theme_templates' => 'نصب و به‌روزرسانی قالب',
             'site.page_builder' => 'صفحه‌ساز Elementor',
@@ -37,6 +37,24 @@ class StaffAcl
             'site.webapp' => 'تنظیمات وب‌اپ / PWA',
             'site.shop_settings' => 'تنظیمات عمومی فروشگاه',
             'full_site' => 'دسترسی گسترده پنل کارمند',
+        ];
+    }
+
+    /**
+     * @return array<string,list<string>>
+     */
+    public static function permissionGroups(): array
+    {
+        return [
+            'فروش و سفارش' => ['sales', 'orders', 'serials', 'reports'],
+            'محصولات' => ['products.view', 'products.create', 'products.edit', 'products.delete'],
+            'پشتیبانی و مالی' => ['support', 'accounting'],
+            'رسانه و نگهداری' => ['media', 'system_tools'],
+            'ظاهر و تنظیمات سایت' => [
+                'site.homepage', 'site.mega_menu', 'site.theme_builder', 'site.theme_templates',
+                'site.page_builder', 'site.footer', 'site.webapp', 'site.shop_settings',
+            ],
+            'دسترسی گسترده' => ['full_site'],
         ];
     }
 
