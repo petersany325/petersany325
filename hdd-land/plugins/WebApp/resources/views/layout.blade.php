@@ -120,7 +120,7 @@
             <em class="wa-drawer-caret" aria-hidden="true">▾</em>
           </button>
           <div class="wa-drawer-sub" @if(!$openByDefault) hidden @endif>
-            <a href="{{ $href }}" class="wa-drawer-sub-all">{{ $key === 'warranty' ? 'استعلام گارانتی' : 'همهٔ '.$item['label'] }}</a>
+            <a href="{{ $href }}" class="wa-drawer-sub-all">همهٔ {{ $item['label'] }}</a>
             @php $shownCompanyHead = false; @endphp
             @foreach($kids as $child)
               @php

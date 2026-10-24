@@ -177,6 +177,9 @@ class Plugin extends BasePlugin
         foreach (['enabled', 'mobile_bottom_nav', 'storefront_bottom_nav', 'show_nav_tickets', 'account_show_tickets', 'drawer_menu_enabled', 'drawer_item_account', 'drawer_item_staff', 'drawer_item_support'] as $k) {
             $s[$k] = true;
         }
+        if (trim((string) ($s['drawer_account_label'] ?? '')) === 'حساب من') {
+            $s['drawer_account_label'] = 'کارتابل مشتری';
+        }
 
         return $s;
     }
