@@ -6,6 +6,15 @@
   $agency = ! empty($studioHome['enabled']);
 @endphp
 
+@if($slug === 'builder' && !empty($builderPage))
+  @php
+    if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
+      \Plugins\ThemeBuilder\Plugin::registerViews();
+    }
+  @endphp
+  @include('theme-builder::storefront.render', ['page' => $builderPage])
+@endif
+
 @if($slug === 'home')
   @if($agency)
     @include('studio::home-agency', ['studioHome' => $studioHome])
