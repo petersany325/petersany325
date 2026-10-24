@@ -34,7 +34,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap">
   <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=17">
-  <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=14">
+  <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=15">
 </head>
 <body class="st-body ag-body{{ \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome) ? ' has-ag-tabbar' : '' }}" style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}">
 @include('studio::nav', ['studioHome' => $studioHome, 'agency' => true])
@@ -111,7 +111,7 @@
     <link rel="stylesheet" href="{{ asset('css/mega-menu.css') }}?v=50">
     <link rel="stylesheet" href="{{ asset('css/home-corporate.css') }}?v=10">
     <link rel="stylesheet" href="{{ asset('css/account.css') }}?v=4">
-    <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=24">
+    <link rel="stylesheet" href="{{ asset('css/webapp.css') }}?v=25">
     @if(\Illuminate\Support\Facades\View::exists('web-app::storefront-head'))
       @include('web-app::storefront-head')
     @endif

@@ -73,10 +73,12 @@ class Plugin extends BasePlugin
             'empty_products_text' => 'هنوز محصولی ثبت نشده است.',
             'nav_home_label' => 'خانه',
             'nav_shop_label' => 'فروشگاه',
+            'nav_tickets_label' => 'تیکت',
             'nav_cart_label' => 'سبد',
             'nav_account_label' => 'حساب',
             'show_nav_home' => true,
             'show_nav_shop' => true,
+            'show_nav_tickets' => true,
             'show_nav_cart' => true,
             'show_nav_account' => true,
             'account_show_orders' => true,
@@ -132,9 +134,13 @@ class Plugin extends BasePlugin
             'drawer_cart_url' => '/app/cart',
             'drawer_cart_icon' => '▢',
             'drawer_item_account' => true,
-            'drawer_account_label' => 'حساب من',
+            'drawer_account_label' => 'کارتابل مشتری',
             'drawer_account_url' => '/app/account',
             'drawer_account_icon' => '☺',
+            'drawer_item_staff' => true,
+            'drawer_staff_label' => 'کارتابل کارمند',
+            'drawer_staff_url' => '/staff',
+            'drawer_staff_icon' => '♟',
             'drawer_item_track' => true,
             'drawer_track_label' => 'پیگیری سفارش',
             'drawer_track_url' => '/orders/track',
@@ -167,7 +173,12 @@ class Plugin extends BasePlugin
     /** @return array<string,mixed> */
     public static function settings(): array
     {
-        return JsonSettings::get(self::SETTINGS_KEY, static::defaults());
+        $s = JsonSettings::get(self::SETTINGS_KEY, static::defaults());
+        foreach (['enabled', 'mobile_bottom_nav', 'storefront_bottom_nav', 'show_nav_tickets', 'account_show_tickets', 'drawer_menu_enabled', 'drawer_item_account', 'drawer_item_staff', 'drawer_item_support'] as $k) {
+            $s[$k] = true;
+        }
+
+        return $s;
     }
 
     /**
@@ -352,7 +363,7 @@ class Plugin extends BasePlugin
             'enabled', 'show_install_banner', 'mobile_bottom_nav', 'storefront_bottom_nav',
             'force_app_on_mobile', 'offline_cache', 'hero_enabled', 'show_search',
             'show_categories', 'show_featured', 'show_quick_links',
-            'show_nav_home', 'show_nav_shop', 'show_nav_cart', 'show_nav_account',
+            'show_nav_home', 'show_nav_shop', 'show_nav_tickets', 'show_nav_cart', 'show_nav_account',
             'account_show_orders', 'account_show_wallet', 'account_show_tickets',
             'account_show_profile', 'account_show_track', 'account_show_full_site',
             'product_show_add_cart', 'product_show_buy_now', 'cart_show_checkout',
@@ -361,6 +372,7 @@ class Plugin extends BasePlugin
             'show_site_menu', 'show_footer', 'sync_footer_from_site',
             'drawer_menu_enabled', 'drawer_show_brand', 'drawer_show_full_site',
             'drawer_item_home', 'drawer_item_shop', 'drawer_item_cart', 'drawer_item_account',
+            'drawer_item_staff',
             'drawer_item_track', 'drawer_item_warranty', 'drawer_item_support', 'drawer_item_contact',
             'smart_install', 'hide_install_when_installed', 'install_only_mobile',
         ], [
@@ -427,9 +439,13 @@ class Plugin extends BasePlugin
             'drawer_cart_label' => fn ($v) => $label($v, 30, 'سبد خرید'),
             'drawer_cart_url' => fn ($v) => $url($v, '/app/cart'),
             'drawer_cart_icon' => fn ($v) => $label($v, 8, '▢'),
-            'drawer_account_label' => fn ($v) => $label($v, 30, 'حساب من'),
+            'drawer_account_label' => fn ($v) => $label($v, 30, 'کارتابل مشتری'),
             'drawer_account_url' => fn ($v) => $url($v, '/app/account'),
             'drawer_account_icon' => fn ($v) => $label($v, 8, '☺'),
+            'drawer_staff_label' => fn ($v) => $label($v, 30, 'کارتابل کارمند'),
+            'drawer_staff_url' => fn ($v) => $url($v, '/staff'),
+            'drawer_staff_icon' => fn ($v) => $label($v, 8, '♟'),
+            'nav_tickets_label' => fn ($v) => $label($v, 20, 'تیکت'),
             'drawer_track_label' => fn ($v) => $label($v, 30, 'پیگیری سفارش'),
             'drawer_track_url' => fn ($v) => $url($v, '/orders/track'),
             'drawer_track_icon' => fn ($v) => $label($v, 8, '⌕'),
@@ -459,16 +475,19 @@ class Plugin extends BasePlugin
             return [];
         }
 
-        $megaByLabel = [];
-        try {
-            foreach (\Plugins\WebApp\src\Support\SiteSync::menuItems(20) as $m) {
-                $megaByLabel[mb_strtolower(trim((string) ($m['label'] ?? '')))] = $m['children'] ?? [];
-            }
-        } catch (\Throwable) {
-            //
-        }
-
-        $keys = ['home', 'shop', 'cart', 'account', 'track', 'warranty', 'support', 'contact'];
+        $keys = ['home', 'shop', 'cart', 'account', 'staff', 'support', 'track', 'warranty', 'contact'];
+        $sections = [
+            'home' => 'فروشگاه',
+            'shop' => 'فروشگاه',
+            'cart' => 'فروشگاه',
+            'account' => 'حساب',
+            'staff' => 'حساب',
+            'support' => 'پشتیبانی',
+            'track' => 'پشتیبانی',
+            'warranty' => 'پشتیبانی',
+            'contact' => 'بیشتر',
+            'extra' => 'بیشتر',
+        ];
         $out = [];
         foreach ($keys as $key) {
             if (empty($s['drawer_item_'.$key])) {
@@ -479,30 +498,21 @@ class Plugin extends BasePlugin
             if ($label === '' || $url === '') {
                 continue;
             }
-            $children = [];
-            if ($key === 'shop') {
-                $children = static::shopDrawerChildren();
-            } elseif ($key === 'warranty') {
-                // Structured warranty menu (actions + companies) — avoid mega duplicates of /serial-check
-                $children = static::warrantyDrawerChildren();
-            } elseif ($key === 'track') {
-                $children = $megaByLabel[mb_strtolower($label)] ?? [];
-                if ($children === []) {
-                    foreach ($megaByLabel as $ml => $kids) {
-                        if (str_contains($ml, 'پیگیری') || str_contains($ml, 'سفارش')) {
-                            $children = $kids;
-                            break;
-                        }
-                    }
-                }
-                $children = static::dedupeMenuChildren($children);
-            }
+            $children = match ($key) {
+                'shop' => static::shopDrawerChildren(),
+                'account' => static::accountDrawerChildren(),
+                'staff' => static::staffDrawerChildren(),
+                'warranty' => static::warrantyDrawerChildren(),
+                'track' => static::trackDrawerChildren(),
+                default => [],
+            };
 
             $out[] = [
                 'key' => $key,
                 'label' => $label,
                 'url' => $url,
                 'icon' => trim((string) ($s['drawer_'.$key.'_icon'] ?? '•')) ?: '•',
+                'section' => $sections[$key] ?? '',
                 'children' => array_values(array_filter($children, static function ($c) {
                     return is_array($c) && trim((string) ($c['label'] ?? '')) !== '' && trim((string) ($c['url'] ?? '')) !== '';
                 })),
@@ -522,6 +532,7 @@ class Plugin extends BasePlugin
                 'label' => mb_substr($lab, 0, 40),
                 'url' => mb_substr($href, 0, 200),
                 'icon' => trim($ico) !== '' ? mb_substr(trim($ico), 0, 8) : '•',
+                'section' => 'بیشتر',
                 'children' => [],
             ];
         }
@@ -544,9 +555,8 @@ class Plugin extends BasePlugin
                 ->orderBy('id')
                 ->get(['id', 'name', 'slug', 'parent_id']);
 
-            // Top-level first, then their children indented by label prefix
             $tops = $cats->whereNull('parent_id')->values();
-            foreach ($tops as $cat) {
+            foreach ($tops->take(8) as $cat) {
                 $slug = trim((string) ($cat->slug ?? ''));
                 $name = trim((string) ($cat->name ?? ''));
                 if ($slug === '' || $name === '') {
@@ -556,34 +566,46 @@ class Plugin extends BasePlugin
                     'label' => $name,
                     'url' => '/app/shop?cat='.rawurlencode($slug),
                 ];
-                foreach ($cats->where('parent_id', $cat->id) as $child) {
-                    $cSlug = trim((string) ($child->slug ?? ''));
-                    $cName = trim((string) ($child->name ?? ''));
-                    if ($cSlug === '' || $cName === '') {
-                        continue;
-                    }
-                    $children[] = [
-                        'label' => '— '.$cName,
-                        'url' => '/app/shop?cat='.rawurlencode($cSlug),
-                    ];
-                }
             }
         } catch (\Throwable) {
             //
         }
 
-        // Useful brand shortcuts for the mobile shop
-        $children[] = ['label' => 'وسترن دیجیتال', 'url' => '/app/shop?q='.rawurlencode('Western Digital')];
-        $children[] = ['label' => 'سیگیت', 'url' => '/app/shop?q='.rawurlencode('Seagate')];
-        $children[] = ['label' => 'توشیبا', 'url' => '/app/shop?q='.rawurlencode('Toshiba')];
-        $children[] = ['label' => 'سامسونگ', 'url' => '/app/shop?q='.rawurlencode('Samsung')];
-        $children[] = ['label' => 'ای‌دیتا', 'url' => '/app/shop?q='.rawurlencode('ADATA')];
-
         return $children;
     }
 
+    /** @return list<array{label:string,url:string}> */
+    protected static function accountDrawerChildren(): array
+    {
+        return [
+            ['label' => 'ورود / ثبت‌نام', 'url' => '/auth/customer'],
+            ['label' => 'تیکت پشتیبانی', 'url' => '/account/tickets'],
+            ['label' => 'سفارش‌های من', 'url' => '/account/orders'],
+            ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials'],
+            ['label' => 'کارتابل کامل', 'url' => '/account'],
+        ];
+    }
+
+    /** @return list<array{label:string,url:string}> */
+    protected static function staffDrawerChildren(): array
+    {
+        return [
+            ['label' => 'ورود کارمند', 'url' => '/auth/staff'],
+            ['label' => 'پنل کارمند', 'url' => '/staff'],
+        ];
+    }
+
+    /** @return list<array{label:string,url:string}> */
+    protected static function trackDrawerChildren(): array
+    {
+        return [
+            ['label' => 'پیگیری سفارش', 'url' => '/orders/track'],
+            ['label' => 'سفارش‌های من', 'url' => '/account/orders'],
+        ];
+    }
+
     /**
-     * Warranty drawer: real actions + active warranty companies (no duplicate serial-check junk).
+     * Warranty drawer: real actions + one row per company (skip serial-check clones).
      *
      * @return list<array{label:string,url:string,kind?:string}>
      */
@@ -592,7 +614,6 @@ class Plugin extends BasePlugin
         $children = [
             ['label' => 'استعلام گارانتی', 'url' => '/serial-check', 'kind' => 'action'],
             ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials', 'kind' => 'action'],
-            ['label' => 'ثبت گارانتی', 'url' => '/serial-check', 'kind' => 'action'],
         ];
 
         try {
@@ -611,8 +632,7 @@ class Plugin extends BasePlugin
                 if ($name === '') {
                     continue;
                 }
-                $months = (int) ($row->default_months ?? 0);
-                $key = mb_strtolower($name).'|'.$months;
+                $key = mb_strtolower($name);
                 if (isset($seen[$key])) {
                     continue;
                 }
@@ -620,8 +640,8 @@ class Plugin extends BasePlugin
 
                 $phone = preg_replace('/\s+/', '', (string) ($row->phone ?? '')) ?: '';
                 $web = trim((string) ($row->website ?? ''));
-                $url = '/serial-check';
-                if ($web !== '' && ! preg_match('/hdd-land\.ri\b/i', $web)) {
+                $url = '';
+                if ($web !== '' && ! preg_match('/hdd-land\.(ri|ir)\b/i', $web)) {
                     if (! str_starts_with($web, 'http://') && ! str_starts_with($web, 'https://')) {
                         $web = 'https://'.$web;
                     }
@@ -629,10 +649,12 @@ class Plugin extends BasePlugin
                 } elseif ($phone !== '') {
                     $url = 'tel:'.$phone;
                 }
+                if ($url === '') {
+                    continue;
+                }
 
-                $label = $months > 0 ? "شرکت {$name} · {$months} ماه" : "شرکت {$name}";
                 $children[] = [
-                    'label' => $label,
+                    'label' => $name,
                     'url' => $url,
                     'kind' => 'company',
                 ];

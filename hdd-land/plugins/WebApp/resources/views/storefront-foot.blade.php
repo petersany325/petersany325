@@ -41,6 +41,9 @@
   @if(!empty($wa['show_nav_shop']))
     <a class="{{ $isShop ? 'active' : '' }}" href="{{ url('/app/shop') }}"><span>▣</span>{{ $wa['nav_shop_label'] ?? 'فروشگاه' }}</a>
   @endif
+  @if(!empty($wa['show_nav_tickets']))
+    <a class="{{ str_contains($path, 'ticket') ? 'active' : '' }}" href="{{ url('/account/tickets') }}"><span>✉</span>{{ $wa['nav_tickets_label'] ?? 'تیکت' }}</a>
+  @endif
   @if(!empty($wa['show_nav_cart']))
     <a class="{{ $isCart ? 'active' : '' }}" href="{{ url('/app/cart') }}"><span>▢</span>{{ $wa['nav_cart_label'] ?? 'سبد' }}</a>
   @endif

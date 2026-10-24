@@ -108,15 +108,15 @@
           <a href="{{ url('/auth/staff') }}">ورود کارمند</a>
         @endauth
       </div>
+      <p class="ag-drawer__sec">حساب و پشتیبانی</p>
+      <a href="{{ url('/account/tickets') }}">تیکت</a>
+      <a href="{{ url('/account') }}">کارتابل مشتری</a>
+      <a href="{{ url('/staff') }}">کارتابل کارمند</a>
+      <a href="{{ url('/app') }}">وب موبایل</a>
+      <p class="ag-drawer__sec">صفحات</p>
       @foreach($items as $item)
-        @php $url = $item['url'] ?? '#'; $kids = $item['children'] ?? []; @endphp
+        @php $url = $item['url'] ?? '#'; @endphp
         <a class="ag-drawer__h" href="{{ url($url) }}">{{ $item['label'] }}</a>
-        @foreach($kids as $col)
-          <a href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
-          @foreach($col['children'] ?? [] as $leaf)
-            <a class="ag-drawer__sub" href="{{ url($leaf['url'] ?? '#') }}">{{ $leaf['label'] }}</a>
-          @endforeach
-        @endforeach
       @endforeach
     </div>
   </div>

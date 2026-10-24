@@ -277,9 +277,9 @@ class StudioHomeConfig
     {
         return [
             ['label' => 'خانه', 'url' => '/', 'icon' => '⌂'],
-            ['label' => 'طراحی', 'url' => '/design', 'icon' => '✎'],
-            ['label' => 'حسابداری', 'url' => '/accounting', 'icon' => '▤'],
-            ['label' => 'تعمیرگاه', 'url' => '/repair-shop', 'icon' => '⚒'],
+            ['label' => 'تیکت', 'url' => '/account/tickets', 'icon' => '✉'],
+            ['label' => 'کارتابل', 'url' => '/account', 'icon' => '☺'],
+            ['label' => 'وب‌اپ', 'url' => '/app', 'icon' => '▣'],
             ['label' => 'تماس', 'url' => '/contact', 'icon' => '☎'],
         ];
     }
