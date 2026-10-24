@@ -56,6 +56,7 @@ class StaffAdminController extends Controller
             's' => StaffPlugin::settings(),
             'roles' => $this->parseRoles(StaffPlugin::settings()),
             'permissionLabels' => StaffAcl::permissionLabels(),
+            'permissionGroups' => StaffAcl::permissionGroups(),
             'rolePresets' => StaffAcl::rolePresets(),
             'loginUrl' => StaffPlugin::loginUrl(),
         ]);
@@ -74,6 +75,7 @@ class StaffAdminController extends Controller
             's' => StaffPlugin::settings(),
             'roles' => $this->parseRoles(StaffPlugin::settings()),
             'permissionLabels' => StaffAcl::permissionLabels(),
+            'permissionGroups' => StaffAcl::permissionGroups(),
             'rolePresets' => StaffAcl::rolePresets(),
             'loginUrl' => StaffPlugin::loginUrl(),
         ]);

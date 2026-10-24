@@ -6,10 +6,11 @@
   $f = fn ($k, $d = '') => old($k, $h[$k] ?? $d);
   $on = fn ($k) => (bool) old($k, $h[$k] ?? false);
 @endphp
+<link rel="stylesheet" href="{{ asset('css/admin-toggles.css') }}?v=1">
 <style>
 .ag-adm h1{margin:0 0 .35rem;font-size:1.35rem}
-.ag-adm .hint{color:#64748b;font-size:.9rem;margin:0 0 1rem}
-.ag-adm .card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:1rem;margin-bottom:.85rem}
+.ag-adm .hint{color:#64748b;font-size:.9rem;margin:0 0 1rem;line-height:1.7}
+.ag-adm .card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:1rem 1.1rem;margin-bottom:.85rem}
 .ag-adm .card h2{margin:0 0 .75rem;font-size:1rem}
 .ag-adm .grid{display:grid;gap:.65rem}
 .ag-adm label{display:grid;gap:.28rem;font-size:.82rem;font-weight:700;color:#0f172a}
@@ -17,7 +18,6 @@
 .ag-adm .row2{display:grid;grid-template-columns:1fr 1fr;gap:.65rem}
 .ag-adm .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.65rem}
 @media(max-width:800px){.ag-adm .row2,.ag-adm .row3{grid-template-columns:1fr}}
-.ag-adm .sw{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.45rem 0}
 .ag-adm .color{display:grid;grid-template-columns:42px 1fr;gap:.4rem;align-items:center}
 .ag-adm input[type=color]{width:42px;height:38px;padding:0;border:1px solid #dbe3ef;border-radius:10px}
 .ag-adm .actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem;position:sticky;bottom:.75rem;background:rgba(248,250,252,.92);padding:.65rem;border:1px solid #e2e8f0;border-radius:12px}
@@ -31,13 +31,32 @@
   <form method="post" action="{{ url('/admin/studio-home') }}">
     @csrf
     <div class="card">
-      <h2>نمایش</h2>
-      <label class="sw"><span>فعال بودن این قالب روی دامنه استودیو</span><input type="checkbox" name="enabled" value="1" @checked($on('enabled'))></label>
-      <label class="sw"><span>نمایش جستجو در هدر</span><input type="checkbox" name="show_search" value="1" @checked($on('show_search'))></label>
-      <label class="sw"><span>وب‌اپ موبایل (نوار پایین + نصب روی گوشی)</span><input type="checkbox" name="mobile_webapp" value="1" @checked($on('mobile_webapp'))></label>
-      <label class="sw"><span>کارت‌های خدمات</span><input type="checkbox" name="services_enabled" value="1" @checked($on('services_enabled'))></label>
-      <label class="sw"><span>ردیف آمار</span><input type="checkbox" name="stats_enabled" value="1" @checked($on('stats_enabled'))></label>
-      <label class="sw"><span>نمونه کارها</span><input type="checkbox" name="works_enabled" value="1" @checked($on('works_enabled'))></label>
+      <h2>نمایش و دسترسی</h2>
+      <p class="hint">به‌جای تیک، کلید روشن/خاموش را بزنید. خاموش یعنی آن بخش روی سایت دیده نمی‌شود.</p>
+      <div class="hl-tog">
+        <div class="hl-tog__txt"><strong>قالب استودیو روی دامنه اصلی</strong><small>خانه hdd-land.ir با این قالب دیده شود</small></div>
+        <label class="hl-sw"><input type="checkbox" name="enabled" value="1" @checked($on('enabled'))><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+      </div>
+      <div class="hl-tog">
+        <div class="hl-tog__txt"><strong>جستجو در هدر</strong><small>کادر جستجو کنار منو</small></div>
+        <label class="hl-sw"><input type="checkbox" name="show_search" value="1" @checked($on('show_search'))><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+      </div>
+      <div class="hl-tog">
+        <div class="hl-tog__txt"><strong>وب‌اپ موبایل</strong><small>نوار پایین و نصب روی گوشی</small></div>
+        <label class="hl-sw"><input type="checkbox" name="mobile_webapp" value="1" @checked($on('mobile_webapp'))><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+      </div>
+      <div class="hl-tog">
+        <div class="hl-tog__txt"><strong>کارت‌های خدمات</strong></div>
+        <label class="hl-sw"><input type="checkbox" name="services_enabled" value="1" @checked($on('services_enabled'))><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+      </div>
+      <div class="hl-tog">
+        <div class="hl-tog__txt"><strong>ردیف آمار</strong></div>
+        <label class="hl-sw"><input type="checkbox" name="stats_enabled" value="1" @checked($on('stats_enabled'))><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+      </div>
+      <div class="hl-tog">
+        <div class="hl-tog__txt"><strong>نمونه کارها</strong></div>
+        <label class="hl-sw"><input type="checkbox" name="works_enabled" value="1" @checked($on('works_enabled'))><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+      </div>
     </div>
     <div class="card">
       <h2>هویت و هدر</h2>

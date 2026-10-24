@@ -257,6 +257,22 @@ if (! class_exists(StaffAcl::class, false)) {
             ];
         }
 
+        /** @return array<string,list<string>> */
+        public static function permissionGroups(): array
+        {
+            return [
+                'فروش و سفارش' => ['sales', 'orders', 'serials', 'reports'],
+                'محصولات' => ['products.view', 'products.create', 'products.edit', 'products.delete'],
+                'پشتیبانی و مالی' => ['support', 'accounting'],
+                'رسانه و نگهداری' => ['media', 'system_tools'],
+                'ظاهر و تنظیمات سایت' => [
+                    'site.homepage', 'site.mega_menu', 'site.theme_builder', 'site.theme_templates',
+                    'site.page_builder', 'site.footer', 'site.webapp', 'site.shop_settings',
+                ],
+                'دسترسی گسترده' => ['full_site'],
+            ];
+        }
+
         /** @return array<string,array{label:string,permissions:list<string>}> */
         public static function rolePresets(): array
         {

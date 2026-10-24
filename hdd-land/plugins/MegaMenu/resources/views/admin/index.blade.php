@@ -2,6 +2,7 @@
 @section('title','مگامنو ساز حرفه‌ای')
 @section('content')
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<link rel="stylesheet" href="{{ asset('css/admin-toggles.css') }}?v=1">
 <script src="{{ asset('vendor/sortablejs/Sortable.min.js') }}"></script>
 <script>
 window.__mmLoadSortable = function(cb){
@@ -366,9 +367,15 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
       </div>
     </div>
 
-    <div class="mm-inline">
-      <label><input type="checkbox" name="show_icons" value="1" @checked(!empty($s['show_icons']))><span>نمایش آیکون‌ها در سایت</span></label>
-      <label><input type="checkbox" name="header_blur" value="1" @checked(!array_key_exists('header_blur',$s) || !empty($s['header_blur']))><span>بلور پس‌زمینه هدر</span></label>
+    <div class="mm-inline" style="display:grid;gap:.15rem">
+      <div class="hl-tog">
+        <div class="hl-tog__txt"><strong>نمایش آیکون‌ها در سایت</strong></div>
+        <label class="hl-sw"><input type="checkbox" name="show_icons" value="1" @checked(!empty($s['show_icons']))><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+      </div>
+      <div class="hl-tog">
+        <div class="hl-tog__txt"><strong>بلور پس‌زمینه هدر</strong></div>
+        <label class="hl-sw"><input type="checkbox" name="header_blur" value="1" @checked(!array_key_exists('header_blur',$s) || !empty($s['header_blur']))><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+      </div>
     </div>
 
     <div style="margin-top:.85rem;padding-top:.7rem;border-top:1px solid rgba(255,255,255,.08)">
@@ -376,11 +383,11 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
       <p class="mm-hint" style="margin:0 0 .55rem">بنر سمت چپ پنل «محصولات» — بعد از تغییر حتماً دکمه ذخیره همین بخش را بزنید (دکمه ذخیره آیتم منو در پنل کناری این بخش را ذخیره نمی‌کند).</p>
       <div id="mm-org-save-status" style="display:none;margin:0 0 .55rem;padding:.45rem .65rem;border-radius:8px;font-size:.82rem;font-weight:650"></div>
       <input type="hidden" name="org_promo_enabled" value="0">
-      <div class="mm-inline" style="margin-top:0;margin-bottom:.55rem">
-        <label>
-          <input type="checkbox" name="org_promo_enabled" value="1" @checked(!array_key_exists('org_promo_enabled',$s) || !empty($s['org_promo_enabled']))>
-          <span>نمایش بنر پیشنهاد سازمانی</span>
-        </label>
+      <div class="mm-inline" style="margin-top:0;margin-bottom:.55rem;display:grid">
+        <div class="hl-tog">
+          <div class="hl-tog__txt"><strong>نمایش بنر پیشنهاد سازمانی</strong></div>
+          <label class="hl-sw"><input type="checkbox" name="org_promo_enabled" value="1" @checked(!array_key_exists('org_promo_enabled',$s) || !empty($s['org_promo_enabled']))><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+        </div>
       </div>
       <div class="mm-grid4">
         <div class="mm-field">
@@ -506,9 +513,15 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
           @endforelse
         </div>
         <label>اندازه آیکون (px)<input type="number" name="icon_size" id="f_icon_size" min="12" max="48" value="18"></label>
-        <div class="mm-checks" style="margin-top:.5rem">
-          <label for="f_is_active"><input type="checkbox" name="is_active" id="f_is_active" value="1" checked><span>فعال در سایت</span></label>
-          <label for="f_open_in_new"><input type="checkbox" name="open_in_new" id="f_open_in_new" value="1"><span>باز شدن در تب جدید</span></label>
+        <div class="mm-checks" style="margin-top:.5rem;display:grid">
+          <div class="hl-tog">
+            <div class="hl-tog__txt"><strong>فعال در سایت</strong></div>
+            <label class="hl-sw"><input type="checkbox" name="is_active" id="f_is_active" value="1" checked><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+          </div>
+          <div class="hl-tog">
+            <div class="hl-tog__txt"><strong>باز شدن در تب جدید</strong></div>
+            <label class="hl-sw"><input type="checkbox" name="open_in_new" id="f_open_in_new" value="1"><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+          </div>
         </div>
       </div>
 
@@ -538,10 +551,19 @@ body.mm-dragging .mm-nest.is-collapsed{display:block}
 
       <div class="mm-pane" data-pane="mega">
         <p class="mm-hint" style="margin-top:0">اگر فقط زیرمنوی معمولی می‌خواهید، تیک مگامنو را خاموش بگذارید. پس‌زمینه سفید/شفاف زیرمنو را از «تنظیمات اصلی» بالا تنظیم کنید.</p>
-        <div class="mm-checks" style="margin-bottom:.65rem">
-          <label for="f_is_mega"><input type="checkbox" name="is_mega" id="f_is_mega" value="1"><span>مگامنو (پنل بازشو بزرگ چندستونه)</span></label>
-          <label for="f_show_search"><input type="checkbox" name="show_search" id="f_show_search" value="1"><span>کادر جستجو داخل پنل مگا</span></label>
-          <label for="f_is_tabbed"><input type="checkbox" name="is_tabbed" id="f_is_tabbed" value="1"><span>منوی تب‌دار (فقط مگا)</span></label>
+        <div class="mm-checks" style="margin-bottom:.65rem;display:grid">
+          <div class="hl-tog">
+            <div class="hl-tog__txt"><strong>مگامنو چندستونه</strong></div>
+            <label class="hl-sw"><input type="checkbox" name="is_mega" id="f_is_mega" value="1"><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+          </div>
+          <div class="hl-tog">
+            <div class="hl-tog__txt"><strong>جستجو داخل پنل مگا</strong></div>
+            <label class="hl-sw"><input type="checkbox" name="show_search" id="f_show_search" value="1"><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+          </div>
+          <div class="hl-tog">
+            <div class="hl-tog__txt"><strong>منوی تب‌دار</strong></div>
+            <label class="hl-sw"><input type="checkbox" name="is_tabbed" id="f_is_tabbed" value="1"><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+          </div>
         </div>
         <div class="grid2">
           <label>تعداد ستون<input type="number" name="columns" id="f_columns" min="1" max="6" value="3"></label>

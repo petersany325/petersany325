@@ -2,6 +2,7 @@
 @section('title', ($member ? 'ویرایش کارمند' : 'افزودن کارمند'))
 @section('content')
 <link rel="stylesheet" href="{{ asset('css/admin-settings.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/admin-toggles.css') }}?v=1">
 @php
   $m = $member;
   $perms = $m ? \Plugins\StaffHR\src\Support\StaffAcl::normalizePermissions($m->permissions ?? []) : [];
@@ -82,39 +83,49 @@
       </div>
     @endif
 
-    <div style="margin-top:1.2rem;padding:1rem;border:1px solid var(--line);border-radius:14px;background:#fafbfc">
+    <div style="margin-top:1.2rem;padding:1rem;border:1px solid var(--line,#e2e8f0);border-radius:14px;background:#fff">
       <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem">
-        <h3 style="margin:0;font-size:1rem">دسترسی‌ها (روشن / خاموش)</h3>
-        <button type="button" class="btn btn-outline btn-sm" id="btnApplyRole">اعمال پیش‌فرض نقش انتخاب‌شده</button>
+        <div>
+          <h3 style="margin:0;font-size:1rem">دسترسی‌ها</h3>
+          <p class="muted" style="margin:.25rem 0 0;font-size:.8rem">هر بخش با کلید روشن/خاموش. نقش فقط پیش‌فرض را پر می‌کند.</p>
+        </div>
+        <button type="button" class="btn btn-outline btn-sm" id="btnApplyRole">اعمال پیش‌فرض نقش</button>
       </div>
-      <div class="vb-block-body" style="padding:0" id="permBox">
-        @foreach($permissionLabels as $key => $label)
-          <div class="vb-opt">
-            <div>
-              <span class="vb-title">{{ $label }}</span>
-              <span class="vb-desc" style="display:block;font-size:.78rem;color:#6b7280">{{ $key }}</span>
-            </div>
-            <div class="vb-ctrl">
-              <label class="vb-switch">
-                <input type="checkbox" name="permissions[]" value="{{ $key }}" class="perm-cb" @checked(in_array($key, old('permissions', $perms), true))>
-                <span class="vb-slider"></span>
-              </label>
-            </div>
+      <div id="permBox">
+        @php
+          $groups = $permissionGroups ?? [];
+          if ($groups === []) {
+            $groups = ['دسترسی‌ها' => array_keys($permissionLabels ?? [])];
+          }
+        @endphp
+        @foreach($groups as $group => $keys)
+          <div class="hl-perm-group">
+            <h4>{{ $group }}</h4>
+            @foreach($keys as $key)
+              <div class="hl-tog">
+                <div class="hl-tog__txt">
+                  <strong>{{ $permissionLabels[$key] ?? $key }}</strong>
+                </div>
+                <label class="hl-sw">
+                  <input type="checkbox" name="permissions[]" value="{{ $key }}" class="perm-cb" @checked(in_array($key, old('permissions', $perms), true))>
+                  <span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span>
+                </label>
+              </div>
+            @endforeach
           </div>
         @endforeach
       </div>
     </div>
 
-    <div class="vb-block" style="margin-top:1rem">
-      <div class="vb-block-body" style="padding:0">
-        <div class="vb-opt">
-          <div><span class="vb-title">حساب فعال</span></div>
-          <div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $m->is_active ?? true))><span class="vb-slider"></span></label></div>
-        </div>
-        <div class="vb-opt">
-          <div><span class="vb-title">دیدن سود فروشگاه در پنل خودش</span></div>
-          <div class="vb-ctrl"><label class="vb-switch"><input type="checkbox" name="can_see_profit" value="1" @checked(old('can_see_profit', $m->can_see_profit ?? false))><span class="vb-slider"></span></label></div>
-        </div>
+    <div class="hl-perm-group" style="margin-top:1rem">
+      <h4>وضعیت حساب</h4>
+      <div class="hl-tog">
+        <div class="hl-tog__txt"><strong>حساب فعال</strong></div>
+        <label class="hl-sw"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $m->is_active ?? true))><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
+      </div>
+      <div class="hl-tog">
+        <div class="hl-tog__txt"><strong>دیدن سود فروشگاه در پنل خودش</strong></div>
+        <label class="hl-sw"><input type="checkbox" name="can_see_profit" value="1" @checked(old('can_see_profit', $m->can_see_profit ?? false))><span class="hl-sw__track" data-on="روشن" data-off="خاموش"><i></i></span></label>
       </div>
     </div>
 
