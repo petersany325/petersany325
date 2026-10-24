@@ -172,6 +172,7 @@
       <a class="btn" href="{{ url('/') }}" target="_blank" rel="noopener">مشاهده سایت</a>
       <a class="btn" href="{{ url('/admin/homepage-settings') }}">بنر فروشگاه</a>
       <a class="btn" href="{{ url('/admin/studio-sms') }}">پیامک ورود / نیازپرداز</a>
+      <a class="btn" href="{{ url('/admin/page-builder') }}">صفحه‌ساز منوها</a>
     </div>
   </form>
 </div>

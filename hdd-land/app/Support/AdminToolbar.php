@@ -93,8 +93,9 @@ class AdminToolbar
 
         if ($path === '' || $path === '/') {
             $label = $studio ? 'خانه استودیو' : 'خانه فروشگاه';
-            if ($studio && $can('site.homepage')) {
-                $primary = ['label' => 'ویرایش', 'url' => url('/admin/studio-home')];
+            if ($studio) {
+                $primary = static::builderEdit('/', $can) ?: ($can('site.homepage') ? ['label' => 'ویرایش', 'url' => url('/admin/studio-home')] : null);
+                $add($can('site.homepage') ? ['label' => 'کلیدهای نمایش خانه', 'url' => url('/admin/studio-home')] : null);
                 $add(['label' => 'بنر فروشگاه', 'url' => url('/admin/homepage-settings')]);
             } elseif ($can('site.homepage')) {
                 $primary = ['label' => 'ویرایش', 'url' => url('/admin/homepage-settings')];
@@ -169,9 +170,7 @@ class AdminToolbar
                 $path === 'contact' => 'تماس',
                 default => 'صفحه استودیو',
             };
-            if ($can('site.homepage')) {
-                $primary = ['label' => 'ویرایش', 'url' => url('/admin/studio-home')];
-            }
+            $primary = static::builderEdit($path, $can) ?: ($can('site.homepage') ? ['label' => 'ویرایش', 'url' => url('/admin/studio-home')] : null);
             $add($can('site.mega_menu') ? ['label' => 'لینک منو', 'url' => url('/admin/mega-menu')] : null);
 
             return compact('label', 'primary', 'links');
@@ -183,9 +182,7 @@ class AdminToolbar
                 str_starts_with($path, 'repair-shop') => 'تعمیرگاه',
                 default => 'حسابداری وب',
             };
-            if ($can('site.homepage')) {
-                $primary = ['label' => 'ویرایش', 'url' => url('/admin/studio-home')];
-            }
+            $primary = static::builderEdit($path, $can) ?: ($can('site.homepage') ? ['label' => 'ویرایش', 'url' => url('/admin/studio-home')] : null);
             $add($can('site.mega_menu') ? ['label' => 'منوی حسابداری', 'url' => url('/admin/mega-menu')] : null);
 
             return compact('label', 'primary', 'links');
@@ -193,9 +190,7 @@ class AdminToolbar
 
         if ($path === 'sites' || str_starts_with($path, 'sites/')) {
             $label = 'فروش سایت';
-            if ($can('site.homepage')) {
-                $primary = ['label' => 'ویرایش', 'url' => url('/admin/studio-home')];
-            }
+            $primary = static::builderEdit($path, $can) ?: ($can('site.homepage') ? ['label' => 'ویرایش', 'url' => url('/admin/studio-home')] : null);
             $add($can('site.mega_menu') ? ['label' => 'مگامنو', 'url' => url('/admin/mega-menu')] : null);
 
             return compact('label', 'primary', 'links');
@@ -220,13 +215,11 @@ class AdminToolbar
             return compact('label', 'primary', 'links');
         }
 
-        $slug = basename($path);
-        $page = $slug !== '' ? static::findBuilderPage($slug) : null;
-        if ($page) {
-            $label = $page->title ?? $page->name ?? 'صفحه';
-            if ($can('site.page_builder')) {
-                $primary = ['label' => 'ویرایش', 'url' => url('/admin/page-builder?page='.$page->id)];
-            }
+        $built = static::builderEdit($path, $can);
+        if ($built) {
+            $found = static::findBuilderPageByPath($path);
+            $label = (string) ($found['title'] ?? $found['menu_label'] ?? 'صفحه');
+            $primary = $built;
 
             return compact('label', 'primary', 'links');
         }
@@ -255,15 +248,53 @@ class AdminToolbar
         return null;
     }
 
-    protected static function findBuilderPage(string $slug): ?object
+    /**
+     * @param  callable(string):bool  $can
+     * @return array{label:string,url:string}|null
+     */
+    protected static function builderEdit(string $path, callable $can): ?array
     {
-        try {
-            if (class_exists(\Plugins\ThemeBuilder\src\Models\BuilderPage::class) && Schema::hasTable('builder_pages')) {
-                return \Plugins\ThemeBuilder\src\Models\BuilderPage::query()->where('slug', $slug)->first();
-            }
-        } catch (\Throwable) {
+        if (! $can('site.page_builder') && ! $can('site.homepage')) {
+            return null;
+        }
+        $page = static::findBuilderPageByPath($path);
+        if ($page === null) {
+            return null;
         }
 
-        return null;
+        return ['label' => 'ویرایش', 'url' => url('/admin/page-builder?page='.$page['id'])];
+    }
+
+    /** @return array<string, mixed>|null */
+    protected static function findBuilderPageByPath(string $path): ?array
+    {
+        $lookup = ($path === '' || $path === '/') ? '/' : '/'.trim($path, '/');
+        try {
+            if (! class_exists(\Plugins\ThemeBuilder\src\PageBuilder::class)) {
+                $file = base_path('plugins/ThemeBuilder/src/PageBuilder.php');
+                if (is_file($file)) {
+                    require_once $file;
+                }
+            }
+            if (! class_exists(\Plugins\ThemeBuilder\src\PageBuilder::class)) {
+                return null;
+            }
+            \Plugins\ThemeBuilder\src\PageBuilder::ensureReady();
+            $page = \Plugins\ThemeBuilder\src\PageBuilder::findByPath($lookup);
+            if ($page === null) {
+                $page = \Plugins\ThemeBuilder\src\PageBuilder::findBySlug(basename($lookup));
+            }
+
+            return $page;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    protected static function findBuilderPage(string $slug): ?object
+    {
+        $page = static::findBuilderPageByPath($slug);
+
+        return $page ? (object) $page : null;
     }
 }
