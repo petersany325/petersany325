@@ -154,6 +154,46 @@ class PageBuilder
         return null;
     }
 
+    /** Find or create the builder document for a public studio path. */
+    public static function ensurePage(string $path): ?array
+    {
+        self::ensureReady();
+        $path = self::normPath($path);
+        $page = self::findByPath($path);
+        if ($page !== null) {
+            return $page;
+        }
+        if (class_exists(StudioPageCatalog::class)) {
+            foreach (StudioPageCatalog::all() as $spec) {
+                if (self::normPath((string) ($spec['path'] ?? '')) === $path) {
+                    return self::save($spec);
+                }
+            }
+        }
+
+        $title = trim(str_replace(['-', '/'], ' ', basename($path))) ?: 'صفحه';
+
+        return self::save([
+            'path' => $path,
+            'slug' => trim(str_replace('/', '-', $path), '-') ?: 'page',
+            'title' => $title,
+            'menu_label' => $title,
+            'menu_group' => 'سایت',
+            'status' => 'publish',
+            'blocks' => [
+                [
+                    'type' => 'hero',
+                    'kicker' => '',
+                    'title' => $title,
+                    'text' => '',
+                    'image' => '',
+                    'cta1_label' => 'تماس با ما',
+                    'cta1_url' => '/contact',
+                ],
+            ],
+        ]);
+    }
+
     /**
      * @param  array<string, mixed>  $input
      * @return array<string, mixed>

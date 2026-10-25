@@ -170,7 +170,7 @@ class AdminToolbar
                 $path === 'contact' => 'تماس',
                 default => 'صفحه استودیو',
             };
-            $primary = static::builderEdit($path, $can) ?: ($can('site.homepage') ? ['label' => 'ویرایش', 'url' => url('/admin/studio-home')] : null);
+            $primary = static::builderEdit($path, $can);
             $add($can('site.mega_menu') ? ['label' => 'لینک منو', 'url' => url('/admin/mega-menu')] : null);
 
             return compact('label', 'primary', 'links');
@@ -182,7 +182,7 @@ class AdminToolbar
                 str_starts_with($path, 'repair-shop') => 'تعمیرگاه',
                 default => 'حسابداری وب',
             };
-            $primary = static::builderEdit($path, $can) ?: ($can('site.homepage') ? ['label' => 'ویرایش', 'url' => url('/admin/studio-home')] : null);
+            $primary = static::builderEdit($path, $can);
             $add($can('site.mega_menu') ? ['label' => 'منوی حسابداری', 'url' => url('/admin/mega-menu')] : null);
 
             return compact('label', 'primary', 'links');
@@ -190,7 +190,7 @@ class AdminToolbar
 
         if ($path === 'sites' || str_starts_with($path, 'sites/')) {
             $label = 'فروش سایت';
-            $primary = static::builderEdit($path, $can) ?: ($can('site.homepage') ? ['label' => 'ویرایش', 'url' => url('/admin/studio-home')] : null);
+            $primary = static::builderEdit($path, $can);
             $add($can('site.mega_menu') ? ['label' => 'مگامنو', 'url' => url('/admin/mega-menu')] : null);
 
             return compact('label', 'primary', 'links');
@@ -257,12 +257,13 @@ class AdminToolbar
         if (! $can('site.page_builder') && ! $can('site.homepage')) {
             return null;
         }
+        $lookup = ($path === '' || $path === '/') ? '/' : '/'.trim($path, '/');
         $page = static::findBuilderPageByPath($path);
-        if ($page === null) {
-            return null;
+        if ($page !== null && ! empty($page['id'])) {
+            return ['label' => 'ویرایش', 'url' => url('/admin/page-builder?page='.$page['id'])];
         }
 
-        return ['label' => 'ویرایش', 'url' => url('/admin/page-builder?page='.$page['id'])];
+        return ['label' => 'ویرایش', 'url' => url('/admin/page-builder?path='.rawurlencode($lookup))];
     }
 
     /** @return array<string, mixed>|null */

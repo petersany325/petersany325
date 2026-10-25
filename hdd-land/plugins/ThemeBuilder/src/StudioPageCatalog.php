@@ -322,18 +322,76 @@ class StudioPageCatalog
             return [];
         }
         $out = [];
-        foreach (StudioAccountingCopy::industries() as $row) {
+        foreach (StudioAccountingCopy::industries() as $base) {
+            $row = StudioAccountingCopy::industry((string) $base['slug']) ?? $base;
             $body = implode("\n\n", $row['body'] ?? []);
-            $highlights = $row['highlights'] ?? [];
+            $others = [];
+            foreach (StudioAccountingCopy::industries() as $other) {
+                if (($other['slug'] ?? '') === ($row['slug'] ?? '')) {
+                    continue;
+                }
+                $others[] = [
+                    'title' => (string) $other['title'],
+                    'text' => (string) ($other['short'] ?? ''),
+                    'url' => '/computer-accounting/'.$other['slug'],
+                ];
+            }
+            $faqItems = [];
+            foreach ($row['faqs'] ?? [] as $faq) {
+                $faqItems[] = [
+                    'title' => (string) ($faq['q'] ?? ''),
+                    'text' => (string) ($faq['a'] ?? ''),
+                ];
+            }
+            $ai = $row['ai'] ?? [];
+            $buy = $row['buy'] ?? [];
+            $blocks = [
+                self::hero((string) ($row['kicker'] ?? 'حسابداری کامپیوتر'), $row['title'], (string) ($row['lead'] ?? $row['short'] ?? ''), '', 'درخواست مشاوره و دمو', '/contact', 'همه حسابداری‌های کامپیوتر', '/computer-accounting'),
+                self::list('نقاط قوت این نسخه', $row['highlights'] ?? []),
+                self::rich($row['title'].' چیست و چه کاری انجام می‌دهد؟', $body.(class_exists(StudioAccountingCopy::class) ? "\n\n".StudioAccountingCopy::sqlNote() : '')),
+            ];
+            if (! empty($ai) || class_exists(StudioAccountingCopy::class)) {
+                $aiLead = (string) ($ai['lead'] ?? (class_exists(StudioAccountingCopy::class) ? StudioAccountingCopy::aiNote() : ''));
+                if (! empty($row['focus'])) {
+                    $aiLead .= "\n\nپرسش‌های پیشنهادی این نسخه: ".$row['focus'];
+                }
+                $blocks[] = self::rich((string) ($ai['title'] ?? 'هوش مصنوعی داخل نرم‌افزار'), $aiLead);
+                $blocks[] = self::cards('دستیار هوشمند', $ai['items'] ?? (class_exists(StudioAccountingCopy::class) ? StudioAccountingCopy::aiMenus() : []));
+            }
+            if (! empty($buy)) {
+                $blocks[] = self::rich((string) ($buy['title'] ?? 'چه می‌خرید'), (string) ($buy['lead'] ?? ''));
+                $blocks[] = self::list('با خرید این نسخه', $buy['items'] ?? []);
+            }
+            $use = trim((string) ($row['used_for'] ?? ''));
+            if ($use !== '') {
+                if (! empty($row['who'])) {
+                    $use .= "\n\nمخاطب اصلی: ".$row['who'];
+                }
+                $blocks[] = self::rich('این حسابداری برای چه کسی و چه کاری است؟', $use);
+            }
+            if (! empty($row['problems'])) {
+                $blocks[] = self::list('چه مشکلی را حل می‌کند', $row['problems']);
+            }
+            if (! empty($row['menus'])) {
+                $blocks[] = self::cards('امکانات و منوهای این نسخه', $row['menus']);
+            }
+            if (! empty($row['steps'])) {
+                $blocks[] = self::steps('از تحلیل تا نصب روی SQL Server 2022', $row['steps']);
+            }
+            if (! empty($row['benefits'])) {
+                $blocks[] = self::list('روی SQL Server 2022، مخصوص صنف شما', $row['benefits']);
+            }
+            if ($faqItems !== []) {
+                $blocks[] = self::steps('قبل از شروع پروژه', $faqItems);
+            }
+            if ($others !== []) {
+                $blocks[] = self::cards('حسابداری کامپیوتر برای صنوف دیگر', $others);
+            }
+            $blocks[] = self::cta('دمو این نسخه', 'روی SQL Server 2022 و گردش کار همان کسب‌وکار شما.', 'تماس با ما', '/contact');
             $out[] = self::spec('/computer-accounting/'.$row['slug'], 'acc-'.$row['slug'], $row['title'], $row['title'], 'حسابداری کامپیوتر', [
                 'seo_title' => (string) ($row['seo_title'] ?? $row['title']),
                 'seo_description' => (string) ($row['seo_description'] ?? ($row['short'] ?? '')),
-                'blocks' => [
-                    self::hero((string) ($row['kicker'] ?? 'حسابداری کامپیوتر'), $row['title'], (string) ($row['lead'] ?? $row['short'] ?? ''), '', 'درخواست مشاوره و دمو', '/contact', 'همه حسابداری‌های کامپیوتر', '/computer-accounting'),
-                    self::list('نقاط قوت این نسخه', $highlights),
-                    self::rich($row['title'].' چیست؟', $body),
-                    self::cta('دمو این نسخه', 'روی SQL Server 2022 و گردش کار همان کسب‌وکار شما.', 'تماس با ما', '/contact'),
-                ],
+                'blocks' => $blocks,
             ]);
         }
 

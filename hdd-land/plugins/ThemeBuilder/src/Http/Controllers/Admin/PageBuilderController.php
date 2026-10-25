@@ -17,15 +17,22 @@ class PageBuilderController extends Controller
         ThemeBuilderPlugin::loadClasses();
         PageBuilder::ensureReady();
         $pages = PageBuilder::all();
-        $id = $request->query('page', $request->query('path'));
+        $id = $request->query('page');
+        $path = $request->query('path');
         $current = null;
         if (is_numeric($id)) {
             $current = PageBuilder::findById((int) $id);
-        } elseif (is_string($id) && $id !== '') {
-            $current = PageBuilder::findByPath($id) ?: PageBuilder::findBySlug($id);
+        }
+        if ($current === null && is_string($path) && $path !== '') {
+            $current = PageBuilder::ensurePage($path);
+            $pages = PageBuilder::all();
+        }
+        if ($current === null && is_string($id) && $id !== '') {
+            $current = PageBuilder::findByPath((string) $id) ?: PageBuilder::findBySlug((string) $id);
         }
         if ($current === null && $pages !== []) {
-            $prefer = PageBuilder::findByPath('/design/corporate');
+            $prefer = PageBuilder::findByPath('/computer-accounting/corporate')
+                ?: PageBuilder::findByPath('/design/corporate');
             $current = $prefer ?: $pages[0];
         }
 
