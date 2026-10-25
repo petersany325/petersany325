@@ -38,6 +38,7 @@ class Plugin extends BasePlugin
     public function adminMenu(): array
     {
         return [
+            ['label' => 'صفحه‌ساز منوها', 'url' => '/admin/page-builder'],
             ['label' => 'صفحه اول استودیو', 'url' => '/admin/studio-home'],
             ['label' => 'پیامک ورود سایت', 'url' => '/admin/studio-sms'],
         ];
@@ -77,6 +78,9 @@ class Plugin extends BasePlugin
             base_path('app/Support/StudioDesignCopy.php'),
             base_path('app/Support/AdminToolbar.php'),
             base_path('app/Http/Middleware/SiteHostSplit.php'),
+            base_path('plugins/ThemeBuilder/src/PageBuilder.php'),
+            base_path('plugins/ThemeBuilder/src/StudioPageCatalog.php'),
+            base_path('plugins/ThemeBuilder/src/Models/BuilderPage.php'),
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Support'.DIRECTORY_SEPARATOR.'StudioSms.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioAuthController.php',

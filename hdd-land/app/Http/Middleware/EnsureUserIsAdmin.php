@@ -29,6 +29,9 @@ class EnsureUserIsAdmin
             if (! $ok && $needed === 'serials' && $user->hasStaffPermission('sales')) {
                 $ok = true;
             }
+            if (! $ok && $needed === 'site.page_builder' && $user->hasStaffPermission('site.homepage')) {
+                $ok = true;
+            }
             if ($ok) {
                 return $next($request);
             }

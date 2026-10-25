@@ -160,11 +160,14 @@ class StudioDesignCopy
     {
         $services = [];
         foreach (self::services() as $row) {
-            $services[] = ['label' => $row['title'], 'url' => '/design/'.$row['slug']];
+            $services[] = [
+                'label' => self::builderLabel('/design/'.$row['slug'], $row['title']),
+                'url' => '/design/'.$row['slug'],
+            ];
         }
 
         return [
-            'label' => 'طراحی سایت',
+            'label' => self::builderLabel('/design', 'طراحی سایت'),
             'url' => '/design',
             'children' => [
                 [
@@ -176,12 +179,27 @@ class StudioDesignCopy
                     'label' => 'همکاری',
                     'url' => '/design#cta',
                     'children' => [
-                        ['label' => 'درباره ما', 'url' => '/about'],
-                        ['label' => 'نمونه کارها', 'url' => '/projects'],
-                        ['label' => 'تماس و مشاوره', 'url' => '/contact'],
+                        ['label' => self::builderLabel('/about', 'درباره ما'), 'url' => '/about'],
+                        ['label' => self::builderLabel('/projects', 'نمونه کارها'), 'url' => '/projects'],
+                        ['label' => self::builderLabel('/contact', 'تماس و مشاوره'), 'url' => '/contact'],
                     ],
                 ],
             ],
         ];
+    }
+
+    protected static function builderLabel(string $path, string $fallback): string
+    {
+        try {
+            if (! class_exists(\Plugins\ThemeBuilder\src\PageBuilder::class)) {
+                return $fallback;
+            }
+            $page = \Plugins\ThemeBuilder\src\PageBuilder::findByPath($path);
+            $label = trim((string) ($page['menu_label'] ?? ''));
+
+            return $label !== '' ? $label : $fallback;
+        } catch (\Throwable) {
+            return $fallback;
+        }
     }
 }

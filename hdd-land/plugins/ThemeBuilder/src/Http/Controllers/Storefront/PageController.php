@@ -28,10 +28,22 @@ class PageController extends Controller
     /** @return array<string, mixed> */
     public function homepageData(): array
     {
-        PageBuilder::ensureSchema();
-        $page = PageBuilder::ensureHomepage();
+        try {
+            $page = PageBuilder::ensureHomepage();
+            if ($page instanceof BuilderPage) {
+                return $this->viewData($page);
+            }
+        } catch (\Throwable) {
+            //
+        }
 
-        return $this->viewData($page);
+        return [
+            'page' => null,
+            'widgets' => [],
+            'featured' => collect(),
+            'latest' => collect(),
+            'categories' => collect(),
+        ];
     }
 
     /** @return array<string, mixed> */

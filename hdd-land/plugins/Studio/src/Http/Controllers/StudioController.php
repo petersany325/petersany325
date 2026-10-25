@@ -7,6 +7,7 @@ use App\Support\StudioAccountingCopy;
 use App\Support\StudioDesignCopy;
 use App\Support\StudioHomeConfig;
 use App\Support\StudioProductMenus;
+use Plugins\ThemeBuilder\src\PageBuilder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -285,6 +286,16 @@ JS;
     protected function page(string $slug, string $title, array $extra = []): View
     {
         StudioPlugin::ensureBooted();
+        if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
+            \Plugins\ThemeBuilder\Plugin::registerViews();
+        }
+        $built = $this->builderForRequest();
+        if ($built !== null) {
+            $slug = 'builder';
+            $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;
+            $extra['description'] = $extra['description'] ?? ($built['seo_description'] ?? null);
+            $extra['builderPage'] = $built;
+        }
 
         return view('studio::page', array_merge([
             'slug' => $slug,
@@ -294,5 +305,44 @@ JS;
             'receiptUrl' => SiteHost::receiptUrl(),
             'shopUrl' => SiteHost::shopUrl('/'),
         ], $extra));
+    }
+
+    /** @return array<string, mixed>|null */
+    protected function builderForRequest(): ?array
+    {
+        if (! class_exists(PageBuilder::class)) {
+            $file = base_path('plugins/ThemeBuilder/src/PageBuilder.php');
+            if (is_file($file)) {
+                try {
+                    require_once $file;
+                } catch (\Throwable) {
+                    return null;
+                }
+            }
+        }
+        if (! class_exists(PageBuilder::class)) {
+            return null;
+        }
+        try {
+            PageBuilder::ensureReady();
+            $path = trim((string) request()->path(), '/');
+            $lookup = ($path === '' || $path === 'index.php') ? '/' : '/'.$path;
+            $aliases = [
+                '/sites/repair-shop' => '/repair-shop',
+                '/sites/repair-shop/staff-menu' => '/repair-shop/staff-menu',
+                '/sites/repair-shop/customer-menu' => '/repair-shop/customer-menu',
+            ];
+            $page = PageBuilder::findPublishedByPath($lookup);
+            if ($page === null && isset($aliases[$lookup])) {
+                $page = PageBuilder::findPublishedByPath($aliases[$lookup]);
+            }
+            if ($page === null && preg_match('#^/sites/repair-shop/m/([^/]+)$#', $lookup, $m)) {
+                $page = PageBuilder::findPublishedByPath('/repair-shop/m/'.$m[1]);
+            }
+
+            return $page;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }
