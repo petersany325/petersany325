@@ -4,7 +4,6 @@ namespace Plugins\ThemeBuilder;
 
 use App\Support\BasePlugin;
 use Illuminate\Support\Facades\View;
-use Plugins\ThemeBuilder\src\PageBuilder;
 
 /**
  * بنرساز Revolution + صفحه‌ساز هر منو و آپشن استودیو.
@@ -53,7 +52,6 @@ class Plugin extends BasePlugin
                 require_once base_path('plugins/Studio/Plugin.php');
                 \Plugins\Studio\Plugin::ensureBooted();
             }
-            PageBuilder::ensureReady();
         } catch (\Throwable) {
         }
     }

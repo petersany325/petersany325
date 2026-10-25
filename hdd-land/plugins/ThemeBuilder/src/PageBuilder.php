@@ -37,17 +37,27 @@ class PageBuilder
         }
     }
 
-    public static function ensureHomepage(): ?object
+    /**
+     * Shop ThemeBuilder homepage row only. Never the studio catalog `/`.
+     */
+    public static function ensureHomepage(): ?BuilderPage
     {
-        self::ensureReady();
-        $row = self::findByPath('/');
-
-        return $row ? self::asObject($row) : null;
+        try {
+            if (! class_exists(BuilderPage::class) || ! class_exists(Schema::class) || ! Schema::hasTable('builder_pages')) {
+                return null;
+            }
+            // First shop ThemeBuilder row only. Studio catalog `/` stays in settings.
+            return BuilderPage::query()
+                ->whereIn('slug', ['home', 'homepage'])
+                ->orderBy('id')
+                ->first();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public static function ensureReady(): void
     {
-        self::ensureSchema();
         self::seedStudioPages();
     }
 
@@ -80,11 +90,15 @@ class PageBuilder
             try {
                 $rows = [];
                 foreach (BuilderPage::query()->orderBy('id')->get() as $model) {
-                    $rows[] = self::fromModel($model);
+                    if (self::isStudioCatalogRow($model)) {
+                        $rows[] = self::fromModel($model);
+                    }
                 }
-                self::$memory = $rows;
+                if ($rows !== []) {
+                    self::$memory = $rows;
 
-                return $rows;
+                    return $rows;
+                }
             } catch (\Throwable) {
                 //
             }
@@ -201,30 +215,7 @@ class PageBuilder
     public static function save(array $input): array
     {
         $page = self::normalize($input);
-        if (self::dbReady()) {
-            try {
-                $model = null;
-                if (! empty($page['id'])) {
-                    $model = BuilderPage::query()->find($page['id']);
-                }
-                if (! $model && ! empty($page['path'])) {
-                    $model = BuilderPage::query()->where('path', $page['path'])->first();
-                }
-                $payload = $page;
-                unset($payload['id']);
-                if ($model) {
-                    $model->fill($payload);
-                    $model->save();
-                } else {
-                    $model = BuilderPage::query()->create($payload);
-                }
-                self::$memory = null;
-
-                return self::fromModel($model);
-            } catch (\Throwable) {
-                //
-            }
-        }
+        // Studio pages live in settings — builder_pages is the shop ThemeBuilder table.
 
         $all = self::all();
         $found = false;
@@ -315,13 +306,15 @@ class PageBuilder
 
     protected static function dbReady(): bool
     {
-        try {
-            return class_exists(BuilderPage::class)
-                && class_exists(Schema::class)
-                && Schema::hasTable('builder_pages');
-        } catch (\Throwable) {
-            return false;
-        }
+        return false;
+    }
+
+    protected static function isStudioCatalogRow(object $model): bool
+    {
+        $path = (string) ($model->path ?? '');
+        $group = (string) ($model->menu_group ?? '');
+
+        return $path !== '' || $group !== '';
     }
 
     /**
