@@ -7,15 +7,6 @@ if (! function_exists('toman')) {
     }
 }
 
-if (! function_exists('shop_name')) {
-    function shop_name(): string
-    {
-        $name = trim((string) \App\Models\AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'سرزمین هارد')));
-
-        return $name !== '' ? $name : 'سرزمین هارد';
-    }
-}
-
 if (! function_exists('jalali_convert')) {
     /**
      * Gregorian Y-m-d → [jy, jm, jd]
@@ -158,5 +149,85 @@ if (! function_exists('jalali_input')) {
         $v = jalali_date($date);
 
         return $v === '—' ? '' : $v;
+    }
+}
+if (! function_exists('shop_name')) {
+    /** Customer brand / company name (white-label). */
+    function shop_name(?string $default = null): string
+    {
+        $fallback = $default ?? (string) config('app.name', 'تعمیرگاه');
+        try {
+            if (class_exists(\App\Models\AppSetting::class)) {
+                $v = \App\Models\AppSetting::getValue('invoice_shop_name');
+                if (is_string($v) && trim($v) !== '') {
+                    return trim($v);
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return trim($fallback) !== '' ? trim($fallback) : 'تعمیرگاه';
+    }
+}
+
+if (! function_exists('shop_tagline')) {
+    function shop_tagline(): string
+    {
+        try {
+            if (class_exists(\App\Models\AppSetting::class)) {
+                $v = \App\Models\AppSetting::getValue('shop_tagline');
+                if (is_string($v) && trim($v) !== '') {
+                    return trim($v);
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return 'سیستم مدیریت تعمیرات';
+    }
+}
+
+if (! function_exists('shop_logo_url')) {
+    /**
+     * @param  'main'|'header'|'invoice'  $variant
+     */
+    function shop_logo_url(string $variant = 'main'): string
+    {
+        $map = [
+            'main' => 'images/logo.png',
+            'header' => 'images/logo-header.png',
+            'invoice' => 'images/logo-invoice.png',
+        ];
+        $rel = $map[$variant] ?? $map['main'];
+        $ver = '1';
+        try {
+            if (class_exists(\App\Models\AppSetting::class)) {
+                $ver = (string) (\App\Models\AppSetting::getValue('brand_logo_version') ?: '1');
+                $custom = \App\Models\AppSetting::getValue('brand_logo_'.$variant);
+                if (is_string($custom) && trim($custom) !== '') {
+                    $rel = ltrim(trim($custom), '/');
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return asset($rel).'?v='.rawurlencode($ver);
+    }
+}
+
+if (! function_exists('shop_office_phone')) {
+    function shop_office_phone(): string
+    {
+        try {
+            if (class_exists(\App\Models\AppSetting::class)) {
+                $v = \App\Models\AppSetting::getValue('office_phone');
+                if (is_string($v) && trim($v) !== '') {
+                    return trim($v);
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return '01144447220';
     }
 }

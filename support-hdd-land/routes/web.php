@@ -15,10 +15,11 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SmsStatusController;
 use App\Http\Controllers\BackupCronController;
-use App\Http\Controllers\BackupCloudController;
 use App\Http\Controllers\StaffMonthlyReportController;
 use App\Http\Controllers\StaffMonthlySmsCronController;
+use App\Http\Controllers\BackupCloudController;
 use App\Http\Controllers\SystemToolsController;
+use App\Http\Controllers\TrashController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
 use App\Http\Controllers\PaymentReceiptController;
@@ -31,10 +32,19 @@ use App\Http\Controllers\StaffSmsTemplateController;
 use App\Http\Controllers\Portal\AuthController as PortalAuthController;
 use App\Http\Controllers\Portal\CartableController as PortalCartableController;
 use App\Http\Controllers\Portal\MessageController as PortalMessageController;
+use App\Http\Controllers\LicenseApiController;
+use App\Http\Controllers\AppUpdateController;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsurePortalCustomer;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+
+Route::post('/license/activate', [LicenseApiController::class, 'activate'])
+    ->middleware('throttle:30,1')
+    ->name('license.activate');
+Route::post('/license/verify', [LicenseApiController::class, 'verify'])
+    ->middleware('throttle:60,1')
+    ->name('license.verify');
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -118,6 +128,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
         Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     });
+    // میانبرهای شخصی — همه نقش‌های واردشده
+    Route::post('/profile/shortcuts', [ProfileController::class, 'updateShortcuts'])->name('profile.shortcuts');
 
     Route::middleware(EnsurePermission::class.':customers')->group(function () {
         Route::resource('customers', CustomerController::class);
@@ -127,14 +139,25 @@ Route::middleware('auth')->group(function () {
         Route::get('receptions/lookup-phone', [ReceptionController::class, 'lookupPhone'])->name('receptions.lookup-phone');
         Route::post('receptions/ensure-customer', [ReceptionController::class, 'ensureCustomer'])->name('receptions.ensure-customer');
         Route::get('receptions/search', [ReceptionController::class, 'search'])->name('receptions.search');
+        Route::match(['get', 'post'], 'receptions/print-bulk', [ReceptionController::class, 'printBulk'])->name('receptions.print-bulk');
         Route::get('deliveries/group', [DeliveryController::class, 'create'])->name('deliveries.group');
         Route::post('deliveries/lookup', [DeliveryController::class, 'lookup'])->name('deliveries.lookup');
         Route::post('deliveries/group', [DeliveryController::class, 'store'])->name('deliveries.store');
-        Route::resource('receptions', ReceptionController::class)->only(['index', 'create', 'store', 'show']);
+        Route::resource('receptions', ReceptionController::class)->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
+        Route::get('receptions/{reception}/report-partial', [ReceptionController::class, 'reportPartial'])->name('receptions.report-partial');
+        Route::get('receptions/{reception}/history', [ReceptionController::class, 'history'])->name('receptions.history');
         Route::post('receptions/{reception}/status', [ReceptionController::class, 'updateStatus'])->name('receptions.status');
         Route::post('receptions/{reception}/parts', [ReceptionController::class, 'addPart'])->name('receptions.parts');
         Route::post('receptions/{reception}/payments', [ReceptionController::class, 'addPayment'])->name('receptions.payments');
+        Route::put('receptions/{reception}/payments/{payment}', [ReceptionController::class, 'updatePayment'])->name('receptions.payments.update');
+        Route::delete('receptions/{reception}/payments/{payment}', [ReceptionController::class, 'destroyPayment'])->name('receptions.payments.destroy');
+        Route::post('receptions/{reception}/settle-deliver', [ReceptionController::class, 'settleAndDeliver'])->name('receptions.settle-deliver');
+        Route::post('receptions/{reception}/collect-debt', [ReceptionController::class, 'collectDebt'])->name('receptions.collect-debt');
         Route::post('receptions/{reception}/cancel-delivery', [ReceptionController::class, 'cancelDelivery'])->name('receptions.cancel-delivery');
+        Route::post('receptions/{reception}/exit-otp/required', [ReceptionController::class, 'updateExitOtpRequired'])->name('receptions.exit-otp.required');
+        Route::post('receptions/{reception}/exit-otp/send', [ReceptionController::class, 'sendExitOtp'])->name('receptions.exit-otp.send');
+        Route::post('receptions/{reception}/exit-otp/verify', [ReceptionController::class, 'verifyExitOtp'])->name('receptions.exit-otp.verify');
+        Route::post('receptions/{reception}/exit-otp/bypass', [ReceptionController::class, 'bypassExitOtp'])->name('receptions.exit-otp.bypass');
         Route::post('receptions/{reception}/cost-stages', [ReceptionController::class, 'storeCostStage'])->name('receptions.cost-stages');
         Route::delete('receptions/{reception}/cost-stages/{stage}', [ReceptionController::class, 'destroyCostStage'])->name('receptions.cost-stages.destroy');
         Route::post('receptions/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('receptions.zarinpal');
@@ -195,7 +218,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware(EnsurePermission::class.':technicians')->group(function () {
-        Route::resource('technicians', TechnicianController::class)->except(['show', 'destroy']);
+        Route::resource('technicians', TechnicianController::class)->except(['show']);
     });
 
     Route::middleware(EnsurePermission::class.':employees')->group(function () {
@@ -215,6 +238,9 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/operations', [ReportController::class, 'operations'])
         ->middleware(EnsurePermission::class.':reports.operations')
         ->name('reports.operations');
+    Route::get('reports/receipt-print', [ReportController::class, 'receiptPrint'])
+        ->middleware(EnsurePermission::class.':receptions')
+        ->name('reports.receipt-print');
     Route::get('reports/custody', [ReportController::class, 'custody'])
         ->middleware(EnsurePermission::class.':reports.custody')
         ->name('reports.custody');
@@ -235,6 +261,7 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/technicians/{technician}', [ReportController::class, 'technicianShow'])
         ->middleware(EnsurePermission::class.':reports.technicians')
         ->name('reports.technicians.show');
+
     Route::get('reports/staff-monthly', [StaffMonthlyReportController::class, 'index'])
         ->middleware(EnsurePermission::class.':reports.staff_monthly')
         ->name('reports.staff-monthly');
@@ -289,6 +316,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware(EnsurePermission::class.':settings')->group(function () {
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::post('settings/general', [SettingController::class, 'updateGeneral'])->name('settings.general');
         Route::post('settings/fault-types', [SettingController::class, 'storeFaultType'])->name('settings.fault-types');
         Route::put('settings/fault-types/{faultType}', [SettingController::class, 'updateFaultType'])->name('settings.fault-types.update');
         Route::delete('settings/fault-types/{faultType}', [SettingController::class, 'destroyFaultType'])->name('settings.fault-types.destroy');
@@ -299,8 +327,21 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/sms', [SettingController::class, 'updateSms'])->name('settings.sms');
         Route::post('settings/sms/test', [SettingController::class, 'testSms'])->name('settings.sms.test');
         Route::post('settings/invoice', [SettingController::class, 'updateInvoice'])->name('settings.invoice');
+        Route::post('settings/labels', [SettingController::class, 'updateLabels'])->name('settings.labels');
+        Route::get('labels/preview', function () {
+            abort(404, 'ماژول چاپ برچسب روی این نصب فعال نیست.');
+        })->name('labels.preview');
         Route::post('settings/payments', [SettingController::class, 'updatePayments'])->name('settings.payments');
         Route::post('settings/backup', [SettingController::class, 'updateBackup'])->name('settings.backup');
+        Route::post('settings/seo', [SettingController::class, 'updateSeo'])->name('settings.seo');
+        Route::get('settings/seo/apex-download', function () {
+            abort(404, 'موتور سئو روی این نصب فعال نیست.');
+        })->name('settings.seo.apex-download');
+        Route::post('settings/seo/apex-publish', function () {
+            abort(404, 'موتور سئو روی این نصب فعال نیست.');
+        })->name('settings.seo.apex-publish');
+        Route::post('settings/portal', [SettingController::class, 'updatePortal'])->name('settings.portal');
+        Route::post('settings/backup/run-now', [SettingController::class, 'runBackupNow'])->name('settings.backup.run-now');
         Route::get('settings/backup/cloud/{provider}/connect', [BackupCloudController::class, 'connect'])
             ->whereIn('provider', ['google', 'onedrive', 'mega'])
             ->name('settings.backup.cloud.connect');
@@ -324,5 +365,33 @@ Route::middleware('auth')->group(function () {
         Route::get('system-tools/backups/{file}', [SystemToolsController::class, 'downloadBackup'])
             ->where('file', '[A-Za-z0-9._-]+')
             ->name('system-tools.backups.download');
+        Route::get('system-tools/updates', [AppUpdateController::class, 'index'])->name('system-tools.updates');
+        Route::get('system-tools/updates/check', [AppUpdateController::class, 'check'])->name('system-tools.updates.check');
+        Route::post('system-tools/updates/apply', [AppUpdateController::class, 'apply'])->name('system-tools.updates.apply');
+    });
+
+    // Customer installs: /licenses/status shows THIS site's active serial.
+    // Seller installs: /licenses/* is the issue/monitor center (blocked on customer sites).
+    Route::middleware(EnsurePermission::class.':dashboard')->get('/licenses/status', [\App\Http\Controllers\LicenseAdminController::class, 'status'])->name('licenses.status');
+
+    Route::middleware(EnsurePermission::class.':system.tools')->prefix('licenses')->name('licenses.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');
+        Route::get('/online', [\App\Http\Controllers\LicenseAdminController::class, 'online'])->name('online');
+        Route::get('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'plans'])->name('plans');
+        Route::post('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'savePlans'])->name('plans.save');
+        Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
+        Route::get('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'edit'])->name('edit');
+        Route::post('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'update'])->name('update');
+        Route::get('/{license}/renew', [\App\Http\Controllers\LicenseAdminController::class, 'renewForm'])->name('renew');
+        Route::post('/{license}/sms', [\App\Http\Controllers\LicenseAdminController::class, 'sendSms'])->name('sms');
+        Route::post('/{license}/revoke', [\App\Http\Controllers\LicenseAdminController::class, 'revoke'])->name('revoke');
+        Route::post('/{license}/unbind', [\App\Http\Controllers\LicenseAdminController::class, 'unbind'])->name('unbind');
+        Route::post('/{license}/extend', [\App\Http\Controllers\LicenseAdminController::class, 'extend'])->name('extend');
+    });
+
+    Route::middleware(EnsurePermission::class.':receptions')->prefix('trash')->name('trash.')->group(function () {
+        Route::get('/', [TrashController::class, 'index'])->name('index');
+        Route::post('/restore', [TrashController::class, 'restore'])->name('restore');
+        Route::post('/force', [TrashController::class, 'forceDestroy'])->name('force');
     });
 });
