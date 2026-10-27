@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DeviceBlacklistController;
 use App\Http\Controllers\DailyLogController;
@@ -189,6 +190,18 @@ Route::middleware('auth')->group(function () {
     Route::get('customers/suggest', [CustomerController::class, 'suggest'])->name('customers.suggest');
 
     Route::middleware(EnsurePermission::class.':customers')->group(function () {
+        Route::get('customers/credit-limits', function () {
+            if (! method_exists(CustomerController::class, 'creditLimits')) {
+                return redirect()->route('customers.index');
+            }
+            return app(CustomerController::class)->creditLimits(request());
+        })->name('customers.credit-limits');
+        Route::put('customers/{customer}/credit-limit', function (\App\Models\Customer $customer) {
+            if (! method_exists(CustomerController::class, 'updateCreditLimit')) {
+                return redirect()->route('customers.index');
+            }
+            return app(CustomerController::class)->updateCreditLimit(request(), $customer);
+        })->name('customers.credit-limit');
         Route::resource('customers', CustomerController::class);
         Route::post('customers/{customer}/blacklist', [CustomerController::class, 'toggleBlacklist'])->name('customers.blacklist');
     });
@@ -373,6 +386,21 @@ Route::middleware('auth')->group(function () {
         Route::post('staff-sms/templates', [StaffSmsTemplateController::class, 'update'])->name('staff-sms.templates.save');
     });
 
+    Route::middleware(EnsurePermission::class.':employees')->prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('manage', function () {
+            if (! class_exists(AttendanceController::class)) {
+                return redirect()->route('employees.index');
+            }
+            return app(AttendanceController::class)->manage(request());
+        })->name('manage');
+        Route::get('/', function () {
+            if (! class_exists(AttendanceController::class)) {
+                return redirect()->route('employees.index');
+            }
+            return app(AttendanceController::class)->index(request());
+        })->name('index');
+    });
+
     Route::post('reports/settings', [ReportController::class, 'saveSettings'])->name('reports.settings');
 
     Route::get('reports/accounting', [ReportController::class, 'accounting'])
@@ -419,6 +447,12 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/customers/{customer}', [ReportController::class, 'customerShow'])
         ->middleware(EnsurePermission::class.':reports.customers')
         ->name('reports.customers.show');
+    Route::get('reports/parts-bilans', function () {
+        if (! method_exists(ReportController::class, 'partsBilans')) {
+            return redirect()->route('reports.parts-used');
+        }
+        return app(ReportController::class)->partsBilans(request());
+    })->middleware(EnsurePermission::class.':reports.parts')->name('reports.parts-bilans');
     Route::get('reports/parts-used', [ReportController::class, 'partsUsed'])
         ->middleware(EnsurePermission::class.':reports.parts')
         ->name('reports.parts-used');
@@ -526,9 +560,25 @@ Route::middleware('auth')->group(function () {
         Route::post('system-tools/updates/apply', [AppUpdateController::class, 'apply'])->name('system-tools.updates.apply');
     });
 
-    Route::get('my-license', [\App\Http\Controllers\MyLicenseController::class, 'index'])->name('my-license.index');
+    Route::get('my-license', function () {
+        if (\App\Support\LicenseStatus::isSellerSite()) {
+            return redirect()->route('licenses.index');
+        }
+        return app(\App\Http\Controllers\MyLicenseController::class)->index(request());
+    })->name('my-license.index');
     Route::post('my-license/refresh', [\App\Http\Controllers\MyLicenseController::class, 'refresh'])->name('my-license.refresh');
-    Route::get('contact', [\App\Http\Controllers\ContactController::class, 'index'])->name('contact.index');
+    Route::get('contact', function () {
+        if (\App\Support\LicenseStatus::isSellerSite()) {
+            return redirect()->route('dashboard');
+        }
+        return app(\App\Http\Controllers\ContactController::class)->index(request());
+    })->name('contact.index');
+    Route::middleware(EnsurePermission::class.':dashboard')->get('licenses/status', function () {
+        if (\App\Support\LicenseStatus::isSellerSite() || ! method_exists(\App\Http\Controllers\LicenseAdminController::class, 'status')) {
+            return redirect()->route('licenses.index');
+        }
+        return app(\App\Http\Controllers\LicenseAdminController::class)->status(request());
+    })->name('licenses.status');
 
     Route::middleware(EnsurePermission::class.':licenses')->prefix('licenses')->name('licenses.')->group(function () {
         Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');
