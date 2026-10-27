@@ -16,6 +16,8 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SmsStatusController;
 use App\Http\Controllers\BackupCronController;
 use App\Http\Controllers\BackupCloudController;
+use App\Http\Controllers\StaffMonthlyReportController;
+use App\Http\Controllers\StaffMonthlySmsCronController;
 use App\Http\Controllers\SystemToolsController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
@@ -69,6 +71,10 @@ Route::get('/payments/zarinpal/callback/{trx}', [ZarinPalController::class, 'cal
 Route::get('/cron/backup', BackupCronController::class)
     ->middleware('throttle:30,1')
     ->name('cron.backup');
+
+Route::get('/cron/staff-monthly-sms', StaffMonthlySmsCronController::class)
+    ->middleware('throttle:30,1')
+    ->name('cron.staff-monthly-sms');
 
 Route::prefix('cartable')->name('portal.')->group(function () {
     Route::get('/', [PortalAuthController::class, 'showLogin'])->name('login');
@@ -229,6 +235,18 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/technicians/{technician}', [ReportController::class, 'technicianShow'])
         ->middleware(EnsurePermission::class.':reports.technicians')
         ->name('reports.technicians.show');
+    Route::get('reports/staff-monthly', [StaffMonthlyReportController::class, 'index'])
+        ->middleware(EnsurePermission::class.':reports.staff_monthly')
+        ->name('reports.staff-monthly');
+    Route::post('reports/staff-monthly/notify-all', [StaffMonthlyReportController::class, 'notifyAll'])
+        ->middleware(EnsurePermission::class.':reports.staff_monthly')
+        ->name('reports.staff-monthly.notify-all');
+    Route::get('reports/staff-monthly/{user}', [StaffMonthlyReportController::class, 'show'])
+        ->middleware(EnsurePermission::class.':reports.staff_monthly')
+        ->name('reports.staff-monthly.show');
+    Route::post('reports/staff-monthly/{user}/notify', [StaffMonthlyReportController::class, 'notify'])
+        ->middleware(EnsurePermission::class.':reports.staff_monthly')
+        ->name('reports.staff-monthly.notify');
     Route::get('reports/customers', [ReportController::class, 'customers'])
         ->middleware(EnsurePermission::class.':reports.customers')
         ->name('reports.customers');

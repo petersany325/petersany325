@@ -7,6 +7,15 @@ if (! function_exists('toman')) {
     }
 }
 
+if (! function_exists('shop_name')) {
+    function shop_name(): string
+    {
+        $name = trim((string) \App\Models\AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'سرزمین هارد')));
+
+        return $name !== '' ? $name : 'سرزمین هارد';
+    }
+}
+
 if (! function_exists('jalali_convert')) {
     /**
      * Gregorian Y-m-d → [jy, jm, jd]

@@ -197,6 +197,7 @@ class Reception extends Model
             ->whereIn('status', ['draft', 'pending_approval', 'approved', 'waived'])
             ->sum('amount');
         $total = $partsCost + $stagesCost + (int) $this->labor_cost + (int) $this->admission_fee - (int) $this->discount;
+        // Refund payments are stored as negative amounts, so SUM is already net paid.
         $paid = (int) $this->payments()->sum('amount');
 
         $this->forceFill([

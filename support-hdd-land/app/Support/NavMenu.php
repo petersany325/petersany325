@@ -186,6 +186,7 @@ class NavMenu
                 'hint' => 'عملکرد و مشتریان',
                 'any_of' => [
                     'reports.technicians',
+                    'reports.staff_monthly',
                     'reports.customers',
                     'reports.parts',
                     'reports.operations',
@@ -195,7 +196,8 @@ class NavMenu
                     'reports.messages',
                 ],
                 'children' => [
-                    ['label' => 'عملکرد تعمیرکاران', 'route' => 'reports.technicians', 'match' => 'reports.technicians*', 'permission' => 'reports.technicians', 'hint' => '', 'mark' => 'ت'],
+                    ['label' => 'عملکرد تعمیرکاران', 'route' => 'reports.technicians', 'match' => 'reports.technicians*', 'permission' => 'reports.technicians', 'hint' => 'تفکیک اجرت و قطعه', 'mark' => 'ت'],
+                    ['label' => 'گزارش ماهانه کارکنان', 'route' => 'reports.staff-monthly', 'match' => 'reports.staff-monthly*', 'permission' => 'reports.staff_monthly', 'hint' => 'SMS و مقایسه ماه', 'mark' => 'م'],
                     ['label' => 'گزارش مشتریان', 'route' => 'reports.customers', 'match' => 'reports.customers*', 'permission' => 'reports.customers', 'hint' => '', 'mark' => 'ش'],
                     ['label' => 'کالای خرج‌شده', 'route' => 'reports.parts-used', 'match' => 'reports.parts-used', 'permission' => 'reports.parts', 'hint' => '', 'mark' => 'ق'],
                     ['label' => 'عملیات کارگاه', 'route' => 'reports.operations', 'match' => 'reports.operations', 'permission' => 'reports.operations', 'hint' => '', 'mark' => 'ع'],

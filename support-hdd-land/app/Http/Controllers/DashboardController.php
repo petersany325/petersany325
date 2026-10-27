@@ -25,7 +25,8 @@ class DashboardController extends Controller
             'readyCount' => Reception::where('status', 'ready')->count(),
             'customersCount' => Customer::count(),
             'lowStockCount' => Part::whereColumn('stock', '<=', 'min_stock')->where('is_active', true)->count(),
-            'todayIncome' => Payment::whereDate('paid_at', today())->sum('amount'),
+            // Payment.amount is negative for refunds, so SUM is already net cash.
+            'todayIncome' => (int) Payment::whereDate('paid_at', today())->sum('amount'),
             'techniciansCount' => Technician::where('is_active', true)->count(),
             'recentReceptions' => Reception::with(['customer', 'technician'])
                 ->latest()

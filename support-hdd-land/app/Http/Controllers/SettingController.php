@@ -85,6 +85,7 @@ class SettingController extends Controller
             'backupProtocols' => BackupSettings::PROTOCOLS,
             'backupCloudLabels' => BackupSettings::CLOUD_LABELS,
             'backupCronUrl' => url('/cron/backup?token='.BackupSettings::all()['cron_token']),
+            'staffMonthlySmsCronUrl' => url('/cron/staff-monthly-sms?token='.BackupSettings::all()['cron_token']),
             'googleRedirectUri' => url('/settings/backup/cloud/google/callback'),
             'onedriveRedirectUri' => url('/settings/backup/cloud/onedrive/callback'),
         ]);
