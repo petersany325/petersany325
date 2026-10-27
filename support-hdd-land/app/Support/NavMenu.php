@@ -3,7 +3,6 @@
 namespace App\Support;
 
 use App\Models\User;
-use App\Support\LicenseStatus;
 use Illuminate\Support\Facades\Route;
 
 class NavMenu
@@ -30,32 +29,62 @@ class NavMenu
                 'children' => [],
             ],
             [
+                'key' => 'attendance',
+                'label' => 'حضور و غیاب',
+                'permission' => 'attendance',
+                'route' => 'attendance.index',
+                'match' => 'attendance.index|attendance.punch*|attendance.otp|attendance.onboard*',
+                'mark' => 'ح',
+                'hint' => 'ورود و خروج از شرکت',
+                'children' => [],
+            ],
+            [
                 'key' => 'reception',
                 'label' => 'پذیرش',
-                'permission' => 'receptions',
+                'permission' => null,
                 'route' => null,
-                'match' => 'receptions.*|deliveries.*|trash.*',
+                'match' => 'receptions.*|deliveries.*|trash.*|remote-preorders.*',
                 'mark' => 'پ',
                 'hint' => 'قبض، جستجو، تحویل',
+                'any_of' => ['receptions', 'remote.preorders', 'trash'],
                 'children' => [
-                    ['label' => 'پذیرش جدید', 'route' => 'receptions.create', 'match' => 'receptions.create', 'hint' => 'ثبت قبض تکی/گروهی', 'mark' => 'جد'],
-                    ['label' => 'جستجوی قبض', 'route' => 'receptions.search', 'match' => 'receptions.search', 'hint' => 'سریال، موبایل، شماره', 'mark' => 'ج'],
-                    ['label' => 'لیست قبض‌ها', 'route' => 'receptions.index', 'match' => 'receptions.index|receptions.show|receptions.edit', 'hint' => 'همه پذیرش‌ها', 'mark' => 'لی'],
-                    ['label' => 'تحویل گروهی', 'route' => 'deliveries.group', 'match' => 'deliveries.*', 'hint' => 'خروج چند قبض', 'mark' => 'تح'],
-                    ['label' => 'سطل زباله', 'route' => 'trash.index', 'match' => 'trash.*', 'hint' => 'بازیابی یا حذف دائم', 'mark' => 'سط'],
+                    ['label' => 'پذیرش جدید', 'route' => 'receptions.create', 'match' => 'receptions.create', 'hint' => 'ثبت قبض تکی/گروهی', 'mark' => 'جد', 'permission' => 'receptions'],
+                    ['label' => 'ورود قطعه از راه دور', 'route' => 'remote-preorders.index', 'match' => 'remote-preorders.*', 'hint' => 'پیش‌سفارش عکس و باربری', 'mark' => 'ور', 'permission' => 'remote.preorders'],
+                    ['label' => 'جستجوی قبض', 'route' => 'receptions.search', 'match' => 'receptions.search', 'hint' => 'سریال، موبایل، شماره', 'mark' => 'ج', 'permission' => 'receptions'],
+                    ['label' => 'لیست قبض‌ها', 'route' => 'receptions.index', 'match' => 'receptions.index|receptions.show|receptions.edit', 'hint' => 'همه پذیرش‌ها', 'mark' => 'لی', 'permission' => 'receptions'],
+                    ['label' => 'تحویل گروهی', 'route' => 'deliveries.group', 'match' => 'deliveries.*', 'hint' => 'خروج چند قبض', 'mark' => 'تح', 'permission' => 'receptions'],
+                    ['label' => 'سطل زباله', 'route' => 'trash.index', 'match' => 'trash.*', 'hint' => 'بازیابی یا حذف دائم', 'mark' => 'سط', 'permission' => 'trash'],
                 ],
             ],
             [
                 'key' => 'handoffs',
                 'label' => 'ارجاع / کارتابل تعمیر',
-                'permission' => 'handoffs',
+                'permission' => null,
                 'route' => 'handoffs.index',
-                'match' => 'handoffs.*',
+                'match' => 'handoffs.*|partners.cartable|partners.intake*',
                 'mark' => 'ا',
-                'hint' => 'دریافت دستگاه و هاردهای دست تعمیر',
+                'hint' => 'دریافت دستگاه، ارجاع شبکه همکاران، هاردهای دست تعمیر',
+                'any_of' => ['handoffs', 'partners'],
                 'children' => [
-                    ['label' => 'کارتابل ارجاع', 'route' => 'handoffs.index', 'match' => 'handoffs.index', 'hint' => 'جستجو، تأیید دریافت، دست تعمیر', 'mark' => 'ک'],
+                    ['label' => 'کارتابل ارجاع', 'route' => 'handoffs.index', 'match' => 'handoffs.index', 'hint' => 'جستجو، تأیید دریافت، دست تعمیر', 'mark' => 'ک', 'permission' => 'handoffs'],
+                    ['label' => 'کارتابل ارجاع نماینده', 'route' => 'partners.cartable', 'match' => 'partners.cartable|partners.intake*|partners.pull|partners.report|partners.send*', 'hint' => 'تأیید/رد قبض شبکه همکاران', 'mark' => 'نم', 'permission' => 'partners'],
+                    ['label' => 'ارجاع قبض به نماینده', 'route' => 'partners.send', 'match' => 'partners.send*', 'hint' => 'سرچ قبض → انتخاب نماینده', 'mark' => 'ارج', 'permission' => 'partners'],
                     ['label' => 'گزارش ارجاع / محل', 'route' => 'reports.custody', 'match' => 'reports.custody', 'hint' => 'گزارش سریال و قبض', 'mark' => 'گ', 'permission' => 'reports.custody'],
+                ],
+            ],
+            [
+                'key' => 'partners',
+                'label' => 'نمایندگان',
+                'permission' => 'partners',
+                'route' => 'partners.index',
+                'match' => 'partners.index|partners.create|partners.edit|partners.store|partners.update|partners.sync|partners.report|partners.send*|partners.refer*',
+                'mark' => 'ه',
+                'hint' => 'همکاران لایسنس‌دار فعال (شبکه داخلی)',
+                'children' => [
+                    ['label' => 'ارجاع قبض به نماینده', 'route' => 'partners.send', 'match' => 'partners.send*', 'hint' => 'سرچ قبض → نماینده', 'mark' => 'ارج'],
+                    ['label' => 'فهرست همکاران شبکه', 'route' => 'partners.index', 'match' => 'partners.index|partners.edit|partners.sync', 'hint' => 'همگام از لایسنس‌های فعال', 'mark' => 'ف'],
+                    ['label' => 'کارتابل ارجاع نماینده', 'route' => 'partners.cartable', 'match' => 'partners.cartable*', 'hint' => 'تأیید یا رد قبض ارجاعی', 'mark' => 'ک'],
+                    ['label' => 'گزارش ارجاع شبکه', 'route' => 'partners.report', 'match' => 'partners.report', 'hint' => 'قبض مبدأ/مقصد و وضعیت', 'mark' => 'گ'],
                 ],
             ],
             [
@@ -78,8 +107,8 @@ class NavMenu
                 'hint' => 'ثبت کار و رویداد روزانه',
                 'any_of' => ['daily_logs', 'daily_logs.manage'],
                 'children' => [
-                    ['label' => 'ثبت امروز', 'route' => 'daily-logs.index', 'match' => 'daily-logs.index', 'hint' => 'رویدادهای روز جاری', 'mark' => 'ام', 'permission' => 'daily_logs'],
-                    ['label' => 'گزارش همه', 'route' => 'daily-logs.report', 'match' => 'daily-logs.report', 'hint' => 'مرور کارمندان', 'mark' => 'گ', 'permission' => 'daily_logs.manage'],
+                    ['label' => 'ثبت امروز', 'route' => 'daily-logs.index', 'match' => 'daily-logs.index', 'hint' => 'کار روزانه + جستجوی قبض', 'mark' => 'ام', 'permission' => 'daily_logs'],
+                    ['label' => 'گزارش همه', 'route' => 'daily-logs.report', 'match' => 'daily-logs.report', 'hint' => 'نفر / دسته / قبض', 'mark' => 'گ', 'permission' => 'daily_logs.manage'],
                 ],
             ],
             [
@@ -98,14 +127,19 @@ class NavMenu
             [
                 'key' => 'customers',
                 'label' => 'مشتریان',
-                'permission' => 'customers',
+                'permission' => null,
                 'route' => 'customers.index',
-                'match' => 'customers.*',
+                'match' => 'customers.*|portal-invites.*|device-blacklists.*',
                 'mark' => 'ش',
-                'hint' => 'فهرست و پرونده مشتری',
+                'hint' => 'فهرست، سقف اعتبار، لیست سیاه',
+                'any_of' => ['customers', 'portal.invites', 'device.blacklists'],
                 'children' => [
-                    ['label' => 'فهرست مشتریان', 'route' => 'customers.index', 'match' => 'customers.index|customers.show|customers.edit', 'hint' => 'جستجو، ویرایش، حذف', 'mark' => 'ف'],
-                    ['label' => 'مشتری جدید', 'route' => 'customers.create', 'match' => 'customers.create', 'hint' => 'نام و موبایل یکتا', 'mark' => '+'],
+                    ['label' => 'فهرست مشتریان', 'route' => 'customers.index', 'match' => 'customers.index|customers.show|customers.edit', 'hint' => 'جستجو، ویرایش، حذف', 'mark' => 'ف', 'permission' => 'customers'],
+                    ['label' => 'مشتری جدید', 'route' => 'customers.create', 'match' => 'customers.create', 'hint' => 'نام و موبایل یکتا', 'mark' => '+', 'permission' => 'customers'],
+                    ['label' => 'سقف اعتبار نسیه', 'route' => 'customers.credit-limits', 'match' => 'customers.credit-limits|customers.credit-limit', 'hint' => 'سقف بدهی مجاز هر مشتری', 'mark' => 'ع', 'permission' => 'customers'],
+                    ['label' => 'ارسال لینک کارتابل', 'route' => 'portal-invites.index', 'match' => 'portal-invites.*', 'hint' => 'تکی + گروهی + گزارش', 'mark' => 'ل', 'permission' => 'portal.invites'],
+                    ['label' => 'لیست سیاه مشتریان', 'route' => 'customers.index', 'params' => ['filter' => 'blacklist'], 'match' => 'customers.index', 'hint' => 'مشتریان مسدود', 'mark' => 'س', 'permission' => 'customers'],
+                    ['label' => 'لیست سیاه دستگاه', 'route' => 'device-blacklists.index', 'match' => 'device-blacklists.*', 'hint' => 'سریال/مدل ممنوع', 'mark' => 'د', 'permission' => 'device.blacklists'],
                 ],
             ],
             [
@@ -113,17 +147,23 @@ class NavMenu
                 'label' => 'انبار',
                 'permission' => 'parts',
                 'route' => 'parts.index',
-                'match' => 'parts.*|warehouses.*',
+                'match' => 'parts.*|warehouses.*|part-categories.*|warehouse-transfers.*|stocktakes.*|price-tiers.*',
                 'mark' => 'ق',
                 'hint' => 'انبار حسابداری قطعات',
                 'children' => [
                     ['label' => 'میز انبار', 'route' => 'parts.index', 'match' => 'parts.index|parts.show|parts.edit', 'hint' => 'موجودی و ارزش', 'mark' => 'م'],
                     ['label' => 'انبارهای چندگانه', 'route' => 'warehouses.index', 'match' => 'warehouses.*', 'hint' => 'تعریف انبار ۱ و ۲…', 'mark' => 'چ'],
+                    ['label' => 'گروه‌بندی درختی', 'route' => 'part-categories.index', 'match' => 'part-categories.*', 'hint' => 'فروشگاه/قطعه/اجرت', 'mark' => 'گ'],
+                    ['label' => 'انتقال بین انبار', 'route' => 'warehouse-transfers.index', 'match' => 'warehouse-transfers.*', 'hint' => 'جابجایی کالا', 'mark' => 'ت'],
+                    ['label' => 'انبارگردانی', 'route' => 'stocktakes.index', 'match' => 'stocktakes.*', 'hint' => 'شمارش موجودی', 'mark' => 'ا'],
+                    ['label' => 'ورود از اکسل', 'route' => 'parts.import', 'match' => 'parts.import*', 'hint' => 'قیمت و موجودی', 'mark' => 'ف'],
+                    ['label' => 'تیپ قیمتی', 'route' => 'price-tiers.index', 'match' => 'price-tiers.*', 'hint' => 'همکار/خاص/عمومی', 'mark' => 'ق'],
                     ['label' => 'رسید ورود', 'route' => 'parts.receipt', 'match' => 'parts.receipt*', 'hint' => 'خرید / ورود', 'mark' => 'ر'],
                     ['label' => 'حواله خروج', 'route' => 'parts.issue', 'match' => 'parts.issue*', 'hint' => 'خروج غیرقبض', 'mark' => 'ح'],
                     ['label' => 'کارتکس / گردش', 'route' => 'parts.movements', 'match' => 'parts.movements', 'hint' => 'دفتر انبار', 'mark' => 'ک'],
                     ['label' => 'ارزش موجودی', 'route' => 'parts.valuation', 'match' => 'parts.valuation', 'hint' => 'تراز ریالی', 'mark' => 'ا'],
                     ['label' => 'کالای جدید', 'route' => 'parts.create', 'match' => 'parts.create', 'hint' => 'تعریف کارت کالا', 'mark' => '+'],
+                    ['label' => 'تنظیم برچسب/بارکد', 'route' => 'settings.index', 'params' => ['tab' => 'labels'], 'match' => 'settings.*|labels.*', 'hint' => 'سایز رول و حالت چاپ', 'mark' => 'ب', 'permission' => 'settings'],
                 ],
             ],
             [
@@ -131,19 +171,20 @@ class NavMenu
                 'label' => 'کارمندان',
                 'permission' => null,
                 'route' => null,
-                'match' => 'employees.*|technicians.*|interns.*|staff-sms.*',
+                'match' => 'employees.*|technicians.*|interns.*|staff-sms.*|attendance.manage*|attendance.settings*|attendance.enroll*',
                 'mark' => 'ک',
-                'hint' => 'کارتابل، کارآموز، SMS',
-                'any_of' => ['employees', 'technicians'],
+                'hint' => 'کارتابل، مدیریت حضور، کارآموز',
+                'any_of' => ['employees', 'technicians', 'attendance.manage'],
                 'children' => [
                     ['label' => 'کارتابل کارمند', 'route' => 'employees.index', 'match' => 'employees.index|employees.edit', 'hint' => 'لیست، وظیفه، دسترسی', 'mark' => 'ک', 'permission' => 'employees'],
+                    ['label' => 'مدیریت حضور و غیاب', 'route' => 'attendance.manage', 'match' => 'attendance.manage|attendance.enroll*', 'hint' => 'روزهای حضور و عکس مرجع', 'mark' => 'م', 'permission' => 'attendance.manage', 'sep' => true],
+                    ['label' => 'تنظیمات حضور / GPS', 'route' => 'attendance.settings', 'match' => 'attendance.settings*', 'hint' => 'مختصات شرکت و شعاع', 'mark' => 'گ', 'permission' => 'attendance.manage'],
+                    ['label' => 'تخصص، سود و حقوق', 'route' => 'employees.pay', 'match' => 'employees.pay*', 'hint' => 'درصد سود و دستمزد تعمیرکار', 'mark' => '٪', 'permission' => 'employees|technicians', 'sep' => true],
                     ['label' => 'کارمند جدید', 'route' => 'employees.create', 'match' => 'employees.create', 'hint' => 'پذیرش / حسابدار / تعمیرکار…', 'mark' => '+', 'permission' => 'employees'],
                     ['label' => 'کارتابل کارآموز', 'route' => 'interns.index', 'match' => 'interns.index|interns.edit', 'hint' => 'دسترسی و پرتال ورود', 'mark' => 'آ', 'permission' => 'employees', 'sep' => true],
                     ['label' => 'کارآموز جدید', 'route' => 'interns.create', 'match' => 'interns.create', 'hint' => 'ثبت + فعال‌سازی ورود', 'mark' => '+', 'permission' => 'employees'],
                     ['label' => 'پرتال کارآموز (پیش‌نمایش)', 'route' => 'intern.portal', 'match' => 'intern.portal', 'hint' => 'نمای ورود کارآموز', 'mark' => 'پ', 'permission' => 'employees'],
                     ['label' => 'متن SMS خوش‌آمد', 'route' => 'staff-sms.templates', 'match' => 'staff-sms.*', 'hint' => 'کارمند و کارآموز', 'mark' => 'پ', 'permission' => 'employees'],
-                    ['label' => 'تخصص و کمیسیون تعمیرکار', 'route' => 'technicians.index', 'match' => 'technicians.index|technicians.edit', 'hint' => 'هارد، بازیابی، قیمت/٪', 'mark' => 'ت', 'permission' => 'technicians', 'sep' => true],
-                    ['label' => 'تعمیرکار جدید (قیمت)', 'route' => 'technicians.create', 'match' => 'technicians.create', 'hint' => 'تخصص + کمیسیون', 'mark' => '+', 'permission' => 'technicians'],
                 ],
             ],
             [
@@ -161,21 +202,40 @@ class NavMenu
                 ],
             ],
             [
+                'key' => 'work',
+                'label' => 'شرح کار',
+                'permission' => 'receptions',
+                'route' => 'work-reports.index',
+                'match' => 'work-reports.*',
+                'mark' => 'ش',
+                'hint' => 'جستجو و تجربیات مشابه',
+                'children' => [
+                    ['label' => 'جستجوی شرح کارها', 'route' => 'work-reports.index', 'match' => 'work-reports.index', 'hint' => 'خصوصی/داخلی/عمومی', 'mark' => 'ج'],
+                    ['label' => 'چاپ گزارش شرح کار', 'route' => 'work-reports.print', 'match' => 'work-reports.print', 'hint' => 'خروجی چاپی', 'mark' => 'چ'],
+                ],
+            ],
+            [
                 'key' => 'accounting',
                 'label' => 'حسابداری',
-                'permission' => 'reports.accounting',
+                'permission' => null,
                 'route' => 'accounting.index',
-                'match' => 'accounting.*|reports.accounting',
+                'match' => 'accounting.*|reports.accounting|installments.*',
                 'mark' => 'ح',
-                'hint' => 'اسناد، خزانه، بدهکاران',
+                'hint' => 'اسناد، خزانه، بانک، هزینه ثابت، اقساط',
+                'any_of' => ['reports.accounting', 'installments'],
                 'children' => [
-                    ['label' => 'میز حسابداری', 'route' => 'accounting.index', 'match' => 'accounting.index', 'hint' => 'خلاصه خزانه و درآمد', 'mark' => 'م', 'permission' => 'reports.accounting'],
-                    ['label' => 'اسناد روزنامه', 'route' => 'accounting.journals', 'match' => 'accounting.journals|accounting.show', 'hint' => 'لیست اسناد', 'mark' => 'ا', 'permission' => 'reports.accounting'],
-                    ['label' => 'سرفصل حساب‌ها', 'route' => 'accounting.accounts', 'match' => 'accounting.accounts', 'hint' => 'کدینگ', 'mark' => 'س', 'permission' => 'reports.accounting'],
-                    ['label' => 'دفتر معین', 'route' => 'accounting.ledger', 'match' => 'accounting.ledger', 'hint' => 'گردش حساب', 'mark' => 'د', 'permission' => 'reports.accounting'],
-                    ['label' => 'تراز آزمایشی', 'route' => 'accounting.trial', 'match' => 'accounting.trial', 'hint' => 'تراز دوره', 'mark' => 'ت', 'permission' => 'reports.accounting'],
-                    ['label' => 'بدهکاران', 'route' => 'accounting.receivables', 'match' => 'accounting.receivables', 'hint' => 'مانده مشتریان', 'mark' => 'ب', 'permission' => 'reports.accounting'],
-                    ['label' => 'سند دستی', 'route' => 'accounting.manual', 'match' => 'accounting.manual', 'hint' => 'ثبت آزاد', 'mark' => '+', 'permission' => 'reports.accounting'],
+                    ['label' => 'میز حسابداری', 'route' => 'accounting.index', 'match' => 'accounting.index', 'hint' => 'مانده خزانه و درآمد دوره', 'mark' => 'م', 'permission' => 'reports.accounting'],
+                    ['label' => 'اسناد روزنامه', 'route' => 'accounting.journals', 'match' => 'accounting.journals|accounting.show', 'hint' => 'لیست اسناد دوطرفه', 'mark' => 'ا', 'permission' => 'reports.accounting'],
+                    ['label' => 'سرفصل حساب‌ها', 'route' => 'accounting.accounts', 'match' => 'accounting.accounts', 'hint' => 'کدینگ دارایی/درآمد/هزینه', 'mark' => 'س', 'permission' => 'reports.accounting'],
+                    ['label' => 'مدیریت بانک', 'route' => 'accounting.banks.index', 'match' => 'accounting.banks*', 'hint' => 'صندوق / کارتخوان / شبا', 'mark' => 'ب', 'permission' => 'reports.accounting'],
+                    ['label' => 'هزینه‌های ثابت', 'route' => 'accounting.fixed-costs.index', 'match' => 'accounting.fixed-costs*', 'hint' => 'اجاره، حقوق، آب‌برق…', 'mark' => 'ث', 'permission' => 'reports.accounting'],
+                    ['label' => 'دفتر معین', 'route' => 'accounting.ledger', 'match' => 'accounting.ledger', 'hint' => 'گردش و مانده هر حساب', 'mark' => 'د', 'permission' => 'reports.accounting'],
+                    ['label' => 'تراز آزمایشی', 'route' => 'accounting.trial', 'match' => 'accounting.trial', 'hint' => 'مانده یا گردش متوازن', 'mark' => 'ت', 'permission' => 'reports.accounting'],
+                    ['label' => 'بدهکاران', 'route' => 'accounting.receivables', 'match' => 'accounting.receivables', 'hint' => 'مانده ۱۲۱۰ مشتریان', 'mark' => 'ب', 'permission' => 'reports.accounting'],
+                    ['label' => 'اقساط', 'route' => 'installments.index', 'match' => 'installments.*', 'hint' => 'طرح و دریافت قسط', 'mark' => 'ق', 'permission' => 'installments'],
+                    ['label' => 'گزارش اقساط', 'route' => 'installments.report', 'match' => 'installments.report', 'hint' => 'پرداخت‌شده / معوق', 'mark' => 'گ', 'permission' => 'installments'],
+                    ['label' => 'پیامک اقساط', 'route' => 'installments.settings', 'match' => 'installments.settings', 'hint' => 'یادآوری سررسید', 'mark' => 'پ', 'permission' => 'installments'],
+                    ['label' => 'سند دستی', 'route' => 'accounting.manual', 'match' => 'accounting.manual*', 'hint' => 'دریافت از بدهکار / سند دوطرفه', 'mark' => '+', 'permission' => 'reports.accounting'],
                 ],
             ],
             [
@@ -185,7 +245,7 @@ class NavMenu
                 'route' => null,
                 'match' => 'reports.*',
                 'mark' => 'گ',
-                'hint' => 'عملکرد و مشتریان',
+                'hint' => 'عملکرد، قطعه، مشتری',
                 'any_of' => [
                     'reports.technicians',
                     'reports.staff_monthly',
@@ -194,21 +254,72 @@ class NavMenu
                     'reports.operations',
                     'reports.custody',
                     'reports.payments',
+                    'payment.receipts',
                     'reports.sms',
                     'reports.messages',
                 ],
                 'children' => [
-                    ['label' => 'عملکرد تعمیرکاران', 'route' => 'reports.technicians', 'match' => 'reports.technicians*', 'permission' => 'reports.technicians', 'hint' => 'تفکیک اجرت و قطعه', 'mark' => 'ت'],
-                    ['label' => 'گزارش ماهانه کارکنان', 'route' => 'reports.staff-monthly', 'match' => 'reports.staff-monthly*', 'permission' => 'reports.staff_monthly', 'hint' => 'SMS و مقایسه ماه', 'mark' => 'م'],
-                    ['label' => 'گزارش مشتریان', 'route' => 'reports.customers', 'match' => 'reports.customers*', 'permission' => 'reports.customers', 'hint' => '', 'mark' => 'ش'],
-                    ['label' => 'کالای خرج‌شده', 'route' => 'reports.parts-used', 'match' => 'reports.parts-used', 'permission' => 'reports.parts', 'hint' => '', 'mark' => 'ق'],
-                    ['label' => 'عملیات کارگاه', 'route' => 'reports.operations', 'match' => 'reports.operations', 'permission' => 'reports.operations', 'hint' => '', 'mark' => 'ع'],
-                    ['label' => 'ارجاع / محل دستگاه', 'route' => 'reports.custody', 'match' => 'reports.custody', 'permission' => 'reports.custody', 'hint' => '', 'mark' => 'ا'],
-                    ['label' => 'صندوق و دریافت‌ها', 'route' => 'reports.payments', 'match' => 'reports.payments', 'permission' => 'reports.payments', 'hint' => '', 'mark' => 'ص'],
-                    ['label' => 'تأیید فیش بانکی', 'route' => 'payment-receipts.index', 'match' => 'payment-receipts.*', 'permission' => 'reports.payments', 'hint' => 'فیش کارت‌به‌کارت پرتال', 'mark' => 'ف'],
-                    ['label' => 'پیام مشتری', 'route' => 'reports.messages', 'match' => 'reports.messages', 'permission' => 'reports.messages', 'hint' => '', 'mark' => 'م'],
+                    ['label' => 'عملکرد تعمیرکاران', 'route' => 'reports.technicians', 'match' => 'reports.technicians*', 'permission' => 'reports.technicians', 'hint' => 'کار، اجرت، کمیسیون', 'mark' => 'ت'],
+                    ['label' => 'بیشترین مراجعه‌کننده تعمیرکار', 'route' => 'reports.technician-top-customers', 'match' => 'reports.technician-top-customers', 'permission' => 'reports.technicians', 'hint' => 'پرمراجعه‌ترین مشتری هر تعمیرکار', 'mark' => 'م'],
+                    ['label' => 'گزارش ماهانه کارکنان', 'route' => 'reports.staff-monthly', 'match' => 'reports.staff-monthly*', 'permission' => 'reports.staff_monthly', 'hint' => 'سود، برگشتی، مقایسه ماه', 'mark' => 'م', 'admin_only' => true],
+                    ['label' => 'گزارش مشتریان', 'route' => 'reports.customers', 'match' => 'reports.customers*', 'permission' => 'reports.customers', 'hint' => 'پرمراجعه سراسری', 'mark' => 'ش'],
+                    ['label' => 'کالای خرج‌شده', 'route' => 'reports.parts-used', 'match' => 'reports.parts-used', 'permission' => 'reports.parts', 'hint' => 'مصرف + بهای خرید + سود', 'mark' => 'ق'],
+                    ['label' => 'بیلان قطعه تعمیر', 'route' => 'reports.parts-bilans', 'match' => 'reports.parts-bilans', 'permission' => 'reports.parts', 'hint' => 'فروش − خرید مصرف‌شده', 'mark' => 'ب'],
+                    ['label' => 'گزارش ورودی کالا', 'route' => 'reports.goods-in', 'match' => 'reports.goods-in', 'permission' => 'reports.parts', 'hint' => 'پذیرش‌های بازه', 'mark' => 'و'],
+                    ['label' => 'گزارش غیرقابل تعمیر', 'route' => 'reports.goods-unrepairable', 'match' => 'reports.goods-unrepairable', 'permission' => 'reports.parts', 'hint' => 'کالاهای غیرقابل تعمیر', 'mark' => 'غ'],
+                    ['label' => 'تفکیک کالا / جستجوی پیشرفته', 'route' => 'reports.goods-filter', 'match' => 'reports.goods-filter', 'permission' => 'reports.parts', 'hint' => 'ریکاوری، تعمیر و فیلتر کامل', 'mark' => 'ت'],
+                    ['label' => 'عملیات کارگاه', 'route' => 'reports.operations', 'match' => 'reports.operations', 'permission' => 'reports.operations', 'hint' => 'خلاصه وضعیت کارگاه', 'mark' => 'ع'],
+                    ['label' => 'ارجاع / محل دستگاه', 'route' => 'reports.custody', 'match' => 'reports.custody', 'permission' => 'reports.custody', 'hint' => 'دست کیست؟', 'mark' => 'ا'],
+                    ['label' => 'ارجاع شبکه نمایندگان', 'route' => 'partners.report', 'match' => 'partners.report', 'permission' => 'partners', 'hint' => 'قبض مبدأ/مقصد', 'mark' => 'ن'],
+                    ['label' => 'صندوق و دریافت‌ها', 'route' => 'reports.payments', 'match' => 'reports.payments', 'permission' => 'reports.payments', 'hint' => 'نقد / کارت / واریز', 'mark' => 'ص'],
+                    ['label' => 'تأیید فیش بانکی', 'route' => 'payment-receipts.index', 'match' => 'payment-receipts.*', 'permission' => 'payment.receipts', 'hint' => 'فیش کارت‌به‌کارت پرتال', 'mark' => 'ف'],
+                    ['label' => 'پیام مشتری', 'route' => 'reports.messages', 'match' => 'reports.messages', 'permission' => 'reports.messages', 'hint' => 'پیام‌های پرتال', 'mark' => 'م'],
                     ['label' => 'گزارش پیامک', 'route' => 'reports.sms', 'match' => 'reports.sms', 'permission' => 'reports.sms', 'hint' => 'از منوی پیامک‌ها هم هست', 'mark' => 'پ'],
                 ],
+            ],
+            [
+                'key' => 'licenses',
+                'label' => 'لایسنس‌ها',
+                'permission' => 'licenses',
+                'route' => 'licenses.index',
+                'match' => 'licenses.*',
+                'mark' => 'ل',
+                'hint' => 'ساخت سریال و گزارش آنلاین نصب مشتریان',
+                'admin_only' => true,
+                'seller_only' => true,
+                'children' => [
+                    ['label' => 'مرکز لایسنس', 'route' => 'licenses.index', 'match' => 'licenses.index|licenses.issue|licenses.sms|licenses.revoke|licenses.unbind|licenses.extend', 'hint' => 'ساخت، ارسال SMS، باطل‌سازی', 'mark' => 'ل'],
+                    ['label' => 'پلن و قیمت', 'route' => 'licenses.plans', 'match' => 'licenses.plans*', 'hint' => '۶ ماهه / یک‌ساله و قیمت‌ها', 'mark' => 'ق'],
+                    ['label' => 'گزارش آنلاین', 'route' => 'licenses.online', 'match' => 'licenses.online', 'hint' => 'نصب‌های آنلاین / آفلاین', 'mark' => 'آ'],
+                    ['label' => 'انتشار آپدیت', 'route' => 'licenses.releases', 'match' => 'licenses.releases*', 'hint' => 'تست انتخابی و ZIP مشتری', 'mark' => 'ن', 'admin_only' => true],
+                ],
+            ],
+            [
+                'key' => 'my_license',
+                'label' => 'لایسنس',
+                'permission' => null,
+                'route' => 'my-license.index',
+                'match' => 'my-license.*',
+                'mark' => 'ل',
+                'hint' => 'روز باقی‌مانده، تمدید و آپدیت نرم‌افزار',
+                'admin_only' => true,
+                'customer_only' => true,
+                'children' => [
+                    ['label' => 'وضعیت و روز باقی‌مانده', 'route' => 'my-license.index', 'match' => 'my-license.index', 'hint' => 'پلن، انقضا و روز مانده', 'mark' => 'و'],
+                    ['label' => 'تمدید لایسنس', 'route' => 'my-license.index', 'params' => ['focus' => 'renew'], 'match' => 'my-license.index', 'hint' => 'راهنمای تمدید با فروشنده', 'mark' => 'ت'],
+                    ['label' => 'آپدیت نرم‌افزار', 'route' => 'system-tools.updates', 'match' => 'system-tools.updates*', 'hint' => 'بررسی و نصب نسخه جدید', 'mark' => 'آ', 'permission' => 'system.tools'],
+                ],
+            ],
+            [
+                'key' => 'contact',
+                'label' => 'تماس با ما',
+                'permission' => null,
+                'route' => 'contact.index',
+                'match' => 'contact.*',
+                'mark' => 'ت',
+                'hint' => 'پشتیبانی سرزمین هارد',
+                'customer_only' => true,
+                'children' => [],
             ],
             [
                 'key' => 'system_tools',
@@ -233,58 +344,27 @@ class NavMenu
                 'hint' => 'سیستم و منوها',
                 'any_of' => ['settings', 'profile', 'daily_logs.manage'],
                 'children' => [
-                    ['label' => 'تنظیمات سیستم', 'route' => 'settings.index', 'match' => 'settings.*', 'hint' => 'منو، فاکتور، SMS، بکاپ', 'mark' => 'ظ', 'permission' => 'settings'],
+                    ['label' => 'تنظیمات سیستم', 'route' => 'settings.index', 'match' => 'settings.*', 'hint' => 'منو، فاکتور، برچسب، SMS، بکاپ', 'mark' => 'ظ', 'permission' => 'settings'],
+                    ['label' => 'وب / موبایل کارتابل', 'route' => 'settings.index', 'params' => ['tab' => 'portal'], 'match' => 'settings.index', 'hint' => 'تلفن دفتر، موبایل، واتساپ، متن خوش‌آمد', 'mark' => 'و', 'permission' => 'settings'],
+                    ['label' => 'سئو / گوگل', 'route' => 'settings.index', 'params' => ['tab' => 'seo'], 'match' => 'settings.index', 'hint' => 'متا، اسکیما، نقشه سایت، صفحه دامنه', 'mark' => 'س', 'permission' => 'settings', 'seller_only' => true],
+                    ['label' => 'برچسب / بارکد', 'route' => 'settings.index', 'params' => ['tab' => 'labels'], 'match' => 'labels.*', 'hint' => 'رول، حالت چاپ، پرینتر', 'mark' => 'ب', 'permission' => 'settings'],
+                    ['label' => 'پیش‌نمایش برچسب', 'route' => 'labels.preview', 'match' => 'labels.preview', 'hint' => 'تست چاپ بارکد', 'mark' => 'پ', 'permission' => 'settings'],
                     ['label' => 'تنظیمات دفتر روز', 'route' => 'daily-logs.settings', 'match' => 'daily-logs.settings', 'hint' => 'دسته و قوانین — فقط ادمین', 'mark' => 'ر', 'permission' => 'daily_logs.manage'],
                     ['label' => 'پروفایل من', 'route' => 'profile.edit', 'match' => 'profile.*', 'hint' => 'نام و رمز', 'mark' => 'پ', 'permission' => 'profile'],
                 ],
             ],
         ];
 
-        // Seller: issue/monitor customer licenses. Customer install: show THIS site's active serial only.
-        if (LicenseStatus::isSellerSite()) {
-            $groups[] = [
-                'key' => 'licenses',
-                'label' => 'لایسنس‌ها',
-                'permission' => 'system.tools',
-                'route' => 'licenses.index',
-                'match' => 'licenses.*',
-                'mark' => 'ل',
-                'hint' => 'ساخت سریال و گزارش آنلاین نصب مشتریان',
-                'admin_only' => true,
-                'seller_only' => true,
-                'children' => [
-                    ['label' => 'مرکز لایسنس', 'route' => 'licenses.index', 'match' => 'licenses.index|licenses.issue|licenses.sms|licenses.revoke|licenses.unbind|licenses.extend', 'hint' => 'ساخت، ارسال SMS، باطل‌سازی', 'mark' => 'ل'],
-                    ['label' => 'پلن و قیمت', 'route' => 'licenses.plans', 'match' => 'licenses.plans*', 'hint' => '۶ ماهه / یک‌ساله و قیمت‌ها', 'mark' => 'ق'],
-                    ['label' => 'گزارش آنلاین', 'route' => 'licenses.online', 'match' => 'licenses.online', 'hint' => 'نصب‌های آنلاین / آفلاین', 'mark' => 'آ'],
-                ],
-            ];
-        } else {
-            $groups[] = [
-                'key' => 'licenses',
-                'label' => 'لایسنس نصب',
-                'permission' => 'dashboard',
-                'route' => 'licenses.status',
-                'match' => 'licenses.status|system-tools.updates*',
-                'mark' => 'ل',
-                'hint' => 'سریال فعال و آپدیت نرم‌افزار',
-                'admin_only' => true,
-                'customer_only' => true,
-                'children' => [
-                    ['label' => 'وضعیت و سریال', 'route' => 'licenses.status', 'match' => 'licenses.status', 'hint' => 'پلن، دامنه، تاریخ اعتبار', 'mark' => 'ل'],
-                    ['label' => 'آپدیت نرم‌افزار', 'route' => 'system-tools.updates', 'match' => 'system-tools.updates*', 'hint' => 'بررسی و نصب نسخه جدید', 'mark' => 'آ', 'permission' => 'system.tools'],
-                ],
-            ];
-        }
-
         $out = [];
+        $isSeller = LicenseStatus::isSellerSite();
         foreach ($groups as $group) {
+            if (! empty($group['seller_only']) && ! $isSeller) {
+                continue;
+            }
+            if (! empty($group['customer_only']) && $isSeller) {
+                continue;
+            }
             if (! empty($group['admin_only']) && ! $user->isAdmin()) {
-                continue;
-            }
-            if (! empty($group['seller_only']) && ! LicenseStatus::isSellerSite()) {
-                continue;
-            }
-            if (! empty($group['customer_only']) && LicenseStatus::isSellerSite()) {
                 continue;
             }
             if (! empty($group['any_of'])) {
@@ -298,15 +378,24 @@ class NavMenu
 
             $children = [];
             foreach ($group['children'] as $child) {
-                if (! empty($child['seller_only']) && ! LicenseStatus::isSellerSite()) {
+                if (! empty($child['seller_only']) && ! $isSeller) {
                     continue;
                 }
-                if (! empty($child['customer_only']) && LicenseStatus::isSellerSite()) {
+                if (! empty($child['customer_only']) && $isSeller) {
+                    continue;
+                }
+                if (! empty($child['admin_only']) && ! $user->isAdmin()) {
                     continue;
                 }
                 $perm = $child['permission'] ?? $group['permission'] ?? null;
-                if ($perm && ! $user->canAccess($perm)) {
-                    continue;
+                if ($perm) {
+                    $okPerm = collect(explode('|', (string) $perm))
+                        ->map(fn ($p) => trim($p))
+                        ->filter()
+                        ->contains(fn ($p) => $user->canAccess($p));
+                    if (! $okPerm) {
+                        continue;
+                    }
                 }
                 if (! empty($child['route']) && ! Route::has($child['route'])) {
                     continue;
@@ -319,8 +408,18 @@ class NavMenu
             }
 
             $group['children'] = $children;
+            if (! empty($group['route']) && ! Route::has($group['route'])) {
+                $group['route'] = $children[0]['route'] ?? null;
+            }
             if (empty($group['route']) && $children !== []) {
                 $group['route'] = $children[0]['route'];
+            }
+            // Drop menu groups whose links cannot be resolved on this install.
+            if (empty($group['route']) && $children === []) {
+                continue;
+            }
+            if (! empty($group['route']) && ! Route::has($group['route'])) {
+                continue;
             }
             $out[] = $group;
         }
@@ -338,14 +437,19 @@ class NavMenu
             if (empty($group['route'])) {
                 continue;
             }
-            $hint = $group['hint'];
-            if ($group['children']) {
-                $hint = collect($group['children'])->pluck('label')->implode(' · ');
+            $hint = (string) ($group['hint'] ?? '');
+            $childCount = is_array($group['children'] ?? null) ? count($group['children']) : 0;
+            // روی دسکتاپ زیر‌منوها را خلاصه نشان بده؛ روی موبایل فقط توضیح کوتاه گروه
+            // (متن بلند ··· باعث overflow افقی گرید می‌شد)
+            if ($childCount > 0) {
+                $labels = collect($group['children'])->pluck('label')->filter()->take(4)->implode(' · ');
+                $hint = $labels !== '' ? $labels.($childCount > 4 ? ' …' : '') : $hint;
             }
             $cards[] = [
                 'label' => $group['label'],
                 'route' => $group['route'],
                 'hint' => $hint,
+                'short_hint' => (string) ($group['hint'] ?? ''),
                 'mark' => $group['mark'],
                 'group' => $group['label'],
                 'tone' => self::tone($group['key']),
@@ -359,8 +463,10 @@ class NavMenu
     {
         return match ($key) {
             'home' => 'slate',
+            'attendance' => 'green',
             'reception' => 'blue',
             'handoffs' => 'green',
+            'partners' => 'teal',
             'notifications' => 'violet',
             'daily_logs' => 'amber',
             'cost_approvals' => 'amber',
@@ -373,6 +479,8 @@ class NavMenu
             'reports' => 'green',
             'system_tools' => 'teal',
             'licenses' => 'violet',
+            'my_license' => 'violet',
+            'contact' => 'blue',
             'settings' => 'slate',
             default => 'slate',
         };
@@ -383,8 +491,11 @@ class NavMenu
     {
         return match ($key) {
             'home' => 'میز',
+            'attendance' => 'حضور',
             'reception' => 'پذیرش',
             'handoffs' => 'ارجاع',
+            'partners' => 'نماینده',
+            'work' => 'شرح‌کار',
             'notifications' => 'اعلان',
             'daily_logs' => 'دفتر',
             'cost_approvals' => 'تأیید',
@@ -408,9 +519,10 @@ class NavMenu
     public static function mobilePrimary(User $user, ?array $groups = null): array
     {
         $groups = collect($groups ?? self::forUser($user))->keyBy('key');
+        // میز / پذیرش / دفتر روز / ارجاع — اولویت موبایل کارمند
         $order = [
-            'home', 'daily_logs', 'reception', 'handoffs', 'notifications',
-            'customers', 'parts', 'cost_approvals', 'accounting', 'reports',
+            'home', 'attendance', 'reception', 'daily_logs', 'handoffs', 'work', 'notifications',
+            'customers', 'sms', 'parts', 'cost_approvals', 'accounting', 'reports',
         ];
 
         $tabs = [];
@@ -434,7 +546,7 @@ class NavMenu
                 'match' => $g['match'],
                 'tone' => self::tone($key),
             ];
-            if (count($tabs) >= 3) {
+            if (count($tabs) >= 4) {
                 break;
             }
         }
