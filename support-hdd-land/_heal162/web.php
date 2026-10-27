@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DeviceBlacklistController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
@@ -15,7 +16,6 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SmsStatusController;
 use App\Http\Controllers\BackupCronController;
-use App\Http\Controllers\StaffMonthlyReportController;
 use App\Http\Controllers\StaffMonthlySmsCronController;
 use App\Http\Controllers\BackupCloudController;
 use App\Http\Controllers\SystemToolsController;
@@ -24,16 +24,34 @@ use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\Payment\ZarinPalController;
 use App\Http\Controllers\PaymentReceiptController;
 use App\Http\Controllers\Portal\PaymentReceiptController as PortalPaymentReceiptController;
+use App\Http\Controllers\Portal\RemotePartPreorderController as PortalRemotePartPreorderController;
+use App\Http\Controllers\RemotePartPreorderController;
+use App\Http\Controllers\PortalInviteController;
 use App\Http\Controllers\HandoffController;
+use App\Http\Controllers\LicenseNetworkApiController;
+use App\Http\Controllers\PartnerController;
+use App\Http\Controllers\PartnerReferralController;
 use App\Http\Controllers\InternController;
 use App\Http\Controllers\InternPortalController;
+use App\Http\Controllers\LabelPrintController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PartCategoryController;
+use App\Http\Controllers\PartImportController;
+use App\Http\Controllers\WarehouseOpsController;
+use App\Http\Controllers\WorkReportController;
 use App\Http\Controllers\StaffSmsTemplateController;
 use App\Http\Controllers\Portal\AuthController as PortalAuthController;
 use App\Http\Controllers\Portal\CartableController as PortalCartableController;
 use App\Http\Controllers\Portal\MessageController as PortalMessageController;
+use App\Http\Controllers\Portal\InstallmentController as PortalInstallmentController;
+use App\Http\Controllers\InstallmentPlanController;
+use App\Http\Controllers\InstallmentReportController;
+use App\Http\Controllers\InstallmentSettingController;
+use App\Http\Controllers\InstallmentCronController;
 use App\Http\Controllers\LicenseApiController;
+use App\Http\Controllers\AppUpdateApiController;
 use App\Http\Controllers\AppUpdateController;
+use App\Http\Controllers\AppReleaseAdminController;
 use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsurePortalCustomer;
 use Illuminate\Support\Facades\Auth;
@@ -45,6 +63,34 @@ Route::post('/license/activate', [LicenseApiController::class, 'activate'])
 Route::post('/license/verify', [LicenseApiController::class, 'verify'])
     ->middleware('throttle:60,1')
     ->name('license.verify');
+Route::post('/license/updates/latest', [AppUpdateApiController::class, 'latest'])
+    ->middleware('throttle:60,1')
+    ->name('license.updates.latest');
+Route::post('/license/updates/download', [AppUpdateApiController::class, 'download'])
+    ->middleware('throttle:20,1')
+    ->name('license.updates.download');
+
+Route::post('/license/network/peers', [LicenseNetworkApiController::class, 'peers'])
+    ->middleware('throttle:60,1')
+    ->name('license.network.peers');
+Route::post('/license/network/referrals', [LicenseNetworkApiController::class, 'createReferral'])
+    ->middleware('throttle:60,1')
+    ->name('license.network.referrals');
+Route::post('/license/network/referrals/inbox', [LicenseNetworkApiController::class, 'inbox'])
+    ->middleware('throttle:60,1')
+    ->name('license.network.inbox');
+Route::post('/license/network/referrals/ack', [LicenseNetworkApiController::class, 'ack'])
+    ->middleware('throttle:60,1')
+    ->name('license.network.ack');
+Route::post('/license/network/referrals/decide', [LicenseNetworkApiController::class, 'decide'])
+    ->middleware('throttle:60,1')
+    ->name('license.network.decide');
+Route::post('/license/network/referrals/status', [LicenseNetworkApiController::class, 'status'])
+    ->middleware('throttle:60,1')
+    ->name('license.network.status');
+Route::post('/license/network/referrals/return', [LicenseNetworkApiController::class, 'markReturned'])
+    ->middleware('throttle:60,1')
+    ->name('license.network.return');
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -81,10 +127,12 @@ Route::get('/payments/zarinpal/callback/{trx}', [ZarinPalController::class, 'cal
 Route::get('/cron/backup', BackupCronController::class)
     ->middleware('throttle:30,1')
     ->name('cron.backup');
-
 Route::get('/cron/staff-monthly-sms', StaffMonthlySmsCronController::class)
     ->middleware('throttle:30,1')
     ->name('cron.staff-monthly-sms');
+Route::get('/cron/installments', InstallmentCronController::class)
+    ->middleware('throttle:60,1')
+    ->name('cron.installments');
 
 Route::prefix('cartable')->name('portal.')->group(function () {
     Route::get('/', [PortalAuthController::class, 'showLogin'])->name('login');
@@ -106,6 +154,14 @@ Route::prefix('cartable')->name('portal.')->group(function () {
         Route::get('/receipts/{receipt}/image', [PortalPaymentReceiptController::class, 'image'])->name('receipts.image');
         Route::get('/messages', [PortalMessageController::class, 'index'])->name('messages');
         Route::post('/messages', [PortalMessageController::class, 'store'])->name('messages.store');
+        Route::get('/installments', [PortalInstallmentController::class, 'index'])->name('installments.index');
+        Route::get('/installments/{plan}', [PortalInstallmentController::class, 'show'])->name('installments.show');
+        Route::post('/installments/items/{item}/pay', [PortalInstallmentController::class, 'pay'])->name('installments.pay');
+        Route::get('/preorders', [PortalRemotePartPreorderController::class, 'index'])->name('preorders.index');
+        Route::get('/preorders/create', [PortalRemotePartPreorderController::class, 'create'])->name('preorders.create');
+        Route::post('/preorders', [PortalRemotePartPreorderController::class, 'store'])->name('preorders.store');
+        Route::get('/preorders/{preorder}', [PortalRemotePartPreorderController::class, 'show'])->name('preorders.show');
+        Route::get('/preorders/{preorder}/photo', [PortalRemotePartPreorderController::class, 'photo'])->name('preorders.photo');
     });
 });
 
@@ -128,18 +184,50 @@ Route::middleware('auth')->group(function () {
         Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
         Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     });
-    // میانبرهای شخصی — همه نقش‌های واردشده
-    Route::post('/profile/shortcuts', [ProfileController::class, 'updateShortcuts'])->name('profile.shortcuts');
+
+    // Shared customer name suggest (reception / delivery / blacklist) — ACL inside controller
+    Route::get('customers/suggest', [CustomerController::class, 'suggest'])->name('customers.suggest');
 
     Route::middleware(EnsurePermission::class.':customers')->group(function () {
         Route::resource('customers', CustomerController::class);
+        Route::post('customers/{customer}/blacklist', [CustomerController::class, 'toggleBlacklist'])->name('customers.blacklist');
+    });
+
+    Route::middleware(EnsurePermission::class.':device.blacklists')->group(function () {
+        Route::get('device-blacklists', [DeviceBlacklistController::class, 'index'])->name('device-blacklists.index');
+        Route::post('device-blacklists', [DeviceBlacklistController::class, 'store'])->name('device-blacklists.store');
+        Route::post('device-blacklists/{deviceBlacklist}/toggle', [DeviceBlacklistController::class, 'toggle'])->name('device-blacklists.toggle');
+        Route::delete('device-blacklists/{deviceBlacklist}', [DeviceBlacklistController::class, 'destroy'])->name('device-blacklists.destroy');
+    });
+
+    Route::middleware(EnsurePermission::class.':portal.invites')->prefix('portal-invites')->name('portal-invites.')->group(function () {
+        Route::get('/', [PortalInviteController::class, 'index'])->name('index');
+        Route::post('/template', [PortalInviteController::class, 'saveTemplate'])->name('template');
+        Route::post('/start', [PortalInviteController::class, 'start'])->name('start');
+        Route::post('/single', [PortalInviteController::class, 'sendSingle'])->name('single');
+        Route::match(['get', 'post'], '/run/{batch}', [PortalInviteController::class, 'run'])->name('run');
+        Route::get('/report', [PortalInviteController::class, 'report'])->name('report');
+        Route::post('/resend-failed', [PortalInviteController::class, 'resendFailed'])->name('resend-failed');
+        Route::post('/resend/{customer}', [PortalInviteController::class, 'resend'])->name('resend');
+    });
+
+    Route::middleware(EnsurePermission::class.':remote.preorders')->prefix('remote-preorders')->name('remote-preorders.')->group(function () {
+        Route::get('/', [RemotePartPreorderController::class, 'index'])->name('index');
+        Route::get('/settings', [RemotePartPreorderController::class, 'settings'])->name('settings');
+        Route::post('/settings', [RemotePartPreorderController::class, 'saveSettings'])->name('settings.save');
+        Route::get('{preorder}', [RemotePartPreorderController::class, 'show'])->name('show');
+        Route::get('{preorder}/photo', [RemotePartPreorderController::class, 'photo'])->name('photo');
+        Route::post('{preorder}/arrived', [RemotePartPreorderController::class, 'markArrived'])->name('arrived');
+        Route::post('{preorder}/specs', [RemotePartPreorderController::class, 'updateSpecs'])->name('specs');
+        Route::post('{preorder}/convert', [RemotePartPreorderController::class, 'convert'])->name('convert');
     });
 
     Route::middleware(EnsurePermission::class.':receptions')->group(function () {
         Route::get('receptions/lookup-phone', [ReceptionController::class, 'lookupPhone'])->name('receptions.lookup-phone');
+        Route::get('receptions/lookup-customers', [ReceptionController::class, 'lookupCustomers'])->name('receptions.lookup-customers');
+        Route::get('receptions/lookup-serial', [ReceptionController::class, 'lookupSerial'])->name('receptions.lookup-serial');
         Route::post('receptions/ensure-customer', [ReceptionController::class, 'ensureCustomer'])->name('receptions.ensure-customer');
         Route::get('receptions/search', [ReceptionController::class, 'search'])->name('receptions.search');
-        Route::match(['get', 'post'], 'receptions/print-bulk', [ReceptionController::class, 'printBulk'])->name('receptions.print-bulk');
         Route::get('deliveries/group', [DeliveryController::class, 'create'])->name('deliveries.group');
         Route::post('deliveries/lookup', [DeliveryController::class, 'lookup'])->name('deliveries.lookup');
         Route::post('deliveries/group', [DeliveryController::class, 'store'])->name('deliveries.store');
@@ -148,6 +236,8 @@ Route::middleware('auth')->group(function () {
         Route::get('receptions/{reception}/history', [ReceptionController::class, 'history'])->name('receptions.history');
         Route::post('receptions/{reception}/status', [ReceptionController::class, 'updateStatus'])->name('receptions.status');
         Route::post('receptions/{reception}/parts', [ReceptionController::class, 'addPart'])->name('receptions.parts');
+        Route::put('receptions/{reception}/parts/{receptionPart}', [ReceptionController::class, 'updatePart'])->name('receptions.parts.update');
+        Route::delete('receptions/{reception}/parts/{receptionPart}', [ReceptionController::class, 'destroyPart'])->name('receptions.parts.destroy');
         Route::post('receptions/{reception}/payments', [ReceptionController::class, 'addPayment'])->name('receptions.payments');
         Route::put('receptions/{reception}/payments/{payment}', [ReceptionController::class, 'updatePayment'])->name('receptions.payments.update');
         Route::delete('receptions/{reception}/payments/{payment}', [ReceptionController::class, 'destroyPayment'])->name('receptions.payments.destroy');
@@ -162,6 +252,10 @@ Route::middleware('auth')->group(function () {
         Route::delete('receptions/{reception}/cost-stages/{stage}', [ReceptionController::class, 'destroyCostStage'])->name('receptions.cost-stages.destroy');
         Route::post('receptions/{reception}/zarinpal', [ZarinPalController::class, 'start'])->name('receptions.zarinpal');
         Route::get('receptions/{reception}/print', [ReceptionController::class, 'print'])->name('receptions.print');
+        Route::get('labels/receptions/{reception}', [LabelPrintController::class, 'reception'])->name('labels.reception');
+        Route::get('work-reports', [WorkReportController::class, 'index'])->name('work-reports.index');
+        Route::get('work-reports/print', [WorkReportController::class, 'print'])->name('work-reports.print');
+        Route::get('receptions/{reception}/similar-work', [WorkReportController::class, 'similar'])->name('work-reports.similar');
         Route::post('receptions/{reception}/handoffs', [HandoffController::class, 'store'])->name('receptions.handoffs.store');
         Route::post('receptions/{reception}/cost-approval', [ReceptionController::class, 'requestCostApproval'])->name('receptions.cost-approval');
         Route::get('cost-approvals', [\App\Http\Controllers\CostApprovalsManageController::class, 'index'])->name('cost-approvals.index');
@@ -175,6 +269,30 @@ Route::middleware('auth')->group(function () {
         Route::post('handoffs/{handoff}/respond', [HandoffController::class, 'respond'])->name('handoffs.respond');
         Route::post('receptions/{reception}/handoffs/return', [HandoffController::class, 'store'])->name('receptions.handoffs.return');
         Route::post('receptions/{reception}/work-report', [HandoffController::class, 'storeWorkReport'])->name('receptions.work-report');
+    });
+
+    Route::middleware(EnsurePermission::class.':partners')->group(function () {
+        Route::get('partners', [PartnerController::class, 'index'])->name('partners.index');
+        Route::post('partners/sync', [PartnerController::class, 'sync'])->name('partners.sync');
+        Route::get('partners/create', [PartnerController::class, 'create'])->name('partners.create');
+        Route::post('partners', [PartnerController::class, 'store'])->name('partners.store');
+        Route::get('partners/{partner}/edit', [PartnerController::class, 'edit'])->name('partners.edit');
+        Route::put('partners/{partner}', [PartnerController::class, 'update'])->name('partners.update');
+        Route::delete('partners/{partner}', [PartnerController::class, 'destroy'])->name('partners.destroy');
+        Route::get('partners/{partner}/refer', [PartnerReferralController::class, 'referForm'])->name('partners.refer-form');
+        Route::post('partners/{partner}/refer', [PartnerReferralController::class, 'referSend'])->name('partners.refer-send');
+
+        Route::get('partner-referrals', [PartnerReferralController::class, 'cartable'])->name('partners.cartable');
+        Route::get('partner-referrals/send', [PartnerReferralController::class, 'sendWizard'])->name('partners.send');
+        Route::post('partner-referrals/send', [PartnerReferralController::class, 'sendRefer'])->name('partners.send.refer');
+        Route::get('partner-referrals/report', [PartnerReferralController::class, 'report'])->name('partners.report');
+        Route::post('partner-referrals/pull', [PartnerReferralController::class, 'pull'])->name('partners.pull');
+        Route::get('partner-referrals/intake', [PartnerReferralController::class, 'createInbound'])->name('partners.intake');
+        Route::post('partner-referrals/intake', [PartnerReferralController::class, 'storeInbound'])->name('partners.intake.store');
+        Route::post('receptions/{reception}/partner-refer', [PartnerReferralController::class, 'referOut'])->name('partners.refer-out');
+        Route::post('receptions/{reception}/partner-approve', [PartnerReferralController::class, 'approve'])->name('partners.approve');
+        Route::post('receptions/{reception}/partner-reject', [PartnerReferralController::class, 'reject'])->name('partners.reject');
+        Route::post('receptions/{reception}/partner-returned', [PartnerReferralController::class, 'markReturned'])->name('partners.mark-returned');
     });
 
     Route::middleware('auth')->prefix('intern')->name('intern.')->group(function () {
@@ -192,6 +310,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware(EnsurePermission::class.':daily_logs')->prefix('daily-logs')->name('daily-logs.')->group(function () {
         Route::get('/', [DailyLogController::class, 'index'])->name('index');
         Route::post('/', [DailyLogController::class, 'store'])->name('store');
+        Route::get('/tickets', [DailyLogController::class, 'searchTickets'])->name('tickets');
         Route::get('/report', [DailyLogController::class, 'report'])->name('report');
         Route::get('/settings', [DailyLogController::class, 'settings'])->name('settings');
         Route::post('/settings', [DailyLogController::class, 'saveSettings'])->name('settings.save');
@@ -215,6 +334,30 @@ Route::middleware('auth')->group(function () {
         Route::delete('warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouses.destroy');
         Route::resource('parts', PartController::class)->except(['destroy']);
         Route::post('parts/{part}/stock', [PartController::class, 'adjustStock'])->name('parts.stock');
+        Route::get('labels/parts/{part}', [LabelPrintController::class, 'part'])->name('labels.part');
+        Route::get('part-categories', [PartCategoryController::class, 'index'])->name('part-categories.index');
+        Route::post('part-categories', [PartCategoryController::class, 'store'])->name('part-categories.store');
+        Route::put('part-categories/{partCategory}', [PartCategoryController::class, 'update'])->name('part-categories.update');
+        Route::delete('part-categories/{partCategory}', [PartCategoryController::class, 'destroy'])->name('part-categories.destroy');
+        Route::get('warehouse-transfers', [WarehouseOpsController::class, 'transfers'])->name('warehouse-transfers.index');
+        Route::post('warehouse-transfers', [WarehouseOpsController::class, 'storeTransfer'])->name('warehouse-transfers.store');
+        Route::get('stocktakes', [WarehouseOpsController::class, 'stocktakes'])->name('stocktakes.index');
+        Route::post('stocktakes', [WarehouseOpsController::class, 'createStocktake'])->name('stocktakes.store');
+        Route::get('stocktakes/{stocktake}', [WarehouseOpsController::class, 'showStocktake'])->name('stocktakes.show');
+        Route::put('stocktakes/{stocktake}', [WarehouseOpsController::class, 'updateStocktake'])->name('stocktakes.update');
+        Route::post('stocktakes/{stocktake}/post', [WarehouseOpsController::class, 'postStocktake'])->name('stocktakes.post');
+        Route::get('parts-import', [PartImportController::class, 'form'])->name('parts.import');
+        Route::post('parts-import', [PartImportController::class, 'store'])->name('parts.import.store');
+        Route::post('parts-bulk-prices', [PartImportController::class, 'bulkPrices'])->name('parts.bulk-prices');
+        Route::get('price-tiers', [PartImportController::class, 'tiers'])->name('price-tiers.index');
+        Route::post('price-tiers', [PartImportController::class, 'storeTier'])->name('price-tiers.store');
+        Route::post('parts/{part}/tier-prices', [PartImportController::class, 'savePartTierPrices'])->name('parts.tier-prices');
+    });
+
+    Route::middleware(EnsurePermission::class.':employees|technicians')->group(function () {
+        Route::get('employees/pay', [EmployeeController::class, 'payIndex'])->name('employees.pay');
+        Route::post('employees/pay', [EmployeeController::class, 'payStore'])->name('employees.pay.store');
+        Route::put('employees/pay/{technician}', [EmployeeController::class, 'payUpdate'])->name('employees.pay.update');
     });
 
     Route::middleware(EnsurePermission::class.':technicians')->group(function () {
@@ -238,9 +381,6 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/operations', [ReportController::class, 'operations'])
         ->middleware(EnsurePermission::class.':reports.operations')
         ->name('reports.operations');
-    Route::get('reports/receipt-print', [ReportController::class, 'receiptPrint'])
-        ->middleware(EnsurePermission::class.':receptions')
-        ->name('reports.receipt-print');
     Route::get('reports/custody', [ReportController::class, 'custody'])
         ->middleware(EnsurePermission::class.':reports.custody')
         ->name('reports.custody');
@@ -248,12 +388,12 @@ Route::middleware('auth')->group(function () {
         ->middleware(EnsurePermission::class.':reports.payments')
         ->name('reports.payments');
 
-    Route::middleware(EnsurePermission::class.':reports.payments')->prefix('payment-receipts')->name('payment-receipts.')->group(function () {
-        Route::get('/', [PaymentReceiptController::class, 'index'])->name('index');
-        Route::get('{receipt}', [PaymentReceiptController::class, 'show'])->name('show');
-        Route::get('{receipt}/image', [PaymentReceiptController::class, 'image'])->name('image');
-        Route::post('{receipt}/approve', [PaymentReceiptController::class, 'approve'])->name('approve');
-        Route::post('{receipt}/reject', [PaymentReceiptController::class, 'reject'])->name('reject');
+    Route::middleware(EnsurePermission::class.':payment.receipts')->prefix('payment-receipts')->name('payment-receipts.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\PaymentReceiptController::class, 'index'])->name('index');
+        Route::get('{receipt}', [\App\Http\Controllers\PaymentReceiptController::class, 'show'])->name('show');
+        Route::get('{receipt}/image', [\App\Http\Controllers\PaymentReceiptController::class, 'image'])->name('image');
+        Route::post('{receipt}/approve', [\App\Http\Controllers\PaymentReceiptController::class, 'approve'])->name('approve');
+        Route::post('{receipt}/reject', [\App\Http\Controllers\PaymentReceiptController::class, 'reject'])->name('reject');
     });
     Route::get('reports/technicians', [ReportController::class, 'technicians'])
         ->middleware(EnsurePermission::class.':reports.technicians')
@@ -261,17 +401,16 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/technicians/{technician}', [ReportController::class, 'technicianShow'])
         ->middleware(EnsurePermission::class.':reports.technicians')
         ->name('reports.technicians.show');
-
-    Route::get('reports/staff-monthly', [StaffMonthlyReportController::class, 'index'])
+    Route::get('reports/staff-monthly', [\App\Http\Controllers\StaffMonthlyReportController::class, 'index'])
         ->middleware(EnsurePermission::class.':reports.staff_monthly')
         ->name('reports.staff-monthly');
-    Route::post('reports/staff-monthly/notify-all', [StaffMonthlyReportController::class, 'notifyAll'])
+    Route::post('reports/staff-monthly/notify-all', [\App\Http\Controllers\StaffMonthlyReportController::class, 'notifyAll'])
         ->middleware(EnsurePermission::class.':reports.staff_monthly')
         ->name('reports.staff-monthly.notify-all');
-    Route::get('reports/staff-monthly/{user}', [StaffMonthlyReportController::class, 'show'])
+    Route::get('reports/staff-monthly/{user}', [\App\Http\Controllers\StaffMonthlyReportController::class, 'show'])
         ->middleware(EnsurePermission::class.':reports.staff_monthly')
         ->name('reports.staff-monthly.show');
-    Route::post('reports/staff-monthly/{user}/notify', [StaffMonthlyReportController::class, 'notify'])
+    Route::post('reports/staff-monthly/{user}/notify', [\App\Http\Controllers\StaffMonthlyReportController::class, 'notify'])
         ->middleware(EnsurePermission::class.':reports.staff_monthly')
         ->name('reports.staff-monthly.notify');
     Route::get('reports/customers', [ReportController::class, 'customers'])
@@ -283,6 +422,15 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/parts-used', [ReportController::class, 'partsUsed'])
         ->middleware(EnsurePermission::class.':reports.parts')
         ->name('reports.parts-used');
+    Route::get('reports/goods-in', [ReportController::class, 'goodsIn'])
+        ->middleware(EnsurePermission::class.':reports.parts')
+        ->name('reports.goods-in');
+    Route::get('reports/goods-unrepairable', [ReportController::class, 'goodsUnrepairable'])
+        ->middleware(EnsurePermission::class.':reports.parts')
+        ->name('reports.goods-unrepairable');
+    Route::get('reports/goods-filter', [ReportController::class, 'goodsFilter'])
+        ->middleware(EnsurePermission::class.':reports.parts')
+        ->name('reports.goods-filter');
     Route::get('reports/sms', [ReportController::class, 'sms'])
         ->middleware(EnsurePermission::class.':reports.sms')
         ->name('reports.sms');
@@ -299,8 +447,26 @@ Route::middleware('auth')->group(function () {
         Route::get('/trial-balance', [AccountingController::class, 'trialBalance'])->name('trial');
         Route::get('/receivables', [AccountingController::class, 'receivables'])->name('receivables');
         Route::get('/manual', [AccountingController::class, 'manualForm'])->name('manual');
+        Route::get('/manual/tickets', [AccountingController::class, 'searchDebtTickets'])->name('manual.tickets');
         Route::post('/manual', [AccountingController::class, 'storeManual'])->name('manual.store');
         Route::post('/rebuild', [AccountingController::class, 'rebuild'])->name('rebuild');
+    });
+
+    Route::middleware(EnsurePermission::class.':installments')->prefix('installments')->name('installments.')->group(function () {
+        Route::get('/', [InstallmentPlanController::class, 'index'])->name('index');
+        Route::get('/create', [InstallmentPlanController::class, 'create'])->name('create');
+        Route::post('/', [InstallmentPlanController::class, 'store'])->name('store');
+        Route::get('/report', [InstallmentReportController::class, 'index'])->name('report');
+        Route::get('/settings', [InstallmentSettingController::class, 'edit'])->name('settings');
+        Route::post('/settings', [InstallmentSettingController::class, 'update'])->name('settings.update');
+        Route::post('/reminders/run', [InstallmentSettingController::class, 'runReminders'])->name('reminders.run');
+        Route::get('/{installment}', [InstallmentPlanController::class, 'show'])->name('show');
+        Route::put('/{installment}', [InstallmentPlanController::class, 'updatePlanNotes'])->name('update');
+        Route::post('/{installment}/cancel', [InstallmentPlanController::class, 'cancel'])->name('cancel');
+        Route::post('/{installment}/checks', [InstallmentPlanController::class, 'storeCheck'])->name('checks.store');
+        Route::put('/checks/{check}', [InstallmentPlanController::class, 'updateCheck'])->name('checks.update');
+        Route::post('/items/{item}/collect', [InstallmentPlanController::class, 'collect'])->name('items.collect');
+        Route::post('/items/{item}/notes', [InstallmentPlanController::class, 'updateItemNotes'])->name('items.notes');
     });
 
     Route::middleware(EnsurePermission::class.':sms.statuses')->group(function () {
@@ -317,6 +483,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware(EnsurePermission::class.':settings')->group(function () {
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
         Route::post('settings/general', [SettingController::class, 'updateGeneral'])->name('settings.general');
+        Route::get('labels/preview', [LabelPrintController::class, 'preview'])->name('labels.preview');
         Route::post('settings/fault-types', [SettingController::class, 'storeFaultType'])->name('settings.fault-types');
         Route::put('settings/fault-types/{faultType}', [SettingController::class, 'updateFaultType'])->name('settings.fault-types.update');
         Route::delete('settings/fault-types/{faultType}', [SettingController::class, 'destroyFaultType'])->name('settings.fault-types.destroy');
@@ -328,19 +495,8 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/sms/test', [SettingController::class, 'testSms'])->name('settings.sms.test');
         Route::post('settings/invoice', [SettingController::class, 'updateInvoice'])->name('settings.invoice');
         Route::post('settings/labels', [SettingController::class, 'updateLabels'])->name('settings.labels');
-        Route::get('labels/preview', function () {
-            abort(404, 'ماژول چاپ برچسب روی این نصب فعال نیست.');
-        })->name('labels.preview');
         Route::post('settings/payments', [SettingController::class, 'updatePayments'])->name('settings.payments');
         Route::post('settings/backup', [SettingController::class, 'updateBackup'])->name('settings.backup');
-        Route::post('settings/seo', [SettingController::class, 'updateSeo'])->name('settings.seo');
-        Route::get('settings/seo/apex-download', function () {
-            abort(404, 'موتور سئو روی این نصب فعال نیست.');
-        })->name('settings.seo.apex-download');
-        Route::post('settings/seo/apex-publish', function () {
-            abort(404, 'موتور سئو روی این نصب فعال نیست.');
-        })->name('settings.seo.apex-publish');
-        Route::post('settings/portal', [SettingController::class, 'updatePortal'])->name('settings.portal');
         Route::post('settings/backup/run-now', [SettingController::class, 'runBackupNow'])->name('settings.backup.run-now');
         Route::get('settings/backup/cloud/{provider}/connect', [BackupCloudController::class, 'connect'])
             ->whereIn('provider', ['google', 'onedrive', 'mega'])
@@ -370,18 +526,27 @@ Route::middleware('auth')->group(function () {
         Route::post('system-tools/updates/apply', [AppUpdateController::class, 'apply'])->name('system-tools.updates.apply');
     });
 
-    // Customer installs: /licenses/status shows THIS site's active serial.
-    // Seller installs: /licenses/* is the issue/monitor center (blocked on customer sites).
-    Route::middleware(EnsurePermission::class.':dashboard')->get('/licenses/status', [\App\Http\Controllers\LicenseAdminController::class, 'status'])->name('licenses.status');
+    Route::get('my-license', [\App\Http\Controllers\MyLicenseController::class, 'index'])->name('my-license.index');
+    Route::post('my-license/refresh', [\App\Http\Controllers\MyLicenseController::class, 'refresh'])->name('my-license.refresh');
+    Route::get('contact', [\App\Http\Controllers\ContactController::class, 'index'])->name('contact.index');
 
-    Route::middleware(EnsurePermission::class.':system.tools')->prefix('licenses')->name('licenses.')->group(function () {
+    Route::middleware(EnsurePermission::class.':licenses')->prefix('licenses')->name('licenses.')->group(function () {
         Route::get('/', [\App\Http\Controllers\LicenseAdminController::class, 'index'])->name('index');
         Route::get('/online', [\App\Http\Controllers\LicenseAdminController::class, 'online'])->name('online');
         Route::get('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'plans'])->name('plans');
         Route::post('/plans', [\App\Http\Controllers\LicenseAdminController::class, 'savePlans'])->name('plans.save');
+        Route::get('/releases', [AppReleaseAdminController::class, 'index'])->name('releases');
+        Route::post('/releases', [AppReleaseAdminController::class, 'store'])->name('releases.store');
+        Route::post('/releases/changes', [AppReleaseAdminController::class, 'storeChange'])->name('releases.changes.store');
+        Route::post('/releases/changes/{change}/test', [AppReleaseAdminController::class, 'toggleTested'])->name('releases.changes.test');
+        Route::post('/releases/changes/{change}/select', [AppReleaseAdminController::class, 'toggleSelected'])->name('releases.changes.select');
+        Route::delete('/releases/changes/{change}', [AppReleaseAdminController::class, 'destroyChange'])->name('releases.changes.destroy');
+        Route::post('/releases/selection', [AppReleaseAdminController::class, 'saveSelection'])->name('releases.selection');
+        Route::post('/releases/mark-tested', [AppReleaseAdminController::class, 'markSelectedTested'])->name('releases.mark-tested');
         Route::post('/', [\App\Http\Controllers\LicenseAdminController::class, 'issue'])->name('issue');
         Route::get('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'edit'])->name('edit');
         Route::post('/{license}/edit', [\App\Http\Controllers\LicenseAdminController::class, 'update'])->name('update');
+        Route::post('/{license}/network', [\App\Http\Controllers\LicenseAdminController::class, 'toggleNetwork'])->name('network');
         Route::get('/{license}/renew', [\App\Http\Controllers\LicenseAdminController::class, 'renewForm'])->name('renew');
         Route::post('/{license}/sms', [\App\Http\Controllers\LicenseAdminController::class, 'sendSms'])->name('sms');
         Route::post('/{license}/revoke', [\App\Http\Controllers\LicenseAdminController::class, 'revoke'])->name('revoke');
@@ -389,7 +554,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/{license}/extend', [\App\Http\Controllers\LicenseAdminController::class, 'extend'])->name('extend');
     });
 
-    Route::middleware(EnsurePermission::class.':receptions')->prefix('trash')->name('trash.')->group(function () {
+    Route::middleware(EnsurePermission::class.':trash')->prefix('trash')->name('trash.')->group(function () {
         Route::get('/', [TrashController::class, 'index'])->name('index');
         Route::post('/restore', [TrashController::class, 'restore'])->name('restore');
         Route::post('/force', [TrashController::class, 'forceDestroy'])->name('force');
