@@ -1,90 +1,100 @@
-# PCB specification — JMS578 SATA→USB stick
+# PCB specification — JMS578 SATA to USB stick (2-layer)
 
 ## Mechanical
 
 | Item | Spec |
 |------|------|
 | Outline | مستطیل **۸۵ × ۲۲ mm** (±۰٫۲) |
-| Thickness | **۱٫۲ mm** (ترجیحی برای کنترل امپدانس JLCPCB) |
-| Layers | **۴** |
-| Finish | ENIG یا HASL سربی/بدون سرب |
-| Min track/space | ۰٫۱ / ۰٫۱ mm (۴/۴ mil) کافی است؛ دیفرانسیل را با ماشین‌حساب JLCPCB بزنید |
-| Via | ۰٫۳ mm hole / ۰٫۵ mm pad حداقل |
-| USB plug | از لبه چپ بیرون بزند یا mid-mount |
-| SATA | لبه راست، right-angle مادگی رو به بالا/بیرون |
-| سوئیچ + جک DC | کنار USB، مثل استیک‌های فکتوری |
+| Thickness | **۱٫۶ mm** استاندارد JLCPCB دو لایه (یا ۱٫۲ mm اگر خواستی نازک‌تر) |
+| Layers | **۲** (Top سیگنال / Bottom GND) |
+| Finish | HASL Lead-Free یا ENIG |
+| Copper | ۱ oz (یا Outer 1oz) |
+| Min track/space | ۰٫۱ / ۰٫۱ mm |
+| Via | ۰٫۳ mm hole / ۰٫۵ mm pad |
+| USB plug | لبه چپ، Type-A male |
+| SATA | لبه راست، 22-pin مادگی |
+| **SW1 ON/OFF** | راکر کنار USB؛ سیلک واضح `ON` / `OFF` |
+| جک DC | کنار سوئیچ، ۵V کمکی |
 
-### Floorplan (چپ → راست)
+### Floorplan (چپ به راست)
 
 ```
-[ USB-A Male ] [ SW ] [ DC ] [ U1 JMS578 + Flash + XTAL ] [ SATA 22P ]
-     0–15mm      15–28mm              28–60mm                  60–85mm
+[ USB-A Male ] [ ON/OFF ] [ DC 5V ] [ U1 + Flash + XTAL + L1 ] [ SATA 22P ]
+     0-15mm      15-28mm    28-38mm           38-62mm              62-85mm
 ```
 
-جزئیات بصری: [`floorplan.svg`](floorplan.svg)
+جزئیات: [`floorplan.svg`](floorplan.svg) / [`floorplan.png`](floorplan.png)
 
-## Stackup پیشنهادی (JLCPCB)
+## چرا ۲ لایه قابل قبول است
 
-استفاده از امپدانس کنترل‌شده JLCPCB، مثلاً:
+دیتاشیت/مارکتینگ JMS578 صریحاً طراحی **دو لایه** ارزان را هدف می‌گیرد. خیلی از استیک‌های بازار هم ۲ لایه‌اند. هزینه و ساخت ساده‌تر از ۴ لایه است؛ در عوض امپدانس USB3 کمی حساس‌تر است — جفت‌ها را کوتاه نگه دارید.
 
-- **JLC04161H-3313** (۱٫۶mm) یا **JLC0412H-3313** (۱٫۲mm)
-- Outer: سیگنال (Top) / سیگنال (Bottom)
-- Inner1: **GND** یکپارچه
-- Inner2: **۵V** + پر کردن GND
+## Stackup دو لایه (JLCPCB)
 
-برای دیفرانسیل:
+| Layer | نقش |
+|-------|-----|
+| **Top (L1)** | قطعات + جفت‌های USB/SATA + مسیر ۵V پهن |
+| **Bottom (L2)** | **GND solid** تقریباً کامل؛ زیر جفت‌های دیف شکاف نزنید |
 
-| Interface | Zdiff target | Layer | Tip |
-|-----------|--------------|-------|-----|
-| USB2 DP/DM | ۹۰Ω | Top | کوتاه، از کریستال دور |
-| USB3 SS | ۹۰Ω | Top | طول‌مچ < ۵ mil؛ کپ TX نزدیک چیپ |
-| SATA | ۱۰۰Ω | Top | کپ ۱۰nF نزدیک کانکتور؛ reference GND پیوسته |
+برای دیفرانسیل روی ۲ لایه (میکرواستریپ با رفرنس Bottom GND):
 
-عرض/فاصله جفت را با [JLCPCB Impedance Calculator](https://cart.jlcpcb.com/impedanceCalculator) برای همان استک‌آپ حساب کنید — عدد ثابت اینجا نگذارید چون به ضخامت مس و core بستگی دارد.
+| Interface | Zdiff | Tip |
+|-----------|-------|-----|
+| USB2 DP/DM | ۹۰Ω | کوتاه، دور از کریستال و L1 |
+| USB3 SS | ۹۰Ω | طول‌مچ جفت کمتر از ۵ mil؛ کپ TX نزدیک چیپ |
+| SATA | ۱۰۰Ω | کپ ۱۰nF نزدیک کانکتور |
 
-## Placement rules
+عرض/گپ را با [JLCPCB Impedance Calculator](https://cart.jlcpcb.com/impedanceCalculator) برای **۲ لایه** و ضخامت انتخابی حساب کنید.
 
-1. **U1** وسط-چپ؛ پد حرارتی با via به Inner GND.
-2. **L1 + C_1V2** بلافاصله کنار پین‌های buck؛ مسیر LX کوتاه و پهن؛ دور از Y1 و REXT.
-3. **Y1** نزدیک پین‌های کلاک؛ بدون مسیر پرسرعت از زیر.
-4. **U2 Flash** نزدیک GPIO0–3؛ مسیر SPI کوتاه.
-5. **کپ‌های SATA ۱۰nF** روی لایه Top، حداکثر ۲–۳mm از پین کانکتور.
-6. **کپ‌های USB3 ۱۰۰nF** نزدیک SSTX چیپ.
-7. **ESD** در ۱–۲mm کانکتور USB.
-8. صفحه GND زیر تمام جفت‌های دیفرانسیل بدون شکاف؛ اگر via عوض لایه شد، viaهای GND در دو طرف جفت بگذارید.
+اگر ماشین‌حساب ۲ لایه ۹۰/۱۰۰Ω نداد: جفت را کوتاه‌تر کنید، فاصله به GND pour کناری (coplanar) بگذارید، یا ضخامت ۱٫۲ mm را امتحان کنید.
+
+## کلید ON / OFF
+
+| Ref | Type | Wiring |
+|-----|------|--------|
+| `SW1` | راکر SPST، جریان ≥ ۳A، سیلک `ON` / `OFF` | قطع می‌کند `V5_OR` → `V5_SW` |
+
+- در وضعیت **OFF**: چیپ و دیسک کاملاً بی‌برق (برای جا زدن امن دیسک / 开卡).
+- در وضعیت **ON**: ۵V از USB یا جک DC (بعد از دیود OR) به کل برد و SATA 5V می‌رود.
+- سیلک کنار سوئیچ حتماً خوانا باشد: `ON` سمت وصل، `OFF` سمت قطع.
+
+## Placement rules (۲ لایه)
+
+1. **همه قطعات روی Top** (اسمبلی تک‌طرفه).
+2. **Bottom فقط GND** + چند jumper برق اگر مجبور شدید (حداقل).
+3. **U1** پد وسط با چند via به Bottom GND.
+4. **L1 + C_1V2** حلقه کوتاه روی Top؛ از Y1 دور.
+5. **جفت USB/SATA** فقط روی Top، زیرشان Bottom GND پیوسته؛ via GND در دو طرف اگر لازم شد.
+6. مسیر **V5_SW** پهن (≥ ۱ mm) از SW1 به U1 و به پین ۵V ساتا.
+7. کپ‌های SATA ۱۰nF نزدیک کانکتور؛ کپ USB3 نزدیک SSTX.
 
 ## Polygon / pour
 
-- Top: ریخته‌گری GND اطراف سیگنال‌ها (با clearance به جفت دیف).
-- Inner1: GND solid.
-- Inner2: V5_SW pour + GND.
-- Bottom: GND؛ قطعات ترجیحاً همه Top برای استنسیل تک‌طرفه.
+- Top: ریخته‌گری GND اطراف (clearance به جفت دیف و به V5).
+- Bottom: GND یکپارچه؛ استایل حرارتی روی پدهای TH سوئیچ/جک/USB اگر لازم.
+- ریخته‌گری ۵V فقط روی Top، پهن و کوتاه.
 
-## Fab outputs to generate in KiCad/EasyEDA
+## Fab outputs
 
-وقتی شماتیک را در CAD پیاده کردید، این‌ها را اکسپورت کنید:
-
-- Gerber (GTL/GBL/G2/G3 + GTO/GBO + GTS/GBS + GKO)
+- Gerber دو لایه: `GTL`, `GBL`, `GTO`, `GBO`, `GTS`, `GBS`, `GKO`
 - Drill Excellon
-- BOM + CPL (برای اسمبلی JLCPCB در صورت نیاز)
-- Pick-and-place با مبدا گوشه پایین-چپ
+- BOM + CPL اختیاری
+
+**نه** لایه Inner (G2/G3) لازم نیست.
 
 ## Assembly notes
 
-1. اول اتصالات برق را با اهم‌متر چک کنید (۵V/۳٫۳V/GND بدون کوتاه).
-2. Flash را با پروگرمر SPI پروگرام کنید (فریمور JMS578 معتبر).
-3. SSD/HDD ۲٫۵" وصل → USB به هاست USB3 → سوئیچ ON.
-4. اگر فقط USB2 دیده شد: جفت SS یا امپدانس/کپ را بررسی کنید.
-5. اگر دیسک دیده نشد: جهت TX/RX SATA و وجود دیسک هنگام بوت را چک کنید.
+1. اتصال ۵V/GND را قبل از جا زدن چیپ چک کنید.
+2. SW1 را روی OFF بگذارید، دیسک را وصل کنید، USB/DC را بزنید، بعد **ON**.
+3. Flash را با SPI پروگرام کنید.
+4. اگر فقط USB2 دیدید: جفت SS یا امپدانس ۲ لایه را بازبینی کنید.
 
-## CAD import path (پیشنهادی)
+## CAD path
 
-این ریپو شماتیک متنی و مشخصات می‌دهد. برای Gerber نهایی:
+1. EasyEDA: فورک طرح JMS578 دو لایه از OSHWHUB، مکانیک استیک + SW ON/OFF + DC را اضافه کنید.
+2. KiCad: نت‌لیست `nets.csv`، استک‌آپ ۲ لایه، Bottom = GND.
 
-1. EasyEDA / LCEDA: از طرح‌های باز JMS578 روی OSHWHUB به‌عنوان پایه استفاده کنید، سپس مکانیک استیک (USB-A + DC + SW) را مثل `floorplan.svg` جلو ببرید.
-2. یا KiCad 8: سمبل QFN48 بسازید، نت‌لیست `nets.csv` را پیاده کنید، استک‌آپ بالا را ست کنید.
-
-لینک‌های پایهٔ تأییدشدهٔ جامعه:
+رفرنس جامعه:
 
 - https://oshwhub.com/valar_morghulisd/ji-yu-jms578-de-usb-zhuan-sata-de-ying-pan-he
 - https://oshwhub.com/aknice/jms578-demo

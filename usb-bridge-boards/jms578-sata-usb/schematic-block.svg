@@ -23,7 +23,7 @@
   <text x="55" y="200" class="l">DC Jack 5V</text>
 
   <rect x="200" y="100" width="90" height="50" rx="6" class="b"/>
-  <text x="220" y="130" class="l">SW I/O</text>
+  <text x="212" y="130" class="l">ON / OFF</text>
 
   <path d="M150 105 H200" class="w5"/>
   <path d="M150 195 H245 V150" class="w5"/>
@@ -70,5 +70,5 @@
   <path d="M90 70 V40 H760 V330" class="wd"/>
 
   <text x="24" y="480" class="s">See SCHEMATIC.md + nets.csv + bom.csv for full connectivity. Draw this in EasyEDA/KiCad before ordering Gerbers.</text>
-  <text x="24" y="500" class="s">NOT for 3.5in drives (needs +12V). USB3 impedance 90 ohm, SATA 100 ohm, 4-layer with solid GND.</text>
+  <text x="24" y="500" class="s">NOT for 3.5in drives (needs +12V). USB3 90 ohm, SATA 100 ohm, 2-layer (Top signal / Bottom GND).</text>
 </svg>

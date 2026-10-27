@@ -5,7 +5,7 @@ Y1,1,30.000MHz crystal,3225 or HC-49S,X322530MOB4SI,,CL per crystal; match C_XTA
 J1,1,USB 3.0 Type-A male plug,TH or SMT mid-mount,USB3.0-A-M,,SuperSpeed pins required
 J2,1,DC jack 5.5x2.1 center+,TH,DC-005 5.5-2.1,,Optional aux 5V
 J3,1,SATA 22-pin female (data+power),SMT right-angle,SATA-22P-RA,,2.5 inch drive
-SW1,1,Rocker switch SPDT/SPST 3A,TH mini rocker,SS12F15-G9 or similar,,I/O power
+SW1,1,Rocker switch SPST >=3A ON/OFF,TH mini rocker,SS12F15-G9 or similar,,Silk ON/OFF; breaks V5_OR to V5_SW
 D1,1,Schottky 40V 3A,SMA/SMC,SS34,C8678,DC jack OR-ing
 D2,1,Schottky 40V 3A,SMA/SMC,SS34,C8678,USB VBUS OR-ing
 D_ACT,1,LED green,0805,,C2286,Activity on GPIO4

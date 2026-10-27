@@ -14,7 +14,7 @@
   </style>
 
   <text x="20" y="28" class="title">JMS578 SATA to USB Stick - Floorplan (top view)</text>
-  <text x="20" y="48" class="sub">Target outline 85 x 22 mm - 4-layer - components on TOP</text>
+  <text x="20" y="48" class="sub">Target outline 85 x 22 mm - 2-layer - ON/OFF switch - components on TOP</text>
 
   <rect x="120" y="90" width="680" height="120" rx="4" class="board"/>
 
@@ -23,8 +23,9 @@
   <text x="55" y="162" class="sub" style="fill:#333">Male 3.0</text>
 
   <rect x="140" y="125" width="36" height="50" rx="3" class="sw"/>
-  <text x="147" y="152" class="label" style="font-size:11px">I/O</text>
-  <text x="138" y="230" class="sub">SW1</text>
+  <text x="145" y="145" class="label" style="font-size:9px">ON</text>
+  <text x="144" y="168" class="label" style="font-size:9px">OFF</text>
+  <text x="132" y="230" class="sub">SW1 ON/OFF</text>
 
   <circle cx="210" cy="150" r="18" class="jack"/>
   <circle cx="210" cy="150" r="7" fill="#111"/>
