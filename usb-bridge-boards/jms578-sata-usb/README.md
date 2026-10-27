@@ -1,0 +1,68 @@
+# JMS578 — استیک SATA → USB 3.0
+
+برد باریک شبیه «آداپتر فکتوری»: USB-A نر، **کلید ON/OFF**، جک DC کمکی، کانکتور SATA دیتا + تغذیه — **PCB دو لایه**.
+
+## مشخصات
+
+| آیتم | مقدار |
+|------|--------|
+| پل | JMicron **JMS578** (QFN-48) |
+| سرعت | USB 3.1 Gen1 / USB 3.0 — تا ~۵ Gbps (~۴۰۰–۴۵۰ MB/s واقعی) |
+| خروجی | SATA 6 Gb/s + برق ۵V (۲٫۵ اینچ) |
+| ورودی | USB-A نر؛ جک DC ۵V اختیاری |
+| کلید | **ON / OFF** راکر روی مسیر ۵V (قطع کامل برد و دیسک) |
+| کاربرد | هارد/SSD ۲٫۵"، mSATA (با تبدیل)، کار فکتوری/开卡 (مثل SM2244LT) |
+| لایه‌ها | **۲ لایه** — Top سیگنال، Bottom GND یکپارچه |
+| ابعاد هدف | حدود **۸۵ × ۲۲ mm** (استیک) |
+
+## فایل‌های طراحی
+
+| فایل | محتوا |
+|------|--------|
+| [`FAB.md`](FAB.md) | تفاوت `.PcbDoc` / Gerber و راهنمای چاپ |
+| [`jms578-sata-usb-gerbers.zip`](jms578-sata-usb-gerbers.zip) | **فایل چاپ** (Gerber+Drill) |
+| [`kicad/jms578-sata-usb.kicad_pcb`](kicad/jms578-sata-usb.kicad_pcb) | پروژه KiCad دو لایه |
+| [`pcb-preview.svg`](pcb-preview.svg) | پیش‌نمایش برد |
+| [`SCHEMATIC.md`](SCHEMATIC.md) | شماتیک بلوکی + اتصالات پایه |
+| [`bom.csv`](bom.csv) | لیست قطعات سفارش |
+| [`pcb-spec.md`](pcb-spec.md) | مکانیک، استک‌آپ، قوانین مسیردهی |
+| [`floorplan.svg`](floorplan.svg) / [`floorplan.png`](floorplan.png) | جانمایی فیزیکی |
+| [`schematic-block.svg`](schematic-block.svg) / [`schematic-block.png`](schematic-block.png) | دیاگرام بلوکی |
+| [`nets.csv`](nets.csv) | نت‌لیست فشرده |
+| [`pinout-jms578.md`](pinout-jms578.md) | پایه به پایه JMS578 |
+
+> `.PcbDoc` فرمت Altium است و اینجا تولید نمی‌شود. برای چاپ از **Gerber ZIP** استفاده کن — جزئیات در `FAB.md`.
+
+## جریان تغذیه
+
+```
+USB VBUS (5V) ──┐
+                ├─(دیود OR)──► SW1 ON/OFF ──┬──► JMS578 5V
+DC Jack 5V ─────┘                           └──► SATA 5V (2.5")
+                                                      │
+                                         داخل JMS578: LDO 3.3V + Buck 1.2V
+```
+
+- **OFF**: برق برد و دیسک قطع — امن برای تعویض دیسک / شورت ROM.
+- **ON**: تغذیه فعال.
+
+برای هارد **۳٫۵ اینچ** این بورد کافی نیست؛ ۱۲V جدا لازم است.
+
+## ساخت
+
+1. قطعات `bom.csv` را سفارش دهید (چیپ و Flash از AliExpress/LCSC).
+2. PCB را طبق `pcb-spec.md` به JLCPCB بفرستید (**۲ لایه**).
+3. فریمور را روی SPI Flash بریزید (۵۱۲ Kbit).
+4. تست: دیسک وصل → کلید **ON** → در Device Manager باید Mass Storage دیده شود.
+
+## فریمور
+
+- ظرفیت Flash: ترجیحاً **۵۱۲ Kbit (۶۴ KB)** SPI NOR.
+- بدون دیسک روی SATA بعضی نسخه‌ها بالا نمی‌آیند؛ برای فلش معمولاً دیسک وصل باشد.
+- رفرنس عمومی جامعه: فریمورهای JMS578 منتشرشده در usbdev.ru / OSHWHUB (مثلاً Hardkernel v173).
+
+## محدودیت‌ها
+
+- فقط **۲٫۵ اینچ / ۵V** (نه ۳٫۵ اینچ مگر نسخه با آداپتور ۱۲V).
+- روی لینوکس گاهی UAS quirk لازم است (`152d:0578`).
+- Auto-spindown فریمور OEM ممکن است فعال باشد؛ در صورت نیاز فریمور را عوض کنید.

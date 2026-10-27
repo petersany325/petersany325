@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="320" viewBox="0 0 900 320">
+  <style>
+    .board { fill:#1a1a1a; stroke:#666; stroke-width:2; }
+    .label { fill:#f0f0f0; font-family:Segoe UI,Arial,sans-serif; font-size:13px; }
+    .title { fill:#fff; font-family:Segoe UI,Arial,sans-serif; font-size:18px; font-weight:700; }
+    .sub { fill:#aaa; font-family:Segoe UI,Arial,sans-serif; font-size:11px; }
+    .chip { fill:#2d2d2d; stroke:#c9a227; stroke-width:1.5; }
+    .conn { fill:#c0c0c0; stroke:#888; }
+    .sw { fill:#111; stroke:#eee; }
+    .jack { fill:#222; stroke:#aaa; }
+    .zone { fill:none; stroke:#444; stroke-dasharray:4 3; }
+    .dim { fill:#7ec8e3; font-family:Consolas,monospace; font-size:11px; }
+  </style>
+
+  <text x="20" y="28" class="title">JMS578 SATA to USB Stick - Floorplan (top view)</text>
+  <text x="20" y="48" class="sub">Target outline 85 x 22 mm - 2-layer - ON/OFF switch - components on TOP</text>
+
+  <rect x="120" y="90" width="680" height="120" rx="4" class="board"/>
+
+  <rect x="40" y="120" width="80" height="60" rx="2" class="conn"/>
+  <text x="52" y="145" class="label" style="fill:#111;font-size:12px">USB-A</text>
+  <text x="55" y="162" class="sub" style="fill:#333">Male 3.0</text>
+
+  <rect x="140" y="125" width="36" height="50" rx="3" class="sw"/>
+  <text x="145" y="145" class="label" style="font-size:9px">ON</text>
+  <text x="144" y="168" class="label" style="font-size:9px">OFF</text>
+  <text x="132" y="230" class="sub">SW1 ON/OFF</text>
+
+  <circle cx="210" cy="150" r="18" class="jack"/>
+  <circle cx="210" cy="150" r="7" fill="#111"/>
+  <text x="195" y="230" class="sub">DC 5V</text>
+
+  <rect x="280" y="125" width="70" height="70" class="chip"/>
+  <text x="292" y="160" class="label" style="fill:#c9a227;font-size:11px">JMS578</text>
+  <text x="300" y="176" class="sub" style="fill:#c9a227">U1 QFN48</text>
+
+  <rect x="365" y="130" width="40" height="24" class="chip"/>
+  <text x="372" y="146" class="label" style="fill:#c9a227;font-size:10px">Flash</text>
+
+  <rect x="365" y="165" width="40" height="18" rx="6" class="chip"/>
+  <text x="370" y="178" class="label" style="fill:#c9a227;font-size:10px">30M</text>
+
+  <rect x="420" y="135" width="50" height="40" class="chip" style="stroke:#6ab04c"/>
+  <text x="428" y="158" class="label" style="fill:#6ab04c;font-size:10px">L1 4.7uH</text>
+  <text x="422" y="230" class="sub">Buck 1.2V</text>
+
+  <rect x="490" y="125" width="14" height="14" fill="#333" stroke="#888"/>
+  <rect x="490" y="145" width="14" height="14" fill="#333" stroke="#888"/>
+  <rect x="490" y="165" width="14" height="14" fill="#333" stroke="#888"/>
+  <rect x="510" y="125" width="14" height="14" fill="#333" stroke="#888"/>
+  <rect x="510" y="145" width="14" height="14" fill="#333" stroke="#888"/>
+  <rect x="510" y="165" width="14" height="14" fill="#333" stroke="#888"/>
+  <text x="488" y="230" class="sub">SPI TPs</text>
+
+  <circle cx="555" cy="140" r="6" fill="#2ecc71"/>
+  <circle cx="555" cy="165" r="6" fill="#3498db"/>
+  <text x="545" y="230" class="sub">LEDs</text>
+
+  <rect x="600" y="115" width="180" height="70" rx="3" class="conn"/>
+  <text x="640" y="145" class="label" style="fill:#111;font-size:13px">SATA 22-pin</text>
+  <text x="635" y="165" class="sub" style="fill:#333">Data + 5V Power</text>
+  <text x="655" y="230" class="sub">J3 to 2.5in drive</text>
+
+  <rect x="120" y="90" width="140" height="120" class="zone"/>
+  <rect x="260" y="90" width="300" height="120" class="zone"/>
+  <rect x="560" y="90" width="240" height="120" class="zone"/>
+
+  <line x1="120" y1="260" x2="800" y2="260" stroke="#7ec8e3" stroke-width="1"/>
+  <line x1="120" y1="255" x2="120" y2="265" stroke="#7ec8e3"/>
+  <line x1="800" y1="255" x2="800" y2="265" stroke="#7ec8e3"/>
+  <text x="430" y="280" class="dim">85 mm</text>
+
+  <line x1="820" y1="90" x2="820" y2="210" stroke="#7ec8e3" stroke-width="1"/>
+  <text x="830" y="155" class="dim">22</text>
+  <text x="830" y="168" class="dim">mm</text>
+
+  <text x="20" y="310" class="sub">Silk: mark SATA-USB JMS578 near center. Keep differential pairs on TOP over solid GND.</text>
+</svg>

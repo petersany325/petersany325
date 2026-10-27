@@ -1,0 +1,25 @@
+Net,Members,Impedance_ohm,Notes
+GND,"U1 paddle, all GND pins, J1 GND, J2 shell, J3 GND, crystal GND, REXT GND, bulk caps GND",,
+V5_USB,"J1.VBUS, FB1.A, D2.A, F1 if used",,From USB host
+V5_DC,"J2.center, D1.A",,Aux jack
+V5_OR,"D1.K, D2.K, SW1.in",,Diode OR node
+V5_SW,"SW1.out, U1 5V pins, J3.SATA_5V, C_V5_*, D_PWR anode via R_PWR",,Switched system 5V
+3V3,"U1.AV33O, U2.VCC, R_CS, LED rails, SPI pads",,Internal LDO only — keep load light
+1V2,"U1 buck out via L1, AVDDL, C_1V2_*",,Short loop around U1
+USB_DP,"J1.D+, ESD1, U1.DP",90,USB2
+USB_DM,"J1.D-, ESD1, U1.DM",90,USB2
+USB_SSTX_P,"U1.SSTXP, C_SSTXP, J1.SSTX+",90,AC cap near U1 TX
+USB_SSTX_N,"U1.SSTXN, C_SSTXN, J1.SSTX-",90,
+USB_SSRX_P,"J1.SSRX+, U1.SSRXP",90,No series cap on device RX typically
+USB_SSRX_N,"J1.SSRX-, U1.SSRXN",90,
+SATA_TX_P,"U1.TXP, C_TXP, J3.SATA_B+",100,Cap near connector
+SATA_TX_N,"U1.TXN, C_TXN, J3.SATA_B-",100,
+SATA_RX_P,"J3.SATA_A+, C_RXP, U1.RXP",100,
+SATA_RX_N,"J3.SATA_A-, C_RXN, U1.RXN",100,
+REXT,"U1.REXT, R_REXT",,12k to GND
+SPI_CS,"U1.GPIO0, U2.CS, R_CS, TP",,
+SPI_CLK,"U1.GPIO1, U2.CLK, TP",,
+SPI_MOSI,"U1.GPIO2, U2.DI, TP",,
+SPI_MISO,"U1.GPIO3, U2.DO, TP",,
+LED_ACT,"U1.GPIO4, R_LED, D_ACT",,
+XTAL,"Y1, C_XTAL1, C_XTAL2, U1 XI/XO",,Keep away from L1 and USB/SATA pairs
