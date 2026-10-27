@@ -8,7 +8,7 @@
 
 <div class="panel" style="margin-bottom:12px;">
     <h2 style="margin-top:0;">عملکرد تعمیرکاران</h2>
-    <p class="muted">تفکیک کارکرد ماهانه: خرجی کالا، مبلغ تعمیر تحویل‌شده، خروج‌نخورده، مانده کارگاه، غیرقابل‌تعمیر (خروج‌شده / نشده).</p>
+    <p class="muted">برای هر تعمیرکار: چند کارِ قیمت‌خورده، خرجیِ همان کارها، و مبلغ فقط خروج‌شده‌ها. خرجیِ داخل کارگاه در سود این بازه کم نمی‌شود.</p>
     <form class="search-row" method="GET" action="{{ route('reports.technicians') }}">
         <input type="search" name="q" value="{{ $q }}" placeholder="نام / تخصص / موبایل" style="min-width:240px;">
         <button class="btn btn-primary" type="submit">جستجو</button>
@@ -20,6 +20,9 @@
 
 @if(!empty($totals))
 <div class="stats stats-compact" style="margin-bottom:12px;">
+    <div class="stat"><div class="label">کار</div><div class="value">{{ number_format($totals['work_count'] ?? 0) }}</div></div>
+    <div class="stat"><div class="label">خرجی</div><div class="value">{{ number_format($totals['work_expense'] ?? 0) }}</div></div>
+    <div class="stat"><div class="label">مبلغ خروجی</div><div class="value">{{ number_format($totals['exit_amount'] ?? 0) }}</div></div>
     <div class="stat"><div class="label">اجرت تحویل</div><div class="value">{{ number_format($totals['labor'] ?? 0) }}</div></div>
     <div class="stat"><div class="label">قطعات تحویل</div><div class="value">{{ number_format($totals['parts'] ?? 0) }}</div></div>
     <div class="stat"><div class="label">جمع قبض تحویل</div><div class="value">{{ number_format($totals['billed'] ?? 0) }}</div></div>
@@ -74,6 +77,9 @@
                         <strong>{{ $row->name }}</strong>
                         <div class="muted" dir="ltr">{{ $row->phone }}</div>
                         <div class="muted" style="font-size:11px;">{{ $row->specialty ?: '—' }}</div>
+                        @if((int) ($row->work_count ?? 0) > 0 && ($row->work_line ?? '') !== '')
+                            <div style="font-size:12px;margin-top:6px;line-height:1.7;">{{ $row->work_line }}</div>
+                        @endif
                     </td>
                     <td>{{ $row->jobs_count }}</td>
                     <td>{{ $row->delivered_count }}</td>
@@ -127,8 +133,10 @@
         </table>
     </div>
     <p class="muted" style="margin:8px 0 0;font-size:11px;">
+        کار = خروج‌کامل این بازه + قیمت‌خورده‌هایی که هنوز داخل کارگاه‌اند.
+        خرجی = قطعهٔ هر دوی این‌ها. مبلغ خروجی = جمع قبض‌های خروج‌کامل.
+        سود این بازه = مبلغ خروجی − خرجیِ همان خروج‌ها.
         خروج‌نخورده = وضعیت «آماده تحویل». مانده کارگاه = پذیرش / در حال تعمیر / منتظر قطعه.
-        غیرقابل‌تعمیر باز = هنوز خروج نشده؛ خروج = قبض‌هایی که مسیر غیرقابل‌تعمیر داشته و در بازه تحویل شده‌اند.
     </p>
 </div>
 @endsection

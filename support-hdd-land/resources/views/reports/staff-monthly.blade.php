@@ -124,7 +124,7 @@
                         @if($row['technician_name'] && $row['technician_name'] !== $row['name'])
                             <div class="muted" style="font-size:11px;">تعمیرکار: {{ $row['technician_name'] }}</div>
                         @endif
-                        <div class="muted" style="font-size:11px;margin-top:4px;">{{ $row['line'] }}</div>
+                        <div style="font-size:12px;margin-top:4px;line-height:1.7;">{{ $row['line'] ?? '' }}</div>
                     </td>
                     <td>{{ $row['role_label'] }}</td>
                     <td>{{ number_format($row['delivered']) }}</td>
@@ -157,7 +157,8 @@
         </table>
     </div>
     <p class="muted" style="margin:10px 0 0;font-size:12px;">
-        سود تقریبی = درآمد قبض‌های تحویل‌شده − قطعات. کمیسیون کارمند در جزئیات نمایش داده می‌شود و از حساب مجموعه کسر نشده است.
+        برای تعمیرکار: «کار» قیمت‌خورده‌هاست، «خرجی» قطعهٔ همان کارهاست، «مبلغ خروجی» فقط خروج‌کامل این بازه است.
+        سود تقریبی = مبلغ خروجی − خرجیِ خروج‌شده‌ها. خرجیِ داخل کارگاه از این سود کم نمی‌شود.
     </p>
 </div>
 @endsection

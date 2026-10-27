@@ -55,6 +55,32 @@
             </tr>
             </thead>
             <tbody>
+            @if(($row['technician_id'] ?? null) || (int) ($row['work_count'] ?? 0) > 0)
+            <tr>
+                <td>کار (قیمت‌خورده)</td>
+                <td>{{ number_format($row['work_count'] ?? 0) }}</td>
+                <td>{{ number_format($prev['work_count'] ?? 0) }}</td>
+                <td>{{ $fmtDelta($row['delta']['work_count'] ?? null) }}</td>
+            </tr>
+            <tr>
+                <td>خرجی</td>
+                <td>{{ toman($row['work_expense'] ?? 0) }}</td>
+                <td>{{ toman($prev['work_expense'] ?? 0) }}</td>
+                <td>{{ $fmtDelta($row['delta']['work_expense'] ?? null) }}</td>
+            </tr>
+            <tr>
+                <td>مبلغ خروجی</td>
+                <td>{{ toman($row['exit_amount'] ?? 0) }}</td>
+                <td>{{ toman($prev['exit_amount'] ?? 0) }}</td>
+                <td>{{ $fmtDelta($row['delta']['exit_amount'] ?? null) }}</td>
+            </tr>
+            <tr>
+                <td>هنوز داخل کارگاه</td>
+                <td>{{ number_format($row['open_count'] ?? 0) }}</td>
+                <td>{{ number_format($prev['open_count'] ?? 0) }}</td>
+                <td>—</td>
+            </tr>
+            @endif
             <tr>
                 <td>تعمیر تحویل‌شده</td>
                 <td>{{ number_format($row['delivered']) }}</td>
@@ -114,6 +140,9 @@
             </tbody>
         </table>
     </div>
-    <p class="muted" style="margin:10px 0 0;font-size:12px;">{{ $shopLine }}</p>
+    <p class="muted" style="margin:10px 0 0;font-size:12px;">
+        خرجی شامل قطعهٔ خروج‌شده‌ها و قطعهٔ داخل کارگاه است. مبلغ خروجی فقط قبض‌های خروج‌کامل است و سود تقریبی از همان منهای خرجیِ خروج‌شده‌ها به دست می‌آید.
+    </p>
+    <p class="muted" style="margin:6px 0 0;font-size:12px;">{{ $shopLine }}</p>
 </div>
 @endsection

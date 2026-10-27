@@ -13,6 +13,7 @@ use App\Models\ReceptionPart;
 use App\Models\ReferralSource;
 use App\Models\SmsLog;
 use App\Models\Technician;
+use App\Services\TechnicianPeriodSummary;
 use App\Support\ReportSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -583,6 +584,18 @@ class ReportController extends Controller
                 return $row;
             });
 
+        $workSplit = app(TechnicianPeriodSummary::class)->forTechnicians($rows->pluck('id')->all(), $from, $to);
+        $rows = $rows->map(function (Technician $row) use ($workSplit) {
+            $split = $workSplit[(int) $row->id] ?? [];
+            $row->work_count = (int) ($split['work_count'] ?? 0);
+            $row->work_expense = (int) ($split['expense'] ?? 0);
+            $row->exit_amount = (int) ($split['exit_amount'] ?? 0);
+            $row->open_priced_count = (int) ($split['open_count'] ?? 0);
+            $row->work_line = (string) ($split['line'] ?? '');
+
+            return $row;
+        });
+
         $totals = [
             'labor' => (int) $rows->sum('labor_sum'),
             'parts' => (int) $rows->sum('parts_sum'),
@@ -595,6 +608,9 @@ class ReportController extends Controller
             'workshop_count' => (int) $rows->sum('workshop_count'),
             'unrepairable_open' => (int) $rows->sum('unrepairable_open'),
             'unrepairable_exited' => (int) $rows->sum('unrepairable_exited'),
+            'work_count' => (int) $rows->sum('work_count'),
+            'work_expense' => (int) $rows->sum('work_expense'),
+            'exit_amount' => (int) $rows->sum('exit_amount'),
         ];
 
         $chartLabels = $rows->pluck('name')->values()->all();
@@ -724,6 +740,15 @@ class ReportController extends Controller
             ->filter(fn ($r) => $r->received_at && $r->delivered_at)
             ->avg(fn ($r) => $r->received_at->diffInHours($r->delivered_at) / 24);
 
+        $periodSummary = app(TechnicianPeriodSummary::class);
+        $workSplit = $periodSummary->forTechnicians([$technician->id], $from, $to)[(int) $technician->id] ?? [];
+        $pricedOpen = $periodSummary->openReceipts((int) $technician->id, $from, $to);
+        $workLine = (string) ($workSplit['line'] ?? '');
+        $workCount = (int) ($workSplit['work_count'] ?? 0);
+        $workExpense = (int) ($workSplit['expense'] ?? 0);
+        $exitAmount = (int) ($workSplit['exit_amount'] ?? 0);
+        $exitParts = (int) ($workSplit['exit_parts'] ?? 0);
+
         $breakdown = [
             'parts_expense' => $partsUsedTotal,
             'repaired_billed' => $billedSum,
@@ -736,12 +761,17 @@ class ReportController extends Controller
             'workshop_sum' => (int) $workshopOpen->sum(fn ($r) => (int) $r->labor_cost + (int) $r->parts_cost),
             'unrepairable_open' => $unrepairableOpen->count(),
             'unrepairable_exited' => $unrepairableExited->count(),
+            'work_count' => $workCount,
+            'work_expense' => $workExpense,
+            'exit_amount' => $exitAmount,
+            'exit_parts' => $exitParts,
         ];
 
         return view('reports.technician-show', compact(
             'technician', 'from', 'to', 'jobs', 'delivered', 'laborSum', 'partsSum',
             'billedSum', 'paidSum', 'commissionSum', 'inHand', 'partsUsed', 'partsUsedTotal',
             'pendingExit', 'workshopOpen', 'unrepairableOpen', 'unrepairableExited',
+            'pricedOpen', 'workLine', 'workCount', 'workExpense', 'exitAmount', 'exitParts',
             'handoffs', 'byStatus', 'statusLabels', 'breakdown',
             'chartStatusLabels', 'chartStatusValues', 'daily', 'avgDays'
         ));

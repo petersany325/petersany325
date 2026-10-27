@@ -21,6 +21,20 @@
     </div>
 </div>
 
+<div class="panel" style="margin-bottom:12px;">
+    <h3 style="margin:0 0 8px;">خلاصه این بازه</h3>
+    <p style="margin:0 0 10px;font-size:15px;">{{ $workLine ?? '' }}</p>
+    <div class="stats stats-compact">
+        <div class="stat"><div class="label">کار</div><div class="value">{{ number_format($workCount ?? 0) }}</div></div>
+        <div class="stat"><div class="label">خرجی</div><div class="value">{{ number_format($workExpense ?? 0) }}</div></div>
+        <div class="stat"><div class="label">مبلغ خروجی</div><div class="value">{{ number_format($exitAmount ?? 0) }}</div></div>
+    </div>
+    <p class="muted" style="margin:8px 0 0;font-size:12px;">
+        سود این بازه {{ toman((int) ($exitAmount ?? 0) - (int) ($exitParts ?? 0)) }}
+        = مبلغ خروجی منهای خرجیِ خروج‌شده‌ها. خرجیِ هاردهای داخل کارگاه در این سود نیست.
+    </p>
+</div>
+
 <div class="stats stats-compact" style="margin-bottom:12px;">
     <div class="stat"><div class="label">تحویل‌شده</div><div class="value">{{ $delivered->count() }}</div></div>
     <div class="stat"><div class="label">مبلغ تعمیر (قبض)</div><div class="value">{{ number_format($billedSum) }}</div></div>
@@ -85,6 +99,37 @@
                 </tr>
             @empty
                 <tr><td colspan="8">در این بازه تحویلی نیست.</td></tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="panel" style="margin-bottom:12px;">
+    <h3 style="margin-top:0;">قیمت خورده، هنوز خروج نشده</h3>
+    <p class="muted" style="margin-top:0;">این قبض‌ها داخل مبلغ خروجی نیستند. خرجی‌شان در عدد خرجیِ بالا هست.</p>
+    <div class="table-wrap">
+        <table class="compact-table">
+            <thead>
+            <tr>
+                <th>قبض</th>
+                <th>مشتری</th>
+                <th>وضعیت</th>
+                <th>خرجی</th>
+                <th>جمع قیمت</th>
+            </tr>
+            </thead>
+            <tbody>
+            @forelse(($pricedOpen ?? []) as $r)
+                <tr>
+                    <td><a href="{{ route('receptions.show', $r) }}">{{ $r->ticket_no }}</a></td>
+                    <td>{{ $r->customer?->name }}</td>
+                    <td>{{ $r->statusLabel() }}</td>
+                    <td>{{ toman((int) $r->parts_cost) }}</td>
+                    <td>{{ toman((int) $r->total_amount) }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="5">قبضِ قیمت‌خوردهٔ خروج‌نشده‌ای نیست.</td></tr>
             @endforelse
             </tbody>
         </table>

@@ -102,20 +102,24 @@ class StaffMonthlyPerformanceService
         $shop = trim((string) \App\Models\AppSetting::getValue('invoice_shop_name', (string) config('app.name', 'تعمیرگاه')))
             ?: (string) config('app.name', 'تعمیرگاه');
         $name = (string) ($row['name'] ?? 'تعمیرکار');
-        $delivered = (int) ($row['delivered'] ?? 0);
-        $labor = (int) ($row['labor'] ?? 0);
-        $parts = (int) ($row['parts'] ?? 0);
-        $revenue = (int) ($row['revenue'] ?? 0);
+        $work = (int) ($row['work_count'] ?? 0);
+        $expense = (int) ($row['work_expense'] ?? 0);
+        $exitAmount = (int) ($row['exit_amount'] ?? ($row['revenue'] ?? 0));
+        $exitCount = (int) ($row['exit_count'] ?? ($row['delivered'] ?? 0));
+        $open = (int) ($row['open_count'] ?? 0);
         $commission = (int) ($row['commission'] ?? 0);
         $pct = (float) ($row['commission_percent'] ?? 0);
+        $split = $open > 0 || $exitCount > 0
+            ? "{$exitCount} خروج، {$open} هنوز داخل کارگاه.\n"
+            : '';
 
         return "گزارش ماهانه {$shop}\n"
             ."{$name}\n"
             ."دوره: {$monthLabel}\n"
-            ."تحویل: {$delivered}\n"
-            .'اجرت: '.number_format($labor)."\n"
-            .'خرجی کالا: '.number_format($parts)."\n"
-            .'جمع قبض: '.number_format($revenue)."\n"
+            ."{$work} کار کردی.\n"
+            .'خرجی: '.number_format($expense)."\n"
+            .'مبلغ خروجی: '.number_format($exitAmount)."\n"
+            .$split
             .'کمیسیون '.$pct.'٪: '.number_format($commission)."\n"
             .'جزئیات در کارتابل.';
     }
@@ -199,9 +203,11 @@ class StaffMonthlyPerformanceService
         $intakePrev = $this->intakeByUser($prevFrom, $prevTo);
         $payNow = $this->paymentsByUser($from, $to);
         $payPrev = $this->paymentsByUser($prevFrom, $prevTo);
+        $workNow = app(TechnicianPeriodSummary::class)->forTechnicians($techIds, $from, $to);
+        $workPrev = app(TechnicianPeriodSummary::class)->forTechnicians($techIds, $prevFrom, $prevTo);
 
         return $users->map(function (User $user) use (
-            $deliveredNow, $deliveredPrev, $intakeNow, $intakePrev, $payNow, $payPrev
+            $deliveredNow, $deliveredPrev, $intakeNow, $intakePrev, $payNow, $payPrev, $workNow, $workPrev
         ) {
             $techId = $user->technician?->id;
             $cur = $this->emptyMetrics();
@@ -220,6 +226,8 @@ class StaffMonthlyPerformanceService
                 $cur['commission'] = (int) round(((int) $cur['labor']) * $pct / 100);
                 $prev['commission'] = (int) round(((int) $prev['labor']) * $pct / 100);
                 $cur['commission_percent'] = $pct;
+                $cur = array_merge($cur, $this->workMetrics($workNow[$techId] ?? null));
+                $prev = array_merge($prev, $this->workMetrics($workPrev[$techId] ?? null));
             }
 
             $cur['intake'] = (int) ($intakeNow[$user->id] ?? 0);
@@ -233,7 +241,13 @@ class StaffMonthlyPerformanceService
             $prev['approx_profit'] = (int) $prev['revenue'] - (int) $prev['parts'];
 
             $hasActivity = ((int) $cur['delivered'] + (int) $cur['intake'] + (int) $cur['collected']
+                + (int) ($cur['work_count'] ?? 0)
                 + (int) $prev['delivered'] + (int) $prev['intake'] + (int) $prev['collected']) > 0;
+
+            $line = $this->oneLine($user->name, $cur, $prev);
+            if ($techId && (int) ($cur['work_count'] ?? 0) > 0 && ($cur['work_line'] ?? '') !== '') {
+                $line = (string) $cur['work_line'];
+            }
 
             $row = array_merge($cur, [
                 'user_id' => $user->id,
@@ -248,12 +262,15 @@ class StaffMonthlyPerformanceService
                 'delta' => [
                     'delivered' => $this->deltaPct((int) $cur['delivered'], (int) $prev['delivered']),
                     'revenue' => $this->deltaPct((int) $cur['revenue'], (int) $prev['revenue']),
+                    'work_count' => $this->deltaPct((int) ($cur['work_count'] ?? 0), (int) ($prev['work_count'] ?? 0)),
+                    'work_expense' => $this->deltaPct((int) ($cur['work_expense'] ?? 0), (int) ($prev['work_expense'] ?? 0)),
+                    'exit_amount' => $this->deltaPct((int) ($cur['exit_amount'] ?? 0), (int) ($prev['exit_amount'] ?? 0)),
                     'collected' => $this->deltaPct((int) $cur['collected'], (int) $prev['collected']),
                     'approx_profit' => $this->deltaPct((int) $cur['approx_profit'], (int) $prev['approx_profit']),
                     'warranty_returns' => $this->deltaPct((int) $cur['warranty_returns'], (int) $prev['warranty_returns']),
                 ],
             ]);
-            $row['line'] = $this->oneLine($user->name, $cur, $prev);
+            $row['line'] = $line;
 
             return $row;
         })->filter(fn (array $row) => $row['has_activity'] || $row['technician_id'])
@@ -356,6 +373,28 @@ class StaffMonthlyPerformanceService
             'approx_profit' => 0,
             'commission' => 0,
             'commission_percent' => 0,
+            'work_count' => 0,
+            'work_expense' => 0,
+            'exit_amount' => 0,
+            'open_count' => 0,
+            'exit_count' => 0,
+            'work_line' => '',
+        ];
+    }
+
+    /**
+     * @param  array<string,mixed>|null  $split
+     * @return array{work_count:int,work_expense:int,exit_amount:int,open_count:int,exit_count:int,work_line:string}
+     */
+    private function workMetrics(?array $split): array
+    {
+        return [
+            'work_count' => (int) ($split['work_count'] ?? 0),
+            'work_expense' => (int) ($split['expense'] ?? 0),
+            'exit_amount' => (int) ($split['exit_amount'] ?? 0),
+            'open_count' => (int) ($split['open_count'] ?? 0),
+            'exit_count' => (int) ($split['exit_count'] ?? 0),
+            'work_line' => (string) ($split['line'] ?? ''),
         ];
     }
 
