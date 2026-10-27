@@ -1,0 +1,37 @@
+Ref,Qty,Value,Package,MPN_example,LCSC_hint,Notes
+U1,1,JMS578 USB3-SATA bridge,QFN-48 6x6,JMS578-QG,AliExpress/LCSC search JMS578,Main bridge
+U2,1,SPI NOR 512Kbit 3.3V,SOIC-8 / WSON,PM25LV512 / W25X05,C14729 or equiv,Firmware store
+Y1,1,30.000MHz crystal,3225 or HC-49S,X322530MOB4SI,,CL per crystal; match C_XTAL
+J1,1,USB 3.0 Type-A male plug,TH or SMT mid-mount,USB3.0-A-M,,SuperSpeed pins required
+J2,1,DC jack 5.5x2.1 center+,TH,DC-005 5.5-2.1,,Optional aux 5V
+J3,1,SATA 22-pin female (data+power),SMT right-angle,SATA-22P-RA,,2.5 inch drive
+SW1,1,Rocker switch SPDT/SPST 3A,TH mini rocker,SS12F15-G9 or similar,,I/O power
+D1,1,Schottky 40V 3A,SMA/SMC,SS34,C8678,DC jack OR-ing
+D2,1,Schottky 40V 3A,SMA/SMC,SS34,C8678,USB VBUS OR-ing
+D_ACT,1,LED green,0805,,C2286,Activity on GPIO4
+D_PWR,1,LED blue/red,0805,,C2287,Optional power LED
+F1,1,PTC resettable ~1.5-2A,1812 or TH,JK16-2000L,,Optional USB protection
+FB1,1,Ferrite bead 600R@100MHz >=2A,0805,BLM21PG221SN1,,On VBUS
+L1,1,4.7uH power inductor >=1A,0805/2x1.6,4.7uH 1A,,JMS578 internal buck
+R_REXT,1,12k 1%,0402/0603,,C25804,REXT to GND
+R_LED,1,330R,0402/0603,,,Activity LED
+R_PWR,1,1k,0402/0603,,,Power LED
+R_CS,1,10k,0402/0603,,,CS pull-up if needed
+C_TXP,1,10nF 50V,0402,C0G/X7R,,SATA TXP AC couple
+C_TXN,1,10nF 50V,0402,,,SATA TXN AC couple
+C_RXP,1,10nF 50V,0402,,,SATA RXP AC couple
+C_RXN,1,10nF 50V,0402,,,SATA RXN AC couple
+C_SSTXP,1,100nF 16V,0402,,,USB3 SSTXP AC couple
+C_SSTXN,1,100nF 16V,0402,,,USB3 SSTXN AC couple
+C_XTAL1,1,15pF C0G,0402,,,Crystal load (tune)
+C_XTAL2,1,15pF C0G,0402,,,Crystal load (tune)
+C_V5_1,1,10uF 16V,0805 X5R,,,Bulk on V5_SW
+C_V5_2,1,100nF,0402,,,Decap V5_SW
+C_3V3_1,1,10uF 10V,0805,,,Bulk 3V3
+C_3V3_2,1,100nF,0402,,,Decap 3V3
+C_1V2_1,1,10uF 6.3V,0805,,,Buck output
+C_1V2_2,1,10uF 6.3V,0805,,,Buck output (parallel ok)
+C_USB2,2,47pF optional,0402,,,Near DP/DM if needed
+ESD1,1,USB2 ESD,SOT-23-6,USBLC6-2SC6,C7519,DP/DM
+ESD2,1,USB3 ESD array optional,DFN,TPD4E05U06,,,Near SS pairs
+MISC,1,Test pads SPI x6,pads,,,3V3 CS CLK MOSI MISO GND

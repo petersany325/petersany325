@@ -23,6 +23,10 @@
 - `hamgap-bot/` — کد ربات
 - `hamgap-bot-design/` — دارایی‌های طراحی
 
+### ۳) طراحی برد SATA→USB (`usb-bridge-boards/`)
+- `usb-bridge-boards/jms578-sata-usb/` — شماتیک، BOM، مشخصات PCB استیک JMicron JMS578
+- فقط طراحی سخت‌افزار/مستندات؛ نرم‌افزار فکتوری هارد اینجا نیست
+
 ## نام‌هایی که عمداً اینجا نیستند
 - **Windex / Windex WD** — حذف شده از این ریپو  
 - **WinFOF** — اینجا نیست  
