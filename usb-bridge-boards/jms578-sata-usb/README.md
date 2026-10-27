@@ -19,6 +19,10 @@
 
 | فایل | محتوا |
 |------|--------|
+| [`FAB.md`](FAB.md) | تفاوت `.PcbDoc` / Gerber و راهنمای چاپ |
+| [`jms578-sata-usb-gerbers.zip`](jms578-sata-usb-gerbers.zip) | **فایل چاپ** (Gerber+Drill) |
+| [`kicad/jms578-sata-usb.kicad_pcb`](kicad/jms578-sata-usb.kicad_pcb) | پروژه KiCad دو لایه |
+| [`pcb-preview.svg`](pcb-preview.svg) | پیش‌نمایش برد |
 | [`SCHEMATIC.md`](SCHEMATIC.md) | شماتیک بلوکی + اتصالات پایه |
 | [`bom.csv`](bom.csv) | لیست قطعات سفارش |
 | [`pcb-spec.md`](pcb-spec.md) | مکانیک، استک‌آپ، قوانین مسیردهی |
@@ -26,6 +30,8 @@
 | [`schematic-block.svg`](schematic-block.svg) / [`schematic-block.png`](schematic-block.png) | دیاگرام بلوکی |
 | [`nets.csv`](nets.csv) | نت‌لیست فشرده |
 | [`pinout-jms578.md`](pinout-jms578.md) | پایه به پایه JMS578 |
+
+> `.PcbDoc` فرمت Altium است و اینجا تولید نمی‌شود. برای چاپ از **Gerber ZIP** استفاده کن — جزئیات در `FAB.md`.
 
 ## جریان تغذیه
 
