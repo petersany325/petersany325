@@ -21,7 +21,8 @@
 | [`SCHEMATIC.md`](SCHEMATIC.md) | شماتیک بلوکی + اتصالات پایه |
 | [`bom.csv`](bom.csv) | لیست قطعات سفارش |
 | [`pcb-spec.md`](pcb-spec.md) | مکانیک، استک‌آپ، قوانین مسیردهی |
-| [`floorplan.svg`](floorplan.svg) | جانمایی فیزیکی |
+| [`floorplan.svg`](floorplan.svg) / [`floorplan.png`](floorplan.png) | جانمایی فیزیکی |
+| [`schematic-block.svg`](schematic-block.svg) / [`schematic-block.png`](schematic-block.png) | دیاگرام بلوکی |
 | [`nets.csv`](nets.csv) | نت‌لیست فشرده |
 | [`pinout-jms578.md`](pinout-jms578.md) | پایه به پایه JMS578 |
 
