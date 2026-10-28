@@ -13,6 +13,7 @@ use App\Models\ReceptionPart;
 use App\Models\ReferralSource;
 use App\Models\SmsLog;
 use App\Models\Technician;
+use App\Services\TechnicianPeriodSummary;
 use App\Support\ReportSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -227,23 +228,30 @@ class ReportController extends Controller
             ->whereDate('paid_at', '>=', $from)
             ->whereDate('paid_at', '<=', $to);
 
-        $totalIn = (clone $payments)->where('type', '!=', 'refund')->sum('amount');
-        $totalRefund = (clone $payments)->where('type', 'refund')->sum('amount');
+        // Refund rows are stored as negative amounts; show absolute refund and true net.
+        $totalIn = (int) (clone $payments)->where('type', '!=', 'refund')->sum('amount');
+        $totalRefund = (int) abs((int) (clone $payments)->where('type', 'refund')->sum('amount'));
+        $totalNet = $totalIn - $totalRefund;
 
         $byMethod = (clone $payments)
-            ->select('method', DB::raw('SUM(amount) as amount'), DB::raw('COUNT(*) as total'))
+            ->select(
+                'method',
+                DB::raw("SUM(CASE WHEN type = 'refund' THEN 0 ELSE amount END) as amount"),
+                DB::raw("SUM(CASE WHEN type = 'refund' THEN ABS(amount) ELSE 0 END) as refund_amount"),
+                DB::raw('COUNT(*) as total')
+            )
             ->groupBy('method')
             ->orderByDesc('amount')
             ->get();
 
         $byType = (clone $payments)
-            ->select('type', DB::raw('SUM(amount) as amount'), DB::raw('COUNT(*) as total'))
+            ->select('type', DB::raw('SUM(ABS(amount)) as amount'), DB::raw('COUNT(*) as total'))
             ->groupBy('type')
             ->orderByDesc('amount')
             ->get();
 
         $daily = (clone $payments)
-            ->selectRaw('DATE(paid_at) as day, SUM(CASE WHEN type = "refund" THEN -amount ELSE amount END) as net, COUNT(*) as total')
+            ->selectRaw('DATE(paid_at) as day, SUM(amount) as net, COUNT(*) as total')
             ->groupBy('day')
             ->orderBy('day')
             ->get();
@@ -254,6 +262,16 @@ class ReportController extends Controller
             ->select('status', DB::raw('COUNT(*) as total'), DB::raw('COALESCE(SUM(amount),0) as amount'))
             ->groupBy('status')
             ->get();
+
+        $deliveredMoney = Reception::query()
+            ->where('status', 'delivered')
+            ->whereDate('delivered_at', '>=', $from)
+            ->whereDate('delivered_at', '<=', $to)
+            ->selectRaw('COALESCE(SUM(total_amount),0) as billed')
+            ->selectRaw('COALESCE(SUM(paid_amount),0) as paid_on_ticket')
+            ->selectRaw('COALESCE(SUM(labor_cost),0) as labor')
+            ->selectRaw('COALESCE(SUM(parts_cost),0) as parts')
+            ->first();
 
         $receivables = Reception::query()
             ->with('customer')
@@ -271,14 +289,23 @@ class ReportController extends Controller
             ->limit(40)
             ->get();
 
+        $reconciliation = [
+            'billed_delivered' => (int) ($deliveredMoney->billed ?? 0),
+            'paid_on_delivered' => (int) ($deliveredMoney->paid_on_ticket ?? 0),
+            'labor_delivered' => (int) ($deliveredMoney->labor ?? 0),
+            'parts_delivered' => (int) ($deliveredMoney->parts ?? 0),
+            'cash_collected' => $totalNet,
+            'gap_billed_vs_cash' => (int) ($deliveredMoney->billed ?? 0) - $totalNet,
+        ];
+
         $chartMethodLabels = $byMethod->map(fn ($r) => Payment::METHODS[$r->method] ?? $r->method)->values()->all();
         $chartMethodValues = $byMethod->pluck('amount')->map(fn ($v) => (int) $v)->values()->all();
         $chartDailyLabels = $daily->pluck('day')->values()->all();
         $chartDailyValues = $daily->pluck('net')->map(fn ($v) => (int) $v)->values()->all();
 
         return view('reports.payments', compact(
-            'from', 'to', 'totalIn', 'totalRefund', 'byMethod', 'byType',
-            'daily', 'gateway', 'receivables', 'recent',
+            'from', 'to', 'totalIn', 'totalRefund', 'totalNet', 'byMethod', 'byType',
+            'daily', 'gateway', 'receivables', 'recent', 'reconciliation',
             'chartMethodLabels', 'chartMethodValues', 'chartDailyLabels', 'chartDailyValues'
         ));
     }
@@ -443,6 +470,50 @@ class ReportController extends Controller
             ->groupBy('custody_technician_id')
             ->pluck('total', 'custody_technician_id');
 
+        // Ready repairs not yet exited: current backlog amount (labor + parts).
+        $pendingExitMap = Reception::query()
+            ->select(
+                'technician_id',
+                DB::raw('COUNT(*) as cnt'),
+                DB::raw('COALESCE(SUM(COALESCE(labor_cost,0) + COALESCE(parts_cost,0)),0) as total')
+            )
+            ->where('status', 'ready')
+            ->whereNotNull('technician_id')
+            ->groupBy('technician_id')
+            ->get()
+            ->keyBy('technician_id');
+
+        $workshopMap = Reception::query()
+            ->select(
+                'technician_id',
+                DB::raw('COUNT(*) as cnt'),
+                DB::raw('COALESCE(SUM(COALESCE(labor_cost,0) + COALESCE(parts_cost,0)),0) as total')
+            )
+            ->whereIn('status', ['received', 'repairing', 'waiting_part'])
+            ->whereNotNull('technician_id')
+            ->groupBy('technician_id')
+            ->get()
+            ->keyBy('technician_id');
+
+        $unrepairableOpenMap = Reception::query()
+            ->select('technician_id', DB::raw('COUNT(*) as cnt'))
+            ->where('status', 'unrepairable')
+            ->whereNotNull('technician_id')
+            ->groupBy('technician_id')
+            ->pluck('cnt', 'technician_id');
+
+        $unrepairableExitedMap = Reception::query()
+            ->select('technician_id', DB::raw('COUNT(*) as cnt'))
+            ->where('status', 'delivered')
+            ->whereDate('delivered_at', '>=', $from)
+            ->whereDate('delivered_at', '<=', $to)
+            ->whereNotNull('technician_id')
+            ->whereHas('statusLogs', function ($logs) {
+                $logs->where('to_status', 'unrepairable');
+            })
+            ->groupBy('technician_id')
+            ->pluck('cnt', 'technician_id');
+
         $query = Technician::query();
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
@@ -469,23 +540,86 @@ class ReportController extends Controller
                         ->whereDate('delivered_at', '<=', $to);
                 },
             ], 'labor_cost')
+            ->withSum([
+                'receptions as parts_sum' => function ($q2) use ($from, $to) {
+                    $q2->where('status', 'delivered')
+                        ->whereDate('delivered_at', '>=', $from)
+                        ->whereDate('delivered_at', '<=', $to);
+                },
+            ], 'parts_cost')
+            ->withSum([
+                'receptions as billed_sum' => function ($q2) use ($from, $to) {
+                    $q2->where('status', 'delivered')
+                        ->whereDate('delivered_at', '>=', $from)
+                        ->whereDate('delivered_at', '<=', $to);
+                },
+            ], 'total_amount')
+            ->withSum([
+                'receptions as paid_sum' => function ($q2) use ($from, $to) {
+                    $q2->where('status', 'delivered')
+                        ->whereDate('delivered_at', '>=', $from)
+                        ->whereDate('delivered_at', '<=', $to);
+                },
+            ], 'paid_amount')
             ->orderBy('name')
             ->get()
-            ->map(function (Technician $row) use ($inHandMap) {
+            ->map(function (Technician $row) use ($inHandMap, $pendingExitMap, $workshopMap, $unrepairableOpenMap, $unrepairableExitedMap) {
                 $labor = (int) ($row->labor_sum ?? 0);
                 $pct = (float) ($row->commission_percent ?? 0);
+                $row->labor_sum = $labor;
+                $row->parts_sum = (int) ($row->parts_sum ?? 0);
+                $row->billed_sum = (int) ($row->billed_sum ?? 0);
+                $row->paid_sum = (int) ($row->paid_sum ?? 0);
                 $row->commission_sum = (int) round($labor * $pct / 100);
                 $row->in_hand_count = (int) ($inHandMap[$row->id] ?? 0);
+                $pending = $pendingExitMap[$row->id] ?? null;
+                $workshop = $workshopMap[$row->id] ?? null;
+                $row->pending_exit_count = (int) ($pending->cnt ?? 0);
+                $row->pending_exit_sum = (int) ($pending->total ?? 0);
+                $row->workshop_count = (int) ($workshop->cnt ?? 0);
+                $row->workshop_sum = (int) ($workshop->total ?? 0);
+                $row->unrepairable_open = (int) ($unrepairableOpenMap[$row->id] ?? 0);
+                $row->unrepairable_exited = (int) ($unrepairableExitedMap[$row->id] ?? 0);
 
                 return $row;
             });
+
+        $workSplit = app(TechnicianPeriodSummary::class)->forTechnicians($rows->pluck('id')->all(), $from, $to);
+        $rows = $rows->map(function (Technician $row) use ($workSplit) {
+            $split = $workSplit[(int) $row->id] ?? [];
+            $row->work_count = (int) ($split['work_count'] ?? 0);
+            $row->work_expense = (int) ($split['expense'] ?? 0);
+            $row->exit_amount = (int) ($split['exit_amount'] ?? 0);
+            $row->open_priced_count = (int) ($split['open_count'] ?? 0);
+            $row->work_line = (string) ($split['line'] ?? '');
+
+            return $row;
+        });
+
+        $totals = [
+            'labor' => (int) $rows->sum('labor_sum'),
+            'parts' => (int) $rows->sum('parts_sum'),
+            'billed' => (int) $rows->sum('billed_sum'),
+            'paid' => (int) $rows->sum('paid_sum'),
+            'commission' => (int) $rows->sum('commission_sum'),
+            'pending_exit' => (int) $rows->sum('pending_exit_sum'),
+            'pending_exit_count' => (int) $rows->sum('pending_exit_count'),
+            'workshop' => (int) $rows->sum('workshop_sum'),
+            'workshop_count' => (int) $rows->sum('workshop_count'),
+            'unrepairable_open' => (int) $rows->sum('unrepairable_open'),
+            'unrepairable_exited' => (int) $rows->sum('unrepairable_exited'),
+            'work_count' => (int) $rows->sum('work_count'),
+            'work_expense' => (int) $rows->sum('work_expense'),
+            'exit_amount' => (int) $rows->sum('exit_amount'),
+        ];
 
         $chartLabels = $rows->pluck('name')->values()->all();
         $chartJobs = $rows->pluck('jobs_count')->map(fn ($v) => (int) $v)->values()->all();
         $chartLabor = $rows->pluck('labor_sum')->map(fn ($v) => (int) $v)->values()->all();
 
         return view('reports.technicians', compact(
-            'rows', 'from', 'to', 'q', 'chartLabels', 'chartJobs', 'chartLabor'
+            'rows', 'from', 'to', 'q', 'totals',
+            'chartLabels', 'chartJobs', 'chartLabor'
         ));
     }
 
@@ -496,14 +630,31 @@ class ReportController extends Controller
         $jobs = Reception::query()
             ->with(['customer', 'parts', 'payments'])
             ->where('technician_id', $technician->id)
-            ->whereDate('created_at', '>=', $from)
-            ->whereDate('created_at', '<=', $to)
+            ->where(function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->whereDate('created_at', '>=', $from)->whereDate('created_at', '<=', $to);
+                })->orWhere(function ($inner) use ($from, $to) {
+                    $inner->where('status', 'delivered')
+                        ->whereDate('delivered_at', '>=', $from)
+                        ->whereDate('delivered_at', '<=', $to);
+                });
+            })
             ->latest('id')
             ->get();
 
-        $delivered = $jobs->where('status', 'delivered');
+        $delivered = Reception::query()
+            ->with(['customer', 'parts', 'payments'])
+            ->where('technician_id', $technician->id)
+            ->where('status', 'delivered')
+            ->whereDate('delivered_at', '>=', $from)
+            ->whereDate('delivered_at', '<=', $to)
+            ->latest('delivered_at')
+            ->get();
+
         $laborSum = (int) $delivered->sum('labor_cost');
         $partsSum = (int) $delivered->sum('parts_cost');
+        $billedSum = (int) $delivered->sum('total_amount');
+        $paidSum = (int) $delivered->sum('paid_amount');
         $commissionSum = (int) round($laborSum * ((float) $technician->commission_percent) / 100);
 
         $inHand = Reception::query()
@@ -514,16 +665,55 @@ class ReportController extends Controller
             ->latest('id')
             ->get();
 
+        $pendingExit = Reception::query()
+            ->with('customer')
+            ->where('technician_id', $technician->id)
+            ->where('status', 'ready')
+            ->latest('id')
+            ->get();
+
+        $workshopOpen = Reception::query()
+            ->with('customer')
+            ->where('technician_id', $technician->id)
+            ->whereIn('status', ['received', 'repairing', 'waiting_part'])
+            ->latest('id')
+            ->get();
+
+        $unrepairableOpen = Reception::query()
+            ->with('customer')
+            ->where('technician_id', $technician->id)
+            ->where('status', 'unrepairable')
+            ->latest('id')
+            ->get();
+
+        $unrepairableExited = Reception::query()
+            ->with('customer')
+            ->where('technician_id', $technician->id)
+            ->where('status', 'delivered')
+            ->whereDate('delivered_at', '>=', $from)
+            ->whereDate('delivered_at', '<=', $to)
+            ->whereHas('statusLogs', fn ($logs) => $logs->where('to_status', 'unrepairable'))
+            ->latest('delivered_at')
+            ->get();
+
         $partsUsed = ReceptionPart::query()
             ->select('part_name', DB::raw('SUM(quantity) as qty'), DB::raw('SUM(total_price) as amount'))
-            ->whereHas('reception', function ($q) use ($technician, $from, $to) {
-                $q->where('technician_id', $technician->id)
-                    ->whereDate('created_at', '>=', $from)
-                    ->whereDate('created_at', '<=', $to);
+            ->whereHas('reception', fn ($q) => $q->where('technician_id', $technician->id))
+            ->where(function ($q) use ($from, $to) {
+                $q->where(function ($inner) use ($from, $to) {
+                    $inner->whereDate('used_at', '>=', $from)->whereDate('used_at', '<=', $to);
+                })->orWhere(function ($inner) use ($from, $to) {
+                    $inner->whereNull('used_at')
+                        ->whereHas('reception', function ($r) use ($from, $to) {
+                            $r->whereDate('created_at', '>=', $from)->whereDate('created_at', '<=', $to);
+                        });
+                });
             })
             ->groupBy('part_name')
             ->orderByDesc('qty')
             ->get();
+
+        $partsUsedTotal = (int) $partsUsed->sum('amount');
 
         $handoffs = DeviceHandoff::query()
             ->where('to_technician_id', $technician->id)
@@ -542,7 +732,7 @@ class ReportController extends Controller
             $chartStatusValues[] = (int) $count;
         }
 
-        $daily = $jobs->groupBy(fn ($r) => optional($r->created_at)->toDateString())
+        $daily = $delivered->groupBy(fn ($r) => optional($r->delivered_at)->toDateString())
             ->map->count()
             ->sortKeys();
 
@@ -550,9 +740,39 @@ class ReportController extends Controller
             ->filter(fn ($r) => $r->received_at && $r->delivered_at)
             ->avg(fn ($r) => $r->received_at->diffInHours($r->delivered_at) / 24);
 
+        $periodSummary = app(TechnicianPeriodSummary::class);
+        $workSplit = $periodSummary->forTechnicians([$technician->id], $from, $to)[(int) $technician->id] ?? [];
+        $pricedOpen = $periodSummary->openReceipts((int) $technician->id, $from, $to);
+        $workLine = (string) ($workSplit['line'] ?? '');
+        $workCount = (int) ($workSplit['work_count'] ?? 0);
+        $workExpense = (int) ($workSplit['expense'] ?? 0);
+        $exitAmount = (int) ($workSplit['exit_amount'] ?? 0);
+        $exitParts = (int) ($workSplit['exit_parts'] ?? 0);
+
+        $breakdown = [
+            'parts_expense' => $partsUsedTotal,
+            'repaired_billed' => $billedSum,
+            'repaired_labor' => $laborSum,
+            'repaired_parts' => $partsSum,
+            'repaired_paid' => $paidSum,
+            'pending_exit_count' => $pendingExit->count(),
+            'pending_exit_sum' => (int) $pendingExit->sum(fn ($r) => (int) $r->labor_cost + (int) $r->parts_cost),
+            'workshop_count' => $workshopOpen->count(),
+            'workshop_sum' => (int) $workshopOpen->sum(fn ($r) => (int) $r->labor_cost + (int) $r->parts_cost),
+            'unrepairable_open' => $unrepairableOpen->count(),
+            'unrepairable_exited' => $unrepairableExited->count(),
+            'work_count' => $workCount,
+            'work_expense' => $workExpense,
+            'exit_amount' => $exitAmount,
+            'exit_parts' => $exitParts,
+        ];
+
         return view('reports.technician-show', compact(
             'technician', 'from', 'to', 'jobs', 'delivered', 'laborSum', 'partsSum',
-            'commissionSum', 'inHand', 'partsUsed', 'handoffs', 'byStatus', 'statusLabels',
+            'billedSum', 'paidSum', 'commissionSum', 'inHand', 'partsUsed', 'partsUsedTotal',
+            'pendingExit', 'workshopOpen', 'unrepairableOpen', 'unrepairableExited',
+            'pricedOpen', 'workLine', 'workCount', 'workExpense', 'exitAmount', 'exitParts',
+            'handoffs', 'byStatus', 'statusLabels', 'breakdown',
             'chartStatusLabels', 'chartStatusValues', 'daily', 'avgDays'
         ));
     }

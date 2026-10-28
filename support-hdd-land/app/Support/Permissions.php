@@ -21,6 +21,7 @@ class Permissions
         'reports.custody' => 'گزارش ارجاع / محل دستگاه',
         'reports.payments' => 'گزارش صندوق و دریافت‌ها',
         'reports.technicians' => 'گزارش عملکرد تعمیرکاران',
+        'reports.staff_monthly' => 'گزارش ماهانه کارکنان (مدیر)',
         'reports.customers' => 'گزارش کاربران',
         'reports.parts' => 'گزارش کالای خرج‌شده',
         'reports.sms' => 'گزارش پیامک',
@@ -89,20 +90,30 @@ class Permissions
             'admin' => array_keys(self::ALL),
             'receptionist' => [
                 'dashboard', 'receptions', 'handoffs', 'notifications', 'daily_logs', 'customers', 'parts', 'sms.statuses',
-                'reports.operations', 'reports.custody', 'reports.sms', 'reports.messages', 'profile',
+                'reports.operations', 'reports.custody', 'reports.payments', 'reports.technicians',
+                'reports.customers', 'reports.parts', 'reports.sms', 'reports.messages', 'profile',
             ],
             'technician' => [
                 'dashboard', 'receptions', 'handoffs', 'notifications', 'daily_logs', 'parts',
-                'reports.custody', 'reports.technicians', 'profile',
+                'reports.custody', 'reports.technicians', 'reports.operations', 'reports.parts', 'profile',
             ],
             'accountant' => [
                 'dashboard', 'receptions', 'handoffs', 'notifications',
                 'reports.accounting', 'reports.operations', 'reports.payments',
-                'reports.technicians', 'reports.customers', 'reports.parts', 'reports.custody',
+                'reports.technicians', 'reports.staff_monthly', 'reports.customers', 'reports.parts', 'reports.custody',
                 'customers', 'daily_logs', 'profile',
             ],
             'intern' => ['dashboard', 'daily_logs', 'notifications', 'profile'],
-            default => ['dashboard', 'notifications', 'daily_logs', 'profile'],
+            // نقش «کارمند»: گزارش‌های عملیاتی پیش‌فرض روشن — مدیر می‌تواند از کارتابل کم/زیاد کند
+            'employee' => [
+                'dashboard', 'notifications', 'daily_logs', 'receptions', 'handoffs',
+                'reports.operations', 'reports.custody', 'reports.technicians', 'reports.parts',
+                'reports.customers', 'reports.sms', 'reports.messages', 'profile',
+            ],
+            default => [
+                'dashboard', 'notifications', 'daily_logs', 'receptions', 'handoffs',
+                'reports.operations', 'reports.custody', 'reports.technicians', 'reports.parts', 'profile',
+            ],
         };
     }
 

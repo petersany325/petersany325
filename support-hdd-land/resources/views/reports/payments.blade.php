@@ -12,9 +12,28 @@
     <div class="stats stats-compact">
         <div class="stat"><div class="label">دریافت دوره</div><div class="value">{{ toman((int) $totalIn) }}</div></div>
         <div class="stat"><div class="label">عودت</div><div class="value">{{ toman((int) $totalRefund) }}</div></div>
-        <div class="stat"><div class="label">خالص</div><div class="value">{{ toman((int) $totalIn - (int) $totalRefund) }}</div></div>
+        <div class="stat"><div class="label">خالص صندوق</div><div class="value">{{ toman((int) ($totalNet ?? ($totalIn - $totalRefund))) }}</div></div>
     </div>
 </div>
+
+@if(!empty($reconciliation))
+<div class="panel" style="margin-bottom:12px;">
+    <h3 style="margin-top:0;">تطبیق درآمد تحویل با صندوق</h3>
+    <p class="muted" style="margin-top:0;font-size:12px;">اختلاف طبیعی است اگر پیش‌دریافت قبل از بازه باشد یا بدهی بعداً وصول شود.</p>
+    <div class="table-wrap">
+        <table class="compact-table">
+            <tbody>
+            <tr><td>جمع قبض‌های تحویل‌شده (بهای فروش)</td><td>{{ toman((int) $reconciliation['billed_delivered']) }}</td></tr>
+            <tr><td>اجرت تحویل‌شده</td><td>{{ toman((int) $reconciliation['labor_delivered']) }}</td></tr>
+            <tr><td>قطعات روی قبض تحویل</td><td>{{ toman((int) $reconciliation['parts_delivered']) }}</td></tr>
+            <tr><td>وصول ثبت‌شده روی همان قبض‌ها</td><td>{{ toman((int) $reconciliation['paid_on_delivered']) }}</td></tr>
+            <tr><td>خالص صندوق دوره (پرداخت‌ها − عودت)</td><td>{{ toman((int) $reconciliation['cash_collected']) }}</td></tr>
+            <tr><td><strong>اختلاف بهای فروش با صندوق</strong></td><td><strong>{{ toman((int) $reconciliation['gap_billed_vs_cash']) }}</strong></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+@endif
 
 @if(\App\Support\ReportSettings::showCharts())
 <div class="report-charts-row" style="margin-bottom:12px;">

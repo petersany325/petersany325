@@ -197,6 +197,7 @@ class Reception extends Model
             ->whereIn('status', ['draft', 'pending_approval', 'approved', 'waived'])
             ->sum('amount');
         $total = $partsCost + $stagesCost + (int) $this->labor_cost + (int) $this->admission_fee - (int) $this->discount;
+        // Refund payments are stored as negative amounts, so SUM is already net paid.
         $paid = (int) $this->payments()->sum('amount');
 
         $this->forceFill([
@@ -219,11 +220,52 @@ class Reception extends Model
         return $prefix.'-'.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
     }
 
+    /**
+     * Per-install receipt prefix (e.g. T-20N for one shop, R for others).
+     */
+    public static function receiptPrefix(): string
+    {
+        $configured = trim((string) AppSetting::getValue('receipt_prefix', ''));
+        if ($configured !== '') {
+            return self::normalizeReceiptPrefix($configured);
+        }
+
+        $base = method_exists(static::class, 'withTrashed') ? static::withTrashed() : static::query();
+        if ((clone $base)->where('receipt_no', 'like', 'T-20N%')->exists()) {
+            return 'T-20N';
+        }
+
+        return 'R';
+    }
+
+    public static function normalizeReceiptPrefix(string $prefix): string
+    {
+        $prefix = trim($prefix);
+        $prefix = preg_replace('/[^A-Za-z0-9\-]/', '', $prefix) ?? '';
+        $prefix = strtoupper(substr($prefix, 0, 12));
+
+        return $prefix !== '' ? $prefix : 'R';
+    }
+
     public static function nextReceiptNo(): string
     {
-        $last = static::orderByDesc('id')->value('receipt_no');
-        $num = $last && ctype_digit((string) $last) ? ((int) $last + 1) : 10001;
+        $prefix = self::receiptPrefix();
+        $max = 999; // next => {prefix}1000
+        $base = method_exists(static::class, 'withTrashed') ? static::withTrashed() : static::query();
 
-        return (string) $num;
+        $dbMax = (int) ((clone $base)
+            ->where('receipt_no', 'like', $prefix.'%')
+            ->selectRaw('MAX(CAST(SUBSTRING(receipt_no, ?) AS UNSIGNED)) as m', [strlen($prefix) + 1])
+            ->value('m') ?? 0);
+
+        $seq = max($max, $dbMax) + 1;
+        for ($i = 0; $i < 50; $i++) {
+            $candidate = $prefix.($seq + $i);
+            if (! (clone $base)->where('receipt_no', $candidate)->exists()) {
+                return $candidate;
+            }
+        }
+
+        return $prefix.$seq.'R'.random_int(10, 99);
     }
 }

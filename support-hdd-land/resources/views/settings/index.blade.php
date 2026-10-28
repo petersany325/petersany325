@@ -728,6 +728,22 @@
                     <p class="hint" style="margin-top:6px;">اجرای اجباری تست: <code dir="ltr">{{ $backupCronUrl }}&amp;force=1</code></p>
                 </div>
 
+                <div class="panel" style="margin-bottom:10px;">
+                    <h3 style="margin-top:0;">کرون SMS عملکرد ماهانه تعمیرکاران</h3>
+                    <p class="muted" style="margin:0 0 6px;">
+                        روز اول هر ماه عملکرد ماه قبل را برای تعمیرکاران پیامک می‌کند (همان توکن بکاپ).
+                        در cPanel یک Cron روزانه (مثلاً ساعت ۸ صبح) روی این آدرس بگذارید؛ فقط روز ۱ واقعاً ارسال می‌کند.
+                    </p>
+                    <div class="accept-row accept-row-2">
+                        <div style="grid-column:1/-1">
+                            <label>دستور پیشنهادی Cron</label>
+                            <input type="text" readonly dir="ltr" style="text-align:left;font-family:monospace;font-size:11px;"
+                                   value="curl -fsS '{{ $staffMonthlySmsCronUrl ?? ($backupCronUrl ? str_replace('/cron/backup', '/cron/staff-monthly-sms', $backupCronUrl) : '') }}'">
+                        </div>
+                    </div>
+                    <p class="hint" style="margin-top:6px;">تست اجباری: <code dir="ltr">{{ ($staffMonthlySmsCronUrl ?? '') }}&amp;force=1</code></p>
+                </div>
+
                 <div class="actions">
                     <button class="btn btn-primary" type="submit">ذخیره تنظیمات بکاپ</button>
                     <button class="btn btn-secondary" form="backup-upload-clouds-now" type="submit">ساخت بکاپ و آپلود به کلودها الآن</button>
