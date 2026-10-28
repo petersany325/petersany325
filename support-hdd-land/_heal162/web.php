@@ -173,6 +173,13 @@ Route::middleware('guest')->group(function () {
     Route::post('/login/otp/verify', [AuthController::class, 'verifyOtp'])->name('login.otp.verify');
 });
 
+// لینک یک‌بارمصرف حضور از SMS — بدون لاگین
+Route::middleware('throttle:30,1')->prefix('attendance')->name('attendance.')->group(function () {
+    Route::get('l/{token}', [AttendanceController::class, 'showPunchLink'])->name('link.show');
+    Route::post('l/{token}', [AttendanceController::class, 'submitPunchLink'])->name('link.submit');
+    Route::get('l/{token}/photo', [AttendanceController::class, 'punchLinkPhoto'])->name('link.photo');
+});
+
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
@@ -386,19 +393,32 @@ Route::middleware('auth')->group(function () {
         Route::post('staff-sms/templates', [StaffSmsTemplateController::class, 'update'])->name('staff-sms.templates.save');
     });
 
-    Route::middleware(EnsurePermission::class.':employees')->prefix('attendance')->name('attendance.')->group(function () {
-        Route::get('manage', function () {
-            if (! class_exists(AttendanceController::class)) {
-                return redirect()->route('employees.index');
-            }
-            return app(AttendanceController::class)->manage(request());
-        })->name('manage');
-        Route::get('/', function () {
-            if (! class_exists(AttendanceController::class)) {
-                return redirect()->route('employees.index');
-            }
-            return app(AttendanceController::class)->index(request());
-        })->name('index');
+    Route::middleware(EnsurePermission::class.':attendance')->prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('onboard', [AttendanceController::class, 'onboard'])->name('onboard');
+        Route::post('onboard', [AttendanceController::class, 'onboardStore'])->name('onboard.store');
+        Route::get('/', [AttendanceController::class, 'index'])->name('index');
+        Route::post('otp', [AttendanceController::class, 'sendOtp'])->name('otp');
+        Route::post('link-sms', [AttendanceController::class, 'sendLinkSms'])->name('link-sms');
+        Route::post('punch', [AttendanceController::class, 'punch'])->name('punch');
+        Route::get('punches/{event}/photo', [AttendanceController::class, 'punchPhoto'])->name('punch-photo');
+        Route::get('my-photo', [AttendanceController::class, 'myReferencePhoto'])->name('my-photo');
+    });
+
+    Route::middleware(EnsurePermission::class.':attendance.manage')->prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('manage', [AttendanceController::class, 'manage'])->name('manage');
+        Route::get('settings', [AttendanceController::class, 'settings'])->name('settings');
+        Route::post('settings', [AttendanceController::class, 'saveSettings'])->name('settings.save');
+        Route::post('toggle-global', [AttendanceController::class, 'toggleGlobal'])->name('toggle-global');
+        Route::post('access/{user}', [AttendanceController::class, 'toggleAccess'])->name('access.toggle');
+        Route::get('geocode', [AttendanceController::class, 'geocodeSearch'])->name('geocode');
+        Route::get('reference/{user}/photo', [AttendanceController::class, 'referencePhoto'])->name('reference-photo');
+        Route::post('selfie/{user}/approve', [AttendanceController::class, 'approveSelfie'])->name('selfie.approve');
+        Route::post('selfie/{user}/reject', [AttendanceController::class, 'rejectSelfie'])->name('selfie.reject');
+    });
+
+    Route::prefix('attendance')->name('attendance.')->group(function () {
+        Route::get('enroll/{user}', [AttendanceController::class, 'enrollForm'])->name('enroll');
+        Route::post('enroll/{user}', [AttendanceController::class, 'enrollStore'])->name('enroll.store');
     });
 
     Route::post('reports/settings', [ReportController::class, 'saveSettings'])->name('reports.settings');
