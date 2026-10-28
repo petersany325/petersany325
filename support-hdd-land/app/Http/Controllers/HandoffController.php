@@ -8,6 +8,7 @@ use App\Models\ReceptionWorkReport;
 use App\Models\Technician;
 use App\Services\ReceptionCustodyGate;
 use App\Services\ReceptionLifecycleService;
+use App\Services\SmsNotificationService;
 use App\Services\StaffNotifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -61,7 +62,10 @@ class HandoffController extends Controller
             }
 
             if ($ticket !== '') {
-                $inHandQuery->where('ticket_no', 'like', '%'.$ticket.'%');
+                $inHandQuery->where(function ($inner) use ($ticket) {
+                    $inner->where('ticket_no', 'like', '%'.$ticket.'%')
+                        ->orWhere('receipt_no', 'like', '%'.$ticket.'%');
+                });
             }
             if ($serial !== '') {
                 $inHandQuery->where('serial_number', 'like', '%'.$serial.'%');
@@ -69,6 +73,7 @@ class HandoffController extends Controller
             if ($q !== '') {
                 $inHandQuery->where(function ($inner) use ($q) {
                     $inner->where('ticket_no', 'like', '%'.$q.'%')
+                        ->orWhere('receipt_no', 'like', '%'.$q.'%')
                         ->orWhere('serial_number', 'like', '%'.$q.'%')
                         ->orWhere('product_name', 'like', '%'.$q.'%')
                         ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('phone', 'like', '%'.$q.'%'));
@@ -128,7 +133,10 @@ class HandoffController extends Controller
     private function applyHandoffSearch($query, string $ticket, string $serial, string $q): void
     {
         if ($ticket !== '') {
-            $query->whereHas('reception', fn ($r) => $r->where('ticket_no', 'like', '%'.$ticket.'%'));
+            $query->whereHas('reception', function ($r) use ($ticket) {
+                $r->where('ticket_no', 'like', '%'.$ticket.'%')
+                    ->orWhere('receipt_no', 'like', '%'.$ticket.'%');
+            });
         }
         if ($serial !== '') {
             $query->where(function ($inner) use ($serial) {
@@ -142,6 +150,7 @@ class HandoffController extends Controller
                     ->orWhere('note', 'like', '%'.$q.'%')
                     ->orWhereHas('reception', function ($r) use ($q) {
                         $r->where('ticket_no', 'like', '%'.$q.'%')
+                            ->orWhere('receipt_no', 'like', '%'.$q.'%')
                             ->orWhere('serial_number', 'like', '%'.$q.'%')
                             ->orWhere('product_name', 'like', '%'.$q.'%')
                             ->orWhereHas('customer', fn ($c) => $c->where('name', 'like', '%'.$q.'%')->orWhere('phone', 'like', '%'.$q.'%'));
@@ -257,10 +266,15 @@ class HandoffController extends Controller
         $user = $request->user();
         $tech = $user->technician;
         $owns = $tech && (int) $reception->custody_technician_id === (int) $tech->id;
-        abort_unless($owns || $user->isAdmin(), 403);
+        // مدیر از فرم «مدیریت مستقیم تعمیر» گزارش می‌نویسد، حتی اگر دستگاه دست تعمیرکار نباشد.
+        $directAdmin = $user->isAdmin();
+        abort_unless($owns || $directAdmin, 403);
 
-        if (($reception->custody ?? '') !== 'with_technician') {
-            return back()->withErrors(['summary' => 'گزارش کار فقط وقتی دستگاه نزد تعمیرکار است ثبت می‌شود.']);
+        if (! $directAdmin && ($reception->custody ?? '') !== 'with_technician') {
+            return back()->withErrors(['summary' => 'گزارش کار فقط وقتی دستگاه نزد تعمیرکار است ثبت می‌شود. از کارتابل ارجاع استفاده کنید.']);
+        }
+        if ($reception->isDelivered()) {
+            return back()->withErrors(['summary' => 'قبض تحویل‌شده قفل است. ابتدا لغو تحویل بزنید.']);
         }
 
         $data = $request->validate([
@@ -268,6 +282,8 @@ class HandoffController extends Controller
             'details' => ['nullable', 'string', 'max:5000'],
             'needs_part' => ['nullable', 'boolean'],
             'result_status' => ['nullable', 'in:repairing,waiting_part,ready,unrepairable'],
+            'visibility' => ['nullable', 'in:private,internal,public'],
+            'send_sms' => ['nullable', 'boolean'],
         ]);
 
         $report = ReceptionWorkReport::query()->create([
@@ -278,11 +294,15 @@ class HandoffController extends Controller
             'details' => $data['details'] ?? null,
             'needs_part' => $request->boolean('needs_part'),
             'result_status' => $data['result_status'] ?? null,
+            'visibility' => $data['visibility'] ?? 'internal',
         ]);
 
         if (! empty($data['result_status']) && $reception->status !== 'delivered') {
             $from = $reception->status;
             $reception->forceFill(['status' => $data['result_status']])->save();
+            if (in_array($data['result_status'], ['unrepairable', 'cancelled'], true) && ! $reception->hasCostSet()) {
+                $reception->confirmCost();
+            }
             app(ReceptionLifecycleService::class)->log(
                 $reception,
                 $data['result_status'],
@@ -291,11 +311,29 @@ class HandoffController extends Controller
                 'گزارش کار تعمیرکار',
                 $data['summary']
             );
+
+            // پیامک مشتری هنگام تغییر وضعیت از کارتابل تعمیرکار (پیش‌فرض: ارسال)
+            $sendSms = $request->boolean('send_sms', true);
+            if ($sendSms) {
+                try {
+                    $smsResult = app(SmsNotificationService::class)->sendOnStatusChange(
+                        $reception->fresh(['customer', 'technician']),
+                        $data['result_status'],
+                        true
+                    );
+                    if ($smsResult && ! ($smsResult['ok'] ?? false) && empty($smsResult['skipped'])) {
+                        // keep work report success; surface SMS note
+                        session()->flash('error', 'گزارش ثبت شد ولی پیامک مشتری: '.($smsResult['message'] ?? 'ناموفق'));
+                    }
+                } catch (\Throwable $e) {
+                    session()->flash('error', 'گزارش ثبت شد ولی ارسال پیامک مشتری خطا داد.');
+                }
+            }
         }
 
-        if ($tech && trim((string) ($data['summary'] ?? '')) !== '') {
+        if (($tech || $directAdmin) && trim((string) ($data['summary'] ?? '')) !== '') {
             $notes = trim((string) $reception->technician_notes);
-            $line = '['.now('Asia/Tehran')->format('Y-m-d H:i').'] '.$data['summary'];
+            $line = '['.jalali_like(now('Asia/Tehran')).'] '.$data['summary'];
             $reception->forceFill([
                 'technician_notes' => $notes === '' ? $line : ($notes."\n".$line),
             ])->save();
