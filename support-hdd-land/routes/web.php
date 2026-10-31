@@ -200,6 +200,15 @@ Route::middleware('auth')->group(function () {
         Route::post('/profile', [ProfileController::class, 'updateProfile'])->name('profile.update');
         Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password');
     });
+    // میانبرهای شخصی. نام مسیر باید باشد حتی اگر متد روی نصب قدیمی نباشد،
+    // چون چیدمان مشتری route('profile.shortcuts') را موقع رندر صدا می‌زند.
+    Route::post('/profile/shortcuts', function (\Illuminate\Http\Request $request) {
+        if (! method_exists(\App\Http\Controllers\ProfileController::class, 'updateShortcuts')) {
+            abort(404);
+        }
+
+        return app()->call([\App\Http\Controllers\ProfileController::class, 'updateShortcuts']);
+    })->name('profile.shortcuts');
 
     // Shared customer name suggest (reception / delivery / blacklist) — ACL inside controller
     Route::get('customers/suggest', [CustomerController::class, 'suggest'])->name('customers.suggest');
