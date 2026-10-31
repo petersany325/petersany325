@@ -125,15 +125,23 @@ Route::post('/a/{token}/reject', [\App\Http\Controllers\CostApprovalController::
 Route::get('/payments/zarinpal/callback/{trx}', [ZarinPalController::class, 'callback'])
     ->name('payments.zarinpal.callback');
 
-Route::get('/cron/backup', BackupCronController::class)
-    ->middleware('throttle:30,1')
-    ->name('cron.backup');
-Route::get('/cron/staff-monthly-sms', StaffMonthlySmsCronController::class)
-    ->middleware('throttle:30,1')
-    ->name('cron.staff-monthly-sms');
-Route::get('/cron/installments', InstallmentCronController::class)
-    ->middleware('throttle:60,1')
-    ->name('cron.installments');
+// Invokable controllers are resolved while routes load. A missing class
+// used to throw and return HTTP 500 for every URL, including /login and /up.
+if (class_exists(BackupCronController::class)) {
+    Route::get('/cron/backup', BackupCronController::class)
+        ->middleware('throttle:30,1')
+        ->name('cron.backup');
+}
+if (class_exists(StaffMonthlySmsCronController::class)) {
+    Route::get('/cron/staff-monthly-sms', StaffMonthlySmsCronController::class)
+        ->middleware('throttle:30,1')
+        ->name('cron.staff-monthly-sms');
+}
+if (class_exists(InstallmentCronController::class)) {
+    Route::get('/cron/installments', InstallmentCronController::class)
+        ->middleware('throttle:60,1')
+        ->name('cron.installments');
+}
 
 Route::prefix('cartable')->name('portal.')->group(function () {
     Route::get('/', [PortalAuthController::class, 'showLogin'])->name('login');
