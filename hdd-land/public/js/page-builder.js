@@ -175,6 +175,11 @@
     } else if (block.type === "works") {
       fields.push(field("عنوان", "title", block.title));
       fields.push(itemsEditor(block.items || [], ["title", "cat", "url", "image"]));
+    } else if (block.type === "gallery") {
+      fields.push(field("کیکر", "kicker", block.kicker));
+      fields.push(field("عنوان", "title", block.title));
+      fields.push(field("متن", "text", block.text, "textarea"));
+      fields.push(itemsEditor(block.items || [], ["title", "text", "image"]));
     }
     fields.forEach(function (el) { card.appendChild(el); });
     card.collect = function () {
@@ -212,6 +217,7 @@
       steps: "مراحل",
       stats: "آمار",
       works: "نمونه کار",
+      gallery: "گالری نرم‌افزار",
       cta: "دعوت به اقدام"
     })[type] || type;
   }

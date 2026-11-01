@@ -345,11 +345,14 @@ class StudioPageCatalog
             }
             $ai = $row['ai'] ?? [];
             $buy = $row['buy'] ?? [];
+            $heroImage = (($row['slug'] ?? '') === 'corporate' && class_exists(\App\Support\StudioSoftwareShots::class))
+                ? \App\Support\StudioSoftwareShots::heroImage()
+                : '';
             $blocks = [
-                self::hero((string) ($row['kicker'] ?? 'حسابداری کامپیوتر'), $row['title'], (string) ($row['lead'] ?? $row['short'] ?? ''), '', 'درخواست مشاوره و دمو', '/contact', 'همه حسابداری‌های کامپیوتر', '/computer-accounting'),
-                self::list('نقاط قوت این نسخه', $row['highlights'] ?? []),
-                self::rich($row['title'].' چیست و چه کاری انجام می‌دهد؟', $body.(class_exists(StudioAccountingCopy::class) ? "\n\n".StudioAccountingCopy::sqlNote() : '')),
+                self::hero((string) ($row['kicker'] ?? 'حسابداری کامپیوتر'), $row['title'], (string) ($row['lead'] ?? $row['short'] ?? ''), $heroImage, 'درخواست مشاوره و دمو', '/contact', 'همه حسابداری‌های کامپیوتر', '/computer-accounting'),
             ];
+            $blocks[] = self::list('نقاط قوت این نسخه', $row['highlights'] ?? []);
+            $blocks[] = self::rich($row['title'].' چیست و چه کاری انجام می‌دهد؟', $body.(class_exists(StudioAccountingCopy::class) ? "\n\n".StudioAccountingCopy::sqlNote() : ''));
             if (! empty($ai) || class_exists(StudioAccountingCopy::class)) {
                 $aiLead = (string) ($ai['lead'] ?? (class_exists(StudioAccountingCopy::class) ? StudioAccountingCopy::aiNote() : ''));
                 if (! empty($row['focus'])) {
@@ -388,6 +391,9 @@ class StudioPageCatalog
                 $blocks[] = self::cards('حسابداری کامپیوتر برای صنوف دیگر', $others);
             }
             $blocks[] = self::cta('دمو این نسخه', 'روی SQL Server 2022 و گردش کار همان کسب‌وکار شما.', 'تماس با ما', '/contact');
+            if (($row['slug'] ?? '') === 'corporate' && class_exists(\App\Support\StudioSoftwareShots::class)) {
+                $blocks = \App\Support\StudioSoftwareShots::applyToBlocks($blocks);
+            }
             $out[] = self::spec('/computer-accounting/'.$row['slug'], 'acc-'.$row['slug'], $row['title'], $row['title'], 'حسابداری کامپیوتر', [
                 'seo_title' => (string) ($row['seo_title'] ?? $row['title']),
                 'seo_description' => (string) ($row['seo_description'] ?? ($row['short'] ?? '')),

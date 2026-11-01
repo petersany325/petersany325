@@ -59,6 +59,32 @@ class PageBuilder
     public static function ensureReady(): void
     {
         self::seedStudioPages();
+        self::syncCorporateShots();
+    }
+
+    protected static function syncCorporateShots(): void
+    {
+        if (! class_exists(\App\Support\StudioSoftwareShots::class)) {
+            $file = base_path('app/Support/StudioSoftwareShots.php');
+            if (is_file($file)) {
+                try {
+                    require_once $file;
+                } catch (\Throwable) {
+                    return;
+                }
+            }
+        }
+        if (! class_exists(\App\Support\StudioSoftwareShots::class)) {
+            return;
+        }
+        $page = self::findByPath(\App\Support\StudioSoftwareShots::CORPORATE_PATH);
+        if ($page === null) {
+            return;
+        }
+        $merged = \App\Support\StudioSoftwareShots::mergeInto($page);
+        if (json_encode($merged['blocks'] ?? []) !== json_encode($page['blocks'] ?? [])) {
+            self::save($merged);
+        }
     }
 
     public static function seedStudioPages(): void

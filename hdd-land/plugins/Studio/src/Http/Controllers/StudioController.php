@@ -339,6 +339,9 @@ JS;
             if ($page === null && preg_match('#^/sites/repair-shop/m/([^/]+)$#', $lookup, $m)) {
                 $page = PageBuilder::findPublishedByPath('/repair-shop/m/'.$m[1]);
             }
+            if ($page !== null && class_exists(\App\Support\StudioSoftwareShots::class)) {
+                $page = \App\Support\StudioSoftwareShots::mergeInto($page);
+            }
 
             return $page;
         } catch (\Throwable) {

@@ -10,6 +10,13 @@
   color: #eef2ff;
 }
 .ag-wrap{width:min(1180px,calc(100% - 2.2rem));margin-inline:auto}
+.pb-hero__grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.9fr);gap:1.4rem;align-items:center}
+.pb-hero__media img{width:100%;height:auto;max-height:420px;object-fit:contain;background:#fff;display:block}
+.pb-card-img{width:100%;height:auto;max-height:150px;object-fit:contain;background:#fff;margin-bottom:.7rem;border-radius:12px;display:block}
+.pb-shot{margin:0;background:#101628;border:1px solid rgba(255,255,255,.08);border-radius:18px;overflow:hidden}
+.pb-shot__bar{display:flex;gap:6px;align-items:center;height:28px;padding:0 12px;background:#1a2348}
+.pb-shot__bar i{width:8px;height:8px;border-radius:50%;background:#4b5568}
+.pb-shot__bar i:first-child{background:#f59e0b}
 .ag-head{position:sticky;top:0;z-index:30;background:rgba(7,11,24,.82);backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,.06)}
 .ag-head__bar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.9rem 0}
 .ag-brand{display:flex;align-items:center;gap:.55rem;text-decoration:none;color:#fff;flex:0 1 auto;min-width:0}
@@ -251,11 +258,11 @@
   .ag-head__bar{flex-wrap:wrap}
   .ag-brand > span{white-space:normal;max-width:15rem}
   .ag-brand b{font-size:.82rem}
-  .ag-hero__grid,.ag-cards,.ag-stats,.ag-works__grid,.ag-menu-grid,.ag-drop__panel,.ag-steps{grid-template-columns:1fr 1fr}
+  .ag-hero__grid,.pb-hero__grid,.ag-cards,.ag-stats,.ag-works__grid,.ag-menu-grid,.ag-drop__panel,.ag-steps{grid-template-columns:1fr 1fr}
   .ag-scene{min-height:240px}
 }
 @media (max-width:700px){
-  .ag-hero__grid,.ag-cards,.ag-stats,.ag-works__grid,.ag-menu-grid,.ag-menu-grid--3,.ag-drop__panel,.ag-list,.ag-steps{grid-template-columns:1fr}
+  .ag-hero__grid,.pb-hero__grid,.ag-cards,.ag-stats,.ag-works__grid,.ag-menu-grid,.ag-menu-grid--3,.ag-drop__panel,.ag-list,.ag-steps{grid-template-columns:1fr}
   .ag-page h1{font-size:1.32rem}
   .ag-sec h2{font-size:1.05rem}
   .ag-laptop,.ag-house{position:relative;width:80%;right:auto;left:auto;top:auto;bottom:auto;margin:.4rem auto}
