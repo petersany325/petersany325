@@ -6,57 +6,35 @@ class StudioSoftwareShots
 {
     public const CORPORATE_PATH = '/computer-accounting/corporate';
 
-    public const GALLERY_ID = 'hesab-corporate-shots';
+    public const HERO = 'images/studio/hesab-corporate/desk.jpg';
+
+    /** @return array<string, mixed> */
+    public static function pair(string $key): array
+    {
+        $row = self::pairs()[$key] ?? null;
+        if ($row === null) {
+            return [];
+        }
+
+        return [
+            'type' => 'gallery',
+            'layout' => 'pair',
+            'id' => 'hesab-corporate-'.$key,
+            'kicker' => $row['kicker'],
+            'title' => $row['title'],
+            'text' => $row['text'],
+            'items' => [[
+                'image' => $row['image'],
+                'title' => $row['title'],
+                'text' => $row['text'],
+                'wide' => true,
+            ]],
+        ];
+    }
 
     public static function heroImage(): string
     {
-        return 'images/studio/hesab-corporate/desk.jpg';
-    }
-
-    /** @return list<array{image:string,title:string,text:string,wide?:bool}> */
-    public static function corporateItems(): array
-    {
-        return [
-            [
-                'image' => 'images/studio/hesab-corporate/desk.jpg',
-                'title' => 'میز کار سال مالی ۱۴۰۵',
-                'text' => 'پیشخوان حسابداری شرکتی: فروش، موجودی، بدهکار، سود و دسترسی سریع به فاکتور و سند.',
-                'wide' => true,
-            ],
-            [
-                'image' => 'images/studio/hesab-corporate/docs.jpg',
-                'title' => 'صدور سند و فاکتور',
-                'text' => 'منوی اسناد: فاکتور فروش، خدمات، دریافت و میانبرهای حسابدار.',
-            ],
-            [
-                'image' => 'images/studio/hesab-corporate/stock.jpg',
-                'title' => 'انبار و کالا',
-                'text' => 'کاردکس، معرفی کالا و چند انبار روی همان دفتر شرکتی.',
-            ],
-            [
-                'image' => 'images/studio/hesab-corporate/ai.jpg',
-                'title' => 'دستیار هوشمند آفلاین',
-                'text' => 'گفتگو با دفتر، موجودی و بدهکاران — روی سیستم شما، بدون ارسال داده به اینترنت.',
-            ],
-            [
-                'image' => 'images/studio/hesab-corporate/editions.jpg',
-                'title' => 'نسخه شرکتی از همان دفتر',
-                'text' => 'حسابداری شرکتی یکی از نسخه‌های HesabHDD است؛ کدینگ و سند مشترک می‌ماند.',
-            ],
-        ];
-    }
-
-    /** @return array<string, mixed> */
-    public static function galleryBlock(): array
-    {
-        return [
-            'type' => 'gallery',
-            'id' => self::GALLERY_ID,
-            'kicker' => 'محیط واقعی نرم‌افزار',
-            'title' => 'عکس حسابداری شرکتی HesabHDD',
-            'text' => 'همین نرم‌افزار نصب می‌شود. فیلتر تبلیغاتی روی عکس نیست؛ نوار ویندوز بریده شده تا خود میز کار دیده شود.',
-            'items' => self::corporateItems(),
-        ];
+        return self::HERO;
     }
 
     /**
@@ -71,38 +49,170 @@ class StudioSoftwareShots
         if ($path !== self::CORPORATE_PATH) {
             return $page;
         }
-
-        $blocks = array_values(is_array($page['blocks'] ?? null) ? $page['blocks'] : []);
-        $gallery = self::galleryBlock();
-        $hero = self::heroImage();
-
-        if ($blocks !== [] && ($blocks[0]['type'] ?? '') === 'hero') {
-            $current = trim((string) ($blocks[0]['image'] ?? ''));
-            if ($current === '' || ! str_contains($current, 'hesab-corporate/')) {
-                $blocks[0]['image'] = $hero;
-            }
-        }
-
-        $found = false;
-        foreach ($blocks as $i => $block) {
-            if (($block['type'] ?? '') === 'gallery' && (string) ($block['id'] ?? '') === self::GALLERY_ID) {
-                $blocks[$i] = $gallery;
-                $found = true;
-                break;
-            }
-            if (self::blockHasCorporateShot($block)) {
-                $found = true;
-                break;
-            }
-        }
-        if (! $found) {
-            $at = ($blocks !== [] && ($blocks[0]['type'] ?? '') === 'hero') ? 1 : 0;
-            array_splice($blocks, $at, 0, [$gallery]);
-        }
-
-        $page['blocks'] = $blocks;
+        $page['blocks'] = self::applyToBlocks(is_array($page['blocks'] ?? null) ? $page['blocks'] : []);
 
         return $page;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $blocks
+     * @return list<array<string, mixed>>
+     */
+    public static function applyToBlocks(array $blocks): array
+    {
+        $blocks = array_values(array_filter($blocks, static function ($block): bool {
+            if (! is_array($block)) {
+                return false;
+            }
+            $id = (string) ($block['id'] ?? '');
+            if (str_starts_with($id, 'hesab-corporate')) {
+                return false;
+            }
+            $type = (string) ($block['type'] ?? '');
+            if (in_array($type, ['gallery', 'image'], true) && self::blockHasCorporateShot($block)) {
+                return false;
+            }
+
+            return true;
+        }));
+
+        if ($blocks !== [] && ($blocks[0]['type'] ?? '') === 'hero') {
+            $blocks[0]['image'] = self::HERO;
+        }
+
+        $blocks = self::stampMenuCards($blocks);
+        $blocks = self::insertAfterTitle($blocks, 'چیست و چه کاری', self::pair('docs'));
+        $blocks = self::insertAfterTitle($blocks, 'هوش مصنوعی شرکتی', self::pair('ai'));
+        if (! self::hasId($blocks, 'hesab-corporate-ai')) {
+            $blocks = self::insertAfterTitle($blocks, 'هوش مصنوعی داخل', self::pair('ai'));
+        }
+        $blocks = self::insertBeforeTitle($blocks, 'امکانات و منو', self::pair('stock'));
+        $blocks = self::insertBeforeTitle($blocks, 'صنوف دیگر', self::pair('editions'));
+
+        return array_values($blocks);
+    }
+
+    /** @return array<string, array{kicker:string,title:string,text:string,image:string}> */
+    protected static function pairs(): array
+    {
+        return [
+            'docs' => [
+                'kicker' => 'همان متن، همان صفحه نرم‌افزار',
+                'title' => 'اسناد و دفاتر',
+                'text' => 'ثبت سند دستی و خودکار از فاکتور. دفتر روزنامه، دفتر کل، معین و تراز آزمایشی از همان اسناد ساخته می‌شود.',
+                'image' => 'images/studio/hesab-corporate/docs.jpg',
+            ],
+            'ai' => [
+                'kicker' => 'همان متن، همان صفحه نرم‌افزار',
+                'title' => 'هوش مصنوعی شرکتی — تحلیل و گفتگو آفلاین',
+                'text' => 'حسابدار می‌پرسد «چرا تراز این ماه اختلاف دارد؟» یا مدیر می‌پرسد «کدام مرکز هزینه از بودجه گذشته؟» جواب از روی همان اسناد دفتر، داخل نرم‌افزار و بدون اینترنت می‌آید.',
+                'image' => 'images/studio/hesab-corporate/ai.jpg',
+            ],
+            'stock' => [
+                'kicker' => 'همان متن، همان صفحه نرم‌افزار',
+                'title' => 'خرید و فروش بازرگانی',
+                'text' => 'پیش‌فاکتور، فاکتور، برگشت از خرید و فروش، اتصال به انبار و صدور سند حسابداری بدون ورود دوباره مبلغ.',
+                'image' => 'images/studio/hesab-corporate/stock.jpg',
+            ],
+            'editions' => [
+                'kicker' => 'همان متن، همان صفحه نرم‌افزار',
+                'title' => 'حسابداری کامپیوتر برای صنوف دیگر',
+                'text' => 'حسابداری شرکتی یکی از نسخه‌های همین دفتر است. سوپرمارکت، فروشگاه، رستوران و بقیه صفحه خودشان را دارند.',
+                'image' => 'images/studio/hesab-corporate/editions.jpg',
+            ],
+        ];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $blocks
+     * @return list<array<string, mixed>>
+     */
+    protected static function stampMenuCards(array $blocks): array
+    {
+        $map = [
+            'داشبورد مالی' => self::HERO,
+            'اسناد و دفاتر' => 'images/studio/hesab-corporate/docs.jpg',
+            'خرید و فروش بازرگانی' => 'images/studio/hesab-corporate/stock.jpg',
+            'گفتگو با دستیار مرکزی' => 'images/studio/hesab-corporate/ai.jpg',
+        ];
+        foreach ($blocks as $i => $block) {
+            if (($block['type'] ?? '') !== 'cards' || empty($block['items']) || ! is_array($block['items'])) {
+                continue;
+            }
+            foreach ($block['items'] as $j => $item) {
+                $title = trim((string) ($item['title'] ?? ''));
+                if (isset($map[$title])) {
+                    $blocks[$i]['items'][$j]['image'] = $map[$title];
+                }
+            }
+        }
+
+        return $blocks;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $blocks
+     * @param  array<string, mixed>  $insert
+     * @return list<array<string, mixed>>
+     */
+    protected static function insertAfterTitle(array $blocks, string $needle, array $insert): array
+    {
+        if ($insert === [] || self::hasId($blocks, (string) ($insert['id'] ?? ''))) {
+            return $blocks;
+        }
+        foreach ($blocks as $i => $block) {
+            if (self::titleHas($block, $needle)) {
+                array_splice($blocks, $i + 1, 0, [$insert]);
+
+                return $blocks;
+            }
+        }
+
+        return $blocks;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $blocks
+     * @param  array<string, mixed>  $insert
+     * @return list<array<string, mixed>>
+     */
+    protected static function insertBeforeTitle(array $blocks, string $needle, array $insert): array
+    {
+        if ($insert === [] || self::hasId($blocks, (string) ($insert['id'] ?? ''))) {
+            return $blocks;
+        }
+        foreach ($blocks as $i => $block) {
+            if (self::titleHas($block, $needle)) {
+                array_splice($blocks, $i, 0, [$insert]);
+
+                return $blocks;
+            }
+        }
+
+        return $blocks;
+    }
+
+    /** @param  list<array<string, mixed>>  $blocks */
+    protected static function hasId(array $blocks, string $id): bool
+    {
+        if ($id === '') {
+            return false;
+        }
+        foreach ($blocks as $block) {
+            if ((string) ($block['id'] ?? '') === $id) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @param  array<string, mixed>  $block */
+    protected static function titleHas(array $block, string $needle): bool
+    {
+        $title = (string) ($block['title'] ?? '');
+
+        return $needle !== '' && str_contains($title, $needle);
     }
 
     /** @param  array<string, mixed>  $block */

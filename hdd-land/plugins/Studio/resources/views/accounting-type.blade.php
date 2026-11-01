@@ -4,32 +4,36 @@
   $sqlNote = $sqlNote ?? ($laravelNote ?? \App\Support\StudioAccountingCopy::sqlNote());
 @endphp
 <section class="ag-page">
-  <div class="ag-wrap">
-    <p class="ag-crumb">
-      <a href="{{ url('/computer-accounting') }}">حسابداری کامپیوتر</a>
-      <span>/</span>
-      <span>{{ $industry['title'] ?? '' }}</span>
-    </p>
-    <p class="ag-kicker">{{ $industry['kicker'] ?? 'حسابداری کامپیوتر' }}</p>
-    <h1>{{ $industry['title'] ?? '' }}</h1>
-    <p class="ag-lead ag-lead--wide">{{ $industry['lead'] ?? '' }}</p>
-    <div class="ag-actions">
-      <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست مشاوره و دمو<i>←</i></a>
-      <a class="ag-btn ag-btn--line" href="{{ url('/computer-accounting') }}">→ همه حسابداری‌های کامپیوتر</a>
+  <div class="ag-wrap{{ ($industry['slug'] ?? '') === 'corporate' ? ' pb-hero__grid' : '' }}">
+    <div>
+      <p class="ag-crumb">
+        <a href="{{ url('/computer-accounting') }}">حسابداری کامپیوتر</a>
+        <span>/</span>
+        <span>{{ $industry['title'] ?? '' }}</span>
+      </p>
+      <p class="ag-kicker">{{ $industry['kicker'] ?? 'حسابداری کامپیوتر' }}</p>
+      <h1>{{ $industry['title'] ?? '' }}</h1>
+      <p class="ag-lead ag-lead--wide">{{ $industry['lead'] ?? '' }}</p>
+      <div class="ag-actions">
+        <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست مشاوره و دمو<i>←</i></a>
+        <a class="ag-btn ag-btn--line" href="{{ url('/computer-accounting') }}">→ همه حسابداری‌های کامپیوتر</a>
+      </div>
+      @if(!empty($industry['highlights']))
+        <ul class="ag-list" style="margin-top:1.1rem">
+          @foreach($industry['highlights'] as $row)
+            <li>{{ $row }}</li>
+          @endforeach
+        </ul>
+      @endif
     </div>
-    @if(!empty($industry['highlights']))
-      <ul class="ag-list" style="margin-top:1.1rem">
-        @foreach($industry['highlights'] as $row)
-          <li>{{ $row }}</li>
-        @endforeach
-      </ul>
+    @if(($industry['slug'] ?? '') === 'corporate')
+      <figure class="pb-hero__media pb-shot">
+        <div class="pb-shot__bar" aria-hidden="true"><i></i><i></i><i></i></div>
+        <img src="{{ asset(\App\Support\StudioSoftwareShots::heroImage()) }}" alt="میز کار حسابداری شرکتی" width="1412" height="1132">
+      </figure>
     @endif
   </div>
 </section>
-
-@if(($industry['slug'] ?? '') === 'corporate' && class_exists(\App\Support\StudioSoftwareShots::class))
-  @include('theme-builder::storefront.partials.gallery', ['block' => \App\Support\StudioSoftwareShots::galleryBlock()])
-@endif
 
 <section class="ag-sec" id="about">
   <div class="ag-wrap">
@@ -41,6 +45,9 @@
     <p class="ag-note">{{ $sqlNote }}</p>
   </div>
 </section>
+@if(($industry['slug'] ?? '') === 'corporate' && class_exists(\App\Support\StudioSoftwareShots::class))
+  @include('theme-builder::storefront.partials.gallery', ['block' => \App\Support\StudioSoftwareShots::pair('docs')])
+@endif
 
 @php $ai = $industry['ai'] ?? null; @endphp
 @if(!empty($ai))
@@ -65,6 +72,9 @@
     <p class="ag-note">{{ \App\Support\StudioAccountingCopy::aiNote() }}</p>
   </div>
 </section>
+@if(($industry['slug'] ?? '') === 'corporate' && class_exists(\App\Support\StudioSoftwareShots::class))
+  @include('theme-builder::storefront.partials.gallery', ['block' => \App\Support\StudioSoftwareShots::pair('ai')])
+@endif
 @endif
 
 @if(!empty($industry['buy']))
@@ -101,13 +111,28 @@
   </div>
 </section>
 
+@if(($industry['slug'] ?? '') === 'corporate' && class_exists(\App\Support\StudioSoftwareShots::class))
+  @include('theme-builder::storefront.partials.gallery', ['block' => \App\Support\StudioSoftwareShots::pair('stock')])
+@endif
+
 <section class="ag-sec" id="menus">
   <div class="ag-wrap">
     <p class="ag-kicker">منوی نرم‌افزار</p>
     <h2>امکانات و منوهای این نسخه — با توضیح هر بخش</h2>
     <div class="ag-cards ag-cards--dense">
       @foreach(($industry['menus'] ?? []) as $row)
+        @php
+          $menuShot = [
+            'داشبورد مالی' => 'images/studio/hesab-corporate/desk.jpg',
+            'اسناد و دفاتر' => 'images/studio/hesab-corporate/docs.jpg',
+            'خرید و فروش بازرگانی' => 'images/studio/hesab-corporate/stock.jpg',
+            'گفتگو با دستیار مرکزی' => 'images/studio/hesab-corporate/ai.jpg',
+          ][$row['title'] ?? ''] ?? '';
+        @endphp
         <article class="ag-card">
+          @if($menuShot !== '')
+            <img class="pb-card-img" src="{{ asset($menuShot) }}" alt="{{ $row['title'] }}" width="1412" height="900" loading="lazy">
+          @endif
           <div>
             <b>{{ $row['title'] }}</b>
             <p>{{ $row['text'] }}</p>
@@ -163,6 +188,10 @@
     </ul>
   </div>
 </section>
+@endif
+
+@if(($industry['slug'] ?? '') === 'corporate' && class_exists(\App\Support\StudioSoftwareShots::class))
+  @include('theme-builder::storefront.partials.gallery', ['block' => \App\Support\StudioSoftwareShots::pair('editions')])
 @endif
 
 <section class="ag-sec ag-sec--last" id="more">

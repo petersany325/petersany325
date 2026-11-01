@@ -199,10 +199,10 @@
 @endforeach
 <style>
 .pb-hero__grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(220px,.9fr);gap:1.4rem;align-items:center}
-.pb-hero__media img,.pb-figure img,.pb-card-img,.ag-work img{width:100%;border-radius:18px;display:block;object-fit:cover}
-.pb-hero__media img{min-height:220px;max-height:360px}
+.pb-hero__media img,.pb-figure img,.ag-work img{width:100%;border-radius:18px;display:block;object-fit:contain;background:#fff}
+.pb-hero__media img{max-height:420px}
 .pb-figure figcaption{margin-top:.5rem;color:#8e97b8;font-size:.82rem}
 .pb-html p{margin:0 0 1rem}
-.pb-card-img{height:140px;margin-bottom:.7rem}
+.pb-card-img{width:100%;height:auto;max-height:150px;object-fit:contain;background:#fff;margin-bottom:.7rem;border-radius:12px;display:block}
 @media(max-width:800px){.pb-hero__grid{grid-template-columns:1fr}}
 </style>
