@@ -27,6 +27,10 @@
   </div>
 </section>
 
+@if(($industry['slug'] ?? '') === 'corporate' && class_exists(\App\Support\StudioSoftwareShots::class))
+  @include('theme-builder::storefront.partials.gallery', ['block' => \App\Support\StudioSoftwareShots::galleryBlock()])
+@endif
+
 <section class="ag-sec" id="about">
   <div class="ag-wrap">
     <p class="ag-kicker">توضیح کامل</p>

@@ -58,6 +58,7 @@
         <button type="button" data-add="steps">مراحل</button>
         <button type="button" data-add="stats">آمار</button>
         <button type="button" data-add="works">نمونه کار</button>
+        <button type="button" data-add="gallery">گالری نرم‌افزار</button>
         <button type="button" data-add="cta">دعوت به اقدام</button>
       </div>
       <div id="pb-app"
@@ -73,5 +74,5 @@
     @endif
   </div>
 </div>
-<script src="{{ asset('js/page-builder.js') }}?v=1"></script>
+<script src="{{ asset('js/page-builder.js') }}?v=2"></script>
 @endsection

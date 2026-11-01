@@ -155,6 +155,9 @@
       </div>
     </section>
 
+  @elseif($type === 'gallery')
+    @include('theme-builder::storefront.partials.gallery', ['block' => $block, 'media' => $media])
+
   @elseif($type === 'works')
     <section class="ag-sec">
       <div class="ag-wrap">

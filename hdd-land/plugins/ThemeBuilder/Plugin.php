@@ -61,6 +61,7 @@ class Plugin extends BasePlugin
         $files = [
             __DIR__.'/src/PageBuilder.php',
             __DIR__.'/src/StudioPageCatalog.php',
+            base_path('app/Support/StudioSoftwareShots.php'),
             __DIR__.'/src/Models/BuilderPage.php',
             __DIR__.'/src/Http/Controllers/Admin/PageBuilderController.php',
             __DIR__.'/src/Http/Controllers/Storefront/PageController.php',
