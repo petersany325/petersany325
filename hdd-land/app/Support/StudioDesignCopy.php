@@ -166,22 +166,60 @@ class StudioDesignCopy
             ];
         }
 
+        $portfolio = [
+            ['label' => 'سایت‌های طراحی‌کرده‌ایم', 'url' => '/projects'],
+        ];
+        if (class_exists(StudioHomeConfig::class)) {
+            foreach (StudioHomeConfig::works() as $work) {
+                $url = (string) ($work['url'] ?? '/projects');
+                if ($url === '' || $url === '#') {
+                    $url = '/projects';
+                }
+                $portfolio[] = [
+                    'label' => (string) ($work['title'] ?? 'نمونه کار'),
+                    'url' => $url,
+                ];
+            }
+        }
+
+        $sellKids = [];
+        if (class_exists(StudioOffers::class)) {
+            foreach (StudioOffers::design() as $offer) {
+                $sellKids[] = [
+                    'label' => 'فروش '.$offer['title'],
+                    'url' => $offer['sell_url'],
+                    'price_label' => $offer['price_label'],
+                    'sell' => true,
+                ];
+            }
+        }
+
         return [
             'label' => self::builderLabel('/design', 'طراحی سایت'),
             'url' => '/design',
             'children' => [
+                [
+                    'label' => 'سایت‌های طراحی‌کرده‌ایم',
+                    'url' => '/projects',
+                    'children' => $portfolio,
+                ],
                 [
                     'label' => 'خدمات طراحی',
                     'url' => '/design#services',
                     'children' => $services,
                 ],
                 [
+                    'label' => 'فروش سایت',
+                    'url' => '/projects#sell',
+                    'children' => $sellKids,
+                ],
+                [
                     'label' => 'همکاری',
-                    'url' => '/design#cta',
+                    'url' => '/contact',
                     'children' => [
                         ['label' => self::builderLabel('/about', 'درباره ما'), 'url' => '/about'],
-                        ['label' => self::builderLabel('/projects', 'نمونه کارها'), 'url' => '/projects'],
                         ['label' => self::builderLabel('/contact', 'تماس و مشاوره'), 'url' => '/contact'],
+                        ['label' => 'پشتیبانی', 'url' => '/support'],
                     ],
                 ],
             ],

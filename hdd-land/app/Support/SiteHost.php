@@ -146,7 +146,7 @@ class SiteHost
     {
         $path = '/'.ltrim(strtolower($path), '/');
 
-        foreach (['/design', '/ai', '/accounting', '/computer-accounting', '/projects', '/receipt-software', '/repair-shop', '/sites', '/about'] as $prefix) {
+        foreach (['/design', '/ai', '/accounting', '/computer-accounting', '/projects', '/receipt-software', '/repair-shop', '/sites', '/about', '/support', '/software', '/pay', '/staff/desk'] as $prefix) {
             if ($path === $prefix || str_starts_with($path, $prefix.'/')) {
                 return true;
             }

@@ -52,12 +52,15 @@
         @if(count($kids))
           <div class="ag-drop">
             <a href="{{ url($url) }}" class="ag-drop__btn {{ $on ? 'is-on' : '' }}" aria-haspopup="true">{{ $item['label'] }} <i>▾</i></a>
-            <div class="ag-drop__panel" role="menu">
+            <div class="ag-drop__panel {{ count($kids) <= 3 ? 'ag-drop__panel--slim' : '' }}" role="menu">
               @foreach($kids as $col)
                 <div class="ag-drop__col">
                   <a class="ag-drop__h" href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
                   @foreach($col['children'] ?? [] as $leaf)
-                    <a href="{{ url($leaf['url'] ?? '#') }}">{{ $leaf['label'] }}</a>
+                    <a href="{{ url($leaf['url'] ?? '/') }}">{{ $leaf['label'] }}</a>
+                    @if(!empty($leaf['sell']) || !empty($leaf['sell_url']))
+                      <a class="ag-drop__sell" href="{{ url($leaf['sell_url'] ?? $leaf['url']) }}">فروش · {{ $leaf['price_label'] ?? 'قیمت اعلام می‌شود' }}</a>
+                    @endif
                   @endforeach
                 </div>
               @endforeach
@@ -115,9 +118,22 @@
       <a href="{{ url('/app') }}">وب موبایل</a>
       <p class="ag-drawer__sec">صفحات</p>
       @foreach($items as $item)
-        @php $url = $item['url'] ?? '#'; @endphp
+        @php $url = $item['url'] ?? '/'; @endphp
         <a class="ag-drawer__h" href="{{ url($url) }}">{{ $item['label'] }}</a>
+        @foreach($item['children'] ?? [] as $col)
+          <a href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
+          @foreach($col['children'] ?? [] as $leaf)
+            <a href="{{ url($leaf['url'] ?? '/') }}">{{ $leaf['label'] }}</a>
+            @if(!empty($leaf['sell']) || !empty($leaf['sell_url']))
+              <a class="ag-drop__sell" href="{{ url($leaf['sell_url'] ?? $leaf['url']) }}">فروش · {{ $leaf['price_label'] ?? 'قیمت اعلام می‌شود' }}</a>
+            @endif
+          @endforeach
+        @endforeach
       @endforeach
+      <p class="ag-drawer__sec">نماینده</p>
+      <a href="{{ url('/staff/desk') }}">کارتابل کارمند</a>
+      <a href="{{ url('/auth/staff') }}">ورود کارمند</a>
+      <a href="{{ url('/support') }}">پشتیبانی</a>
     </div>
   </div>
 </header>

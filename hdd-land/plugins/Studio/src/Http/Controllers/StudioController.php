@@ -136,7 +136,30 @@ class StudioController
 
     public function projects(): View
     {
-        return $this->page('projects', 'پروژه‌های سایت');
+        return $this->page('projects', 'سایت‌های طراحی‌کرده‌ایم', [
+            'designOffers' => class_exists(\App\Support\StudioOffers::class) ? \App\Support\StudioOffers::design() : [],
+        ]);
+    }
+
+    public function softwareOffer(string $slug): View|RedirectResponse
+    {
+        $map = [
+            'medical-beauty' => 'med-beauty',
+            'medical-opera' => 'med-opera',
+            'medical-psychology' => 'med-psych',
+        ];
+        $sku = $map[$slug] ?? '';
+        $offer = $sku !== '' && class_exists(\App\Support\StudioOffers::class)
+            ? \App\Support\StudioOffers::find($sku)
+            : null;
+        if ($offer === null) {
+            return redirect()->to(url('/computer-accounting'));
+        }
+
+        return $this->page('software-offer', $offer['title'].' | فراز نت آمل', [
+            'description' => $offer['short'],
+            'offer' => $offer,
+        ]);
     }
 
     public function receiptSoftware(): View

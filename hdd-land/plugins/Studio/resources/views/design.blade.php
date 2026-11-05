@@ -41,6 +41,7 @@
         </a>
       @endforeach
     </div>
+    @include('studio::sell-strip', ['offers' => class_exists(\App\Support\StudioOffers::class) ? \App\Support\StudioOffers::design() : []])
   </div>
 </section>
 
