@@ -55,6 +55,7 @@ class Plugin extends BasePlugin
         parent::boot();
         try {
             app('router')->pushMiddlewareToGroup('web', SiteHostSplit::class);
+            app('router')->pushMiddlewareToGroup('web', \App\Http\Middleware\StudioAccountBridge::class);
         } catch (\Throwable) {
         }
     }
@@ -81,6 +82,9 @@ class Plugin extends BasePlugin
             base_path('app/Support/StudioStaffDesk.php'),
             base_path('app/Support/StudioPay.php'),
             base_path('app/Support/StudioNotify.php'),
+            base_path('app/Support/StudioPlugins.php'),
+            base_path('app/Support/StudioCustomerDesk.php'),
+            base_path('app/Http/Middleware/StudioAccountBridge.php'),
             base_path('app/Support/AdminToolbar.php'),
             base_path('app/Http/Middleware/SiteHostSplit.php'),
             base_path('plugins/ThemeBuilder/src/PageBuilder.php'),
@@ -92,6 +96,7 @@ class Plugin extends BasePlugin
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioStaffDeskController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioPayController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioSupportController.php',
+            __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioCustomerDeskController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'Admin'.DIRECTORY_SEPARATOR.'StudioHomeController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'Admin'.DIRECTORY_SEPARATOR.'StudioSmsController.php',
         ];

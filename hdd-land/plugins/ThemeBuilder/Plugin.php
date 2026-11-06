@@ -66,6 +66,8 @@ class Plugin extends BasePlugin
             base_path('app/Support/StudioStaffDesk.php'),
             base_path('app/Support/StudioPay.php'),
             base_path('app/Support/StudioNotify.php'),
+            base_path('app/Support/StudioPlugins.php'),
+            base_path('app/Support/StudioCustomerDesk.php'),
             __DIR__.'/src/Models/BuilderPage.php',
             __DIR__.'/src/Http/Controllers/Admin/PageBuilderController.php',
             __DIR__.'/src/Http/Controllers/Storefront/PageController.php',

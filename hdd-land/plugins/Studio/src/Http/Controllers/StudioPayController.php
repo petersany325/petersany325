@@ -4,6 +4,7 @@ namespace Plugins\Studio\src\Http\Controllers;
 
 use App\Support\StudioOffers;
 use App\Support\StudioPay;
+use App\Support\StudioPlugins;
 use App\Support\StudioStaffDesk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class StudioPayController
     {
         StudioPlugin::ensureBooted();
         $sku = trim((string) $request->query('sku', $request->input('sku', '')));
-        $offer = StudioOffers::find($sku);
+        $offer = StudioOffers::find($sku) ?? StudioPlugins::shopOffer($sku);
         if ($offer === null) {
             return redirect()->to(url('/contact'))->with('error', 'این محصول برای فروش پیدا نشد.');
         }
@@ -39,7 +40,7 @@ class StudioPayController
     {
         StudioPlugin::ensureBooted();
         $sku = trim((string) $request->input('sku', ''));
-        $offer = StudioOffers::find($sku);
+        $offer = StudioOffers::find($sku) ?? StudioPlugins::shopOffer($sku);
         if ($offer === null) {
             return redirect()->to(url('/contact'))->with('error', 'محصول نامعتبر است.');
         }
@@ -51,12 +52,20 @@ class StudioPayController
             $buyerPhone = StudioSms::normalizePhone((string) $request->input('phone', $user->phone ?? ''));
         } catch (\Throwable) {
         }
-        $invoice = StudioStaffDesk::recordSale($offer, (int) ($user->id ?? 0), $buyer, $gateway);
+        $isStaff = false;
+        try {
+            $isStaff = $user && (method_exists($user, 'isStaff') && $user->isStaff() || method_exists($user, 'isAdmin') && $user->isAdmin());
+        } catch (\Throwable) {
+        }
+        $offer['buyer_id'] = $isStaff ? 0 : (int) ($user->id ?? 0);
+        $sellerId = $isStaff ? (int) ($user->id ?? 0) : 0;
+        $invoice = StudioStaffDesk::recordSale($offer, $sellerId, $buyer, $gateway);
         $invoice['buyer_phone'] = $buyerPhone;
         if (class_exists(\App\Support\StudioNotify::class) && $buyerPhone !== '') {
             \App\Support\StudioNotify::invoice($invoice);
         }
+        $to = $isStaff ? '/staff/desk/invoices' : '/account/invoices';
 
-        return redirect()->to(url('/staff/desk/invoices'))->with('success', 'فاکتور '.$invoice['id'].' ثبت شد. سهم نماینده در کارتابل آمده است.');
+        return redirect()->to(url($to))->with('success', 'فاکتور '.$invoice['id'].' ثبت شد.');
     }
 }

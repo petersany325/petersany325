@@ -11,7 +11,8 @@
     <div class="ag-actions">
       <a class="ag-btn ag-btn--on" href="tel:{{ preg_replace('/\s+/', '', $phone ?? '01144447220') }}">تماس {{ $phone ?? '01144447220' }}<i>←</i></a>
       <a class="ag-btn ag-btn--line" href="{{ url('/contact') }}">صفحه تماس</a>
-      <a class="ag-btn ag-btn--line" href="{{ url('/staff/desk/tickets') }}">تیکت کارتابل</a>
+      <a class="ag-btn ag-btn--line" href="{{ url('/account/tickets') }}">تیکت مشتری</a>
+      <a class="ag-btn ag-btn--line" href="{{ url('/staff/desk/tickets') }}">تیکت کارمند</a>
     </div>
     <form class="ag-auth-form" method="post" action="{{ url('/support') }}" style="margin-top:1.2rem">
       @csrf

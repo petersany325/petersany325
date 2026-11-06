@@ -34,6 +34,9 @@
     @endif
     <a href="{{ url('/account/serials') }}">سریال‌ها و گارانتی من <span>‹</span></a>
     <a href="{{ url('/serial-check') }}">استعلام گارانتی <span>‹</span></a>
+    <a href="{{ url('/account/buy') }}">خرید <span>‹</span></a>
+    <a href="{{ url('/account/sell') }}">فروش / سفارش <span>‹</span></a>
+    <a href="{{ url('/account/support') }}">پشتیبانی <span>‹</span></a>
     <a href="{{ url('/account') }}">کارتابل کامل مشتری <span>‹</span></a>
     <a href="{{ url('/staff') }}">کارتابل کارمند <span>‹</span></a>
     @if(!empty($s['account_show_full_site']))

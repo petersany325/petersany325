@@ -116,6 +116,7 @@ class StudioStaffDesk
             'title' => (string) ($offer['title'] ?? ''),
             'url' => (string) ($offer['url'] ?? '/'),
             'buyer' => $buyer,
+            'buyer_id' => (int) ($offer['buyer_id'] ?? 0),
             'seller_id' => $userId,
             'price' => $price,
             'price_label' => $price > 0 ? number_format($price).' تومان' : StudioOffers::PRICE_LABEL,
@@ -145,6 +146,21 @@ class StudioStaffDesk
         $rows = [];
         foreach (self::state()['sales'] as $row) {
             if ((int) ($row['seller_id'] ?? 0) === $userId || $userId === 0) {
+                $rows[] = $row;
+            }
+        }
+
+        return array_reverse($rows);
+    }
+
+    /** @return list<array<string, mixed>> */
+    public static function salesForBuyer(int $userId): array
+    {
+        $rows = [];
+        foreach (self::state()['sales'] as $row) {
+            $buyerId = (int) ($row['buyer_id'] ?? 0);
+            $sellerId = (int) ($row['seller_id'] ?? 0);
+            if ($userId > 0 && ($buyerId === $userId || ($buyerId === 0 && $sellerId === $userId))) {
                 $rows[] = $row;
             }
         }

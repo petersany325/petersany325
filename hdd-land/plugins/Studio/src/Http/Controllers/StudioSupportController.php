@@ -60,7 +60,7 @@ class StudioSupportController
         } catch (\Throwable) {
         }
         $user = Auth::user();
-        StudioStaffDesk::openTicket(
+        \App\Support\StudioPlugins::openTicket(
             (int) ($user->id ?? 0),
             $name,
             $phone,

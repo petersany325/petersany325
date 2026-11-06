@@ -112,8 +112,12 @@
         @endauth
       </div>
       <p class="ag-drawer__sec">حساب و پشتیبانی</p>
-      <a href="{{ url('/account/tickets') }}">تیکت</a>
       <a href="{{ url('/account') }}">کارتابل مشتری</a>
+      <a href="{{ url('/account/buy') }}">خرید</a>
+      <a href="{{ url('/account/sell') }}">فروش / سفارش</a>
+      <a href="{{ url('/account/tickets') }}">تیکت</a>
+      <a href="{{ url('/account/support') }}">پشتیبانی</a>
+      <a href="{{ url('/account/invoices') }}">فاکتورها</a>
       <a href="{{ url('/staff') }}">کارتابل کارمند</a>
       <a href="{{ url('/app') }}">وب موبایل</a>
       <p class="ag-drawer__sec">صفحات</p>

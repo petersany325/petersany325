@@ -77,7 +77,7 @@ class StudioStaffDeskController
             $phone = StudioSms::normalizePhone((string) ($user->phone ?? $request->input('phone', '')));
         } catch (\Throwable) {
         }
-        StudioStaffDesk::openTicket(
+        \App\Support\StudioPlugins::openTicket(
             (int) ($user->id ?? 0),
             (string) ($user->name ?? 'نماینده'),
             $phone,
@@ -129,7 +129,7 @@ class StudioStaffDeskController
             'offers' => StudioOffers::software(),
             'designOffers' => StudioOffers::design(),
             'sales' => StudioStaffDesk::salesFor($uid),
-            'tickets' => StudioStaffDesk::ticketsFor($uid, true),
+            'tickets' => \App\Support\StudioPlugins::tickets($uid, true),
             'reps' => StudioStaffDesk::reps(),
             'balance' => StudioStaffDesk::balance($uid),
             'gateways' => StudioPay::gateways(),

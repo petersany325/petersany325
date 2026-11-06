@@ -6,6 +6,7 @@ use Plugins\Studio\src\Http\Controllers\StudioController;
 use Plugins\Studio\src\Http\Controllers\StudioPayController;
 use Plugins\Studio\src\Http\Controllers\StudioStaffDeskController;
 use Plugins\Studio\src\Http\Controllers\StudioSupportController;
+use Plugins\Studio\src\Http\Controllers\StudioCustomerDeskController;
 
 Route::get('/auth/customer', [StudioAuthController::class, 'customer'])->name('studio.auth.customer');
 Route::get('/auth/customer/register', fn () => redirect()->to(url('/auth/customer?tab=register')));
@@ -68,3 +69,10 @@ Route::get('/staff/desk/tickets', [StudioStaffDeskController::class, 'tickets'])
 Route::post('/staff/desk/tickets', [StudioStaffDeskController::class, 'storeTicket'])->name('studio.staff.tickets.save');
 Route::get('/staff/desk/sms', [StudioStaffDeskController::class, 'sms'])->name('studio.staff.sms');
 Route::post('/staff/desk/sell', [StudioStaffDeskController::class, 'storeSale'])->name('studio.staff.sell.save');
+
+Route::get('/account', [StudioCustomerDeskController::class, 'home'])->name('studio.account');
+Route::get('/account/{tab}', [StudioCustomerDeskController::class, 'home'])->where('tab', 'buy|sell|shop|orders|invoices|tickets|support|wallet|serials|prices');
+Route::post('/account/tickets', [StudioCustomerDeskController::class, 'storeTicket'])->name('studio.account.tickets');
+Route::post('/account/support', [StudioCustomerDeskController::class, 'storeTicket'])->name('studio.account.support');
+Route::post('/account/sell', [StudioCustomerDeskController::class, 'storeSale'])->name('studio.account.sell');
+Route::post('/account/buy', [StudioCustomerDeskController::class, 'storeSale'])->name('studio.account.buy');
