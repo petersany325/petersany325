@@ -24,6 +24,12 @@ class SiteHostSplit
             $path = '/';
         }
 
+        if (SiteHost::isStudio($request) && in_array($path, ['/login', '/register'], true)) {
+            $suffix = $path === '/register' ? '?tab=register' : '';
+
+            return redirect()->to(url('/auth/customer'.$suffix));
+        }
+
         if (SiteHost::isSharedPath($path)) {
             return $next($request);
         }
