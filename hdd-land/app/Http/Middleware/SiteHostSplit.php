@@ -24,7 +24,7 @@ class SiteHostSplit
             $path = '/';
         }
 
-        if (SiteHost::isStudio($request) && in_array($path, ['/login', '/register'], true)) {
+        if (! SiteHost::isShop($request) && in_array($path, ['/login', '/register'], true)) {
             $suffix = $path === '/register' ? '?tab=register' : '';
 
             return redirect()->to(url('/auth/customer'.$suffix));

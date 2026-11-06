@@ -8,6 +8,9 @@ use Plugins\Studio\src\Http\Controllers\StudioStaffDeskController;
 use Plugins\Studio\src\Http\Controllers\StudioSupportController;
 use Plugins\Studio\src\Http\Controllers\StudioCustomerDeskController;
 
+Route::get('/login', fn () => redirect()->to(url('/auth/customer')));
+Route::get('/register', fn () => redirect()->to(url('/auth/customer?tab=register')));
+
 Route::get('/auth/customer', [StudioAuthController::class, 'customer'])->name('studio.auth.customer');
 Route::get('/auth/customer/register', fn () => redirect()->to(url('/auth/customer?tab=register')));
 Route::post('/auth/customer/sms', [StudioAuthController::class, 'sendCustomer'])->name('studio.auth.customer.sms');
