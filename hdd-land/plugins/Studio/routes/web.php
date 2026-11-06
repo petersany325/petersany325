@@ -3,6 +3,13 @@
 use Illuminate\Support\Facades\Route;
 use Plugins\Studio\src\Http\Controllers\StudioAuthController;
 use Plugins\Studio\src\Http\Controllers\StudioController;
+use Plugins\Studio\src\Http\Controllers\StudioPayController;
+use Plugins\Studio\src\Http\Controllers\StudioStaffDeskController;
+use Plugins\Studio\src\Http\Controllers\StudioSupportController;
+use Plugins\Studio\src\Http\Controllers\StudioCustomerDeskController;
+
+Route::get('/login', fn () => redirect()->to(url('/auth/customer')));
+Route::get('/register', fn () => redirect()->to(url('/auth/customer?tab=register')));
 
 Route::get('/auth/customer', [StudioAuthController::class, 'customer'])->name('studio.auth.customer');
 Route::get('/auth/customer/register', fn () => redirect()->to(url('/auth/customer?tab=register')));
@@ -43,3 +50,32 @@ Route::get('/sites/repair-shop/customer-menu', [StudioController::class, 'repair
 Route::get('/sites/repair-shop/m/{slug}', [StudioController::class, 'repairItem']);
 Route::get('/sites/repair-shop/{slug}', [StudioController::class, 'repairItem']);
 Route::get('/sites/{slug}', [StudioController::class, 'sitesSlug']);
+
+Route::get('/support', [StudioSupportController::class, 'show'])->name('studio.support');
+Route::post('/support', [StudioSupportController::class, 'send'])->name('studio.support.send');
+
+Route::get('/software/{slug}', [StudioController::class, 'softwareOffer'])->name('studio.software');
+
+Route::get('/pay/start', [StudioPayController::class, 'start'])->name('studio.pay.start');
+Route::get('/pay/zarinpal', [StudioPayController::class, 'start'])->name('studio.pay.zarinpal');
+Route::get('/pay/melli', [StudioPayController::class, 'start'])->name('studio.pay.melli');
+Route::post('/pay/record', [StudioPayController::class, 'record'])->name('studio.pay.record');
+
+Route::get('/staff/desk', [StudioStaffDeskController::class, 'home'])->name('studio.staff.desk');
+Route::get('/staff/desk/buy', [StudioStaffDeskController::class, 'buy'])->name('studio.staff.buy');
+Route::get('/staff/desk/sell', [StudioStaffDeskController::class, 'sell'])->name('studio.staff.sell');
+Route::get('/staff/desk/prices', [StudioStaffDeskController::class, 'prices'])->name('studio.staff.prices');
+Route::get('/staff/desk/sales', [StudioStaffDeskController::class, 'sales'])->name('studio.staff.sales');
+Route::get('/staff/desk/invoices', [StudioStaffDeskController::class, 'invoices'])->name('studio.staff.invoices');
+Route::get('/staff/desk/reps', [StudioStaffDeskController::class, 'reps'])->name('studio.staff.reps');
+Route::get('/staff/desk/tickets', [StudioStaffDeskController::class, 'tickets'])->name('studio.staff.tickets');
+Route::post('/staff/desk/tickets', [StudioStaffDeskController::class, 'storeTicket'])->name('studio.staff.tickets.save');
+Route::get('/staff/desk/sms', [StudioStaffDeskController::class, 'sms'])->name('studio.staff.sms');
+Route::post('/staff/desk/sell', [StudioStaffDeskController::class, 'storeSale'])->name('studio.staff.sell.save');
+
+Route::get('/account', [StudioCustomerDeskController::class, 'home'])->name('studio.account');
+Route::get('/account/{tab}', [StudioCustomerDeskController::class, 'home'])->where('tab', 'buy|sell|shop|orders|invoices|tickets|support|wallet|serials|prices');
+Route::post('/account/tickets', [StudioCustomerDeskController::class, 'storeTicket'])->name('studio.account.tickets');
+Route::post('/account/support', [StudioCustomerDeskController::class, 'storeTicket'])->name('studio.account.support');
+Route::post('/account/sell', [StudioCustomerDeskController::class, 'storeSale'])->name('studio.account.sell');
+Route::post('/account/buy', [StudioCustomerDeskController::class, 'storeSale'])->name('studio.account.buy');

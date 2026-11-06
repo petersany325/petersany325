@@ -138,7 +138,7 @@ class SiteHost
             }
         }
 
-        return (bool) preg_match('#^/account/(shop|orders|invoices|serials|preorders|wallet)(/|$)#', $path);
+        return false;
     }
 
     /** Studio marketing pages — redirect off the shop host. */
@@ -146,7 +146,7 @@ class SiteHost
     {
         $path = '/'.ltrim(strtolower($path), '/');
 
-        foreach (['/design', '/ai', '/accounting', '/computer-accounting', '/projects', '/receipt-software', '/repair-shop', '/sites', '/about'] as $prefix) {
+        foreach (['/design', '/ai', '/accounting', '/computer-accounting', '/projects', '/receipt-software', '/repair-shop', '/sites', '/about', '/support', '/software', '/pay', '/staff/desk'] as $prefix) {
             if ($path === $prefix || str_starts_with($path, $prefix.'/')) {
                 return true;
             }
@@ -160,7 +160,7 @@ class SiteHost
         $path = '/'.ltrim(strtolower($path), '/');
 
         foreach ([
-            '/admin', '/staff', '/login', '/logout', '/register', '/auth',
+            '/admin', '/staff', '/login', '/logout', '/register', '/auth', '/account',
             '/password', '/sanctum', '/livewire',
         ] as $prefix) {
             if ($path === $prefix || str_starts_with($path, $prefix.'/')) {

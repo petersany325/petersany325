@@ -79,6 +79,10 @@
 @include('studio::accounting-type')
 @endif
 
+@if($slug === 'software-offer')
+@include('studio::software-offer')
+@endif
+
 @if($slug === 'projects')
 <section class="{{ $agency ? 'ag-page' : 'st-hero' }}">
   @unless($agency)
@@ -98,6 +102,7 @@
         <div class="ag-card"><i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 18V6M4 18h16"/><path d="m8 14 3-4 3 3 5-7"/></svg></i><div><b>دفتر متصل به فروش</b><p>یک فروش = یک سند.</p></div></div>
         <div class="ag-card"><i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4" width="12" height="16" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></i><div><b>وب‌اپ و کارت ویزیت</b><p>نصب روی گوشی و عضویت پیامکی.</p></div></div>
       </div>
+      @include('studio::sell-strip', ['offers' => $designOffers ?? (class_exists(\App\Support\StudioOffers::class) ? \App\Support\StudioOffers::design() : [])])
     @else
       <div class="st-grid">
         <div class="st-card"><small>نرم‌افزار + سایت</small><b>مدیریت تعمیرگاه</b><p>پذیرش، قبض، ارجاع و تحویل.</p></div>

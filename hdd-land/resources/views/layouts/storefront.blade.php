@@ -1,4 +1,14 @@
 @php
+  try {
+    $p = request()->path();
+    if (class_exists(\App\Support\SiteHost::class)
+        && ! \App\Support\SiteHost::isShop()
+        && in_array($p, ['login', 'register'], true)) {
+        header('Location: '.url($p === 'register' ? '/auth/customer?tab=register' : '/auth/customer'), true, 302);
+        exit;
+    }
+  } catch (\Throwable $e) {
+  }
   $hlAdminBar = null;
   if (class_exists(\App\Support\AdminToolbar::class)) {
     try { $hlAdminBar = \App\Support\AdminToolbar::current(); } catch (\Throwable $e) {}

@@ -94,7 +94,9 @@ class PortalNav
             [
                 'title' => 'خرید و سفارش‌ها',
                 'items' => [
-                    ['label' => 'خرید محصول', 'url' => '/account/shop', 'match' => 'account/shop', 'icon' => '◎'],
+                    ['label' => 'خرید', 'url' => '/account/buy', 'match' => 'account/buy', 'icon' => '◎'],
+                    ['label' => 'فروش / سفارش', 'url' => '/account/sell', 'match' => 'account/sell', 'icon' => '⬆'],
+                    ['label' => 'خرید محصول فروشگاه', 'url' => '/account/shop', 'match' => 'account/shop', 'icon' => '◎'],
                     ['label' => 'سفارش‌های من', 'url' => '/account/orders', 'match' => 'account/orders', 'icon' => '▣'],
                     ['label' => 'فاکتورها', 'url' => '/account/invoices', 'match' => 'account/invoices', 'icon' => '▤'],
                     ['label' => 'پیش‌خرید', 'url' => '/account/preorders', 'match' => 'account/preorders', 'icon' => '◷'],
@@ -106,6 +108,7 @@ class PortalNav
                 'title' => 'پشتیبانی و ارتباط',
                 'items' => [
                     ['label' => 'تیکت پشتیبانی', 'url' => '/account/tickets', 'match' => 'account/tickets', 'icon' => '✉'],
+                    ['label' => 'پشتیبانی', 'url' => '/account/support', 'match' => 'account/support', 'icon' => '?'],
                     ['label' => 'سریال‌ها و گارانتی من', 'url' => '/account/serials', 'match' => 'account/serials', 'icon' => '☰'],
                     ['label' => 'استعلام گارانتی', 'url' => '/serial-check', 'icon' => '⛨'],
                     ['label' => 'تاریخچه چت هوشمند', 'url' => '/account/chat-history', 'match' => 'account/chat-history', 'icon' => '✦'],

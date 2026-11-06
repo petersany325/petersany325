@@ -11,27 +11,68 @@ class StudioProductMenus
     /** @return list<array{label:string,url:string,children?:list<array{label:string,url:string,children?:list<array{label:string,url:string}>}>}> */
     public static function headerItems(): array
     {
+        return [self::softwareNavItem()];
+    }
+
+    /** @return array{label:string,url:string,children:list<array<string,mixed>>} */
+    public static function softwareNavItem(): array
+    {
+        $accKids = [];
+        if (class_exists(StudioAccountingCopy::class)) {
+            foreach (StudioAccountingCopy::industries() as $row) {
+                $accKids[] = [
+                    'label' => (string) ($row['title'] ?? ''),
+                    'url' => '/computer-accounting/'.$row['slug'],
+                ];
+            }
+        }
+        $accKids[] = ['label' => 'همه حسابداری‌های کامپیوتر', 'url' => '/computer-accounting'];
+
+        $medKids = [];
+        if (class_exists(StudioOffers::class)) {
+            foreach (StudioOffers::medical() as $row) {
+                $medKids[] = [
+                    'label' => (string) $row['title'],
+                    'url' => (string) $row['url'],
+                    'sell_url' => (string) $row['sell_url'],
+                    'price_label' => (string) $row['price_label'],
+                ];
+            }
+        }
+
         return [
-            [
-                'label' => 'حسابداری وب',
-                'url' => '/accounting',
-                'children' => self::webAccountingNav(),
-            ],
-            [
-                'label' => 'حسابداری کامپیوتر',
-                'url' => '/computer-accounting',
-                'children' => class_exists(StudioAccountingCopy::class)
-                    ? StudioAccountingCopy::navGroups()
-                    : array_map(static function (array $group): array {
-                        return [
-                            'label' => $group['title'],
-                            'url' => '/computer-accounting#'.$group['slug'],
-                            'children' => array_map(static fn (array $item): array => [
-                                'label' => $item['title'],
-                                'url' => '/computer-accounting/m/'.$item['slug'],
-                            ], $group['items']),
-                        ];
-                    }, self::accountingGroups()),
+            'label' => 'نرم‌افزارها',
+            'url' => '/computer-accounting',
+            'children' => [
+                [
+                    'label' => 'حسابداری کامپیوتر',
+                    'url' => '/computer-accounting',
+                    'children' => $accKids,
+                ],
+                [
+                    'label' => 'نرم‌افزارهای پزشکی',
+                    'url' => '/software/medical-beauty',
+                    'children' => $medKids,
+                ],
+                [
+                    'label' => 'حسابداری وب و تعمیرگاه',
+                    'url' => '/accounting',
+                    'children' => [
+                        ['label' => 'معرفی حسابداری وب', 'url' => '/accounting'],
+                        ['label' => 'سایت مدیریت تعمیرگاه', 'url' => '/repair-shop'],
+                        ['label' => 'منوی کارکنان', 'url' => '/repair-shop/staff-menu'],
+                        ['label' => 'کارتابل مشتری', 'url' => '/repair-shop/customer-menu'],
+                        ['label' => 'نرم‌افزار قبض', 'url' => '/receipt-software'],
+                    ],
+                ],
+                [
+                    'label' => 'هوش مصنوعی',
+                    'url' => '/ai',
+                    'children' => [
+                        ['label' => 'لایه هوش مصنوعی', 'url' => '/ai'],
+                        ['label' => 'تماس برای دمو', 'url' => '/contact'],
+                    ],
+                ],
             ],
         ];
     }
@@ -48,7 +89,7 @@ class StudioProductMenus
             '/accounting', '/computer-accounting', '/repair-shop', '/sites/repair-shop',
             '/receipt-software', '/sites',
         ];
-        $dropLabels = ['نرم‌افزار', 'حسابداری وب', 'حسابداری کامپیوتر', 'تعمیرگاه', 'تعمیرکاران', 'حسابداری هوش مصنوعی', 'نرم‌افزار قبض تحت وب'];
+        $dropLabels = ['نرم‌افزار', 'نرم‌افزارها', 'حسابداری وب', 'حسابداری کامپیوتر', 'تعمیرگاه', 'تعمیرکاران', 'حسابداری هوش مصنوعی', 'نرم‌افزار قبض تحت وب', 'پشتیبانی'];
         $kept = [];
         foreach ($items as $item) {
             $url = rtrim((string) ($item['url'] ?? ''), '/') ?: '/';
@@ -83,6 +124,17 @@ class StudioProductMenus
         }
 
         array_splice($kept, $insertAt, 0, $products);
+
+        $hasSupport = false;
+        foreach ($kept as $item) {
+            if (($item['url'] ?? '') === '/support' || ($item['label'] ?? '') === 'پشتیبانی') {
+                $hasSupport = true;
+                break;
+            }
+        }
+        if (! $hasSupport) {
+            $kept[] = ['label' => 'پشتیبانی', 'url' => '/support'];
+        }
 
         return $kept;
     }

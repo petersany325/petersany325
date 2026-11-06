@@ -123,22 +123,29 @@ class StudioAuthController
         $this->markPhoneVerified($user);
         $this->forgetPending($request, 'customer');
         $this->loginUser($request, $user);
+        if (class_exists(\App\Support\StudioNotify::class)) {
+            \App\Support\StudioNotify::login($user);
+        }
 
         return $this->afterLogin($request, $user)->with('success', 'وارد شدید.');
     }
 
     public function sendStaff(Request $request): RedirectResponse
     {
-        $phone = StudioSms::normalizePhone((string) $request->input('phone', ''));
+        $login = trim((string) $request->input('login', $request->input('username', '')));
+        if ($login === '') {
+            return back()->withInput()->with('error', 'نام کاربری کارمند را بنویسید.');
+        }
+        $user = $this->findStaffByLogin($login);
+        if (! $user || ! $this->isStaffUser($user)) {
+            return back()->withInput()->with('error', 'این نام کاربری برای کارمند فعال نیست.');
+        }
+        $phone = StudioSms::normalizePhone((string) ($user->phone ?? $request->input('phone', '')));
         if (! StudioSms::isMobile($phone)) {
-            return back()->withInput()->with('error', 'شماره موبایل معتبر نیست. نمونه: 09121234567');
+            return back()->withInput()->with('error', 'برای این کارمند شماره موبایل معتبر ثبت نشده است.');
         }
 
-        $user = $this->findUserByPhone($phone);
-        $allowed = $user && $this->isStaffUser($user);
-        $sent = $allowed
-            ? StudioSms::sendOtp($phone, 'staff')
-            : ['ok' => true, 'message' => 'اگر این شماره برای کارمند ثبت شده باشد، کد پیامک می‌شود.'];
+        $sent = StudioSms::sendOtp($phone, 'staff');
         if (! ($sent['ok'] ?? false)) {
             return back()->withInput()->with('error', $sent['message']);
         }
@@ -146,6 +153,7 @@ class StudioAuthController
         $this->rememberPending($request, 'staff', [
             'step' => 'code',
             'phone' => $phone,
+            'login' => $login,
             'intent' => 'login',
         ]);
 
@@ -168,7 +176,11 @@ class StudioAuthController
             return back()->withInput()->with('error', $check['message']);
         }
 
-        $user = $this->findUserByPhone($phone);
+        $pendingLogin = trim((string) ($pending['login'] ?? $request->input('login', '')));
+        $user = $pendingLogin !== '' ? $this->findStaffByLogin($pendingLogin) : $this->findUserByPhone($phone);
+        if ($user && $pendingLogin !== '' && StudioSms::normalizePhone((string) ($user->phone ?? '')) !== $phone) {
+            $user = null;
+        }
         if (! $user || ! $this->isStaffUser($user)) {
             $this->forgetPending($request, 'staff');
 
@@ -179,6 +191,9 @@ class StudioAuthController
         $this->touchStaffLogin($user);
         $this->forgetPending($request, 'staff');
         $this->loginUser($request, $user);
+        if (class_exists(\App\Support\StudioNotify::class)) {
+            \App\Support\StudioNotify::login($user);
+        }
 
         return redirect()->to($this->staffHome())->with('success', 'وارد پنل کارمند شدید.');
     }
@@ -215,6 +230,7 @@ class StudioAuthController
             'step' => $pending['step'] ?? 'phone',
             'phone' => old('phone', $pending['phone'] ?? ''),
             'name' => old('name', $pending['name'] ?? ''),
+            'login' => old('login', $pending['login'] ?? ''),
             'title' => $mode === 'staff' ? 'ورود کارمند' : 'ورود و ثبت‌نام کاربر',
         ]);
     }
@@ -236,6 +252,36 @@ class StudioAuthController
     protected function forgetPending(Request $request, string $mode): void
     {
         $request->session()->forget('studio_auth.'.$mode);
+    }
+
+    protected function findStaffByLogin(string $login): ?User
+    {
+        $login = trim($login);
+        if ($login === '') {
+            return null;
+        }
+        try {
+            if (! Schema::hasTable('users')) {
+                return null;
+            }
+            $q = User::query();
+            $q->where(function ($inner) use ($login) {
+                if (Schema::hasColumn('users', 'email')) {
+                    $inner->orWhere('email', $login);
+                }
+                if (Schema::hasColumn('users', 'username')) {
+                    $inner->orWhere('username', $login);
+                }
+                if (Schema::hasColumn('users', 'login')) {
+                    $inner->orWhere('login', $login);
+                }
+                $inner->orWhere('name', $login);
+            });
+
+            return $q->first();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     protected function findUserByPhone(string $phone): ?User
@@ -344,6 +390,6 @@ class StudioAuthController
 
     protected function staffHome(): string
     {
-        return url('/staff');
+        return url('/staff/desk');
     }
 }
