@@ -85,7 +85,11 @@ class CustomerController extends Controller
                     $query->orWhere('national_code', 'like', '%'.$q.'%');
                 }
             })
-            ->orderByDesc('id')
+            ->orderByRaw(
+                'CASE WHEN name LIKE ? OR alias LIKE ? THEN 0 WHEN name LIKE ? OR alias LIKE ? THEN 1 ELSE 2 END',
+                [$q.'%', $q.'%', '% '.$q.'%', '% '.$q.'%']
+            )
+            ->orderBy('name')
             ->limit(25)
             ->get();
 
@@ -99,7 +103,11 @@ class CustomerController extends Controller
                 'display_name' => $c->displayName(),
                 'alias' => $c->alias,
                 'phone' => $c->phone,
+                'gender' => $c->gender,
+                'national_code' => $c->national_code,
                 'job' => $c->job,
+                'address' => $c->address,
+                'referral_source_id' => $c->referral_source_id,
                 'is_blacklisted' => (bool) $c->is_blacklisted,
                 'visits' => (int) ($c->receptions_count ?? 0),
             ])->values(),

@@ -1752,6 +1752,21 @@ class ReceptionController extends Controller
     private function resolveCustomerForTicketEdit(Reception $reception, array $data, bool $splitThisTicket = false): Customer
     {
         $current = Customer::query()->findOrFail((int) $reception->customer_id);
+
+        $pickedId = (int) ($data['customer_id'] ?? 0);
+        if ($pickedId > 0 && $pickedId !== (int) $current->id) {
+            $picked = Customer::query()->find($pickedId);
+            if ($picked) {
+                $pickedName = $this->normalizeCustomerName((string) $picked->name);
+                $postedName = $this->normalizeCustomerName((string) ($data['customer_name'] ?? ''));
+                if ($pickedName !== '' && $pickedName === $postedName) {
+                    $this->assertCustomerModelNotBlacklisted($picked);
+
+                    return $picked;
+                }
+            }
+        }
+
         $this->assertCustomerModelNotBlacklisted($current);
 
         $phone = $this->normalizePhone((string) ($data['customer_phone'] ?? ''));
@@ -2089,6 +2104,14 @@ class ReceptionController extends Controller
             } catch (\Throwable $e) {
             }
         })->afterResponse();
+    }
+
+    private function normalizeCustomerName(string $value): string
+    {
+        $value = strtr(trim($value), ['ي' => 'ی', 'ك' => 'ک', 'ة' => 'ه']);
+        $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+
+        return mb_strtolower($value);
     }
 
     private function normalizePhone(string $value): string
