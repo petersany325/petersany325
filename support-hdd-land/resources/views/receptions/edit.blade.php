@@ -20,22 +20,23 @@
     <div class="panel" style="margin-bottom:10px;" id="edit-customer-panel">
         <h3 style="margin:0 0 4px;">مشتری</h3>
         <p class="muted" style="margin:0 0 8px;font-size:11.5px;">
-            ویرایش فقط روی <strong>همین قبض</strong> اعمال می‌شود. اگر موبایل متعلق به شخص دیگری باشد یا مشتری چند قبض داشته باشد، ذخیره نمی‌شود و خطا همین‌جا نمایش داده می‌شود.
-            برای تغییر نام روی <strong>همه</strong> قبض‌ها از منوی مشتریان استفاده کنید.
+            با زدن اولین کلمهٔ نام، مشتری‌هایی که همان کلمه در اسمشان است می‌آیند. با انتخاب اسم، موبایل و بقیهٔ مشخصات همان شخص پر می‌شود و فقط همین قبض به پروندهٔ او وصل می‌شود.
+            اگر نام را دستی عوض کنید و مشتری چند قبض داشته باشد، ذخیره نمی‌شود مگر گزینهٔ جدا کردن را بزنید.
         </p>
         <div class="accept-row accept-row-3">
-            <div>
+            <div style="position:relative;">
                 <label>نام</label>
-                <input type="text" name="customer_name" id="edit-customer-name" value="{{ old('customer_name', $c->name) }}" required autocomplete="off">
+                <input type="text" name="customer_name" id="edit-customer-name" value="{{ old('customer_name', $c->name) }}" required autocomplete="off" data-suggest-url="{{ route('customers.suggest') }}">
+                <div id="edit-customer-pick" class="customer-pick-list" hidden style="position:absolute;z-index:30;left:0;right:0;background:#fff;box-shadow:0 8px 20px rgba(15,23,42,.12);"></div>
                 @error('customer_name')<div class="field-error" style="color:#b91c1c;font-size:12px;margin-top:4px;">{{ $message }}</div>@enderror
             </div>
             <div>
                 <label>اسم مستعار</label>
-                <input type="text" name="alias" value="{{ old('alias', $c->alias) }}">
+                <input type="text" name="alias" id="edit-customer-alias" value="{{ old('alias', $c->alias) }}">
             </div>
             <div>
                 <label>جنسیت</label>
-                <select name="gender">
+                <select name="gender" id="edit-customer-gender">
                     <option value="">—</option>
                     @foreach(\App\Models\Customer::GENDERS as $val => $label)
                         <option value="{{ $val }}" @selected(old('gender', $c->gender) === $val)>{{ $label }}</option>
@@ -49,15 +50,15 @@
             </div>
             <div>
                 <label>کد ملی</label>
-                <input type="text" name="national_code" value="{{ old('national_code', $c->national_code) }}">
+                <input type="text" name="national_code" id="edit-customer-national" value="{{ old('national_code', $c->national_code) }}">
             </div>
             <div>
                 <label>شغل</label>
-                <input type="text" name="job" value="{{ old('job', $c->job) }}">
+                <input type="text" name="job" id="edit-customer-job" value="{{ old('job', $c->job) }}">
             </div>
             <div>
                 <label>نحوه آشنایی</label>
-                <select name="referral_source_id">
+                <select name="referral_source_id" id="edit-customer-referral">
                     <option value="">—</option>
                     @foreach($referralSources as $src)
                         <option value="{{ $src->id }}" @selected((string) old('referral_source_id', $c->referral_source_id) === (string) $src->id)>{{ $src->name }}</option>
@@ -66,7 +67,7 @@
             </div>
             <div style="grid-column:1/-1;">
                 <label>آدرس</label>
-                <input type="text" name="address" value="{{ old('address', $c->address) }}">
+                <input type="text" name="address" id="edit-customer-address" value="{{ old('address', $c->address) }}">
             </div>
             <div style="grid-column:1/-1;margin-top:4px;">
                 <label style="display:flex;align-items:flex-start;gap:8px;font-weight:500;cursor:pointer;">
@@ -265,4 +266,76 @@
         <a class="btn btn-ghost" href="{{ route('receptions.show', $r) }}">انصراف</a>
     </div>
 </form>
+<script>
+(function () {
+    var input = document.getElementById('edit-customer-name');
+    var box = document.getElementById('edit-customer-pick');
+    var idInput = document.querySelector('input[name="customer_id"]');
+    if (!input || !box || !idInput) return;
+    var url = input.getAttribute('data-suggest-url');
+    var originalId = idInput.value;
+    var pickedName = input.value;
+    var timer = null;
+
+    function setVal(id, value) {
+        var el = document.getElementById(id);
+        if (el) el.value = value == null ? '' : value;
+    }
+
+    function hide() {
+        box.hidden = true;
+        box.innerHTML = '';
+    }
+
+    function choose(c) {
+        idInput.value = c.id;
+        pickedName = c.name || '';
+        input.value = pickedName;
+        setVal('edit-customer-phone', c.phone || '');
+        setVal('edit-customer-alias', c.alias || '');
+        setVal('edit-customer-gender', c.gender || '');
+        setVal('edit-customer-national', c.national_code || '');
+        setVal('edit-customer-job', c.job || '');
+        setVal('edit-customer-address', c.address || '');
+        setVal('edit-customer-referral', c.referral_source_id || '');
+        hide();
+    }
+
+    function render(list) {
+        box.innerHTML = '';
+        if (!list.length) { hide(); return; }
+        list.forEach(function (c) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'customer-pick-item';
+            btn.textContent = (c.display_name || c.name || '') + (c.phone ? ' — ' + c.phone : '');
+            btn.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                choose(c);
+            });
+            box.appendChild(btn);
+        });
+        box.hidden = false;
+    }
+
+    input.addEventListener('input', function () {
+        if ((input.value || '').trim() !== pickedName) {
+            idInput.value = originalId;
+        }
+        clearTimeout(timer);
+        var q = input.value.trim();
+        if (q.length < 1) { hide(); return; }
+        timer = setTimeout(function () {
+            fetch(url + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } })
+                .then(function (r) { return r.json(); })
+                .then(function (data) { render((data && data.customers) || []); })
+                .catch(function () { hide(); });
+        }, 180);
+    });
+
+    input.addEventListener('blur', function () {
+        setTimeout(hide, 200);
+    });
+})();
+</script>
 @endsection
