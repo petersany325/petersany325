@@ -1756,12 +1756,14 @@ class ReceptionController extends Controller
         $pickedId = (int) ($data['customer_id'] ?? 0);
         if ($pickedId > 0 && $pickedId !== (int) $current->id) {
             $picked = Customer::query()->find($pickedId);
-            $pickedName = $this->normalizeCustomerName((string) ($picked->name ?? ''));
-            $postedName = $this->normalizeCustomerName((string) ($data['customer_name'] ?? ''));
-            if ($picked && $pickedName !== '' && $pickedName === $postedName) {
-                $this->assertCustomerModelNotBlacklisted($picked);
+            if ($picked) {
+                $pickedName = $this->normalizeCustomerName((string) $picked->name);
+                $postedName = $this->normalizeCustomerName((string) ($data['customer_name'] ?? ''));
+                if ($pickedName !== '' && $pickedName === $postedName) {
+                    $this->assertCustomerModelNotBlacklisted($picked);
 
-                return $picked;
+                    return $picked;
+                }
             }
         }
 

@@ -274,12 +274,30 @@
     if (!input || !box || !idInput) return;
     var url = input.getAttribute('data-suggest-url');
     var originalId = idInput.value;
-    var pickedName = input.value;
+    var pickedName = (input.value || '').trim();
+    var activePick = false;
     var timer = null;
+    var seq = 0;
+    var fieldIds = [
+        'edit-customer-phone', 'edit-customer-alias', 'edit-customer-gender',
+        'edit-customer-national', 'edit-customer-job', 'edit-customer-address',
+        'edit-customer-referral'
+    ];
+    var originalFields = {};
+    fieldIds.forEach(function (id) {
+        var el = document.getElementById(id);
+        originalFields[id] = el ? el.value : '';
+    });
 
     function setVal(id, value) {
         var el = document.getElementById(id);
         if (el) el.value = value == null ? '' : value;
+    }
+
+    function restoreOriginal() {
+        activePick = false;
+        idInput.value = originalId;
+        fieldIds.forEach(function (id) { setVal(id, originalFields[id]); });
     }
 
     function hide() {
@@ -288,6 +306,7 @@
     }
 
     function choose(c) {
+        activePick = true;
         idInput.value = c.id;
         pickedName = c.name || '';
         input.value = pickedName;
@@ -319,17 +338,24 @@
     }
 
     input.addEventListener('input', function () {
-        if ((input.value || '').trim() !== pickedName) {
-            idInput.value = originalId;
+        if (activePick && (input.value || '').trim() !== pickedName) {
+            restoreOriginal();
         }
         clearTimeout(timer);
-        var q = input.value.trim();
-        if (q.length < 1) { hide(); return; }
+        var q = (input.value || '').trim();
+        if (q.length < 1) { seq++; hide(); return; }
         timer = setTimeout(function () {
-            fetch(url + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' } })
+            var s = ++seq;
+            fetch(url + '?q=' + encodeURIComponent(q), { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
-                .then(function (data) { render((data && data.customers) || []); })
-                .catch(function () { hide(); });
+                .then(function (data) {
+                    if (s !== seq || (input.value || '').trim() !== q) return;
+                    render((data && data.customers) || []);
+                })
+                .catch(function () {
+                    if (s !== seq) return;
+                    hide();
+                });
         }, 180);
     });
 
