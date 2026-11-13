@@ -13,6 +13,9 @@
       </p>
       <p class="ag-kicker">{{ $industry['kicker'] ?? 'حسابداری کامپیوتر' }}</p>
       <h1>{{ $industry['title'] ?? '' }}</h1>
+      @if(!empty($industry['tagline']))
+        <p class="ag-lead">{{ $industry['tagline'] }}</p>
+      @endif
       <p class="ag-lead ag-lead--wide">{{ $industry['lead'] ?? '' }}</p>
       <div class="ag-actions">
         <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست مشاوره و دمو<i>←</i></a>
@@ -25,6 +28,21 @@
           @endforeach
         </ul>
       @endif
+      @if(!empty($industry['stats']))
+        <div class="ag-stats" style="margin-top:1rem">
+          @foreach($industry['stats'] as $st)
+            <div><b>{{ $st['n'] }}</b><span>{{ $st['l'] }}</span></div>
+          @endforeach
+        </div>
+      @endif
+      <nav class="ag-jump" aria-label="بخش‌های این نسخه">
+        @if(!empty($industry['pains']))<a href="#why-hdd">چرا این نسخه</a>@endif
+        @if(!empty($industry['strengths']))<a href="#strengths">نقاط قوت</a>@endif
+        @if(!empty($industry['options']))<a href="#options">امکانات منو</a>@endif
+        @if(!empty($industry['compare']))<a href="#compare">مقایسه</a>@endif
+        <a href="#menus">منوی نرم‌افزار</a>
+        <a href="#faq">پرسش‌ها</a>
+      </nav>
     </div>
     @if(($industry['slug'] ?? '') === 'corporate')
       <figure class="pb-hero__media pb-shot">
@@ -97,6 +115,9 @@
     <p class="ag-kicker">کاربرد</p>
     <h2>این حسابداری برای چه کسی و چه کاری است؟</h2>
     <p class="ag-lead ag-lead--wide">{{ $industry['used_for'] ?? '' }}</p>
+    @if(!empty($industry['audience']))
+      <p class="ag-lead ag-lead--wide"><strong>برای چه کسب‌وکارهایی:</strong> {{ $industry['audience'] }}</p>
+    @endif
     @if(!empty($industry['who']))
       <p class="ag-lead ag-lead--wide"><strong>مخاطب اصلی:</strong> {{ $industry['who'] }}</p>
     @endif
@@ -113,6 +134,90 @@
 
 @if(($industry['slug'] ?? '') === 'corporate' && class_exists(\App\Support\StudioSoftwareShots::class))
   @include('theme-builder::storefront.partials.gallery', ['block' => \App\Support\StudioSoftwareShots::pair('stock')])
+@endif
+
+@if(!empty($industry['pains']))
+<section class="ag-sec" id="why-hdd">
+  <div class="ag-wrap">
+    <p class="ag-kicker">چرا این نسخه</p>
+    <h2>دردهایی که این صنف می‌شناسد</h2>
+    <ul class="ag-list">
+      @foreach($industry['pains'] as $row)
+        <li>{{ $row }}</li>
+      @endforeach
+    </ul>
+  </div>
+</section>
+@endif
+
+@if(!empty($industry['strengths']))
+<section class="ag-sec" id="strengths">
+  <div class="ag-wrap">
+    <p class="ag-kicker">نقاط قوت</p>
+    <h2>شش دلیل انتخاب حسابداری {{ $industry['title'] ?? '' }}</h2>
+    <p class="ag-lead">این‌ها چیزهایی است که در بیشتر نرم‌افزارهای رایج یا نیست یا ماژول جدا و هزینهٔ جدا دارد.</p>
+    <div class="ag-cards ag-cards--dense">
+      @foreach($industry['strengths'] as $i => $row)
+        <article class="ag-card">
+          <div>
+            <b>{{ ($i+1) }}. {{ $row['title'] }}</b>
+            <p>{{ $row['text'] }}</p>
+          </div>
+        </article>
+      @endforeach
+    </div>
+  </div>
+</section>
+@endif
+
+@if(!empty($industry['options']))
+<section class="ag-sec" id="options">
+  <div class="ag-wrap">
+    <p class="ag-kicker">امکانات منو</p>
+    <h2>همهٔ امکانات در یک نگاه</h2>
+    @if(!empty($industry['product_code']))
+      <p class="ag-note">فهرست از منوی واقعی نسخهٔ {{ $industry['version'] ?? '' }} — کد محصول {{ $industry['product_code'] }}</p>
+    @endif
+    <div class="ag-cards ag-cards--dense">
+      @foreach($industry['options'] as $row)
+        <article class="ag-card">
+          <div>
+            <b>{{ $row['title'] }}</b>
+            <p>{{ $row['text'] }}</p>
+          </div>
+        </article>
+      @endforeach
+    </div>
+  </div>
+</section>
+@endif
+
+@if(!empty($industry['compare']))
+<section class="ag-sec" id="compare">
+  <div class="ag-wrap">
+    <p class="ag-kicker">مقایسه</p>
+    <h2>در کنار نرم‌افزارهای رایج همین صنف</h2>
+    <div class="ag-table-wrap">
+      <table class="ag-cmp ag-cmp--two">
+        <thead>
+          <tr>
+            <th>در این نسخه</th>
+            <th>بیشتر نرم‌افزارهای رایج</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach($industry['compare'] as $row)
+            <tr>
+              <th>{{ $row['us'] }}</th>
+              <td>{{ $row['them'] }}</td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+    <p class="ag-note">ستون «بیشتر نرم‌افزارهای رایج» روال عمومی بازار را نشان می‌دهد؛ امکانات هر نرم‌افزار بسته به نسخه و ماژول خریداری‌شده فرق می‌کند.</p>
+  </div>
+</section>
 @endif
 
 <section class="ag-sec" id="menus">

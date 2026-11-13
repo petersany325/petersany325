@@ -307,7 +307,7 @@ class StudioPageCatalog
             'seo_title' => 'حسابداری کامپیوتر با SQL Server 2022 | فراز نت آمل',
             'seo_description' => 'حسابداری کامپیوتری صنوف روی SQL Server 2022 با هوش مصنوعی آفلاین داخل نرم‌افزار.',
             'blocks' => [
-                self::hero('حسابداری کامپیوتر', 'حسابداری کامپیوتر با SQL Server 2022', 'حسابداری کامپیوتری صنوف روی SQL Server 2022 با هوش مصنوعی آفلاین داخل نرم‌افزار: شرکتی، فروشگاهی، سوپرمارکت، پخش، رستوران، تولیدی و پیمانکاری.', '', 'درخواست مشاوره و دمو', '/contact', 'حسابداری وب', '/accounting'),
+                self::hero('حسابداری کامپیوتر', 'حسابداری کامپیوتر با SQL Server 2022', 'حسابداری کامپیوتری صنوف روی SQL Server 2022 با هوش مصنوعی آفلاین داخل نرم‌افزار: شرکتی، فروشگاهی، سوپرمارکت، پخش، رستوران، تولیدی، تعمیرکاران و پیمانکاری.', '', 'درخواست مشاوره و دمو', '/contact', 'حسابداری وب', '/accounting'),
                 self::cards('صنوف', $cards),
                 self::rich('نکته نسخه', class_exists(StudioAccountingCopy::class) ? StudioAccountingCopy::sqlNote() : ''),
                 self::cta('کدام صنف شماست؟', 'هر صنف صفحه خودش را در صفحه‌ساز دارد.', 'تماس با ما', '/contact'),
@@ -374,6 +374,33 @@ class StudioPageCatalog
             }
             if (! empty($row['problems'])) {
                 $blocks[] = self::list('چه مشکلی را حل می‌کند', $row['problems']);
+            }
+            if (! empty($row['pains'])) {
+                $blocks[] = self::list('دردهایی که این صنف می‌شناسد', $row['pains']);
+            }
+            if (! empty($row['strengths'])) {
+                $blocks[] = self::cards('نقاط قوت', $row['strengths']);
+            }
+            if (! empty($row['options'])) {
+                $note = '';
+                if (! empty($row['product_code'])) {
+                    $note = 'فهرست از منوی واقعی نسخهٔ '.($row['version'] ?? '').' — کد محصول '.$row['product_code'];
+                    $blocks[] = self::rich('امکانات منو', $note);
+                }
+                $blocks[] = self::cards('همهٔ امکانات در یک نگاه', $row['options']);
+            }
+            if (! empty($row['compare'])) {
+                $cmp = [];
+                foreach ($row['compare'] as $line) {
+                    $cmp[] = [
+                        'title' => (string) ($line['us'] ?? ''),
+                        'text' => 'در بیشتر نرم‌افزارهای رایج: '.($line['them'] ?? ''),
+                    ];
+                }
+                $blocks[] = self::cards('مقایسه با نرم‌افزارهای رایج', $cmp);
+            }
+            if (! empty($row['audience'])) {
+                $blocks[] = self::rich('برای چه کسب‌وکارهایی', (string) $row['audience']);
             }
             if (! empty($row['menus'])) {
                 $blocks[] = self::cards('امکانات و منوهای این نسخه', $row['menus']);

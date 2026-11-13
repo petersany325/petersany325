@@ -47,7 +47,7 @@ class StudioAccountingEditions
     {
         return match ($slug) {
             'shop' => 'فروش امروز، بدهکاران، کالاهای زیر نقطه سفارش، چک‌های سررسید این هفته.',
-            'corporate' => 'سود و زیان، اسناد پیش‌نویس، خلاصه حقوق، مانده بانک و سامانه مودیان.',
+            'corporate' => 'سود و زیان، اسناد پیش‌نویس، خلاصه حقوق، مانده بانک و سامانه مؤدیان.',
             'supermarket' => 'صندوق فروش، بارکد، ترازو و کارتخوان.',
             'distribution' => 'ویزیتورها، پورسانت، مسیرها و بدهکاران بالای ۳۰ روز.',
             'service' => 'درآمد خدمات، فاکتور خدمات و مشتریان.',
@@ -56,6 +56,7 @@ class StudioAccountingEditions
             'cafe' => 'پیشخوان، بار، اندازه و افزودنی نوشیدنی، درصد بهای نوشیدنی و پرفروش‌ترین‌ها.',
             'contracting' => 'پروژه‌ها، صورت‌وضعیت، کسور حسن انجام کار و بیمه، درصد پیشرفت و ذخیره زیان.',
             'automation' => 'کارتابل نامه، تأیید سند، گردش امضا و تأخیر در مسیر داخلی.',
+            'technicians' => 'دستگاه‌های آماده تحویل، تأیید هزینهٔ معطل، قبض مانده و اجرت تعمیرکار.',
             default => 'پرسش‌های همان صنف؛ دستیار فقط دفتر همین نسخه را می‌بیند.',
         };
     }
@@ -69,7 +70,7 @@ class StudioAccountingEditions
     {
         $y = 'هست';
         $n = '—';
-        $cols = ['shop', 'corporate', 'supermarket', 'distribution', 'service', 'manufacturing', 'restaurant', 'cafe', 'contracting', 'automation'];
+        $cols = ['shop', 'corporate', 'supermarket', 'distribution', 'service', 'manufacturing', 'restaurant', 'cafe', 'contracting', 'technicians', 'automation'];
 
         $row = static function (string $label, array $on) use ($y, $n, $cols): array {
             $cells = [];
@@ -82,12 +83,12 @@ class StudioAccountingEditions
 
         return [
             $row('دستیار هوشمند آفلاین', $cols),
-            $row('حسابرسی مالیاتی و سامانه مودیان', $cols),
-            $row('حسابداری کامل و دفاتر', ['shop', 'corporate', 'supermarket', 'distribution', 'service', 'manufacturing', 'contracting', 'automation']),
+            $row('حسابرسی مالیاتی و سامانه مؤدیان', $cols),
+            $row('حسابداری کامل و دفاتر', ['shop', 'corporate', 'supermarket', 'distribution', 'service', 'manufacturing', 'contracting', 'technicians', 'automation']),
             $row('خزانه‌داری یکپارچه رستوران و کافه', ['restaurant', 'cafe']),
-            $row('خزانه‌داری: دریافت، پرداخت، چک، بانک', ['shop', 'corporate', 'supermarket', 'distribution', 'service', 'manufacturing', 'contracting', 'automation']),
+            $row('خزانه‌داری: دریافت، پرداخت، چک، بانک', ['shop', 'corporate', 'supermarket', 'distribution', 'service', 'manufacturing', 'contracting', 'technicians', 'automation']),
             $row('خرید و فروش بازرگانی', ['shop', 'corporate', 'supermarket', 'distribution', 'service', 'manufacturing', 'contracting']),
-            $row('انبار', ['shop', 'corporate', 'supermarket', 'distribution', 'manufacturing', 'contracting']),
+            $row('انبار', ['shop', 'corporate', 'supermarket', 'distribution', 'manufacturing', 'contracting', 'technicians']),
             $row('سریال کالا', ['shop', 'corporate', 'supermarket', 'distribution', 'service', 'manufacturing']),
             $row('قرارداد و اقساط', ['corporate', 'distribution', 'service', 'manufacturing', 'contracting']),
             $row('حقوق و دستمزد', ['corporate', 'distribution', 'manufacturing', 'restaurant', 'contracting']),
@@ -101,6 +102,7 @@ class StudioAccountingEditions
             $row('سالن، میز، آشپزخانه، پیک', ['restaurant']),
             $row('پیشخوان، بار، افزودنی نوشیدنی', ['cafe']),
             $row('پیمانکاری و پروژه', ['contracting']),
+            $row('کارتابل تعمیرکار و قبض دستگاه', ['technicians']),
         ];
     }
 
@@ -117,6 +119,7 @@ class StudioAccountingEditions
             ['slug' => 'restaurant', 'title' => 'رستوران'],
             ['slug' => 'cafe', 'title' => 'کافی‌شاپ'],
             ['slug' => 'contracting', 'title' => 'پیمانکاری'],
+            ['slug' => 'technicians', 'title' => 'تعمیرکاران'],
             ['slug' => 'automation', 'title' => 'اتوماسیون'],
         ];
     }
@@ -126,7 +129,7 @@ class StudioAccountingEditions
     {
         $common = [
             ['title' => 'پیشخوان همه نسخه‌ها', 'text' => 'نمای کلی روز: فروش، مانده‌ها، هشدارها و میانبرها. سند افتتاحیه، حساب‌های بانکی، کنترل صحت حساب‌ها و وضعیت اسناد پیش‌نویس یا قطعی.'],
-            ['title' => 'حسابرسی مالیاتی و سامانه مودیان', 'text' => 'پیشخوان ریسک مالیاتی، اجرای حسابرسی دوره، کارتابل بررسی انسانی، کنترل نرخ ارزش افزوده هر ردیف، تطبیق فاکتور با دفاتر و ارسال به سامانه مودیان.'],
+            ['title' => 'حسابرسی مالیاتی و سامانه مؤدیان', 'text' => 'پیشخوان ریسک مالیاتی، اجرای حسابرسی دوره، کارتابل بررسی انسانی، کنترل نرخ ارزش افزوده هر ردیف، تطبیق فاکتور با دفاتر و ارسال به سامانه مؤدیان.'],
             ['title' => 'کاربران، چاپ و پیامک', 'text' => '۱۵ مجوز ریز کاربر، پشتیبان‌گیری و آزمایش سلامت بکاپ، چند شرکت در یک نرم‌افزار، چاپ فاکتور A5 و A4، بارکدخوان و پیامک به مشتری.'],
         ];
 
@@ -182,6 +185,7 @@ class StudioAccountingEditions
             'automation' => [
                 ['title' => 'کارتابل و تأیید سند', 'text' => 'نامه، ارجاع و تأیید سند حسابداری در همان مسیر داخلی؛ تأخیر امضا گزارش می‌شود.'],
             ],
+            'technicians' => self::technicianMenus(),
             default => [],
         };
 
@@ -194,7 +198,7 @@ class StudioAccountingEditions
         return [
             ['title' => 'پذیرش دستگاه', 'text' => 'ثبت دستگاه و مشکل اعلام‌شده؛ قبض پذیرش همان لحظه ساخته می‌شود.'],
             ['title' => 'کارهای تعمیر', 'text' => 'عیب‌یابی، قطعه، اجرت و تحویل با فاکتور ترکیبی روی همان قبض.'],
-            ['title' => 'گزارش اجرت تعمیرکاران', 'text' => 'عملکرد و درآمد اجرت هر تعمیرکار؛ داده قبض روی سامانه support جدا می‌ماند.'],
+            ['title' => 'گزارش اجرت تعمیرکاران', 'text' => 'عملکرد و درآمد اجرت هر تعمیرکار؛ قطعه و اجرت روی همان قبض به دفتر می‌رسند.'],
         ];
     }
 }

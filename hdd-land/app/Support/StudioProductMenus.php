@@ -22,7 +22,7 @@ class StudioProductMenus
             foreach (StudioAccountingCopy::industries() as $row) {
                 $accKids[] = [
                     'label' => (string) ($row['title'] ?? ''),
-                    'url' => '/computer-accounting/'.$row['slug'],
+                    'url' => '/computer-accounting/'.($row['slug'] ?? ''),
                 ];
             }
         }
