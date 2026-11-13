@@ -130,8 +130,11 @@
 .ag-ico{width:2.6rem;height:2.6rem;flex:0 0 auto;color:var(--ag-accent);display:grid;place-items:center}
 .ag-ico svg{width:1.45rem;height:1.45rem}
 .ag-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem;margin:1.55rem auto 0;text-align:center}
-.ag-stats strong{display:block;color:#fff;font-size:1.55rem;margin:.28rem 0 .08rem}
+.ag-stats strong,.ag-stats b{display:block;color:#fff;font-size:1.55rem;margin:.28rem 0 .08rem}
 .ag-stats span{color:#8e97b8;font-size:.8rem}
+.ag-jump{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:1rem}
+.ag-jump a{display:inline-flex;align-items:center;border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:.28rem .7rem;color:#c9d0ea;text-decoration:none;font-size:.78rem;font-weight:750;background:rgba(255,255,255,.04)}
+.ag-jump a:hover{color:#fff;border-color:rgba(124,92,255,.45)}
 .ag-stat-ico{display:inline-grid;place-items:center;width:1.7rem;height:1.7rem;color:var(--ag-accent);vertical-align:middle}
 .ag-stat-ico svg{width:1.25rem;height:1.25rem}
 .ag-works{margin:2.3rem auto 2.5rem}
@@ -253,6 +256,8 @@
 .ag-cmp tbody th{text-align:right;color:#eef2ff;font-weight:750;white-space:normal;min-width:9rem}
 .ag-cmp td{color:#9aa3c7}
 .ag-cmp a{color:#c9d0ea;text-decoration:none}
+.ag-cmp--two{min-width:0}
+.ag-cmp--two th,.ag-cmp--two td{white-space:normal;text-align:right}
 @media (max-width:1100px){
   .ag-steps{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
