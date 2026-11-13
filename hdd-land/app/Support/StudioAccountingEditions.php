@@ -185,15 +185,33 @@ class StudioAccountingEditions
             'automation' => [
                 ['title' => 'کارتابل و تأیید سند', 'text' => 'نامه، ارجاع و تأیید سند حسابداری در همان مسیر داخلی؛ تأخیر امضا گزارش می‌شود.'],
             ],
-            'technicians' => self::technicianMenus(),
+            'technicians' => self::computerTechnicianMenus(),
             default => [],
         };
 
         return array_merge($by, $common);
     }
 
-    /** @return list<array{title:string,text:string}> */
+    /**
+     * Web repair-shop accounting — receipt data stays on support.hdd-land.ir.
+     *
+     * @return list<array{title:string,text:string}>
+     */
     public static function technicianMenus(): array
+    {
+        return [
+            ['title' => 'پذیرش دستگاه', 'text' => 'ثبت دستگاه و مشکل اعلام‌شده؛ قبض پذیرش همان لحظه ساخته می‌شود.'],
+            ['title' => 'کارهای تعمیر', 'text' => 'عیب‌یابی، قطعه، اجرت و تحویل با فاکتور ترکیبی روی همان قبض.'],
+            ['title' => 'گزارش اجرت تعمیرکاران', 'text' => 'عملکرد و درآمد اجرت هر تعمیرکار؛ داده قبض روی سامانه support جدا می‌ماند.'],
+        ];
+    }
+
+    /**
+     * Desktop HDD حساب edition 3001 — piece and wage post to the same local ledger.
+     *
+     * @return list<array{title:string,text:string}>
+     */
+    public static function computerTechnicianMenus(): array
     {
         return [
             ['title' => 'پذیرش دستگاه', 'text' => 'ثبت دستگاه و مشکل اعلام‌شده؛ قبض پذیرش همان لحظه ساخته می‌شود.'],

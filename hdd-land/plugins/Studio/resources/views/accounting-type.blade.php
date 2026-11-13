@@ -154,7 +154,7 @@
 <section class="ag-sec" id="strengths">
   <div class="ag-wrap">
     <p class="ag-kicker">نقاط قوت</p>
-    <h2>شش دلیل انتخاب حسابداری {{ $industry['title'] ?? '' }}</h2>
+    <h2>شش دلیل انتخاب {{ $industry['title'] ?? '' }}</h2>
     <p class="ag-lead">این‌ها چیزهایی است که در بیشتر نرم‌افزارهای رایج یا نیست یا ماژول جدا و هزینهٔ جدا دارد.</p>
     <div class="ag-cards ag-cards--dense">
       @foreach($industry['strengths'] as $i => $row)
