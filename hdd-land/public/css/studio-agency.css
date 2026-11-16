@@ -269,6 +269,7 @@
   .ag-brand > span{white-space:normal;max-width:15rem}
   .ag-brand b{font-size:.82rem}
   .ag-hero__grid,.pb-hero__grid,.ag-cards,.ag-stats,.ag-works__grid,.ag-menu-grid,.ag-drop__panel,.ag-steps{grid-template-columns:1fr 1fr}
+  .ag-drop__panel--list{grid-template-columns:1fr;min-width:min(280px,92vw)}
   .ag-scene{min-height:240px}
 }
 @media (max-width:700px){
