@@ -54,6 +54,9 @@
 .ag-drop__col a{display:block;color:#9aa3c7;font-size:.78rem;font-weight:650;line-height:1.7;padding:.05rem 0}
 .ag-drop__col a:hover{color:#fff}
 .ag-drop__panel--slim{min-width:min(720px,92vw);grid-template-columns:repeat(2,minmax(160px,1fr))}
+.ag-drop__panel--list{min-width:min(280px,92vw);width:max-content;max-width:min(360px,92vw);grid-template-columns:1fr;padding:.55rem .8rem}
+.ag-drop__panel--list > a{display:block;color:#c9d0ea;font-size:.84rem;font-weight:750;line-height:1.9;padding:.08rem 0}
+.ag-drop__panel--list > a:hover{color:#fff}
 .ag-drop__sell{color:#c4b5fd !important;font-size:.72rem !important}
 .ag-menu-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.8rem}
 .ag-menu-grid--3{grid-template-columns:repeat(3,minmax(0,1fr))}

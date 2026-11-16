@@ -50,20 +50,32 @@
           }
         @endphp
         @if(count($kids))
+          @php
+            $flatKids = true;
+            foreach ($kids as $col) {
+              if (! empty($col['children'])) { $flatKids = false; break; }
+            }
+          @endphp
           <div class="ag-drop">
             <a href="{{ url($url) }}" class="ag-drop__btn {{ $on ? 'is-on' : '' }}" aria-haspopup="true">{{ $item['label'] }} <i>▾</i></a>
-            <div class="ag-drop__panel {{ count($kids) <= 3 ? 'ag-drop__panel--slim' : '' }}" role="menu">
-              @foreach($kids as $col)
-                <div class="ag-drop__col">
-                  <a class="ag-drop__h" href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
-                  @foreach($col['children'] ?? [] as $leaf)
-                    <a href="{{ url($leaf['url'] ?? '/') }}">{{ $leaf['label'] }}</a>
-                    @if(!empty($leaf['sell']) || !empty($leaf['sell_url']))
-                      <a class="ag-drop__sell" href="{{ url($leaf['sell_url'] ?? $leaf['url']) }}">فروش · {{ $leaf['price_label'] ?? 'قیمت اعلام می‌شود' }}</a>
-                    @endif
-                  @endforeach
-                </div>
-              @endforeach
+            <div class="ag-drop__panel {{ $flatKids ? 'ag-drop__panel--list' : (count($kids) <= 3 ? 'ag-drop__panel--slim' : '') }}" role="menu">
+              @if($flatKids)
+                @foreach($kids as $leaf)
+                  <a href="{{ url($leaf['url'] ?? $url) }}">{{ $leaf['label'] }}</a>
+                @endforeach
+              @else
+                @foreach($kids as $col)
+                  <div class="ag-drop__col">
+                    <a class="ag-drop__h" href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
+                    @foreach($col['children'] ?? [] as $leaf)
+                      <a href="{{ url($leaf['url'] ?? '/') }}">{{ $leaf['label'] }}</a>
+                      @if(!empty($leaf['sell']) || !empty($leaf['sell_url']))
+                        <a class="ag-drop__sell" href="{{ url($leaf['sell_url'] ?? $leaf['url']) }}">فروش · {{ $leaf['price_label'] ?? 'قیمت اعلام می‌شود' }}</a>
+                      @endif
+                    @endforeach
+                  </div>
+                @endforeach
+              @endif
             </div>
           </div>
         @else
