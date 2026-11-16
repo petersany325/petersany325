@@ -125,6 +125,29 @@ class StudioProductMenus
 
         array_splice($kept, $insertAt, 0, $products);
 
+        if (class_exists(StudioDesignCopy::class)) {
+            $about = StudioDesignCopy::aboutNavItem();
+            $hasAbout = false;
+            foreach ($kept as $i => $item) {
+                $url = rtrim((string) ($item['url'] ?? ''), '/') ?: '/';
+                $label = trim((string) ($item['label'] ?? ''));
+                if ($url === '/about' || $label === 'درباره ما') {
+                    $kept[$i] = $about;
+                    $hasAbout = true;
+                }
+            }
+            if (! $hasAbout) {
+                $at = count($kept);
+                foreach ($kept as $i => $item) {
+                    if (rtrim((string) ($item['url'] ?? ''), '/') === '/contact' || ($item['label'] ?? '') === 'تماس') {
+                        $at = $i;
+                        break;
+                    }
+                }
+                array_splice($kept, $at, 0, [$about]);
+            }
+        }
+
         $hasSupport = false;
         foreach ($kept as $item) {
             if (($item['url'] ?? '') === '/support' || ($item['label'] ?? '') === 'پشتیبانی') {

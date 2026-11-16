@@ -60,6 +60,7 @@ class PageBuilder
     {
         self::seedStudioPages();
         self::syncCorporateShots();
+        self::syncAboutPage();
     }
 
     protected static function syncCorporateShots(): void
@@ -84,6 +85,33 @@ class PageBuilder
         $merged = \App\Support\StudioSoftwareShots::mergeInto($page);
         if (json_encode($merged['blocks'] ?? []) !== json_encode($page['blocks'] ?? [])) {
             self::save($merged);
+        }
+    }
+
+    protected static function syncAboutPage(): void
+    {
+        if (! class_exists(StudioPageCatalog::class)) {
+            return;
+        }
+        $page = self::findByPath('/about');
+        if ($page === null) {
+            return;
+        }
+        $blob = json_encode($page, JSON_UNESCAPED_UNICODE) ?: '';
+        if (str_contains($blob, '۱۴۰۵۳۱۳۳۷۹')) {
+            return;
+        }
+        foreach (StudioPageCatalog::all() as $spec) {
+            if (self::normPath((string) ($spec['path'] ?? '')) !== '/about') {
+                continue;
+            }
+            $page['title'] = (string) ($spec['title'] ?? $page['title'] ?? 'درباره ما');
+            $page['seo_title'] = (string) ($spec['seo_title'] ?? $page['seo_title'] ?? '');
+            $page['seo_description'] = (string) ($spec['seo_description'] ?? $page['seo_description'] ?? '');
+            $page['menu_label'] = 'درباره ما';
+            $page['blocks'] = $spec['blocks'] ?? [];
+            self::save($page);
+            break;
         }
     }
 

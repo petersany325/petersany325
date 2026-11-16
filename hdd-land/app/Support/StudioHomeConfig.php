@@ -18,7 +18,7 @@ class StudioHomeConfig
             'show_search' => true,
             'mobile_webapp' => true,
             'search_placeholder' => 'جستجو',
-            'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nهوش مصنوعی|/ai\nحسابداری وب|/accounting\nحسابداری کامپیوتر|/computer-accounting\nنمونه کارها|/projects\nتماس|/contact",
+            'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nنرم‌افزارها|/computer-accounting\nدرباره ما|/about\nهوش مصنوعی|/ai\nنمونه کارها|/projects\nتماس|/contact",
             'hero_title' => 'طراحی سایت، نرم‌افزار و هوش مصنوعی',
             'hero_em' => 'هوش مصنوعی',
             'hero_text' => 'شرکت فراز نت آمل سایت حرفه‌ای، نرم‌افزار اختصاصی و هوش مصنوعی می‌سازد — برای کسب‌وکار، فروشگاه و سازمان.',
@@ -52,8 +52,8 @@ class StudioHomeConfig
             'stat_1_label' => 'پروژه موفق',
             'stat_2_value' => '۹۸٪',
             'stat_2_label' => 'رضایت مشتریان',
-            'stat_3_value' => '۱۵+',
-            'stat_3_label' => 'سال تجربه تخصصی',
+            'stat_3_value' => '۲۰+',
+            'stat_3_label' => 'سال بازیابی اطلاعات',
             'stat_4_value' => '۲۵۰+',
             'stat_4_label' => 'مشتری فعال',
             'works_enabled' => true,
@@ -116,9 +116,16 @@ class StudioHomeConfig
                 $merged[$key] = $fresh[$key];
             }
         }
-        $oldNav = "صفحه اصلی|/\nطراحی سایت|/design\nحسابداری وب|/accounting\nحسابداری کامپیوتر|/computer-accounting\nنمونه کارها|/projects\nتماس|/contact";
-        if (trim((string) ($merged['nav'] ?? '')) === $oldNav) {
+        $oldNavs = [
+            "صفحه اصلی|/\nطراحی سایت|/design\nحسابداری وب|/accounting\nحسابداری کامپیوتر|/computer-accounting\nنمونه کارها|/projects\nتماس|/contact",
+            "صفحه اصلی|/\nطراحی سایت|/design\nهوش مصنوعی|/ai\nحسابداری وب|/accounting\nحسابداری کامپیوتر|/computer-accounting\nنمونه کارها|/projects\nتماس|/contact",
+        ];
+        if (in_array(trim((string) ($merged['nav'] ?? '')), $oldNavs, true)) {
             $merged['nav'] = $fresh['nav'];
+        }
+        if (($merged['stat_3_value'] ?? '') === '۱۵+' && str_contains((string) ($merged['stat_3_label'] ?? ''), 'سال تجربه')) {
+            $merged['stat_3_value'] = $fresh['stat_3_value'];
+            $merged['stat_3_label'] = $fresh['stat_3_label'];
         }
 
         return $merged;

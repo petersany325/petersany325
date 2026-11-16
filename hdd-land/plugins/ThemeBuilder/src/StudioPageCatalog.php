@@ -197,17 +197,40 @@ class StudioPageCatalog
     protected static function about(): array
     {
         $about = StudioDesignCopy::about();
-        $html = implode("\n\n", $about['body']);
+        $intro = self::rich('معرفی شرکت', implode("\n\n", $about['body'] ?? []));
+        $intro['id'] = 'intro';
+        $intro['kicker'] = 'درباره ما';
+        $blocks = [
+            self::hero('درباره ما', 'شرکت فراز نت آمل (سرزمین هارد)', (string) $about['lead'], '', 'تماس با ما', '/contact', 'طراحی سایت', '/design'),
+            $intro,
+        ];
+        $facts = [];
+        foreach ($about['facts'] ?? [] as $fact) {
+            $facts[] = ['value' => (string) ($fact['n'] ?? ''), 'label' => (string) ($fact['l'] ?? '')];
+        }
+        if ($facts !== []) {
+            $blocks[] = self::statsBlock('شناسنامه شرکت', $facts);
+        }
+        foreach ($about['sections'] ?? [] as $section) {
+            $block = self::rich((string) $section['title'], (string) ($section['text'] ?? ''));
+            $block['id'] = (string) ($section['id'] ?? '');
+            $block['kicker'] = (string) ($section['label'] ?? 'درباره ما');
+            $blocks[] = $block;
+            if (! empty($section['items'])) {
+                $blocks[] = self::list('خدمات این بخش', $section['items']);
+            }
+        }
+        $mission = self::rich('مأموریت و چشم‌انداز', "مأموریت ما: ".($about['mission'] ?? '')."\n\nچشم‌انداز ما: ".($about['vision'] ?? '')."\n\n".($about['belief'] ?? ''));
+        $mission['id'] = 'mission';
+        $mission['kicker'] = 'مأموریت';
+        $blocks[] = $mission;
+        $blocks[] = self::rich((string) ($about['closing'] ?? ''), 'وب‌سایت: '.($about['site_label'] ?? 'www.hdd-land.ir'));
+        $blocks[] = self::cta('گفتگو را شروع کنیم؟', (string) ($about['closing'] ?? ''), 'تماس با ما', '/contact');
 
-        return self::spec('/about', 'about', $about['title'], 'درباره ما', 'طراحی سایت', [
+        return self::spec('/about', 'about', 'درباره ما', 'درباره ما', 'درباره ما', [
             'seo_title' => StudioDesignCopy::seoTitle('about'),
             'seo_description' => StudioDesignCopy::seoDescription('about'),
-            'blocks' => [
-                self::hero('درباره ما', $about['title'], $about['lead'], '', 'تماس با ما', '/contact', 'طراحی سایت', '/design'),
-                self::rich($about['title'], $html),
-                self::list('چرا فراز نت آمل؟', StudioDesignCopy::reasons()),
-                self::cta('همکاری را شروع کنیم؟', $about['lead'], 'تماس با ما', '/contact'),
-            ],
+            'blocks' => $blocks,
         ]);
     }
 
