@@ -60,6 +60,7 @@ class PageBuilder
     {
         self::seedStudioPages();
         self::syncCorporateShots();
+        self::syncAboutPage();
     }
 
     protected static function syncCorporateShots(): void
@@ -85,6 +86,75 @@ class PageBuilder
         if (json_encode($merged['blocks'] ?? []) !== json_encode($page['blocks'] ?? [])) {
             self::save($merged);
         }
+    }
+
+    protected static function syncAboutPage(): void
+    {
+        if (! class_exists(StudioPageCatalog::class)) {
+            return;
+        }
+        $page = self::findByPath('/about');
+        if ($page === null) {
+            return;
+        }
+        $blob = json_encode($page, JSON_UNESCAPED_UNICODE) ?: '';
+        if (str_contains($blob, '۱۴۰۵۳۱۳۳۷۹')) {
+            $stamped = self::stampAboutAnchors(is_array($page['blocks'] ?? null) ? $page['blocks'] : []);
+            if (json_encode($stamped, JSON_UNESCAPED_UNICODE) !== json_encode($page['blocks'] ?? [], JSON_UNESCAPED_UNICODE)) {
+                $page['blocks'] = $stamped;
+                self::save($page);
+            }
+
+            return;
+        }
+        foreach (StudioPageCatalog::all() as $spec) {
+            if (self::normPath((string) ($spec['path'] ?? '')) !== '/about') {
+                continue;
+            }
+            $page['title'] = (string) ($spec['title'] ?? $page['title'] ?? 'درباره ما');
+            $page['seo_title'] = (string) ($spec['seo_title'] ?? $page['seo_title'] ?? '');
+            $page['seo_description'] = (string) ($spec['seo_description'] ?? $page['seo_description'] ?? '');
+            $page['menu_label'] = 'درباره ما';
+            $page['blocks'] = $spec['blocks'] ?? [];
+            self::save($page);
+            break;
+        }
+    }
+
+    /**
+     * Put section anchors back on about blocks after an editor save that dropped them.
+     *
+     * @param  list<array<string, mixed>>  $blocks
+     * @return list<array<string, mixed>>
+     */
+    protected static function stampAboutAnchors(array $blocks): array
+    {
+        $map = [
+            'معرفی شرکت' => ['id' => 'intro', 'kicker' => 'درباره ما'],
+            'بازیابی اطلاعات و تعمیر تجهیزات ذخیره‌سازی' => ['id' => 'recovery', 'kicker' => 'بازیابی اطلاعات'],
+            'طراحی و توسعه نرم‌افزار تخصصی' => ['id' => 'software', 'kicker' => 'نرم‌افزار'],
+            'طراحی وب‌سایت و سامانه تحت وب' => ['id' => 'web', 'kicker' => 'طراحی وب'],
+            'هوش مصنوعی و راهکار هوشمند' => ['id' => 'ai', 'kicker' => 'هوش مصنوعی'],
+            'تجهیزات پیشرفته و فناوری روز' => ['id' => 'lab', 'kicker' => 'تجهیزات'],
+            'مأموریت و چشم‌انداز' => ['id' => 'mission', 'kicker' => 'مأموریت'],
+        ];
+        foreach ($blocks as $i => $block) {
+            if (! is_array($block)) {
+                continue;
+            }
+            $stamp = $map[(string) ($block['title'] ?? '')] ?? null;
+            if ($stamp === null) {
+                continue;
+            }
+            if (trim((string) ($block['id'] ?? '')) === '') {
+                $blocks[$i]['id'] = $stamp['id'];
+            }
+            if (trim((string) ($block['kicker'] ?? '')) === '' && ($block['type'] ?? '') === 'richtext') {
+                $blocks[$i]['kicker'] = $stamp['kicker'];
+            }
+        }
+
+        return $blocks;
     }
 
     public static function seedStudioPages(): void

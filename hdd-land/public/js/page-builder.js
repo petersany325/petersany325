@@ -184,6 +184,7 @@
     fields.forEach(function (el) { card.appendChild(el); });
     card.collect = function () {
       var next = { type: block.type };
+      if (block.id) next.id = block.id;
       card.querySelectorAll(":scope > .pb-field").forEach(function (lab) {
         if (lab._input) {
           next.image = lab._input.value;
@@ -202,6 +203,7 @@
           if (["cta1_label", "cta1_url", "cta2_label", "cta2_url"].indexOf(el.name) >= 0) next[el.name] = el.value;
         });
       });
+      if (!Object.prototype.hasOwnProperty.call(next, "kicker") && block.kicker) next.kicker = block.kicker;
       return next;
     };
     return card;

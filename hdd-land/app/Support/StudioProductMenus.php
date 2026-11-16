@@ -125,15 +125,16 @@ class StudioProductMenus
 
         array_splice($kept, $insertAt, 0, $products);
 
-        $hasSupport = false;
-        foreach ($kept as $item) {
-            if (($item['url'] ?? '') === '/support' || ($item['label'] ?? '') === 'پشتیبانی') {
-                $hasSupport = true;
-                break;
-            }
-        }
-        if (! $hasSupport) {
-            $kept[] = ['label' => 'پشتیبانی', 'url' => '/support'];
+        $aboutLabels = ['درباره ما', 'تماس', 'تماس با ما', 'پشتیبانی'];
+        $aboutUrls = ['/about', '/contact', '/support'];
+        $kept = array_values(array_filter($kept, static function (array $item) use ($aboutLabels, $aboutUrls): bool {
+            $url = rtrim((string) ($item['url'] ?? ''), '/') ?: '/';
+            $label = trim((string) ($item['label'] ?? ''));
+
+            return ! in_array($url, $aboutUrls, true) && ! in_array($label, $aboutLabels, true);
+        }));
+        if (class_exists(StudioDesignCopy::class)) {
+            $kept[] = StudioDesignCopy::aboutNavItem();
         }
 
         return $kept;

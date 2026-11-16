@@ -12,7 +12,7 @@
   @php $type = $block['type'] ?? ''; @endphp
 
   @if($type === 'hero')
-    <section class="ag-page pb-hero">
+    <section class="ag-page pb-hero" @if(!empty($block['id'])) id="{{ $block['id'] }}" @endif>
       <div class="ag-wrap{{ !empty($block['image']) ? ' pb-hero__grid' : '' }}">
         <div>
           @if(!empty($block['crumb']))
@@ -43,10 +43,10 @@
     </section>
 
   @elseif($type === 'richtext')
-    <section class="ag-sec">
+    <section class="ag-sec" @if(!empty($block['id'])) id="{{ $block['id'] }}" @endif>
       <div class="ag-wrap pb-rich">
         @if(!empty($block['title']))
-          <p class="ag-kicker">متن</p>
+          <p class="ag-kicker">{{ $block['kicker'] ?? 'متن' }}</p>
           <h2>{{ $block['title'] }}</h2>
         @endif
         <div class="ag-lead ag-lead--wide pb-html">{!! $block['html'] ?? '' !!}</div>
@@ -54,7 +54,7 @@
     </section>
 
   @elseif($type === 'image')
-    <section class="ag-sec">
+    <section class="ag-sec" @if(!empty($block['id'])) id="{{ $block['id'] }}" @endif>
       <div class="ag-wrap">
         @if(!empty($block['title']))
           <h2>{{ $block['title'] }}</h2>
@@ -69,7 +69,7 @@
     </section>
 
   @elseif($type === 'cards')
-    <section class="ag-sec">
+    <section class="ag-sec" @if(!empty($block['id'])) id="{{ $block['id'] }}" @endif>
       <div class="ag-wrap">
         @if(!empty($block['title']))
           <p class="ag-kicker">بخش‌ها</p>
@@ -106,7 +106,7 @@
     </section>
 
   @elseif($type === 'list')
-    <section class="ag-sec">
+    <section class="ag-sec" @if(!empty($block['id'])) id="{{ $block['id'] }}" @endif>
       <div class="ag-wrap">
         @if(!empty($block['title']))
           <h2>{{ $block['title'] }}</h2>
@@ -120,7 +120,7 @@
     </section>
 
   @elseif($type === 'steps')
-    <section class="ag-sec">
+    <section class="ag-sec" @if(!empty($block['id'])) id="{{ $block['id'] }}" @endif>
       <div class="ag-wrap">
         @if(!empty($block['title']))
           <p class="ag-kicker">مراحل</p>
@@ -139,7 +139,7 @@
     </section>
 
   @elseif($type === 'stats')
-    <section class="ag-sec">
+    <section class="ag-sec" @if(!empty($block['id'])) id="{{ $block['id'] }}" @endif>
       <div class="ag-wrap">
         @if(!empty($block['title']))
           <h2>{{ $block['title'] }}</h2>
@@ -159,7 +159,7 @@
     @include('theme-builder::storefront.partials.gallery', ['block' => $block, 'media' => $media])
 
   @elseif($type === 'works')
-    <section class="ag-sec">
+    <section class="ag-sec" @if(!empty($block['id'])) id="{{ $block['id'] }}" @endif>
       <div class="ag-wrap">
         @if(!empty($block['title']))
           <h2>{{ $block['title'] }}</h2>
