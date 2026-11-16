@@ -200,7 +200,11 @@ class StudioDesignCopy
         return [
             'label' => 'درباره ما',
             'url' => '/about',
-            'children' => self::aboutLeaves(),
+            'children' => [
+                ['label' => 'درباره ما', 'url' => '/about'],
+                ['label' => 'تماس با ما', 'url' => '/contact'],
+                ['label' => 'پشتیبانی', 'url' => '/support'],
+            ],
         ];
     }
 
@@ -297,14 +301,6 @@ class StudioDesignCopy
                     'label' => 'فروش سایت',
                     'url' => '/projects#sell',
                     'children' => $sellKids,
-                ],
-                [
-                    'label' => 'همکاری',
-                    'url' => '/contact',
-                    'children' => [
-                        ['label' => self::builderLabel('/contact', 'تماس و مشاوره'), 'url' => '/contact'],
-                        ['label' => 'پشتیبانی', 'url' => '/support'],
-                    ],
                 ],
             ],
         ];

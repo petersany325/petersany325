@@ -203,7 +203,7 @@
           if (["cta1_label", "cta1_url", "cta2_label", "cta2_url"].indexOf(el.name) >= 0) next[el.name] = el.value;
         });
       });
-      if (!next.kicker && block.kicker) next.kicker = block.kicker;
+      if (!Object.prototype.hasOwnProperty.call(next, "kicker") && block.kicker) next.kicker = block.kicker;
       return next;
     };
     return card;

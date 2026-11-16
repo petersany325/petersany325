@@ -312,7 +312,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = $this->builderForRequest();
+        $built = ($slug === 'about') ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;

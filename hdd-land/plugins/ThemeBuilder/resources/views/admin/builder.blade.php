@@ -74,5 +74,5 @@
     @endif
   </div>
 </div>
-<script src="{{ asset('js/page-builder.js') }}?v=3"></script>
+<script src="{{ asset('js/page-builder.js') }}?v=4"></script>
 @endsection

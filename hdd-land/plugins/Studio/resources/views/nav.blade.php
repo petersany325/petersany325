@@ -149,7 +149,6 @@
       <p class="ag-drawer__sec">نماینده</p>
       <a href="{{ url('/staff/desk') }}">کارتابل کارمند</a>
       <a href="{{ url('/auth/staff') }}">ورود کارمند</a>
-      <a href="{{ url('/support') }}">پشتیبانی</a>
     </div>
   </div>
 </header>
@@ -168,7 +167,6 @@
         @php $on = $path === $item['url'] || str_starts_with($path, rtrim($item['url'], '/').'/'); @endphp
         <a href="{{ url($item['url']) }}" class="{{ $on ? 'is-on' : '' }}">{{ $item['label'] }}</a>
       @endforeach
-      <a href="{{ url('/contact') }}">تماس</a>
       @auth
         <a href="{{ auth()->user()->isStaff() || auth()->user()->isAdmin() ? url('/staff') : url('/account') }}">{{ auth()->user()->name }}</a>
       @else

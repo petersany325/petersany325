@@ -18,7 +18,7 @@ class StudioHomeConfig
             'show_search' => true,
             'mobile_webapp' => true,
             'search_placeholder' => 'جستجو',
-            'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nنرم‌افزارها|/computer-accounting\nدرباره ما|/about\nهوش مصنوعی|/ai\nنمونه کارها|/projects\nتماس|/contact",
+            'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nنرم‌افزارها|/computer-accounting\nهوش مصنوعی|/ai\nنمونه کارها|/projects\nدرباره ما|/about",
             'hero_title' => 'طراحی سایت، نرم‌افزار و هوش مصنوعی',
             'hero_em' => 'هوش مصنوعی',
             'hero_text' => 'شرکت فراز نت آمل سایت حرفه‌ای، نرم‌افزار اختصاصی و هوش مصنوعی می‌سازد — برای کسب‌وکار، فروشگاه و سازمان.',
@@ -119,6 +119,7 @@ class StudioHomeConfig
         $oldNavs = [
             "صفحه اصلی|/\nطراحی سایت|/design\nحسابداری وب|/accounting\nحسابداری کامپیوتر|/computer-accounting\nنمونه کارها|/projects\nتماس|/contact",
             "صفحه اصلی|/\nطراحی سایت|/design\nهوش مصنوعی|/ai\nحسابداری وب|/accounting\nحسابداری کامپیوتر|/computer-accounting\nنمونه کارها|/projects\nتماس|/contact",
+            "صفحه اصلی|/\nطراحی سایت|/design\nنرم‌افزارها|/computer-accounting\nدرباره ما|/about\nهوش مصنوعی|/ai\nنمونه کارها|/projects\nتماس|/contact",
         ];
         if (in_array(trim((string) ($merged['nav'] ?? '')), $oldNavs, true)) {
             $merged['nav'] = $fresh['nav'];
@@ -287,7 +288,7 @@ class StudioHomeConfig
             ['label' => 'تیکت', 'url' => '/account/tickets', 'icon' => '✉'],
             ['label' => 'کارتابل', 'url' => '/account', 'icon' => '☺'],
             ['label' => 'وب‌اپ', 'url' => '/app', 'icon' => '▣'],
-            ['label' => 'تماس', 'url' => '/contact', 'icon' => '☎'],
+            ['label' => 'درباره ما', 'url' => '/about', 'icon' => '☎'],
         ];
     }
 

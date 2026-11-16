@@ -125,38 +125,16 @@ class StudioProductMenus
 
         array_splice($kept, $insertAt, 0, $products);
 
-        if (class_exists(StudioDesignCopy::class)) {
-            $about = StudioDesignCopy::aboutNavItem();
-            $hasAbout = false;
-            foreach ($kept as $i => $item) {
-                $url = rtrim((string) ($item['url'] ?? ''), '/') ?: '/';
-                $label = trim((string) ($item['label'] ?? ''));
-                if ($url === '/about' || $label === 'درباره ما') {
-                    $kept[$i] = $about;
-                    $hasAbout = true;
-                }
-            }
-            if (! $hasAbout) {
-                $at = count($kept);
-                foreach ($kept as $i => $item) {
-                    if (rtrim((string) ($item['url'] ?? ''), '/') === '/contact' || ($item['label'] ?? '') === 'تماس') {
-                        $at = $i;
-                        break;
-                    }
-                }
-                array_splice($kept, $at, 0, [$about]);
-            }
-        }
+        $aboutLabels = ['درباره ما', 'تماس', 'تماس با ما', 'پشتیبانی'];
+        $aboutUrls = ['/about', '/contact', '/support'];
+        $kept = array_values(array_filter($kept, static function (array $item) use ($aboutLabels, $aboutUrls): bool {
+            $url = rtrim((string) ($item['url'] ?? ''), '/') ?: '/';
+            $label = trim((string) ($item['label'] ?? ''));
 
-        $hasSupport = false;
-        foreach ($kept as $item) {
-            if (($item['url'] ?? '') === '/support' || ($item['label'] ?? '') === 'پشتیبانی') {
-                $hasSupport = true;
-                break;
-            }
-        }
-        if (! $hasSupport) {
-            $kept[] = ['label' => 'پشتیبانی', 'url' => '/support'];
+            return ! in_array($url, $aboutUrls, true) && ! in_array($label, $aboutLabels, true);
+        }));
+        if (class_exists(StudioDesignCopy::class)) {
+            $kept[] = StudioDesignCopy::aboutNavItem();
         }
 
         return $kept;
