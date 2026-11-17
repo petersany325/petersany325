@@ -12,8 +12,8 @@
       <path id="ddVp" d="M40 250 H90 V160 H230 V75 H370 V160 H510 V75 H570" fill="none" stroke="#4fa8ff" stroke-width="2.5" stroke-dasharray="6 6"/>
       <path id="ddTp" d="M560 250 H370 V160 L300 160 H230 V250 H90 V75" fill="none" stroke="#2dd4bf" stroke-width="3"/>
       <g id="ddPins"></g>
-      <g id="ddVis"><circle r="13" fill="none" stroke="#4fa8ff" stroke-width="2" class="dd-pulse"/><circle r="8" fill="#0e1124" stroke="#4fa8ff" stroke-width="3"/></g>
-      <g id="ddTrk"><circle r="13" fill="none" stroke="#2dd4bf" stroke-width="2" class="dd-pulse"/><circle r="8" fill="#0e1124" stroke="#2dd4bf" stroke-width="3"/></g>
+      <g id="ddVis" transform="translate(40,250)"><circle r="13" fill="none" stroke="#4fa8ff" stroke-width="2" class="dd-pulse"/><circle r="8" fill="#0e1124" stroke="#4fa8ff" stroke-width="3"/></g>
+      <g id="ddTrk" transform="translate(560,250)"><circle r="13" fill="none" stroke="#2dd4bf" stroke-width="2" class="dd-pulse"/><circle r="8" fill="#0e1124" stroke="#2dd4bf" stroke-width="3"/></g>
     </svg>
     <div class="dd-side">
       <div class="lg"><i style="background:#2ecc8f"></i>سفارش یا تحویل</div>
