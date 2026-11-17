@@ -87,6 +87,10 @@
 @include('studio::accounting-supermarket')
 @endif
 
+@if($slug === 'accounting-shop')
+@include('studio::accounting-shop')
+@endif
+
 @if($slug === 'accounting-type')
 @include('studio::accounting-type')
 @endif
