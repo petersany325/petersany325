@@ -18,8 +18,18 @@ class StudioProductMenus
     public static function softwareNavItem(): array
     {
         $accKids = [];
-        if (class_exists(StudioAccountingCopy::class)) {
+        if (class_exists(StudioComputerMenu::class)) {
+            foreach (StudioComputerMenu::cards() as $row) {
+                $accKids[] = [
+                    'label' => (string) $row['title'],
+                    'url' => '/computer-accounting/'.$row['slug'],
+                ];
+            }
+        } elseif (class_exists(StudioAccountingCopy::class)) {
             foreach (StudioAccountingCopy::industries() as $row) {
+                if (($row['slug'] ?? '') === 'technicians') {
+                    continue;
+                }
                 $accKids[] = [
                     'label' => (string) ($row['title'] ?? ''),
                     'url' => '/computer-accounting/'.($row['slug'] ?? ''),

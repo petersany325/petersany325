@@ -77,6 +77,7 @@ class Plugin extends BasePlugin
             base_path('app/Support/StudioHomeConfig.php'),
             base_path('app/Support/StudioProductMenus.php'),
             base_path('app/Support/StudioAccountingCopy.php'),
+            base_path('app/Support/StudioComputerMenu.php'),
             base_path('app/Support/StudioAccountingEditions.php'),
             base_path('app/Support/StudioDesignCopy.php'),
             base_path('app/Support/StudioSoftwareShots.php'),

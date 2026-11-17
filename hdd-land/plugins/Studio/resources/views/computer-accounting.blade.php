@@ -1,28 +1,59 @@
 @php
-  $sqlNote = $sqlNote ?? \App\Support\StudioAccountingCopy::sqlNote();
-  $industries = $industries ?? [];
-  $groups = $groups ?? [];
+  $cards = \App\Support\StudioComputerMenu::cards();
+  $shared = \App\Support\StudioComputerMenu::shared();
+  $assistant = \App\Support\StudioComputerMenu::assistant();
+  $network = \App\Support\StudioComputerMenu::network();
+  $faqs = \App\Support\StudioComputerMenu::faqs();
+  $faqLd = ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => []];
+  foreach ($faqs as $faq) {
+      $faqLd['mainEntity'][] = [
+          '@type' => 'Question',
+          'name' => $faq['q'],
+          'acceptedAnswer' => ['@type' => 'Answer', 'text' => $faq['a']],
+      ];
+  }
 @endphp
-<section class="ag-page">
+<section class="ag-page" id="top">
   <div class="ag-wrap">
-    <p class="ag-kicker">حسابداری کامپیوتر · SQL Server 2022</p>
-    <h1>حسابداری کامپیوتری صنوف</h1>
-    <p class="ag-lead ag-lead--wide">هر صنف منوی خودش را دارد: شرکتی، فروشگاهی، سوپرمارکت، پخش، رستوران، تولیدی، تعمیرکاران و بقیه. روی SQL Server 2022 نصب می‌شود و هوش مصنوعی تحلیل و گفتگو را آفلاین، داخل خود نرم‌افزار انجام می‌دهد. حسابداری وب جداگانه برای قبض تعمیرگاه است.</p>
+    <p class="ag-kicker">حسابداری کامپیوتری</p>
+    <h1>حسابداری ویژهٔ صنف شما، با دستیار هوشمند فارسی</h1>
+    <p class="ag-lead ag-lead--wide">فاکتور، انبار، خزانه، حقوق، مالیات و سامانهٔ مؤدیان در یک نرم‌افزار؛ هر صنف منو و منطق حسابداری خودش را دارد. دستیار هوش مصنوعی داخل خود نرم‌افزار و بدون اینترنت کار می‌کند.</p>
     <div class="ag-actions">
-      <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست نصب و دمو<i>←</i></a>
-      <a class="ag-btn ag-btn--line" href="{{ url('/accounting') }}">حسابداری وب تعمیرکاران</a>
+      <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست دمو و مشاوره<i>←</i></a>
+      <span class="ag-btn ag-btn--line">تماس در واتس‌اپ · [[لینک واتس‌اپ]]</span>
     </div>
-    <p class="ag-note">{{ $sqlNote }}</p>
+    <p class="ag-note">نصب روی کامپیوتر و شبکهٔ خودتان · کار هم‌زمان چند کاربر · پشتیبانی [[مدت/نوع پشتیبانی]]</p>
+    <figure class="ag-shot-ph">
+      <span>فاکتور فروش در نرم‌افزار حسابداری حساب HDD</span>
+    </figure>
   </div>
 </section>
 
-<section class="ag-sec" id="ai">
+<section class="ag-sec" id="industries">
   <div class="ag-wrap">
-    <p class="ag-kicker">دستیار هوشمند آفلاین</p>
-    <h2>تحلیل و گفتگو با هوش مصنوعی — داخل نرم‌افزار</h2>
-    <p class="ag-lead ag-lead--wide">{{ \App\Support\StudioAccountingCopy::aiNote() }}</p>
+    <p class="ag-kicker">صنف‌ها</p>
+    <h2>صنف خود را انتخاب کنید</h2>
+    <p class="ag-lead">هر نسخه فقط منوهایی را دارد که آن صنف لازم دارد؛ نه کمتر، نه شلوغ‌تر.</p>
     <div class="ag-cards ag-cards--dense">
-      @foreach(\App\Support\StudioAccountingCopy::aiMenus() as $row)
+      @foreach($cards as $row)
+        <a class="ag-card" href="{{ url('/computer-accounting/'.$row['slug']) }}">
+          <div>
+            <b>{{ $row['title'] }}</b>
+            <p>{{ $row['text'] }}</p>
+          </div>
+        </a>
+      @endforeach
+    </div>
+    <p class="ag-note">تعمیرگاه دارید؟ حسابداری تعمیرکاران تحت وب است. <a href="{{ url('/accounting') }}">حسابداری وب</a></p>
+  </div>
+</section>
+
+<section class="ag-sec" id="shared">
+  <div class="ag-wrap">
+    <p class="ag-kicker">مشترک</p>
+    <h2>آنچه در همهٔ نسخه‌ها هست</h2>
+    <div class="ag-cards ag-cards--dense">
+      @foreach($shared as $row)
         <article class="ag-card">
           <div>
             <b>{{ $row['title'] }}</b>
@@ -31,84 +62,93 @@
         </article>
       @endforeach
     </div>
-    @if(class_exists(\App\Support\StudioAccountingEditions::class))
-      <h2 class="ag-sec-title">۹ کنترل حسابرس هوشمند</h2>
-      <p class="ag-lead ag-lead--wide">حسابرس هوشمند کنترل خودکار را با ذکر دلیل اجرا می‌کند. ثبت قطعی فقط با تأیید شماست.</p>
-      <ul class="ag-list">
-        @foreach(\App\Support\StudioAccountingEditions::auditorChecks() as $row)
-          <li><strong>{{ $row['title'] }}:</strong> {{ $row['text'] }}</li>
-        @endforeach
-      </ul>
-    @endif
   </div>
 </section>
 
-@if(class_exists(\App\Support\StudioAccountingEditions::class))
-<section class="ag-sec" id="compare">
+<section class="ag-sec" id="ai">
   <div class="ag-wrap">
-    <p class="ag-kicker">نسخه‌ها در یک نگاه</p>
-    <h2>هر نسخه منوی همان کسب‌وکار را نشان می‌دهد</h2>
-    <p class="ag-lead ag-lead--wide">دستیار هوشمند در همه نسخه‌ها هست. حسابداری تعمیرکاران نسخهٔ کامپیوتر هم دارد؛ حسابداری وب جداگانه برای قبض تعمیرگاه است.</p>
-    <div class="ag-table-wrap">
-      <table class="ag-cmp">
-        <thead>
-          <tr>
-            <th>امکان</th>
-            @foreach(\App\Support\StudioAccountingEditions::comparisonColumns() as $col)
-              <th><a href="{{ url('/computer-accounting/'.$col['slug']) }}">{{ $col['title'] }}</a></th>
-            @endforeach
-          </tr>
-        </thead>
-        <tbody>
-          @foreach(\App\Support\StudioAccountingEditions::comparison() as $row)
-            <tr>
-              <th>{{ $row['label'] }}</th>
-              @foreach(\App\Support\StudioAccountingEditions::comparisonColumns() as $col)
-                <td>{{ $row['cells'][$col['slug']] ?? '—' }}</td>
-              @endforeach
-            </tr>
-          @endforeach
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-@endif
-
-<section class="ag-sec" id="industries">
-  <div class="ag-wrap">
-    <p class="ag-kicker">به تفکیک صنف</p>
-    <h2>هر صنف منوی خودش را دارد</h2>
+    <p class="ag-kicker">هوش مصنوعی</p>
+    <h2>دستیار هوشمندی که حسابداری بلد است</h2>
+    <p class="ag-lead ag-lead--wide">دستیار داخل خود نرم‌افزار و روی کامپیوتر شما کار می‌کند؛ اطلاعات مالی‌تان به اینترنت فرستاده نمی‌شود.</p>
     <div class="ag-cards ag-cards--dense">
-      @foreach($industries as $row)
-        <a class="ag-card" href="{{ url('/computer-accounting/'.$row['slug']) }}">
+      @foreach($assistant as $row)
+        <article class="ag-card">
           <div>
             <b>{{ $row['title'] }}</b>
-            <p>{{ $row['short'] }}</p>
-            <small>توضیحات کامل ←</small>
+            <p>{{ $row['text'] }}</p>
           </div>
-        </a>
+        </article>
+      @endforeach
+    </div>
+    <figure class="ag-shot-ph">
+      <span>دستیار هوش مصنوعی فارسی حساب HDD</span>
+    </figure>
+  </div>
+</section>
+
+<section class="ag-sec" id="network">
+  <div class="ag-wrap">
+    <p class="ag-kicker">شبکه</p>
+    <h2>یک نرم‌افزار برای کل مجموعه</h2>
+    <div class="ag-cards ag-cards--dense">
+      @foreach($network as $row)
+        <article class="ag-card">
+          <div>
+            <b>{{ $row['title'] }}</b>
+            <p>{{ $row['text'] }}</p>
+          </div>
+        </article>
       @endforeach
     </div>
   </div>
 </section>
 
-<section class="ag-sec ag-sec--last">
+<section class="ag-sec" id="migrate">
   <div class="ag-wrap">
-    <p class="ag-kicker">ماژول‌های دفتر</p>
-    <h2>اسناد، انبار، خزانه و گزارش روی SQL Server 2022</h2>
-    <div class="ag-menu-grid">
-      @foreach($groups as $group)
-        <article class="ag-menu-card" id="{{ $group['slug'] }}">
-          <small>حسابداری کامپیوتر</small>
-          <b>{{ $group['title'] }}</b>
-          <ul>
-            @foreach($group['items'] as $mod)
-              <li><a href="{{ url('/computer-accounting/m/'.$mod['slug']) }}">{{ $mod['title'] }}</a></li>
-            @endforeach
-          </ul>
-        </article>
+    <p class="ag-kicker">انتقال</p>
+    <h2>اطلاعات قبلی‌تان را می‌آوریم</h2>
+    <p class="ag-lead ag-lead--wide">انتقال اطلاعات از نرم‌افزارهای هلو، آرتا و پیو؛ و ورود اطلاعات کالا و اشخاص از Excel. [[اگر نرم‌افزارهای دیگری را هم با خدمات انتقال پشتیبانی می‌کنید، این‌جا نام ببرید]]</p>
+  </div>
+</section>
+
+<section class="ag-sec" id="trust">
+  <div class="ag-wrap">
+    <p class="ag-kicker">اعتماد</p>
+    <h2>چرا حساب HDD</h2>
+    <div class="ag-stats">
+      <div><b>۱۸ سال</b><span>طراحی نرم‌افزار</span></div>
+      <div><b>۴۱۸۹</b><span>شمارهٔ ثبت شرکت</span></div>
+      <div><b>[[تعداد مشتری]]</b><span>مشتری</span></div>
+      <div><b>[[مدت پشتیبانی]]</b><span>پشتیبانی</span></div>
+    </div>
+    <p class="ag-note">شرکت فراز نت آمل (سرزمین هارد) · شناسهٔ صنفی ۱۴۰۵۳۱۳۳۷۹</p>
+  </div>
+</section>
+
+<section class="ag-sec" id="faq">
+  <div class="ag-wrap">
+    <p class="ag-kicker">پرسش‌ها</p>
+    <h2>پرسش‌های رایج</h2>
+    <ul class="ag-steps" style="grid-template-columns:1fr">
+      @foreach($faqs as $row)
+        <li>
+          <b>{{ $row['q'] }}</b>
+          <p>{{ $row['a'] }}</p>
+        </li>
       @endforeach
+    </ul>
+  </div>
+</section>
+<script type="application/ld+json">{!! json_encode($faqLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+
+<section class="ag-sec ag-sec--last" id="demo">
+  <div class="ag-wrap">
+    <p class="ag-kicker">دمو</p>
+    <h2>آمادهٔ دیدن نرم‌افزار هستید؟</h2>
+    <p class="ag-lead">یک دموی کوتاه با صنف خودتان نشان‌تان می‌دهیم.</p>
+    <div class="ag-actions">
+      <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست دمو<i>←</i></a>
+      <a class="ag-btn ag-btn--line" href="tel:01144447220">تماس: ۰۱۱۴۴۴۴۷۲۲۰</a>
     </div>
   </div>
 </section>
