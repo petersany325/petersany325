@@ -439,9 +439,10 @@
 .ag-switch--on i::after{right:auto;left:.12rem;background:#fff}
 @media (max-width:800px){
   .ag-steps.ag-cycle,.ag-roles,.ag-roles.ag-roles--4,.ag-steps.ag-gate,.ag-steps.ag-path,.ag-marks{grid-template-columns:1fr}
-  .ag-cycle li:not(:nth-child(3n)):not(:last-child)::after,
-  .ag-cycle li:nth-child(3n):not(:last-child)::after,
-  .ag-path li:not(:last-child)::after{
-    content:"↓";left:auto;right:.35rem;top:auto;bottom:-.75rem;
+  .ag-cycle li:not(:last-child)::after,
+  .ag-path li:not(:last-child)::after,
+  .ag-flow li:not(:last-child)::after{
+    content:"↓";position:absolute;left:auto;right:.35rem;top:auto;bottom:-.75rem;
+    color:var(--ag-accent,#7c5cff);font-weight:800;
   }
 }
