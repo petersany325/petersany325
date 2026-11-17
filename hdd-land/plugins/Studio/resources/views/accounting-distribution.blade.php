@@ -192,7 +192,7 @@
     if (o.rule) {
       r.classList.add('is-flag'); r.dataset.rule = o.rule;
       st.innerHTML = '<span class="vo-badge is-bad">نیاز به تأیید سرپرست</span><span class="vo-reason">'+RULES[o.rule]+'</span>';
-      act.innerHTML = '<button type="button" class="y">تأیید</button><button type="button">اصلاح</button>';
+      act.innerHTML = '<span class="y">تأیید</span><span>اصلاح</span>';
       var c = card(o.rule);
       if (c) { c.classList.add('is-on'); c.classList.remove('is-pulse'); void c.offsetWidth; c.classList.add('is-pulse'); }
     } else {
@@ -219,7 +219,7 @@
   }
   async function supervisor(){
     var r = rowsEl.querySelector('.vo-row[data-no="'+APPROVE+'"]'); if (!r) return;
-    var btn = r.querySelector('button.y');
+    var btn = r.querySelector('.y');
     cur.style.transition = 'none';
     cur.style.transform = 'translate('+(win.clientWidth*0.15)+'px,'+(win.clientHeight-40)+'px)';
     void cur.offsetWidth; cur.style.transition = '';
