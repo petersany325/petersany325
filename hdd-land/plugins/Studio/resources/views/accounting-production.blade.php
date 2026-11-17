@@ -38,7 +38,7 @@
       <a class="ag-btn ag-btn--line" href="#features">همهٔ امکانات</a>
     </div>
     <p class="ag-note">فرمول ساخت (BOM) · بهای تمام‌شدهٔ خودکار · قبض باسکول</p>
-    <figure class="ag-shot-ph"><span>دستور تولید و بهای تمام‌شده در نرم‌افزار حسابداری تولیدی حساب HDD</span></figure>
+    @include('studio::accounting-production-demos', ['n' => 1])
   </div>
 </section>
 
@@ -89,7 +89,17 @@
             @endforeach
           </ul>
           @foreach($tab['alts'] ?? [] as $alt)
-            <figure class="ag-shot-ph"><span>{{ $alt }}</span></figure>
+            @if($alt === 'فرمول ساخت (BOM) محصول')
+              @include('studio::accounting-production-demos', ['n' => 2])
+            @elseif($alt === 'ظرفیت تولید بر اساس موجودی مواد')
+              @include('studio::accounting-production-demos', ['n' => 3])
+            @elseif($alt === 'سری ساخت و تاریخ انقضای کالا')
+              @include('studio::accounting-production-demos', ['n' => 4])
+            @elseif($alt === 'قبض باسکول و سند توزین')
+              @include('studio::accounting-production-demos', ['n' => 5])
+            @else
+              <figure class="ag-shot-ph"><span>{{ $alt }}</span></figure>
+            @endif
           @endforeach
         </div>
       @endforeach
@@ -111,7 +121,7 @@
       <div>دستمزد و سربار</div>
       <div>بهای هر واحد</div>
     </div>
-    <figure class="ag-shot-ph"><span>گزارش بهای تمام‌شدهٔ محصول</span></figure>
+    @include('studio::accounting-production-demos', ['n' => 6])
   </div>
 </section>
 
@@ -146,3 +156,4 @@
     </div>
   </div>
 </section>
+@include('studio::accounting-production-demo-script')
