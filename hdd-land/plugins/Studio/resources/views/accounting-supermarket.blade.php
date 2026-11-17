@@ -32,7 +32,7 @@
       <a class="ag-btn ag-btn--line" href="#features">همهٔ امکانات</a>
     </div>
     <p class="ag-note">صندوق بدون اتصال · بارکد ترازو · باشگاه مشتریان</p>
-    <figure class="ag-shot-ph"><span>صندوق فروش سوپرمارکت در نرم‌افزار حساب HDD</span></figure>
+    @include('studio::accounting-supermarket-demos', ['n' => 1])
   </div>
 </section>
 
@@ -60,7 +60,7 @@
       <li>رسیدی که سرور نپذیرد برای بررسی کنار گذاشته می‌شود، گم نمی‌شود</li>
       <li>تا همهٔ رسیدهای شیفت ثبت نشده، شیفت بسته نمی‌شود</li>
     </ul>
-    <figure class="ag-shot-ph"><span>فروش سوپرمارکت بدون اتصال به شبکه</span></figure>
+    @include('studio::accounting-supermarket-demos', ['n' => 2])
   </div>
 </section>
 
@@ -78,7 +78,13 @@
               <li>{{ $line }}</li>
             @endforeach
           </ul>
-          @if(!empty($tab['alt']))
+          @if(($tab['alt'] ?? '') === 'نمایشگر مشتری سوپرمارکت')
+            @include('studio::accounting-supermarket-demos', ['n' => 3])
+          @elseif(($tab['alt'] ?? '') === 'باشگاه مشتریان سوپرمارکت')
+            @include('studio::accounting-supermarket-demos', ['n' => 4])
+          @elseif(($tab['alt'] ?? '') === 'گزارش فروش ساعتی صندوق')
+            @include('studio::accounting-supermarket-demos', ['n' => 5])
+          @elseif(!empty($tab['alt']))
             <figure class="ag-shot-ph"><span>{{ $tab['alt'] }}</span></figure>
           @endif
         </div>
@@ -95,7 +101,6 @@
         <div><b>{{ $item }}</b></div>
       @endforeach
     </div>
-    <p class="ag-note">[[فهرست مدل‌ها یا برندهایی که آزموده‌اید، اگر می‌خواهید اعلام کنید]]</p>
   </div>
 </section>
 
@@ -135,3 +140,4 @@
     </div>
   </div>
 </section>
+@include('studio::accounting-supermarket-demo-script')

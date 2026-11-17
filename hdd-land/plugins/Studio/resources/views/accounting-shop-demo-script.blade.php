@@ -161,7 +161,7 @@
     jobs.forEach(function(j){
       var c = j[0].children;
       count(c[1], j[1][1], 1100); count(c[2], j[1][2], 1100); count(c[3], j[2], 1100);
-      j[0].querySelector('.tr i').style.width = (j[3] * 2) + '%';
+      j[0].querySelector('.tr i').style.width = j[3] + '%';
       var s = j[0].querySelector('.sd-share .num');
       count(s, j[3], 1100).then(function(){ s.textContent = faN(j[3])+'٪'; });
     });
