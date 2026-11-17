@@ -19,7 +19,7 @@
   $compare = [
       ['فاکتور، انبار، چک، اقساط، مؤدیان', '✓', '✓', '✓'],
       ['تخفیف‌های پلکانی و مشترکین', '✓', '✓', '✓'],
-      ['کارتخوان متصل (PC-POS)', '✓', '✓', '[[تأیید]]'],
+      ['کارتخوان متصل (PC-POS)', '✓', '✓', '✓'],
       ['صندوق فروش سریع (POS) و شیفت', '—', '✓', '—'],
       ['صندوق بدون اتصال، نمایشگر مشتری، کشوی پول', '—', '✓', '—'],
       ['باشگاه مشتریان با امتیاز', '—', '✓', '—'],
@@ -42,7 +42,7 @@
       <a class="ag-btn ag-btn--line" href="#features">همهٔ امکانات</a>
     </div>
     <p class="ag-note">سود هر کالا و فاکتور · چک و اقساط · سامانهٔ مؤدیان</p>
-    <figure class="ag-shot-ph"><span>فاکتور فروش در نرم‌افزار حسابداری فروشگاهی حساب HDD</span></figure>
+    @include('studio::accounting-shop-demos', ['n' => 1])
   </div>
 </section>
 
@@ -87,7 +87,15 @@
               <li>{{ $line }}</li>
             @endforeach
           </ul>
-          @if(!empty($tab['alt']))
+          @if(($tab['alt'] ?? '') === 'تسویهٔ فاکتور با نقد، کارت و چک')
+            @include('studio::accounting-shop-demos', ['n' => 2])
+          @elseif(($tab['alt'] ?? '') === 'گزارش موجودی کالا')
+            @include('studio::accounting-shop-demos', ['n' => 3])
+          @elseif(($tab['alt'] ?? '') === 'مدیریت چک دریافتی')
+            @include('studio::accounting-shop-demos', ['n' => 4])
+          @elseif(($tab['alt'] ?? '') === 'گزارش سود هر کالا')
+            @include('studio::accounting-shop-demos', ['n' => 5])
+          @elseif(!empty($tab['alt']))
             <figure class="ag-shot-ph"><span>{{ $tab['alt'] }}</span></figure>
           @endif
         </div>
@@ -155,3 +163,4 @@
     </div>
   </div>
 </section>
+@include('studio::accounting-shop-demo-script')
