@@ -99,6 +99,10 @@
 @include('studio::accounting-restaurant')
 @endif
 
+@if($slug === 'accounting-production')
+@include('studio::accounting-production')
+@endif
+
 @if($slug === 'accounting-type')
 @include('studio::accounting-type')
 @endif
