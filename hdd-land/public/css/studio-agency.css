@@ -431,11 +431,18 @@
 }
 .ag-marks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.6rem;margin-top:.9rem}
 .ag-marks div{border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:.85rem .7rem;text-align:center;color:#fff;font-weight:800}
+.ag-switch{display:inline-flex;align-items:center;gap:.4rem;margin:0 0 .45rem;color:#9aa3c7;font-size:.75rem;font-weight:800}
+.ag-switch i{width:2.1rem;height:1.15rem;border-radius:999px;background:#2a3148;position:relative;display:inline-block}
+.ag-switch i::after{content:"";position:absolute;top:.12rem;right:.12rem;width:.9rem;height:.9rem;border-radius:50%;background:#8b93ad}
+.ag-switch--on{color:#efeaff}
+.ag-switch--on i{background:#7c5cff}
+.ag-switch--on i::after{right:auto;left:.12rem;background:#fff}
 @media (max-width:800px){
   .ag-steps.ag-cycle,.ag-roles,.ag-roles.ag-roles--4,.ag-steps.ag-gate,.ag-steps.ag-path,.ag-marks{grid-template-columns:1fr}
-  .ag-cycle li:not(:nth-child(3n)):not(:last-child)::after,
-  .ag-cycle li:nth-child(3n):not(:last-child)::after,
-  .ag-path li:not(:last-child)::after{
-    content:"↓";left:auto;right:.35rem;top:auto;bottom:-.75rem;
+  .ag-cycle li:not(:last-child)::after,
+  .ag-path li:not(:last-child)::after,
+  .ag-flow li:not(:last-child)::after{
+    content:"↓";position:absolute;left:auto;right:.35rem;top:auto;bottom:-.75rem;
+    color:var(--ag-accent,#7c5cff);font-weight:800;
   }
 }
