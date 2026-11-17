@@ -399,3 +399,15 @@
   .sd-tabbar a.is-on{color:#fff}
   .sd{padding-bottom:5.6rem}
 }
+.ag-steps.ag-flow{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ag-flow li{position:relative}
+.ag-flow li:not(:last-child)::after{
+  content:"←";position:absolute;left:-.55rem;top:.9rem;color:var(--ag-accent,#7c5cff);font-weight:800;
+}
+.ag-trades{display:flex;flex-wrap:wrap;gap:.55rem;margin-top:.8rem}
+.ag-trades div{border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:.7rem .8rem;min-width:7.2rem;text-align:center}
+.ag-trades b{color:#fff;font-size:.82rem}
+@media (max-width:800px){
+  .ag-steps.ag-flow{grid-template-columns:1fr}
+  .ag-flow li:not(:last-child)::after{content:"↓";left:auto;right:.35rem;top:auto;bottom:-.75rem}
+}

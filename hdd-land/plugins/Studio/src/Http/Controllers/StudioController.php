@@ -103,6 +103,12 @@ class StudioController
             ]);
         }
 
+        if ($slug === 'shop') {
+            return $this->page('accounting-shop', \App\Support\StudioComputerMenu::SHOP_SEO_TITLE, [
+                'description' => \App\Support\StudioComputerMenu::SHOP_SEO_DESCRIPTION,
+            ]);
+        }
+
         if ($slug === 'corporate') {
             return $this->page('accounting-corporate', \App\Support\StudioComputerMenu::CORPORATE_SEO_TITLE, [
                 'description' => \App\Support\StudioComputerMenu::CORPORATE_SEO_DESCRIPTION,
@@ -332,7 +338,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket'], true) ? null : $this->builderForRequest();
+        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop'], true) ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;
