@@ -111,6 +111,10 @@
 @include('studio::accounting-service')
 @endif
 
+@if($slug === 'accounting-office')
+@include('studio::accounting-office')
+@endif
+
 @if($slug === 'accounting-type')
 @include('studio::accounting-type')
 @endif
