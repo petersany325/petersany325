@@ -91,7 +91,7 @@
     var E2 = T2.map(function(t){ var d = document.createElement('div'); h2.appendChild(d); free(d, t[0], t[1]); return d; });
     busy(E1[1], '۲', 305, 1840000, 'رضا'); busy(E1[4], '۵', 308, 3260000, 'علی'); busy(E2[1], '۱۰', 309, 920000, 'سارا'); tally();
     await sleep(1500);
-    busy(E1[6], '۷', 312, 3740000, 'علی'); tally(); await flash(E1[6]); await sleep(1100);
+    busy(E1[6], '۷', 312, 7480000, 'علی'); tally(); await flash(E1[6]); await sleep(1100);
     reserved(E2[3], '۱۲', '۲۰:۳۰', 'خانوادهٔ نمونه'); tally(); await flash(E2[3]); await sleep(1100);
     busy(E1[3], '۴', 313, 0, 'رضا'); E1[3].innerHTML = '<div class="nm">میز ۴</div>سفارش ۳۱۳<br>تازه باز شد · رضا'; E1[3].className = 'rd-tb is-busy'; tally(); await flash(E1[3]); await sleep(1100);
     free(E1[1], '۲', 2); tally(); await flash(E1[1]); E1[1].insertAdjacentHTML('beforeend', '<br><span class="is-paid">تسویه شد</span>');
