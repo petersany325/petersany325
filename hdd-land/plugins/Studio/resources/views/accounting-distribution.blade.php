@@ -38,7 +38,7 @@
       <a class="ag-btn ag-btn--line" href="#features">همهٔ امکانات</a>
     </div>
     <p class="ag-note">اپ ویزیتور و موزع · نقشه و GPS · طرح‌های فروش پلکانی</p>
-    <figure class="ag-shot-ph"><span>نقشهٔ پخش و GPS در نرم‌افزار حسابداری پخش حساب HDD</span></figure>
+    @include('studio::accounting-distribution-demos', ['n' => 1])
   </div>
 </section>
 
@@ -73,7 +73,7 @@
       @endforeach
     </div>
     <p class="ag-note">برنامهٔ اندروید یکی است و امکاناتش با مجوز و نقش هر گوشی باز می‌شود. (حداقل اندروید ۱۲)</p>
-    <figure class="ag-shot-ph"><span>اپ اندروید ویزیتور حساب HDD</span></figure>
+    @include('studio::accounting-distribution-demos', ['n' => 2])
   </div>
 </section>
 
@@ -121,6 +121,12 @@
                 <span>سرپرست</span>
               </div>
             </div>
+          @elseif(($tab['alt'] ?? '') === 'لیست پخش و بارگیری ماشین')
+            @include('studio::accounting-distribution-demos', ['n' => 3])
+          @elseif(($tab['alt'] ?? '') === 'طرح فروش و اشانتیون پلکانی')
+            @include('studio::accounting-distribution-demos', ['n' => 4])
+          @elseif(($tab['alt'] ?? '') === 'داشبورد مدیر پخش')
+            @include('studio::accounting-distribution-demos', ['n' => 5])
           @elseif(!empty($tab['alt']))
             <figure class="ag-shot-ph"><span>{{ $tab['alt'] }}</span></figure>
           @endif
@@ -307,3 +313,4 @@
     </div>
   </div>
 </section>
+@include('studio::accounting-distribution-demo-script')
