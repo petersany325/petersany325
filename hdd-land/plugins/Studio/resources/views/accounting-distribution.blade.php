@@ -22,13 +22,6 @@
       ['title' => 'ویزیتور (اپ اندروید)', 'items' => ['مسیر و مشتری‌های روز', 'ثبت سفارش، حتی بی‌اینترنت', 'دیدن طرح‌ها، اشانتیون و «چند عدد دیگر تا پلهٔ بعد»', 'ثبت بی‌خریدی', 'دریافت نقد، کارتخوان و چک', 'بستن روز']],
       ['title' => 'موزع و راننده (اپ اندروید)', 'items' => ['لیست تحویل به ترتیب', 'ثبت تحویل، برگشتی یا «تحویل نشد»', 'مکان ماشین روی نقشه']],
   ];
-  $gates = [
-      'بیش از سقف اعتبار مشتری (با احتساب سفارش‌های منتظر دیگرش)',
-      'چک برگشتی باز',
-      'تخفیف بیش از سقف مجاز ویزیتور',
-      'ثبت سفارش بیرون از محدودهٔ مغازه',
-      'بیش از سهمیهٔ ماهانهٔ ویزیتور',
-  ];
 @endphp
 <section class="ag-page">
   <div class="ag-wrap">
@@ -93,12 +86,42 @@
         <label for="dist-{{ $tab['id'] }}">{{ $tab['title'] }}</label>
         <div class="acc-tabs__panel">
           <h2>{{ $tab['title'] }}</h2>
-          <ul class="acc-cols">
+          <ul class="acc-cols{{ $tab['id'] === 'visitor' ? ' acc-cols--1' : '' }}">
             @foreach($tab['items'] as $line)
               <li>{{ $line }}</li>
             @endforeach
           </ul>
-          @if(!empty($tab['alt']))
+          @if($tab['id'] === 'visitor')
+            <p class="ag-lead">سفارش گوشی ویزیتور به کارتابل دفتر می‌رسد، بررسی می‌شود و بعد فاکتور یا راهی لیست پخش می‌شود. نام‌ها و مبلغ‌ها ساختگی است.</p>
+            <div class="vo-flow" aria-hidden="true">
+              <div class="vo-step" id="voS1"><i>۱</i><span>سفارش از گوشی ویزیتور</span></div>
+              <div class="vo-link" id="voL1"></div>
+              <div class="vo-step" id="voS2"><i>۲</i><span>کنترل پنج قاعده</span></div>
+              <div class="vo-link" id="voL2"></div>
+              <div class="vo-step" id="voS3"><i>۳</i><span>فاکتور یا لیست پخش</span></div>
+            </div>
+            <div class="vo-win" id="voWin">
+              <div class="vo-bar">
+                <div class="vo-dots" aria-hidden="true"><b></b><b></b><b></b></div>
+                <div class="vo-title">کارتابل سفارش ویزیتورها</div>
+                <div class="vo-count" id="voCount"></div>
+              </div>
+              <div class="vo-tools" aria-label="کارهای کارتابل">
+                <span class="is-on">تأیید و صدور فاکتور</span>
+                <span class="is-on">تأیید برای لیست پخش</span>
+                <span>پیش‌فاکتور</span>
+                <span>اصلاح</span>
+                <span>رد</span>
+              </div>
+              <div class="vo-grid vo-head"><div>سفارش</div><div>ویزیتور</div><div>مشتری</div><div>مبلغ</div><div>وضعیت</div><div></div></div>
+              <div class="vo-rows" id="voRows"></div>
+              <div class="vo-toast" id="voToast"></div>
+              <div class="vo-cursor" id="voCursor" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 2l16 10-7 1.5L9.5 21z" fill="#fff" stroke="#070b18" stroke-width="1.5"/></svg>
+                <span>سرپرست</span>
+              </div>
+            </div>
+          @elseif(!empty($tab['alt']))
             <figure class="ag-shot-ph"><span>{{ $tab['alt'] }}</span></figure>
           @endif
         </div>
@@ -111,13 +134,143 @@
   <div class="ag-wrap">
     <h2>هر سفارشی فاکتور نمی‌شود</h2>
     <p class="ag-lead ag-lead--wide">سفارش گوشی ویزیتور مستقیم فاکتور نمی‌شود. نرم‌افزار آن را بررسی می‌کند و اگر یکی از این‌ها باشد، برای تأیید سرپرست کنار می‌گذارد:</p>
-    <ol class="ag-steps ag-gate">
-      @foreach($gates as $i => $line)
-        <li><small>{{ ['۱','۲','۳','۴','۵'][$i] }}</small><p>{{ $line }}</p></li>
-      @endforeach
-    </ol>
+    <div class="vo-rules" id="voRules">
+      <div class="vo-card" data-rule="1"><div class="n">۱</div><div class="tx">بیش از سقف اعتبار مشتری</div><div class="go">با احتساب سفارش‌های منتظر دیگرش</div></div>
+      <div class="vo-card" data-rule="2"><div class="n">۲</div><div class="tx">چک برگشتی باز</div><div class="go">← تأیید سرپرست</div></div>
+      <div class="vo-card" data-rule="3"><div class="n">۳</div><div class="tx">تخفیف بیش از سقف مجاز ویزیتور</div><div class="go">← تأیید سرپرست</div></div>
+      <div class="vo-card" data-rule="4"><div class="n">۴</div><div class="tx">ثبت سفارش بیرون از محدودهٔ مغازه</div><div class="go">← تأیید سرپرست</div></div>
+      <div class="vo-card" data-rule="5"><div class="n">۵</div><div class="tx">بیش از سهمیهٔ ماهانهٔ ویزیتور</div><div class="go">← تأیید سرپرست</div></div>
+    </div>
   </div>
 </section>
+<script>
+(function () {
+  var RULES = {1:'بیش از سقف اعتبار',2:'چک برگشتی باز',3:'تخفیف بیش از سقف ویزیتور',4:'بیرون از محدودهٔ مغازه',5:'بیش از سهمیهٔ ماهانه'};
+  var ORDERS = [
+    {no:2041,v:'رضا کریمی',c:'سوپرمارکت ستاره',amt:18450000,rule:0,done:'فاکتور شد'},
+    {no:2042,v:'مریم احمدی',c:'فروشگاه گلستان',amt:42800000,rule:1},
+    {no:2043,v:'رضا کریمی',c:'بقالی امید',amt:6300000,rule:0,done:'در لیست پخش'},
+    {no:2044,v:'حسین نوری',c:'هایپر آفتاب',amt:27900000,rule:3},
+    {no:2045,v:'مریم احمدی',c:'مینی‌مارکت باران',amt:9750000,rule:4}
+  ];
+  var APPROVE = 2042;
+  var rowsEl = document.getElementById('voRows');
+  var win = document.getElementById('voWin');
+  var cur = document.getElementById('voCursor');
+  var toast = document.getElementById('voToast');
+  var countEl = document.getElementById('voCount');
+  if (!rowsEl || !win) return;
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function faN(n){return String(n).replace(/\d/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'[d]})}
+  function fa(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'٬').replace(/\d/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'[d]})}
+  function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
+  function card(k){return document.querySelector('.vo-card[data-rule="'+k+'"]')}
+  function steps(a){
+    ['voS1','voS2','voS3'].forEach(function(id,i){
+      var e = document.getElementById(id);
+      if (!e) return;
+      e.classList.toggle('is-on', a===i+1);
+      e.classList.toggle('is-bad', a===-2 && i===1);
+    });
+  }
+  function run(id){var e=document.getElementById(id); if(!e) return; e.classList.remove('is-run'); void e.offsetWidth; e.classList.add('is-run')}
+  function updateCount(){
+    var n = rowsEl.querySelectorAll('.vo-row.is-flag').length;
+    countEl.innerHTML = n ? '<em>'+fa(n)+'</em> سفارش منتظر تأیید سرپرست' : 'همهٔ سفارش‌ها بررسی شد';
+  }
+  function makeRow(o){
+    var r = document.createElement('div');
+    r.className = 'vo-row vo-grid';
+    r.dataset.no = o.no;
+    r.innerHTML = '<div class="num">#'+faN(o.no)+'</div><div>'+o.v+'</div><div>'+o.c+'</div>'+
+      '<div class="amt">'+fa(o.amt)+' <small>ریال</small></div>'+
+      '<div class="st"><span class="vo-badge is-check">در حال بررسی</span></div><div class="act"></div>';
+    return r;
+  }
+  function resolve(o,r){
+    var st = r.querySelector('.st'), act = r.querySelector('.act');
+    if (o.rule) {
+      r.classList.add('is-flag'); r.dataset.rule = o.rule;
+      st.innerHTML = '<span class="vo-badge is-bad">نیاز به تأیید سرپرست</span><span class="vo-reason">'+RULES[o.rule]+'</span>';
+      act.innerHTML = '<button type="button" class="y">تأیید</button><button type="button">اصلاح</button>';
+      var c = card(o.rule);
+      if (c) { c.classList.add('is-on'); c.classList.remove('is-pulse'); void c.offsetWidth; c.classList.add('is-pulse'); }
+    } else {
+      r.classList.add('is-ok');
+      st.innerHTML = '<span class="vo-badge is-ok">✓ '+o.done+'</span>';
+    }
+    updateCount();
+  }
+  function approveRow(r){
+    if (!r) return;
+    var rule = r.dataset.rule;
+    r.classList.remove('is-flag'); r.classList.add('is-ok');
+    delete r.dataset.rule;
+    r.querySelector('.st').innerHTML = '<span class="vo-badge is-ok">✓ تأیید سرپرست · فاکتور شد</span><span class="vo-reason is-done">'+RULES[rule]+'</span>';
+    r.querySelector('.act').innerHTML = '';
+    var c = card(rule); if (c) c.classList.remove('is-on');
+    steps(3); run('voL2'); updateCount();
+    toast.textContent = 'فاکتور سفارش #'+faN(APPROVE)+' با تأیید سرپرست صادر شد';
+    toast.classList.add('is-show');
+  }
+  function moveCursor(el){
+    var w = win.getBoundingClientRect(), b = el.getBoundingClientRect();
+    cur.style.transform = 'translate('+(b.left-w.left+b.width/2)+'px,'+(b.top-w.top+b.height/2)+'px)';
+  }
+  async function supervisor(){
+    var r = rowsEl.querySelector('.vo-row[data-no="'+APPROVE+'"]'); if (!r) return;
+    var btn = r.querySelector('button.y');
+    cur.style.transition = 'none';
+    cur.style.transform = 'translate('+(win.clientWidth*0.15)+'px,'+(win.clientHeight-40)+'px)';
+    void cur.offsetWidth; cur.style.transition = '';
+    cur.style.opacity = 1;
+    await sleep(80); moveCursor(btn); await sleep(1000);
+    btn.classList.add('is-press'); await sleep(220); btn.classList.remove('is-press');
+    approveRow(r);
+    await sleep(600); cur.style.opacity = 0;
+  }
+  async function play(){
+    while (true) {
+      rowsEl.style.opacity = 1; rowsEl.innerHTML = ''; toast.classList.remove('is-show');
+      document.querySelectorAll('.vo-card').forEach(function(c){c.classList.remove('is-on')});
+      updateCount();
+      for (var i = 0; i < ORDERS.length; i++) {
+        var o = ORDERS[i], r = makeRow(o);
+        steps(1); rowsEl.appendChild(r); await sleep(450);
+        run('voL1'); steps(2); await sleep(900);
+        resolve(o, r);
+        if (o.rule) steps(-2); else { run('voL2'); steps(3); }
+        await sleep(750);
+      }
+      steps(0); await sleep(700);
+      await supervisor();
+      await sleep(3200);
+      rowsEl.style.opacity = 0; toast.classList.remove('is-show'); steps(0);
+      await sleep(600);
+    }
+  }
+  function staticView(){
+    ORDERS.forEach(function(o){var r = makeRow(o); rowsEl.appendChild(r); resolve(o,r)});
+    var r = rowsEl.querySelector('.vo-row[data-no="'+APPROVE+'"]');
+    approveRow(r);
+    cur.style.opacity = 0;
+  }
+  document.querySelectorAll('.vo-card').forEach(function(c){
+    c.addEventListener('mouseenter', function(){
+      rowsEl.querySelectorAll('.vo-row[data-rule="'+c.dataset.rule+'"]').forEach(function(r){r.classList.add('is-hl')});
+    });
+    c.addEventListener('mouseleave', function(){
+      rowsEl.querySelectorAll('.vo-row.is-hl').forEach(function(r){r.classList.remove('is-hl')});
+    });
+  });
+  if (reduce) { staticView(); return; }
+  var started = false;
+  function start(){ if (!started) { started = true; play(); } }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function(es){ if (es[0].isIntersecting) start(); }, {threshold: 0.25}).observe(win);
+  } else start();
+})();
+</script>
 
 <section class="ag-sec" id="ai">
   <div class="ag-wrap">
