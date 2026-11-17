@@ -37,7 +37,7 @@
       <a class="ag-btn ag-btn--line" href="#features">همهٔ امکانات</a>
     </div>
     <p class="ag-note">اندازه و افزودنی · ایستگاه بار · درصد بهای هر نوشیدنی</p>
-    <figure class="ag-shot-ph"><span>سفارش سریع پیشخوان در نرم‌افزار کافی‌شاپ حساب HDD</span></figure>
+    @include('studio::accounting-cafe-demos', ['n' => 1])
   </div>
 </section>
 
@@ -88,9 +88,18 @@
               <li>{{ $line }}</li>
             @endforeach
           </ul>
-          @foreach($tab['alts'] ?? [] as $alt)
+          @php $alt = $tab['alts'][0] ?? ''; @endphp
+          @if($alt === 'صف بار و نوشیدنی')
+            @include('studio::accounting-cafe-demos', ['n' => 2])
+          @elseif($alt === 'منوی کافه با اندازه‌ها')
+            @include('studio::accounting-cafe-demos', ['n' => 3])
+          @elseif($alt === 'منوی QR کافی‌شاپ')
+            @include('studio::accounting-cafe-demos', ['n' => 4])
+          @elseif($alt === 'بستن صندوق شیفت کافه')
+            @include('studio::accounting-cafe-demos', ['n' => 5])
+          @elseif($alt !== '')
             <figure class="ag-shot-ph"><span>{{ $alt }}</span></figure>
-          @endforeach
+          @endif
         </div>
       @endforeach
     </div>
@@ -106,7 +115,7 @@
         <div><b>{{ $col }}</b></div>
       @endforeach
     </div>
-    <figure class="ag-shot-ph"><span>درصد بهای نوشیدنی در نرم‌افزار کافی‌شاپ</span></figure>
+    @include('studio::accounting-cafe-demos', ['n' => 6])
   </div>
 </section>
 
@@ -141,3 +150,4 @@
     <p class="ag-note">رستوران دارید؟ <a href="{{ url('/computer-accounting/restaurant') }}">نسخهٔ رستوران</a></p>
   </div>
 </section>
+@include('studio::accounting-cafe-demo-script')
