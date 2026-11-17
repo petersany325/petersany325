@@ -121,6 +121,12 @@ class StudioController
             ]);
         }
 
+        if ($slug === 'contracting') {
+            return $this->page('accounting-contracting', \App\Support\StudioComputerMenu::CONTRACTING_SEO_TITLE, [
+                'description' => \App\Support\StudioComputerMenu::CONTRACTING_SEO_DESCRIPTION,
+            ]);
+        }
+
         if ($slug === 'manufacturing') {
             return $this->page('accounting-production', \App\Support\StudioComputerMenu::PRODUCTION_SEO_TITLE, [
                 'description' => \App\Support\StudioComputerMenu::PRODUCTION_SEO_DESCRIPTION,
@@ -374,7 +380,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office'], true) ? null : $this->builderForRequest();
+        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting'], true) ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;

@@ -70,6 +70,7 @@
   var BQ = [['۷۸','۰۸:۱۸','—','آیس موکا','۱','',19],['۸۰','۰۸:۲۹','میز ۳','کاپوچینو (بزرگ)','۲','یکی بدون شکر',11],['۸۲','۰۸:۳۴','—','اسپرسو','۱','دبل',6],['۸۴','۰۸:۳۸','—','لاته (متوسط)','۱','شات اضافه · شیر جو دوسر · بدون شکر',2]];
   async function play2(){
     var bq = el('cfBq'); if (!bq) return;
+    el('cfClk').textContent = 'ساعت '+faN('08:40')+' · تازه شدن خودکار';
     bq.innerHTML = '';
     var rows = BQ.map(function(k){
       var tr = document.createElement('tr'); tr.dataset.m = k[6];
