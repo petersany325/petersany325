@@ -115,6 +115,12 @@ class StudioController
             ]);
         }
 
+        if ($slug === 'restaurant') {
+            return $this->page('accounting-restaurant', \App\Support\StudioComputerMenu::RESTAURANT_SEO_TITLE, [
+                'description' => \App\Support\StudioComputerMenu::RESTAURANT_SEO_DESCRIPTION,
+            ]);
+        }
+
         if ($slug === 'corporate') {
             return $this->page('accounting-corporate', \App\Support\StudioComputerMenu::CORPORATE_SEO_TITLE, [
                 'description' => \App\Support\StudioComputerMenu::CORPORATE_SEO_DESCRIPTION,
@@ -344,7 +350,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution'], true) ? null : $this->builderForRequest();
+        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant'], true) ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;
