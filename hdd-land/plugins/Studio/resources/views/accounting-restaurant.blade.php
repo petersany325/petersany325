@@ -37,7 +37,7 @@
       <a class="ag-btn ag-btn--line" href="#features">همهٔ امکانات</a>
     </div>
     <p class="ag-note">سفارش گارسون با گوشی · منوی QR میز · بهای هر پرس</p>
-    <figure class="ag-shot-ph"><span>ثبت سفارش لمسی در نرم‌افزار رستوران حساب HDD</span></figure>
+    @include('studio::accounting-restaurant-demos', ['n' => 1])
   </div>
 </section>
 
@@ -84,7 +84,15 @@
               <li>{{ $line }}</li>
             @endforeach
           </ul>
-          @if(!empty($tab['alt']))
+          @if(($tab['alt'] ?? '') === 'نمای سالن و میزهای رستوران')
+            @include('studio::accounting-restaurant-demos', ['n' => 2])
+          @elseif(($tab['alt'] ?? '') === 'سفارش گارسون با گوشی')
+            @include('studio::accounting-restaurant-demos', ['n' => 3])
+          @elseif(($tab['alt'] ?? '') === 'منوی QR میز رستوران')
+            @include('studio::accounting-restaurant-demos', ['n' => 4])
+          @elseif(($tab['alt'] ?? '') === 'صف سفارش‌های آشپزخانه')
+            @include('studio::accounting-restaurant-demos', ['n' => 5])
+          @elseif(!empty($tab['alt']))
             <figure class="ag-shot-ph"><span>{{ $tab['alt'] }}</span></figure>
           @endif
         </div>
@@ -102,7 +110,7 @@
       <div>سود هر غذا</div>
       <div>موجودی مواد</div>
     </div>
-    <figure class="ag-shot-ph"><span>دستور پخت و بهای هر پرس</span></figure>
+    @include('studio::accounting-restaurant-demos', ['n' => 6])
   </div>
 </section>
 
@@ -143,3 +151,4 @@
     <p class="ag-note">کافی‌شاپ دارید؟ <a href="{{ url('/computer-accounting/cafe') }}">نسخهٔ کافی‌شاپ</a></p>
   </div>
 </section>
+@include('studio::accounting-restaurant-demo-script')
