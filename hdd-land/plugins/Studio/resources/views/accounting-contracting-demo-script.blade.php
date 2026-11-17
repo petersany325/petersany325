@@ -141,7 +141,12 @@
   async function play5(){
     var bud = el('ctBud'); if (!bud) return;
     var bls = bud.querySelectorAll('.ct-bl');
-    bls.forEach(function(d){ var f = d.querySelector('.fill'); f.style.transition = 'none'; f.style.width = '0'; f.classList.remove('is-over'); void f.offsetWidth; f.style.transition = ''; d.querySelector('.pc').style.color = ''; });
+    bls.forEach(function(d){
+      var f = d.querySelector('.fill');
+      f.style.transition = 'none'; f.style.width = '0'; f.classList.remove('is-over'); void f.offsetWidth; f.style.transition = '';
+      d.querySelector('.v').textContent = '۰';
+      var pc = d.querySelector('.pc'); pc.textContent = '۰٪'; pc.style.color = '';
+    });
     await sleep(400);
     bls.forEach(function(d, i){
       var b = B[i], p = Math.round(b[2] / b[1] * 100), f = d.querySelector('.fill');
