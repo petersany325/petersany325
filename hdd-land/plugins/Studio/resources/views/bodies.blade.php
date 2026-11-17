@@ -75,6 +75,18 @@
 @include('studio::computer-accounting')
 @endif
 
+@if($slug === 'accounting-edition')
+@include('studio::accounting-edition')
+@endif
+
+@if($slug === 'accounting-corporate')
+@include('studio::accounting-corporate')
+@endif
+
+@if($slug === 'accounting-supermarket')
+@include('studio::accounting-supermarket')
+@endif
+
 @if($slug === 'accounting-type')
 @include('studio::accounting-type')
 @endif

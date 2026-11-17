@@ -78,8 +78,8 @@ class StudioController
 
     public function computerAccounting(): View
     {
-        return $this->page('computer-accounting', 'حسابداری کامپیوتر با SQL Server 2022 | فراز نت آمل', [
-            'description' => 'حسابداری کامپیوتری صنوف روی SQL Server 2022 با هوش مصنوعی آفلاین داخل نرم‌افزار: شرکتی، فروشگاهی، سوپرمارکت، پخش، رستوران، تولیدی و پیمانکاری.',
+        return $this->page('computer-accounting', \App\Support\StudioComputerMenu::SEO_TITLE, [
+            'description' => \App\Support\StudioComputerMenu::SEO_DESCRIPTION,
             'groups' => StudioProductMenus::accountingGroups(),
             'industries' => StudioAccountingCopy::industries(),
             'sqlNote' => StudioAccountingCopy::sqlNote(),
@@ -97,6 +97,26 @@ class StudioController
 
     public function computerAccountingType(string $slug): View|RedirectResponse
     {
+        if ($slug === 'supermarket') {
+            return $this->page('accounting-supermarket', \App\Support\StudioComputerMenu::SUPERMARKET_SEO_TITLE, [
+                'description' => \App\Support\StudioComputerMenu::SUPERMARKET_SEO_DESCRIPTION,
+            ]);
+        }
+
+        if ($slug === 'corporate') {
+            return $this->page('accounting-corporate', \App\Support\StudioComputerMenu::CORPORATE_SEO_TITLE, [
+                'description' => \App\Support\StudioComputerMenu::CORPORATE_SEO_DESCRIPTION,
+            ]);
+        }
+
+        $edition = \App\Support\StudioComputerMenu::edition($slug);
+        if ($edition !== null) {
+            return $this->page('accounting-edition', $edition['seo_title'], [
+                'description' => $edition['seo_description'],
+                'edition' => $edition,
+            ]);
+        }
+
         $industry = StudioAccountingCopy::industry($slug);
         if ($industry === null) {
             return redirect()->to(url('/computer-accounting'));
@@ -312,7 +332,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = ($slug === 'about') ? null : $this->builderForRequest();
+        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket'], true) ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;
