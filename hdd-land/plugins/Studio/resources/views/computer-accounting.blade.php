@@ -23,9 +23,7 @@
       <span class="ag-btn ag-btn--line">تماس در واتس‌اپ · [[لینک واتس‌اپ]]</span>
     </div>
     <p class="ag-note">نصب روی کامپیوتر و شبکهٔ خودتان · کار هم‌زمان چند کاربر · پشتیبانی [[مدت/نوع پشتیبانی]]</p>
-    <figure class="ag-shot-ph">
-      <span>فاکتور فروش در نرم‌افزار حسابداری HDD Land</span>
-    </figure>
+    @include('studio::accounting-hub-demos', ['n' => 1])
   </div>
 </section>
 
@@ -80,9 +78,7 @@
         </article>
       @endforeach
     </div>
-    <figure class="ag-shot-ph">
-      <span>دستیار هوش مصنوعی فارسی HDD Land</span>
-    </figure>
+    @include('studio::accounting-hub-demos', ['n' => 2])
   </div>
 </section>
 
@@ -108,13 +104,16 @@
     <p class="ag-kicker">انتقال</p>
     <h2>اطلاعات قبلی‌تان را می‌آوریم</h2>
     <p class="ag-lead ag-lead--wide">انتقال اطلاعات از نرم‌افزارهای هلو، آرتا و پیو؛ و ورود اطلاعات کالا و اشخاص از Excel. [[اگر نرم‌افزارهای دیگری را هم با خدمات انتقال پشتیبانی می‌کنید، این‌جا نام ببرید]]</p>
+    <div class="ag-actions">
+      <a class="ag-btn ag-btn--line" href="{{ url('/computer-accounting/data-migration') }}">مراحل مهاجرت داده</a>
+    </div>
   </div>
 </section>
 
 <section class="ag-sec" id="trust">
   <div class="ag-wrap">
     <p class="ag-kicker">اعتماد</p>
-    <h2>چرا HDD Land</h2>
+    <h2>چرا حسابداری HDD Land</h2>
     <div class="ag-stats">
       <div><b>۱۸ سال</b><span>طراحی نرم‌افزار</span></div>
       <div><b>۴۱۸۹</b><span>شمارهٔ ثبت شرکت</span></div>
@@ -140,6 +139,7 @@
   </div>
 </section>
 <script type="application/ld+json">{!! json_encode($faqLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+@include('studio::accounting-hub-demo-script')
 
 <section class="ag-sec ag-sec--last" id="demo">
   <div class="ag-wrap">

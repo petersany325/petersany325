@@ -145,6 +145,12 @@ class StudioController
             ]);
         }
 
+        if ($slug === 'data-migration') {
+            return $this->page('accounting-migration', \App\Support\StudioComputerMenu::MIGRATION_SEO_TITLE, [
+                'description' => \App\Support\StudioComputerMenu::MIGRATION_SEO_DESCRIPTION,
+            ]);
+        }
+
         if ($slug === 'automation') {
             return $this->page('accounting-office', \App\Support\StudioComputerMenu::OFFICE_SEO_TITLE, [
                 'description' => \App\Support\StudioComputerMenu::OFFICE_SEO_DESCRIPTION,
@@ -380,7 +386,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting'], true) ? null : $this->builderForRequest();
+        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration'], true) ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;
