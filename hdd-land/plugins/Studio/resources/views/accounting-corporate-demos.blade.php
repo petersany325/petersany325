@@ -1,6 +1,6 @@
 @if($n === 1)
 <div class="cd" id="cd1">
-  <div class="cd-bar"><div class="cd-dots" aria-hidden="true"><b></b><b></b><b></b></div><div class="cd-t">HDD Land · نسخهٔ شرکتی</div><div class="cd-r">شرکت نمونهٔ آریا · سال مالی ۱۴۰۵</div></div>
+  <div class="cd-bar"><div class="cd-dots" aria-hidden="true"><b></b><b></b><b></b></div><div class="cd-t">حسابداری HDD Land · نسخهٔ شرکتی</div><div class="cd-r">شرکت نمونهٔ آریا · سال مالی ۱۴۰۵</div></div>
   <div class="cd-hero">
     <div class="cd-mods" id="cdMods"></div>
     <div class="cd-feed">
