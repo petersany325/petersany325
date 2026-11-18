@@ -63,7 +63,13 @@ class StudioController
 
     public function ai(): View
     {
-        return $this->page('ai', 'هوش مصنوعی برای سایت و نرم‌افزار | فراز نت آمل');
+        return $this->page('ai', 'دستیار فارسی که روی کامپیوتر خودتان کار می‌کند | فراز نت آمل', [
+            'description' => 'می‌پرسید، با صدا یا متن؛ دستیار حسابداری HDD Land از دفاتر خود شما جواب می‌دهد، گزارش را توضیح می‌دهد و پیش‌نویس ثبت می‌سازد. ثبت قطعی فقط با تأیید شماست و بدون اینترنت کار می‌کند.',
+            'canonical' => url('/ai'),
+            'ogTitle' => 'دستیار فارسی حسابداری HDD Land | فراز نت آمل',
+            'ogDescription' => 'گفت‌وگوی صوتی فارسی، پیش‌نویس ثبت با تأیید، خواندن فاکتور و حسابرس هوشمند؛ روی همین کامپیوتر.',
+            'twitterDescription' => 'دستیار فارسی روی کامپیوتر خودتان؛ ثبت فقط با تأیید شما.',
+        ]);
     }
 
     public function accounting(): View
@@ -430,7 +436,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration', 'software-beauty', 'software-psychology', 'software-dental', 'software-physio'], true) ? null : $this->builderForRequest();
+        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration', 'software-beauty', 'software-psychology', 'software-dental', 'software-physio', 'ai'], true) ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;
