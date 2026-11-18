@@ -92,7 +92,6 @@ class StudioAccountingEditions
             $row('سریال کالا', ['shop', 'corporate', 'supermarket', 'distribution', 'service', 'manufacturing']),
             $row('قرارداد و اقساط', ['corporate', 'distribution', 'service', 'manufacturing', 'contracting']),
             $row('حقوق و دستمزد', ['corporate', 'distribution', 'manufacturing', 'restaurant', 'contracting']),
-            $row('کنترل شعب', ['corporate', 'distribution']),
             $row('بودجه و مقایسه با عملکرد', ['corporate']),
             $row('صندوق فروش و کیوسک', ['supermarket']),
             $row('کارتخوان PC-POS', ['shop', 'supermarket', 'restaurant', 'cafe']),
@@ -136,7 +135,7 @@ class StudioAccountingEditions
         $by = match ($slug) {
             'corporate' => [
                 ['title' => 'مدیریت مشتری و وظایف', 'text' => 'معرفی و رده‌بندی مشتریان، قراردادها، ادغام اشخاص تکراری، ارجاع کار و بایگانی پرونده با اسناد.'],
-                ['title' => 'کنترل شعب و بودجه', 'text' => 'ارسال و دریافت با سرور مرکزی، نرخ ویژه شعبه، مقایسه انتقال‌ها و تعریف بودجه برای حساب، مرکز هزینه و پروژه.'],
+                ['title' => 'بودجه', 'text' => 'تعریف بودجه برای حساب، مرکز هزینه و پروژه و مقایسه با عملکرد.'],
                 ['title' => 'حقوق و دستمزد کامل', 'text' => 'معرفی پرسنل، شیفت، مرخصی، محاسبه حقوق ماهانه، مساعده، لیست حقوقی و صدور سند حقوق.'],
             ],
             'shop' => [
