@@ -241,6 +241,7 @@
 .ag-burger i{display:block;height:2px;background:#fff;border-radius:2px;margin:.22rem 0}
 .ag-drawer{display:none;padding:0 0 1rem}
 .ag-drawer__in{display:block;padding:.2rem 0 1.2rem}
+.ag-drawer__in a,.ag-acc,.ag-acc summary,.ag-drawer__auth form,.ag-drawer__auth button{display:block;width:100%;text-align:right}
 .ag-acc{border-bottom:1px solid rgba(255,255,255,.06);padding:.15rem 0 .35rem}
 .ag-acc summary{cursor:pointer;color:#fff;font-weight:850;padding:.5rem 0;list-style:none}
 .ag-acc summary::-webkit-details-marker{display:none}

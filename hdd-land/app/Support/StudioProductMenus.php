@@ -124,6 +124,7 @@ class StudioProductMenus
         return [
             'label' => 'فروش سایت',
             'url' => '/contact',
+            'active' => false,
             'children' => [
                 [
                     'label' => 'حسابداری کامپیوتر',

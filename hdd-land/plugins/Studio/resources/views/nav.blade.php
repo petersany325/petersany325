@@ -7,6 +7,38 @@
   $items = $agency && class_exists(\App\Support\StudioHomeConfig::class)
     ? \App\Support\StudioHomeConfig::navItems($studioHome)
     : ($menu ?? \App\Support\SiteHost::studioMenu());
+  $navOn = function (array $item) use ($path): bool {
+    if (array_key_exists('active', $item) && $item['active'] === false) {
+      return false;
+    }
+    $url = (string) ($item['url'] ?? '');
+    if ($path === '/contact') {
+      return $url === '/about';
+    }
+    $hit = function (string $u) use ($path): bool {
+      if ($u === '' || $u === '#') {
+        return false;
+      }
+      if ($u === '/accounting' && str_starts_with($path, '/repair-shop')) {
+        return true;
+      }
+      return $path === $u || ($u !== '/' && str_starts_with($path, rtrim($u, '/').'/'));
+    };
+    if ($hit($url)) {
+      return true;
+    }
+    foreach ($item['children'] ?? [] as $col) {
+      if ($hit((string) ($col['url'] ?? ''))) {
+        return true;
+      }
+      foreach ($col['children'] ?? [] as $leaf) {
+        if ($hit((string) ($leaf['url'] ?? ''))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
   if ($agency && class_exists(\App\Support\StudioProductMenus::class)) {
     $hasKids = false;
     foreach ($items as $it) {
@@ -35,20 +67,7 @@
         @php
           $url = $item['url'] ?? '#';
           $kids = $item['children'] ?? [];
-          $on = $path === $url || ($url !== '/' && str_starts_with($path, rtrim($url, '/').'/'));
-          if (! $on && $url === '/accounting' && str_starts_with($path, '/repair-shop')) {
-            $on = true;
-          }
-          if (! $on) {
-            foreach ($kids as $col) {
-              $cu = $col['url'] ?? '';
-              if ($cu && ($path === $cu || str_starts_with($path, rtrim($cu, '/').'/'))) { $on = true; break; }
-              foreach ($col['children'] ?? [] as $leaf) {
-                $lu = $leaf['url'] ?? '';
-                if ($lu && ($path === $lu || str_starts_with($path, rtrim($lu, '/').'/'))) { $on = true; break 2; }
-              }
-            }
-          }
+          $on = $navOn($item);
         @endphp
         @if(count($kids))
           @php
@@ -127,8 +146,7 @@
         @php
           $url = $item['url'] ?? '/';
           $kids = $item['children'] ?? [];
-          $open = $path === $url || ($url !== '/' && str_starts_with($path, rtrim($url, '/').'/'));
-          if (! $open && $url === '/accounting' && str_starts_with($path, '/repair-shop')) { $open = true; }
+          $open = $navOn($item);
         @endphp
         @if(count($kids))
           <details class="ag-acc" @if($open) open @endif>
