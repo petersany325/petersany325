@@ -290,7 +290,7 @@
         </tbody>
       </table>
     </div>
-    <p class="ag-note">صفحهٔ جدا برای دندانپزشکی هنوز روی سایت نیست. برای دموی آن نسخه با ما تماس بگیرید. اوپرا و روانشناسی در حساب مطب همین سایت هستند: <a href="{{ url('/software/medical-opera') }}">اوپرا</a> · <a href="{{ url('/software/medical-psychology') }}">روانشناسی</a> · <a href="{{ url('/ai') }}">هوش مصنوعی</a></p>
+    <p class="ag-note">اوپرا، روانشناسی و دندانپزشکی در حساب مطب همین سایت هستند: <a href="{{ url('/software/medical-opera') }}">اوپرا</a> · <a href="{{ url('/software/medical-psychology') }}">روانشناسی</a> · <a href="{{ url('/software/medical-dental') }}">دندانپزشکی</a> · <a href="{{ url('/ai') }}">هوش مصنوعی</a></p>
     <p class="ag-note">تقسیم دقیق امکانات بین سطوح لایسنس و قیمت را صاحب سایت مشخص می‌کند. تا آن زمان سلول‌ها جای‌نگهدار می‌مانند.</p>
     <div class="ag-table-wrap">
       <table class="ag-cmp ag-cmp--two">

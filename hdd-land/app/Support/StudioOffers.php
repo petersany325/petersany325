@@ -132,6 +132,18 @@ class StudioOffers
                 'price_label' => self::PRICE_LABEL,
                 'commission' => 12,
             ],
+            [
+                'sku' => 'med-dental',
+                'kind' => 'medical',
+                'slug' => 'dental',
+                'title' => 'نرم‌افزار دندانپزشکی',
+                'short' => 'نوبت یونیت، چارت دندانی و پرونده مطب',
+                'url' => '/software/medical-dental',
+                'sell_url' => '',
+                'price' => '',
+                'price_label' => '',
+                'commission' => 12,
+            ],
         ];
     }
 
