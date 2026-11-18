@@ -36,35 +36,7 @@
 @endif
 
 @if($slug === 'ai')
-<section class="{{ $agency ? 'ag-page' : 'st-hero' }}">
-  @unless($agency)
-    <div class="st-hero__glow st-hero__glow--steel" aria-hidden="true"></div>
-    <div class="st-hero__glow st-hero__glow--amber" aria-hidden="true"></div>
-  @endunless
-  <div class="{{ $agency ? 'ag-wrap' : 'st-wrap' }}">
-    <p class="{{ $agency ? 'ag-kicker' : 'st-kicker' }}">هوش مصنوعی شرکت فراز نت آمل</p>
-    <h1>هوش مصنوعی برای سایت و نرم‌افزار</h1>
-    <p class="{{ $agency ? 'ag-lead ag-lead--wide' : '' }}">ما شرکت طراحی سایت و ساخت نرم‌افزار هستیم. هوش مصنوعی لایه سوم همان کار است: داخل سایت، داخل سامانه و داخل حسابداری — آفلاین، روی سیستم شما، بدون ارسال داده به اینترنت.</p>
-    @if($agency)
-      <div class="ag-actions">
-        <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست مشاوره رایگان<i>←</i></a>
-        <a class="ag-btn ag-btn--line" href="{{ url('/design') }}">طراحی سایت</a>
-        <a class="ag-btn ag-btn--line" href="{{ url('/computer-accounting') }}">ساخت نرم‌افزار</a>
-      </div>
-    @endif
-  </div>
-</section>
-<section class="ag-sec">
-  <div class="ag-wrap">
-    <p class="ag-kicker">سه کار مشخص</p>
-    <h2>AI شعار نیست؛ روی محصول شما می‌نشیند</h2>
-    <div class="ag-cards ag-cards--dense">
-      <article class="ag-card"><div><b>روی سایت</b><p>جستجو، پاسخ به مشتری و راهنمای صفحات داخل همان وب‌سایت — نه چت عمومی اینترنتی.</p></div></article>
-      <article class="ag-card"><div><b>داخل نرم‌افزار</b><p>گفتگو با سامانه، توضیح گزارش و پیشنهاد کار. ثبت قطعی فقط با تأیید شماست.</p></div></article>
-      <article class="ag-card"><div><b>روی حسابداری</b><p>خواندن فاکتور، پیش‌نویس سند و ۹ کنترل حسابرس هوشمند؛ عدد از دفتر می‌آید نه از حدس مدل.</p></div></article>
-    </div>
-  </div>
-</section>
+@include('studio::ai-page')
 @endif
 
 @if($slug === 'accounting' || $slug === 'accounting-web')
