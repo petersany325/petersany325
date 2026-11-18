@@ -156,7 +156,7 @@
 
 <section class="ag-sec ag-sec--last">
   <div class="ag-wrap">
-    <h2>فروشگاه خودتان را در حساب HDD ببینید</h2>
+    <h2>فروشگاه خودتان را در HDD Land ببینید</h2>
     <div class="ag-actions">
       <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست دمو<i>←</i></a>
       <a class="ag-btn ag-btn--line" href="tel:01144447220">تماس: ۰۱۱۴۴۴۴۷۲۲۰</a>

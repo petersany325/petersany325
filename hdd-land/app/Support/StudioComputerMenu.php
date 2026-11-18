@@ -9,7 +9,7 @@ namespace App\Support;
  */
 class StudioComputerMenu
 {
-    public const SEO_TITLE = 'نرم‌افزار حسابداری کامپیوتری صنوف با هوش مصنوعی | حساب HDD';
+    public const SEO_TITLE = 'نرم‌افزار حسابداری کامپیوتری صنوف با هوش مصنوعی | HDD Land';
 
     public const SEO_DESCRIPTION = 'نرم‌افزار حسابداری ویژهٔ شرکت، فروشگاه، سوپرمارکت، پخش، رستوران، کافی‌شاپ، تولیدی، پیمانکاری و خدماتی؛ با سامانهٔ مؤدیان، فروش ارزی، برنامهٔ اندروید و دستیار هوش مصنوعی فارسی بدون اینترنت.';
 
@@ -89,9 +89,9 @@ class StudioComputerMenu
         ];
     }
 
-    public const CORPORATE_SEO_TITLE = 'نرم‌افزار حسابداری شرکتی با حقوق، مؤدیان و بودجه | حساب HDD';
+    public const CORPORATE_SEO_TITLE = 'نرم‌افزار حسابداری شرکتی با حقوق، مؤدیان و بودجه | HDD Land';
 
-    public const CORPORATE_SEO_DESCRIPTION = 'نرم‌افزار حسابداری شرکتی حساب HDD: دفاتر قانونی، خزانه و چک، بازرگانی و انبار، حقوق و بیمه، دارایی ثابت، سامانهٔ مؤدیان، حسابرسی مالیاتی، دفتر دوم و بودجه و دستیار هوش مصنوعی فارسی.';
+    public const CORPORATE_SEO_DESCRIPTION = 'نرم‌افزار حسابداری شرکتی HDD Land: دفاتر قانونی، خزانه و چک، بازرگانی و انبار، حقوق و بیمه، دارایی ثابت، سامانهٔ مؤدیان، حسابرسی مالیاتی، دفتر دوم و بودجه و دستیار هوش مصنوعی فارسی.';
 
     /** @return list<array{id:string,title:string,lead:string,items:list<string>,alt?:string}> */
     public static function corporateTabs(): array
@@ -161,7 +161,7 @@ class StudioComputerMenu
                 'گزارش‌ساز انبار',
                 'بارکد، چاپ بارکد و برچسب قیمت',
             ]],
-            ['id' => 'payroll', 'title' => 'حقوق و دستمزد', 'lead' => 'از ساعت کاری تا لیست بیمه و فایل پرداخت بانک.', 'alt' => 'حقوق و دستمزد در حساب HDD', 'items' => [
+            ['id' => 'payroll', 'title' => 'حقوق و دستمزد', 'lead' => 'از ساعت کاری تا لیست بیمه و فایل پرداخت بانک.', 'alt' => 'حقوق و دستمزد در HDD Land', 'items' => [
                 'معرفی پرسنل و عوامل حقوقی، تقویم کاری',
                 'ساعت کاری: شیفت، مرخصی، ثبت ورود و خروج، خلاصه و گزارش ماهانه',
                 'ثبت حقوق ماهانه (تکی یا جامع)، کپی از ماه قبل، ورود از Excel',
@@ -226,9 +226,9 @@ class StudioComputerMenu
         ];
     }
 
-    public const SUPERMARKET_SEO_TITLE = 'نرم‌افزار حسابداری سوپرمارکت با صندوق آفلاین و بارکد ترازو | حساب HDD';
+    public const SUPERMARKET_SEO_TITLE = 'نرم‌افزار حسابداری سوپرمارکت با صندوق آفلاین و بارکد ترازو | HDD Land';
 
-    public const SUPERMARKET_SEO_DESCRIPTION = 'نرم‌افزار حسابداری سوپرمارکت حساب HDD: صندوق فروش سریع با بارکد و ترازو، فروش بدون اتصال به شبکه، نمایشگر مشتری و کشوی پول، باشگاه مشتریان، گزارش Z صندوق‌دار، انبار، حقوق و سامانهٔ مؤدیان.';
+    public const SUPERMARKET_SEO_DESCRIPTION = 'نرم‌افزار حسابداری سوپرمارکت HDD Land: صندوق فروش سریع با بارکد و ترازو، فروش بدون اتصال به شبکه، نمایشگر مشتری و کشوی پول، باشگاه مشتریان، گزارش Z صندوق‌دار، انبار، حقوق و سامانهٔ مؤدیان.';
 
     /** @return list<array{id:string,title:string,lead:string,items:list<string>,alt?:string}> */
     public static function supermarketTabs(): array
@@ -317,9 +317,9 @@ class StudioComputerMenu
         ];
     }
 
-    public const SHOP_SEO_TITLE = 'نرم‌افزار حسابداری فروشگاهی با سود هر کالا، چک و اقساط | حساب HDD';
+    public const SHOP_SEO_TITLE = 'نرم‌افزار حسابداری فروشگاهی با سود هر کالا، چک و اقساط | HDD Land';
 
-    public const SHOP_SEO_DESCRIPTION = 'نرم‌افزار حسابداری فروشگاهی حساب HDD: فاکتور فروش و خرید با بارکد، انبار و سریال کالا، چک و اقساط، کارتخوان متصل، تخفیف پلکانی و مشترکین، سود هر کالا و فاکتور، پیامک و سامانهٔ مؤدیان.';
+    public const SHOP_SEO_DESCRIPTION = 'نرم‌افزار حسابداری فروشگاهی HDD Land: فاکتور فروش و خرید با بارکد، انبار و سریال کالا، چک و اقساط، کارتخوان متصل، تخفیف پلکانی و مشترکین، سود هر کالا و فاکتور، پیامک و سامانهٔ مؤدیان.';
 
     /** @return list<array{id:string,title:string,items:list<string>,alt?:string}> */
     public static function shopTabs(): array
@@ -413,9 +413,9 @@ class StudioComputerMenu
         ];
     }
 
-    public const DISTRIBUTION_SEO_TITLE = 'نرم‌افزار حسابداری پخش مویرگی با اپ ویزیتور و GPS | حساب HDD';
+    public const DISTRIBUTION_SEO_TITLE = 'نرم‌افزار حسابداری پخش مویرگی با اپ ویزیتور و GPS | HDD Land';
 
-    public const DISTRIBUTION_SEO_DESCRIPTION = 'نرم‌افزار حسابداری پخش حساب HDD: اپ اندروید ویزیتور و موزع با سفارش بی‌اینترنت، نقشه و GPS، لیست پخش و تسویهٔ ماشین، اشانتیون و تخفیف پلکانی، سهمیه و پورسانت، حسابداری، انبار و سامانهٔ مؤدیان.';
+    public const DISTRIBUTION_SEO_DESCRIPTION = 'نرم‌افزار حسابداری پخش HDD Land: اپ اندروید ویزیتور و موزع با سفارش بی‌اینترنت، نقشه و GPS، لیست پخش و تسویهٔ ماشین، اشانتیون و تخفیف پلکانی، سهمیه و پورسانت، حسابداری، انبار و سامانهٔ مؤدیان.';
 
     /** @return list<array{id:string,title:string,items:list<string>,alt?:string}> */
     public static function distributionTabs(): array
@@ -503,9 +503,9 @@ class StudioComputerMenu
         ];
     }
 
-    public const RESTAURANT_SEO_TITLE = 'نرم‌افزار رستوران با سفارش گارسون، منوی QR و بهای هر پرس | حساب HDD';
+    public const RESTAURANT_SEO_TITLE = 'نرم‌افزار رستوران با سفارش گارسون، منوی QR و بهای هر پرس | HDD Land';
 
-    public const RESTAURANT_SEO_DESCRIPTION = 'نرم‌افزار حسابداری رستوران حساب HDD: نمای سالن و میز، سفارش لمسی و سفارش گارسون با گوشی، منوی QR میز، صف آشپزخانه، رزرو، دلیوری و پیک، دستور پخت و کسر خودکار مواد، حقوق و سامانهٔ مؤدیان.';
+    public const RESTAURANT_SEO_DESCRIPTION = 'نرم‌افزار حسابداری رستوران HDD Land: نمای سالن و میز، سفارش لمسی و سفارش گارسون با گوشی، منوی QR میز، صف آشپزخانه، رزرو، دلیوری و پیک، دستور پخت و کسر خودکار مواد، حقوق و سامانهٔ مؤدیان.';
 
     /** @return list<array{id:string,title:string,items:list<string>,alt?:string}> */
     public static function restaurantTabs(): array
@@ -584,9 +584,9 @@ class StudioComputerMenu
         ];
     }
 
-    public const PRODUCTION_SEO_TITLE = 'نرم‌افزار حسابداری تولیدی با فرمول ساخت و بهای تمام‌شده | حساب HDD';
+    public const PRODUCTION_SEO_TITLE = 'نرم‌افزار حسابداری تولیدی با فرمول ساخت و بهای تمام‌شده | HDD Land';
 
-    public const PRODUCTION_SEO_DESCRIPTION = 'نرم‌افزار حسابداری تولیدی حساب HDD: فرمول ساخت (BOM) و نیم‌ساخته، دستور تولید با سند خودکار، بهای تمام‌شدهٔ هر واحد، تسهیم دستمزد و سربار، سری ساخت و انقضا، قبض باسکول، حقوق و دستمزد و دارایی ثابت.';
+    public const PRODUCTION_SEO_DESCRIPTION = 'نرم‌افزار حسابداری تولیدی HDD Land: فرمول ساخت (BOM) و نیم‌ساخته، دستور تولید با سند خودکار، بهای تمام‌شدهٔ هر واحد، تسهیم دستمزد و سربار، سری ساخت و انقضا، قبض باسکول، حقوق و دستمزد و دارایی ثابت.';
 
     /** @return list<array{id:string,title:string,lead:string,items:list<string>,alts?:list<string>}> */
     public static function productionTabs(): array
@@ -675,9 +675,9 @@ class StudioComputerMenu
         ];
     }
 
-    public const CONTRACTING_SEO_TITLE = 'نرم‌افزار حسابداری پیمانکاری با صورت وضعیت و درصد پیشرفت | حساب HDD';
+    public const CONTRACTING_SEO_TITLE = 'نرم‌افزار حسابداری پیمانکاری با صورت وضعیت و درصد پیشرفت | HDD Land';
 
-    public const CONTRACTING_SEO_DESCRIPTION = 'نرم‌افزار حسابداری پیمانکاری حساب HDD: پروژه روی قرارداد، صورت وضعیت کارفرما و پیمانکار جزء با کسور حسن انجام کار و بیمه، درآمد درصد پیشرفت و ذخیرهٔ زیان، بودجه و سود هر پروژه، حقوق و دستمزد و سامانهٔ مؤدیان.';
+    public const CONTRACTING_SEO_DESCRIPTION = 'نرم‌افزار حسابداری پیمانکاری HDD Land: پروژه روی قرارداد، صورت وضعیت کارفرما و پیمانکار جزء با کسور حسن انجام کار و بیمه، درآمد درصد پیشرفت و ذخیرهٔ زیان، بودجه و سود هر پروژه، حقوق و دستمزد و سامانهٔ مؤدیان.';
 
     /** @return list<array{id:string,title:string,lead:string,items:list<string>,alts?:list<string>}> */
     public static function contractingTabs(): array
@@ -759,9 +759,9 @@ class StudioComputerMenu
         ];
     }
 
-    public const CAFE_SEO_TITLE = 'نرم‌افزار کافی‌شاپ با سفارش پیشخوان، بار و منوی QR | حساب HDD';
+    public const CAFE_SEO_TITLE = 'نرم‌افزار کافی‌شاپ با سفارش پیشخوان، بار و منوی QR | HDD Land';
 
-    public const CAFE_SEO_DESCRIPTION = 'نرم‌افزار حسابداری کافی‌شاپ حساب HDD: سفارش لمسی پیشخوان با اندازه و افزودنی، ایستگاه بار، منوی QR، بستن صندوق شیفت، کسر خودکار مواد از انبار، درصد بهای هر نوشیدنی و سامانهٔ مؤدیان.';
+    public const CAFE_SEO_DESCRIPTION = 'نرم‌افزار حسابداری کافی‌شاپ HDD Land: سفارش لمسی پیشخوان با اندازه و افزودنی، ایستگاه بار، منوی QR، بستن صندوق شیفت، کسر خودکار مواد از انبار، درصد بهای هر نوشیدنی و سامانهٔ مؤدیان.';
 
     /** @return list<array{id:string,title:string,lead:string,items:list<string>,alts?:list<string>}> */
     public static function cafeTabs(): array
@@ -841,9 +841,9 @@ class StudioComputerMenu
         ];
     }
 
-    public const SERVICE_SEO_TITLE = 'نرم‌افزار حسابداری خدماتی با فاکتور خدمات و قرارداد | حساب HDD';
+    public const SERVICE_SEO_TITLE = 'نرم‌افزار حسابداری خدماتی با فاکتور خدمات و قرارداد | HDD Land';
 
-    public const SERVICE_SEO_DESCRIPTION = 'نرم‌افزار حسابداری شرکت‌های خدماتی حساب HDD: قرارداد و اقساط، فاکتور خدمات ساعتی، بهای مستقیم و سود هر خدمت، سودآوری به تفکیک نوع کار، پیگیری وصول، تیکت و گزارش کار روزانه و سامانهٔ مؤدیان.';
+    public const SERVICE_SEO_DESCRIPTION = 'نرم‌افزار حسابداری شرکت‌های خدماتی HDD Land: قرارداد و اقساط، فاکتور خدمات ساعتی، بهای مستقیم و سود هر خدمت، سودآوری به تفکیک نوع کار، پیگیری وصول، تیکت و گزارش کار روزانه و سامانهٔ مؤدیان.';
 
     /** @return list<array{id:string,title:string,lead:string,items:list<string>,alts?:list<string>}> */
     public static function serviceTabs(): array
@@ -930,9 +930,9 @@ class StudioComputerMenu
         ];
     }
 
-    public const OFFICE_SEO_TITLE = 'نرم‌افزار اتوماسیون اداری با دبیرخانه و کارتابل | حساب HDD';
+    public const OFFICE_SEO_TITLE = 'نرم‌افزار اتوماسیون اداری با دبیرخانه و کارتابل | HDD Land';
 
-    public const OFFICE_SEO_DESCRIPTION = 'اتوماسیون اداری حساب HDD: نامهٔ داخلی، وارده و صادره با شمارهٔ دبیرخانه، امضای داخلی با پین، کارتابل و ارجاع با مهلت و یادآوری، گزارش کار روزانه و گزارش عملکرد کارکنان؛ مستقل یا کنار حسابداری.';
+    public const OFFICE_SEO_DESCRIPTION = 'اتوماسیون اداری HDD Land: نامهٔ داخلی، وارده و صادره با شمارهٔ دبیرخانه، امضای داخلی با پین، کارتابل و ارجاع با مهلت و یادآوری، گزارش کار روزانه و گزارش عملکرد کارکنان؛ مستقل یا کنار حسابداری.';
 
     /** @return list<array{id:string,title:string,lead:string,items:list<string>,alts?:list<string>}> */
     public static function officeTabs(): array
@@ -998,7 +998,7 @@ class StudioComputerMenu
     {
         return [
             ['q' => 'بدون نرم‌افزار حسابداری هم کار می‌کند؟', 'a' => 'بله. اتوماسیون اداری نسخهٔ مستقل هم دارد.'],
-            ['q' => 'روی حسابداری فعلی حساب HDD هم اضافه می‌شود؟', 'a' => 'بله، به‌صورت ماژول جدا با مجوز «اتوماسیون اداری».'],
+            ['q' => 'روی حسابداری فعلی HDD Land هم اضافه می‌شود؟', 'a' => 'بله، به‌صورت ماژول جدا با مجوز «اتوماسیون اداری».'],
             ['q' => 'نامه شمارهٔ دبیرخانه می‌گیرد؟', 'a' => 'بله. نامهٔ داخلی، وارده و صادره هر کدام شمارهٔ جدا دارند. شماره‌گذاری فقط با مجوز دبیرخانه انجام می‌شود.'],
             ['q' => 'امضای نامه قانونی است؟', 'a' => 'امضای داخلی با تصویر امضا و پین برای گردش تأیید داخلی سازمان است و گواهی امضای الکترونیکی قانونی نیست.'],
             ['q' => 'می‌شود کار را به یک واحد یا نقش سپرد، نه یک نفر؟', 'a' => 'بله. با انتخاب نقش، همهٔ دارندگان آن نقش کار را می‌بینند.'],
@@ -1015,7 +1015,7 @@ class StudioComputerMenu
             return null;
         }
         $row['slug'] = $slug;
-        $row['seo_title'] = 'نرم‌افزار حسابداری '.$row['title'].' | حساب HDD';
+        $row['seo_title'] = 'نرم‌افزار حسابداری '.$row['title'].' | HDD Land';
         $row['seo_description'] = $row['sentence'].' با سامانهٔ مؤدیان و دستیار هوش مصنوعی فارسی.';
 
         return $row;
@@ -1028,7 +1028,7 @@ class StudioComputerMenu
             'corporate' => [
                 'title' => 'شرکتی',
                 'sentence' => 'حسابداری کامل شرکت با دفتر قانونی، حقوق، دارایی ثابت و دفتر دوم و بودجه.',
-                'alt' => 'نرم‌افزار حسابداری شرکتی حساب HDD',
+                'alt' => 'نرم‌افزار حسابداری شرکتی HDD Land',
                 'features' => [
                     'سند حسابداری، کارتابل حسابداری، درختوارهٔ حساب‌ها و حساب‌های تفصیلی با رده‌بندی',
                     'دفتر دوم و بودجه: دفتر موازی فقط برای اصلاحیه، تراز تطبیقی دفتر اول و دوم، تعریف بودجه برای حساب و مرکز هزینه و پروژه، بودجه در برابر عملکرد، ردپای تغییرناپذیر',
@@ -1042,7 +1042,7 @@ class StudioComputerMenu
             'shop' => [
                 'title' => 'فروشگاهی',
                 'sentence' => 'فروش سریع، انبار دقیق و سود واقعی هر کالا.',
-                'alt' => 'نرم‌افزار حسابداری فروشگاهی حساب HDD',
+                'alt' => 'نرم‌افزار حسابداری فروشگاهی HDD Land',
                 'features' => [
                     'فاکتور فروش و خرید و برگشتی با فاکتور مرجع، پیش‌فاکتور و سفارش',
                     'انبار، بارکد، چاپ برچسب قیمت، انبارگردانی',
@@ -1055,7 +1055,7 @@ class StudioComputerMenu
             'supermarket' => [
                 'title' => 'سوپرمارکت',
                 'sentence' => 'صندوق سریع فروش با بارکد و ترازو، حتی وقتی شبکه قطع است.',
-                'alt' => 'نرم‌افزار حسابداری سوپرمارکت حساب HDD',
+                'alt' => 'نرم‌افزار حسابداری سوپرمارکت HDD Land',
                 'features' => [
                     'صفحهٔ صندوق فروش با بارکدخوان و بارکد ترازو',
                     'نمایشگر مشتری و کشوی پول',
@@ -1069,7 +1069,7 @@ class StudioComputerMenu
             'distribution' => [
                 'title' => 'پخش',
                 'sentence' => 'پخش مویرگی کامل، از سفارش ویزیتور تا تسویهٔ موزع و پورسانت.',
-                'alt' => 'نرم‌افزار حسابداری پخش حساب HDD',
+                'alt' => 'نرم‌افزار حسابداری پخش HDD Land',
                 'features' => [
                     'ویزیتورها و درصد پورسانت، سهمیه و سقف فروش ویزیتور',
                     'مسیرها و مشتریان مسیر، نقشهٔ پخش و GPS',
@@ -1083,7 +1083,7 @@ class StudioComputerMenu
             'restaurant' => [
                 'title' => 'رستوران',
                 'sentence' => 'سالن، آشپزخانه و صندوق در یک نرم‌افزار، با بهای هر پرس.',
-                'alt' => 'نرم‌افزار حسابداری رستوران حساب HDD',
+                'alt' => 'نرم‌افزار حسابداری رستوران HDD Land',
                 'features' => [
                     'نمای سالن و میزها، رزرو میز',
                     'ثبت سفارش با صفحهٔ لمسی، سفارش گارسون از موبایل',
@@ -1097,7 +1097,7 @@ class StudioComputerMenu
             'cafe' => [
                 'title' => 'کافی‌شاپ',
                 'sentence' => 'سفارش سریع پیشخوان، ایستگاه بار و بهای هر فنجان.',
-                'alt' => 'نرم‌افزار حسابداری کافی‌شاپ حساب HDD',
+                'alt' => 'نرم‌افزار حسابداری کافی‌شاپ HDD Land',
                 'features' => [
                     'پیشخوان و بیرون‌بر (بدون حق سرویس به‌صورت پیش‌فرض)',
                     'ایستگاه بار و نوشیدنی؛ آشپزخانهٔ غذا به‌صورت اختیاری',
@@ -1109,7 +1109,7 @@ class StudioComputerMenu
             'manufacturing' => [
                 'title' => 'تولیدی',
                 'sentence' => 'از فرمول ساخت تا بهای تمام‌شدهٔ هر محصول.',
-                'alt' => 'نرم‌افزار حسابداری تولیدی حساب HDD',
+                'alt' => 'نرم‌افزار حسابداری تولیدی HDD Land',
                 'features' => [
                     'فرمول ساخت (BOM) با دستمزد و سربار',
                     'دستور تولید: مصرف مواد و رسید محصول، کالای در جریان ساخت',
@@ -1122,7 +1122,7 @@ class StudioComputerMenu
             'contracting' => [
                 'title' => 'پیمانکاری',
                 'sentence' => 'هر پروژه با بودجه، صورت‌وضعیت و سود و زیان خودش.',
-                'alt' => 'نرم‌افزار حسابداری پیمانکاری حساب HDD',
+                'alt' => 'نرم‌افزار حسابداری پیمانکاری HDD Land',
                 'features' => [
                     'تعریف پروژه روی قرارداد با برآورد و نرخ کسور',
                     'صورت‌وضعیت کارفرما و پیمانکار جزء',
@@ -1136,7 +1136,7 @@ class StudioComputerMenu
             'service' => [
                 'title' => 'خدماتی',
                 'sentence' => 'برای کسب‌وکاری که خدمت می‌فروشد، نه کالا.',
-                'alt' => 'نرم‌افزار حسابداری خدماتی حساب HDD',
+                'alt' => 'نرم‌افزار حسابداری خدماتی HDD Land',
                 'features' => [
                     'فاکتور خدمات و قرارداد خدمت',
                     'مدیریت وظایف: انواع کار، ثبت و ارجاع، ساعات و بهای استاندارد',
@@ -1148,7 +1148,7 @@ class StudioComputerMenu
             'automation' => [
                 'title' => 'اتوماسیون اداری',
                 'sentence' => 'نامه، کارتابل و امضای داخلی برای سازمان شما.',
-                'alt' => 'نرم‌افزار اتوماسیون اداری حساب HDD',
+                'alt' => 'نرم‌افزار اتوماسیون اداری HDD Land',
                 'features' => [
                     'واحدهای سازمانی، سمت‌ها و کارکنان',
                     'نامهٔ داخلی، دبیرخانه و بایگانی نامه',

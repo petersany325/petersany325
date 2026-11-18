@@ -34,9 +34,9 @@
     await sleep(2200); el('auT1').classList.remove('is-show');
     n.classList.add('is-read'); n.classList.remove('is-new'); b.textContent = '۲';
     await sleep(900);
-    tl.children[1].querySelector('.au-chip:last-child').outerHTML = '<span class="au-chip is-blue">پاسخ داده شد</span>';
+    tl.children[1].querySelector(':scope > .au-chip').outerHTML = '<span class="au-chip is-blue">پاسخ داده شد</span>';
     await sleep(900);
-    var r2 = tl.children[2]; r2.querySelector('.au-chip:last-child').outerHTML = '<span class="au-chip is-ok">بسته شد</span>'; r2.classList.add('is-read');
+    var r2 = tl.children[2]; r2.querySelector(':scope > .au-chip').outerHTML = '<span class="au-chip is-ok">بسته شد</span>'; r2.classList.add('is-read');
     await sleep(3500);
   }
   onVisible(el('au1'), function(){ loop(play1); });

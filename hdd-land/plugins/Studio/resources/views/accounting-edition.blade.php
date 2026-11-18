@@ -6,7 +6,7 @@
       <span>/</span>
       <span>{{ $edition['title'] ?? '' }}</span>
     </p>
-    <p class="ag-kicker">حساب HDD</p>
+    <p class="ag-kicker">HDD Land</p>
     <h1>حسابداری {{ $edition['title'] ?? '' }}</h1>
     <p class="ag-lead ag-lead--wide">{{ $edition['sentence'] ?? '' }}</p>
     <div class="ag-actions">

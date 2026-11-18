@@ -24,7 +24,7 @@
     </div>
     <p class="ag-note">نصب روی کامپیوتر و شبکهٔ خودتان · کار هم‌زمان چند کاربر · پشتیبانی [[مدت/نوع پشتیبانی]]</p>
     <figure class="ag-shot-ph">
-      <span>فاکتور فروش در نرم‌افزار حسابداری حساب HDD</span>
+      <span>فاکتور فروش در نرم‌افزار حسابداری HDD Land</span>
     </figure>
   </div>
 </section>
@@ -81,7 +81,7 @@
       @endforeach
     </div>
     <figure class="ag-shot-ph">
-      <span>دستیار هوش مصنوعی فارسی حساب HDD</span>
+      <span>دستیار هوش مصنوعی فارسی HDD Land</span>
     </figure>
   </div>
 </section>
@@ -114,7 +114,7 @@
 <section class="ag-sec" id="trust">
   <div class="ag-wrap">
     <p class="ag-kicker">اعتماد</p>
-    <h2>چرا حساب HDD</h2>
+    <h2>چرا HDD Land</h2>
     <div class="ag-stats">
       <div><b>۱۸ سال</b><span>طراحی نرم‌افزار</span></div>
       <div><b>۴۱۸۹</b><span>شمارهٔ ثبت شرکت</span></div>

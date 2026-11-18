@@ -38,7 +38,7 @@
 
 <section class="ag-sec" id="day">
   <div class="ag-wrap">
-    <h2>یک روز پشت صندوق، با حساب HDD</h2>
+    <h2>یک روز پشت صندوق، با HDD Land</h2>
     <ol class="ag-steps ag-day">
       @foreach($day as $step)
         <li>

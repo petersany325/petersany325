@@ -59,7 +59,7 @@
           </ul>
           @if(($tab['alt'] ?? '') === 'ترازنامه در نرم‌افزار حسابداری شرکتی')
             @include('studio::accounting-corporate-demos', ['n' => 2])
-          @elseif(($tab['alt'] ?? '') === 'حقوق و دستمزد در حساب HDD')
+          @elseif(($tab['alt'] ?? '') === 'حقوق و دستمزد در HDD Land')
             @include('studio::accounting-corporate-demos', ['n' => 3])
           @elseif(($tab['alt'] ?? '') === 'ارسال به سامانهٔ مؤدیان')
             @include('studio::accounting-corporate-demos', ['n' => 4])
