@@ -1,1 +1,1 @@
-@include('errors.minimal', ['message' => 'سایت چند لحظه در دسترس نیست.'])
+@include('errors.plain', ['message' => 'سایت چند لحظه در دسترس نیست.'])

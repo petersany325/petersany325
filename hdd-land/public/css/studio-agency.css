@@ -1485,7 +1485,7 @@
 .by-room{color:#9aa3c7;font-size:.8rem}
 .by-voice{margin:.7rem auto 0;max-width:22rem;background:rgba(124,92,255,.16);border:1px solid rgba(124,92,255,.35);border-radius:999px;padding:.4rem .8rem;font-weight:800;font-size:.84rem;opacity:0}
 .by-voice.is-show{opacity:1}
-.by-next{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-top:.8rem}
+.by-queue{display:flex;flex-wrap:wrap;gap:.4rem;justify-content:center;margin-top:.8rem}
 .by-chip{background:#171a33;border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:.28rem .65rem;font-size:.75rem;color:#c9d0ea}
 .by-chip.is-on{border-color:#7c5cff;color:#fff;background:rgba(124,92,255,.2)}
 .by-path{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:.4rem;margin-top:.8rem}

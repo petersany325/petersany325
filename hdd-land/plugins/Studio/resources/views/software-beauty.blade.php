@@ -219,7 +219,7 @@
             <div class="by-room" id="byQRoom"></div>
             <div class="by-voice" id="byQVoice"></div>
           </div>
-          <div class="by-next" id="byQNext"></div>
+          <div class="by-queue" id="byQNext"></div>
         </div>
       </div>
       <div class="cd" id="byRsv">

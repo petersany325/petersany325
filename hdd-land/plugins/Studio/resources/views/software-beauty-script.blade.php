@@ -187,7 +187,9 @@
   });
   var form = el('byDemo');
   if (form){
+    form.phone.addEventListener('input', function(){ form.phone.setCustomValidity(''); });
     form.addEventListener('submit', function(e){
+      form.phone.setCustomValidity('');
       var phone = form.phone.value || '';
       var latin = phone.replace(/[۰-۹]/g, function(d){ return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d); }).replace(/[^\d]/g,'');
       if (!/^0?9\d{9}$/.test(latin)){
@@ -196,7 +198,6 @@
         form.phone.reportValidity();
         return;
       }
-      form.phone.setCustomValidity('');
       if (latin.length === 10) latin = '0' + latin;
       form.phone.value = latin;
       var clinic = (el('byClinic') && el('byClinic').value) || '';
