@@ -2109,9 +2109,10 @@
   .ab-st > div:last-child{grid-column:2}
   .ab-cols,.ab-why{grid-template-columns:1fr 1fr}
 }
+.ab section.ab-trust-sec,.ab section.ab-contact-sec{padding-top:10px}
 @media (max-width:560px){
   .ab section{padding:40px 0}
-  .ab-why{grid-template-columns:1fr}
+  .ab-cols,.ab-why{grid-template-columns:1fr}
   .ab-chip{font-size:11px;padding:6px 10px}
   .ab-chip b{font-size:16px}
 }
@@ -2165,4 +2166,60 @@
 }
 @media (prefers-reduced-motion:reduce){
   .ct-bot img{animation:none!important}
+}
+.su{overflow-x:clip;padding-bottom:2rem}
+.su-wrap{width:min(1180px,calc(100% - 2rem));margin:0 auto}
+.su section{padding:28px 0}
+.su-kick{color:#a48bff;font-weight:800;font-size:13px}
+.su h1{margin:6px 0 12px;font-size:clamp(28px,4vw,44px);font-weight:900;color:#fff;line-height:1.35}
+.su h2,.su h3{color:#fff}
+.su-hero{display:grid;grid-template-columns:1.3fr auto;gap:20px;align-items:center}
+.su-hero p{color:#b8bddf;max-width:40rem}
+.su-acts{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.su-b{display:inline-flex;align-items:center;border-radius:999px;padding:8px 16px;text-decoration:none;font-weight:800;border:1px solid #3a3f78;color:#fff;background:transparent}
+.su-b.p{background:#7c5cff;border-color:#7c5cff}
+.su-search input,.su input,.su select,.su textarea{width:100%;background:#101628;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:.7rem .8rem;color:#fff;font:inherit}
+.su-bot{width:120px;height:120px;border-radius:50%;object-fit:cover;object-position:center 20%;filter:hue-rotate(28deg) saturate(1.15);border:3px solid #7c5cff;box-shadow:0 0 28px rgba(124,92,255,.4)}
+.su-prods{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.su-pr{background:#121428;border:1px solid #262a4a;border-radius:14px;color:#fff;padding:12px 8px;font:inherit;cursor:pointer;text-align:right}
+.su-pr.on{border-color:#7c5cff;background:rgba(124,92,255,.16)}
+.su-pr b{display:block}
+.su-help{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+.su-faq{background:#121428;border:1px solid #262a4a;border-radius:14px;padding:12px 14px;margin:8px 0}
+.su-faq summary{cursor:pointer;font-weight:800;color:#fff}
+.su-faq p{margin:8px 0 0;color:#b8bddf}
+.su-empty{display:none;margin-top:8px}
+.su-empty:not([hidden]){display:block}
+.su-tip[hidden]{display:none}
+.su-win{background:#0f1124;border:1px solid #2f3462;border-radius:14px;overflow:hidden;margin-top:10px}
+.su-bar{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#151834;color:#9097c0;font-size:12px}
+.su-bar i{width:8px;height:8px;border-radius:50%;background:#7c5cff}
+.su-body{padding:10px;font-size:13px}
+.su-kv{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.su-copy{display:inline-block;margin-top:10px;border:1px solid #7c5cff;border-radius:10px;padding:6px 10px}
+.su-copy.press{background:#7c5cff}
+.su-msg{display:none;margin-right:8px;color:#2ecc8f;font-weight:800}
+.su-msg.on{display:inline}
+.su-note,.su-muted{color:#9097c0;font-size:12.5px}
+.su-error{background:rgba(255,93,108,.12);border:1px solid rgba(255,93,108,.4);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.su-done{background:rgba(46,204,143,.12);border:1px solid rgba(46,204,143,.4);border-radius:16px;padding:14px;margin-bottom:12px}
+.su-no{font-size:1.4rem;font-weight:900;color:#fff}
+.su-tk{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+.su form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.su-full{grid-column:1/-1}
+.su label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:#c9d0ea}
+.su-urg{display:flex;gap:12px}
+.su-side{display:flex;flex-direction:column;gap:10px}
+.su-card{background:#121428;border:1px solid #262a4a;border-radius:16px;padding:14px}
+.su-row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px}
+.su-row a{color:#fff;font-weight:800;text-decoration:none}
+@media (max-width:900px){
+  .su-hero{grid-template-columns:1fr;text-align:center}
+  .su-bot{order:-1;margin:0 auto}
+  .su-acts{justify-content:center}
+  .su-prods{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .su-help,.su-tk,.su form{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .su-prods{grid-template-columns:1fr 1fr}
 }

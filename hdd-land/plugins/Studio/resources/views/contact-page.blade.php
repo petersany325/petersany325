@@ -35,7 +35,7 @@
       ],
   ];
 @endphp
-<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=54">
+<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=55">
 <div class="ct">
   <div class="ct-wrap">
     <section class="ct-hero">
