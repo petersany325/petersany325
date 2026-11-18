@@ -222,6 +222,16 @@ class StudioController
             'medical-opera' => 'med-opera',
             'medical-psychology' => 'med-psych',
         ];
+        if ($slug === 'medical-psychology') {
+            return $this->page('software-psychology', 'نرم‌افزار مدیریت مطب و کلینیک روانشناسی؛ نوبت‌دهی، پرونده، پیامک و تسویه | حساب مطب', [
+                'description' => 'حساب مطب، نسخهٔ روانشناسی: ثبت مراجع، نوبت‌دهی تلفنی و حضوری و اینترنتی، شماره نوبت خودکار، پرونده و گزارش، تسویه و نوبت جلسهٔ بعد، پیامک خودکار و آموزش فارسی داخل برنامه؛ کاملاً آفلاین.',
+                'canonical' => 'https://hdd-land.ir/software/medical-psychology',
+                'ogTitle' => 'نرم‌افزار مدیریت مطب و کلینیک روانشناسی | حساب مطب',
+                'ogDescription' => 'نوبت‌دهی سه‌کاناله، شماره نوبت خودکار، پرونده مراجع، تسویه و جلسهٔ بعد، پیامک خودکار و آموزش کامل داخل برنامه؛ بدون نیاز به اینترنت.',
+                'twitterDescription' => 'نوبت‌دهی، پرونده، تسویه و پیامک خودکار؛ نسخهٔ روانشناسی حساب مطب.',
+            ]);
+        }
+
         if ($slug === 'medical-beauty') {
             return $this->page('software-beauty', 'نرم‌افزار مدیریت کلینیک زیبایی و لیزر؛ نوبت‌دهی، پرونده، پیامک و فراخوان صوتی | حساب مطب', [
                 'description' => 'حساب مطب، نسخهٔ کلینیک زیبایی: نوبت‌دهی تلفنی، حضوری و اینترنتی، شماره نوبت و اعلام صوتی فارسی، پرونده و گزارش کامل بیمار، تسویه و نوبت بعدی، پیامک خودکار، خدمات لیزر بانوان، انبار و سطح دسترسی؛ کاملاً آفلاین.',
@@ -396,7 +406,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration', 'software-beauty'], true) ? null : $this->builderForRequest();
+        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration', 'software-beauty', 'software-psychology'], true) ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;

@@ -131,6 +131,10 @@
 @include('studio::software-beauty')
 @endif
 
+@if($slug === 'software-psychology')
+@include('studio::software-psychology')
+@endif
+
 @if($slug === 'software-offer')
 @include('studio::software-offer')
 @endif
