@@ -65,7 +65,7 @@
     L.forEach(function (l) { [].slice.call(l.querySelectorAll('.tn-dev')).forEach(function (d) { d.remove(); }); });
     var els = DEV.map(function (d) {
       var e = document.createElement('div'); e.className = 'tn-dev';
-      e.innerHTML = '<b>قبض ' + d[0] + '</b>' + d[1] + ' · <span class="st">' + CH.open + '</span>';
+      e.innerHTML = '<b>قبض ' + d[0] + '</b> ' + d[1] + ' · <span class="st">' + CH.open + '</span>';
       L[0].appendChild(e); return e;
     });
     async function send(e, to, who) {

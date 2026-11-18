@@ -91,8 +91,12 @@ class StudioAccountingCopy
     private static function enrich(array $row): array
     {
         $slug = (string) ($row['slug'] ?? '');
+        $menusLocked = $slug === 'technicians';
         if (class_exists(StudioHddCatalog::class)) {
             $row = StudioHddCatalog::merge($row);
+        }
+        if ($menusLocked) {
+            $row['menus'] = [];
         }
         if (! class_exists(StudioAccountingEditions::class)) {
             return $row;
