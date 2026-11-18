@@ -33,7 +33,7 @@
       <a class="ag-btn ag-btn--line" href="#features">همهٔ امکانات</a>
     </div>
     <p class="ag-note">قرارداد و اقساط · سود هر نوع کار · پیگیری وصول</p>
-    <figure class="ag-shot-ph"><span>سودآوری به تفکیک نوع کار در نرم‌افزار حسابداری خدماتی حساب HDD</span></figure>
+    @include('studio::accounting-service-demos', ['n' => 1])
   </div>
 </section>
 
@@ -80,7 +80,17 @@
             @endforeach
           </ul>
           @foreach($tab['alts'] ?? [] as $alt)
-            <figure class="ag-shot-ph"><span>{{ $alt }}</span></figure>
+            @if($alt === 'قرارداد و اقساط مشتری')
+              @include('studio::accounting-service-demos', ['n' => 2])
+            @elseif($alt === 'فاکتور خدمات ساعتی')
+              @include('studio::accounting-service-demos', ['n' => 3])
+            @elseif($alt === 'سود ناخالص خدمات')
+              @include('studio::accounting-service-demos', ['n' => 4])
+            @elseif($alt === 'انواع کار و نرخ استاندارد')
+              @include('studio::accounting-service-demos', ['n' => 5])
+            @elseif($alt === 'پیگیری وصول مطالبات')
+              @include('studio::accounting-service-demos', ['n' => 6])
+            @endif
           @endforeach
         </div>
       @endforeach
@@ -96,7 +106,7 @@
       <p>خدمت «پشتیبانی ماهانه»: ۱۰ ساعت × ۵٬۰۰۰٬۰۰۰ ریال = ۵۰٬۰۰۰٬۰۰۰ ریال درآمد</p>
       <p>نوع کار «پشتیبانی» با زمان و نرخ استاندارد ← بهای استاندارد دستمزد و حاشیه در گزارش «سودآوری به تفکیک نوع کار»</p>
     </div>
-    <figure class="ag-shot-ph"><span>سود ناخالص خدمات در حسابداری خدماتی</span></figure>
+    @include('studio::accounting-service-demos', ['n' => 7])
   </div>
 </section>
 
@@ -131,3 +141,4 @@
     <p class="ag-note">انبار و حقوق و دستمزد هم لازم دارید؟ <a href="{{ url('/computer-accounting/corporate') }}">نسخهٔ شرکتی</a></p>
   </div>
 </section>
+@include('studio::accounting-service-demo-script')
