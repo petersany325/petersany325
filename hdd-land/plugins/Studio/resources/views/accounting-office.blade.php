@@ -37,7 +37,7 @@
       <a class="ag-btn ag-btn--line" href="#features">همهٔ امکانات</a>
     </div>
     <p class="ag-note">دبیرخانه با شماره‌گذاری · ارجاع با مهلت و یادآوری · گزارش عملکرد کارکنان</p>
-    <figure class="ag-shot-ph"><span>کارتابل اتوماسیون اداری حساب HDD</span></figure>
+    @include('studio::accounting-office-demos', ['n' => 1])
   </div>
 </section>
 
@@ -86,7 +86,15 @@
             @endforeach
           </ul>
           @foreach($tab['alts'] ?? [] as $alt)
-            <figure class="ag-shot-ph"><span>{{ $alt }}</span></figure>
+            @if($alt === 'نامه و دبیرخانه')
+              @include('studio::accounting-office-demos', ['n' => 2])
+            @elseif($alt === 'امضای داخلی نامه')
+              @include('studio::accounting-office-demos', ['n' => 3])
+            @elseif($alt === 'ارجاع کار با مهلت')
+              @include('studio::accounting-office-demos', ['n' => 4])
+            @elseif($alt === 'گزارش عملکرد کارکنان')
+              @include('studio::accounting-office-demos', ['n' => 5])
+            @endif
           @endforeach
         </div>
       @endforeach
@@ -103,7 +111,7 @@
       <div>۱ ساعت مانده</div>
       <div>مهلت گذشت</div>
     </div>
-    <figure class="ag-shot-ph"><span>گزارش کارهای معوق در اتوماسیون اداری</span></figure>
+    @include('studio::accounting-office-demos', ['n' => 6])
   </div>
 </section>
 
@@ -114,7 +122,6 @@
     <div class="ag-actions">
       <a class="ag-btn ag-btn--line" href="{{ url('/computer-accounting') }}">نسخه‌های حسابداری</a>
     </div>
-    <p class="ag-note">[[تأیید: بخش هوش مصنوعی در صفحهٔ اتوماسیون بیاید یا نه؟]]</p>
   </div>
 </section>
 
@@ -138,3 +145,4 @@
     </div>
   </div>
 </section>
+@include('studio::accounting-office-demo-script')
