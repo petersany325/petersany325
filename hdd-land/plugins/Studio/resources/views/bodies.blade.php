@@ -176,42 +176,7 @@
 @endif
 
 @if($slug === 'contact')
-@php $contactCopy = $contactCopy ?? \App\Support\StudioDesignCopy::contact(); @endphp
-<section class="ag-page">
-  <div class="ag-wrap">
-    <p class="ag-kicker">تماس با فراز نت آمل</p>
-    <h1>{{ $contactCopy['title'] }}</h1>
-    <p class="ag-lead ag-lead--wide">{{ $contactCopy['lead'] }}</p>
-    <div class="ag-actions">
-      @if(!empty($studioHome['phone']))
-        <a class="ag-btn ag-btn--on" href="tel:{{ preg_replace('/\s+/', '', $studioHome['phone']) }}">تماس {{ $studioHome['phone'] }}<i>←</i></a>
-      @endif
-      <a class="ag-btn ag-btn--line" href="{{ $shopUrl }}">فروشگاه قطعات<i>←</i></a>
-    </div>
-    <div class="ag-cards ag-cards--dense" style="margin-top:1rem">
-      <a class="ag-card" href="tel:{{ preg_replace('/\s+/', '', $studioHome['phone'] ?? '01144447220') }}">
-        <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3h3l1.5 4-2 1.5a12 12 0 0 0 6 6L17 13l4 1.5V18a2 2 0 0 1-2 2A16 16 0 0 1 5 6a2 2 0 0 1 2-2z"/></svg></i>
-        <div><b>تلفن استودیو</b><p>{{ $studioHome['phone'] ?? '01144447220' }}</p></div>
-      </a>
-      <a class="ag-card" href="{{ url('/design') }}">
-        <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 8 4 12l4 4M16 8l4 4-4 4M13 5l-2 14"/></svg></i>
-        <div><b>طراحی سایت</b><p>وب‌سایت حرفه‌ای برای برند شما</p></div>
-      </a>
-      <a class="ag-card" href="{{ url('/accounting') }}">
-        <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 11 12 4l8 7v9H4z"/></svg></i>
-        <div><b>حسابداری وب</b><p>فقط تعمیرکاران: سند قبض، معین و صندوق تعمیرگاه</p></div>
-      </a>
-      <a class="ag-card" href="{{ url('/computer-accounting') }}">
-        <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 18V6M4 18h16"/><path d="m8 14 3-4 3 3 5-7"/></svg></i>
-        <div><b>حسابداری کامپیوتر</b><p>صنوف روی SQL Server 2022: شرکتی، فروشگاهی، رستوران</p></div>
-      </a>
-      <a class="ag-card" href="{{ url('/repair-shop') }}">
-        <i class="ag-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16v12H4z"/><path d="M8 7V5h8v2"/></svg></i>
-        <div><b>تعمیرگاه</b><p>پذیرش، ارجاع تعمیرکار و کارتابل مشتری</p></div>
-      </a>
-    </div>
-  </div>
-</section>
+@include('studio::contact-page')
 @endif
 
 @if($slug === 'sites')
