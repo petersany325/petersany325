@@ -298,6 +298,9 @@ class StudioController
     {
         return $this->page('contact', StudioDesignCopy::seoTitle('contact'), [
             'description' => StudioDesignCopy::seoDescription('contact'),
+            'canonical' => url('/contact'),
+            'ogTitle' => 'تماس با سرزمین هارد (فراز نت آمل)',
+            'ogDescription' => StudioDesignCopy::seoDescription('contact'),
             'contactCopy' => StudioDesignCopy::contact(),
         ]);
     }
@@ -439,7 +442,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration', 'software-beauty', 'software-psychology', 'software-dental', 'software-physio', 'ai', 'projects'], true) ? null : $this->builderForRequest();
+        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration', 'software-beauty', 'software-psychology', 'software-dental', 'software-physio', 'ai', 'projects', 'contact'], true) ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;

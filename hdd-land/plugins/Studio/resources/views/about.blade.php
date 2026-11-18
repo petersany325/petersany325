@@ -8,14 +8,18 @@
               'name' => 'شرکت فراز نت آمل',
               'alternateName' => ['سرزمین هارد', 'HDD Land'],
               'url' => 'https://hdd-land.ir',
-              'telephone' => '+98'.$phone,
+              'telephone' => '+981144447220',
           ],
           [
               '@type' => 'LocalBusiness',
               'name' => 'شرکت فراز نت آمل',
               'alternateName' => ['سرزمین هارد', 'HDD Land'],
               'url' => 'https://hdd-land.ir/about',
-              'telephone' => '+98'.$phone,
+              'telephone' => '+981144447220',
+              'contactPoint' => [
+                  ['@type' => 'ContactPoint', 'telephone' => '+989113100473', 'contactType' => 'sales', 'name' => 'مهندس رضانژاد'],
+                  ['@type' => 'ContactPoint', 'telephone' => '+981144447220', 'contactType' => 'customer support'],
+              ],
           ],
       ],
   ];
@@ -28,7 +32,7 @@
       'بازیابی حافظه و دیگر رسانه‌های ذخیره‌سازی دیجیتال',
   ];
 @endphp
-<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=53">
+<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=54">
 <div class="ab">
   <div class="ab-wrap">
     <section class="ab-hero">
@@ -121,10 +125,11 @@
 
     <section class="ab-contact-sec">
       <div class="ab-kick">ارتباط با ما</div>
-      <h2>حضوری، تلفنی یا در شبکه‌های اجتماعی</h2>
+      <h2>تلفنی با دفتر یا مشاور فروش</h2>
       <div class="ab-contact">
         <div class="ab-card">
-          <div class="ab-row"><span class="ab-k">تلفن</span><a class="num" dir="ltr" href="tel:{{ $phone }}">۰۱۱-۴۴۴۴۷۲۲۰</a></div>
+          <div class="ab-row"><span class="ab-k">مشاور فروش</span><span>مهندس رضانژاد · <a class="num" dir="ltr" href="tel:09113100473">۰۹۱۱ ۳۱۰ ۰۴۷۳</a></span></div>
+          <div class="ab-row"><span class="ab-k">دفتر</span><a class="num" dir="ltr" href="tel:{{ $phone }}">۰۱۱ ۴۴۴۴ ۷۲۲۰</a></div>
         </div>
       </div>
     </section>
