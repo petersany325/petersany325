@@ -21,7 +21,7 @@ class StudioHomeConfig
             'nav' => "صفحه اصلی|/\nطراحی سایت|/design\nنرم‌افزارها|/computer-accounting\nهوش مصنوعی|/ai\nنمونه کارها|/projects\nدرباره ما|/about",
             'hero_title' => 'طراحی سایت، نرم‌افزار و هوش مصنوعی',
             'hero_em' => 'هوش مصنوعی',
-            'hero_text' => 'شرکت فراز نت آمل سایت حرفه‌ای، نرم‌افزار اختصاصی و هوش مصنوعی می‌سازد — برای کسب‌وکار، فروشگاه و سازمان.',
+            'hero_text' => 'از سایت فروشگاهی تا نرم‌افزار حسابداری صنوف و دستیار فارسی که روی کامپیوتر خودتان کار می‌کند.',
             'cta1_label' => 'درخواست مشاوره رایگان',
             'cta1_url' => '/contact',
             'cta2_label' => 'مشاهده نمونه کارها',
@@ -104,7 +104,10 @@ class StudioHomeConfig
             'tagline' => ['تخصصی طراحی سایت و نرم‌افزار'],
             'hero_title' => ['طراحی سایت و نرم‌افزار'],
             'hero_em' => ['نرم‌افزار'],
-            'hero_text' => ['طراحی حرفه‌ای وب‌سایت مدرن و نرم‌افزار هوشمند برای کسب‌وکار، فروشگاه و سازمان — با لایه هوش مصنوعی.'],
+            'hero_text' => [
+                'طراحی حرفه‌ای وب‌سایت مدرن و نرم‌افزار هوشمند برای کسب‌وکار، فروشگاه و سازمان — با لایه هوش مصنوعی.',
+                'شرکت فراز نت آمل سایت حرفه‌ای، نرم‌افزار اختصاصی و هوش مصنوعی می‌سازد — برای کسب‌وکار، فروشگاه و سازمان.',
+            ],
             'svc_2_title' => ['نرم‌افزار هوشمند'],
             'svc_2_text' => ['حسابداری، قبض و پنل اختصاصی با لایه هوش مصنوعی'],
             'svc_2_url' => ['/accounting'],
@@ -249,12 +252,20 @@ class StudioHomeConfig
         $title = (string) ($s['hero_title'] ?? '');
         $em = trim((string) ($s['hero_em'] ?? ''));
         if ($em !== '' && mb_strpos($title, $em) !== false) {
-            $parts = explode($em, $title, 2);
-            $before = trim((string) $parts[0]);
-            $after = trim((string) ($parts[1] ?? ''));
+        $parts = explode($em, $title, 2);
+        $before = rtrim((string) $parts[0]);
+        $after = trim((string) ($parts[1] ?? ''));
+        if (mb_strpos($before, '،') !== false) {
+            [$line1, $line2] = explode('،', $before, 2);
+            $html = e(trim($line1)).'،<br>'.e(trim($line2));
+            if (trim($line2) !== '') {
+                $html .= ' ';
+            }
+        } else {
             $html = $before !== '' ? e($before).'<br>' : '';
+        }
 
-            return $html.'<em>'.e($em).'</em>'.($after !== '' ? e($after) : '');
+        return $html.'<em>'.e($em).'</em>'.($after !== '' ? ' '.e($after) : '');
         }
 
         return e($title);
