@@ -124,7 +124,7 @@ class StudioAccountingCopy
             'بازرگانی و فروش' => ['corporate', 'shop', 'supermarket', 'distribution'],
             'رستوران و کافه' => ['restaurant', 'cafe'],
             'پروژه و تولید' => ['contracting', 'manufacturing', 'service'],
-            'تعمیرگاه' => ['technicians'],
+            'تعمیرکاران' => ['technicians'],
             'سازمان' => ['automation'],
         ];
         $map = [];

@@ -54,17 +54,17 @@
         <span class="go">آشنایی با اپ ←</span></div>
     </a>
 
-    <a class="hp-prod" href="{{ url('/repair-shop') }}">
+    <a class="hp-prod" href="{{ url('/computer-accounting/technicians') }}">
       <div class="hp-shot"><div class="hp-rep">
         <div class="hp-card"><b>پذیرش ۱۰۸۴ · لپ‌تاپ</b><div class="muted">مشتری: آقای نمونه · ایراد: روشن نمی‌شود</div></div>
         <div class="hp-flow" id="hpFl"><span>پذیرش</span><span>بررسی</span><span>تأیید مشتری</span><span>تعمیر</span><span>تحویل</span></div>
         <div class="hp-card hp-row"><span>قطعه: آی‌سی شارژ</span><b class="num">۳٬۲۰۰٬۰۰۰</b></div>
         <div class="hp-sms" id="hpSms">📩 کد تأیید هزینه برای مشتری پیامک شد</div>
       </div></div>
-      <div class="hp-info"><span class="tag">نرم‌افزار تعمیرگاه</span><h3>تعمیرگاه HDD Land</h3>
+      <div class="hp-info"><span class="tag">ویژهٔ تعمیرکاران</span><h3>حسابداری تعمیرکاران</h3>
         <p>از پذیرش دستگاه تا تأیید هزینه با کد پیامکی، قطعهٔ مصرفی و تحویل؛ با اقساط و گزارش کارکنان.</p>
         <div class="feat"><span>تأیید پیامکی</span><span>قطعات و انبار</span><span>اقساط</span></div>
-        <span class="go">آشنایی با تعمیرگاه ←</span></div>
+        <span class="go">آشنایی با حسابداری تعمیرکاران ←</span></div>
     </a>
   </div>
 </section>
