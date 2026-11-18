@@ -296,10 +296,10 @@ class StudioHomeConfig
     {
         return [
             ['label' => 'خانه', 'url' => '/', 'icon' => '⌂'],
-            ['label' => 'تیکت', 'url' => '/account/tickets', 'icon' => '✉'],
-            ['label' => 'کارتابل', 'url' => '/account', 'icon' => '☺'],
-            ['label' => 'وب‌اپ', 'url' => '/app', 'icon' => '▣'],
-            ['label' => 'درباره ما', 'url' => '/about', 'icon' => '☎'],
+            ['label' => 'نرم‌افزار', 'url' => '/computer-accounting', 'icon' => '▣'],
+            ['label' => 'وب', 'url' => '/accounting', 'icon' => '◉'],
+            ['label' => 'فروش', 'url' => '/contact', 'icon' => '✉'],
+            ['label' => 'درباره', 'url' => '/about', 'icon' => '☎'],
         ];
     }
 

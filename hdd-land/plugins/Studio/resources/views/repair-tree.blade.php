@@ -11,12 +11,17 @@
     <div class="ag-actions">
       <a class="ag-btn ag-btn--line" href="{{ url('/repair-shop') }}">→ صفحه محصول</a>
       @if($isStaff)
-        <a class="ag-btn ag-btn--line" href="{{ url('/repair-shop/customer-menu') }}">منوی کارتابل مشتری ←</a>
+        <a class="ag-btn ag-btn--line" href="{{ url('/repair-shop/customer-menu') }}">کارتابل مشتری ←</a>
       @else
-        <a class="ag-btn ag-btn--line" href="{{ url('/repair-shop/staff-menu') }}">منوی کارکنان ←</a>
+        <a class="ag-btn ag-btn--line" href="{{ url('/repair-shop/staff-menu') }}">کارتابل کارمندان ←</a>
       @endif
     </div>
-    <div class="ag-menu-grid" style="margin-top:1.8rem">
+    <nav class="sd-nav" aria-label="پرش به بخش">
+      @foreach($rows as $section)
+        <a href="#{{ $section['slug'] }}">{{ $section['title'] }}</a>
+      @endforeach
+    </nav>
+    <div class="ag-menu-grid" style="margin-top:1rem">
       @foreach($rows as $section)
         <article class="ag-menu-card" id="{{ $section['slug'] }}">
           <small>{{ $section['num'] ?? '' }}</small>

@@ -16,7 +16,7 @@
 
     <nav class="sd-nav" aria-label="منوی کارتابل مشتری">
       @foreach($menu as $item)
-        @php $on = $path === ltrim($item['url'], '/'); @endphp
+        @php $on = rtrim($path, '/') === rtrim((string) $item['url'], '/'); @endphp
         <a class="{{ $on ? 'is-on' : '' }}" href="{{ url($item['url']) }}">{{ $item['label'] }}</a>
       @endforeach
     </nav>
@@ -173,7 +173,7 @@
 </section>
 <nav class="sd-tabbar" aria-label="منوی موبایل کارتابل مشتری">
   @foreach($menu as $item)
-    @php $on = $path === ltrim($item['url'], '/'); @endphp
+    @php $on = rtrim($path, '/') === rtrim((string) $item['url'], '/'); @endphp
     <a class="{{ $on ? 'is-on' : '' }}" href="{{ url($item['url']) }}"><span>{{ $item['icon'] }}</span>{{ $item['label'] }}</a>
   @endforeach
 </nav>

@@ -11,7 +11,7 @@ class StudioProductMenus
     /** @return list<array{label:string,url:string,children?:list<array{label:string,url:string,children?:list<array{label:string,url:string}>}>}> */
     public static function headerItems(): array
     {
-        return [self::softwareNavItem()];
+        return [self::softwareNavItem(), self::webSoftwareNavItem(), self::siteSalesNavItem()];
     }
 
     /** @return array{label:string,url:string,children:list<array<string,mixed>>} */
@@ -44,8 +44,6 @@ class StudioProductMenus
                 $medKids[] = [
                     'label' => (string) $row['title'],
                     'url' => (string) $row['url'],
-                    'sell_url' => (string) $row['sell_url'],
-                    'price_label' => (string) $row['price_label'],
                 ];
             }
         }
@@ -65,23 +63,90 @@ class StudioProductMenus
                     'children' => $medKids,
                 ],
                 [
-                    'label' => 'حسابداری وب و تعمیرگاه',
-                    'url' => '/accounting',
-                    'children' => [
-                        ['label' => 'معرفی حسابداری وب', 'url' => '/accounting'],
-                        ['label' => 'سایت مدیریت تعمیرگاه', 'url' => '/repair-shop'],
-                        ['label' => 'منوی کارکنان', 'url' => '/repair-shop/staff-menu'],
-                        ['label' => 'کارتابل مشتری', 'url' => '/repair-shop/customer-menu'],
-                        ['label' => 'نرم‌افزار قبض', 'url' => '/receipt-software'],
-                    ],
-                ],
-                [
                     'label' => 'هوش مصنوعی',
                     'url' => '/ai',
                     'children' => [
-                        ['label' => 'لایه هوش مصنوعی', 'url' => '/ai'],
+                        ['label' => 'دستیار روی رایانه', 'url' => '/ai'],
                         ['label' => 'تماس برای دمو', 'url' => '/contact'],
                     ],
+                ],
+            ],
+        ];
+    }
+
+    /** @return array{label:string,url:string,children:list<array<string,mixed>>} */
+    public static function webSoftwareNavItem(): array
+    {
+        return [
+            'label' => 'نرم‌افزار وب',
+            'url' => '/accounting',
+            'children' => [
+                ['label' => 'حسابداری وب تعمیرگاه', 'url' => '/accounting'],
+                ['label' => 'سایت مدیریت تعمیرگاه', 'url' => '/repair-shop'],
+                ['label' => 'کارتابل کارمندان', 'url' => '/repair-shop/staff-menu'],
+                ['label' => 'کارتابل مشتری', 'url' => '/repair-shop/customer-menu'],
+                ['label' => 'نرم‌افزار قبض', 'url' => '/receipt-software'],
+            ],
+        ];
+    }
+
+    /** @return array{label:string,url:string,children:list<array<string,mixed>>} */
+    public static function siteSalesNavItem(): array
+    {
+        $acc = [];
+        if (class_exists(StudioComputerMenu::class)) {
+            foreach (StudioComputerMenu::cards() as $row) {
+                $acc[] = [
+                    'label' => (string) $row['title'],
+                    'url' => '/computer-accounting/'.$row['slug'],
+                ];
+            }
+        }
+        $med = [];
+        if (class_exists(StudioOffers::class)) {
+            foreach (StudioOffers::medical() as $row) {
+                $med[] = [
+                    'label' => (string) $row['title'],
+                    'url' => (string) $row['url'],
+                ];
+            }
+        }
+        $design = [];
+        if (class_exists(StudioDesignCopy::class)) {
+            foreach (StudioDesignCopy::services() as $row) {
+                $design[] = [
+                    'label' => (string) $row['title'],
+                    'url' => '/design/'.$row['slug'],
+                ];
+            }
+        }
+
+        return [
+            'label' => 'فروش سایت',
+            'url' => '/contact',
+            'children' => [
+                [
+                    'label' => 'حسابداری کامپیوتر',
+                    'url' => '/computer-accounting',
+                    'children' => $acc,
+                ],
+                [
+                    'label' => 'نرم‌افزار پزشکی',
+                    'url' => '/software/medical-beauty',
+                    'children' => $med,
+                ],
+                [
+                    'label' => 'نرم‌افزار وب',
+                    'url' => '/accounting',
+                    'children' => [
+                        ['label' => 'حسابداری وب تعمیرگاه', 'url' => '/accounting'],
+                        ['label' => 'سایت مدیریت تعمیرگاه', 'url' => '/repair-shop'],
+                    ],
+                ],
+                [
+                    'label' => 'طراحی سایت',
+                    'url' => '/design',
+                    'children' => $design,
                 ],
             ],
         ];
@@ -99,12 +164,12 @@ class StudioProductMenus
             '/accounting', '/computer-accounting', '/repair-shop', '/sites/repair-shop',
             '/receipt-software', '/sites',
         ];
-        $dropLabels = ['نرم‌افزار', 'نرم‌افزارها', 'حسابداری وب', 'حسابداری کامپیوتر', 'تعمیرگاه', 'تعمیرکاران', 'حسابداری هوش مصنوعی', 'نرم‌افزار قبض تحت وب', 'پشتیبانی'];
+        $dropLabels = ['نرم‌افزار', 'نرم‌افزارها', 'نرم‌افزار وب', 'نرم‌افزار کامپیوتر', 'فروش سایت', 'حسابداری وب', 'حسابداری کامپیوتر', 'تعمیرگاه', 'تعمیرکاران', 'حسابداری هوش مصنوعی', 'نرم‌افزار قبض تحت وب', 'پشتیبانی', 'نمونه کار', 'نمونه کارها'];
         $kept = [];
         foreach ($items as $item) {
             $url = rtrim((string) ($item['url'] ?? ''), '/') ?: '/';
             $label = trim((string) ($item['label'] ?? ''));
-            if (in_array($url, $dropUrls, true) || in_array($label, $dropLabels, true)) {
+            if ($url === '/projects' || in_array($url, $dropUrls, true) || in_array($label, $dropLabels, true)) {
                 continue;
             }
             $kept[] = $item;
@@ -138,6 +203,9 @@ class StudioProductMenus
         $aboutLabels = ['درباره ما', 'تماس', 'تماس با ما', 'پشتیبانی'];
         $aboutUrls = ['/about', '/contact', '/support'];
         $kept = array_values(array_filter($kept, static function (array $item) use ($aboutLabels, $aboutUrls): bool {
+            if (! empty($item['children'])) {
+                return true;
+            }
             $url = rtrim((string) ($item['url'] ?? ''), '/') ?: '/';
             $label = trim((string) ($item['label'] ?? ''));
 
