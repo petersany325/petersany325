@@ -42,7 +42,7 @@
         </a>
       @endforeach
     </div>
-    <p class="ag-note">تعمیرگاه دارید؟ حسابداری تعمیرکاران تحت وب است. <a href="{{ url('/accounting') }}">حسابداری وب</a></p>
+    <p class="ag-note">تعمیرگاه دارید؟ <a href="{{ url('/computer-accounting/technicians') }}">حسابداری تعمیرکاران</a> نسخهٔ کامپیوتری است. قبض آنلاین و کارتابل مشتری در <a href="{{ url('/accounting') }}">حسابداری وب</a> می‌ماند.</p>
   </div>
 </section>
 

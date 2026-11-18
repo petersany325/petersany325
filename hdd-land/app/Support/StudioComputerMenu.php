@@ -5,18 +5,18 @@ namespace App\Support;
 /**
  * Public copy for the computer-accounting menu.
  * Empty [[...]] marks stay until the site owner fills them.
- * Technicians stay on web accounting, not in this menu.
+ * Technicians is a computer-accounting edition. Web repair receipts stay under /accounting.
  */
 class StudioComputerMenu
 {
     public const SEO_TITLE = 'نرم‌افزار حسابداری کامپیوتری صنوف با هوش مصنوعی | حسابداری HDD Land';
 
-    public const SEO_DESCRIPTION = 'نرم‌افزار حسابداری ویژهٔ شرکت، فروشگاه، سوپرمارکت، پخش، رستوران، کافی‌شاپ، تولیدی، پیمانکاری و خدماتی؛ با سامانهٔ مؤدیان، فروش ارزی، برنامهٔ اندروید و دستیار هوش مصنوعی فارسی بدون اینترنت.';
+    public const SEO_DESCRIPTION = 'نرم‌افزار حسابداری ویژهٔ شرکت، فروشگاه، سوپرمارکت، پخش، رستوران، کافی‌شاپ، تولیدی، پیمانکاری، خدماتی و تعمیرکاران؛ با سامانهٔ مؤدیان، فروش ارزی، برنامهٔ اندروید و دستیار هوش مصنوعی فارسی بدون اینترنت.';
 
     /** @return list<string> */
     public static function slugs(): array
     {
-        return ['corporate', 'shop', 'supermarket', 'distribution', 'restaurant', 'cafe', 'manufacturing', 'contracting', 'service', 'automation'];
+        return ['corporate', 'shop', 'supermarket', 'distribution', 'restaurant', 'cafe', 'manufacturing', 'contracting', 'service', 'technicians', 'automation'];
     }
 
     /** @return list<array{slug:string,title:string,text:string}> */
@@ -32,6 +32,7 @@ class StudioComputerMenu
             ['slug' => 'manufacturing', 'title' => 'حسابداری تولیدی', 'text' => 'فرمول ساخت (BOM)، دستور تولید، دستمزد و سربار، بهای تمام‌شدهٔ محصول، ضایعات و باسکول.'],
             ['slug' => 'contracting', 'title' => 'حسابداری پیمانکاری', 'text' => 'پروژه روی قرارداد، صورت‌وضعیت کارفرما و پیمانکار جزء، حسن انجام کار و بیمه، سود هر پروژه.'],
             ['slug' => 'service', 'title' => 'حسابداری خدماتی', 'text' => 'قرارداد و فاکتور خدمت، مدیریت کارها و ساعت کارکرد، صورت‌وضعیت، سودآوری هر نوع کار؛ بدون انبار.'],
+            ['slug' => 'technicians', 'title' => 'حسابداری تعمیرکاران', 'text' => 'هر دستگاه یک قبض: پذیرش، کارتابل تعمیرکار، تأیید هزینه، قطعه و اجرت، تحویل و پیامک وضعیت.'],
             ['slug' => 'automation', 'title' => 'اتوماسیون اداری', 'text' => 'نامه و دبیرخانه، کارتابل و ارجاع، امضای داخلی، مدیریت وظایف و بایگانی.'],
         ];
     }
