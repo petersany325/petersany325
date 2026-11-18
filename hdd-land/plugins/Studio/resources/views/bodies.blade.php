@@ -126,8 +126,8 @@
     <div class="st-hero__glow st-hero__glow--amber" aria-hidden="true"></div>
   @endunless
   <div class="{{ $agency ? 'ag-wrap' : 'st-wrap' }}">
-    <p class="{{ $agency ? 'ag-kicker' : 'st-kicker' }}">پروژه‌های سایت</p>
-    <h1>نمونه از همین سیستم</h1>
+    <p class="{{ $agency ? 'ag-kicker' : 'st-kicker' }}">محصولات</p>
+    <h1>محصولات</h1>
     <p class="{{ $agency ? 'ag-lead' : '' }}">پروژه‌هایی که استقرار شده‌اند؛ قالب تزئینی نیستند.</p>
     @if($agency)
       <div class="ag-actions">

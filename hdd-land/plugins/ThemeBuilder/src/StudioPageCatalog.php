@@ -253,11 +253,11 @@ class StudioPageCatalog
     /** @return array<string, mixed> */
     protected static function projects(): array
     {
-        return self::spec('/projects', 'projects', 'نمونه کارها', 'نمونه کارها', 'طراحی سایت', [
-            'seo_title' => 'پروژه‌های سایت | فراز نت آمل',
-            'seo_description' => 'نمونه پروژه‌های استقرارشده فراز نت آمل؛ قالب تزئینی نیستند.',
+        return self::spec('/projects', 'projects', 'محصولات', 'محصولات', 'طراحی سایت', [
+            'seo_title' => 'محصولات | فراز نت آمل',
+            'seo_description' => 'محصولات نرم‌افزاری فراز نت آمل؛ قالب تزئینی نیستند.',
             'blocks' => [
-                self::hero('پروژه‌های سایت', 'نمونه از همین سیستم', 'پروژه‌هایی که استقرار شده‌اند؛ قالب تزئینی نیستند.', '', 'شروع پروژه مشابه', '/contact', 'طراحی سایت', '/design'),
+                self::hero('محصولات', 'محصولات', 'پروژه‌هایی که استقرار شده‌اند؛ قالب تزئینی نیستند.', '', 'شروع پروژه مشابه', '/contact', 'طراحی سایت', '/design'),
                 self::cards('نمونه‌ها', [
                     ['title' => 'مدیریت تعمیرگاه', 'text' => 'پذیرش، قبض، ارجاع و تحویل.', 'url' => '/repair-shop'],
                     ['title' => 'دفتر متصل به فروش', 'text' => 'یک فروش = یک سند.', 'url' => '/computer-accounting'],
