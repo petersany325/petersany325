@@ -127,6 +127,10 @@
 @include('studio::accounting-type')
 @endif
 
+@if($slug === 'software-beauty')
+@include('studio::software-beauty')
+@endif
+
 @if($slug === 'software-offer')
 @include('studio::software-offer')
 @endif

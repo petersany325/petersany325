@@ -15,6 +15,20 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>@yield('title', ($studioHome['tagline'] ?? 'طراحی سایت، نرم‌افزار و هوش مصنوعی').' | فراز نت آمل')</title>
   <meta name="description" content="@hasSection('description')@yield('description')@else{{ $studioHome['hero_text'] ?? 'طراحی سایت حرفه‌ای با فراز نت آمل؛ سایت شرکتی، فروشگاهی و سامانه‌های اختصاصی لاراول.' }}@endif">
+  @if(!empty($canonical))
+    <link rel="canonical" href="{{ $canonical }}">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="fa_IR">
+    <meta property="og:site_name" content="فراز نت آمل">
+    <meta property="og:url" content="{{ $canonical }}">
+    <meta property="og:title" content="{{ $ogTitle ?? $title ?? '' }}">
+    <meta property="og:description" content="{{ $ogDescription ?? ($description ?? '') }}">
+    <meta property="og:image" content="{{ asset('images/hdd-land-icon-192.png') }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ $ogTitle ?? $title ?? '' }}">
+    <meta name="twitter:description" content="{{ $twitterDescription ?? ($ogDescription ?? ($description ?? '')) }}">
+    <meta name="twitter:image" content="{{ asset('images/hdd-land-icon-192.png') }}">
+  @endif
   @if($agency && class_exists(\App\Support\StudioHomeConfig::class) && \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome))
     <link rel="manifest" href="{{ url('/studio-manifest.webmanifest') }}">
     <meta name="theme-color" content="{{ $studioHome['accent'] ?? '#7c5cff' }}">
@@ -27,7 +41,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap">
   <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=17">
   @if($agency)
-    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=44">
+    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=45">
   @endif
 </head>
 <body class="st-body{{ $agency ? ' ag-body' : '' }}{{ ($agency && class_exists(\App\Support\StudioHomeConfig::class) && \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome)) ? ' has-ag-tabbar' : '' }}{{ $hlAdminBar ? ' has-hl-adminbar' : '' }}"@if($agency) style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}"@endif>
