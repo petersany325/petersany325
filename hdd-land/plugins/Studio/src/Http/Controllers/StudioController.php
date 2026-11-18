@@ -442,7 +442,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration', 'software-beauty', 'software-psychology', 'software-dental', 'software-physio', 'ai', 'projects', 'contact', 'accounting-type'], true) ? null : $this->builderForRequest();
+        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration', 'software-beauty', 'software-psychology', 'software-dental', 'software-physio', 'ai', 'projects', 'contact', 'accounting-type', 'repair', 'repair-staff', 'repair-customer'], true) ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;

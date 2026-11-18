@@ -7,7 +7,7 @@
   $editions = $editions ?? [];
   $statusLabel = ['open' => 'در انتظار', 'pending' => 'در حال بررسی', 'review' => 'در حال بررسی', 'closed' => 'بسته شد'];
 @endphp
-<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=57">
+<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=60">
 <div class="su">
   <div class="su-wrap">
     <section class="su-hero">

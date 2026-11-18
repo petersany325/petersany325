@@ -7,6 +7,38 @@
   $items = $agency && class_exists(\App\Support\StudioHomeConfig::class)
     ? \App\Support\StudioHomeConfig::navItems($studioHome)
     : ($menu ?? \App\Support\SiteHost::studioMenu());
+  $navOn = function (array $item) use ($path): bool {
+    if (array_key_exists('active', $item) && $item['active'] === false) {
+      return false;
+    }
+    $url = (string) ($item['url'] ?? '');
+    if ($path === '/contact') {
+      return $url === '/about';
+    }
+    $hit = function (string $u) use ($path): bool {
+      if ($u === '' || $u === '#') {
+        return false;
+      }
+      if ($u === '/accounting' && str_starts_with($path, '/repair-shop')) {
+        return true;
+      }
+      return $path === $u || ($u !== '/' && str_starts_with($path, rtrim($u, '/').'/'));
+    };
+    if ($hit($url)) {
+      return true;
+    }
+    foreach ($item['children'] ?? [] as $col) {
+      if ($hit((string) ($col['url'] ?? ''))) {
+        return true;
+      }
+      foreach ($col['children'] ?? [] as $leaf) {
+        if ($hit((string) ($leaf['url'] ?? ''))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
   if ($agency && class_exists(\App\Support\StudioProductMenus::class)) {
     $hasKids = false;
     foreach ($items as $it) {
@@ -18,6 +50,7 @@
   }
 @endphp
 @if($agency)
+<style>.ag-drop--flip>.ag-drop__panel{right:auto;left:0}</style>
 <header class="ag-head">
   <div class="ag-wrap ag-head__bar">
     <a class="ag-brand" href="{{ url('/') }}">
@@ -34,20 +67,7 @@
         @php
           $url = $item['url'] ?? '#';
           $kids = $item['children'] ?? [];
-          $on = $path === $url || ($url !== '/' && str_starts_with($path, rtrim($url, '/').'/'));
-          if (! $on && $url === '/accounting' && str_starts_with($path, '/repair-shop')) {
-            $on = true;
-          }
-          if (! $on) {
-            foreach ($kids as $col) {
-              $cu = $col['url'] ?? '';
-              if ($cu && ($path === $cu || str_starts_with($path, rtrim($cu, '/').'/'))) { $on = true; break; }
-              foreach ($col['children'] ?? [] as $leaf) {
-                $lu = $leaf['url'] ?? '';
-                if ($lu && ($path === $lu || str_starts_with($path, rtrim($lu, '/').'/'))) { $on = true; break 2; }
-              }
-            }
-          }
+          $on = $navOn($item);
         @endphp
         @if(count($kids))
           @php
@@ -56,7 +76,7 @@
               if (! empty($col['children'])) { $flatKids = false; break; }
             }
           @endphp
-          <div class="ag-drop">
+          <div class="ag-drop{{ ($item['label'] ?? '') === 'فروش سایت' ? ' ag-drop--flip' : '' }}">
             <a href="{{ url($url) }}" class="ag-drop__btn {{ $on ? 'is-on' : '' }}" aria-haspopup="true">{{ $item['label'] }} <i>▾</i></a>
             <div class="ag-drop__panel {{ $flatKids ? 'ag-drop__panel--list' : (count($kids) <= 3 ? 'ag-drop__panel--slim' : '') }}" role="menu">
               @if($flatKids)
@@ -69,9 +89,6 @@
                     <a class="ag-drop__h" href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
                     @foreach($col['children'] ?? [] as $leaf)
                       <a href="{{ url($leaf['url'] ?? '/') }}">{{ $leaf['label'] }}</a>
-                      @if(!empty($leaf['sell']) || !empty($leaf['sell_url']))
-                        <a class="ag-drop__sell" href="{{ url($leaf['sell_url'] ?? $leaf['url']) }}">فروش · {{ $leaf['price_label'] ?? 'قیمت اعلام می‌شود' }}</a>
-                      @endif
                     @endforeach
                   </div>
                 @endforeach
@@ -115,40 +132,41 @@
     <div class="ag-drawer__in">
       <div class="ag-drawer__auth">
         @auth
-          <a class="ag-drawer__h" href="{{ auth()->user()->isStaff() || auth()->user()->isAdmin() ? url('/staff') : url('/account') }}">{{ auth()->user()->name }}</a>
+          <a class="ag-drawer__h" href="{{ auth()->user()->isStaff() || auth()->user()->isAdmin() ? url('/staff/desk') : url('/account') }}">{{ auth()->user()->name }}</a>
           <form method="post" action="{{ url('/auth/logout') }}">@csrf<button type="submit">خروج</button></form>
         @else
           <a class="ag-drawer__h" href="{{ url('/auth/customer') }}">ورود کاربر</a>
           <a href="{{ url('/auth/customer?tab=register') }}">ثبت‌نام</a>
           <a href="{{ url('/auth/staff') }}">ورود کارمند</a>
         @endauth
+        <a href="{{ url('/account') }}">کارتابل مشتری</a>
+        <a href="{{ url('/staff/desk') }}">کارتابل کارمندان</a>
       </div>
-      <p class="ag-drawer__sec">حساب و پشتیبانی</p>
-      <a href="{{ url('/account') }}">کارتابل مشتری</a>
-      <a href="{{ url('/account/buy') }}">خرید</a>
-      <a href="{{ url('/account/sell') }}">فروش / سفارش</a>
-      <a href="{{ url('/account/tickets') }}">تیکت</a>
-      <a href="{{ url('/account/support') }}">پشتیبانی</a>
-      <a href="{{ url('/account/invoices') }}">فاکتورها</a>
-      <a href="{{ url('/staff') }}">کارتابل کارمند</a>
-      <a href="{{ url('/app') }}">وب موبایل</a>
-      <p class="ag-drawer__sec">صفحات</p>
       @foreach($items as $item)
-        @php $url = $item['url'] ?? '/'; @endphp
-        <a class="ag-drawer__h" href="{{ url($url) }}">{{ $item['label'] }}</a>
-        @foreach($item['children'] ?? [] as $col)
-          <a href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
-          @foreach($col['children'] ?? [] as $leaf)
-            <a href="{{ url($leaf['url'] ?? '/') }}">{{ $leaf['label'] }}</a>
-            @if(!empty($leaf['sell']) || !empty($leaf['sell_url']))
-              <a class="ag-drop__sell" href="{{ url($leaf['sell_url'] ?? $leaf['url']) }}">فروش · {{ $leaf['price_label'] ?? 'قیمت اعلام می‌شود' }}</a>
-            @endif
-          @endforeach
-        @endforeach
+        @php
+          $url = $item['url'] ?? '/';
+          $kids = $item['children'] ?? [];
+          $open = $navOn($item);
+        @endphp
+        @if(count($kids))
+          <details class="ag-acc" @if($open) open @endif>
+            <summary>{{ $item['label'] }}</summary>
+            <a class="ag-drawer__h" href="{{ url($url) }}">{{ $item['label'] }}</a>
+            @foreach($kids as $col)
+              @if(!empty($col['children']))
+                <a class="ag-drawer__h" href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
+                @foreach($col['children'] as $leaf)
+                  <a class="ag-drawer__sub" href="{{ url($leaf['url'] ?? '/') }}">{{ $leaf['label'] }}</a>
+                @endforeach
+              @else
+                <a href="{{ url($col['url'] ?? $url) }}">{{ $col['label'] }}</a>
+              @endif
+            @endforeach
+          </details>
+        @else
+          <a class="ag-drawer__h" href="{{ url($url) }}">{{ $item['label'] }}</a>
+        @endif
       @endforeach
-      <p class="ag-drawer__sec">نماینده</p>
-      <a href="{{ url('/staff/desk') }}">کارتابل کارمند</a>
-      <a href="{{ url('/auth/staff') }}">ورود کارمند</a>
     </div>
   </div>
 </header>
