@@ -264,7 +264,7 @@
         </tbody>
       </table>
     </div>
-    <p class="ag-note">زیبایی، اوپرا و دندانپزشکی روی همین سایت هستند: <a href="{{ url('/software/medical-beauty') }}">زیبایی</a> · <a href="{{ url('/software/medical-opera') }}">اوپرا</a> · <a href="{{ url('/software/medical-dental') }}">دندانپزشکی</a> · <a href="{{ url('/ai') }}">هوش مصنوعی</a></p>
+    <p class="ag-note">زیبایی، فیزیوتراپی و دندانپزشکی روی همین سایت هستند: <a href="{{ url('/software/medical-beauty') }}">زیبایی</a> · <a href="{{ url('/software/medical-physiotherapy') }}">فیزیوتراپی</a> · <a href="{{ url('/software/medical-dental') }}">دندانپزشکی</a> · <a href="{{ url('/ai') }}">هوش مصنوعی</a></p>
     <p class="ag-note">تقسیم دقیق امکانات بین سطوح لایسنس و قیمت را صاحب سایت مشخص می‌کند. تا آن زمان سلول‌ها جای‌نگهدار می‌مانند.</p>
     <div class="ag-table-wrap">
       <table class="ag-cmp ag-cmp--two">

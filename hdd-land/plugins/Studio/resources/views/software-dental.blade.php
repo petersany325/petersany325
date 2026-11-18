@@ -175,7 +175,7 @@
       <tr><th>چارت دندانی FDI و کارتابل لابراتوار</th><td>هست</td><td>—</td><td>—</td></tr>
       <tr><th>خدمات آمادهٔ مختص رشته</th><td>چارت استاندارد دندانپزشکی</td><td>لیزر بانوان (دکا و تیتانیوم)</td><td>[[طبق نسخه]]</td></tr>
     </tbody></table></div>
-    <p class="ag-note">زیبایی، روانشناسی و اوپرا: <a href="{{ url('/software/medical-beauty') }}">زیبایی</a> · <a href="{{ url('/software/medical-psychology') }}">روانشناسی</a> · <a href="{{ url('/software/medical-opera') }}">اوپرا</a>. کد فروش پیشنهادی تا تأیید شما جای خالی است: [[SKU: med-dental]]</p>
+    <p class="ag-note">زیبایی، روانشناسی و فیزیوتراپی: <a href="{{ url('/software/medical-beauty') }}">زیبایی</a> · <a href="{{ url('/software/medical-psychology') }}">روانشناسی</a> · <a href="{{ url('/software/medical-physiotherapy') }}">فیزیوتراپی</a>. کد فروش پیشنهادی تا تأیید شما جای خالی است: [[SKU: med-dental]]</p>
     <div class="ag-table-wrap"><table class="ag-cmp ag-cmp--two"><thead><tr><th>امکان</th><th>پایه</th><th>حرفه‌ای</th><th>چندکاربره / شبکه</th></tr></thead><tbody>
       <tr><th>ثبت بیمار و نوبت‌دهی</th><td>[[ ]]</td><td>[[ ]]</td><td>[[ ]]</td></tr>
       <tr><th>گزارش بیمار</th><td>[[ ]]</td><td>[[ ]]</td><td>[[ ]]</td></tr>
