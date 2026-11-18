@@ -32,7 +32,7 @@
       'بازیابی حافظه و دیگر رسانه‌های ذخیره‌سازی دیجیتال',
   ];
 @endphp
-<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=55">
+<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=57">
 <div class="ab">
   <div class="ab-wrap">
     <section class="ab-hero">

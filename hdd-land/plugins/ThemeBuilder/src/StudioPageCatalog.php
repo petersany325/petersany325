@@ -374,7 +374,9 @@ class StudioPageCatalog
             $blocks = [
                 self::hero((string) ($row['kicker'] ?? 'حسابداری کامپیوتر'), $row['title'], (string) ($row['lead'] ?? $row['short'] ?? ''), $heroImage, 'درخواست مشاوره و دمو', '/contact', 'همه حسابداری‌های کامپیوتر', '/computer-accounting'),
             ];
-            $blocks[] = self::list('نقاط قوت این نسخه', $row['highlights'] ?? []);
+            if (! empty($row['highlights'])) {
+                $blocks[] = self::list('نقاط قوت این نسخه', $row['highlights']);
+            }
             $blocks[] = self::rich($row['title'].' چیست و چه کاری انجام می‌دهد؟', $body.(class_exists(StudioAccountingCopy::class) ? "\n\n".StudioAccountingCopy::sqlNote() : ''));
             if (! empty($ai) || class_exists(StudioAccountingCopy::class)) {
                 $aiLead = (string) ($ai['lead'] ?? (class_exists(StudioAccountingCopy::class) ? StudioAccountingCopy::aiNote() : ''));
@@ -429,7 +431,7 @@ class StudioPageCatalog
                 $blocks[] = self::cards('امکانات و منوهای این نسخه', $row['menus']);
             }
             if (! empty($row['steps'])) {
-                $blocks[] = self::steps('از تحلیل تا نصب روی SQL Server 2022', $row['steps']);
+                $blocks[] = self::steps((string) ($row['steps_title'] ?? 'از تحلیل تا نصب روی SQL Server 2022'), $row['steps']);
             }
             if (! empty($row['benefits'])) {
                 $blocks[] = self::list('روی SQL Server 2022، مخصوص صنف شما', $row['benefits']);

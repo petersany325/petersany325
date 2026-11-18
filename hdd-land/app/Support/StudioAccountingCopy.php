@@ -91,8 +91,12 @@ class StudioAccountingCopy
     private static function enrich(array $row): array
     {
         $slug = (string) ($row['slug'] ?? '');
+        $menusLocked = $slug === 'technicians';
         if (class_exists(StudioHddCatalog::class)) {
             $row = StudioHddCatalog::merge($row);
+        }
+        if ($menusLocked) {
+            $row['menus'] = [];
         }
         if (! class_exists(StudioAccountingEditions::class)) {
             return $row;
@@ -940,7 +944,8 @@ class StudioAccountingCopy
                 'تأیید هزینه معطل می‌ماند.',
                 'قبض در یک برنامه است و حساب در دفتر دیگر.',
             ],
-            'menus' => self::aiMenus(),
+            'menus' => [],
+            'steps_title' => 'از پذیرش تا تحویل',
             'steps' => [
                 ['num' => '۱', 'title' => 'پذیرش', 'text' => 'دستگاه و ایراد روی قبض ثبت می‌شود؛ برچسب چاپ می‌شود.'],
                 ['num' => '۲', 'title' => 'ارجاع و تعمیر', 'text' => 'قبض به کارتابل تعمیرکار می‌رود؛ قطعه و اجرت ثبت می‌شود.'],

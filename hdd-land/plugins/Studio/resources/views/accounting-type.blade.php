@@ -4,7 +4,7 @@
   $sqlNote = $sqlNote ?? ($laravelNote ?? \App\Support\StudioAccountingCopy::sqlNote());
 @endphp
 <section class="ag-page">
-  <div class="ag-wrap{{ ($industry['slug'] ?? '') === 'corporate' ? ' pb-hero__grid' : '' }}">
+  <div class="ag-wrap{{ ($industry['slug'] ?? '') === 'corporate' ? ' pb-hero__grid' : '' }}{{ ($industry['slug'] ?? '') === 'technicians' ? ' tn-hero' : '' }}">
     <div>
       <p class="ag-crumb">
         <a href="{{ url('/computer-accounting') }}">حسابداری کامپیوتر</a>
@@ -44,7 +44,9 @@
         <a href="#faq">پرسش‌ها</a>
       </nav>
     </div>
-    @if(($industry['slug'] ?? '') === 'corporate')
+    @if(($industry['slug'] ?? '') === 'technicians')
+      @include('studio::technicians-demos', ['part' => 'board'])
+    @elseif(($industry['slug'] ?? '') === 'corporate')
       <figure class="pb-hero__media pb-shot">
         <div class="pb-shot__bar" aria-hidden="true"><i></i><i></i><i></i></div>
         <img src="{{ asset(\App\Support\StudioSoftwareShots::heroImage()) }}" alt="میز کار حسابداری شرکتی" width="1412" height="1132">
@@ -61,6 +63,9 @@
       <p class="ag-lead ag-lead--wide">{{ $para }}</p>
     @endforeach
     <p class="ag-note">{{ $sqlNote }}</p>
+    @if(($industry['slug'] ?? '') === 'technicians')
+      @include('studio::technicians-demos', ['part' => 'intake'])
+    @endif
   </div>
 </section>
 @if(($industry['slug'] ?? '') === 'corporate' && class_exists(\App\Support\StudioSoftwareShots::class))
@@ -77,6 +82,9 @@
     @if(!empty($industry['focus']))
       <p class="ag-note">پرسش‌های پیشنهادی این نسخه: {{ $industry['focus'] }}</p>
     @endif
+    @if(($industry['slug'] ?? '') === 'technicians')
+      @include('studio::technicians-demos', ['part' => 'assistant'])
+    @else
     <div class="ag-cards ag-cards--dense">
       @foreach(($ai['items'] ?? \App\Support\StudioAccountingCopy::aiMenus()) as $row)
         <article class="ag-card">
@@ -87,6 +95,7 @@
         </article>
       @endforeach
     </div>
+    @endif
     <p class="ag-note">{{ \App\Support\StudioAccountingCopy::aiNote() }}</p>
   </div>
 </section>
@@ -252,7 +261,7 @@
 <section class="ag-sec" id="steps">
   <div class="ag-wrap">
     <p class="ag-kicker">مسیر پروژه</p>
-    <h2>از تحلیل تا نصب روی SQL Server 2022</h2>
+    <h2>{{ $industry['steps_title'] ?? 'از تحلیل تا نصب روی SQL Server 2022' }}</h2>
     <ol class="ag-steps">
       @foreach($industry['steps'] as $row)
         <li>
@@ -262,6 +271,9 @@
         </li>
       @endforeach
     </ol>
+    @if(($industry['slug'] ?? '') === 'technicians')
+      @include('studio::technicians-demos', ['part' => 'flow'])
+    @endif
   </div>
 </section>
 @endif
@@ -322,3 +334,17 @@
     </div>
   </div>
 </section>
+@if(($industry['slug'] ?? '') === 'technicians')
+@php
+  $tnLd = [
+      '@context' => 'https://schema.org',
+      '@type' => 'SoftwareApplication',
+      'name' => 'حسابداری تعمیرکاران HDD Land',
+      'applicationCategory' => 'BusinessApplication',
+      'operatingSystem' => 'Windows',
+      'url' => 'https://hdd-land.ir/computer-accounting/technicians',
+  ];
+@endphp
+<script type="application/ld+json">{!! json_encode($tnLd, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!}</script>
+@include('studio::technicians-script')
+@endif
