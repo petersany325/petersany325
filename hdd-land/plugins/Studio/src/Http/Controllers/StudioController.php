@@ -55,7 +55,10 @@ class StudioController
     public function about(): View
     {
         return $this->page('about', StudioDesignCopy::seoTitle('about'), [
-            'description' => StudioDesignCopy::seoDescription('about'),
+            'description' => 'شرکت فراز نت آمل (سرزمین هارد)، شماره ثبت ۴۱۸۹ و شناسه صنفی ۱۴۰۵۳۱۳۳۷۹: بیش از ۲۰ سال بازیابی اطلاعات و ۱۸ سال طراحی سایت و نرم‌افزار، با حسابداری HDD Land و دستیار فارسی آفلاین.',
+            'canonical' => url('/about'),
+            'ogTitle' => 'درباره سرزمین هارد (فراز نت آمل)',
+            'ogDescription' => 'از بازیابی اطلاعات تا حسابداری HDD Land و دستیار فارسی که روی کامپیوتر خودتان کار می‌کند.',
             'aboutPage' => StudioDesignCopy::about(),
             'reasons' => StudioDesignCopy::reasons(),
         ]);
