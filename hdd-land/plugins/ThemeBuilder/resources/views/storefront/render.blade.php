@@ -46,7 +46,7 @@
     <section class="ag-sec" @if(!empty($block['id'])) id="{{ $block['id'] }}" @endif>
       <div class="ag-wrap pb-rich">
         @if(!empty($block['title']))
-          <p class="ag-kicker">{{ $block['kicker'] ?? 'متن' }}</p>
+          @if(!empty($block['kicker']))<p class="ag-kicker">{{ $block['kicker'] }}</p>@endif
           <h2>{{ $block['title'] }}</h2>
         @endif
         <div class="ag-lead ag-lead--wide pb-html">{!! $block['html'] ?? '' !!}</div>
@@ -105,7 +105,7 @@
       </div>
     </section>
 
-  @elseif($type === 'list')
+  @elseif($type === 'list' && !empty($block['items']))
     <section class="ag-sec" @if(!empty($block['id'])) id="{{ $block['id'] }}" @endif>
       <div class="ag-wrap">
         @if(!empty($block['title']))
