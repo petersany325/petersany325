@@ -222,6 +222,16 @@ class StudioController
             'medical-opera' => 'med-opera',
             'medical-psychology' => 'med-psych',
         ];
+        if ($slug === 'medical-beauty') {
+            return $this->page('software-beauty', 'نرم‌افزار مدیریت کلینیک زیبایی و لیزر؛ نوبت‌دهی، پرونده، پیامک و فراخوان صوتی | حساب مطب', [
+                'description' => 'حساب مطب، نسخهٔ کلینیک زیبایی: نوبت‌دهی تلفنی، حضوری و اینترنتی، شماره نوبت و اعلام صوتی فارسی، پرونده و گزارش کامل بیمار، تسویه و نوبت بعدی، پیامک خودکار، خدمات لیزر بانوان، انبار و سطح دسترسی؛ کاملاً آفلاین.',
+                'canonical' => 'https://hdd-land.ir/software/medical-beauty',
+                'ogTitle' => 'نرم‌افزار مدیریت کلینیک زیبایی و لیزر | حساب مطب',
+                'ogDescription' => 'نوبت‌دهی سه‌کاناله، شماره نوبت و فراخوان صوتی فارسی، پرونده بیمار، تسویه و نوبت بعدی، پیامک خودکار و آموزش کامل داخل برنامه؛ بدون نیاز به اینترنت.',
+                'twitterDescription' => 'نوبت‌دهی، فراخوان صوتی فارسی، پرونده بیمار، تسویه و پیامک خودکار؛ نسخهٔ کلینیک زیبایی حساب مطب.',
+            ]);
+        }
+
         $sku = $map[$slug] ?? '';
         $offer = $sku !== '' && class_exists(\App\Support\StudioOffers::class)
             ? \App\Support\StudioOffers::find($sku)
@@ -386,7 +396,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration'], true) ? null : $this->builderForRequest();
+        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration', 'software-beauty'], true) ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;
