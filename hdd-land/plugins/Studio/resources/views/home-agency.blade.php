@@ -2,11 +2,14 @@
   $c = $studioHome ?? \App\Support\StudioHomeConfig::get();
   $services = \App\Support\StudioHomeConfig::services($c);
   $stats = \App\Support\StudioHomeConfig::stats($c);
-  $works = \App\Support\StudioHomeConfig::works($c);
+  $serviceUrl = [];
+  foreach ($services as $svc) {
+      $serviceUrl[$svc['title']] = $svc['url'];
+  }
   $orbit = [
-    ['cls' => 's1', 'mark' => '🌐', 'title' => 'طراحی سایت', 'text' => 'واکنش‌گرا و بهینه برای گوگل', 'url' => $services[0]['url'] ?? '/design'],
-    ['cls' => 's2', 'mark' => '🧮', 'title' => 'ساخت نرم‌افزار', 'text' => 'حسابداری صنوف، انبار، تعمیرگاه', 'url' => $services[1]['url'] ?? '/computer-accounting'],
-    ['cls' => 's3', 'mark' => '✨', 'title' => 'هوش مصنوعی', 'text' => 'دستیار فارسی بدون اینترنت', 'url' => $services[2]['url'] ?? '/ai'],
+    ['cls' => 's1', 'mark' => '🌐', 'title' => 'طراحی سایت', 'text' => 'واکنش‌گرا و بهینه برای گوگل', 'url' => $serviceUrl['طراحی سایت'] ?? '/design'],
+    ['cls' => 's2', 'mark' => '🧮', 'title' => 'ساخت نرم‌افزار', 'text' => 'حسابداری صنوف، انبار، تعمیرگاه', 'url' => $serviceUrl['ساخت نرم‌افزار'] ?? '/computer-accounting'],
+    ['cls' => 's3', 'mark' => '✨', 'title' => 'هوش مصنوعی', 'text' => 'دستیار فارسی بدون اینترنت', 'url' => $serviceUrl['هوش مصنوعی'] ?? '/ai'],
   ];
   $svcIcons = [
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 8 4 12l4 4M16 8l4 4-4 4M13 5l-2 14"/></svg>',
@@ -52,7 +55,6 @@
   if (!hero || !say) return;
   var svc = hero.querySelectorAll('.hh-svc');
   var SAY = ['سایتی که در موبایل هم سریع باز شود.','حسابداری با منطق واقعی صنف شما.','می‌پرسید، روی کامپیوتر خودتان جواب می‌دهم.'];
-  if (reduce) return;
   function sleep(ms){ return new Promise(function (r) { setTimeout(r, ms); }); }
   var paused = false;
   svc.forEach(function (s, idx) {
@@ -63,6 +65,7 @@
     });
     s.addEventListener('mouseleave', function () { paused = false; });
   });
+  if (reduce) return;
   function play() {
     (async function loop() {
       for (;;) {
@@ -121,29 +124,6 @@
 </section>
 @endif
 
-@if(!empty($c['works_enabled']) && $works)
-<section class="ag-wrap ag-works">
-  <header class="ag-works__head">
-    <div>
-      <h2>{{ $c['works_title'] }}</h2>
-      @if(!empty($c['works_subtitle']))
-        <p>{{ $c['works_subtitle'] }}</p>
-      @endif
-    </div>
-    <a href="{{ url($c['works_more_url'] ?: '/projects') }}">{{ $c['works_more_label'] }} ←</a>
-  </header>
-  <div class="ag-works__grid">
-    @foreach($works as $w)
-      <a class="ag-work" href="{{ url($w['url']) }}">
-        <div class="ag-work__media">
-          @if($w['image'])
-            <img src="{{ \App\Support\StudioHomeConfig::imageUrl($w['image']) }}" alt="{{ $w['title'] }}">
-          @endif
-        </div>
-        <b>{{ $w['title'] }}</b>
-        <small>{{ $w['cat'] }}</small>
-      </a>
-    @endforeach
-  </div>
-</section>
+@if(!empty($c['works_enabled']))
+@include('studio::home-products')
 @endif
