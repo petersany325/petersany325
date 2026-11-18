@@ -3,12 +3,10 @@
   $services = \App\Support\StudioHomeConfig::services($c);
   $stats = \App\Support\StudioHomeConfig::stats($c);
   $works = \App\Support\StudioHomeConfig::works($c);
-  $scene = trim((string) ($c['scene_image'] ?? ''));
-  $nodes = [
-    ['cls' => 'n1', 'label' => $c['node_1'] ?? ''],
-    ['cls' => 'n2', 'label' => $c['node_2'] ?? ''],
-    ['cls' => 'n3', 'label' => $c['node_3'] ?? ''],
-    ['cls' => 'n4', 'label' => $c['node_4'] ?? ''],
+  $orbit = [
+    ['cls' => 's1', 'mark' => '🌐', 'title' => 'طراحی سایت', 'text' => 'واکنش‌گرا و بهینه برای گوگل', 'url' => $services[0]['url'] ?? '/design'],
+    ['cls' => 's2', 'mark' => '🧮', 'title' => 'ساخت نرم‌افزار', 'text' => 'حسابداری صنوف، انبار، تعمیرگاه', 'url' => $services[1]['url'] ?? '/computer-accounting'],
+    ['cls' => 's3', 'mark' => '✨', 'title' => 'هوش مصنوعی', 'text' => 'دستیار فارسی بدون اینترنت', 'url' => $services[2]['url'] ?? '/ai'],
   ];
   $svcIcons = [
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 8 4 12l4 4M16 8l4 4-4 4M13 5l-2 14"/></svg>',
@@ -22,50 +20,77 @@
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.4"/><path d="M3.5 19c.5-3 2.8-5 5.5-5s5 2 5.5 5M14 14c2.2 0 4 1.6 4.5 4"/></svg>',
   ];
 @endphp
-<section class="ag-hero">
-  <div class="ag-wrap ag-hero__grid">
-    <div class="ag-copy">
+<section class="ag-wrap ag-hero hh" id="hhHero" aria-label="معرفی شرکت">
+  <div class="hh-wrap">
+    <div class="hh-copy">
+      <div class="hh-pill"><i></i>شرکت فراز نت آمل · سرزمین هارد</div>
       <h1>{!! \App\Support\StudioHomeConfig::titleHtml($c) !!}</h1>
-      <p>{{ $c['hero_text'] }}</p>
-      <div class="ag-actions">
+      <p class="hh-lead">{{ $c['hero_text'] }}</p>
+      <div class="hh-btns">
         <a class="ag-btn ag-btn--on" href="{{ url($c['cta1_url'] ?: '/contact') }}">{{ $c['cta1_label'] }}<i>←</i></a>
         <a class="ag-btn ag-btn--line" href="{{ url($c['cta2_url'] ?: '/projects') }}">{{ $c['cta2_label'] }}<i>←</i></a>
       </div>
     </div>
-    <div class="ag-scene" aria-hidden="true">
-      @if($scene !== '')
-        <img class="ag-scene__img" src="{{ \App\Support\StudioHomeConfig::imageUrl($scene) }}" alt="">
-      @else
-        <div class="ag-laptop">
-          @if($c['laptop_image'])
-            <img src="{{ \App\Support\StudioHomeConfig::imageUrl($c['laptop_image']) }}" alt="">
-          @else
-            <div class="ag-screen">
-              <b>{{ $c['laptop_title'] }}</b>
-              <i></i><i></i><i></i>
-              <span></span><span></span>
-            </div>
-          @endif
-        </div>
-        <div class="ag-house">
-          @if($c['house_image'])
-            <img src="{{ \App\Support\StudioHomeConfig::imageUrl($c['house_image']) }}" alt="">
-          @else
-            <div class="ag-iso">
-              <em></em><em></em>
-              <i class="w1"></i><i class="w2"></i><i class="w3"></i>
-            </div>
-          @endif
-        </div>
-        @foreach($nodes as $n)
-          @if($n['label'] !== '')
-            <div class="ag-node ag-node--{{ $n['cls'] }}"><i></i><span>{{ $n['label'] }}</span></div>
-          @endif
-        @endforeach
-      @endif
+    <div class="hh-orbit">
+      <div class="hh-halo" aria-hidden="true"></div>
+      <div class="hh-ring" aria-hidden="true"><i></i></div>
+      <div class="hh-robot">
+        <img src="{{ asset('images/hero-robot.webp') }}" width="250" height="250" alt="دستیار هوش مصنوعی HDD Land" fetchpriority="high" decoding="async">
+      </div>
+      @foreach($orbit as $i => $card)
+        <a class="hh-svc {{ $card['cls'] }}{{ $i === 0 ? ' on' : '' }}" href="{{ url($card['url']) }}"><b>{{ $card['mark'] }} {{ $card['title'] }}</b><small>{{ $card['text'] }}</small></a>
+      @endforeach
+      <div class="hh-say" id="hhSay" aria-live="off">سایتی که در موبایل هم سریع باز شود.</div>
     </div>
   </div>
 </section>
+<script>
+(function () {
+  var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var hero = document.getElementById('hhHero');
+  var say = document.getElementById('hhSay');
+  if (!hero || !say) return;
+  var svc = hero.querySelectorAll('.hh-svc');
+  var SAY = ['سایتی که در موبایل هم سریع باز شود.','حسابداری با منطق واقعی صنف شما.','می‌پرسید، روی کامپیوتر خودتان جواب می‌دهم.'];
+  if (reduce) return;
+  function sleep(ms){ return new Promise(function (r) { setTimeout(r, ms); }); }
+  var paused = false;
+  svc.forEach(function (s, idx) {
+    s.addEventListener('mouseenter', function () {
+      paused = true;
+      svc.forEach(function (x, j) { x.classList.toggle('on', j === idx); });
+      say.textContent = SAY[idx] || '';
+    });
+    s.addEventListener('mouseleave', function () { paused = false; });
+  });
+  function play() {
+    (async function loop() {
+      for (;;) {
+        for (var i = 0; i < SAY.length; i++) {
+          while (paused) await sleep(200);
+          svc.forEach(function (x, j) { x.classList.toggle('on', j === i); });
+          say.textContent = '';
+          for (var k = 1; k <= SAY[i].length && !paused; k++) {
+            say.textContent = SAY[i].slice(0, k);
+            await sleep(28);
+          }
+          await sleep(2200);
+          while (paused) await sleep(200);
+        }
+        if (reduce) return;
+      }
+    })();
+  }
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (es) {
+      if (es[0].isIntersecting) { io.disconnect(); play(); }
+    }, { threshold: 0.3 });
+    io.observe(hero);
+  } else {
+    play();
+  }
+})();
+</script>
 
 @if(!empty($c['services_enabled']) && $services)
 <section class="ag-wrap ag-cards">
