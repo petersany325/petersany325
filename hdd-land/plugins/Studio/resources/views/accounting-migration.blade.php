@@ -98,7 +98,7 @@
   <div class="ag-wrap">
     <h2>چه چیزهایی منتقل می‌شود</h2>
     <div class="ag-table-wrap">
-      <table class="ag-cmp">
+      <table class="ag-cmp ag-cmp--two">
         <thead><tr><th>داده</th><th>توضیح</th></tr></thead>
         <tbody>
           @foreach($moved as $row)
