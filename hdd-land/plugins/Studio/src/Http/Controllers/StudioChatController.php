@@ -11,6 +11,14 @@ class StudioChatController
 {
     public function ask(Request $request): JsonResponse
     {
+        if (empty(StudioChat::widget()['enabled'])) {
+            return response()->json([
+                'text' => 'گفتگوی سایت خاموش است.',
+                'links' => [],
+                'handoff' => null,
+            ], 404);
+        }
+
         $key = 'studio-chat:'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, 30)) {
             return response()->json([

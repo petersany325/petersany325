@@ -2,7 +2,7 @@
   $c = \App\Support\StudioChat::widget();
 @endphp
 @if(!empty($c['enabled']))
-<link rel="stylesheet" href="{{ asset('css/studio-chat.css') }}?v=3">
+<link rel="stylesheet" href="{{ asset('css/studio-chat.css') }}?v=4">
 <div class="fc {{ ($c['corner'] ?? 'right') === 'left' ? 'is-left' : '' }}" id="fcChat">
   <button class="fc-fab" type="button" id="fcOpen" aria-expanded="false" aria-controls="fcPanel">
     <img src="{{ asset($c['avatar']) }}" alt="" width="54" height="54">
@@ -47,6 +47,10 @@
   var token=document.querySelector('meta[name="csrf-token"]');
   var suggestions=@json($c['suggestions']);
   var greeting=@json($c['greeting']);
+  var humans={
+    sales: @json(!empty($c['show_sales']) ? ['label' => $c['sales_label'], 'url' => $c['sales_url']] : null),
+    support: @json(!empty($c['show_support']) ? ['label' => $c['support_label'], 'url' => $c['support_url']] : null)
+  };
   function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function bubble(text, links, who){
     var el=document.createElement('div');
@@ -85,7 +89,16 @@
       headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN': token?token.content:''},
       body:JSON.stringify({message:text})
     }).then(function(r){return r.json();}).then(function(data){
-      bubble(data.text||'', data.links||[], 'bot');
+      var links=(data.links||[]).slice();
+      var hand=humans[data.handoff]||null;
+      root.querySelectorAll('.fc-human a.is-hot').forEach(function(a){ a.classList.remove('is-hot'); });
+      if(hand && hand.url){
+        var seen=links.some(function(l){ return l.url===hand.url; });
+        if(!seen) links.push(hand);
+        var footer=root.querySelector('.fc-human a[href="'+hand.url+'"]');
+        if(footer) footer.classList.add('is-hot');
+      }
+      bubble(data.text||'', links, 'bot');
     }).catch(function(){
       bubble('ارتباط برقرار نشد. از دکمه‌های فروش یا پشتیبانی استفاده کنید.', [], 'bot');
     });
