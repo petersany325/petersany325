@@ -10,7 +10,8 @@
   <div class="ag-wrap">
     <p class="ag-kicker">کارتابل نمایندگان شهرستان</p>
     <h1>{{ $title ?? 'میز کار' }}</h1>
-    <p class="ag-lead">قیمت فروش، درصد سهم و فاکتور اینجا ثبت می‌شود. پرداخت بانکی وقتی کلید درگاه بیاید فعال است.</p>
+    <p class="ag-lead">قیمت را مدیر می‌گذارد. درصد پیش‌فرض مال همان نرم‌افزار است. اگر برای شخص درصد جدا باشد، سهم از درصد شخص حساب می‌شود و روی فاکتور قفل می‌ماند.</p>
+    <div class="sd-rule">سهم = قیمت فروش × درصد ÷ ۱۰۰. قیمت خالی یعنی سهم صفر تا وقتی قیمت ثبت شود.</div>
     @if(auth()->user() && method_exists(auth()->user(), 'isAdmin') && auth()->user()->isAdmin())
       <p><a class="ag-btn ag-btn--on" href="{{ url('/admin') }}">پنل مدیریت کامل</a></p>
     @endif
@@ -43,7 +44,10 @@
               <tr>
                 <td>{{ $row['title'] }}</td>
                 <td>{{ $row['price_label'] }}</td>
-                <td>{{ $row['commission'] }}٪</td>
+                <td>
+                  {{ rtrim(rtrim(number_format((float)($row['quote']['rate'] ?? $row['commission']), 1, '.', ''), '0'), '.') }}٪
+                  <small>{{ ($row['quote']['source'] ?? '') === 'person' ? 'شخص' : 'نرم‌افزار' }}</small>
+                </td>
                 <td>
                   <a href="{{ url($row['url']) }}">معرفی</a>
                   @if($tab === 'sell')
@@ -61,9 +65,9 @@
         <form class="ag-auth-form" method="post" action="{{ url('/staff/desk/sell') }}" style="margin-top:1rem">
           @csrf
           <label>نرم‌افزار
-            <select name="sku" required>
+            <select name="sku" id="sdSku" required>
               @foreach(($offers ?? []) as $row)
-                <option value="{{ $row['sku'] }}">{{ $row['title'] }}</option>
+                <option value="{{ $row['sku'] }}" @selected(($selected ?? '') === $row['sku']) data-price="{{ (int)($row['quote']['price'] ?? 0) }}" data-rate="{{ (float)($row['quote']['rate'] ?? 0) }}" data-share="{{ (int)($row['quote']['share'] ?? 0) }}" data-source="{{ $row['quote']['source'] ?? 'software' }}">{{ $row['title'] }}</option>
               @endforeach
             </select>
           </label>
@@ -77,6 +81,26 @@
             </select>
           </label>
           <button class="ag-btn ag-btn--on" type="submit">ثبت فروش و فاکتور</button>
+        </form>
+        <p class="sd-calc" id="sdCalc"></p>
+      @endif
+      @if($tab === 'prices' && !empty($isAdmin))
+        <form class="ag-auth-form" method="post" action="{{ url('/staff/desk/prices') }}" style="margin-top:1rem">
+          @csrf
+          <label>نرم‌افزار
+            <select name="sku" required>
+              @foreach(($offers ?? []) as $row)
+                <option value="{{ $row['sku'] }}">{{ $row['title'] }}</option>
+              @endforeach
+            </select>
+          </label>
+          <label>قیمت فروش به تومان، خالی یعنی اعلام نشده
+            <input name="price" inputmode="numeric" maxlength="12" placeholder="خالی">
+          </label>
+          <label>درصد سهم این نرم‌افزار، خالی یعنی درصد فعلی بماند
+            <input name="commission" inputmode="decimal" maxlength="5" placeholder="مثلاً ۸">
+          </label>
+          <button class="ag-btn ag-btn--on" type="submit">ذخیره قیمت و درصد</button>
         </form>
       @endif
     @endif
@@ -148,9 +172,41 @@
 </section>
 
 <nav class="sd-tabbar" aria-label="منوی موبایل کارتابل">
-  @foreach($menu as $item)
+  @foreach(($mobileMenu ?? $menu) as $item)
     @php $on = rtrim($path, '/') === rtrim((string) $item['url'], '/'); @endphp
     <a class="{{ $on ? 'is-on' : '' }}" href="{{ url($item['url']) }}"><span>{{ $item['icon'] }}</span>{{ $item['label'] }}</a>
   @endforeach
 </nav>
+<style>
+.sd-rule{margin:.4rem 0 1rem;color:#c9d2ea;font-size:.86rem}
+.sd-calc{margin-top:.8rem;padding:.75rem .9rem;border-radius:14px;background:#101628;color:#eef2ff}
+.sd-table small{display:block;color:#9aa3b8;font-weight:600}
+@media(max-width:760px){
+  .sd{padding-bottom:5rem}
+  .sd-tabbar{display:grid !important;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:40;background:#0c1020;border-top:1px solid rgba(255,255,255,.08);padding:.35rem .15rem calc(.4rem + env(safe-area-inset-bottom))}
+  .sd-tabbar a{display:flex;flex-direction:column;align-items:center;gap:.1rem;color:#c9d2ea;text-decoration:none;font-size:.68rem;font-weight:750}
+  .sd-tabbar a span{font-size:.95rem}
+  .sd-tabbar a.is-on{color:#fff}
+}
+</style>
+<script>
+(function(){
+  var sel=document.getElementById('sdSku');
+  var box=document.getElementById('sdCalc');
+  if(!sel||!box) return;
+  function paint(){
+    var o=sel.options[sel.selectedIndex];
+    if(!o) return;
+    var price=parseInt(o.dataset.price||'0',10);
+    var rate=parseFloat(o.dataset.rate||'0');
+    var share=parseInt(o.dataset.share||'0',10);
+    var who=o.dataset.source==='person' ? 'درصد شخص' : 'درصد نرم‌افزار';
+    box.textContent = price>0
+      ? (price.toLocaleString('fa-IR')+' × '+rate+'٪ ('+who+') = '+share.toLocaleString('fa-IR')+' تومان سهم')
+      : 'قیمت این نرم‌افزار خالی است. سهم تا ثبت قیمت صفر می‌ماند. درصد فعلی '+rate+'٪ است.';
+  }
+  sel.addEventListener('change', paint);
+  paint();
+})();
+</script>
 @endsection

@@ -88,6 +88,37 @@ class StudioStaffDeskController
         return back()->with('success', 'تیکت ثبت شد. پیامک برای صاحب تیکت ارسال می‌شود.');
     }
 
+    public function storePrice(Request $request): RedirectResponse
+    {
+        $gate = $this->guard();
+        if ($gate instanceof RedirectResponse) {
+            return $gate;
+        }
+        $user = Auth::user();
+        $isAdmin = $user && method_exists($user, 'isAdmin') && $user->isAdmin();
+        if (! $isAdmin) {
+            return back()->with('error', 'تعریف قیمت و درصد فقط برای مدیر است.');
+        }
+        $sku = trim((string) $request->input('sku', ''));
+        $offer = StudioOffers::find($sku);
+        if ($offer === null) {
+            return back()->with('error', 'این نرم‌افزار در فهرست نیست.');
+        }
+        $rawPrice = trim((string) $request->input('price', ''));
+        $rawRate = trim((string) $request->input('commission', ''));
+        $price = $rawPrice === '' ? null : (int) preg_replace('/\D+/', '', $rawPrice);
+        if ($price !== null && $price < 0) {
+            $price = null;
+        }
+        $rate = $rawRate === '' ? null : (float) str_replace(',', '.', $rawRate);
+        if ($rate !== null && ($rate < 0 || $rate > 80)) {
+            return back()->with('error', 'درصد سهم بین ۰ و ۸۰ است.');
+        }
+        StudioStaffDesk::savePrice($sku, $price, $rate);
+
+        return back()->with('success', 'قیمت و درصد این نرم‌افزار ذخیره شد.');
+    }
+
     public function storeSale(Request $request): RedirectResponse
     {
         $gate = $this->guard();
@@ -122,11 +153,23 @@ class StudioStaffDeskController
             $sms = ['ready' => false];
         }
 
+        $offers = [];
+        foreach (StudioOffers::catalog() as $row) {
+            if (($row['kind'] ?? '') === 'design') {
+                continue;
+            }
+            $row['quote'] = StudioOffers::quote($row, $uid);
+            $offers[] = $row;
+        }
+
         return view('studio::staff-desk', [
             'tab' => $tab,
             'title' => $title,
             'menu' => StudioStaffDesk::menu(),
-            'offers' => StudioOffers::software(),
+            'mobileMenu' => StudioStaffDesk::mobileMenu(),
+            'offers' => $offers,
+            'selected' => trim((string) request('sku', '')),
+            'isAdmin' => $user && method_exists($user, 'isAdmin') && $user->isAdmin(),
             'designOffers' => StudioOffers::design(),
             'sales' => StudioStaffDesk::salesFor($uid),
             'tickets' => \App\Support\StudioPlugins::tickets($uid, true),

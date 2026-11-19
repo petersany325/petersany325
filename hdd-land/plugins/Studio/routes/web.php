@@ -67,6 +67,7 @@ Route::get('/staff/desk', [StudioStaffDeskController::class, 'home'])->name('stu
 Route::get('/staff/desk/buy', [StudioStaffDeskController::class, 'buy'])->name('studio.staff.buy');
 Route::get('/staff/desk/sell', [StudioStaffDeskController::class, 'sell'])->name('studio.staff.sell');
 Route::get('/staff/desk/prices', [StudioStaffDeskController::class, 'prices'])->name('studio.staff.prices');
+Route::post('/staff/desk/prices', [StudioStaffDeskController::class, 'storePrice'])->name('studio.staff.prices.save');
 Route::get('/staff/desk/sales', [StudioStaffDeskController::class, 'sales'])->name('studio.staff.sales');
 Route::get('/staff/desk/invoices', [StudioStaffDeskController::class, 'invoices'])->name('studio.staff.invoices');
 Route::get('/staff/desk/reps', [StudioStaffDeskController::class, 'reps'])->name('studio.staff.reps');

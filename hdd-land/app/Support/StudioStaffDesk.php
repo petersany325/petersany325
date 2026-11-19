@@ -32,6 +32,7 @@ class StudioStaffDesk
             'tickets' => is_array($raw['tickets'] ?? null) ? $raw['tickets'] : [],
             'balances' => is_array($raw['balances'] ?? null) ? $raw['balances'] : [],
             'messages' => is_array($raw['messages'] ?? null) ? $raw['messages'] : [],
+            'prices' => is_array($raw['prices'] ?? null) ? $raw['prices'] : [],
         ];
     }
 
@@ -60,6 +61,61 @@ class StudioStaffDesk
             ['label' => 'پشتیبانی', 'url' => '/support', 'icon' => '?', 'match' => 'support'],
             ['label' => 'پنل ورود', 'url' => '/auth/staff', 'icon' => '→', 'match' => 'auth/staff'],
         ];
+    }
+
+    /** @return list<array{label:string,url:string,icon:string,match:string}> */
+    public static function mobileMenu(): array
+    {
+        $want = ['staff/desk', 'staff/desk/sell', 'staff/desk/prices', 'staff/desk/invoices', 'staff/desk/tickets'];
+        $out = [];
+        foreach (self::menu() as $item) {
+            if (in_array($item['match'], $want, true)) {
+                $out[] = $item;
+            }
+        }
+
+        return $out;
+    }
+
+    /** @return array<string, array{price:?int,commission:?float}> */
+    public static function priceMap(): array
+    {
+        $map = [];
+        foreach (self::state()['prices'] as $sku => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $map[(string) $sku] = [
+                'price' => isset($row['price']) && $row['price'] !== '' ? (int) $row['price'] : null,
+                'commission' => isset($row['commission']) && $row['commission'] !== '' ? (float) $row['commission'] : null,
+            ];
+        }
+
+        return $map;
+    }
+
+    public static function savePrice(string $sku, ?int $price, ?float $commission): void
+    {
+        $state = self::state();
+        $state['prices'][$sku] = [
+            'price' => $price,
+            'commission' => $commission,
+        ];
+        self::save($state);
+    }
+
+    public static function personRate(int $userId): ?float
+    {
+        if ($userId <= 0) {
+            return null;
+        }
+        foreach (self::reps() as $rep) {
+            if ((int) ($rep['user_id'] ?? 0) === $userId && (float) ($rep['commission'] ?? 0) > 0) {
+                return (float) $rep['commission'];
+            }
+        }
+
+        return null;
     }
 
     /** @return list<array<string, mixed>> */
@@ -107,9 +163,10 @@ class StudioStaffDesk
     {
         $state = self::state();
         $id = 'INV-'.date('ymdHis').'-'.substr(bin2hex(random_bytes(3)), 0, 6);
-        $price = (int) preg_replace('/\D+/', '', (string) ($offer['price'] ?? '')) ?: 0;
-        $rate = (float) ($offer['commission'] ?? 0);
-        $share = (int) round($price * $rate / 100);
+        $quote = class_exists(StudioOffers::class) ? StudioOffers::quote($offer, $userId) : ['price' => 0, 'rate' => 0, 'share' => 0, 'source' => 'software'];
+        $price = (int) ($quote['price'] ?? 0);
+        $rate = (float) ($quote['rate'] ?? 0);
+        $share = (int) ($quote['share'] ?? 0);
         $invoice = [
             'id' => $id,
             'sku' => (string) ($offer['sku'] ?? ''),
