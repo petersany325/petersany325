@@ -25,14 +25,19 @@ class Setting extends Model
 
     private static function settingsTableExists(): bool
     {
-        if (self::$settingsTable !== null) {
-            return self::$settingsTable;
+        if (self::$settingsTable === true) {
+            return true;
         }
         try {
-            return self::$settingsTable = Schema::hasTable('settings');
+            $exists = Schema::hasTable('settings');
         } catch (\Throwable) {
-            return self::$settingsTable = false;
+            return false;
         }
+        if ($exists) {
+            self::$settingsTable = true;
+        }
+
+        return $exists;
     }
 
     public static function getValue(string $key, mixed $default = null): mixed
