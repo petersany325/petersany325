@@ -347,7 +347,7 @@
           ['label' => 'تنظیمات فاکتور', 'href' => $u('invoice-design'), 'active' => $is('invoice-design')],
           ['label' => 'بارکد و سریال', 'href' => $u('serial-sales'), 'active' => $is('serial-sales')],
           ['label' => 'تنظیمات ثبت‌نام مشتری', 'href' => $u('auth-settings').'?tab=register', 'active' => $is('auth-settings') && ($tab === '' || $tab === 'register')],
-          ['label' => 'تنظیمات ثبت‌نام', 'href' => $u('auth-settings'), 'active' => $is('auth-settings') && $tab === ''],
+          ['label' => 'تنظیمات ثبت‌نام', 'href' => $u('auth-settings').'?tab=fields', 'active' => $is('auth-settings') && $tab === 'fields'],
           ['label' => 'کارمند و دسترسی‌ها', 'href' => $u('staff'), 'active' => $is('staff') && ! $is('staff/reports') && ! $is('staff/activity')],
           ['label' => 'منوی نمایندگان', 'href' => url('/staff/desk/reps'), 'active' => false],
         ],

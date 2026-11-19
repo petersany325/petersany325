@@ -218,6 +218,9 @@ class StudioAuthController
 
             return back()->withInput($request->except('password'))->with('error', 'نام کاربری یا رمز درست نیست.');
         }
+        if ($login !== '') {
+            RateLimiter::clear($loginKey);
+        }
         $this->touchStaffLogin($user);
         $this->loginUser($request, $user);
         if (class_exists(\App\Support\StudioNotify::class)) {

@@ -41,10 +41,10 @@ class AdminToolbar
         $design = array_values(array_filter([
             $can('site.homepage') ? ['label' => 'تنظیمات صفحه اول', 'url' => url('/admin/studio-home')] : null,
             $can('site.homepage') ? ['label' => 'بنر صفحه اول فروشگاه', 'url' => url('/admin/homepage-settings')] : null,
-            $isAdmin || $can('accounting.settings') || $can('accounting') ? ['label' => 'تنظیمات حسابداری', 'url' => url('/admin/accounting/settings')] : null,
+            $isAdmin || $can('full_site') ? ['label' => 'تنظیمات حسابداری', 'url' => url('/admin/accounting/settings')] : null,
             $can('site.homepage') ? ['label' => 'تنظیم درگاه پیامک', 'url' => url('/admin/studio-sms')] : null,
-            $isAdmin || $can('orders') ? ['label' => 'تنظیمات فاکتور', 'url' => url('/admin/invoice-design')] : null,
-            $isAdmin || $can('serials') || $can('products.view') ? ['label' => 'بارکد و سریال', 'url' => url('/admin/serial-sales')] : null,
+            $isAdmin || $can('full_site') ? ['label' => 'تنظیمات فاکتور', 'url' => url('/admin/invoice-design')] : null,
+            $isAdmin || $can('serials') || $can('sales') ? ['label' => 'بارکد و سریال', 'url' => url('/admin/serial-sales')] : null,
             $isAdmin ? ['label' => 'تنظیمات ثبت‌نام مشتری', 'url' => url('/admin/auth-settings?tab=register')] : null,
             $isAdmin ? ['label' => 'تنظیمات ثبت‌نام', 'url' => url('/admin/auth-settings')] : null,
             $isAdmin ? ['label' => 'کارمند و دسترسی‌ها', 'url' => url('/admin/staff')] : null,
@@ -276,10 +276,10 @@ class AdminToolbar
         $user = auth()->user();
         $isAdmin = $user && method_exists($user, 'isAdmin') && $user->isAdmin();
         $add($can('site.homepage') ? ['label' => 'تنظیمات صفحه اول', 'url' => url('/admin/studio-home')] : null);
-        $add($isAdmin || $can('accounting.settings') || $can('accounting') ? ['label' => 'تنظیمات حسابداری', 'url' => url('/admin/accounting/settings')] : null);
+        $add($isAdmin || $can('full_site') ? ['label' => 'تنظیمات حسابداری', 'url' => url('/admin/accounting/settings')] : null);
         $add($can('site.homepage') ? ['label' => 'تنظیم درگاه پیامک', 'url' => url('/admin/studio-sms')] : null);
-        $add($isAdmin || $can('orders') ? ['label' => 'تنظیمات فاکتور', 'url' => url('/admin/invoice-design')] : null);
-        $add($isAdmin || $can('serials') || $can('products.view') ? ['label' => 'بارکد و سریال', 'url' => url('/admin/serial-sales')] : null);
+        $add($isAdmin || $can('full_site') ? ['label' => 'تنظیمات فاکتور', 'url' => url('/admin/invoice-design')] : null);
+        $add($isAdmin || $can('serials') || $can('sales') ? ['label' => 'بارکد و سریال', 'url' => url('/admin/serial-sales')] : null);
         $add($isAdmin ? ['label' => 'تنظیمات ثبت‌نام', 'url' => url('/admin/auth-settings')] : null);
         $add($isAdmin ? ['label' => 'کارمند و دسترسی‌ها', 'url' => url('/admin/staff')] : null);
         $add($isAdmin || $can('sales') ? ['label' => 'منوی نمایندگان', 'url' => url('/staff/desk/reps')] : null);
