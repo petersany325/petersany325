@@ -457,9 +457,11 @@
         $systemStay[] = $it;
       }
     }
-    $groups['system']['items'] = $systemStay;
-    if ($systemStay === []) {
+    $systemInside = array_values(array_filter($systemStay, fn ($it) => empty($it['ext'])));
+    if ($systemInside === []) {
       unset($groups['system']);
+    } else {
+      $groups['system']['items'] = $systemStay;
     }
     if ($shopSettings) {
       if (! isset($groups['shop-home'])) {
