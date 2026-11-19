@@ -37,7 +37,7 @@
       'address' => ['@type' => 'PostalAddress', 'addressLocality' => 'آمل', 'addressCountry' => 'IR'],
   ];
 @endphp
-<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=62">
+<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=63">
 <section class="ag-page">
   <div class="ag-wrap dg-hero">
     <div>
