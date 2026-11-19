@@ -175,6 +175,15 @@ class StudioHomeConfig
         return $s;
     }
 
+    public static function saveNav(string $raw): array
+    {
+        $s = self::get();
+        $s['nav'] = mb_substr(trim($raw), 0, 2000);
+        SettingsStore::set(self::KEY, $s);
+
+        return $s;
+    }
+
     /** @return list<array{label:string,url:string,children?:list<array<string,mixed>>}> */
     public static function navItems(?array $s = null): array
     {
