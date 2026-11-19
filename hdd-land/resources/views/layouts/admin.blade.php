@@ -5,21 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'پنل مدیریت')</title>
-    <!-- ADMIN-MENU-V14-PANELS -->
+    <!-- ADMIN-MENU-V15-SITE-SKIN -->
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=43">
+    <link rel="stylesheet" href="{{ asset('css/admin-nav.css') }}?v=8">
+    <link rel="stylesheet" href="{{ asset('css/admin-settings.css') }}?v=1">
     <style>
-      .adm-panels{display:grid!important;grid-template-columns:1fr 1fr;gap:.35rem;margin:0 .15rem .75rem}
-      .adm-panels a{display:block;text-align:center;text-decoration:none;border-radius:8px;padding:.55rem .3rem;font-weight:800;font-size:.82rem;color:#c9d0dc;background:#171b22;border:1px solid rgba(255,255,255,.06)}
-      .adm-panels a.active{color:#fff;background:#6d4aff;border-color:#8b74ff}
+      .admin-shell{grid-template-columns:248px 1fr}
+      .admin-side{background:#070b18 !important;border-left:1px solid rgba(255,255,255,.06);color:#eef2ff;font-family:Vazirmatn,Tahoma,sans-serif}
+      .adm-brand{padding:.85rem .8rem .55rem}
+      .adm-brand .brand-mark{width:1.7rem;height:1.7rem;border-radius:8px;background:rgba(124,92,255,.18);color:#c4b5fd;font-size:.68rem;font-weight:600}
+      .admin-side .adm-brand strong{font-size:.78rem;font-weight:600;letter-spacing:0}
+      .admin-side .adm-brand span{font-size:.62rem;font-weight:400;color:#9aa3b8}
+      .adm-nav{padding:.35rem .55rem .8rem}
+      .adm-nav-search{margin:0 .05rem .55rem;padding:.38rem .55rem;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+      .adm-nav-search input{font-size:.72rem;font-weight:400}
+      .adm-panels{display:grid!important;grid-template-columns:1fr 1fr;gap:.28rem;margin:0 0 .7rem;padding:.2rem;background:rgba(255,255,255,.03);border-radius:999px}
+      .adm-panels.is-single{grid-template-columns:1fr}
+      .adm-panels a{display:block;text-align:center;text-decoration:none;border-radius:999px;padding:.38rem .3rem;font-weight:500;font-size:.72rem;color:#b7c0d4;background:transparent;border:0}
+      .adm-panels a.active{color:#fff;background:#7c5cff}
+      .adm-dash{font-size:.74rem;font-weight:500;border-radius:10px;padding:.48rem .65rem}
+      .adm-group{margin-bottom:.28rem;border:0 !important;background:transparent !important;border-radius:10px}
+      .adm-group-head{font-size:.74rem !important;font-weight:500 !important;padding:.48rem .62rem !important;border-radius:10px !important;background:transparent !important;color:#d5dcf0 !important;box-shadow:none !important}
+      .adm-group.is-open>.adm-group-head,.adm-group.is-active>.adm-group-head{background:rgba(124,92,255,.16) !important;color:#fff !important}
+      .adm-group-head .g-chev{color:#9aa3b8}
+      .adm-sub a{font-size:.72rem !important;font-weight:400 !important;color:#b7c0d4;padding:.34rem .55rem .34rem .4rem}
+      .adm-sub a.active{background:#7c5cff !important;color:#fff !important}
+      .adm-group[data-group="shop"] .adm-sub,
+      .adm-group[data-group="shop"].is-open>.adm-sub{display:block !important;background:transparent !important;padding:.1rem 0 .3rem !important;border:0 !important}
+      .adm-group[data-group="shop"] .adm-sub a{min-height:0 !important;flex-direction:row !important;justify-content:flex-start !important;text-align:right !important;font-size:.72rem !important;font-weight:400 !important;padding:.34rem .55rem !important;background:transparent !important;color:#b7c0d4 !important;border:0 !important;box-shadow:none !important}
+      .adm-group[data-group="shop"] .adm-sub a.active{background:#7c5cff !important;color:#fff !important}
+      .adm-foot{font-size:.68rem}
+      .adm-logout-btn,.adm-logout-block{font-size:.72rem;font-weight:500}
       .adm-nav[data-panel="site"] .adm-group[data-panel="shop"],
       .adm-nav[data-panel="shop"] .adm-group[data-panel="site"]{display:none}
       .adm-nav.is-searching[data-panel] .adm-group[data-panel]{display:block}
       .adm-nav.is-searching[data-panel] .adm-group[data-panel].is-filter-hidden{display:none}
-      .adm-panels.is-single{grid-template-columns:1fr}
+      @media(max-width:900px){.admin-shell{grid-template-columns:1fr}}
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=43">
-    <link rel="stylesheet" href="{{ asset('css/admin-nav.css') }}?v=8">
-    <link rel="stylesheet" href="{{ asset('css/admin-settings.css') }}?v=1">
 </head>
 <body>
 @php
