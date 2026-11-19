@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\DesignPageCache;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
@@ -20,10 +21,24 @@ class Setting extends Model
 
     public $timestamps = true;
 
+    private static ?bool $settingsTable = null;
+
+    private static function settingsTableExists(): bool
+    {
+        if (self::$settingsTable !== null) {
+            return self::$settingsTable;
+        }
+        try {
+            return self::$settingsTable = Schema::hasTable('settings');
+        } catch (\Throwable) {
+            return self::$settingsTable = false;
+        }
+    }
+
     public static function getValue(string $key, mixed $default = null): mixed
     {
         try {
-            if (! Schema::hasTable('settings')) {
+            if (! self::settingsTableExists()) {
                 return $default;
             }
             $all = Cache::remember('settings.all', 60, function () {
@@ -55,7 +70,7 @@ class Setting extends Model
     public static function setValue(string $key, mixed $value): void
     {
         try {
-            if (! Schema::hasTable('settings')) {
+            if (! self::settingsTableExists()) {
                 return;
             }
             if (is_array($value) || is_object($value)) {
@@ -67,6 +82,9 @@ class Setting extends Model
             }
             static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
             Cache::forget('settings.all');
+            if (class_exists(DesignPageCache::class)) {
+                DesignPageCache::forget();
+            }
         } catch (\Throwable) {
             //
         }
