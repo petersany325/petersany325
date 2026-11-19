@@ -2344,7 +2344,9 @@
 .ds-facts div{background:#121428;border:1px solid #2b2650;border-radius:12px;padding:10px 12px}
 .ds-facts span{display:block;color:#9097c0;font-size:.75rem}
 .ds-facts b{color:#fff}
-.ds-devices{position:relative;padding-bottom:28px;min-width:0}
+.ds-devices{position:relative;padding-bottom:28px;min-width:0;max-width:100%}
+.ds-laptop,.ds-screen,.ds-grid,.ds-nav{min-width:0;max-width:100%}
+.ds-grid i,.ds-nav i{min-width:0}
 .ds-laptop{background:#121428;border:1px solid #2b2650;border-radius:14px 14px 6px 6px;padding:10px 10px 0}
 .ds-screen{aspect-ratio:16/10;border-radius:8px 8px 0 0;background:linear-gradient(160deg,#2a2160,#13102a);padding:14px;display:grid;grid-template-rows:auto 1fr auto;gap:10px}
 .ds-nav{display:flex;justify-content:space-between;gap:8px}

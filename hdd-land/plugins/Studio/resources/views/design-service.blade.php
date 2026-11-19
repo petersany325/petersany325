@@ -62,7 +62,7 @@
       ],
   ];
 @endphp
-<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=64">
+<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=65">
 <section class="ag-page">
   <div class="ag-wrap dg-hero">
     <div>
