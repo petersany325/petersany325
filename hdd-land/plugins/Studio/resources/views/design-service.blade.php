@@ -68,7 +68,7 @@
       ],
   ];
 @endphp
-<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=68">
+<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=69">
 <section class="ag-page">
   <div class="ag-wrap dg-hero">
     <div>
@@ -103,7 +103,7 @@
         </form>
       @endif
       <div class="ag-actions">
-        <a class="ag-btn ag-btn--on" href="#contact">{{ $page['hero_cta'] ?? 'درخواست مشاوره رایگان' }}<i>←</i></a>
+        <a class="ag-btn ag-btn--on" href="{{ $page['hero_href'] ?? '#contact' }}">{{ $page['hero_cta'] ?? 'درخواست مشاوره رایگان' }}<i>←</i></a>
         @if($wa !== '')
           <a class="ag-btn ag-btn--line dg-wa" href="https://wa.me/{{ $wa }}" rel="noopener">پیام در واتس‌اپ</a>
         @endif
@@ -192,6 +192,7 @@
   <div class="ag-wrap">
     <p class="ag-kicker">{{ $page['journey']['kicker'] }}</p>
     <h2>{{ $page['journey']['title'] }}</h2>
+    @if(($page['journey']['lead'] ?? '') !== '')<p class="ag-lead">{{ $page['journey']['lead'] }}</p>@endif
     <ol class="ds-journey">
       @foreach($page['journey']['steps'] as $step)
         <li><b>{{ $step['title'] }}</b><p>{{ $step['text'] }}</p></li>
@@ -356,14 +357,48 @@
 </section>
 @endif
 
-@if(!empty($page['packages']['items']))
+@if(!empty($page['sla']['rows']))
 <section class="ag-sec">
+  <div class="ag-wrap">
+    <p class="ag-kicker">{{ $page['sla']['kicker'] ?? '' }}</p>
+    <h2>{{ $page['sla']['title'] ?? '' }}</h2>
+    @if(($page['sla']['lead'] ?? '') !== '')<p class="ag-lead">{{ $page['sla']['lead'] }}</p>@endif
+    <div class="ds-sla">
+      <table>
+        <thead><tr><th>اولویت</th><th>نمونه</th><th>شروع رسیدگی</th><th>هدف رفع</th></tr></thead>
+        <tbody>
+          @foreach($page['sla']['rows'] as $row)
+            <tr>
+              <td><span class="ds-lvl {{ $row['tone'] ?? 'norm' }}">{{ $row['level'] }}</span></td>
+              <td><b>{{ $row['title'] }}</b>@if(($row['text'] ?? '') !== '')<small>{{ $row['text'] }}</small>@endif</td>
+              <td>{{ ($row['start'] ?? '') !== '' ? $row['start'] : 'در قرارداد' }}</td>
+              <td>{{ ($row['fix'] ?? '') !== '' ? $row['fix'] : 'در قرارداد' }}</td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+    @if(!empty($page['sla']['channels']))
+      <div class="ds-channels">
+        @foreach($page['sla']['channels'] as $channel)
+          <div><b>{{ $channel['title'] }}</b><span>{{ $channel['text'] }}</span></div>
+        @endforeach
+      </div>
+    @endif
+  </div>
+</section>
+@endif
+
+@if(!empty($page['packages']['items']))
+<section class="ag-sec" @if(($page['packages']['id'] ?? '') !== '') id="{{ $page['packages']['id'] }}" @endif>
   <div class="ag-wrap">
     <p class="ag-kicker">{{ $page['packages']['kicker'] ?? '' }}</p>
     <h2>{{ $page['packages']['title'] ?? '' }}</h2>
+    @if(($page['packages']['lead'] ?? '') !== '')<p class="ag-lead">{{ $page['packages']['lead'] }}</p>@endif
     <div class="ds-pkgs">
       @foreach($page['packages']['items'] as $pack)
         <article class="ds-pk{{ !empty($pack['featured']) ? ' is-on' : '' }}">
+          @if(($pack['badge'] ?? '') !== '')<span class="ds-badge">{{ $pack['badge'] }}</span>@endif
           <h3>{{ $pack['title'] }}</h3>
           @if(($pack['price'] ?? '') !== '')
             <p class="dg-price">{{ $pack['price_prefix'] ?? '' }} <b>{{ $pack['price'] }}</b> تومان</p>
@@ -472,9 +507,11 @@
         <label class="{{ !empty($field['full']) || count($field['options'] ?? []) > 2 ? 'dg-full' : '' }}">{{ $field['label'] }}
           @if(($field['type'] ?? 'select') === 'select')
             <select name="{{ $field['name'] }}">
-              <option value="" @selected(old($field['name'], '') === '')>انتخاب کنید</option>
+              @if(($field['default'] ?? '') === '')
+                <option value="" @selected(old($field['name'], '') === '')>انتخاب کنید</option>
+              @endif
               @foreach(($field['options'] ?? []) as $opt)
-                <option value="{{ $opt }}" @selected(old($field['name']) === $opt)>{{ $opt }}</option>
+                <option value="{{ $opt }}" @selected(old($field['name'], $field['default'] ?? '') === $opt)>{{ $opt }}</option>
               @endforeach
             </select>
           @else
