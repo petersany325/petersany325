@@ -161,17 +161,19 @@ class AdminToolbar
             return compact('label', 'primary', 'links');
         }
 
-        if (str_starts_with($path, 'design') || $path === 'ai' || $path === 'projects' || $path === 'about' || $path === 'contact' || $path === 'receipt-software') {
+        if (str_starts_with($path, 'design') || str_starts_with($path, 'software') || $path === 'ai' || $path === 'projects' || $path === 'about' || $path === 'contact' || $path === 'support' || $path === 'receipt-software') {
             $label = match (true) {
                 str_starts_with($path, 'design') => 'طراحی سایت',
+                str_starts_with($path, 'software') => 'نرم‌افزار',
                 $path === 'ai' => 'هوش مصنوعی',
                 $path === 'projects' => 'نمونه کار',
                 $path === 'about' => 'درباره ما',
                 $path === 'contact' => 'تماس',
+                $path === 'support' => 'پشتیبانی',
                 default => 'صفحه استودیو',
             };
-            $primary = static::builderEdit($path, $can);
-            $add($can('site.mega_menu') ? ['label' => 'لینک منو', 'url' => url('/admin/mega-menu')] : null);
+            $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            static::studioLinks($can, $add);
 
             return compact('label', 'primary', 'links');
         }
@@ -182,16 +184,16 @@ class AdminToolbar
                 str_starts_with($path, 'repair-shop') => 'تعمیرگاه',
                 default => 'حسابداری وب',
             };
-            $primary = static::builderEdit($path, $can);
-            $add($can('site.mega_menu') ? ['label' => 'منوی حسابداری', 'url' => url('/admin/mega-menu')] : null);
+            $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            static::studioLinks($can, $add);
 
             return compact('label', 'primary', 'links');
         }
 
         if ($path === 'sites' || str_starts_with($path, 'sites/')) {
             $label = 'فروش سایت';
-            $primary = static::builderEdit($path, $can);
-            $add($can('site.mega_menu') ? ['label' => 'مگامنو', 'url' => url('/admin/mega-menu')] : null);
+            $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            static::studioLinks($can, $add);
 
             return compact('label', 'primary', 'links');
         }
@@ -252,6 +254,17 @@ class AdminToolbar
      * @param  callable(string):bool  $can
      * @return array{label:string,url:string}|null
      */
+    protected static function studioLinks(callable $can, callable $add): void
+    {
+        $add($can('site.homepage') ? ['label' => 'صفحه اول استودیو', 'url' => url('/admin/studio-home')] : null);
+        $add($can('site.homepage') ? ['label' => 'پیامک ورود', 'url' => url('/admin/studio-sms')] : null);
+        $add($can('site.mega_menu') ? ['label' => 'منوی بالا', 'url' => url('/admin/mega-menu')] : null);
+        $add($can('site.footer') ? ['label' => 'فوتر', 'url' => url('/admin/footer-settings')] : null);
+        $add($can('site.page_builder') ? ['label' => 'صفحه‌ساز', 'url' => url('/admin/page-builder')] : null);
+        $add($can('site.webapp') ? ['label' => 'وب‌اپ', 'url' => url('/admin/web-app')] : null);
+        $add($can('site.shop_settings') ? ['label' => 'تنظیمات فروشگاه', 'url' => url('/admin/settings')] : null);
+    }
+
     protected static function builderEdit(string $path, callable $can): ?array
     {
         if (! $can('site.page_builder') && ! $can('site.homepage')) {

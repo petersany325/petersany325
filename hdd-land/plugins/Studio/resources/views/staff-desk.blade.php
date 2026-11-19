@@ -11,6 +11,9 @@
     <p class="ag-kicker">کارتابل نمایندگان شهرستان</p>
     <h1>{{ $title ?? 'میز کار' }}</h1>
     <p class="ag-lead">قیمت فروش، درصد سهم و فاکتور اینجا ثبت می‌شود. پرداخت بانکی وقتی کلید درگاه بیاید فعال است.</p>
+    @if(auth()->user() && method_exists(auth()->user(), 'isAdmin') && auth()->user()->isAdmin())
+      <p><a class="ag-btn ag-btn--on" href="{{ url('/admin') }}">پنل مدیریت کامل</a></p>
+    @endif
     @if(session('success'))<div class="ag-note">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="ag-note ag-note--err">{{ session('error') }}</div>@endif
     <p class="sd-bal">سهم ثبت‌شده در حساب شما: <b>{{ number_format((int)($balance ?? 0)) }} تومان</b></p>

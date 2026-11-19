@@ -416,6 +416,11 @@ class StudioAuthController
 
     protected function staffHome(): string
     {
+        $user = Auth::user();
+        if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
+            return url('/admin');
+        }
+
         return url('/staff/desk');
     }
 }
