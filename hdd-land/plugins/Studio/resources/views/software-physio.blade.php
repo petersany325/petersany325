@@ -66,7 +66,6 @@
     </div>
     @include('studio::sale-bar', ['sku' => 'med-physio'])
     <p class="ag-note">نوبت‌دهی روی واحد · صف هر واحد · پیامک خودکار · آفلاین</p>
-    @if($staff)<p class="ag-note">برای نمایندهٔ واردشده: سهم این نسخه ۱۲٪ است. این جمله در صفحهٔ عمومی دیده نمی‌شود.</p>@endif
     <div class="cd" id="py1">
       <div class="cd-bar"><div class="cd-dots" aria-hidden="true"><b></b><b></b><b></b></div><div class="cd-t">حساب مطب · نسخهٔ فیزیوتراپی</div><div class="cd-r">کلینیک نمونه حرکت · امروز <span class="py-sample">نمونه</span></div></div>
       <div class="py-hero">

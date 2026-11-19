@@ -106,11 +106,12 @@ class StudioStaffDeskController
         }
         $rawPrice = trim((string) $request->input('price', ''));
         $rawRate = trim((string) $request->input('commission', ''));
+        $existing = StudioStaffDesk::priceMap()[$sku] ?? ['price' => null, 'commission' => null];
         $price = $rawPrice === '' ? null : (int) preg_replace('/\D+/', '', $rawPrice);
         if ($price !== null && $price < 0) {
             $price = null;
         }
-        $rate = $rawRate === '' ? null : (float) str_replace(',', '.', $rawRate);
+        $rate = $rawRate === '' ? ($existing['commission'] ?? null) : (float) str_replace(',', '.', $rawRate);
         if ($rate !== null && ($rate < 0 || $rate > 80)) {
             return back()->with('error', 'درصد سهم بین ۰ و ۸۰ است.');
         }

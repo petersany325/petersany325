@@ -132,9 +132,6 @@
     </div>
     @include('studio::sale-bar', ['sku' => 'med-beauty'])
     <p class="ag-note">نوبت‌دهی سه‌کاناله · فراخوان صوتی فارسی · پیامک خودکار · آفلاین</p>
-    @if($staff)
-      <p class="ag-note">برای نمایندهٔ واردشده: سهم این نسخه ۱۲٪ است. این جمله در صفحهٔ عمومی دیده نمی‌شود.</p>
-    @endif
     <div class="cd" id="by1">
       <div class="cd-bar">
         <div class="cd-dots" aria-hidden="true"><b></b><b></b><b></b></div>
