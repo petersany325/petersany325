@@ -326,7 +326,8 @@ class StudioController
 
     public function repairShop(): View
     {
-        return $this->page('repair', 'سایت مدیریت تعمیرگاه', [
+        return $this->page('repair', 'سامانه وب مدیریت تعمیرگاه | فراز نت آمل', [
+            'description' => 'سامانه وب تعمیرگاه: پذیرش، ارجاع، تأیید هزینه، انبار، پیامک و کارتابل مشتری. جدا از حسابداری کامپیوتری تعمیرکاران.',
             'staff' => StudioProductMenus::repairStaffTree(),
             'customer' => StudioProductMenus::repairCustomerTree(),
         ]);
