@@ -10,11 +10,12 @@
       static fn (array $row): bool => ($row['slug'] ?? '') !== ($page['slug'] ?? '')
   ));
   $works = [];
-  if (class_exists(\App\Support\StudioHomeConfig::class) && ($page['slug'] ?? '') === 'corporate') {
+  $worksWord = (string) ($page['works_word'] ?? '');
+  if ($worksWord !== '' && class_exists(\App\Support\StudioHomeConfig::class)) {
       foreach (\App\Support\StudioHomeConfig::works() as $work) {
           $blob = ($work['title'] ?? '').' '.($work['cat'] ?? '');
           $image = (string) ($work['image'] ?? '');
-          if (!str_contains($blob, 'شرکتی') || str_contains($image, 'studio-work-corp')) {
+          if (!str_contains($blob, $worksWord) || (($page['works_exclude'] ?? '') !== '' && str_contains($image, $page['works_exclude']))) {
               continue;
           }
           $works[] = $work;
@@ -30,9 +31,11 @@
       'laravel' => 'سامانهٔ اختصاصی',
       default => 'هنوز نمی‌دانم',
   };
-  $contactTitle = ($page['slug'] ?? '') === 'corporate'
+  $contactTitle = $page['contact_title'] ?? (($page['slug'] ?? '') === 'corporate'
       ? 'آماده‌اید سایت شرکتی‌تان را بسازیم؟'
-      : 'آماده‌اید «'.($page['h1'] ?? 'این خدمت').'» را شروع کنیم؟';
+      : 'آماده‌اید «'.($page['h1'] ?? 'این خدمت').'» را شروع کنیم؟');
+  $companyLabel = $page['company_label'] ?? 'نام شرکت';
+  $faqKicker = $page['faq_kicker'] ?? 'پرسش‌های متداول';
   $faqLd = ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => []];
   foreach ($faqs as $faq) {
       $faqLd['mainEntity'][] = ['@type' => 'Question', 'name' => $faq['q'], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $faq['a']]];
@@ -59,7 +62,7 @@
       ],
   ];
 @endphp
-<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=63">
+<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=65">
 <section class="ag-page">
   <div class="ag-wrap dg-hero">
     <div>
@@ -86,13 +89,17 @@
         </div>
       @endif
     </div>
-    @if(($page['slug'] ?? '') === 'corporate')
+    @if(in_array(($page['device'] ?? $page['slug'] ?? ''), ['corporate', 'shop'], true))
       <div class="ds-devices" aria-hidden="true">
         <div class="ds-laptop">
           <div class="ds-screen">
             <div class="ds-nav"><i></i><i></i></div>
+          @if(($page['device'] ?? '') === 'shop')
+            <div class="ds-grid"><i></i><i></i><i></i><i></i></div>
+          @else
             <div class="ds-hero">سایت شرکتی</div>
             <div class="ds-row"><i></i><i></i><i></i></div>
+          @endif
           </div>
           <div class="ds-base"></div>
         </div>
@@ -101,6 +108,42 @@
     @endif
   </div>
 </section>
+
+@if(!empty($page['journey']['steps']))
+<section class="ag-sec">
+  <div class="ag-wrap">
+    <p class="ag-kicker">{{ $page['journey']['kicker'] }}</p>
+    <h2>{{ $page['journey']['title'] }}</h2>
+    <ol class="ds-journey">
+      @foreach($page['journey']['steps'] as $step)
+        <li><b>{{ $step['title'] }}</b><p>{{ $step['text'] }}</p></li>
+      @endforeach
+    </ol>
+  </div>
+</section>
+@endif
+
+@if(!empty($page['band']['items']))
+<section class="ag-sec">
+  <div class="ag-wrap ds-band">
+    <div>
+      <p class="ag-kicker">{{ $page['band']['kicker'] }}</p>
+      <h2>{{ $page['band']['title'] }}</h2>
+      <ul class="ag-list">
+        @foreach($page['band']['items'] as $line)
+          <li>{{ $line }}</li>
+        @endforeach
+      </ul>
+    </div>
+    <div class="ds-pipe">
+      @foreach($page['band']['flow'] as $i => $node)
+        @if($i > 0)<em>↓</em>@endif
+        <div><b>{{ $node[0] }}</b><span>{{ $node[1] }}</span></div>
+      @endforeach
+    </div>
+  </div>
+</section>
+@endif
 
 @if(!empty($page['pages']))
 <section class="ag-sec">
@@ -120,8 +163,8 @@
 @if(!empty($page['features']))
 <section class="ag-sec">
   <div class="ag-wrap">
-    <p class="ag-kicker">امکانات مخصوص شرکت‌ها</p>
-    <h2>هر چه سایت شرکتی شما لازم دارد</h2>
+    <p class="ag-kicker">{{ $page['features_kicker'] ?? 'امکانات' }}</p>
+    <h2>{{ $page['features_title'] ?? 'امکانات این خدمت' }}</h2>
     <div class="ag-cards ag-cards--dense">
       @foreach($page['features'] as $card)
         <article class="ag-card"><div><b>{{ $card['title'] }}</b><p>{{ $card['text'] }}</p></div></article>
@@ -135,14 +178,29 @@
 <section class="ag-sec">
   <div class="ag-wrap ds-split">
     <div>
-      <p class="ag-kicker">بعد از تحویل</p>
-      <h2>سایت دست خودتان است</h2>
+      <p class="ag-kicker">{{ $page['checks_kicker'] ?? 'بعد از تحویل' }}</p>
+      <h2>{{ $page['checks_title'] ?? 'سایت دست خودتان است' }}</h2>
       <ul class="ag-list">
         @foreach($page['checks'] as $line)
           <li>{{ $line }}</li>
         @endforeach
       </ul>
     </div>
+    @if(!empty($page['orders_sample']))
+      <div class="ds-panel" aria-label="نمونهٔ فهرست سفارش‌ها">
+        <div class="ds-top">پنل فروشگاه · نمونه</div>
+        <div class="ds-table">
+          <table>
+            <thead><tr><th>سفارش</th><th>مشتری</th><th>مبلغ (تومان)</th><th>وضعیت</th></tr></thead>
+            <tbody>
+              @foreach($page['orders_sample'] as $row)
+                <tr><td>{{ $row[0] }}</td><td>{{ $row[1] }}</td><td>{{ $row[2] }}</td><td>{{ $row[3] }}</td></tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div>
+      </div>
+    @else
     <div class="ds-panel" aria-label="نمای ساده از پنل مدیریت">
       <div class="ds-top">پنل مدیریت · ویرایش صفحهٔ «درباره ما»</div>
       <div class="ds-body">
@@ -154,6 +212,7 @@
         </div>
       </div>
     </div>
+    @endif
   </div>
 </section>
 @endif
@@ -161,8 +220,8 @@
 @if($works !== [])
 <section class="ag-sec">
   <div class="ag-wrap">
-    <p class="ag-kicker">سایت‌های شرکتی که ساخته‌ایم</p>
-    <h2>نمونه‌کار سایت شرکتی</h2>
+    <p class="ag-kicker">{{ ($page['slug'] ?? '') === 'shop' ? 'فروشگاه‌هایی که ساخته‌ایم' : 'سایت‌هایی که ساخته‌ایم' }}</p>
+    <h2>{{ ($page['slug'] ?? '') === 'shop' ? 'نمونه‌کار فروشگاه اینترنتی' : 'نمونه‌کار' }}</h2>
     <div class="dg-works">
       @foreach($works as $work)
         <a class="dg-work" href="{{ url($work['url'] ?: '/projects') }}">
@@ -181,8 +240,8 @@
 <section class="ag-sec">
   <div class="ag-wrap ds-pkg">
     <div>
-      <p class="ag-kicker">بستهٔ سایت شرکتی</p>
-      <h2>هر آنچه برای شروع لازم است</h2>
+      <p class="ag-kicker">{{ $page['package_kicker'] ?? 'بسته' }}</p>
+      <h2>{{ $page['package_title'] ?? 'هر آنچه برای شروع لازم است' }}</h2>
       @if(($page['package_price'] ?? '') !== '')
         <p class="dg-price">شروع از <b>{{ $page['package_price'] }}</b> تومان</p>
       @else
@@ -202,7 +261,7 @@
 @if($faqs !== [])
 <section class="ag-sec" id="faq">
   <div class="ag-wrap">
-    <p class="ag-kicker">سؤال‌های رایج دربارهٔ سایت شرکتی</p>
+    <p class="ag-kicker">{{ $faqKicker }}</p>
     <h2>پرسش‌های متداول</h2>
     <div class="dg-faq">
       @foreach($faqs as $row)
@@ -240,7 +299,16 @@
       <div class="dg-hp" aria-hidden="true"><input name="dg_hp" tabindex="-1" autocomplete="off" value=""></div>
       <label>نام و نام خانوادگی<input name="name" value="{{ old('name') }}" required maxlength="120" autocomplete="name"></label>
       <label>شمارهٔ موبایل<input name="phone" value="{{ old('phone') }}" required inputmode="tel" dir="ltr" autocomplete="tel"></label>
-      <label>نام شرکت<input name="company" value="{{ old('company') }}" maxlength="120"></label>
+      <label>{{ $companyLabel }}<input name="company" value="{{ old('company') }}" maxlength="120"></label>
+      @foreach(($page['fields'] ?? []) as $field)
+        <label class="{{ count($field['options'] ?? []) > 2 ? 'dg-full' : '' }}">{{ $field['label'] }}
+          <select name="{{ $field['name'] }}">
+            @foreach($field['options'] as $opt)
+              <option @selected(old($field['name']) === $opt)>{{ $opt }}</option>
+            @endforeach
+          </select>
+        </label>
+      @endforeach
       <label>نوع پروژه
         <select name="type" required>
           @foreach(['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'هنوز نمی‌دانم'] as $type)
