@@ -12,6 +12,9 @@
       .adm-panels a.active{color:#fff;background:#6d4aff;border-color:#8b74ff}
       .adm-nav[data-panel="site"] .adm-group[data-panel="shop"],
       .adm-nav[data-panel="shop"] .adm-group[data-panel="site"]{display:none}
+      .adm-nav.is-searching[data-panel] .adm-group[data-panel]{display:block}
+      .adm-nav.is-searching[data-panel] .adm-group[data-panel].is-filter-hidden{display:none}
+      .adm-panels.is-single{grid-template-columns:1fr}
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/shop.css') }}?v=43">
@@ -357,6 +360,11 @@
           ['label' => 'صفحه‌ساز', 'href' => $u('page-builder'), 'active' => $is('page-builder')],
           ['label' => 'تنظیمات ثبت‌نام مشتری', 'href' => $u('auth-settings').'?tab=register', 'active' => $is('auth-settings') && ($tab === '' || $tab === 'register')],
           ['label' => 'فیلدهای ثبت‌نام', 'href' => $u('auth-settings').'?tab=fields', 'active' => $is('auth-settings') && $tab === 'fields'],
+          ['label' => 'عودت وجه / شبا', 'href' => $u('auth-settings').'?tab=refund', 'active' => $is('auth-settings') && $tab === 'refund'],
+          ['label' => 'قوانین سایت', 'href' => $u('auth-settings').'?tab=terms', 'active' => $is('auth-settings') && $tab === 'terms'],
+          ['label' => 'ورود دو مرحله‌ای', 'href' => $u('auth-settings').'?tab=2fa', 'active' => $is('auth-settings') && $tab === '2fa'],
+          ['label' => 'پنل پیامک ثبت‌نام', 'href' => $u('auth-settings').'?tab=sms', 'active' => $is('auth-settings') && $tab === 'sms'],
+          ['label' => 'اعلان‌های پیامک', 'href' => $u('auth-settings').'?tab=notify', 'active' => $is('auth-settings') && $tab === 'notify'],
           ['label' => 'کارمند و دسترسی‌ها', 'href' => $u('staff'), 'active' => $is('staff') && ! $is('staff/reports') && ! $is('staff/activity')],
           ['label' => 'منوی نمایندگان', 'href' => url('/staff/desk/reps'), 'active' => false],
         ],
@@ -380,13 +388,62 @@
     $groupSections['access'] = 'site';
     $groupSections['shop-home'] = 'shop';
   }
+  $canHome = empty($isStaffOnly) || $staffCan('site.homepage');
   if (isset($groups['theme']['items'])) {
-    $groups['theme']['items'] = array_values(array_filter($groups['theme']['items'], function ($it) {
+    $themeKept = [];
+    $bannerItem = null;
+    foreach ($groups['theme']['items'] as $it) {
       $href = (string) ($it['href'] ?? '');
-
-      return ! str_contains($href, 'homepage-settings') && ! str_contains($href, 'online-home') && ! str_contains($href, 'banner-settings');
-    }));
-    array_unshift($groups['theme']['items'], ['label' => 'تنظیمات صفحه اول سایت', 'href' => $u('studio-home'), 'active' => $is('studio-home')]);
+      if (str_contains($href, 'homepage-settings') || str_contains($href, 'online-home') || str_contains($href, 'banner-settings')) {
+        if ($bannerItem === null && str_contains($href, 'homepage-settings')) {
+          $bannerItem = $it;
+        }
+        continue;
+      }
+      $themeKept[] = $it;
+    }
+    if ($canHome) {
+      array_unshift($themeKept, ['label' => 'تنظیمات صفحه اول سایت', 'href' => $u('studio-home'), 'active' => $is('studio-home')]);
+    }
+    $groups['theme']['items'] = $themeKept;
+    if ($bannerItem && $canHome && ! isset($groups['shop-home'])) {
+      $groups['shop-home'] = [
+        'title' => 'فروشگاه',
+        'icon' => '🛒',
+        'open' => true,
+        'items' => [$bannerItem],
+      ];
+      $groupSections['shop-home'] = 'shop';
+    }
+  }
+  if (isset($groups['users']['items'])) {
+    $authKept = [];
+    $userRest = [];
+    foreach ($groups['users']['items'] as $it) {
+      $href = (string) ($it['href'] ?? '');
+      $isAuth = str_contains($href, 'auth-settings') || str_contains($href, '/login') || str_contains($href, '/register') || str_contains($href, '/forgot-password') || str_contains($href, '/terms');
+      if ($isAuth) {
+        $authKept[] = $it;
+      } else {
+        $userRest[] = $it;
+      }
+    }
+    $groups['users']['items'] = $userRest;
+    if ($userRest === []) {
+      unset($groups['users']);
+    }
+    if ($authKept) {
+      if (! isset($groups['access'])) {
+        $groups = ['access' => ['title' => 'عضویت سایت', 'icon' => '☰', 'open' => $is('auth-settings'), 'items' => []]] + $groups;
+        $groupSections['access'] = 'site';
+      }
+      $have = array_map(fn ($it) => (string) ($it['href'] ?? ''), $groups['access']['items']);
+      foreach ($authKept as $it) {
+        if (! in_array((string) ($it['href'] ?? ''), $have, true)) {
+          $groups['access']['items'][] = $it;
+        }
+      }
+    }
   }
   $shopPrefixes = ['products', 'categories', 'orders', 'media', 'featured-products', 'serial-sales', 'serial-warranties', 'warranty-companies', 'warranty-register', 'shipping-carriers', 'shipping-post', 'shipping-tipax', 'invoice-design', 'homepage-settings', 'online-home', 'banner-settings', 'payment', 'customers', 'wallet-settings', 'accounting', 'reports', 'settings'];
   $adminRel = preg_replace('#^admin/?#', '', $path) ?? '';
@@ -398,6 +455,71 @@
     }
   }
   $shopGroupIds = ['shop', 'shipping', 'accounting', 'payment', 'users', 'shop-home', 'sales'];
+  $staffAllows = function (string $href) use ($isStaffOnly, $staffCan): bool {
+    if (empty($isStaffOnly)) {
+      return true;
+    }
+    $pathOnly = (string) (parse_url($href, PHP_URL_PATH) ?? '');
+    if (! str_contains($pathOnly, '/admin/')) {
+      return true;
+    }
+    $rel = ltrim((string) preg_replace('#^.*/admin/#', '', $pathOnly), '/');
+    if ($rel === '') {
+      return false;
+    }
+    $need = match (true) {
+      str_starts_with($rel, 'system-tools') => 'system_tools',
+      str_starts_with($rel, 'mega-menu') => 'site.mega_menu',
+      str_starts_with($rel, 'page-builder'), str_starts_with($rel, 'about-page'), str_starts_with($rel, 'services-page'), str_starts_with($rel, 'contact-page'), str_starts_with($rel, 'training-page') => 'site.page_builder',
+      str_starts_with($rel, 'homepage-settings'), str_starts_with($rel, 'studio-home'), str_starts_with($rel, 'studio-sms'), str_starts_with($rel, 'hero-studio'), str_starts_with($rel, 'online-home'), str_starts_with($rel, 'banner-settings'), str_starts_with($rel, 'theme-builder') => 'site.homepage',
+      str_starts_with($rel, 'footer-settings') => 'site.footer',
+      str_starts_with($rel, 'web-app') => 'site.webapp',
+      $rel === 'settings' || str_starts_with($rel, 'settings/') => 'site.shop_settings',
+      str_starts_with($rel, 'products') => 'products.view',
+      str_starts_with($rel, 'orders') => 'orders',
+      str_starts_with($rel, 'serial'), str_starts_with($rel, 'warranty') => 'serials',
+      str_starts_with($rel, 'tickets') && ! str_starts_with($rel, 'tickets/settings') => 'support',
+      str_starts_with($rel, 'media') => 'media',
+      str_starts_with($rel, 'categories') => 'products.edit',
+      str_starts_with($rel, 'reports') => 'reports',
+      default => null,
+    };
+    if ($need === null) {
+      return false;
+    }
+    if ($staffCan($need)) {
+      return true;
+    }
+    if ($need === 'orders' && $staffCan('sales')) {
+      return true;
+    }
+    if ($need === 'serials' && $staffCan('sales')) {
+      return true;
+    }
+    if ($need === 'site.page_builder' && $staffCan('site.homepage')) {
+      return true;
+    }
+
+    return false;
+  };
+  $firstPanelHref = function (string $want) use ($groups, $shopGroupIds, $staffAllows): ?string {
+    foreach ($groups as $gid => $g) {
+      $isShop = in_array($gid, $shopGroupIds, true);
+      if (($want === 'shop') !== $isShop) {
+        continue;
+      }
+      foreach ($g['items'] ?? [] as $it) {
+        $href = (string) ($it['href'] ?? '');
+        if ($href !== '' && empty($it['ext']) && $staffAllows($href)) {
+          return $href;
+        }
+      }
+    }
+
+    return null;
+  };
+  $siteTab = $firstPanelHref('site');
+  $shopTab = $firstPanelHref('shop');
 
   // پاک‌سازی کلید perm از منوی ادمین
   foreach ($groups as $gid => &$g) {
@@ -436,20 +558,24 @@
               <span>⌕</span>
               <input type="search" id="admNavSearch" placeholder="جستجو در منو…" autocomplete="off">
             </div>
-            <div class="adm-panels" role="tablist" aria-label="انتخاب ادمین">
-              <a href="{{ url('/admin/studio-home') }}" class="{{ $panel === 'site' ? 'active' : '' }}" data-panel-btn="site">سایت</a>
-              <a href="{{ url('/admin/products') }}" class="{{ $panel === 'shop' ? 'active' : '' }}" data-panel-btn="shop">فروشگاه</a>
+            <div class="adm-panels {{ ($siteTab && $shopTab) ? '' : 'is-single' }}" role="tablist" aria-label="انتخاب ادمین">
+              @if($siteTab)
+              <a href="{{ $siteTab }}" class="{{ $panel === 'site' ? 'active' : '' }}" data-panel-btn="site">سایت</a>
+              @endif
+              @if($shopTab)
+              <a href="{{ $shopTab }}" class="{{ $panel === 'shop' ? 'active' : '' }}" data-panel-btn="shop">فروشگاه</a>
+              @endif
             </div>
             @if(!empty($isStaffOnly))
               <a class="adm-dash" href="{{ url('/staff') }}">
                 <span>🏠</span> بازگشت به پنل کارمند
               </a>
-            @elseif($panel === 'shop')
-            <a class="adm-dash {{ $is('products') ? 'active' : '' }}" href="{{ $u('products') }}">
-              <span>🏠</span> کالاهای فروشگاه
+            @elseif($panel === 'shop' && $shopTab)
+            <a class="adm-dash" href="{{ $shopTab }}">
+              <span>🏠</span> ورود فروشگاه
             </a>
-            @else
-            <a class="adm-dash {{ $is('studio-home') ? 'active' : '' }}" href="{{ $u('studio-home') }}">
+            @elseif($siteTab)
+            <a class="adm-dash" href="{{ $siteTab }}">
               <span>🏠</span> تنظیمات سایت
             </a>
             @endif
@@ -527,20 +653,21 @@
       });
     });
     var search = document.getElementById('admNavSearch');
-    var panel = nav.getAttribute('data-panel') || 'site';
     function applyPanel(q){
       q=(q||'').trim().toLocaleLowerCase('fa');
+      nav.classList.toggle('is-searching', q.length>0);
       nav.querySelectorAll('.adm-group').forEach(function(group){
-        var inPanel=group.getAttribute('data-panel')===panel;
         var matches=0;
         group.querySelectorAll('.adm-sub a').forEach(function(link){
           var show=!q || link.textContent.toLocaleLowerCase('fa').includes(q);
+          link.classList.toggle('is-filter-hidden', !show);
           link.style.display=show ? '' : 'none';
           if(show) matches++;
         });
         var title=group.querySelector('.g-title')?.textContent.toLocaleLowerCase('fa') || '';
         var groupMatch=!q || matches>0 || title.includes(q);
-        group.style.display=(q ? groupMatch : inPanel) ? '' : 'none';
+        group.classList.toggle('is-filter-hidden', q.length>0 && !groupMatch);
+        group.style.display='';
         if(q && groupMatch) group.classList.add('is-open');
       });
     }
