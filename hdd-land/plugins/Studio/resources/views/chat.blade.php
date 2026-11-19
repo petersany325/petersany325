@@ -2,7 +2,7 @@
   $c = \App\Support\StudioChat::widget();
 @endphp
 @if(!empty($c['enabled']))
-<link rel="stylesheet" href="{{ asset('css/studio-chat.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('css/studio-chat.css') }}?v=5">
 <div class="fc {{ ($c['corner'] ?? 'right') === 'left' ? 'is-left' : '' }}" id="fcChat">
   <button class="fc-fab" type="button" id="fcOpen" aria-expanded="false" aria-controls="fcPanel">
     <img src="{{ asset($c['avatar']) }}" alt="" width="54" height="54">
@@ -105,8 +105,10 @@
   }
   function open(on){
     panel.hidden=!on;
+    root.classList.toggle('is-open', !!on);
     document.getElementById('fcOpen').setAttribute('aria-expanded', on?'true':'false');
-    if(on && !log.childElementCount){ bubble(greeting, [], 'bot'); chips(); input.focus(); }
+    if(on && !log.childElementCount){ bubble(greeting, [], 'bot'); chips(); }
+    if(on && window.matchMedia('(min-width:701px)').matches) input.focus();
   }
   document.getElementById('fcOpen').addEventListener('click', function(){ open(panel.hidden); });
   document.getElementById('fcClose').addEventListener('click', function(){ open(false); });

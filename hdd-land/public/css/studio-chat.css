@@ -5,6 +5,7 @@
 .fc-fab img,.fc-head img{border-radius:50%;object-fit:cover;display:block;border:2px solid #7c5cff}
 .fc-fab span{font-size:.78rem;font-weight:600}
 .fc-panel{position:absolute;right:0;bottom:4.2rem;width:min(360px,calc(100vw - 1.5rem));height:min(540px,70vh);display:flex;flex-direction:column;background:#0c1224;color:#eef2ff;border:1px solid rgba(255,255,255,.08);border-radius:18px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.fc-panel[hidden]{display:none}
 .fc.is-left .fc-panel{right:auto;left:0}
 .fc-head{display:flex;align-items:center;gap:.6rem;padding:.7rem .8rem;background:#070b18;border-bottom:1px solid rgba(255,255,255,.06)}
 .fc-head b{display:block;font-size:.84rem;font-weight:600}
@@ -27,3 +28,34 @@
 .fc-human a{text-align:center;padding:.4rem .3rem}
 .fc-human a:first-child{background:#7c5cff;color:#fff;border-color:transparent}
 .fc-human a.is-hot{outline:2px solid #fff;outline-offset:2px}
+@media (max-width:700px){
+  .fc{right:.8rem;bottom:calc(.7rem + env(safe-area-inset-bottom));z-index:90}
+  .has-ag-tabbar .fc{bottom:calc(4.85rem + env(safe-area-inset-bottom))}
+  .fc-fab{padding:.16rem;border-radius:50%}
+  .fc-fab span{display:none}
+  .fc-fab img{width:52px;height:52px}
+  .fc.is-open .fc-fab{display:none}
+  .fc-panel,
+  .fc.is-left .fc-panel{
+    position:fixed;
+    left:.6rem;
+    right:.6rem;
+    bottom:calc(.55rem + env(safe-area-inset-bottom));
+    width:auto;
+    height:auto;
+    max-height:min(78dvh, calc(100dvh - 1.3rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+    border-radius:22px;
+  }
+  .has-ag-tabbar .fc-panel,
+  .has-ag-tabbar .fc.is-left .fc-panel{
+    bottom:calc(4.7rem + env(safe-area-inset-bottom));
+    max-height:min(74dvh, calc(100dvh - 6rem - env(safe-area-inset-bottom)));
+  }
+  .fc-head{position:sticky;top:0;z-index:1}
+  .fc-head button{width:2.2rem;height:2.2rem}
+  .fc-log{min-height:6.5rem;max-height:38dvh}
+  .fc-form{min-width:0}
+  .fc-form input{min-width:0;font-size:16px}
+  .fc-form button{flex:0 0 auto;min-height:42px;padding:.4rem .85rem}
+  .fc-human a{min-height:42px;display:flex;align-items:center;justify-content:center}
+}
