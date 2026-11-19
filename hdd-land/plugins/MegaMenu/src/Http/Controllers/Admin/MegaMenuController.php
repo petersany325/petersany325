@@ -20,17 +20,9 @@ class MegaMenuController extends Controller
         }
         $home = class_exists(\App\Support\StudioHomeConfig::class) ? \App\Support\StudioHomeConfig::get() : [];
         $items = class_exists(\App\Support\StudioHomeConfig::class) ? \App\Support\StudioHomeConfig::navItems($home) : [];
-        $raw = [];
-        foreach (preg_split('/\R/u', (string) ($home['nav'] ?? '')) ?: [] as $line) {
-            [$label, $url] = array_pad(explode('|', $line, 2), 2, '');
-            if (trim($label) !== '') {
-                $raw[] = ['label' => trim($label), 'url' => trim($url)];
-            }
-        }
-
         return view('studio::admin.site-menu', [
             'items' => $items,
-            'raw' => $raw !== [] ? $raw : [['label' => '', 'url' => '/']],
+            'custom' => ! empty($home['menu_custom']),
             'brand' => (string) ($home['brand'] ?? 'شرکت فراز نت آمل (سرزمین هارد)'),
             'tagline' => (string) ($home['tagline'] ?? 'طراحی سایت، نرم‌افزار و هوش مصنوعی'),
         ]);
@@ -39,29 +31,36 @@ class MegaMenuController extends Controller
     public function saveSettings(Request $request): RedirectResponse|JsonResponse
     {
         if ($request->has('site_menu') && class_exists(\App\Support\StudioHomeConfig::class)) {
-            $labels = (array) $request->input('nav_label', []);
-            $urls = (array) $request->input('nav_url', []);
-            $lines = [];
-            foreach ($labels as $i => $label) {
-                $label = trim((string) $label);
-                if ($label === '') {
-                    continue;
+            if ($request->boolean('menu_reset')) {
+                \App\Support\StudioHomeConfig::resetMenu();
+            } elseif ($request->has('menu_json')) {
+                $tree = json_decode((string) $request->input('menu_json', '[]'), true);
+                \App\Support\StudioHomeConfig::saveMenu(is_array($tree) ? $tree : []);
+            } else {
+                $labels = (array) $request->input('nav_label', []);
+                $urls = (array) $request->input('nav_url', []);
+                $lines = [];
+                foreach ($labels as $i => $label) {
+                    $label = trim((string) $label);
+                    if ($label === '') {
+                        continue;
+                    }
+                    $url = trim((string) ($urls[$i] ?? '/'));
+                    if ($url === '' || $url === '#') {
+                        $url = '/';
+                    }
+                    if (! str_starts_with($url, '/') && ! preg_match('#^https?://#i', $url)) {
+                        $url = '/'.$url;
+                    }
+                    $lines[] = mb_substr($label, 0, 80).'|'.mb_substr($url, 0, 300);
                 }
-                $url = trim((string) ($urls[$i] ?? '/'));
-                if ($url === '' || $url === '#') {
-                    $url = '/';
-                }
-                if (! str_starts_with($url, '/') && ! preg_match('#^https?://#i', $url)) {
-                    $url = '/'.$url;
-                }
-                $lines[] = mb_substr($label, 0, 80).'|'.mb_substr($url, 0, 300);
+                \App\Support\StudioHomeConfig::saveNav(implode("\n", $lines));
             }
-            \App\Support\StudioHomeConfig::saveNav(implode("\n", $lines));
             if (class_exists(\App\Support\DesignPageCache::class)) {
                 \App\Support\DesignPageCache::forget();
             }
 
-            return redirect()->to(url('/admin/mega-menu'))->with('success', 'منوی سایت ذخیره شد.');
+            return redirect()->to(url('/admin/mega-menu'))->with('success', $request->boolean('menu_reset') ? 'منوی پیش‌فرض سایت برگشت.' : 'منوی سایت ذخیره شد.');
         }
 
         try {

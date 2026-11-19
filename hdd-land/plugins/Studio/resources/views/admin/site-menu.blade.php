@@ -20,14 +20,18 @@
 .sm-col a{display:block;color:#c9d2ea;text-decoration:none;font-size:.86rem;padding:.18rem 0}
 .sm-form{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:1rem}
 .sm-form h2{margin:0 0 .4rem;font-size:1rem}
-.sm-row{display:grid;grid-template-columns:1.2fr 1fr auto;gap:.45rem;margin-bottom:.45rem}
-.sm-row input{border:1px solid #dbe3ef;border-radius:10px;padding:.55rem .7rem;font:inherit}
+.sm-node{margin-bottom:.45rem}
+.sm-row{display:grid;grid-template-columns:1.1fr .9fr auto;gap:.4rem;align-items:center}
+.sm-row input{border:1px solid #dbe3ef;border-radius:10px;padding:.5rem .65rem;font:inherit;width:100%}
+.sm-ops{display:flex;gap:.3rem;flex-wrap:wrap}
+.sm-ops button,.sm-actions .btn{border:1px solid #dbe3ef;background:#f8fafc;border-radius:8px;padding:.4rem .55rem;font:inherit;font-weight:700;cursor:pointer}
+.sm-kids{margin-right:1.15rem;margin-top:.35rem;border-right:2px solid #e2e8f0;padding-right:.55rem}
 .sm-actions{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem}
 @media(max-width:700px){.sm-row{grid-template-columns:1fr}.sm-brand{margin-left:0}}
 </style>
 <div class="sm">
   <h1>منوی سایت</h1>
-  <p class="lead">همان چیدمان منوی بالای سایت: صفحه اصلی، طراحی سایت، نرم‌افزارها، هوش مصنوعی و بقیه. زیرمنوها از صفحات طراحی، نرم‌افزار و فروش سایت ساخته می‌شوند.</p>
+  <p class="lead">نام هر منو را عوض کنید، منوی جدید یا زیرمنو بسازید، حذف کنید و ترتیب را بالا و پایین ببرید. بعد از ذخیره، همان فهرست روی سایت دیده می‌شود.</p>
   @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
   @endif
@@ -74,31 +78,81 @@
   <form class="sm-form" method="post" action="{{ url('/admin/mega-menu/settings') }}">
     @csrf
     <input type="hidden" name="site_menu" value="1">
-    <h2>عنوان‌های اصلی منو</h2>
-    <p class="lead">هر ردیف یک دکمه در نوار بالاست. اگر عنوان «طراحی سایت» باشد، زیرمنوی خدمات طراحی به آن وصل می‌شود.</p>
-    <div id="sm-rows">
-      @foreach($raw as $row)
-        <div class="sm-row">
-          <input name="nav_label[]" value="{{ $row['label'] }}" placeholder="عنوان" maxlength="80">
-          <input name="nav_url[]" value="{{ $row['url'] }}" placeholder="/design" dir="ltr" maxlength="300">
-          <button class="btn" type="button" onclick="this.parentElement.remove()">حذف</button>
-        </div>
-      @endforeach
+    <input type="hidden" name="menu_json" id="menu_json" value="[]">
+    <h2>ویرایش منو</h2>
+    <div id="sm-tree">
+      @include('studio::admin.site-menu-node', ['nodes' => $items, 'depth' => 0])
     </div>
     <div class="sm-actions">
-      <button class="btn" type="button" id="sm-add">ردیف جدید</button>
+      <button class="btn" type="button" id="sm-add">منوی جدید</button>
       <button class="btn btn-primary" type="submit">ذخیره منوی سایت</button>
+      @if(!empty($custom))
+        <button class="btn" type="submit" name="menu_reset" value="1">بازگشت به منوی پیش‌فرض</button>
+      @endif
       <a class="btn" href="{{ url('/') }}" target="_blank" rel="noopener">دیدن سایت</a>
     </div>
   </form>
 </div>
+<template id="sm-tpl">
+  <div class="sm-node" data-depth="0">
+    <div class="sm-row">
+      <input class="js-label" value="" maxlength="80" placeholder="نام منو">
+      <input class="js-url" value="/" maxlength="300" dir="ltr" placeholder="/path">
+      <div class="sm-ops">
+        <button type="button" data-act="up">بالا</button>
+        <button type="button" data-act="down">پایین</button>
+        <button type="button" data-act="child">زیرمنو</button>
+        <button type="button" data-act="del">حذف</button>
+      </div>
+    </div>
+    <div class="sm-kids"></div>
+  </div>
+</template>
 <script>
-document.getElementById('sm-add')?.addEventListener('click', function(){
-  var row=document.createElement('div');
-  row.className='sm-row';
-  row.innerHTML='<input name="nav_label[]" placeholder="عنوان" maxlength="80"><input name="nav_url[]" placeholder="/" dir="ltr" maxlength="300"><button class="btn" type="button">حذف</button>';
-  row.querySelector('button').addEventListener('click', function(){ row.remove(); });
-  document.getElementById('sm-rows').appendChild(row);
-});
+(function(){
+  var tree=document.getElementById('sm-tree');
+  var form=tree?.closest('form');
+  function node(depth){
+    var el=document.getElementById('sm-tpl').content.firstElementChild.cloneNode(true);
+    el.dataset.depth=String(depth);
+    if(depth>=2){
+      var child=el.querySelector('[data-act="child"]');
+      if(child) child.remove();
+    }
+    return el;
+  }
+  tree?.addEventListener('click', function(ev){
+    var btn=ev.target.closest('[data-act]');
+    if(!btn) return;
+    var item=btn.closest('.sm-node');
+    var parent=item.parentElement;
+    if(btn.dataset.act==='del'){ item.remove(); return; }
+    if(btn.dataset.act==='up' && item.previousElementSibling){ parent.insertBefore(item, item.previousElementSibling); return; }
+    if(btn.dataset.act==='down' && item.nextElementSibling){ parent.insertBefore(item.nextElementSibling, item); return; }
+    if(btn.dataset.act==='child'){
+      var depth=parseInt(item.dataset.depth||'0',10);
+      if(depth>=2) return;
+      item.querySelector(':scope > .sm-kids').appendChild(node(depth+1));
+    }
+  });
+  document.getElementById('sm-add')?.addEventListener('click', function(){ tree.appendChild(node(0)); });
+  function read(box){
+    var out=[];
+    box.querySelectorAll(':scope > .sm-node').forEach(function(item){
+      var label=(item.querySelector(':scope > .sm-row .js-label')?.value||'').trim();
+      if(!label) return;
+      var url=(item.querySelector(':scope > .sm-row .js-url')?.value||'/').trim()||'/';
+      var row={label:label, url:url};
+      var kids=read(item.querySelector(':scope > .sm-kids'));
+      if(kids.length) row.children=kids;
+      out.push(row);
+    });
+    return out;
+  }
+  form?.addEventListener('submit', function(ev){
+    if(ev.submitter && ev.submitter.name==='menu_reset') return;
+    document.getElementById('menu_json').value=JSON.stringify(read(tree));
+  });
+})();
 </script>
 @endsection
