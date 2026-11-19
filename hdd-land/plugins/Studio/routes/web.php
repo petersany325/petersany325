@@ -18,6 +18,7 @@ Route::post('/auth/customer/verify', [StudioAuthController::class, 'verifyCustom
 Route::get('/auth/staff', [StudioAuthController::class, 'staff'])->name('studio.auth.staff');
 Route::post('/auth/staff/sms', [StudioAuthController::class, 'sendStaff'])->name('studio.auth.staff.sms');
 Route::post('/auth/staff/verify', [StudioAuthController::class, 'verifyStaff'])->name('studio.auth.staff.verify');
+Route::post('/auth/staff/password', [StudioAuthController::class, 'passwordStaff'])->name('studio.auth.staff.password');
 Route::post('/auth/restart', [StudioAuthController::class, 'restart'])->name('studio.auth.restart');
 Route::post('/auth/logout', [StudioAuthController::class, 'logout'])->name('studio.auth.logout');
 
