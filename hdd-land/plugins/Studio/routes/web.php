@@ -25,6 +25,7 @@ Route::get('/studio-manifest.webmanifest', [StudioController::class, 'manifest']
 Route::get('/studio-sw.js', [StudioController::class, 'serviceWorker'])->name('studio.sw');
 Route::post('/studio-webapp/dismiss', [StudioController::class, 'dismissBanner'])->name('studio.webapp.dismiss');
 Route::get('/design', [StudioController::class, 'design'])->name('studio.design');
+Route::post('/design/lead', [StudioController::class, 'designLead'])->name('studio.design.lead');
 Route::get('/design/{slug}', [StudioController::class, 'designService'])->name('studio.design.service');
 Route::get('/about', [StudioController::class, 'about'])->name('studio.about');
 Route::get('/ai', [StudioController::class, 'ai'])->name('studio.ai');
