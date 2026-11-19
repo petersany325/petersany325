@@ -445,6 +445,35 @@
       }
     }
   }
+  if (isset($groups['system']['items'])) {
+    $systemStay = [];
+    $shopSettings = [];
+    foreach ($groups['system']['items'] as $it) {
+      $href = (string) ($it['href'] ?? '');
+      $rel = ltrim((string) preg_replace('#^.*/admin/#', '', (string) (parse_url($href, PHP_URL_PATH) ?? '')), '/');
+      if ($rel === 'settings' || str_starts_with($rel, 'settings/')) {
+        $shopSettings[] = $it;
+      } else {
+        $systemStay[] = $it;
+      }
+    }
+    $groups['system']['items'] = $systemStay;
+    if ($systemStay === []) {
+      unset($groups['system']);
+    }
+    if ($shopSettings) {
+      if (! isset($groups['shop-home'])) {
+        $groups['shop-home'] = ['title' => 'فروشگاه', 'icon' => '🛒', 'open' => true, 'items' => []];
+        $groupSections['shop-home'] = 'shop';
+      }
+      $haveShop = array_map(fn ($it) => (string) ($it['href'] ?? ''), $groups['shop-home']['items']);
+      foreach ($shopSettings as $it) {
+        if (! in_array((string) ($it['href'] ?? ''), $haveShop, true)) {
+          $groups['shop-home']['items'][] = $it;
+        }
+      }
+    }
+  }
   $shopPrefixes = ['products', 'categories', 'orders', 'media', 'featured-products', 'serial-sales', 'serial-warranties', 'warranty-companies', 'warranty-register', 'shipping-carriers', 'shipping-post', 'shipping-tipax', 'invoice-design', 'homepage-settings', 'online-home', 'banner-settings', 'payment', 'customers', 'wallet-settings', 'accounting', 'reports', 'settings'];
   $adminRel = preg_replace('#^admin/?#', '', $path) ?? '';
   $panel = 'site';
@@ -467,26 +496,37 @@
     if ($rel === '') {
       return false;
     }
+    foreach (['staff', 'plugins', 'customers', 'auth-settings', 'wallet-settings', 'payment', 'developer-studio'] as $locked) {
+      if ($rel === $locked || str_starts_with($rel, $locked.'/')) {
+        return false;
+      }
+    }
+    if ($rel === 'tickets/settings' || str_starts_with($rel, 'tickets/settings/')) {
+      return false;
+    }
     $need = match (true) {
       str_starts_with($rel, 'system-tools') => 'system_tools',
       str_starts_with($rel, 'mega-menu') => 'site.mega_menu',
+      str_starts_with($rel, 'theme-templates') => 'site.theme_templates',
+      str_starts_with($rel, 'theme-builder') => 'site.theme_builder',
       str_starts_with($rel, 'page-builder'), str_starts_with($rel, 'about-page'), str_starts_with($rel, 'services-page'), str_starts_with($rel, 'contact-page'), str_starts_with($rel, 'training-page') => 'site.page_builder',
-      str_starts_with($rel, 'homepage-settings'), str_starts_with($rel, 'studio-home'), str_starts_with($rel, 'studio-sms'), str_starts_with($rel, 'hero-studio'), str_starts_with($rel, 'online-home'), str_starts_with($rel, 'banner-settings'), str_starts_with($rel, 'theme-builder') => 'site.homepage',
+      str_starts_with($rel, 'homepage-settings'), str_starts_with($rel, 'studio-home'), str_starts_with($rel, 'studio-sms'), str_starts_with($rel, 'online-home'), str_starts_with($rel, 'banner-settings') => 'site.homepage',
       str_starts_with($rel, 'footer-settings') => 'site.footer',
       str_starts_with($rel, 'web-app') => 'site.webapp',
       $rel === 'settings' || str_starts_with($rel, 'settings/') => 'site.shop_settings',
+      str_contains($rel, '/serials') => 'serials',
+      str_contains($rel, '/edit') && str_starts_with($rel, 'products') => 'products.edit',
+      $rel === 'products/create' || str_starts_with($rel, 'products/create/') => 'products.create',
       str_starts_with($rel, 'products') => 'products.view',
       str_starts_with($rel, 'orders') => 'orders',
       str_starts_with($rel, 'serial'), str_starts_with($rel, 'warranty') => 'serials',
-      str_starts_with($rel, 'tickets') && ! str_starts_with($rel, 'tickets/settings') => 'support',
+      str_starts_with($rel, 'tickets') => 'support',
       str_starts_with($rel, 'media') => 'media',
       str_starts_with($rel, 'categories') => 'products.edit',
       str_starts_with($rel, 'reports') => 'reports',
-      default => null,
+      str_starts_with($rel, 'shipping'), str_starts_with($rel, 'invoice') => 'full_site',
+      default => 'full_site',
     };
-    if ($need === null) {
-      return false;
-    }
     if ($staffCan($need)) {
       return true;
     }
@@ -502,17 +542,25 @@
 
     return false;
   };
-  $firstPanelHref = function (string $want) use ($groups, $shopGroupIds, $staffAllows): ?string {
-    foreach ($groups as $gid => $g) {
-      $isShop = in_array($gid, $shopGroupIds, true);
-      if (($want === 'shop') !== $isShop) {
-        continue;
+  $hrefPanel = function (string $href) use ($shopPrefixes): string {
+    $rel = ltrim((string) preg_replace('#^.*/admin/#', '', (string) (parse_url($href, PHP_URL_PATH) ?? '')), '/');
+    foreach ($shopPrefixes as $pre) {
+      if ($rel === $pre || str_starts_with($rel, $pre.'/')) {
+        return 'shop';
       }
+    }
+
+    return 'site';
+  };
+  $firstPanelHref = function (string $want) use ($groups, $staffAllows, $hrefPanel): ?string {
+    foreach ($groups as $g) {
       foreach ($g['items'] ?? [] as $it) {
         $href = (string) ($it['href'] ?? '');
-        if ($href !== '' && empty($it['ext']) && $staffAllows($href)) {
-          return $href;
+        if ($href === '' || ! empty($it['ext']) || $hrefPanel($href) !== $want || ! $staffAllows($href)) {
+          continue;
         }
+
+        return $href;
       }
     }
 
