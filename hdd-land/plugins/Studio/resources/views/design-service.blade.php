@@ -11,7 +11,9 @@
   ));
   $works = [];
   $worksWord = (string) ($page['works_word'] ?? '');
-  if ($worksWord !== '' && class_exists(\App\Support\StudioHomeConfig::class)) {
+  if (!empty($page['showcase']) && is_array($page['showcase'])) {
+      $works = array_values($page['showcase']);
+  } elseif ($worksWord !== '' && class_exists(\App\Support\StudioHomeConfig::class)) {
       foreach (\App\Support\StudioHomeConfig::works() as $work) {
           $blob = ($work['title'] ?? '').' '.($work['cat'] ?? '');
           $image = (string) ($work['image'] ?? '');
@@ -31,9 +33,13 @@
       'laravel' => 'سامانهٔ اختصاصی',
       default => 'هنوز نمی‌دانم',
   };
-  $contactTitle = $page['contact_title'] ?? (($page['slug'] ?? '') === 'corporate'
-      ? 'آماده‌اید سایت شرکتی‌تان را بسازیم؟'
-      : 'آماده‌اید «'.($page['h1'] ?? 'این خدمت').'» را شروع کنیم؟');
+  $typeOptions = $page['type_options'] ?? ['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'هنوز نمی‌دانم'];
+  $typeDefault = $page['type_default'] ?? $leadType;
+  $typeLabel = $page['type_label'] ?? 'نوع پروژه';
+  $contactKicker = $page['contact_kicker'] ?? 'مشاورهٔ رایگان';
+  $contactLead = $page['contact_lead'] ?? 'فرم را بفرستید تا برای هماهنگی با شما تماس بگیریم.';
+  $submitLabel = $page['submit_label'] ?? 'ارسال درخواست مشاوره';
+  $contactTitle = $page['contact_title'] ?? 'آماده‌اید «'.($page['h1'] ?? 'این خدمت').'» را شروع کنیم؟';
   $companyLabel = $page['company_label'] ?? 'نام شرکت';
   $faqKicker = $page['faq_kicker'] ?? 'پرسش‌های متداول';
   $faqLd = ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => []];
@@ -62,7 +68,7 @@
       ],
   ];
 @endphp
-<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=65">
+<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=66">
 <section class="ag-page">
   <div class="ag-wrap dg-hero">
     <div>
@@ -76,7 +82,7 @@
       <h1>{{ $page['h1'] ?? '' }}</h1>
       <p class="ag-lead">{{ $page['lead'] ?? '' }}</p>
       <div class="ag-actions">
-        <a class="ag-btn ag-btn--on" href="#contact">درخواست مشاوره رایگان<i>←</i></a>
+        <a class="ag-btn ag-btn--on" href="#contact">{{ $page['hero_cta'] ?? 'درخواست مشاوره رایگان' }}<i>←</i></a>
         @if($wa !== '')
           <a class="ag-btn ag-btn--line dg-wa" href="https://wa.me/{{ $wa }}" rel="noopener">پیام در واتس‌اپ</a>
         @endif
@@ -89,21 +95,29 @@
         </div>
       @endif
     </div>
-    @if(in_array(($page['device'] ?? $page['slug'] ?? ''), ['corporate', 'shop'], true))
-      <div class="ds-devices" aria-hidden="true">
+    @if(in_array(($page['device'] ?? $page['slug'] ?? ''), ['corporate', 'shop', 'laravel'], true))
+      <div class="ds-devices{{ !empty($page['hero_image']) ? ' ds-devices--shot' : '' }}">
         <div class="ds-laptop">
           <div class="ds-screen">
-            <div class="ds-nav"><i></i><i></i></div>
-          @if(($page['device'] ?? '') === 'shop')
-            <div class="ds-grid"><i></i><i></i><i></i><i></i></div>
+          @if(!empty($page['hero_image']))
+            <img src="{{ asset($page['hero_image']) }}" width="1280" height="720" alt="{{ $page['hero_alt'] ?? '' }}" fetchpriority="high" decoding="async">
           @else
-            <div class="ds-hero">سایت شرکتی</div>
-            <div class="ds-row"><i></i><i></i><i></i></div>
+            <div class="ds-nav"><i></i><i></i></div>
+            @if(($page['device'] ?? '') === 'shop')
+              <div class="ds-grid"><i></i><i></i><i></i><i></i></div>
+            @else
+              <div class="ds-hero">سایت شرکتی</div>
+              <div class="ds-row"><i></i><i></i><i></i></div>
+            @endif
           @endif
           </div>
           <div class="ds-base"></div>
         </div>
-        <div class="ds-phone"></div>
+        <div class="ds-phone" aria-hidden="true">
+          @if(!empty($page['hero_image']))
+            <img src="{{ asset($page['hero_image']) }}" width="1280" height="720" alt="">
+          @endif
+        </div>
       </div>
     @endif
   </div>
@@ -137,7 +151,7 @@
     </div>
     <div class="ds-pipe">
       @foreach($page['band']['flow'] as $i => $node)
-        @if($i > 0)<em>↓</em>@endif
+        @if($i > 0)<em>{{ $page['band']['arrow'] ?? '↓' }}</em>@endif
         <div><b>{{ $node[0] }}</b><span>{{ $node[1] }}</span></div>
       @endforeach
     </div>
@@ -186,7 +200,9 @@
         @endforeach
       </ul>
     </div>
-    @if(!empty($page['orders_sample']))
+    @if(!empty($page['panel_image']))
+      <img class="ds-panel-img" src="{{ asset($page['panel_image']) }}" width="1280" height="720" alt="{{ $page['panel_alt'] ?? '' }}" loading="lazy" decoding="async">
+    @elseif(!empty($page['orders_sample']))
       <div class="ds-panel" aria-label="نمونهٔ فهرست سفارش‌ها">
         <div class="ds-top">پنل فروشگاه · نمونه</div>
         <div class="ds-table">
@@ -220,8 +236,11 @@
 @if($works !== [])
 <section class="ag-sec">
   <div class="ag-wrap">
-    <p class="ag-kicker">{{ ($page['slug'] ?? '') === 'shop' ? 'فروشگاه‌هایی که ساخته‌ایم' : 'سایت‌هایی که ساخته‌ایم' }}</p>
-    <h2>{{ ($page['slug'] ?? '') === 'shop' ? 'نمونه‌کار فروشگاه اینترنتی' : 'نمونه‌کار' }}</h2>
+    <p class="ag-kicker">{{ $page['works_kicker'] ?? 'نمونه‌کار' }}</p>
+    <h2>{{ $page['works_title'] ?? 'پروژه‌های مرتبط' }}</h2>
+    @if(($page['works_lead'] ?? '') !== '')
+      <p class="ag-lead">{{ $page['works_lead'] }}</p>
+    @endif
     <div class="dg-works">
       @foreach($works as $work)
         <a class="dg-work" href="{{ url($work['url'] ?: '/projects') }}">
@@ -245,9 +264,9 @@
       @if(($page['package_price'] ?? '') !== '')
         <p class="dg-price">شروع از <b>{{ $page['package_price'] }}</b> تومان</p>
       @else
-        <p class="dg-price">قیمت دقیق بعد از مشاوره</p>
+        <p class="dg-price">{{ $page['price_note'] ?? 'قیمت دقیق بعد از مشاوره' }}</p>
       @endif
-      <a class="ag-btn ag-btn--on" href="#contact">دریافت قیمت دقیق</a>
+      <a class="ag-btn ag-btn--on" href="#contact">{{ $page['package_button'] ?? 'دریافت قیمت دقیق' }}</a>
     </div>
     <ul>
       @foreach($page['package'] as $line)
@@ -278,9 +297,9 @@
 <section class="ag-sec" id="contact">
   <div class="ag-wrap dg-contact">
     <div>
-      <p class="ag-kicker">مشاورهٔ رایگان</p>
+      <p class="ag-kicker">{{ $contactKicker }}</p>
       <h2>{{ $contactTitle }}</h2>
-      <p class="ag-lead">فرم را بفرستید تا برای هماهنگی با شما تماس بگیریم.</p>
+      <p class="ag-lead">{{ $contactLead }}</p>
       <div class="dg-consult">
         <div>
           <small>مشاور فروش</small>
@@ -301,23 +320,24 @@
       <label>شمارهٔ موبایل<input name="phone" value="{{ old('phone') }}" required inputmode="tel" dir="ltr" autocomplete="tel"></label>
       <label>{{ $companyLabel }}<input name="company" value="{{ old('company') }}" maxlength="120"></label>
       @foreach(($page['fields'] ?? []) as $field)
-        <label class="{{ count($field['options'] ?? []) > 2 ? 'dg-full' : '' }}">{{ $field['label'] }}
+        <label class="{{ !empty($field['full']) || count($field['options'] ?? []) > 2 ? 'dg-full' : '' }}">{{ $field['label'] }}
           <select name="{{ $field['name'] }}">
+            <option value="" @selected(old($field['name'], '') === '')>انتخاب کنید</option>
             @foreach($field['options'] as $opt)
-              <option @selected(old($field['name']) === $opt)>{{ $opt }}</option>
+              <option value="{{ $opt }}" @selected(old($field['name']) === $opt)>{{ $opt }}</option>
             @endforeach
           </select>
         </label>
       @endforeach
-      <label>نوع پروژه
+      <label>{{ $typeLabel }}
         <select name="type" required>
-          @foreach(['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'هنوز نمی‌دانم'] as $type)
-            <option @selected(old('type', $leadType) === $type)>{{ $type }}</option>
+          @foreach($typeOptions as $type)
+            <option value="{{ $type }}" @selected(old('type', $typeDefault) === $type)>{{ $type }}</option>
           @endforeach
         </select>
       </label>
       <label class="dg-full">توضیح کوتاه (اختیاری)<textarea name="message" maxlength="2000">{{ old('message') }}</textarea></label>
-      <button class="ag-btn ag-btn--on dg-full" type="submit">ارسال درخواست مشاوره</button>
+      <button class="ag-btn ag-btn--on dg-full" type="submit">{{ $submitLabel }}</button>
       @if(session('design_lead'))<p class="dg-ok">درخواست ثبت شد. برای هماهنگی با شما تماس می‌گیریم.</p>@endif
       @if($errors->any())<p class="dg-err">{{ $errors->first() }}</p>@endif
     </form>

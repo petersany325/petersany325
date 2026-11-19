@@ -73,10 +73,14 @@ class StudioController
         $company = trim((string) $request->input('company', ''));
         $items = trim((string) $request->input('items', ''));
         $uses = trim((string) $request->input('uses_accounting', ''));
+        $users = trim((string) $request->input('users', ''));
+        $current = trim((string) $request->input('current', ''));
         $itemChoices = ['', 'کمتر از ۱۰۰', '۱۰۰ تا ۱۰۰۰', 'بیشتر از ۱۰۰۰'];
         $useChoices = ['', 'بله', 'نه', 'می‌خواهم تهیه کنم'];
-        $types = ['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'هنوز نمی‌دانم'];
-        if ($name === '' || mb_strlen($name) > 120 || mb_strlen($company) > 120 || ! in_array($type, $types, true) || ! in_array($items, $itemChoices, true) || ! in_array($uses, $useChoices, true) || mb_strlen($message) > 2000 || ! StudioSms::isMobile($phone)) {
+        $userChoices = ['', 'کمتر از ۱۰', '۱۰ تا ۵۰', 'بیشتر از ۵۰'];
+        $currentChoices = ['', 'اکسل و کاغذ', 'نرم‌افزار دیگر', 'هیچ سیستمی ندارم'];
+        $types = ['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'هنوز نمی‌دانم', 'CRM و پیگیری مشتری', 'اتوماسیون اداری', 'رزرو و نوبت‌دهی', 'پورتال سازمانی', 'چیز دیگر'];
+        if ($name === '' || mb_strlen($name) > 120 || mb_strlen($company) > 120 || ! in_array($type, $types, true) || ! in_array($items, $itemChoices, true) || ! in_array($uses, $useChoices, true) || ! in_array($users, $userChoices, true) || ! in_array($current, $currentChoices, true) || mb_strlen($message) > 2000 || ! StudioSms::isMobile($phone)) {
             return redirect()->to($backTo)->withErrors(['phone' => 'نام و موبایل ۱۱ رقمی را درست وارد کنید.'])->withInput();
         }
         RateLimiter::hit($key, 3600);
@@ -88,6 +92,8 @@ class StudioController
             'company' => $company,
             'items' => $items,
             'uses_accounting' => $uses,
+            'users' => $users,
+            'current' => $current,
             'message' => $message,
         ];
         try {
