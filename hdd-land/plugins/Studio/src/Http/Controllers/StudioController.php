@@ -57,7 +57,7 @@ class StudioController
         if (RateLimiter::tooManyAttempts($key, 6)) {
             return redirect()->to(url('/design').'#contact')->withErrors(['phone' => 'چند درخواست پشت سر هم آمد. کمی بعد دوباره بفرستید.'])->withInput();
         }
-        if (trim((string) $request->input('website', '')) !== '') {
+        if (trim((string) $request->input('dg_hp', '')) !== '') {
             return redirect()->to(url('/design').'#contact')->with('design_lead', true);
         }
         $phone = strtr((string) $request->input('phone', ''), ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);

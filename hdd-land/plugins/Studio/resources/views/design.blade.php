@@ -217,7 +217,7 @@
     </div>
     <form method="post" action="{{ url('/design/lead') }}">
       @csrf
-      <label class="dg-hp">وب‌سایت<input name="website" tabindex="-1" autocomplete="off"></label>
+      <div class="dg-hp" aria-hidden="true"><input name="dg_hp" tabindex="-1" autocomplete="off" value=""></div>
       <label>نام و نام خانوادگی<input name="name" value="{{ old('name') }}" required maxlength="120" autocomplete="name"></label>
       <label>شمارهٔ موبایل<input name="phone" value="{{ old('phone') }}" required inputmode="tel" dir="ltr" autocomplete="tel" placeholder="09xxxxxxxxx"></label>
       <label class="dg-full">نوع پروژه
