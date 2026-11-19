@@ -645,6 +645,7 @@ class StudioDesignCopy
                     'items' => [
                         [
                             'title' => 'پایه',
+                            'plan' => 'پایه',
                             'price' => $cfg['support_basic_price'] ?? '',
                             'price_prefix' => 'ماهانه',
                             'price_note' => 'قیمت ماهانه بعد از بررسی',
@@ -653,6 +654,7 @@ class StudioDesignCopy
                         ],
                         [
                             'title' => 'حرفه‌ای',
+                            'plan' => 'حرفه‌ای',
                             'price' => $cfg['support_pro_price'] ?? '',
                             'price_prefix' => 'ماهانه',
                             'price_note' => 'قیمت ماهانه بعد از بررسی',
@@ -663,6 +665,7 @@ class StudioDesignCopy
                         ],
                         [
                             'title' => 'سازمانی',
+                            'plan' => 'سازمانی',
                             'price' => '',
                             'price_note' => 'بر اساس نیاز',
                             'button' => 'مشاوره',

@@ -186,7 +186,7 @@ class StudioController
 
     private function cachedDesign(string $path): ?Response
     {
-        if (request()->user() || session()->has('design_lead') || session()->has('design_quick') || session()->has('errors')) {
+        if (request()->user() || request()->query() !== [] || session()->has('design_lead') || session()->has('design_quick') || session()->has('errors')) {
             return null;
         }
         $html = DesignPageCache::get($path);
@@ -200,7 +200,7 @@ class StudioController
     private function respondDesign(string $path, View $view): Response
     {
         $html = $view->render();
-        if (! request()->user() && ! session()->has('design_lead') && ! session()->has('design_quick') && ! session()->has('errors')) {
+        if (! request()->user() && request()->query() === [] && ! session()->has('design_lead') && ! session()->has('design_quick') && ! session()->has('errors')) {
             $token = csrf_token();
             DesignPageCache::put($path, str_replace($token, '%%CSRF%%', $html));
         }

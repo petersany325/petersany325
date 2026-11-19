@@ -408,7 +408,7 @@
           <ul>
             @foreach($pack['items'] as $line)<li>{{ $line }}</li>@endforeach
           </ul>
-          <a class="ag-btn {{ !empty($pack['featured']) ? 'ag-btn--on' : 'ag-btn--line' }}" href="#contact">{{ $pack['button'] ?? 'درخواست' }}</a>
+          <a class="ag-btn {{ !empty($pack['featured']) ? 'ag-btn--on' : 'ag-btn--line' }}" href="{{ ($pack['plan'] ?? '') !== '' ? '?plan='.rawurlencode($pack['plan']).'#contact' : '#contact' }}">{{ $pack['button'] ?? 'درخواست' }}</a>
         </article>
       @endforeach
     </div>
@@ -510,8 +510,16 @@
               @if(($field['default'] ?? '') === '')
                 <option value="" @selected(old($field['name'], '') === '')>انتخاب کنید</option>
               @endif
+              @php
+                $fieldPick = old($field['name']);
+                if ($fieldPick === null && ($field['name'] ?? '') === 'plan') {
+                    $asked = (string) request()->query('plan', '');
+                    $fieldPick = in_array($asked, $field['options'] ?? [], true) ? $asked : ($field['default'] ?? '');
+                }
+                $fieldPick = $fieldPick ?? ($field['default'] ?? '');
+              @endphp
               @foreach(($field['options'] ?? []) as $opt)
-                <option value="{{ $opt }}" @selected(old($field['name'], $field['default'] ?? '') === $opt)>{{ $opt }}</option>
+                <option value="{{ $opt }}" @selected($fieldPick === $opt)>{{ $opt }}</option>
               @endforeach
             </select>
           @else
