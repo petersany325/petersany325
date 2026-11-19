@@ -28,6 +28,7 @@
 .fc-human a{text-align:center;padding:.4rem .3rem}
 .fc-human a:first-child{background:#7c5cff;color:#fff;border-color:transparent}
 .fc-human a.is-hot{outline:2px solid #fff;outline-offset:2px}
+.fc-call{grid-column:1 / -1;background:transparent;color:#fff;border-color:#7c5cff}
 @media (max-width:700px){
   .fc{right:.8rem;bottom:calc(.7rem + env(safe-area-inset-bottom));z-index:90}
   .has-ag-tabbar .fc{bottom:calc(4.85rem + env(safe-area-inset-bottom))}

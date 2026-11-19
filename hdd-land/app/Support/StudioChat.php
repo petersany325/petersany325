@@ -33,6 +33,8 @@ class StudioChat
             'show_sales' => true,
             'sales_label' => 'اتصال به فروش',
             'sales_url' => 'https://wa.me/989113100473',
+            'consult_label' => 'مشاوره فروش',
+            'consult_phone' => '09113100473',
             'show_support' => true,
             'support_label' => 'اتصال به پشتیبانی',
             'support_url' => '/design/support',
@@ -65,7 +67,8 @@ class StudioChat
         $s['avatar'] = self::safeAvatar((string) ($s['avatar'] ?? $base['avatar']));
         $s['sales_url'] = self::safeUrl((string) ($s['sales_url'] ?? '')) ?: $base['sales_url'];
         $s['support_url'] = self::safeUrl((string) ($s['support_url'] ?? '')) ?: $base['support_url'];
-        foreach (['button', 'title', 'subtitle', 'placeholder', 'greeting', 'fallback', 'sales_label', 'support_label'] as $k) {
+        $s['consult_phone'] = self::phone((string) ($s['consult_phone'] ?? '')) ?: $base['consult_phone'];
+        foreach (['button', 'title', 'subtitle', 'placeholder', 'greeting', 'fallback', 'sales_label', 'support_label', 'consult_label'] as $k) {
             $s[$k] = trim((string) ($s[$k] ?? ''));
             if ($s[$k] === '') {
                 $s[$k] = $base[$k];
@@ -100,7 +103,7 @@ class StudioChat
         foreach ([
             'button' => 24, 'title' => 60, 'subtitle' => 80, 'placeholder' => 80,
             'greeting' => 400, 'fallback' => 400,
-            'sales_label' => 40, 'support_label' => 40,
+            'sales_label' => 40, 'support_label' => 40, 'consult_label' => 40,
         ] as $k => $max) {
             $s[$k] = mb_substr(trim((string) ($d[$k] ?? '')), 0, $max);
             if ($s[$k] === '') {
@@ -109,6 +112,7 @@ class StudioChat
         }
         $s['sales_url'] = self::safeUrl((string) ($d['sales_url'] ?? '')) ?: $base['sales_url'];
         $s['support_url'] = self::safeUrl((string) ($d['support_url'] ?? '')) ?: $base['support_url'];
+        $s['consult_phone'] = self::phone((string) ($d['consult_phone'] ?? '')) ?: $base['consult_phone'];
         if (isset($d['avatar'])) {
             $s['avatar'] = self::safeAvatar((string) $d['avatar']);
         }
@@ -161,6 +165,9 @@ class StudioChat
             'show_support' => $s['show_support'],
             'support_label' => $s['support_label'],
             'support_url' => $s['support_url'],
+            'consult_label' => $s['consult_label'],
+            'consult_phone' => $s['consult_phone'],
+            'consult_url' => 'tel:'.$s['consult_phone'],
         ];
     }
 
@@ -183,7 +190,7 @@ class StudioChat
         $s = self::get();
         $q = self::norm($message);
         if ($q === '') {
-            return self::pack((string) $s['greeting'], [], null);
+            return self::withConsult(self::pack((string) $s['greeting'], [], null));
         }
 
         $best = null;
@@ -202,14 +209,42 @@ class StudioChat
         }
 
         if ($best === null || $bestScore < 2) {
-            return self::pack((string) $s['fallback'], [
+            return self::withConsult(self::pack((string) $s['fallback'], [
                 ['label' => 'تماس', 'url' => '/contact'],
                 ['label' => 'طراحی سایت', 'url' => '/design'],
                 ['label' => 'حسابداری HDD Land', 'url' => '/computer-accounting'],
-            ], null);
+            ], null));
         }
 
-        return self::pack($best['text'], $best['links'], $best['handoff']);
+        return self::withConsult(self::pack($best['text'], $best['links'], $best['handoff']));
+    }
+
+    /**
+     * @param  array{text:string,links:list<array{label:string,url:string}>,handoff:?string}  $packed
+     * @return array{text:string,links:list<array{label:string,url:string}>,handoff:?string}
+     */
+    protected static function withConsult(array $packed): array
+    {
+        if (($packed['handoff'] ?? null) !== 'sales') {
+            return $packed;
+        }
+        $phone = self::phone((string) (self::get()['consult_phone'] ?? ''));
+        if ($phone === '') {
+            return $packed;
+        }
+        $shown = self::persianDigits($phone);
+        if (! str_contains($packed['text'], $phone) && ! str_contains($packed['text'], $shown)) {
+            $packed['text'] .= ' مشاوره فروش: '.$shown.'.';
+        }
+        $tel = 'tel:'.$phone;
+        foreach ($packed['links'] as $link) {
+            if (($link['url'] ?? '') === $tel) {
+                return $packed;
+            }
+        }
+        $packed['links'][] = ['label' => 'مشاوره فروش '.$shown, 'url' => $tel];
+
+        return $packed;
     }
 
     /**
@@ -241,8 +276,34 @@ class StudioChat
         if (preg_match('#^https://#i', $url)) {
             return mb_substr($url, 0, 300);
         }
+        if (preg_match('#^tel:\+?[0-9]{8,15}$#', $url)) {
+            return $url;
+        }
 
         return '';
+    }
+
+    public static function phone(string $value): string
+    {
+        $digits = preg_replace('/\D+/', '', self::latinDigits($value)) ?? '';
+        if (str_starts_with($digits, '98') && strlen($digits) === 12) {
+            $digits = '0'.substr($digits, 2);
+        }
+        if (preg_match('/^0\d{10}$/', $digits)) {
+            return $digits;
+        }
+
+        return '';
+    }
+
+    public static function persianDigits(string $value): string
+    {
+        return strtr(self::latinDigits($value), ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']);
+    }
+
+    protected static function latinDigits(string $value): string
+    {
+        return strtr($value, ['۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9', '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9']);
     }
 
     public static function safeAvatar(string $path): string

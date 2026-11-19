@@ -2,7 +2,7 @@
   $c = \App\Support\StudioChat::widget();
 @endphp
 @if(!empty($c['enabled']))
-<link rel="stylesheet" href="{{ asset('css/studio-chat.css') }}?v=5">
+<link rel="stylesheet" href="{{ asset('css/studio-chat.css') }}?v=6">
 <div class="fc {{ ($c['corner'] ?? 'right') === 'left' ? 'is-left' : '' }}" id="fcChat">
   <button class="fc-fab" type="button" id="fcOpen" aria-expanded="false" aria-controls="fcPanel">
     <img src="{{ asset($c['avatar']) }}" alt="" width="54" height="54">
@@ -23,13 +23,16 @@
       <input id="fcInput" name="message" maxlength="500" placeholder="{{ $c['placeholder'] }}" autocomplete="off">
       <button type="submit">ارسال</button>
     </form>
-    @if(!empty($c['show_sales']) || !empty($c['show_support']))
+    @if(!empty($c['show_sales']) || !empty($c['show_support']) || !empty($c['consult_phone']))
       <footer class="fc-human {{ (empty($c['show_sales']) || empty($c['show_support'])) ? 'is-one' : '' }}">
         @if(!empty($c['show_sales']))
           <a href="{{ $c['sales_url'] }}" @if(str_starts_with($c['sales_url'], 'http')) target="_blank" rel="noopener" @endif>{{ $c['sales_label'] }}</a>
         @endif
         @if(!empty($c['show_support']))
           <a href="{{ $c['support_url'] }}" @if(str_starts_with($c['support_url'], 'http')) target="_blank" rel="noopener" @endif>{{ $c['support_label'] }}</a>
+        @endif
+        @if(!empty($c['consult_phone']))
+          <a class="fc-call" href="tel:{{ $c['consult_phone'] }}">{{ $c['consult_label'] }} {{ \App\Support\StudioChat::persianDigits($c['consult_phone']) }}</a>
         @endif
       </footer>
     @endif
@@ -49,7 +52,8 @@
   var greeting=@json($c['greeting']);
   var humans={
     sales: @json(!empty($c['show_sales']) ? ['label' => $c['sales_label'], 'url' => $c['sales_url']] : null),
-    support: @json(!empty($c['show_support']) ? ['label' => $c['support_label'], 'url' => $c['support_url']] : null)
+    support: @json(!empty($c['show_support']) ? ['label' => $c['support_label'], 'url' => $c['support_url']] : null),
+    call: @json(!empty($c['consult_phone']) ? ['label' => $c['consult_label'].' '.\App\Support\StudioChat::persianDigits($c['consult_phone']), 'url' => $c['consult_url']] : null)
   };
   function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function bubble(text, links, who){
@@ -60,7 +64,7 @@
       html+='<div class="fc-links">';
       links.forEach(function(l){
         var url=String(l.url||'');
-        if(url.charAt(0)!=='/' && url.indexOf('https://')!==0) return;
+        if(url.charAt(0)!=='/' && url.indexOf('https://')!==0 && url.indexOf('tel:')!==0) return;
         html+='<a href="'+esc(url)+'">'+esc(l.label||'')+'</a>';
       });
       html+='</div>';
@@ -97,6 +101,12 @@
         if(!seen) links.push(hand);
         var footer=root.querySelector('.fc-human a[href="'+hand.url+'"]');
         if(footer) footer.classList.add('is-hot');
+      }
+      if(data.handoff==='sales' && humans.call && humans.call.url){
+        var hasCall=links.some(function(l){ return l.url===humans.call.url; });
+        if(!hasCall) links.push(humans.call);
+        var callBtn=root.querySelector('.fc-call');
+        if(callBtn) callBtn.classList.add('is-hot');
       }
       bubble(data.text||'', links, 'bot');
     }).catch(function(){

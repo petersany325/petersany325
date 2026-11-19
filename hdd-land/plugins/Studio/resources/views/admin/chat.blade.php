@@ -131,6 +131,10 @@
           <label>برچسب پشتیبانی<input type="text" name="support_label" maxlength="40" value="{{ $f('support_label') }}"></label>
           <label>لینک پشتیبانی<input type="text" name="support_url" maxlength="300" value="{{ $f('support_url') }}" dir="ltr"></label>
         </div>
+        <div class="sc-row">
+          <label>برچسب مشاوره فروش<input type="text" name="consult_label" maxlength="40" value="{{ $f('consult_label', 'مشاوره فروش') }}"></label>
+          <label>شماره مشاوره فروش<input type="text" name="consult_phone" maxlength="20" value="{{ $f('consult_phone', '09113100473') }}" dir="ltr"></label>
+        </div>
       </div>
     </div>
 
