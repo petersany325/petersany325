@@ -2333,7 +2333,7 @@
 .dg-contact label{display:grid;gap:4px;font-size:.82rem;color:#b8bddf}
 .dg-contact input,.dg-contact select,.dg-contact textarea{width:100%;background:#070b18;border:1px solid #2b2650;border-radius:10px;padding:10px;color:#fff;font:inherit}
 .dg-full{grid-column:1/-1}
-.dg-hp{position:absolute;left:-9999px;height:0;overflow:hidden}
+.dg-hp{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
 .dg-ok{color:#2ecc8f;margin:0}
 .dg-err{color:#ffb3ba;margin:0}
 @media (max-width:900px){
