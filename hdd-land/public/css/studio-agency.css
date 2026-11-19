@@ -2396,6 +2396,31 @@
 .ds-devices--shot .ds-phone img{width:100%;height:100%;object-fit:cover;object-position:center top;border-radius:9px;display:block}
 .ds-panel-img{width:100%;height:auto;min-height:240px;object-fit:cover;display:block;border-radius:16px;border:1px solid #262a4a}
 .ds-shot-plain{width:100%;max-width:100%;height:auto;display:block}
+.ds-gap{margin-top:16px}
+.ds-check{display:grid;gap:8px;margin-top:1rem;background:#121428;border:1px solid #2b2650;border-radius:14px;padding:12px}
+.ds-check .row{display:flex;flex-wrap:wrap;gap:8px}
+.ds-check input{flex:1 1 140px;min-width:0;font:inherit;color:#fff;background:#070b18;border:1px solid #2b2650;border-radius:10px;padding:10px 12px}
+.ds-check small{color:#b8bddf}
+.ds-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:1rem}
+.ds-metric{background:#121428;border:1px solid #2b2650;border-radius:14px;padding:14px;min-width:0}
+.ds-metric .k{display:block;color:#b9a8ff;font-size:.75rem;direction:ltr;text-align:left}
+.ds-metric b{display:block;color:#fff;margin:.3rem 0}
+.ds-metric .goal{color:#2ecc8f;font-weight:800}
+.ds-metric p{margin:.35rem 0 0;color:#b8bddf;font-size:.9rem}
+.ds-promise{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:1rem}
+.ds-promise h3{margin:0 0 .6rem}
+.ds-promise ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.ds-yes{background:#10241b;border:1px solid #1f6b45;border-radius:16px;padding:14px}
+.ds-no{background:#2a1218;border:1px solid #6e2330;border-radius:16px;padding:14px}
+.ds-yes li::before{content:"✓ ";color:#2ecc8f;font-weight:800}
+.ds-no li::before{content:"✕ ";color:#ff8fa0;font-weight:800}
+.ds-pkgs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:1rem}
+.ds-pk{border:1px solid #2b2650;border-radius:18px;padding:1.1rem;background:#121428;min-width:0}
+.ds-pk.is-on{border-color:#7c5cff;background:linear-gradient(120deg,rgba(124,92,255,.18),rgba(124,92,255,.03))}
+.ds-pk h3{margin:0}
+.ds-pk ul{margin:.8rem 0 1rem;padding:0;list-style:none;display:grid;gap:6px}
+.ds-pk li::before{content:"✓ ";color:#2ecc8f;font-weight:800}
+@media (max-width:760px){.ds-metrics,.ds-promise,.ds-pkgs{grid-template-columns:1fr}}
 .ds-ba{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .ds-ba figure{margin:0;display:grid;gap:8px}
 .ds-ba img{width:100%;height:auto;display:block;border-radius:14px;border:1px solid #2b2650}

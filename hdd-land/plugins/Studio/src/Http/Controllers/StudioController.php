@@ -2,6 +2,7 @@
 
 namespace Plugins\Studio\src\Http\Controllers;
 
+use App\Support\DesignPageCache;
 use App\Support\SiteHost;
 use App\Support\StudioAccountingCopy;
 use App\Support\StudioDesignCopy;
@@ -29,17 +30,22 @@ class StudioController
         return $this->page('home', $homeTitle);
     }
 
-    public function design(): View
+    public function design(): View|Response
     {
+        if ($cached = $this->cachedDesign('/design')) {
+            return $cached;
+        }
         $title = StudioDesignCopy::seoTitle('design');
         $description = StudioDesignCopy::seoDescription('design');
 
-        return $this->page('design', $title, [
+        return $this->respondDesign('/design', $this->page('design', $title, [
             'description' => $description,
             'canonical' => 'https://hdd-land.ir/design',
             'ogTitle' => $title,
             'ogDescription' => $description,
             'ogImage' => asset(StudioDesignCopy::hero()['og']),
+            'ogImageWidth' => 1200,
+            'ogImageHeight' => 630,
             'hero' => StudioDesignCopy::hero(),
             'aboutBlurb' => StudioDesignCopy::aboutBlurb(),
             'services' => StudioDesignCopy::services(),
@@ -48,7 +54,7 @@ class StudioController
             'faqs' => StudioDesignCopy::faqs(),
             'cfg' => StudioDesignCopy::pageSettings(),
             'works' => class_exists(StudioHomeConfig::class) ? StudioHomeConfig::works() : [],
-        ]);
+        ]));
     }
 
     public function designLead(Request $request): RedirectResponse
@@ -58,13 +64,14 @@ class StudioController
         if (! preg_match('#^/design(/[a-z0-9-]+)?$#', $backPath)) {
             $backPath = '/design';
         }
-        $backTo = url($backPath).'#contact';
+        $quick = (string) $request->input('quick', '') === '1';
+        $backTo = url($backPath).($quick ? '#check' : '#contact');
         $key = 'design-lead:'.$request->ip();
         if (RateLimiter::tooManyAttempts($key, 6)) {
             return redirect()->to($backTo)->withErrors(['phone' => 'چند درخواست پشت سر هم آمد. کمی بعد دوباره بفرستید.'])->withInput();
         }
         if (trim((string) $request->input('dg_hp', '')) !== '') {
-            return redirect()->to($backTo)->with('design_lead', true);
+            return redirect()->to($backTo)->with($quick ? 'design_quick' : 'design_lead', true);
         }
         $phone = strtr((string) $request->input('phone', ''), ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
         $name = trim((string) $request->input('name', ''));
@@ -81,11 +88,26 @@ class StudioController
         $currentChoices = ['', 'اکسل و کاغذ', 'نرم‌افزار دیگر', 'هیچ سیستمی ندارم'];
         $hasCurrent = trim((string) $request->input('has_current', ''));
         $currentUrl = trim((string) $request->input('current_url', ''));
+        if ($currentUrl !== '' && ! preg_match('#^https?://#i', $currentUrl)) {
+            $currentUrl = 'https://'.$currentUrl;
+        }
+        $goal = trim((string) $request->input('goal', ''));
+        $platform = trim((string) $request->input('platform', ''));
         $hasChoices = ['', 'بله', 'نه، از صفر'];
-        $types = ['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'طراحی UI/UX', 'سئو و سرعت', 'پشتیبانی', 'هنوز نمی‌دانم', 'CRM و پیگیری مشتری', 'اتوماسیون اداری', 'رزرو و نوبت‌دهی', 'پورتال سازمانی', 'چیز دیگر', 'سایت', 'اپلیکیشن موبایل', 'پنل نرم‌افزار', 'بررسی UX سایت فعلی'];
-        $urlOk = $currentUrl === '' || (mb_strlen($currentUrl) <= 300 && filter_var($currentUrl, FILTER_VALIDATE_URL));
-        if ($name === '' || mb_strlen($name) > 120 || mb_strlen($company) > 120 || ! in_array($type, $types, true) || ! in_array($items, $itemChoices, true) || ! in_array($uses, $useChoices, true) || ! in_array($users, $userChoices, true) || ! in_array($current, $currentChoices, true) || ! in_array($hasCurrent, $hasChoices, true) || ! $urlOk || mb_strlen($message) > 2000 || ! StudioSms::isMobile($phone)) {
-            return redirect()->to($backTo)->withErrors(['phone' => 'نام و موبایل ۱۱ رقمی را درست وارد کنید.'])->withInput();
+        $goalChoices = ['', 'فروش آنلاین بیشتر', 'تماس و مشتری بیشتر', 'دیده‌شدن در نقشه و جستجوی محلی', 'فقط سرعت سایت'];
+        $platformChoices = ['', 'وردپرس', 'لاراول', 'سیستم دیگر', 'نمی‌دانم'];
+        $types = ['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'طراحی UI/UX', 'سئو و سرعت', 'پشتیبانی', 'هنوز نمی‌دانم', 'CRM و پیگیری مشتری', 'اتوماسیون اداری', 'رزرو و نوبت‌دهی', 'پورتال سازمانی', 'چیز دیگر', 'سایت', 'اپلیکیشن موبایل', 'پنل نرم‌افزار', 'بررسی UX سایت فعلی', 'بررسی رایگان سئو'];
+        $urlRequired = (string) $request->input('url_required', '') === '1' || $type === 'بررسی رایگان سئو';
+        $urlOk = $currentUrl === ''
+            ? ! $urlRequired
+            : (mb_strlen($currentUrl) <= 300 && (bool) filter_var($currentUrl, FILTER_VALIDATE_URL));
+        if ($quick && $name === '') {
+            $name = 'بررسی رایگان';
+        }
+        if ($name === '' || mb_strlen($name) > 120 || mb_strlen($company) > 120 || ! in_array($type, $types, true) || ! in_array($items, $itemChoices, true) || ! in_array($uses, $useChoices, true) || ! in_array($users, $userChoices, true) || ! in_array($current, $currentChoices, true) || ! in_array($hasCurrent, $hasChoices, true) || ! in_array($goal, $goalChoices, true) || ! in_array($platform, $platformChoices, true) || ! $urlOk || mb_strlen($message) > 2000 || ! StudioSms::isMobile($phone)) {
+            $error = $quick || $urlRequired ? 'آدرس سایت و موبایل ۱۱ رقمی را درست وارد کنید.' : 'نام و موبایل ۱۱ رقمی را درست وارد کنید.';
+
+            return redirect()->to($backTo)->withErrors(['phone' => $error])->withInput();
         }
         RateLimiter::hit($key, 3600);
         $row = [
@@ -100,6 +122,8 @@ class StudioController
             'current' => $current,
             'has_current' => $hasCurrent,
             'current_url' => $currentUrl,
+            'goal' => $goal,
+            'platform' => $platform,
             'message' => $message,
         ];
         try {
@@ -111,28 +135,59 @@ class StudioController
         } catch (\Throwable) {
         }
 
-        return redirect()->to($backTo)->with('design_lead', true);
+        return redirect()->to($backTo)->with($quick ? 'design_quick' : 'design_lead', true);
     }
 
-    public function designService(string $slug): View|RedirectResponse
+    public function designService(string $slug): View|RedirectResponse|Response
     {
         $item = StudioDesignCopy::service($slug);
         if ($item === null) {
             return redirect()->to(url('/design'));
         }
+        $path = '/design/'.$slug;
+        if ($cached = $this->cachedDesign($path)) {
+            return $cached;
+        }
 
         $pageData = StudioDesignCopy::servicePage($slug) ?? [];
+        $og = $pageData['og_image'] ?? '';
 
-        return $this->page('design-service', $pageData['seo_title'] ?? $item['seo_title'], [
+        return $this->respondDesign($path, $this->page('design-service', $pageData['seo_title'] ?? $item['seo_title'], [
             'description' => $pageData['seo_description'] ?? $item['seo_description'],
             'canonical' => 'https://hdd-land.ir/design/'.$slug,
             'ogTitle' => $pageData['seo_title'] ?? $item['seo_title'],
             'ogDescription' => $pageData['seo_description'] ?? $item['seo_description'],
-            'ogImage' => asset($pageData['og_image'] ?? 'images/hdd-land-icon-192.png'),
+            'ogImage' => asset($og !== '' ? $og : 'images/hdd-land-icon-192.png'),
+            'ogImageWidth' => $og !== '' ? 1200 : null,
+            'ogImageHeight' => $og !== '' ? 630 : null,
             'service' => $item,
             'servicePage' => $pageData,
             'cfg' => StudioDesignCopy::pageSettings(),
-        ]);
+        ]));
+    }
+
+    private function cachedDesign(string $path): ?Response
+    {
+        if (request()->user() || session()->has('design_lead') || session()->has('design_quick') || session()->has('errors')) {
+            return null;
+        }
+        $html = DesignPageCache::get($path);
+        if ($html === null) {
+            return null;
+        }
+
+        return response(str_replace('%%CSRF%%', csrf_token(), $html));
+    }
+
+    private function respondDesign(string $path, View $view): Response
+    {
+        $html = $view->render();
+        if (! request()->user() && ! session()->has('design_lead') && ! session()->has('design_quick') && ! session()->has('errors')) {
+            $token = csrf_token();
+            DesignPageCache::put($path, str_replace($token, '%%CSRF%%', $html));
+        }
+
+        return response($html);
     }
 
     public function about(): View

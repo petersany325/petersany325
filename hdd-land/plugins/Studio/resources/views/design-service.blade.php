@@ -68,7 +68,7 @@
       ],
   ];
 @endphp
-<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=67">
+<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=68">
 <section class="ag-page">
   <div class="ag-wrap dg-hero">
     <div>
@@ -81,6 +81,27 @@
       </p>
       <h1>{{ $page['h1'] ?? '' }}</h1>
       <p class="ag-lead">{{ $page['lead'] ?? '' }}</p>
+      @if(!empty($page['quick']))
+        <form class="ds-check" id="check" method="post" action="{{ url('/design/lead') }}">
+          @csrf
+          <input type="hidden" name="back" value="{{ url('/design/'.($page['slug'] ?? '')) }}">
+          <input type="hidden" name="quick" value="1">
+          <input type="hidden" name="type" value="بررسی رایگان سئو">
+          <div class="dg-hp" aria-hidden="true"><input name="dg_hp" tabindex="-1" autocomplete="off" value=""></div>
+          <b>بررسی رایگان سرعت و سئوی سایت شما</b>
+          <div class="row">
+            <input name="current_url" value="{{ old('current_url') }}" type="url" inputmode="url" dir="ltr" placeholder="https://your-site.ir" aria-label="آدرس سایت" required maxlength="300">
+            <input name="phone" value="{{ old('phone') }}" inputmode="tel" dir="ltr" placeholder="09xx xxx xxxx" aria-label="شمارهٔ موبایل" required autocomplete="tel">
+            <button class="ag-btn ag-btn--on" type="submit">گزارش رایگان</button>
+          </div>
+          @if(session('design_quick'))
+            <small class="dg-ok">درخواست ثبت شد. گزارش کوتاه را تا یک روز کاری پیامک یا واتس‌اپ می‌کنیم.</small>
+          @else
+            <small>گزارش کوتاه را تا یک روز کاری برایتان پیامک یا واتس‌اپ می‌کنیم.</small>
+          @endif
+          @if($errors->any() && old('quick'))<small class="dg-err">{{ $errors->first() }}</small>@endif
+        </form>
+      @endif
       <div class="ag-actions">
         <a class="ag-btn ag-btn--on" href="#contact">{{ $page['hero_cta'] ?? 'درخواست مشاوره رایگان' }}<i>←</i></a>
         @if($wa !== '')
@@ -124,6 +145,29 @@
     @endif
   </div>
 </section>
+
+@if(!empty($page['metrics']['items']))
+<section class="ag-sec">
+  <div class="ag-wrap">
+    <p class="ag-kicker">{{ $page['metrics']['kicker'] ?? '' }}</p>
+    <h2>{{ $page['metrics']['title'] ?? '' }}</h2>
+    @if(($page['metrics']['lead'] ?? '') !== '')<p class="ag-lead">{{ $page['metrics']['lead'] }}</p>@endif
+    <div class="ds-metrics">
+      @foreach($page['metrics']['items'] as $item)
+        <article class="ds-metric">
+          <span class="k">{{ $item['k'] }}</span>
+          <b>{{ $item['title'] }}</b>
+          <span class="goal">{{ $item['goal'] }}</span>
+          <p>{{ $item['text'] }}</p>
+        </article>
+      @endforeach
+    </div>
+    @if(($page['metrics']['image'] ?? '') !== '')
+      <img class="ds-shot-plain ds-gap" src="{{ asset($page['metrics']['image']) }}" width="{{ $page['metrics']['image_w'] ?? 1200 }}" height="{{ $page['metrics']['image_h'] ?? 750 }}" alt="{{ $page['metrics']['image_alt'] ?? '' }}" loading="lazy" decoding="async">
+    @endif
+  </div>
+</section>
+@endif
 
 @if(!empty($page['before_after']['before']['image']) && !empty($page['before_after']['after']['image']))
 <section class="ag-sec">
@@ -209,6 +253,19 @@
 </section>
 @endif
 
+@if(!empty($page['promise']['yes']) || !empty($page['promise']['no']))
+<section class="ag-sec">
+  <div class="ag-wrap">
+    <p class="ag-kicker">{{ $page['promise']['kicker'] ?? '' }}</p>
+    <h2>{{ $page['promise']['title'] ?? '' }}</h2>
+    <div class="ds-promise">
+      <div class="ds-yes"><h3>{{ $page['promise']['yes_title'] ?? 'قول می‌دهیم' }}</h3><ul>@foreach($page['promise']['yes'] ?? [] as $line)<li>{{ $line }}</li>@endforeach</ul></div>
+      <div class="ds-no"><h3>{{ $page['promise']['no_title'] ?? 'قول نمی‌دهیم' }}</h3><ul>@foreach($page['promise']['no'] ?? [] as $line)<li>{{ $line }}</li>@endforeach</ul></div>
+    </div>
+  </div>
+</section>
+@endif
+
 @if(!empty($page['checks']))
 <section class="ag-sec">
   <div class="ag-wrap ds-split">
@@ -279,6 +336,45 @@
           @endif
           <div><b>{{ $work['title'] }}</b>@if(($work['cat'] ?? '') !== '')<span>{{ $work['cat'] }}</span>@endif</div>
         </a>
+      @endforeach
+    </div>
+  </div>
+</section>
+@endif
+
+@if(!empty($page['results']))
+<section class="ag-sec">
+  <div class="ag-wrap">
+    <p class="ag-kicker">{{ $page['results_kicker'] ?? 'نتیجهٔ کار با عدد' }}</p>
+    <h2>{{ $page['results_title'] ?? 'نمونهٔ نتایج' }}</h2>
+    <div class="ds-results">
+      @foreach($page['results'] as $card)
+        <article class="ds-result"><b>{{ $card['name'] }}</b></article>
+      @endforeach
+    </div>
+  </div>
+</section>
+@endif
+
+@if(!empty($page['packages']['items']))
+<section class="ag-sec">
+  <div class="ag-wrap">
+    <p class="ag-kicker">{{ $page['packages']['kicker'] ?? '' }}</p>
+    <h2>{{ $page['packages']['title'] ?? '' }}</h2>
+    <div class="ds-pkgs">
+      @foreach($page['packages']['items'] as $pack)
+        <article class="ds-pk{{ !empty($pack['featured']) ? ' is-on' : '' }}">
+          <h3>{{ $pack['title'] }}</h3>
+          @if(($pack['price'] ?? '') !== '')
+            <p class="dg-price">{{ $pack['price_prefix'] ?? '' }} <b>{{ $pack['price'] }}</b> تومان</p>
+          @else
+            <p class="dg-price">{{ $pack['price_note'] ?? 'قیمت بعد از بررسی' }}</p>
+          @endif
+          <ul>
+            @foreach($pack['items'] as $line)<li>{{ $line }}</li>@endforeach
+          </ul>
+          <a class="ag-btn {{ !empty($pack['featured']) ? 'ag-btn--on' : 'ag-btn--line' }}" href="#contact">{{ $pack['button'] ?? 'درخواست' }}</a>
+        </article>
       @endforeach
     </div>
   </div>
@@ -358,7 +454,12 @@
       @if(empty($page['hide_company']))
         <label>{{ $companyLabel }}<input name="company" value="{{ old('company') }}" maxlength="120"></label>
       @endif
-      @if(!empty($page['type_before']))
+      @if(!empty($page['url_required']))
+        <input type="hidden" name="url_required" value="1">
+      @endif
+      @if(($page['type_hidden'] ?? '') !== '')
+        <input type="hidden" name="type" value="{{ $page['type_hidden'] }}">
+      @elseif(!empty($page['type_before']))
         <label>{{ $typeLabel }}
           <select name="type" required>
             @foreach($typeOptions as $type)
@@ -377,11 +478,11 @@
               @endforeach
             </select>
           @else
-            <input name="{{ $field['name'] }}" value="{{ old($field['name']) }}" @if(($field['type'] ?? '') === 'url') type="url" inputmode="url" dir="ltr" placeholder="https://" @endif maxlength="300">
+            <input name="{{ $field['name'] }}" value="{{ old($field['name']) }}" @if(($field['type'] ?? '') === 'url') type="url" inputmode="url" dir="ltr" placeholder="https://" @endif @if(!empty($field['required'])) required @endif maxlength="300">
           @endif
         </label>
       @endforeach
-      @if(empty($page['type_before']))
+      @if(empty($page['type_before']) && ($page['type_hidden'] ?? '') === '')
         <label>{{ $typeLabel }}
           <select name="type" required>
             @foreach($typeOptions as $type)
@@ -393,7 +494,7 @@
       <label class="dg-full">توضیح کوتاه (اختیاری)<textarea name="message" maxlength="2000">{{ old('message') }}</textarea></label>
       <button class="ag-btn ag-btn--on dg-full" type="submit">{{ $submitLabel }}</button>
       @if(session('design_lead'))<p class="dg-ok">درخواست ثبت شد. برای هماهنگی با شما تماس می‌گیریم.</p>@endif
-      @if($errors->any())<p class="dg-err">{{ $errors->first() }}</p>@endif
+      @if($errors->any() && !old('quick'))<p class="dg-err">{{ $errors->first() }}</p>@endif
     </form>
   </div>
 </section>

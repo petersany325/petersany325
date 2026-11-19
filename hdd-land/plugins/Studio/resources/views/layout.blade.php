@@ -24,6 +24,10 @@
     <meta property="og:title" content="{{ $ogTitle ?? $title ?? '' }}">
     <meta property="og:description" content="{{ $ogDescription ?? ($description ?? '') }}">
     <meta property="og:image" content="{{ $ogImage ?? asset('images/hdd-land-icon-192.png') }}">
+    @if(!empty($ogImageWidth) && !empty($ogImageHeight))
+      <meta property="og:image:width" content="{{ $ogImageWidth }}">
+      <meta property="og:image:height" content="{{ $ogImageHeight }}">
+    @endif
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $ogTitle ?? $title ?? '' }}">
     <meta name="twitter:description" content="{{ $twitterDescription ?? ($ogDescription ?? ($description ?? '')) }}">
@@ -41,7 +45,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap">
   <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=17">
   @if($agency)
-    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=67">
+    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=68">
   @endif
 </head>
 <body class="st-body{{ $agency ? ' ag-body' : '' }}{{ ($agency && class_exists(\App\Support\StudioHomeConfig::class) && \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome)) ? ' has-ag-tabbar' : '' }}{{ $hlAdminBar ? ' has-hl-adminbar' : '' }}"@if($agency) style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}"@endif>
