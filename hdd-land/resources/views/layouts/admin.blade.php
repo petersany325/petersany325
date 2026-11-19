@@ -42,6 +42,34 @@
       .adm-nav.is-searching[data-panel] .adm-group[data-panel]{display:block}
       .adm-nav.is-searching[data-panel] .adm-group[data-panel].is-filter-hidden{display:none}
       @media(max-width:900px){.admin-shell{grid-template-columns:1fr}}
+      .admin-main{font-family:Vazirmatn,Tahoma,sans-serif}
+      .admin-main .vb-page h1{font-size:1.02rem;font-weight:600;margin:0}
+      .admin-main .vb-page-head p,.admin-main .vb-page>p{font-size:.74rem;font-weight:400;color:#64748b}
+      .admin-main .btn{font-size:.72rem !important;font-weight:500 !important;padding:.38rem .72rem !important;border-radius:999px !important;line-height:1.4}
+      .admin-main .btn-primary{background:#7c5cff !important;border-color:#7c5cff !important;box-shadow:none !important}
+      .admin-main .btn-outline,.admin-main .btn-dark{border:1px solid #e2e8f0 !important;background:#fff !important;color:#334155 !important}
+      .admin-main .panel{border:1px solid #e6eaf2 !important;border-radius:14px !important;box-shadow:0 8px 22px rgba(15,23,42,.04);background:#fff}
+      .admin-main .panel .muted{font-size:.68rem;font-weight:500}
+      .admin-main .panel strong{font-size:.98rem !important;font-weight:600}
+      .admin-main .table{font-size:.74rem}
+      .admin-main .table th{font-size:.68rem;font-weight:500;color:#64748b}
+      .admin-main .vb-block{border:1px solid #e6eaf2;border-radius:14px;overflow:hidden;background:#fff}
+      .admin-main .vb-block-head{font-size:.78rem;font-weight:600;padding:.7rem .9rem;background:#f8fafc}
+      .admin-main .vb-opt{display:flex;align-items:center;justify-content:space-between;gap:.8rem;margin:.4rem .7rem;padding:.55rem .75rem;border:1px solid #e6eaf2;border-radius:12px;background:#fff}
+      .admin-main .vb-title{font-size:.76rem;font-weight:500}
+      .admin-main .vb-desc{display:block;font-size:.66rem;font-weight:400;color:#64748b;margin-top:.12rem}
+      .admin-main .hl-tog{margin:.35rem 0;padding:.55rem .7rem;border:1px solid #e6eaf2;border-radius:12px;background:#fff;border-bottom:1px solid #e6eaf2}
+      .admin-main .hl-tog__txt strong,.admin-main .hl-tog__title{font-size:.76rem !important;font-weight:500 !important}
+      .admin-main .hl-tog__txt small{font-size:.66rem !important;font-weight:400 !important}
+      .admin-main .hl-sw input:checked + .hl-sw__track{background:#7c5cff}
+      .admin-main .hl-sw input:focus-visible + .hl-sw__track{outline-color:#7c5cff}
+      .admin-main .hl-perm-group{border-radius:14px}
+      .admin-main .hl-perm-group h4{font-size:.7rem;font-weight:500}
+      .admin-main .card,.admin-main .ag-adm .card{border:1px solid #e6eaf2;border-radius:14px;box-shadow:0 8px 22px rgba(15,23,42,.04)}
+      .admin-main .card h2,.admin-main h2{font-size:.86rem;font-weight:600}
+      .admin-main label{font-size:.74rem;font-weight:500}
+      .admin-main input,.admin-main select,.admin-main textarea{font-size:.76rem;border-radius:10px}
+      .admin-main .hint,.admin-main .muted{font-size:.68rem}
     </style>
 </head>
 <body>
