@@ -40,7 +40,7 @@
     if ($('abRp')) $('abRp').textContent = '۰';
     if ($('abRs')) $('abRs').textContent = 'در حال خواندن…';
     for (var n = 0; n < N; n++) {
-      c[n].className = BAD.indexOf(n) >= 0 ? 'bad' : RD.indexOf(n) >= 0 ? 'rd' : 'ok';
+      c[n].className = BAD.indexOf(n) >= 0 ? 'ab-bad' : RD.indexOf(n) >= 0 ? 'ab-rd' : 'ab-ok';
       var p = Math.round((n + 1) / N * 1000) / 10;
       if ($('abRbar')) $('abRbar').style.width = p + '%';
       if ($('abRp')) $('abRp').textContent = faN(p.toFixed(1)).replace('.', '٫');
