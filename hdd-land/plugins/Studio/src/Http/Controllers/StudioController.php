@@ -71,8 +71,12 @@ class StudioController
         $type = trim((string) $request->input('type', ''));
         $message = trim((string) $request->input('message', ''));
         $company = trim((string) $request->input('company', ''));
+        $items = trim((string) $request->input('items', ''));
+        $uses = trim((string) $request->input('uses_accounting', ''));
+        $itemChoices = ['', 'کمتر از ۱۰۰', '۱۰۰ تا ۱۰۰۰', 'بیشتر از ۱۰۰۰'];
+        $useChoices = ['', 'بله', 'نه', 'می‌خواهم تهیه کنم'];
         $types = ['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'هنوز نمی‌دانم'];
-        if ($name === '' || mb_strlen($name) > 120 || mb_strlen($company) > 120 || ! in_array($type, $types, true) || mb_strlen($message) > 2000 || ! StudioSms::isMobile($phone)) {
+        if ($name === '' || mb_strlen($name) > 120 || mb_strlen($company) > 120 || ! in_array($type, $types, true) || ! in_array($items, $itemChoices, true) || ! in_array($uses, $useChoices, true) || mb_strlen($message) > 2000 || ! StudioSms::isMobile($phone)) {
             return redirect()->to($backTo)->withErrors(['phone' => 'نام و موبایل ۱۱ رقمی را درست وارد کنید.'])->withInput();
         }
         RateLimiter::hit($key, 3600);
@@ -82,6 +86,8 @@ class StudioController
             'phone' => StudioSms::normalizePhone($phone),
             'type' => $type,
             'company' => $company,
+            'items' => $items,
+            'uses_accounting' => $uses,
             'message' => $message,
         ];
         try {

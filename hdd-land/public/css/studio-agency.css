@@ -2370,10 +2370,25 @@
 .ds-pkg{display:grid;grid-template-columns:1fr 1.2fr;gap:1.4rem;border:1px solid #7c5cff;border-radius:20px;padding:1.4rem;background:linear-gradient(120deg,rgba(124,92,255,.18),rgba(124,92,255,.03))}
 .ds-pkg ul{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
 .ds-pkg li::before{content:"✓ ";color:#2ecc8f;font-weight:800}
+.ds-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.ds-grid i{aspect-ratio:3/4;border-radius:6px;background:rgba(255,255,255,.08)}
+.ds-journey{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:1rem 0 0;padding:0;list-style:none;counter-reset:j}
+.ds-journey li{position:relative;padding-top:42px}
+.ds-journey li::before{counter-increment:j;content:counter(j);position:absolute;top:0;right:0;width:32px;height:32px;border-radius:50%;border:1px solid #7c5cff;display:grid;place-items:center;color:#b9a8ff;font-weight:800}
+.ds-journey p{margin:.3rem 0 0;color:#b8bddf;font-size:.9rem}
+.ds-band{display:grid;grid-template-columns:1.2fr .8fr;gap:1.2rem;border:1px solid #7c5cff;border-radius:18px;padding:1.2rem;background:linear-gradient(120deg,rgba(124,92,255,.18),rgba(124,92,255,.03))}
+.ds-pipe{display:grid;gap:8px}
+.ds-pipe div{background:#070b18;border:1px solid #2b2650;border-radius:12px;padding:10px 14px;display:flex;justify-content:space-between;gap:8px}
+.ds-pipe span{color:#9097c0;font-size:.8rem}
+.ds-pipe em{text-align:center;color:#b9a8ff;font-style:normal}
+.ds-table{overflow-x:auto;padding:8px 12px}
+.ds-table table{width:100%;border-collapse:collapse;font-size:.8rem}
+.ds-table th,.ds-table td{text-align:right;padding:8px 6px;border-bottom:1px solid #2b2650;white-space:nowrap}
+.ds-table th{color:#9097c0;font-weight:500}
 .ds-others{display:flex;flex-wrap:wrap;gap:10px}
 .ds-others a{border:1px solid #2b2650;border-radius:999px;padding:8px 16px;color:#fff;text-decoration:none;background:#121428}
 @media (max-width:900px){
-  .ds-4,.ds-split,.ds-pkg{grid-template-columns:1fr}
+  .ds-4,.ds-split,.ds-pkg,.ds-band,.ds-journey{grid-template-columns:1fr}
   .ds-pkg ul{grid-template-columns:1fr}
 }
 @media (max-width:560px){.ds-facts{grid-template-columns:1fr}}
