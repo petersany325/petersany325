@@ -10,6 +10,7 @@ class StudioDesignCopy
     public static function seoTitle(string $page = 'design'): string
     {
         return match ($page) {
+            'design' => 'طراحی سایت در آمل | فراز نت آمل',
             'about' => 'درباره سرزمین هارد (فراز نت آمل) | بازیابی اطلاعات، نرم‌افزار و هوش مصنوعی',
             'contact' => 'تماس با سرزمین هارد (فراز نت آمل) | مشاور فروش، بازیابی اطلاعات و نرم‌افزار',
             default => (self::service($page)['seo_title'] ?? 'طراحی سایت حرفه‌ای با فراز نت آمل | لاراول'),
@@ -23,6 +24,49 @@ class StudioDesignCopy
             'contact' => 'تماس با شرکت فراز نت آمل (سرزمین هارد) برای بازیابی اطلاعات، حسابداری HDD Land، طراحی سایت و دستیار هوشمند فارسی. مشاور فروش: مهندس رضانژاد.',
             default => (self::service($page)['seo_description'] ?? 'طراحی سایت شرکتی، فروشگاهی و پروژه‌های اختصاصی با لاراول در آمل. کدنویسی اختصاصی، سئو، سرعت و پشتیبانی واقعی پس از تحویل.'),
         };
+    }
+
+    /** @return array<string, string> */
+    public static function pageSettings(): array
+    {
+        $defaults = [
+            'consultant_name' => 'مهندس رضانژاد',
+            'consultant_phone' => '09113100473',
+            'office_phone' => '01144447220',
+            'whatsapp' => '989113100473',
+            'years' => '۱۵+',
+            'projects' => '',
+            'renew' => '',
+            'price_base' => '',
+            'price_shop' => '',
+        ];
+        try {
+            if (class_exists(SettingsStore::class)) {
+                $saved = SettingsStore::get('studio_design_page', []);
+                if (is_array($saved)) {
+                    foreach ($defaults as $key => $value) {
+                        if (isset($saved[$key]) && is_string($saved[$key])) {
+                            $defaults[$key] = trim($saved[$key]);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return $defaults;
+    }
+
+    /** @return list<array{q:string,a:string}> */
+    public static function faqs(): array
+    {
+        return [
+            ['q' => 'طراحی سایت چقدر طول می‌کشد؟', 'a' => 'زمان دقیق بعد از مشخص شدن صفحات و امکانات، در قرارداد نوشته می‌شود.'],
+            ['q' => 'هزینه چطور حساب می‌شود؟', 'a' => 'بعد از جلسهٔ مشاوره، امکانات را فهرست می‌کنیم و قیمت ثابت در قرارداد می‌آید.'],
+            ['q' => 'بعد از تحویل، خودم می‌توانم محتوا را عوض کنم؟', 'a' => 'بله. پنل مدیریت فارسی دارید و کار با آن را آموزش می‌دهیم.'],
+            ['q' => 'فروشگاه به نرم‌افزار حسابداری وصل می‌شود؟', 'a' => 'اگر حسابداری HDD Land داشته باشید، سفارش سایت می‌تواند فاکتور فروش شود و موجودی و قیمت با دفتر یکی بماند.'],
+            ['q' => 'دامنه و هاست را هم شما تهیه می‌کنید؟', 'a' => 'اگر بخواهید تهیه می‌کنیم و سایت را روی دامنهٔ خودتان راه می‌اندازیم.'],
+        ];
     }
 
     /** @return list<array{slug:string,title:string,short:string,text:string,seo_title:string,seo_description:string}> */

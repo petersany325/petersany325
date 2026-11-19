@@ -2287,6 +2287,59 @@
 .tn-flag{opacity:.35;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.06)}
 .tn-flag.on{opacity:1}
 .tn-flag p{margin:2px 0 0;color:#9097c0;font-size:12.5px}
+.dg-hero{display:grid;grid-template-columns:1.05fr .95fr;gap:1.6rem;align-items:center}
+.dg-hero h1 em{font-style:normal;color:#a48bff}
+.dg-wa{border-color:rgba(47,210,127,.55);color:#2fd27f}
+.dg-stats{display:flex;flex-wrap:wrap;gap:.8rem 1.4rem;margin-top:1.1rem;padding-top:.8rem;border-top:1px solid rgba(255,255,255,.1)}
+.dg-stats b{display:block;font-size:1.35rem;color:#fff}
+.dg-stats span{color:#9097c0;font-size:.82rem}
+.dg-browser{background:#121428;border:1px solid #2b2650;border-radius:16px;overflow:hidden}
+.dg-bar{display:flex;gap:6px;align-items:center;padding:8px 12px;background:#171a33}
+.dg-bar i{width:8px;height:8px;border-radius:50%;background:#3a3f66}
+.dg-bar span{margin-inline-start:8px;color:#9097c0;font-size:12px;direction:ltr}
+.dg-browser img,.dg-work img{width:100%;height:auto;display:block}
+.dg-ico{width:38px;height:38px;border-radius:10px;background:rgba(124,92,255,.15);display:grid;place-items:center;color:#b9a8ff;flex:none}
+.dg-ico svg{width:20px;height:20px}
+.dg-acc{margin-top:1rem;border:1px solid #7c5cff;border-radius:18px;padding:1.2rem;display:grid;grid-template-columns:1.3fr 1fr;gap:1rem;background:linear-gradient(120deg,rgba(124,92,255,.22),rgba(124,92,255,.04))}
+.dg-acc h2{font-size:1.25rem}
+.dg-flow{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;font-weight:800}
+.dg-flow span{background:#070b18;border:1px solid #2b2650;border-radius:10px;padding:8px 12px}
+.dg-flow em{font-style:normal;color:#b9a8ff}
+.dg-works,.dg-pkgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:1rem}
+.dg-work{background:#121428;border:1px solid #262a4a;border-radius:14px;overflow:hidden;text-decoration:none;color:inherit}
+.dg-work div{padding:12px 14px}
+.dg-work b{display:block;color:#fff}
+.dg-work span{color:#b9a8ff;font-size:.78rem}
+.dg-why{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 18px;margin:0;padding:0;list-style:none}
+.dg-why li{display:flex;gap:8px;align-items:flex-start}
+.dg-why li::before{content:"";width:8px;height:8px;border-radius:50%;background:#7c5cff;margin-top:.55em;flex:none}
+.dg-pkg{background:#121428;border:1px solid #262a4a;border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:8px}
+.dg-pkg--on{border-color:#7c5cff;background:linear-gradient(180deg,rgba(124,92,255,.16),#121428 55%)}
+.dg-pkg span{align-self:flex-start;background:#7c5cff;color:#fff;border-radius:999px;font-size:.72rem;padding:1px 10px}
+.dg-pkg h3{margin:0;color:#fff}
+.dg-pkg ul{margin:0;padding:0 1rem 0 0;color:#b8bddf}
+.dg-price{color:#9097c0;margin:0}
+.dg-price b{color:#fff;font-size:1.15rem}
+.dg-faq{display:grid;gap:8px;max-width:820px}
+.dg-faq details{background:#121428;border:1px solid #262a4a;border-radius:12px;padding:4px 16px}
+.dg-faq summary{cursor:pointer;font-weight:800;color:#fff;padding:12px 0}
+.dg-faq p{margin:0 0 12px;color:#b8bddf}
+.dg-contact{display:grid;grid-template-columns:1fr 1.1fr;gap:1.4rem;background:#121428;border:1px solid #262a4a;border-radius:20px;padding:1.3rem}
+.dg-consult{border:1px solid #7c5cff;border-radius:14px;padding:12px 14px;margin:.6rem 0}
+.dg-consult small{color:#9097c0}
+.dg-consult b,.dg-consult a{display:block;color:#fff;font-weight:800;text-decoration:none}
+.dg-office a{color:#fff;font-weight:800;text-decoration:none}
+.dg-contact form{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dg-contact label{display:grid;gap:4px;font-size:.82rem;color:#b8bddf}
+.dg-contact input,.dg-contact select,.dg-contact textarea{width:100%;background:#070b18;border:1px solid #2b2650;border-radius:10px;padding:10px;color:#fff;font:inherit}
+.dg-full{grid-column:1/-1}
+.dg-hp{position:absolute;left:-9999px;height:0;overflow:hidden}
+.dg-ok{color:#2ecc8f;margin:0}
+.dg-err{color:#ffb3ba;margin:0}
+@media (max-width:900px){
+  .dg-hero,.dg-acc,.dg-contact,.dg-works,.dg-pkgs,.dg-why{grid-template-columns:1fr}
+  .dg-contact form{grid-template-columns:1fr}
+}
 .tn-hero > *{min-width:0}
 @media (max-width:900px){
   .tn-hero,.tn-two,.tn-lanes{grid-template-columns:1fr}

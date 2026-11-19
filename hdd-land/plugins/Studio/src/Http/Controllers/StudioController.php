@@ -11,6 +11,8 @@ use Plugins\ThemeBuilder\src\PageBuilder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Plugins\Studio\src\Support\StudioSms;
 use Plugins\Studio\Plugin as StudioPlugin;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -29,14 +31,61 @@ class StudioController
 
     public function design(): View
     {
-        return $this->page('design', StudioDesignCopy::seoTitle('design'), [
-            'description' => StudioDesignCopy::seoDescription('design'),
+        $title = StudioDesignCopy::seoTitle('design');
+        $description = StudioDesignCopy::seoDescription('design');
+
+        return $this->page('design', $title, [
+            'description' => $description,
+            'canonical' => 'https://hdd-land.ir/design',
+            'ogTitle' => $title,
+            'ogDescription' => $description,
+            'ogImage' => asset('images/studio/studio-work-shop.jpg'),
             'hero' => StudioDesignCopy::hero(),
             'aboutBlurb' => StudioDesignCopy::aboutBlurb(),
             'services' => StudioDesignCopy::services(),
             'reasons' => StudioDesignCopy::reasons(),
             'steps' => StudioDesignCopy::steps(),
+            'faqs' => StudioDesignCopy::faqs(),
+            'cfg' => StudioDesignCopy::pageSettings(),
+            'works' => class_exists(StudioHomeConfig::class) ? StudioHomeConfig::works() : [],
         ]);
+    }
+
+    public function designLead(Request $request): RedirectResponse
+    {
+        $key = 'design-lead:'.$request->ip();
+        if (RateLimiter::tooManyAttempts($key, 6)) {
+            return redirect()->to(url('/design').'#contact')->withErrors(['phone' => 'چند درخواست پشت سر هم آمد. کمی بعد دوباره بفرستید.'])->withInput();
+        }
+        if (trim((string) $request->input('website', '')) !== '') {
+            return redirect()->to(url('/design').'#contact')->with('design_lead', true);
+        }
+        $phone = strtr((string) $request->input('phone', ''), ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
+        $name = trim((string) $request->input('name', ''));
+        $type = trim((string) $request->input('type', ''));
+        $message = trim((string) $request->input('message', ''));
+        $types = ['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'هنوز نمی‌دانم'];
+        if ($name === '' || mb_strlen($name) > 120 || ! in_array($type, $types, true) || mb_strlen($message) > 2000 || ! StudioSms::isMobile($phone)) {
+            return redirect()->to(url('/design').'#contact')->withErrors(['phone' => 'نام و موبایل ۱۱ رقمی را درست وارد کنید.'])->withInput();
+        }
+        RateLimiter::hit($key, 3600);
+        $row = [
+            'at' => date('c'),
+            'name' => $name,
+            'phone' => StudioSms::normalizePhone($phone),
+            'type' => $type,
+            'message' => $message,
+        ];
+        try {
+            $path = storage_path('app/design-leads.jsonl');
+            if (! is_dir(dirname($path))) {
+                mkdir(dirname($path), 0755, true);
+            }
+            file_put_contents($path, json_encode($row, JSON_UNESCAPED_UNICODE).PHP_EOL, FILE_APPEND | LOCK_EX);
+        } catch (\Throwable) {
+        }
+
+        return redirect()->to(url('/design').'#contact')->with('design_lead', true);
     }
 
     public function designService(string $slug): View|RedirectResponse
@@ -443,7 +492,7 @@ JS;
         if (class_exists(\Plugins\ThemeBuilder\Plugin::class)) {
             \Plugins\ThemeBuilder\Plugin::registerViews();
         }
-        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration', 'software-beauty', 'software-psychology', 'software-dental', 'software-physio', 'ai', 'projects', 'contact', 'accounting-type', 'repair', 'repair-staff', 'repair-customer'], true) ? null : $this->builderForRequest();
+        $built = in_array($slug, ['about', 'computer-accounting', 'accounting-edition', 'accounting-corporate', 'accounting-supermarket', 'accounting-shop', 'accounting-distribution', 'accounting-restaurant', 'accounting-production', 'accounting-cafe', 'accounting-service', 'accounting-office', 'accounting-contracting', 'accounting-migration', 'software-beauty', 'software-psychology', 'software-dental', 'software-physio', 'ai', 'projects', 'contact', 'accounting-type', 'design', 'repair', 'repair-staff', 'repair-customer'], true) ? null : $this->builderForRequest();
         if ($built !== null) {
             $slug = 'builder';
             $title = trim((string) ($built['seo_title'] ?? '')) ?: trim((string) ($built['title'] ?? '')) ?: $title;

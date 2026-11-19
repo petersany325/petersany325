@@ -23,11 +23,11 @@
     <meta property="og:url" content="{{ $canonical }}">
     <meta property="og:title" content="{{ $ogTitle ?? $title ?? '' }}">
     <meta property="og:description" content="{{ $ogDescription ?? ($description ?? '') }}">
-    <meta property="og:image" content="{{ asset('images/hdd-land-icon-192.png') }}">
+    <meta property="og:image" content="{{ $ogImage ?? asset('images/hdd-land-icon-192.png') }}">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $ogTitle ?? $title ?? '' }}">
     <meta name="twitter:description" content="{{ $twitterDescription ?? ($ogDescription ?? ($description ?? '')) }}">
-    <meta name="twitter:image" content="{{ asset('images/hdd-land-icon-192.png') }}">
+    <meta name="twitter:image" content="{{ $ogImage ?? asset('images/hdd-land-icon-192.png') }}">
   @endif
   @if($agency && class_exists(\App\Support\StudioHomeConfig::class) && \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome))
     <link rel="manifest" href="{{ url('/studio-manifest.webmanifest') }}">
@@ -41,7 +41,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap">
   <link rel="stylesheet" href="{{ asset('css/studio.css') }}?v=17">
   @if($agency)
-    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=61">
+    <link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=62">
   @endif
 </head>
 <body class="st-body{{ $agency ? ' ag-body' : '' }}{{ ($agency && class_exists(\App\Support\StudioHomeConfig::class) && \App\Support\StudioHomeConfig::mobileWebAppOn($studioHome)) ? ' has-ag-tabbar' : '' }}{{ $hlAdminBar ? ' has-hl-adminbar' : '' }}"@if($agency) style="--ag-accent:{{ $studioHome['accent'] ?? '#7c5cff' }};--ag-bg:{{ $studioHome['bg'] ?? '#070b18' }}"@endif>
