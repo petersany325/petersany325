@@ -39,7 +39,7 @@ class StudioController
             'canonical' => 'https://hdd-land.ir/design',
             'ogTitle' => $title,
             'ogDescription' => $description,
-            'ogImage' => asset('images/studio/studio-work-shop.jpg'),
+            'ogImage' => asset(StudioDesignCopy::hero()['og']),
             'hero' => StudioDesignCopy::hero(),
             'aboutBlurb' => StudioDesignCopy::aboutBlurb(),
             'services' => StudioDesignCopy::services(),
@@ -79,8 +79,12 @@ class StudioController
         $useChoices = ['', 'بله', 'نه', 'می‌خواهم تهیه کنم'];
         $userChoices = ['', 'کمتر از ۱۰', '۱۰ تا ۵۰', 'بیشتر از ۵۰'];
         $currentChoices = ['', 'اکسل و کاغذ', 'نرم‌افزار دیگر', 'هیچ سیستمی ندارم'];
-        $types = ['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'هنوز نمی‌دانم', 'CRM و پیگیری مشتری', 'اتوماسیون اداری', 'رزرو و نوبت‌دهی', 'پورتال سازمانی', 'چیز دیگر'];
-        if ($name === '' || mb_strlen($name) > 120 || mb_strlen($company) > 120 || ! in_array($type, $types, true) || ! in_array($items, $itemChoices, true) || ! in_array($uses, $useChoices, true) || ! in_array($users, $userChoices, true) || ! in_array($current, $currentChoices, true) || mb_strlen($message) > 2000 || ! StudioSms::isMobile($phone)) {
+        $hasCurrent = trim((string) $request->input('has_current', ''));
+        $currentUrl = trim((string) $request->input('current_url', ''));
+        $hasChoices = ['', 'بله', 'نه، از صفر'];
+        $types = ['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'طراحی UI/UX', 'سئو و سرعت', 'پشتیبانی', 'هنوز نمی‌دانم', 'CRM و پیگیری مشتری', 'اتوماسیون اداری', 'رزرو و نوبت‌دهی', 'پورتال سازمانی', 'چیز دیگر', 'سایت', 'اپلیکیشن موبایل', 'پنل نرم‌افزار', 'بررسی UX سایت فعلی'];
+        $urlOk = $currentUrl === '' || (mb_strlen($currentUrl) <= 300 && filter_var($currentUrl, FILTER_VALIDATE_URL));
+        if ($name === '' || mb_strlen($name) > 120 || mb_strlen($company) > 120 || ! in_array($type, $types, true) || ! in_array($items, $itemChoices, true) || ! in_array($uses, $useChoices, true) || ! in_array($users, $userChoices, true) || ! in_array($current, $currentChoices, true) || ! in_array($hasCurrent, $hasChoices, true) || ! $urlOk || mb_strlen($message) > 2000 || ! StudioSms::isMobile($phone)) {
             return redirect()->to($backTo)->withErrors(['phone' => 'نام و موبایل ۱۱ رقمی را درست وارد کنید.'])->withInput();
         }
         RateLimiter::hit($key, 3600);
@@ -94,6 +98,8 @@ class StudioController
             'uses_accounting' => $uses,
             'users' => $users,
             'current' => $current,
+            'has_current' => $hasCurrent,
+            'current_url' => $currentUrl,
             'message' => $message,
         ];
         try {
@@ -122,6 +128,7 @@ class StudioController
             'canonical' => 'https://hdd-land.ir/design/'.$slug,
             'ogTitle' => $pageData['seo_title'] ?? $item['seo_title'],
             'ogDescription' => $pageData['seo_description'] ?? $item['seo_description'],
+            'ogImage' => asset($pageData['og_image'] ?? 'images/hdd-land-icon-192.png'),
             'service' => $item,
             'servicePage' => $pageData,
             'cfg' => StudioDesignCopy::pageSettings(),

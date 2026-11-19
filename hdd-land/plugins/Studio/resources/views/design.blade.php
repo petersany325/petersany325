@@ -7,7 +7,6 @@
   $cfg = $cfg ?? \App\Support\StudioDesignCopy::pageSettings();
   $works = $works ?? (class_exists(\App\Support\StudioHomeConfig::class) ? \App\Support\StudioHomeConfig::works() : []);
   $works = array_slice($works, 0, 6);
-  $shot = $works[0]['image'] ?? '';
   $icons = [
       'corporate' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>',
       'shop' => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16l-2 9H6z"/><circle cx="9" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/></svg>',
@@ -37,7 +36,7 @@
       'address' => ['@type' => 'PostalAddress', 'addressLocality' => 'آمل', 'addressCountry' => 'IR'],
   ];
 @endphp
-<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=66">
+<link rel="stylesheet" href="{{ asset('css/studio-agency.css') }}?v=67">
 <section class="ag-page">
   <div class="ag-wrap dg-hero">
     <div>
@@ -59,12 +58,7 @@
         </div>
       @endif
     </div>
-    <div class="dg-browser" aria-label="پیش‌نمایش نمونه‌کار">
-      <div class="dg-bar"><i></i><i></i><i></i><span>hdd-land.ir</span></div>
-      @if($shot !== '')
-        <img src="{{ \App\Support\StudioHomeConfig::imageUrl($shot) }}" alt="{{ $works[0]['title'] ?? 'نمونه‌کار طراحی سایت' }}" width="1280" height="720" fetchpriority="high" decoding="async">
-      @endif
-    </div>
+    <img class="ds-shot-plain" src="{{ asset($hero['image']) }}" width="{{ $hero['image_w'] }}" height="{{ $hero['image_h'] }}" alt="{{ $hero['image_alt'] }}" fetchpriority="high" decoding="async">
   </div>
 </section>
 
