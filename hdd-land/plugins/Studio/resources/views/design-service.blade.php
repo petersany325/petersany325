@@ -24,6 +24,15 @@
   $officeTel = preg_replace('/\D+/', '', (string) $cfg['office_phone']) ?? '';
   $wa = preg_replace('/\D+/', '', (string) ($page['whatsapp'] ?? $cfg['whatsapp'])) ?? '';
   $faqs = $page['faqs'] ?? [];
+  $leadType = match ($page['slug'] ?? '') {
+      'corporate' => 'سایت شرکتی',
+      'shop' => 'فروشگاه اینترنتی',
+      'laravel' => 'سامانهٔ اختصاصی',
+      default => 'هنوز نمی‌دانم',
+  };
+  $contactTitle = ($page['slug'] ?? '') === 'corporate'
+      ? 'آماده‌اید سایت شرکتی‌تان را بسازیم؟'
+      : 'آماده‌اید «'.($page['h1'] ?? 'این خدمت').'» را شروع کنیم؟';
   $faqLd = ['@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => []];
   foreach ($faqs as $faq) {
       $faqLd['mainEntity'][] = ['@type' => 'Question', 'name' => $faq['q'], 'acceptedAnswer' => ['@type' => 'Answer', 'text' => $faq['a']]];
@@ -211,7 +220,7 @@
   <div class="ag-wrap dg-contact">
     <div>
       <p class="ag-kicker">مشاورهٔ رایگان</p>
-      <h2>آماده‌اید سایت شرکتی‌تان را بسازیم؟</h2>
+      <h2>{{ $contactTitle }}</h2>
       <p class="ag-lead">فرم را بفرستید تا برای هماهنگی با شما تماس بگیریم.</p>
       <div class="dg-consult">
         <div>
@@ -235,7 +244,7 @@
       <label>نوع پروژه
         <select name="type" required>
           @foreach(['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'هنوز نمی‌دانم'] as $type)
-            <option @selected(old('type', 'سایت شرکتی') === $type)>{{ $type }}</option>
+            <option @selected(old('type', $leadType) === $type)>{{ $type }}</option>
           @endforeach
         </select>
       </label>
