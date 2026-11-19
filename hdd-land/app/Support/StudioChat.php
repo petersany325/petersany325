@@ -228,21 +228,29 @@ class StudioChat
         if (($packed['handoff'] ?? null) !== 'sales') {
             return $packed;
         }
-        $phone = self::phone((string) (self::get()['consult_phone'] ?? ''));
+        $settings = self::get();
+        $phone = self::phone((string) ($settings['consult_phone'] ?? ''));
         if ($phone === '') {
             return $packed;
         }
+        $label = trim((string) ($settings['consult_label'] ?? ''));
+        if ($label === '') {
+            $label = 'مشاوره فروش';
+        }
         $shown = self::persianDigits($phone);
         if (! str_contains($packed['text'], $phone) && ! str_contains($packed['text'], $shown)) {
-            $packed['text'] .= ' مشاوره فروش: '.$shown.'.';
+            $packed['text'] .= ' '.$label.': '.$shown.'.';
         }
         $tel = 'tel:'.$phone;
-        foreach ($packed['links'] as $link) {
+        $chip = $label.' '.$shown;
+        foreach ($packed['links'] as $i => $link) {
             if (($link['url'] ?? '') === $tel) {
+                $packed['links'][$i]['label'] = $chip;
+
                 return $packed;
             }
         }
-        $packed['links'][] = ['label' => 'مشاوره فروش '.$shown, 'url' => $tel];
+        $packed['links'][] = ['label' => $chip, 'url' => $tel];
 
         return $packed;
     }
