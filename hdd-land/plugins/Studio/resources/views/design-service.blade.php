@@ -171,7 +171,8 @@
     </div>
     <div class="ds-pipe">
       @foreach($page['band']['flow'] as $i => $node)
-        @if($i > 0 && ($page['band']['arrow'] ?? '↓') !== '')<em>{{ $page['band']['arrow'] }}</em>@endif
+        @php $bandArrow = $page['band']['arrow'] ?? '↓'; @endphp
+        @if($i > 0 && $bandArrow !== '')<em>{{ $bandArrow }}</em>@endif
         <div><b>{{ $node[0] }}</b><span>{{ $node[1] }}</span></div>
       @endforeach
     </div>
