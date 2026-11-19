@@ -206,6 +206,7 @@ class StudioHomeConfig
         $s = self::get();
         $s['menu_custom'] = false;
         $s['menu_tree'] = [];
+        $s['nav'] = (string) (self::defaults()['nav'] ?? '');
         SettingsStore::set(self::KEY, $s);
 
         return $s;
