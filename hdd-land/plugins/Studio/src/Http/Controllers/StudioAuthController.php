@@ -203,18 +203,21 @@ class StudioAuthController
     {
         $login = trim((string) $request->input('login', ''));
         $password = (string) $request->input('password', '');
-        $key = 'staff-password:'.$request->ip();
-        if (RateLimiter::tooManyAttempts($key, 8)) {
+        $ipKey = 'staff-password-ip:'.$request->ip();
+        $loginKey = 'staff-password-login:'.hash('sha256', mb_strtolower($login));
+        if (RateLimiter::tooManyAttempts($ipKey, 8) || ($login !== '' && RateLimiter::tooManyAttempts($loginKey, 8))) {
             return back()->withInput($request->except('password'))->with('error', 'چند بار رمز اشتباه آمد. کمی بعد دوباره تلاش کنید.');
         }
         $user = $this->findStaffByLogin($login);
         $hash = (string) ($user->password ?? '');
         if (! $user || ! $this->isStaffUser($user) || $password === '' || $hash === '' || ! \Illuminate\Support\Facades\Hash::check($password, $hash)) {
-            RateLimiter::hit($key, 900);
+            RateLimiter::hit($ipKey, 900);
+            if ($login !== '') {
+                RateLimiter::hit($loginKey, 900);
+            }
 
             return back()->withInput($request->except('password'))->with('error', 'نام کاربری یا رمز درست نیست.');
         }
-        RateLimiter::clear($key);
         $this->touchStaffLogin($user);
         $this->loginUser($request, $user);
         if (class_exists(\App\Support\StudioNotify::class)) {

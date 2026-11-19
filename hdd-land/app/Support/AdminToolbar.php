@@ -31,7 +31,7 @@ class AdminToolbar
         if ($path === 'admin' || str_starts_with($path, 'admin/') || $path === 'staff' || str_starts_with($path, 'staff/')) {
             $ctx = [
                 'label' => str_starts_with($path, 'staff') ? 'کارتابل نماینده' : 'پنل مدیریت',
-                'primary' => ['label' => 'تنظیمات صفحه اول', 'url' => url('/admin/studio-home')],
+                'primary' => $can('site.homepage') ? ['label' => 'تنظیمات صفحه اول', 'url' => url('/admin/studio-home')] : null,
                 'links' => [],
             ];
         } else {
@@ -183,7 +183,9 @@ class AdminToolbar
                 $path === 'support' => 'پشتیبانی',
                 default => 'صفحه استودیو',
             };
-            $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            if ($can('site.homepage')) {
+                $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            }
             static::studioLinks($can, $add);
 
             return compact('label', 'primary', 'links');
@@ -195,7 +197,9 @@ class AdminToolbar
                 str_starts_with($path, 'repair-shop') => 'تعمیرگاه',
                 default => 'حسابداری وب',
             };
-            $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            if ($can('site.homepage')) {
+                $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            }
             static::studioLinks($can, $add);
 
             return compact('label', 'primary', 'links');
@@ -203,7 +207,9 @@ class AdminToolbar
 
         if ($path === 'sites' || str_starts_with($path, 'sites/')) {
             $label = 'فروش سایت';
-            $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            if ($can('site.homepage')) {
+                $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            }
             static::studioLinks($can, $add);
 
             return compact('label', 'primary', 'links');
