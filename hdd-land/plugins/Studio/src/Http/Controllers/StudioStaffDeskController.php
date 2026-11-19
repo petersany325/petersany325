@@ -189,14 +189,13 @@ class StudioStaffDeskController
         }
         $user = Auth::user();
         try {
-            if ($user && (method_exists($user, 'isStaff') && $user->isStaff() || method_exists($user, 'isAdmin') && $user->isAdmin())) {
+            if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
+                return null;
+            }
+            if ($user && method_exists($user, 'isStaff') && $user->isStaff()) {
                 return null;
             }
         } catch (\Throwable) {
-        }
-        $role = is_object($user) ? (string) ($user->role ?? '') : '';
-        if (in_array($role, ['staff', 'admin', 'seller'], true) || ! empty($user->is_admin)) {
-            return null;
         }
 
         return redirect()->to(url('/auth/staff'))->with('error', 'این حساب کارمند فعال نیست.');
