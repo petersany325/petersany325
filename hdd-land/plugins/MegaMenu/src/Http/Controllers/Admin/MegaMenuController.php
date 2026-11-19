@@ -38,7 +38,7 @@ class MegaMenuController extends Controller
 
     public function saveSettings(Request $request): RedirectResponse|JsonResponse
     {
-        if ($request->has('nav_label') && class_exists(\App\Support\StudioHomeConfig::class)) {
+        if ($request->has('site_menu') && class_exists(\App\Support\StudioHomeConfig::class)) {
             $labels = (array) $request->input('nav_label', []);
             $urls = (array) $request->input('nav_url', []);
             $lines = [];

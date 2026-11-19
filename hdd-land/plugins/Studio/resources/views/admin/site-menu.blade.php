@@ -73,6 +73,7 @@
   </div>
   <form class="sm-form" method="post" action="{{ url('/admin/mega-menu/settings') }}">
     @csrf
+    <input type="hidden" name="site_menu" value="1">
     <h2>عنوان‌های اصلی منو</h2>
     <p class="lead">هر ردیف یک دکمه در نوار بالاست. اگر عنوان «طراحی سایت» باشد، زیرمنوی خدمات طراحی به آن وصل می‌شود.</p>
     <div id="sm-rows">
