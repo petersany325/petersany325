@@ -406,6 +406,7 @@
           ['label' => 'نرم‌افزار', 'href' => url('/computer-accounting'), 'active' => false, 'ext' => true],
           ['label' => 'هوش مصنوعی', 'href' => url('/ai'), 'active' => false, 'ext' => true],
           ['label' => 'تنظیم درگاه پیامک', 'href' => $u('studio-sms'), 'active' => $is('studio-sms')],
+          ['label' => 'تنظیمات چت آنلاین', 'href' => $u('studio-chat'), 'active' => $is('studio-chat')],
           ['label' => 'مگامنو', 'href' => $u('mega-menu'), 'active' => $is('mega-menu')],
           ['label' => 'فوتر', 'href' => $u('footer-settings'), 'active' => $is('footer-settings')],
           ['label' => 'صفحه‌ساز', 'href' => $u('page-builder'), 'active' => $is('page-builder')],
@@ -455,6 +456,13 @@
     }
     if ($canHome) {
       array_unshift($themeKept, ['label' => 'تنظیمات صفحه اول سایت', 'href' => $u('studio-home'), 'active' => $is('studio-home')]);
+      if (! isset($groups['access'])) {
+        array_splice($themeKept, 1, 0, [[
+          'label' => 'تنظیمات چت آنلاین',
+          'href' => $u('studio-chat'),
+          'active' => $is('studio-chat'),
+        ]]);
+      }
     }
     $groups['theme']['items'] = $themeKept;
     if ($bannerItem && $canHome && ! isset($groups['shop-home'])) {
@@ -563,7 +571,7 @@
       str_starts_with($rel, 'theme-templates') => 'site.theme_templates',
       str_starts_with($rel, 'theme-builder') => 'site.theme_builder',
       str_starts_with($rel, 'page-builder'), str_starts_with($rel, 'about-page'), str_starts_with($rel, 'services-page'), str_starts_with($rel, 'contact-page'), str_starts_with($rel, 'training-page') => 'site.page_builder',
-      str_starts_with($rel, 'homepage-settings'), str_starts_with($rel, 'studio-home'), str_starts_with($rel, 'studio-sms'), str_starts_with($rel, 'online-home'), str_starts_with($rel, 'banner-settings') => 'site.homepage',
+      str_starts_with($rel, 'homepage-settings'), str_starts_with($rel, 'studio-home'), str_starts_with($rel, 'studio-sms'), str_starts_with($rel, 'studio-chat'), str_starts_with($rel, 'online-home'), str_starts_with($rel, 'banner-settings') => 'site.homepage',
       str_starts_with($rel, 'footer-settings') => 'site.footer',
       str_starts_with($rel, 'web-app') => 'site.webapp',
       $rel === 'settings' || str_starts_with($rel, 'settings/') => 'site.shop_settings',

@@ -1,0 +1,28 @@
+.fc{position:fixed;right:1rem;bottom:1rem;z-index:80;font-family:Vazirmatn,Tahoma,sans-serif}
+.fc.is-left{right:auto;left:1rem}
+.has-ag-tabbar .fc{bottom:4.6rem}
+.fc-fab{display:flex;align-items:center;gap:.45rem;border:0;border-radius:999px;padding:.28rem .7rem .28rem .28rem;background:#070b18;color:#fff;box-shadow:0 12px 30px rgba(7,11,24,.35);cursor:pointer}
+.fc-fab img,.fc-head img{border-radius:50%;object-fit:cover;display:block;border:2px solid #7c5cff}
+.fc-fab span{font-size:.78rem;font-weight:600}
+.fc-panel{position:absolute;right:0;bottom:4.2rem;width:min(360px,calc(100vw - 1.5rem));height:min(540px,70vh);display:flex;flex-direction:column;background:#0c1224;color:#eef2ff;border:1px solid rgba(255,255,255,.08);border-radius:18px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.fc.is-left .fc-panel{right:auto;left:0}
+.fc-head{display:flex;align-items:center;gap:.6rem;padding:.7rem .8rem;background:#070b18;border-bottom:1px solid rgba(255,255,255,.06)}
+.fc-head b{display:block;font-size:.84rem;font-weight:600}
+.fc-head small{color:#9aa3b8;font-size:.68rem}
+.fc-head button{margin-right:auto;border:0;background:transparent;color:#fff;font-size:1.3rem;cursor:pointer}
+.fc-log{flex:1;overflow:auto;padding:.75rem;display:flex;flex-direction:column;gap:.55rem}
+.fc-msg{max-width:92%;padding:.55rem .7rem;border-radius:14px;font-size:.78rem;line-height:1.7}
+.fc-msg p{margin:0}
+.fc-msg--bot{background:#161c31;align-self:flex-start}
+.fc-msg--user{background:#7c5cff;align-self:flex-end}
+.fc-links{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.4rem}
+.fc-links a,.fc-suggest button,.fc-human a{border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:.22rem .55rem;color:#e7e3ff;text-decoration:none;font-size:.68rem;background:transparent}
+.fc-suggest{display:flex;gap:.3rem;overflow:auto;padding:0 .7rem .45rem}
+.fc-suggest button{color:#d5dcf0;cursor:pointer;white-space:nowrap}
+.fc-form{display:flex;gap:.35rem;padding:.55rem .7rem;border-top:1px solid rgba(255,255,255,.06)}
+.fc-form input{flex:1;border:1px solid rgba(255,255,255,.1);background:#070b18;color:#fff;border-radius:999px;padding:.5rem .75rem;font:inherit;font-size:.76rem}
+.fc-form button{border:0;border-radius:999px;background:#7c5cff;color:#fff;padding:.45rem .75rem;font:inherit;font-size:.74rem;font-weight:600;cursor:pointer}
+.fc-human{display:grid;grid-template-columns:1fr 1fr;gap:.35rem;padding:.45rem .7rem .7rem}
+.fc-human.is-one{grid-template-columns:1fr}
+.fc-human a{text-align:center;padding:.4rem .3rem}
+.fc-human a:first-child{background:#7c5cff;color:#fff;border-color:transparent}

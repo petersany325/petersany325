@@ -43,6 +43,7 @@ class AdminToolbar
             $can('site.homepage') ? ['label' => 'بنر صفحه اول فروشگاه', 'url' => url('/admin/homepage-settings')] : null,
             $isAdmin || $can('full_site') ? ['label' => 'تنظیمات حسابداری', 'url' => url('/admin/accounting/settings')] : null,
             $can('site.homepage') ? ['label' => 'تنظیم درگاه پیامک', 'url' => url('/admin/studio-sms')] : null,
+            $can('site.homepage') ? ['label' => 'تنظیمات چت آنلاین', 'url' => url('/admin/studio-chat')] : null,
             $isAdmin || $can('full_site') ? ['label' => 'تنظیمات فاکتور', 'url' => url('/admin/invoice-design')] : null,
             $isAdmin || $can('serials') || $can('sales') ? ['label' => 'بارکد و سریال', 'url' => url('/admin/serial-sales')] : null,
             $isAdmin ? ['label' => 'تنظیمات ثبت‌نام مشتری', 'url' => url('/admin/auth-settings?tab=register')] : null,
