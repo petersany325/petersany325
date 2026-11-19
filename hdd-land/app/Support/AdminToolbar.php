@@ -105,9 +105,11 @@ class AdminToolbar
         if ($path === '' || $path === '/') {
             $label = $studio ? 'خانه استودیو' : 'خانه فروشگاه';
             if ($studio) {
-                $primary = static::builderEdit('/', $can) ?: ($can('site.homepage') ? ['label' => 'ویرایش', 'url' => url('/admin/studio-home')] : null);
-                $add($can('site.homepage') ? ['label' => 'کلیدهای نمایش خانه', 'url' => url('/admin/studio-home')] : null);
-                $add(['label' => 'بنر فروشگاه', 'url' => url('/admin/homepage-settings')]);
+                $primary = $can('site.homepage') ? ['label' => 'ویرایش', 'url' => url('/admin/studio-home')] : null;
+                $add($can('site.homepage') ? ['label' => 'تنظیمات صفحه اول', 'url' => url('/admin/studio-home')] : null);
+                $add($can('site.homepage') ? ['label' => 'طراحی سایت', 'url' => url('/design')] : null);
+                $add($can('site.homepage') ? ['label' => 'نرم‌افزار', 'url' => url('/computer-accounting')] : null);
+                $add($can('site.homepage') ? ['label' => 'هوش مصنوعی', 'url' => url('/ai')] : null);
             } elseif ($can('site.homepage')) {
                 $primary = ['label' => 'ویرایش', 'url' => url('/admin/homepage-settings')];
                 $add(['label' => 'صفحه اول استودیو', 'url' => url('/admin/studio-home')]);
