@@ -28,11 +28,7 @@ class DesignPageCache
         if (strlen($html) < 8000 || ! str_contains($html, '%%CSRF%%') || ! self::trustedHost() || self::hasForeignAppUrl($html)) {
             return;
         }
-        $html = str_ireplace(
-            ['https://www.hdd-land.ir', 'http://www.hdd-land.ir', 'http://hdd-land.ir'],
-            'https://hdd-land.ir',
-            $html
-        );
+        $html = preg_replace('#https?://(?:www\.)?hdd-land\.ir(?::\d+)?#i', 'https://hdd-land.ir', $html) ?? $html;
         $dir = dirname(self::file($path));
         if (! is_dir($dir)) {
             mkdir($dir, 0755, true);
@@ -76,7 +72,7 @@ class DesignPageCache
     /** Only the public site may write the shared cache. A forged Host must not. */
     private static function trustedHost(): bool
     {
-        $host = strtolower((string) preg_replace('/:\d+$/', '', (string) request()->getHttpHost()));
+        $host = strtolower((string) request()->getHttpHost());
 
         return in_array($host, ['hdd-land.ir', 'www.hdd-land.ir'], true);
     }
@@ -84,6 +80,6 @@ class DesignPageCache
     /** Form and asset URLs must stay on this site. Other hosts, such as fonts, are left alone. */
     private static function hasForeignAppUrl(string $html): bool
     {
-        return (bool) preg_match('#https?://(?!(?:www\.)?hdd-land\.ir)[^"\'\s>]+/(?:design(?:/|$)|css/|images/)#i', $html);
+        return (bool) preg_match('#https?://(?!(?:www\.)?hdd-land\.ir(?=/|["\'\s>]|$))[^"\'\s>]+/(?:design(?:/|$)|css/|images/)#i', $html);
     }
 }
