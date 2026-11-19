@@ -93,9 +93,15 @@ class StudioController
         }
         $goal = trim((string) $request->input('goal', ''));
         $platform = trim((string) $request->input('platform', ''));
+        $builder = trim((string) $request->input('builder', ''));
+        $issue = trim((string) $request->input('issue', ''));
+        $plan = trim((string) $request->input('plan', ''));
         $hasChoices = ['', 'بله', 'نه، از صفر'];
         $goalChoices = ['', 'فروش آنلاین بیشتر', 'تماس و مشتری بیشتر', 'دیده‌شدن در نقشه و جستجوی محلی', 'فقط سرعت سایت'];
         $platformChoices = ['', 'وردپرس', 'لاراول', 'سیستم دیگر', 'نمی‌دانم'];
+        $builderChoices = ['', 'فراز نت آمل', 'طراح یا شرکت دیگر', 'نمی‌دانم'];
+        $issueChoices = ['', 'فقط نگهداری می‌خواهم', 'سایت کند است', 'سایت خطا می‌دهد یا بالا نمی‌آید', 'فکر می‌کنم هک شده', 'طراح قبلی جواب نمی‌دهد'];
+        $planChoices = ['', 'هنوز نمی‌دانم', 'پایه', 'حرفه‌ای', 'سازمانی'];
         $types = ['سایت شرکتی', 'فروشگاه اینترنتی', 'سامانهٔ اختصاصی', 'طراحی UI/UX', 'سئو و سرعت', 'پشتیبانی', 'هنوز نمی‌دانم', 'CRM و پیگیری مشتری', 'اتوماسیون اداری', 'رزرو و نوبت‌دهی', 'پورتال سازمانی', 'چیز دیگر', 'سایت', 'اپلیکیشن موبایل', 'پنل نرم‌افزار', 'بررسی UX سایت فعلی', 'بررسی رایگان سئو'];
         $urlRequired = (string) $request->input('url_required', '') === '1' || $type === 'بررسی رایگان سئو';
         $urlOk = $currentUrl === ''
@@ -104,7 +110,7 @@ class StudioController
         if ($quick && $name === '') {
             $name = 'بررسی رایگان';
         }
-        if ($name === '' || mb_strlen($name) > 120 || mb_strlen($company) > 120 || ! in_array($type, $types, true) || ! in_array($items, $itemChoices, true) || ! in_array($uses, $useChoices, true) || ! in_array($users, $userChoices, true) || ! in_array($current, $currentChoices, true) || ! in_array($hasCurrent, $hasChoices, true) || ! in_array($goal, $goalChoices, true) || ! in_array($platform, $platformChoices, true) || ! $urlOk || mb_strlen($message) > 2000 || ! StudioSms::isMobile($phone)) {
+        if ($name === '' || mb_strlen($name) > 120 || mb_strlen($company) > 120 || ! in_array($type, $types, true) || ! in_array($items, $itemChoices, true) || ! in_array($uses, $useChoices, true) || ! in_array($users, $userChoices, true) || ! in_array($current, $currentChoices, true) || ! in_array($hasCurrent, $hasChoices, true) || ! in_array($goal, $goalChoices, true) || ! in_array($platform, $platformChoices, true) || ! in_array($builder, $builderChoices, true) || ! in_array($issue, $issueChoices, true) || ! in_array($plan, $planChoices, true) || ! $urlOk || mb_strlen($message) > 2000 || ! StudioSms::isMobile($phone)) {
             $error = $quick || $urlRequired ? 'آدرس سایت و موبایل ۱۱ رقمی را درست وارد کنید.' : 'نام و موبایل ۱۱ رقمی را درست وارد کنید.';
 
             return redirect()->to($backTo)->withErrors(['phone' => $error])->withInput();
@@ -124,6 +130,9 @@ class StudioController
             'current_url' => $currentUrl,
             'goal' => $goal,
             'platform' => $platform,
+            'builder' => $builder,
+            'issue' => $issue,
+            'plan' => $plan,
             'message' => $message,
         ];
         try {
@@ -133,6 +142,15 @@ class StudioController
             }
             file_put_contents($path, json_encode($row, JSON_UNESCAPED_UNICODE).PHP_EOL, FILE_APPEND | LOCK_EX);
         } catch (\Throwable) {
+        }
+        if (in_array($issue, ['سایت خطا می‌دهد یا بالا نمی‌آید', 'فکر می‌کنم هک شده'], true)) {
+            try {
+                $alertPhone = (string) (StudioDesignCopy::pageSettings()['consultant_phone'] ?? '');
+                if ($alertPhone !== '') {
+                    StudioSms::sendSms($alertPhone, 'درخواست فوری پشتیبانی: '.$issue.' — '.$phone.' — '.$currentUrl);
+                }
+            } catch (\Throwable) {
+            }
         }
 
         return redirect()->to($backTo)->with($quick ? 'design_quick' : 'design_lead', true);
@@ -168,7 +186,7 @@ class StudioController
 
     private function cachedDesign(string $path): ?Response
     {
-        if (request()->user() || session()->has('design_lead') || session()->has('design_quick') || session()->has('errors')) {
+        if (request()->user() || request()->query() !== [] || session()->has('design_lead') || session()->has('design_quick') || session()->has('errors')) {
             return null;
         }
         $html = DesignPageCache::get($path);
@@ -182,7 +200,7 @@ class StudioController
     private function respondDesign(string $path, View $view): Response
     {
         $html = $view->render();
-        if (! request()->user() && ! session()->has('design_lead') && ! session()->has('design_quick') && ! session()->has('errors')) {
+        if (! request()->user() && request()->query() === [] && ! session()->has('design_lead') && ! session()->has('design_quick') && ! session()->has('errors')) {
             $token = csrf_token();
             DesignPageCache::put($path, str_replace($token, '%%CSRF%%', $html));
         }

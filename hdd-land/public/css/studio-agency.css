@@ -2414,13 +2414,28 @@
 .ds-no{background:#2a1218;border:1px solid #6e2330;border-radius:16px;padding:14px}
 .ds-yes li::before{content:"✓ ";color:#2ecc8f;font-weight:800}
 .ds-no li::before{content:"✕ ";color:#ff8fa0;font-weight:800}
-.ds-pkgs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:1rem}
+.ds-pkgs{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:1rem}
 .ds-pk{border:1px solid #2b2650;border-radius:18px;padding:1.1rem;background:#121428;min-width:0}
 .ds-pk.is-on{border-color:#7c5cff;background:linear-gradient(120deg,rgba(124,92,255,.18),rgba(124,92,255,.03))}
 .ds-pk h3{margin:0}
 .ds-pk ul{margin:.8rem 0 1rem;padding:0;list-style:none;display:grid;gap:6px}
 .ds-pk li::before{content:"✓ ";color:#2ecc8f;font-weight:800}
-@media (max-width:760px){.ds-metrics,.ds-promise,.ds-pkgs{grid-template-columns:1fr}}
+.ds-badge{display:inline-block;background:#7c5cff;color:#fff;border-radius:999px;font-size:.75rem;padding:2px 10px;margin-bottom:8px}
+.ds-sla{overflow-x:auto;margin-top:1rem}
+.ds-sla table{width:100%;border-collapse:collapse;min-width:520px}
+.ds-sla th,.ds-sla td{text-align:right;padding:10px 8px;border-bottom:1px solid #2b2650;vertical-align:top}
+.ds-sla th{color:#9097c0;font-weight:500}
+.ds-sla b{display:block;color:#fff}
+.ds-sla small{display:block;color:#9097c0}
+.ds-lvl{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.78rem;font-weight:700}
+.ds-lvl.bad{background:rgba(255,80,100,.18);color:#ff8fa0}
+.ds-lvl.warn{background:rgba(255,209,102,.16);color:#ffd166}
+.ds-lvl.norm{background:rgba(124,92,255,.2);color:#b9a8ff}
+.ds-channels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.ds-channels div{background:#121428;border:1px solid #2b2650;border-radius:12px;padding:12px;min-width:0}
+.ds-channels b{display:block;color:#fff}
+.ds-channels span{color:#b8bddf;font-size:.88rem}
+@media (max-width:760px){.ds-metrics,.ds-promise,.ds-pkgs,.ds-channels{grid-template-columns:1fr}}
 .ds-ba{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .ds-ba figure{margin:0;display:grid;gap:8px}
 .ds-ba img{width:100%;height:auto;display:block;border-radius:14px;border:1px solid #2b2650}
