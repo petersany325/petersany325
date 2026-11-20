@@ -14,6 +14,10 @@ class StaffNotifier
      */
     public function notifyMany(iterable $users, string $type, string $title, ?string $body = null, ?string $link = null, array $data = []): void
     {
+        if (\App\Support\DesktopSync\Origin::isDesktop()) {
+            return;
+        }
+
         $ids = collect($users)->map(function ($u) {
             return $u instanceof User ? $u->id : (int) $u;
         })->filter()->unique()->values();

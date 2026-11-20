@@ -331,7 +331,7 @@ class NavMenu
                 'hint' => 'کش، تعمیر، بکاپ و آپدیت زنده',
                 'children' => [
                     ['label' => 'نگهداری و بکاپ', 'route' => 'system-tools.index', 'match' => 'system-tools.index|system-tools.run|system-tools.backups*', 'hint' => 'کش، تعمیر، بکاپ و ریستور', 'mark' => 'ن'],
-                    ['label' => 'آپدیت نرم‌افزار', 'route' => 'system-tools.updates', 'match' => 'system-tools.updates*', 'hint' => 'بررسی زنده و نصب نسخه جدید', 'mark' => 'آ'],
+                    ['label' => 'آپدیت نرم‌افزار', 'route' => 'system-tools.updates', 'match' => 'system-tools.updates*', 'hint' => 'بررسی زنده و نصب نسخه جدید', 'mark' => 'آ', 'customer_only' => true],
                 ],
             ],
             [
@@ -344,7 +344,8 @@ class NavMenu
                 'hint' => 'سیستم و منوها',
                 'any_of' => ['settings', 'profile', 'daily_logs.manage'],
                 'children' => [
-                    ['label' => 'تنظیمات سیستم', 'route' => 'settings.index', 'match' => 'settings.*', 'hint' => 'منو، فاکتور، برچسب، SMS، بکاپ', 'mark' => 'ظ', 'permission' => 'settings'],
+                    ['label' => 'تنظیمات سیستم', 'route' => 'settings.index', 'match' => 'settings.index|settings.general|settings.fault-types*|settings.referral*|settings.lookups*|settings.sms*|settings.invoice|settings.labels|settings.payments|settings.backup*', 'hint' => 'منو، فاکتور، برچسب، SMS، بکاپ', 'mark' => 'ظ', 'permission' => 'settings'],
+                    ['label' => 'همگام‌سازی رایانه', 'route' => 'settings.desktop-sync', 'match' => 'settings.desktop-sync*', 'hint' => 'توکن نرم‌افزار کامپیوتر و به‌روز ماندن دو طرف', 'mark' => 'ک', 'permission' => 'settings'],
                     ['label' => 'وب / موبایل کارتابل', 'route' => 'settings.index', 'params' => ['tab' => 'portal'], 'match' => 'settings.index', 'hint' => 'تلفن دفتر، موبایل، واتساپ، متن خوش‌آمد', 'mark' => 'و', 'permission' => 'settings'],
                     ['label' => 'سئو / گوگل', 'route' => 'settings.index', 'params' => ['tab' => 'seo'], 'match' => 'settings.index', 'hint' => 'متا، اسکیما، نقشه سایت، صفحه دامنه', 'mark' => 'س', 'permission' => 'settings', 'seller_only' => true],
                     ['label' => 'برچسب / بارکد', 'route' => 'settings.index', 'params' => ['tab' => 'labels'], 'match' => 'labels.*', 'hint' => 'رول، حالت چاپ، پرینتر', 'mark' => 'ب', 'permission' => 'settings'],

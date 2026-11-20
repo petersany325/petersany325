@@ -73,6 +73,10 @@ class SmsNotificationService
      */
     public function sendForReception(Reception $reception, SmsStatusRule $rule, bool $force = false): array
     {
+        if (\App\Support\DesktopSync\Origin::isDesktop()) {
+            return ['ok' => false, 'skipped' => true, 'message' => 'نوشتن از نرم‌افزار رایانه پیامک نمی‌فرستد.'];
+        }
+
         if (! $this->masterEnabled()) {
             return ['ok' => false, 'skipped' => true, 'message' => 'ارسال پیامک در سطح سیستم خاموش است.'];
         }
@@ -244,6 +248,10 @@ class SmsNotificationService
      */
     public function sendGroupDeliverySms(string $phone, string $pickupName, $receptions): array
     {
+        if (\App\Support\DesktopSync\Origin::isDesktop()) {
+            return ['ok' => false, 'skipped' => true, 'message' => 'نوشتن از نرم‌افزار رایانه پیامک نمی‌فرستد.'];
+        }
+
         if (! $this->masterEnabled()) {
             return ['ok' => false, 'skipped' => true, 'message' => 'ارسال پیامک خاموش است.'];
         }
