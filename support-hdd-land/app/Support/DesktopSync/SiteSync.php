@@ -95,6 +95,7 @@ class SiteSync
         $page = max(1, $page);
         $perPage = max(1, min(1000, $perPage));
         $query = $this->baseQuery($table, false);
+        $this->onlyPublicSettings($query, $table);
         $total = (clone $query)->count();
         $rows = $query->orderBy('id')->forPage($page, $perPage)->get();
         $data = [];
@@ -668,9 +669,7 @@ class SiteSync
     {
         $time = $this->timeColumn($table);
         $query = $this->baseQuery($table)->orderBy($time ?: 'id')->orderBy('id');
-        if ($table === 'app_settings') {
-            $query->whereIn('key', SyncTableRegistry::SETTING_KEYS);
-        }
+        $this->onlyPublicSettings($query, $table);
         if ($cursor && $time) {
             if ($cursor['table'] < $table) {
                 $query->where($time, '>=', $cursor['t']);
@@ -741,6 +740,9 @@ class SiteSync
         if ($table === 'users') {
             $data = array_intersect_key($data, array_flip(SyncTableRegistry::USER_COLUMNS));
         }
+        if ($table === 'app_settings' && ! in_array((string) ($data['key'] ?? ''), SyncTableRegistry::SETTING_KEYS, true)) {
+            return ['id' => $data['id'] ?? null];
+        }
         foreach (array_keys($data) as $column) {
             if (in_array($column, self::SECRETS, true) || preg_match('/password|secret|token|api_key|otp/i', (string) $column)) {
                 unset($data[$column]);
@@ -773,6 +775,13 @@ class SiteSync
         }
 
         return $data;
+    }
+
+    private function onlyPublicSettings(mixed $query, string $table): void
+    {
+        if ($table === 'app_settings') {
+            $query->whereIn('key', SyncTableRegistry::SETTING_KEYS);
+        }
     }
 
     private function baseQuery(string $table, bool $withTrashed = true): mixed

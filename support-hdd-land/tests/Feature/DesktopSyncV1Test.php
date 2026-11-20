@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AppSetting;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\DesktopDevice;
@@ -343,6 +344,16 @@ class DesktopSyncV1Test extends TestCase
         ])->assertOk()->json('results.0');
         $this->assertSame('rejected', $blocked['status']);
         $this->assertNotNull(Payment::query()->find($payment->id));
+
+        AppSetting::setValue('backup_cron_token', 'cron-secret-value');
+        AppSetting::setValue('receipt_prefix', 'T-20N');
+        $settings = $this->withToken($token)->getJson('/api/desktop-sync/v1/snapshot?table=app_settings&per_page=100')
+            ->assertOk()->json('data');
+        $blob = json_encode($settings, JSON_UNESCAPED_UNICODE);
+        $this->assertStringNotContainsString('cron-secret-value', $blob);
+        $this->assertStringContainsString('T-20N', $blob);
+        $changes = json_encode($this->withToken($token)->getJson('/api/desktop-sync/v1/changes?tables=app_settings&limit=100')->assertOk()->json('items'), JSON_UNESCAPED_UNICODE);
+        $this->assertStringNotContainsString('cron-secret-value', $changes);
 
         $device->reissue();
         $this->assertSame(substr($device->fresh()->plainToken(), 0, 12), $device->fresh()->prefix);
