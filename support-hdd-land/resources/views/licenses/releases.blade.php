@@ -195,7 +195,8 @@
                         فقط اگر همه انتخاب‌ها تست شده باشند منتشر شود (اختیاری)
                     </label>
                     <label style="display:flex;gap:8px;align-items:center;">
-                        <input type="checkbox" name="set_latest" value="1" checked>
+                        <input type="hidden" name="set_latest" value="0">
+                        <input type="checkbox" name="set_latest" value="1" @checked(old('set_latest', '1') === '1')>
                         به‌عنوان آخرین نسخه کانال پایدار تنظیم شود
                     </label>
                     <button type="submit" class="btn btn-primary" @if($selectedCount === 0) disabled @endif>ساخت ZIP انتخابی و انتشار برای مشتری</button>
@@ -226,7 +227,8 @@
                         این نسخه را روی سایت اصلی تست کردم و گزینه‌ها درست است. بدون این تأیید برای مشتری منتشر نمی‌شود.
                     </label>
                     <label style="display:flex;gap:8px;align-items:center;">
-                        <input type="checkbox" name="set_latest" value="1" checked>
+                        <input type="hidden" name="set_latest" value="0">
+                        <input type="checkbox" name="set_latest" value="1" @checked(old('set_latest', '1') === '1')>
                         آخرین نسخه کانال پایدار
                     </label>
                     <button type="submit" class="btn btn-secondary">انتشار ZIP دستی</button>

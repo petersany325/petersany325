@@ -243,7 +243,8 @@ class AppReleaseAdminController extends Controller
             'change_ids' => array_values(array_map(fn ($i) => (string) ($i['id'] ?? ''), $selected)),
         ]);
 
-        $setLatest = $request->boolean('set_latest', true);
+        // An unchecked box omits the field. Missing must stay off the stable channel.
+        $setLatest = $request->boolean('set_latest');
         $manifest = [
             'channel' => (string) ($manifest['channel'] ?? 'stable'),
             'latest' => $setLatest ? $version : (string) ($manifest['latest'] ?? $version),

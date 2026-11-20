@@ -455,6 +455,7 @@ class DesktopSyncV1Test extends TestCase
         }
         $last->assertStatus(429);
         $this->assertTrue($last->headers->has('Retry-After'));
+        $last->assertJsonPath('message', 'تعداد درخواست بیش از حد است. کمی بعد دوباره تلاش کنید.');
     }
 
     public function test_push_cannot_relink_staff_rewrite_sms_or_forge_cost_approval(): void
