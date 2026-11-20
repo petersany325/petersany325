@@ -28,6 +28,45 @@ class DesktopSyncTest extends TestCase
             ->assertJson(['ok' => false]);
     }
 
+    public function test_legacy_sync_rejects_expired_and_read_only_writes(): void
+    {
+        [$expired, $expiredToken] = DesktopDevice::issue('منقضی', null);
+        $expired->forceFill(['expires_at' => now()->subMinute()])->save();
+        $this->withToken($expiredToken)->postJson('/api/desktop/v1/sync', [
+            'cursor' => null,
+            'changes' => [],
+        ])->assertUnauthorized();
+
+        [$reader, $token] = DesktopDevice::issue('فقط خواندن', null);
+        $reader->forceFill(['scopes' => ['read']])->save();
+        $this->withToken($token)->postJson('/api/desktop/v1/sync', [
+            'cursor' => null,
+            'changes' => [],
+        ])->assertOk();
+
+        $this->withToken($token)->postJson('/api/desktop/v1/sync', [
+            'cursor' => null,
+            'changes' => [[
+                'resource' => 'customers',
+                'sync_key' => 'customer-read-only-0001',
+                'op' => 'upsert',
+                'data' => ['name' => 'نباید ثبت شود', 'phone' => '09120000000'],
+            ]],
+        ])->assertForbidden();
+        $this->assertSame(0, Customer::query()->count());
+
+        $reader->forceFill(['scopes' => []])->save();
+        $this->withToken($token)->postJson('/api/desktop/v1/sync', [
+            'cursor' => null,
+            'changes' => [[
+                'resource' => 'customers',
+                'sync_key' => 'customer-empty-scope-001',
+                'op' => 'upsert',
+                'data' => ['name' => 'نباید ثبت شود', 'phone' => '09120000001'],
+            ]],
+        ])->assertForbidden();
+    }
+
     public function test_snapshot_and_push_keep_both_sides_current(): void
     {
         $site = Customer::query()->create([

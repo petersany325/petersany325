@@ -5,7 +5,6 @@ namespace App\Http\Middleware;
 use App\Models\DesktopDevice;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -24,12 +23,11 @@ class EnsureDesktopSyncToken
             return $this->deny();
         }
 
-        $expires = $device->getAttribute('expires_at');
-        if ($expires && Carbon::parse($expires)->isPast()) {
+        if ($device->isExpired()) {
             return $this->deny();
         }
 
-        if ($scope !== 'any' && ! in_array($scope, $device->tokenScopes(), true)) {
+        if ($scope !== 'any' && ! $device->allows($scope)) {
             return response()->json([
                 'ok' => false,
                 'message' => 'این توکن اجازه این کار را ندارد.',

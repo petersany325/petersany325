@@ -35,6 +35,24 @@ class SiteSync
     ];
 
     /**
+     * Columns a desktop write must never set, even when the model lists them
+     * as fillable. Staff links, message templates, and cost-approval flags
+     * stay on the site workflows.
+     *
+     * @var list<string>
+     */
+    private const BLOCKED_WRITE = [
+        'user_id', 'created_by', 'from_user_id', 'to_user_id', 'handled_by',
+        'reviewed_by', 'received_by', 'changed_by', 'sent_by',
+        'message_template', 'coworker_message_template', 'auto_send', 'send_coworker',
+        'on_create', 'on_price',
+        'cost_approval_status', 'customer_cost_approved_at', 'customer_cost_approved_amount',
+        'cost_confirmed_at', 'cost_approval_id', 'approved_at',
+        'deleted_at', 'delete_reason', 'photo_path', 'image_path',
+        'permissions', 'role', 'is_system', 'approval_code',
+    ];
+
+    /**
      * @return array<string, mixed>
      */
     public function ping(DesktopDevice $device): array
@@ -583,12 +601,20 @@ class SiteSync
     private function payload(string $table, array $data): array
     {
         $columns = Schema::getColumnListing($table);
+        $model = SyncTableRegistry::model($table);
+        $fillable = $model ? (new $model)->getFillable() : null;
         $out = [];
         foreach ($data as $key => $value) {
             if (! is_string($key) || ! in_array($key, $columns, true)) {
                 continue;
             }
-            if (in_array($key, ['id', 'password', 'remember_token', 'token_hash', 'token_encrypted', 'image_path'], true)) {
+            if ($key === 'id' || in_array($key, self::BLOCKED_WRITE, true) || in_array($key, self::SECRETS, true)) {
+                continue;
+            }
+            if (preg_match('/password|secret|token|api_key|otp/i', $key)) {
+                continue;
+            }
+            if ($fillable !== null && ! in_array($key, $fillable, true)) {
                 continue;
             }
             if (is_array($value) && ! SyncTableRegistry::model($table)) {

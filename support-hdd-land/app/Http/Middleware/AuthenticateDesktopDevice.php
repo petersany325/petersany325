@@ -27,7 +27,7 @@ class AuthenticateDesktopDevice
         }
 
         $device = DesktopDevice::findByToken($plain);
-        if (! $device || $device->isRevoked()) {
+        if (! $device || $device->isRevoked() || $device->isExpired()) {
             return response()->json([
                 'ok' => false,
                 'message' => 'توکن نامعتبر یا باطل شده است.',

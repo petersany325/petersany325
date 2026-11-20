@@ -121,8 +121,19 @@ class DesktopDevice extends Model
         return $this->revoked_at !== null;
     }
 
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
+    }
+
+    public function allows(string $scope): bool
+    {
+        return in_array($scope, $this->tokenScopes(), true);
+    }
+
     /**
-     * Tokens issued before scopes existed stay able to read and write.
+     * A null scope list belongs to a token issued before scopes existed, so it
+     * can still read and write. An explicit empty list grants nothing.
      *
      * @return list<string>
      */
@@ -135,8 +146,11 @@ class DesktopDevice extends Model
         if (is_string($scopes)) {
             $scopes = json_decode($scopes, true);
         }
-        if (! is_array($scopes) || $scopes === []) {
+        if ($scopes === null) {
             return ['read', 'write'];
+        }
+        if (! is_array($scopes)) {
+            return [];
         }
 
         return array_values(array_map('strval', $scopes));

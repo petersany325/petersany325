@@ -52,6 +52,13 @@ class DesktopSyncController extends Controller
     {
         /** @var DesktopDevice $device */
         $device = $request->attributes->get('desktopDevice');
+        $changes = $request->json('changes', []);
+        if (is_array($changes) && $changes !== [] && ! $device->allows('write')) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'این توکن اجازه این کار را ندارد.',
+            ], 403);
+        }
 
         try {
             $body = $engine->exchange($device, $request->json()->all());

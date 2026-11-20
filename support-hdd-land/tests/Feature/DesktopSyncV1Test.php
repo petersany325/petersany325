@@ -15,6 +15,7 @@ use App\Models\Reception;
 use App\Models\SmsLog;
 use App\Models\StockMovement;
 use App\Models\SmsStatusRule;
+use App\Models\Technician;
 use App\Models\User;
 use App\Services\SmsNotificationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -454,5 +455,83 @@ class DesktopSyncV1Test extends TestCase
         }
         $last->assertStatus(429);
         $this->assertTrue($last->headers->has('Retry-After'));
+    }
+
+    public function test_push_cannot_relink_staff_rewrite_sms_or_forge_cost_approval(): void
+    {
+        [, $token] = DesktopDevice::issue('دفتر', null);
+        $user = User::query()->create([
+            'name' => 'تعمیرکار سایت',
+            'email' => 'tech-link@example.com',
+            'password' => 'secret-secret',
+            'role' => 'technician',
+            'is_active' => true,
+        ]);
+        $customer = Customer::query()->create(['name' => 'مشتری', 'phone' => '09123334455']);
+        $reception = Reception::query()->create([
+            'ticket_no' => Reception::nextTicketNo(),
+            'customer_id' => $customer->id,
+            'product_name' => 'هارد',
+            'received_at' => now(),
+            'cost_approval_status' => 'pending',
+        ]);
+        $rule = SmsStatusRule::query()->create([
+            'code' => 'ready-test',
+            'title' => 'آماده',
+            'status_key' => 'ready',
+            'message_template' => 'قالب سایت',
+            'auto_send' => false,
+        ]);
+
+        $pushed = $this->withToken($token)->postJson('/api/desktop-sync/v1/push', [
+            'batch_id' => 'dddddddd-eeee-4fff-8000-111111111111',
+            'items' => [
+                [
+                    'table' => 'technicians',
+                    'op' => 'upsert',
+                    'desktop_uid' => 'tech:linked',
+                    'data' => ['name' => 'رضا', 'phone' => '09120001122', 'user_id' => $user->id, 'is_active' => true],
+                ],
+                [
+                    'table' => 'sms_status_rules',
+                    'op' => 'upsert',
+                    'site_id' => $rule->id,
+                    'desktop_uid' => 'sms:ready',
+                    'data' => [
+                        'title' => 'آماده تحویل',
+                        'message_template' => 'قالب رایانه',
+                        'auto_send' => true,
+                        'send_coworker' => true,
+                    ],
+                ],
+                [
+                    'table' => 'receptions',
+                    'op' => 'upsert',
+                    'site_id' => $reception->id,
+                    'desktop_uid' => 'receipt:approval',
+                    'data' => [
+                        'product_name' => 'هارد اکسترنال',
+                        'cost_approval_status' => 'approved',
+                        'customer_cost_approved_amount' => 900000,
+                        'cost_confirmed_at' => now()->toIso8601String(),
+                    ],
+                ],
+            ],
+        ])->assertOk()->json('results');
+
+        $this->assertSame(['created', 'updated', 'updated'], array_column($pushed, 'status'));
+        $technician = Technician::query()->where('name', 'رضا')->first();
+        $this->assertNotNull($technician);
+        $this->assertNull($technician->user_id);
+        $rule->refresh();
+        $this->assertSame('آماده تحویل', $rule->title);
+        $this->assertSame('قالب سایت', $rule->message_template);
+        $this->assertFalse($rule->auto_send);
+        $this->assertFalse((bool) $rule->send_coworker);
+        $reception->refresh();
+        $this->assertSame('هارد اکسترنال', $reception->product_name);
+        $this->assertSame('pending', $reception->cost_approval_status);
+        $this->assertNull($reception->customer_cost_approved_amount);
+        $this->assertNull($reception->cost_confirmed_at);
     }
 }
