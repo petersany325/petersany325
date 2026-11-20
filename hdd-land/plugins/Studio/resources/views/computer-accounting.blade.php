@@ -113,6 +113,28 @@
   </div>
 </section>
 
+<section class="ag-sec" id="medical-prices">
+  <div class="ag-wrap">
+    <p class="ag-kicker">پزشکی</p>
+    <h2>قیمت نرم‌افزار کامپیوتر پزشکی</h2>
+    <p class="ag-lead">این جدول جدا از حسابداری صنوف است. هر نسخه ۴۰ میلیون تومان است.</p>
+    <div class="ag-price-block" style="max-width:720px">
+      <table class="ag-price">
+        <thead><tr><th>نسخه</th><th>قیمت</th><th></th></tr></thead>
+        <tbody>
+          @foreach(\App\Support\StudioPriceList::medical() as $row)
+            <tr>
+              <th><a href="{{ url($row['url']) }}">{{ $row['title'] }}</a></th>
+              <td>{{ \App\Support\StudioPriceList::label($row['million']) }}</td>
+              <td>@include('studio::price-cart-button', ['sku' => $row['sku']])</td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <section class="ag-sec" id="shared">
   <div class="ag-wrap">
     <p class="ag-kicker">مشترک</p>

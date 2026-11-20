@@ -32,6 +32,17 @@ class StudioPriceList
     }
 
     /** @return list<array{sku:string,title:string,million:int,kind:string,url:string}> */
+    public static function medical(): array
+    {
+        return [
+            self::row('med-beauty', 'نرم‌افزار پزشکی مطب زیبایی', 40, 'medical', '/software/medical-beauty'),
+            self::row('med-psych', 'نرم‌افزار مطب روانشناسی', 40, 'medical', '/software/medical-psychology'),
+            self::row('med-dental', 'نرم‌افزار دندانپزشکی', 40, 'medical', '/software/medical-dental'),
+            self::row('med-physio', 'نرم‌افزار فیزیوتراپی', 40, 'medical', '/software/medical-physiotherapy'),
+        ];
+    }
+
+    /** @return list<array{sku:string,title:string,million:int,kind:string,url:string}> */
     public static function addons(): array
     {
         return [
@@ -53,7 +64,7 @@ class StudioPriceList
     /** @return array{sku:string,title:string,million:int,kind:string,url:string,price:int,price_label:string}|null */
     public static function find(string $sku): ?array
     {
-        foreach (array_merge(self::editions(), [self::bundle()], self::addons()) as $row) {
+        foreach (array_merge(self::editions(), [self::bundle()], self::medical(), self::addons()) as $row) {
             if ($row['sku'] === $sku) {
                 $row['price'] = $row['million'] * 1000000;
                 $row['price_label'] = self::label($row['million']);
