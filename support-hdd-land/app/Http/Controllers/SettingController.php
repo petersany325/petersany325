@@ -34,6 +34,9 @@ class SettingController extends Controller
             $tab = 'lookups';
         }
 
+        $payments = $this->paymentView();
+        $backup = $this->backupView();
+
         return view('settings.index', [
             'activeTab' => $tab,
             'faultTypes' => FaultType::orderBy('name')->get(),
@@ -68,26 +71,103 @@ class SettingController extends Controller
                 'show_fault' => AppSetting::getValue('invoice_show_fault', '1') !== '0',
                 'show_serial' => AppSetting::getValue('invoice_show_serial', '1') !== '0',
             ],
-            'paymentGateways' => PaymentGateways::all(),
-            'paymentLinksShow' => [
-                'reception' => PaymentGateways::showOnReception(),
-                'invoice' => PaymentGateways::showOnInvoice(),
-                'otp_debug' => AppSetting::getValue('portal_otp_debug', '0') === '1',
-            ],
-            'zarinpal' => PaymentGateways::zarinpal(),
-            'bankTransfer' => BankTransferSettings::all(),
+            'paymentGateways' => $payments['gateways'],
+            'paymentLinksShow' => $payments['links'],
+            'zarinpal' => $payments['zarinpal'],
+            'bankTransfer' => $this->bankTransferView(),
             'portalUrl' => url('/cartable'),
             'permissions' => Permissions::ALL,
-            'backup' => BackupSettings::all(),
-            'backupScopes' => BackupSettings::SCOPES,
-            'backupIntervals' => BackupSettings::INTERVALS,
-            'backupWeekdays' => BackupSettings::WEEKDAYS,
-            'backupProtocols' => BackupSettings::PROTOCOLS,
-            'backupCloudLabels' => BackupSettings::CLOUD_LABELS,
-            'backupCronUrl' => url('/cron/backup?token='.BackupSettings::all()['cron_token']),
+            'backup' => $backup['backup'],
+            'backupScopes' => $backup['scopes'],
+            'backupIntervals' => $backup['intervals'],
+            'backupWeekdays' => $backup['weekdays'],
+            'backupProtocols' => $backup['protocols'],
+            'backupCloudLabels' => $backup['labels'],
+            'backupCronUrl' => $backup['cronUrl'],
             'googleRedirectUri' => url('/settings/backup/cloud/google/callback'),
             'onedriveRedirectUri' => url('/settings/backup/cloud/onedrive/callback'),
         ]);
+    }
+
+    /** @return array{gateways:list<array<string,mixed>>,links:array<string,bool>,zarinpal:array<string,mixed>} */
+    private function paymentView(): array
+    {
+        $empty = [
+            'gateways' => [],
+            'links' => ['reception' => false, 'invoice' => false, 'otp_debug' => false],
+            'zarinpal' => ['configured' => false, 'sandbox' => false, 'merchant_id' => '', 'currency' => 'IRT'],
+        ];
+
+        try {
+            return [
+                'gateways' => PaymentGateways::all(),
+                'links' => [
+                    'reception' => PaymentGateways::showOnReception(),
+                    'invoice' => PaymentGateways::showOnInvoice(),
+                    'otp_debug' => AppSetting::getValue('portal_otp_debug', '0') === '1',
+                ],
+                'zarinpal' => PaymentGateways::zarinpal(),
+            ];
+        } catch (\Throwable) {
+            return $empty;
+        }
+    }
+
+    /** @return array<string,mixed> */
+    private function bankTransferView(): array
+    {
+        $empty = [
+            'enabled' => false,
+            'card_number' => '',
+            'card_holder' => '',
+            'bank_name' => '',
+            'iban' => '',
+            'instructions' => '',
+        ];
+
+        if (! class_exists(BankTransferSettings::class)) {
+            return $empty;
+        }
+
+        try {
+            return array_merge($empty, BankTransferSettings::all());
+        } catch (\Throwable) {
+            return $empty;
+        }
+    }
+
+    /** @return array{backup:array<string,mixed>,scopes:array<string,string>,intervals:array<string,string>,weekdays:array<int,string>,protocols:array<string,string>,labels:array<string,string>,cronUrl:string} */
+    private function backupView(): array
+    {
+        $empty = [
+            'backup' => [],
+            'scopes' => ['full' => 'کامل سیستم'],
+            'intervals' => ['weekly' => 'هر هفته'],
+            'weekdays' => [5 => 'جمعه'],
+            'protocols' => ['ftp' => 'FTP'],
+            'labels' => [
+                'google' => 'Google Drive',
+                'onedrive' => 'OneDrive',
+                'mega' => 'MEGA',
+            ],
+            'cronUrl' => url('/cron/backup'),
+        ];
+
+        try {
+            $backup = BackupSettings::all();
+
+            return [
+                'backup' => $backup,
+                'scopes' => BackupSettings::SCOPES,
+                'intervals' => BackupSettings::INTERVALS,
+                'weekdays' => BackupSettings::WEEKDAYS,
+                'protocols' => BackupSettings::PROTOCOLS,
+                'labels' => BackupSettings::CLOUD_LABELS,
+                'cronUrl' => url('/cron/backup?token='.($backup['cron_token'] ?? '')),
+            ];
+        } catch (\Throwable) {
+            return $empty;
+        }
     }
 
     private function resolveTab(Request $request, string $fallback = 'lookups'): string

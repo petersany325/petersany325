@@ -106,10 +106,12 @@ class Permissions
         };
     }
 
-    public static function roleMeta(string $role): array
+    public static function roleMeta(?string $role): array
     {
+        $role = (string) $role;
+
         return self::ROLES[$role] ?? [
-            'label' => $role,
+            'label' => $role !== '' ? $role : 'نامشخص',
             'hint' => '',
             'tone' => 'slate',
             'mark' => '؟',
