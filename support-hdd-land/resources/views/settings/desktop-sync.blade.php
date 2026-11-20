@@ -20,6 +20,17 @@
 .device-menu.is-open .device-menu-pop { display: flex; flex-direction: column; gap: 6px; }
 .device-menu-pop .btn,
 .device-menu-pop form .btn { width: 100%; }
+.device-token {
+    direction: ltr;
+    unicode-bidi: plaintext;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    word-break: break-all;
+    user-select: all;
+    margin-bottom: 6px;
+}
+.device-token-missing { font-size: 12px; color: #66707c; margin-bottom: 6px; }
 </style>
 @endpush
 @section('content')
@@ -62,15 +73,20 @@
                     <td>{{ $device->revoked_at ? 'قطع‌شده' : 'فعال' }}</td>
                     <td>
                         @php $token = $device->plainToken(); @endphp
+                        @if($token)
+                            <div class="device-token" dir="ltr">{{ $token }}</div>
+                        @elseif(!$device->revoked_at)
+                            <div class="device-token-missing">توکن قبلی ذخیره نشده و دوباره نشان داده نمی‌شود.</div>
+                        @endif
                         <div class="device-menu" data-device-menu>
                             <button type="button" class="btn btn-secondary" data-device-menu-btn>منو</button>
                             <div class="device-menu-pop">
                                 @if($token)
                                     <button type="button" class="btn btn-primary" data-copy-token="{{ $token }}" @if((int) $copyId === (int) $device->id) data-autocopy @endif>کپی توکن</button>
-                                @else
+                                @elseif(!$device->revoked_at)
                                     <form method="POST" action="{{ route('settings.desktop-sync.reissue', $device) }}">
                                         @csrf
-                                        <button class="btn btn-primary" type="submit" data-confirm="توکن قبلی ذخیره نشده و با ساختن توکن جدید از کار می‌افتد. توکن جدید ساخته و کپی شود؟">کپی توکن</button>
+                                        <button class="btn btn-primary" type="submit" data-confirm="توکن جدید ساخته می‌شود و توکن قبلی این رایانه دیگر وصل نمی‌شود. ادامه می‌دهید؟">توکن جدید</button>
                                     </form>
                                 @endif
                                 @if(!$device->revoked_at)
