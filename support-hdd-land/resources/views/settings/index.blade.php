@@ -3,6 +3,81 @@
 @section('page_title', 'تنظیمات')
 @section('window_title', 'پنجره تنظیمات سیستم')
 @section('content')
+@php
+    $bankTransfer = array_merge([
+        'enabled' => false,
+        'card_number' => '',
+        'card_holder' => '',
+        'bank_name' => '',
+        'iban' => '',
+        'instructions' => '',
+    ], $bankTransfer ?? []);
+    $zarinpal = array_merge([
+        'configured' => false,
+        'sandbox' => false,
+        'merchant_id' => '',
+        'currency' => 'IRT',
+    ], $zarinpal ?? []);
+    $paymentLinksShow = array_merge([
+        'reception' => false,
+        'invoice' => false,
+        'otp_debug' => false,
+    ], $paymentLinksShow ?? []);
+    $paymentGateways = $paymentGateways ?? [];
+    $backup = array_merge([
+        'enabled' => false,
+        'scope' => 'full',
+        'interval' => 'weekly',
+        'weekday' => 5,
+        'hour' => 3,
+        'keep_local' => 8,
+        'remote_enabled' => false,
+        'remote_protocol' => 'ftp',
+        'remote_host' => '',
+        'remote_port' => 21,
+        'remote_user' => '',
+        'remote_password' => '',
+        'remote_path' => '/backups',
+        'last_run_at' => null,
+        'last_message' => '',
+        'clouds' => [],
+    ], $backup ?? []);
+    $cloudEmpty = [
+        'enabled' => false,
+        'client_id' => '',
+        'client_secret' => '',
+        'folder' => '',
+        'email' => '',
+        'password' => '',
+        'connected' => false,
+        'account_email' => '',
+    ];
+    foreach (['google', 'onedrive', 'mega'] as $cloudKey) {
+        $backup['clouds'][$cloudKey] = array_merge($cloudEmpty, $backup['clouds'][$cloudKey] ?? []);
+    }
+    $backupCloudLabels = array_merge([
+        'google' => 'Google Drive',
+        'onedrive' => 'OneDrive',
+        'mega' => 'MEGA',
+    ], $backupCloudLabels ?? []);
+    $backupScopes = $backupScopes ?? [];
+    $backupIntervals = $backupIntervals ?? [];
+    $backupWeekdays = $backupWeekdays ?? [];
+    $backupProtocols = $backupProtocols ?? [];
+    $paymentGatewaysLoaded = $paymentGatewaysLoaded ?? true;
+    $paymentLinksLoaded = $paymentLinksLoaded ?? true;
+    $zarinpalLoaded = $zarinpalLoaded ?? true;
+    $bankTransferLoaded = $bankTransferLoaded ?? true;
+    $backupLoaded = $backupLoaded ?? true;
+    $paymentsFormReady = $paymentGatewaysLoaded || $paymentLinksLoaded || $zarinpalLoaded || $bankTransferLoaded;
+    $href = function (string $name, mixed $params = []) {
+        if (! \Illuminate\Support\Facades\Route::has($name)) {
+            return '#';
+        }
+
+        return app('url')->route($name, $params);
+    };
+@endphp
 <div data-workspace-tabs data-active-tab="{{ $activeTab ?? 'lookups' }}">
     <div class="ws-tabs">
         <button type="button" class="{{ $activeTab === 'lookups' ? 'active' : '' }}" data-ws-tab="lookups">منوهای پذیرش</button>
@@ -39,7 +114,7 @@
                         </div>
                     </div>
 
-                    <form method="POST" action="{{ route('settings.lookups') }}" class="lookup-form-create">
+                    <form method="POST" action="{{ $href('settings.lookups') }}" class="lookup-form-create">
                         @csrf
                         <input type="hidden" name="settings_tab" value="lookups">
                         <input type="hidden" name="group_key" value="{{ $groupKey }}">
@@ -114,7 +189,7 @@
                         </select>
                     </div>
                 </div>
-                <form method="POST" action="{{ route('settings.fault-types') }}" class="simple-form-create">
+                <form method="POST" action="{{ $href('settings.fault-types') }}" class="simple-form-create">
                     @csrf
                     <input type="hidden" name="settings_tab" value="faults">
                     <div class="accept-row accept-row-4">
@@ -170,7 +245,7 @@
                         </select>
                     </div>
                 </div>
-                <form method="POST" action="{{ route('settings.referral-sources') }}" class="simple-form-create">
+                <form method="POST" action="{{ $href('settings.referral-sources') }}" class="simple-form-create">
                     @csrf
                     <input type="hidden" name="settings_tab" value="referrals">
                     <div class="accept-row accept-row-4">
@@ -210,7 +285,7 @@
         <div class="ws-pane {{ $activeTab === 'invoice' ? 'active' : '' }}" data-ws-pane="invoice">
             <h2>تنظیمات فاکتور و چاپ</h2>
             <p class="lead">اطلاعات سربرگ فاکتور، نمایش فیلدها، چاپ خودکار و شرایط تعمیرات را اینجا تنظیم کنید.</p>
-            <form method="POST" action="{{ route('settings.invoice') }}">
+            <form method="POST" action="{{ $href('settings.invoice') }}">
                 @csrf
                 <input type="hidden" name="settings_tab" value="invoice">
                 <div class="accept-row accept-row-2">
@@ -290,9 +365,13 @@
                 <strong>وب‌سرویس مشتری:</strong>
                 <div dir="ltr" style="margin-top:4px;"><a href="{{ $portalUrl }}" target="_blank">{{ $portalUrl }}</a></div>
             </div>
-            <form method="POST" action="{{ route('settings.payments') }}">
+            @unless($paymentsFormReady)
+                <div class="alert alert-error">بخش پرداخت خوانده نشد. فرم ذخیره نشان داده نمی‌شود تا تنظیمات فعلی پاک نشود.</div>
+            @else
+            <form method="POST" action="{{ $href('settings.payments') }}">
                 @csrf
                 <input type="hidden" name="settings_tab" value="payments">
+                @if($zarinpalLoaded)
                 <h3>زرین‌پال (IPG)</h3>
                 <div class="pay-settings-grid">
                     <div class="pay-settings-card tone-amber">
@@ -322,7 +401,11 @@
                         <span class="pill pill-off">Merchant ID وارد نشده</span>
                     @endif
                 </p>
+                @else
+                <div class="alert alert-error">تنظیمات زرین‌پال خوانده نشد و در ذخیرهٔ بعدی تغییر نمی‌کند.</div>
+                @endif
 
+                @if($paymentGatewaysLoaded)
                 <h3 style="margin-top:16px;">لینک موقت بانک‌ها (تا اتصال IPG)</h3>
                 <div class="pay-settings-grid">
                     @foreach($paymentGateways as $gw)
@@ -338,12 +421,18 @@
                         </div>
                     @endforeach
                 </div>
+                @else
+                <div class="alert alert-error">لینک بانک‌ها خوانده نشد و در ذخیرهٔ بعدی تغییر نمی‌کند.</div>
+                @endif
+                @if($paymentLinksLoaded)
                 <div class="toggle-grid" style="margin-top:10px;">
                     @include('partials.toggle', ['name' => 'pay_links_show_reception', 'label' => 'نمایش لینک بانک در صفحه قبض', 'checked' => $paymentLinksShow['reception']])
                     @include('partials.toggle', ['name' => 'pay_links_show_invoice', 'label' => 'نمایش لینک بانک روی فاکتور چاپ', 'checked' => $paymentLinksShow['invoice']])
                     @include('partials.toggle', ['name' => 'portal_otp_debug', 'label' => 'نمایش کد OTP کارتابل مشتری (فقط تست)', 'checked' => $paymentLinksShow['otp_debug']])
                 </div>
+                @endif
 
+                @if($bankTransferLoaded)
                 <h3 style="margin-top:18px;">واریز کارت‌به‌کارت (پرتال مشتری)</h3>
                 <p class="lead">شماره کارت شرکت برای نمایش در کارتابل مشتری. فیش‌ها فقط توسط مدیر و حسابدار تأیید می‌شوند.</p>
                 <div class="toggle-grid" style="margin-top:8px;">
@@ -380,15 +469,20 @@
                               placeholder="مثلاً بعد از واریز، تصویر فیش را از همین صفحه ارسال کنید.">{{ old('bank_transfer_instructions', $bankTransfer['instructions']) }}</textarea>
                 </div>
 
+                @else
+                <div class="alert alert-error">اطلاعات کارت‌به‌کارت خوانده نشد و در ذخیرهٔ بعدی تغییر نمی‌کند.</div>
+                @endif
+
                 <div class="actions">
                     <button class="btn btn-primary" type="submit">ذخیره تنظیمات پرداخت</button>
                 </div>
             </form>
+            @endunless
         </div>
 
         <div class="ws-pane {{ $activeTab === 'sms' ? 'active' : '' }}" data-ws-pane="sms">
             <h2>پنل نیازپرداز</h2>
-            <form method="POST" action="{{ route('settings.sms') }}">
+            <form method="POST" action="{{ $href('settings.sms') }}">
                 @csrf
                 <input type="hidden" name="settings_tab" value="sms">
                 <div class="form-grid" style="grid-template-columns:1fr 1fr;">
@@ -403,7 +497,7 @@
             <div class="panel" style="margin-top:10px;">
                 <h3>تست پنل پیامک</h3>
                 <p class="lead">پس از ذخیره تنظیمات، یک پیامک تست به شماره دلخواه بفرستید تا اتصال پنل را بررسی کنید.</p>
-                <form method="POST" action="{{ route('settings.sms.test') }}">
+                <form method="POST" action="{{ $href('settings.sms.test') }}">
                     @csrf
                     <input type="hidden" name="settings_tab" value="sms">
                     <div class="accept-row accept-row-3">
@@ -432,7 +526,7 @@
                     <p class="muted" style="margin:0 0 8px;">
                         برای انتقال به هاست جدید، «کامل سیستم» را انتخاب کنید تا مشتری، قبض، کارمند، منوها و تنظیمات برگردند.
                     </p>
-                    <form method="POST" action="{{ route('system-tools.run') }}">
+                    <form method="POST" action="{{ $href('system-tools.run') }}">
                         @csrf
                         <input type="hidden" name="settings_tab" value="backup">
                         <input type="hidden" name="action" value="backup_save_pc">
@@ -453,7 +547,7 @@
                 <div class="panel" style="padding:10px;">
                     <h3 style="margin:0 0 6px;">ریستور بکاپ از کامپیوتر</h3>
                     <p class="muted" style="margin:0 0 8px;">فایل `.sql` / `.sql.gz` کامل را از کامپیوتر انتخاب کنید تا همه داده‌ها برگردند.</p>
-                    <form method="POST" action="{{ route('system-tools.run') }}" enctype="multipart/form-data"
+                    <form method="POST" action="{{ $href('system-tools.run') }}" enctype="multipart/form-data"
                           data-confirm="ریستور از فایل کامپیوتر؟ جداول داخل فایل جایگزین می‌شوند.">
                         @csrf
                         <input type="hidden" name="settings_tab" value="backup">
@@ -468,16 +562,20 @@
                         ])
                         <div class="actions" style="margin-top:8px;">
                             <button class="btn btn-danger" type="submit">ریستور از کامپیوتر</button>
-                            <a class="btn btn-ghost" href="{{ route('system-tools.index') }}">ابزار کامل بکاپ</a>
+                            <a class="btn btn-ghost" href="{{ $href('system-tools.index') }}">ابزار کامل بکاپ</a>
                         </div>
                     </form>
                 </div>
             </div>
             @endif
 
-            <form method="POST" action="{{ route('settings.backup') }}">
+            @unless($backupLoaded)
+                <div class="alert alert-error">تنظیمات بکاپ خوانده نشد. فرم ذخیره نشان داده نمی‌شود تا رمز کلود و FTP پاک نشود.</div>
+            @else
+            <form method="POST" action="{{ $href('settings.backup') }}">
                 @csrf
                 <input type="hidden" name="settings_tab" value="backup">
+                <input type="hidden" name="backup_settings_loaded" value="1">
                 <div class="panel" style="margin-bottom:10px;">
                     <h3 style="margin-top:0;">زمان‌بندی</h3>
                     <div class="accept-row accept-row-4" style="align-items:end;">
@@ -571,7 +669,7 @@
                                 @endif
                             </p>
                             <div class="actions" style="margin:0;">
-                                <a class="btn btn-primary" href="{{ route('settings.backup.cloud.connect', 'google') }}">اتصال به گوگل</a>
+                                <a class="btn btn-primary" href="{{ $href('settings.backup.cloud.connect', 'google') }}">اتصال به گوگل</a>
                                 <button class="btn btn-secondary" form="backup-cloud-test-google" type="submit">تست</button>
                                 <button class="btn btn-ghost" form="backup-cloud-disconnect-google" type="submit">قطع اتصال</button>
                             </div>
@@ -617,7 +715,7 @@
                                 @endif
                             </p>
                             <div class="actions" style="margin:0;">
-                                <a class="btn btn-primary" href="{{ route('settings.backup.cloud.connect', 'onedrive') }}">اتصال به مایکروسافت</a>
+                                <a class="btn btn-primary" href="{{ $href('settings.backup.cloud.connect', 'onedrive') }}">اتصال به مایکروسافت</a>
                                 <button class="btn btn-secondary" form="backup-cloud-test-onedrive" type="submit">تست</button>
                                 <button class="btn btn-ghost" form="backup-cloud-disconnect-onedrive" type="submit">قطع اتصال</button>
                             </div>
@@ -658,7 +756,7 @@
                             @endif
                         </p>
                         <div class="actions" style="margin:0;">
-                            <a class="btn btn-primary" href="{{ route('settings.backup.cloud.connect', 'mega') }}">تست و اتصال MEGA</a>
+                            <a class="btn btn-primary" href="{{ $href('settings.backup.cloud.connect', 'mega') }}">تست و اتصال MEGA</a>
                             <button class="btn btn-secondary" form="backup-cloud-test-mega" type="submit">تست دوباره</button>
                             <button class="btn btn-ghost" form="backup-cloud-disconnect-mega" type="submit">قطع اتصال</button>
                         </div>
@@ -731,19 +829,20 @@
                 <div class="actions">
                     <button class="btn btn-primary" type="submit">ذخیره تنظیمات بکاپ</button>
                     <button class="btn btn-secondary" form="backup-upload-clouds-now" type="submit">ساخت بکاپ و آپلود به کلودها الآن</button>
-                    <a class="btn btn-ghost" href="{{ route('system-tools.index') }}">ابزار بکاپ / ریستور</a>
+                    <a class="btn btn-ghost" href="{{ $href('system-tools.index') }}">ابزار بکاپ / ریستور</a>
                 </div>
             </form>
+            @endunless
 
             {{-- Forms خارج از فرم اصلی (HTML فرم تو در تو مجاز نیست) --}}
-            <form id="backup-cloud-test-google" method="POST" action="{{ route('settings.backup.cloud.test', 'google') }}" class="hidden">@csrf</form>
-            <form id="backup-cloud-disconnect-google" method="POST" action="{{ route('settings.backup.cloud.disconnect', 'google') }}" class="hidden">@csrf</form>
-            <form id="backup-cloud-test-onedrive" method="POST" action="{{ route('settings.backup.cloud.test', 'onedrive') }}" class="hidden">@csrf</form>
-            <form id="backup-cloud-disconnect-onedrive" method="POST" action="{{ route('settings.backup.cloud.disconnect', 'onedrive') }}" class="hidden">@csrf</form>
-            <form id="backup-cloud-test-mega" method="POST" action="{{ route('settings.backup.cloud.test', 'mega') }}" class="hidden">@csrf</form>
-            <form id="backup-cloud-disconnect-mega" method="POST" action="{{ route('settings.backup.cloud.disconnect', 'mega') }}" class="hidden">@csrf</form>
+            <form id="backup-cloud-test-google" method="POST" action="{{ $href('settings.backup.cloud.test', 'google') }}" class="hidden">@csrf</form>
+            <form id="backup-cloud-disconnect-google" method="POST" action="{{ $href('settings.backup.cloud.disconnect', 'google') }}" class="hidden">@csrf</form>
+            <form id="backup-cloud-test-onedrive" method="POST" action="{{ $href('settings.backup.cloud.test', 'onedrive') }}" class="hidden">@csrf</form>
+            <form id="backup-cloud-disconnect-onedrive" method="POST" action="{{ $href('settings.backup.cloud.disconnect', 'onedrive') }}" class="hidden">@csrf</form>
+            <form id="backup-cloud-test-mega" method="POST" action="{{ $href('settings.backup.cloud.test', 'mega') }}" class="hidden">@csrf</form>
+            <form id="backup-cloud-disconnect-mega" method="POST" action="{{ $href('settings.backup.cloud.disconnect', 'mega') }}" class="hidden">@csrf</form>
             @if(auth()->user()->canAccess('system.tools'))
-            <form id="backup-upload-clouds-now" method="POST" action="{{ route('system-tools.run') }}" class="hidden">
+            <form id="backup-upload-clouds-now" method="POST" action="{{ $href('system-tools.run') }}" class="hidden">
                 @csrf
                 <input type="hidden" name="settings_tab" value="backup">
                 <input type="hidden" name="action" value="backup_upload_clouds">
@@ -758,8 +857,8 @@
                     <p class="lead" style="margin:4px 0 0;">ورود با موبایل و تأیید SMS — دسترسی طبق وظیفه</p>
                 </div>
                 <div class="actions" style="margin:0;">
-                    <a class="btn btn-primary" href="{{ route('employees.create') }}">کارمند جدید</a>
-                    <a class="btn btn-secondary" href="{{ route('employees.index') }}">کارتابل کامل</a>
+                    <a class="btn btn-primary" href="{{ $href('employees.create') }}">کارمند جدید</a>
+                    <a class="btn btn-secondary" href="{{ $href('employees.index') }}">کارتابل کامل</a>
                 </div>
             </div>
 
@@ -772,7 +871,7 @@
 
             <div class="emp-card-grid" style="margin-top:10px;">
                 @foreach($users->take(8) as $employee)
-                    @php $meta = \App\Support\Permissions::roleMeta($employee->role); @endphp
+                    @php $meta = \App\Support\Permissions::roleMeta(is_string($employee->role) ? $employee->role : ''); @endphp
                     <article class="emp-card tone-{{ $meta['tone'] }} {{ $employee->is_active ? '' : 'is-off' }}">
                         <header class="emp-card-head"><meta charset="utf-8">
                             <div class="emp-avatar">{{ $meta['mark'] }}</div>
@@ -789,7 +888,7 @@
                             </div>
                         </div>
                         <footer class="emp-card-foot">
-                            <a class="btn btn-secondary" href="{{ route('employees.edit', $employee) }}">دسترسی / وظیفه</a>
+                            <a class="btn btn-secondary" href="{{ $href('employees.edit', $employee) }}">دسترسی / وظیفه</a>
                         </footer>
                     </article>
                 @endforeach
