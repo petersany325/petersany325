@@ -183,6 +183,9 @@ class StudioStaffDesk
             'status' => 'recorded',
             'created_at' => date('c'),
         ];
+        if (! empty($offer['lines']) && is_array($offer['lines'])) {
+            $invoice['lines'] = array_values($offer['lines']);
+        }
         $state['invoices'][] = $invoice;
         $state['sales'][] = $invoice;
         if ($userId > 0) {

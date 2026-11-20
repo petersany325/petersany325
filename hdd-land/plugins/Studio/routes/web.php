@@ -6,6 +6,7 @@ use Plugins\Studio\src\Http\Controllers\StudioController;
 use Plugins\Studio\src\Http\Controllers\StudioPayController;
 use Plugins\Studio\src\Http\Controllers\StudioStaffDeskController;
 use Plugins\Studio\src\Http\Controllers\StudioSupportController;
+use Plugins\Studio\src\Http\Controllers\StudioCartController;
 use Plugins\Studio\src\Http\Controllers\StudioChatController;
 use Plugins\Studio\src\Http\Controllers\StudioCustomerDeskController;
 
@@ -36,6 +37,9 @@ Route::get('/accounting', [StudioController::class, 'accounting'])->name('studio
 Route::get('/accounting/m/{slug}', [StudioController::class, 'accountingItem'])->name('studio.accounting.item');
 Route::get('/accounting/{slug}', [StudioController::class, 'accountingType'])->name('studio.accounting.type');
 Route::get('/computer-accounting', [StudioController::class, 'computerAccounting'])->name('studio.computer');
+Route::post('/computer-accounting/cart/add', [StudioCartController::class, 'add'])->name('studio.cart.add');
+Route::post('/computer-accounting/cart/remove', [StudioCartController::class, 'remove'])->name('studio.cart.remove');
+Route::get('/computer-accounting/cart', [StudioCartController::class, 'show'])->name('studio.cart');
 Route::get('/computer-accounting/m/{slug}', [StudioController::class, 'computerAccountingItem'])->name('studio.computer.item');
 Route::get('/computer-accounting/{slug}', [StudioController::class, 'computerAccountingType'])->name('studio.computer.type');
 Route::get('/projects', [StudioController::class, 'projects'])->name('studio.projects');
@@ -60,6 +64,8 @@ Route::post('/support', [StudioSupportController::class, 'send'])->name('studio.
 
 Route::get('/software/{slug}', [StudioController::class, 'softwareOffer'])->name('studio.software');
 
+Route::get('/pay/cart', [StudioCartController::class, 'pay'])->name('studio.pay.cart');
+Route::post('/pay/cart', [StudioCartController::class, 'record'])->name('studio.pay.cart.record');
 Route::get('/pay/start', [StudioPayController::class, 'start'])->name('studio.pay.start');
 Route::get('/pay/zarinpal', [StudioPayController::class, 'start'])->name('studio.pay.zarinpal');
 Route::get('/pay/melli', [StudioPayController::class, 'start'])->name('studio.pay.melli');

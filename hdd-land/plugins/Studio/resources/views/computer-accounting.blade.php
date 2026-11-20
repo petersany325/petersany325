@@ -52,38 +52,10 @@
     <h2>قیمت نرم‌افزار کامپیوتر</h2>
     <p class="ag-lead">مبالغ به تومان است. همهٔ نسخه‌ها با هم ۲۰۰ میلیون تومان است.</p>
     @php
-      $faPrice = function (int $million): string {
-          $digits = strtr((string) $million, ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']);
-
-          return $digits.' میلیون تومان';
-      };
-      $editions = [
-          ['نرم‌افزار فروشگاهی', 25, '/computer-accounting/shop'],
-          ['نرم‌افزار شرکتی', 30, '/computer-accounting/corporate'],
-          ['نرم‌افزار سوپرمارکت', 25, '/computer-accounting/supermarket'],
-          ['نرم‌افزار پخش', 30, '/computer-accounting/distribution'],
-          ['نرم‌افزار خدماتی', 20, '/computer-accounting/service'],
-          ['نرم‌افزار تولیدی', 30, '/computer-accounting/manufacturing'],
-          ['نرم‌افزار تعمیرکاران', 25, '/computer-accounting/technicians'],
-          ['نرم‌افزار رستوران', 25, '/computer-accounting/restaurant'],
-          ['نرم‌افزار کافی‌شاپ', 25, '/computer-accounting/cafe'],
-          ['نرم‌افزار پیمانکاری', 20, '/computer-accounting/contracting'],
-          ['نرم‌افزار اتوماسیون اداری', 25, '/computer-accounting/automation'],
-      ];
-      $addons = [
-          ['افزونه پیامک', 1],
-          ['افزونه صندوق فروشگاه', 1],
-          ['افزونه نسخه وب', 15],
-          ['افزونه چند شرکتی', 10],
-          ['افزونه پخش ویزیتور', 5],
-          ['افزونه اتصال برنامه‌های دیگر (API)', 10],
-          ['افزونه هوش مصنوعی اقتصادی داخلی', 25],
-          ['افزونه هوش مصنوعی داخلی حرفه‌ای', 80],
-          ['افزونه کلاینت', 2],
-          ['افزونه حسابداری مالیاتی', 15],
-          ['افزونه دفتر دوم', 10],
-          ['افزونه حسابداری چند ارزی', 25],
-      ];
+      $editions = \App\Support\StudioPriceList::editions();
+      $bundle = \App\Support\StudioPriceList::bundle();
+      $addons = \App\Support\StudioPriceList::addons();
+      $cartCount = count(\App\Support\StudioCart::skus());
     @endphp
     <style>
       .ag-price-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
@@ -96,41 +68,46 @@
       .ag-price td{color:#fff;font-weight:700;white-space:nowrap}
       .ag-price tr.is-all th,.ag-price tr.is-all td{background:rgba(124,92,255,.16);color:#fff}
       .ag-price-block h3{margin:0 0 .55rem;font-size:1rem}
-      @media(max-width:800px){.ag-price-grid{grid-template-columns:1fr}.ag-price th,.ag-price td{padding:.62rem .7rem;font-size:.84rem}}
+      .ag-price .ag-cart{border:0;border-radius:999px;background:#7c5cff;color:#fff;font:inherit;font-size:.74rem;font-weight:600;padding:.32rem .7rem;cursor:pointer}
+      .ag-price .ag-cart.is-in{background:transparent;color:#c4b5fd;border:1px solid rgba(124,92,255,.5);text-decoration:none;display:inline-block}
+      .ag-cart-bar{display:flex;justify-content:space-between;gap:.7rem;align-items:center;margin-top:.9rem;padding:.7rem .9rem;border-radius:14px;background:#101628;border:1px solid rgba(124,92,255,.35)}
+      @media(max-width:800px){.ag-price-grid{grid-template-columns:1fr}.ag-price th,.ag-price td{padding:.62rem .7rem;font-size:.84rem}.ag-cart-bar{flex-direction:column;align-items:stretch}}
     </style>
     <div class="ag-price-grid">
       <div class="ag-price-block">
       <h3>قیمت نرم‌افزار کامپیوتر</h3>
       <table class="ag-price">
-        <thead><tr><th>نسخه</th><th>قیمت</th></tr></thead>
+        <thead><tr><th>نسخه</th><th>قیمت</th><th></th></tr></thead>
         <tbody>
-          @foreach($editions as [$name, $million, $path])
-            <tr>
-              <th><a href="{{ url($path) }}">{{ $name }}</a></th>
-              <td>{{ $faPrice($million) }}</td>
+          @foreach(array_merge($editions, [$bundle]) as $row)
+            <tr class="{{ $row['kind'] === 'bundle' ? 'is-all' : '' }}">
+              <th>@if($row['kind'] === 'edition')<a href="{{ url($row['url']) }}">{{ $row['title'] }}</a>@else{{ $row['title'] }}@endif</th>
+              <td>{{ \App\Support\StudioPriceList::label($row['million']) }}</td>
+              <td>@include('studio::price-cart-button', ['sku' => $row['sku']])</td>
             </tr>
           @endforeach
-          <tr class="is-all">
-            <th>همه نسخه‌ها</th>
-            <td>{{ $faPrice(200) }}</td>
-          </tr>
         </tbody>
       </table>
       </div>
       <div class="ag-price-block">
       <h3>قیمت افزونه‌ها</h3>
       <table class="ag-price">
-        <thead><tr><th>افزونه</th><th>قیمت</th></tr></thead>
+        <thead><tr><th>افزونه</th><th>قیمت</th><th></th></tr></thead>
         <tbody>
-          @foreach($addons as [$name, $million])
+          @foreach($addons as $row)
             <tr>
-              <th>{{ $name }}</th>
-              <td>{{ $faPrice($million) }}</td>
+              <th>{{ $row['title'] }}</th>
+              <td>{{ \App\Support\StudioPriceList::label($row['million']) }}</td>
+              <td>@include('studio::price-cart-button', ['sku' => $row['sku']])</td>
             </tr>
           @endforeach
         </tbody>
       </table>
       </div>
+    </div>
+    <div class="ag-cart-bar">
+      <span>سبد شما: {{ strtr((string) $cartCount, ['0'=>'۰','1'=>'۱','2'=>'۲','3'=>'۳','4'=>'۴','5'=>'۵','6'=>'۶','7'=>'۷','8'=>'۸','9'=>'۹']) }} مورد</span>
+      <a class="ag-btn ag-btn--on" href="{{ url('/computer-accounting/cart') }}">کارتابل سبد و پرداخت<i>←</i></a>
     </div>
     <p class="ag-note">مشاورهٔ فروش: <a href="tel:09113100473">۰۹۱۱۳۱۰۰۴۷۳</a></p>
   </div>

@@ -113,7 +113,11 @@
             @forelse(($sales ?? []) as $row)
               <tr>
                 <td>{{ $row['id'] }}</td>
-                <td><a href="{{ url($row['url'] ?? '/') }}">{{ $row['title'] }}</a></td>
+                <td><a href="{{ url($row['url'] ?? '/') }}">{{ $row['title'] }}</a>
+                  @if(!empty($row['lines']) && is_array($row['lines']))
+                    <div style="color:#64748b;font-size:.68rem">{{ implode('، ', array_map(fn ($line) => (string) ($line['title'] ?? ''), $row['lines'])) }}</div>
+                  @endif
+                </td>
                 <td>{{ $row['price_label'] ?? '' }}</td>
                 <td>{{ $row['commission'] ?? 0 }}٪</td>
                 <td>{{ number_format((int)($row['share'] ?? 0)) }}</td>

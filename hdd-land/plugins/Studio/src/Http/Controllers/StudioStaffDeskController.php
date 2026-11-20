@@ -172,7 +172,9 @@ class StudioStaffDeskController
             'selected' => trim((string) request('sku', '')),
             'isAdmin' => $user && method_exists($user, 'isAdmin') && $user->isAdmin(),
             'designOffers' => StudioOffers::design(),
-            'sales' => StudioStaffDesk::salesFor($uid),
+            'sales' => ($tab === 'invoices' && $user && method_exists($user, 'isAdmin') && $user->isAdmin())
+                ? array_reverse(StudioStaffDesk::state()['sales'] ?? [])
+                : StudioStaffDesk::salesFor($uid),
             'tickets' => \App\Support\StudioPlugins::tickets($uid, true),
             'reps' => StudioStaffDesk::reps(),
             'balance' => StudioStaffDesk::balance($uid),
