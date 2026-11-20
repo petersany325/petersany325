@@ -35,8 +35,8 @@
 @endpush
 @section('content')
 <div class="panel">
-    <h2>نرم‌افزار کامپیوتر و سایت</h2>
-    <p class="lead">یک توکن برای هر رایانه بسازید و در نرم‌افزار وارد کنید. از آن به بعد مشتری، قبض، پرداخت، قطعه، تعمیرکار و منوهای پذیرش از هر دو طرف به هم می‌رسند و نسخه جدیدتر می‌ماند.</p>
+    <h2>همگام‌سازی با نرم‌افزار حسابداری</h2>
+    <p class="lead">یک توکن برای هر رایانه بسازید و در نرم‌افزار حسابداری وارد کنید. از آن به بعد مشتری، قبض و پرداخت از هر دو طرف به هم می‌رسند.</p>
 
     @if(!$ready)
         <div class="alert alert-error">جدول همگام‌سازی هنوز ساخته نشده. به‌روزرسانی نرم‌افزار را یک بار نصب کنید.</div>
@@ -60,7 +60,10 @@
         <thead>
             <tr>
                 <th>نام</th>
+                <th>پیشوند</th>
+                <th>دسترسی</th>
                 <th>آخرین اتصال</th>
+                <th>آخرین IP</th>
                 <th>وضعیت</th>
                 <th></th>
             </tr>
@@ -69,7 +72,10 @@
             @forelse($devices as $device)
                 <tr>
                     <td>{{ $device->name }}</td>
+                    <td dir="ltr">{{ $device->prefix ?: '—' }}</td>
+                    <td>{{ implode(' و ', array_map(fn ($scope) => $scope === 'write' ? 'نوشتن' : 'خواندن', $device->tokenScopes())) }}</td>
                     <td>{{ $device->last_seen_at ? jalali_like($device->last_seen_at) : 'هنوز وصل نشده' }}</td>
+                    <td dir="ltr">{{ $device->last_ip ?: '—' }}</td>
                     <td>{{ $device->revoked_at ? 'قطع‌شده' : 'فعال' }}</td>
                     <td>
                         @php $token = $device->plainToken(); @endphp
@@ -100,7 +106,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="4">هنوز رایانه‌ای وصل نشده است.</td></tr>
+                <tr><td colspan="7">هنوز رایانه‌ای وصل نشده است.</td></tr>
             @endforelse
         </tbody>
     </table>
@@ -108,8 +114,11 @@
 
 <div class="panel" style="margin-top:12px;">
     <h3>قرارداد نرم‌افزار</h3>
-    <p>درخواست‌ها هدر <span dir="ltr">Authorization: Bearer</span> و توکن را لازم دارند.</p>
+    <p>نرم‌افزار حسابداری این آدرس را صدا می‌زند. درخواست‌ها هدر <span dir="ltr">Authorization: Bearer</span> و توکن را لازم دارند.</p>
     <ul>
+        <li dir="ltr">GET {{ $apiBase }}/ping</li>
+        <li dir="ltr">GET {{ $apiBase }}/changes</li>
+        <li dir="ltr">POST {{ $apiBase }}/push</li>
         <li dir="ltr">GET {{ $pingUrl }}</li>
         <li dir="ltr">GET {{ $specUrl }}</li>
         <li dir="ltr">POST {{ $syncUrl }}</li>
@@ -127,6 +136,36 @@
     }
   ]
 }</pre>
+</div>
+
+<div class="panel" style="margin-top:12px;">
+    <h3>آخرین رویدادها</h3>
+    <table class="compact-table">
+        <thead>
+            <tr>
+                <th>زمان</th>
+                <th>مسیر</th>
+                <th>جدول</th>
+                <th>عمل</th>
+                <th>نتیجه</th>
+                <th>IP</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($logs as $log)
+                <tr>
+                    <td>{{ $log->created_at ? jalali_like($log->created_at) : '—' }}</td>
+                    <td dir="ltr">{{ $log->endpoint }}</td>
+                    <td dir="ltr">{{ $log->table_name ?: '—' }}</td>
+                    <td dir="ltr">{{ $log->op ?: '—' }}</td>
+                    <td dir="ltr">{{ $log->status ?: '—' }}</td>
+                    <td dir="ltr">{{ $log->ip ?: '—' }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="6">هنوز رویدادی ثبت نشده است.</td></tr>
+            @endforelse
+        </tbody>
+    </table>
 </div>
 <script>
 (function () {

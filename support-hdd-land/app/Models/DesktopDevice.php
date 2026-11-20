@@ -17,6 +17,10 @@ class DesktopDevice extends Model
         'last_cursor',
         'revoked_at',
         'created_by',
+        'prefix',
+        'scopes',
+        'last_ip',
+        'expires_at',
     ];
 
     protected function casts(): array
@@ -24,6 +28,8 @@ class DesktopDevice extends Model
         return [
             'last_seen_at' => 'datetime',
             'revoked_at' => 'datetime',
+            'expires_at' => 'datetime',
+            'scopes' => 'array',
         ];
     }
 
@@ -44,8 +50,18 @@ class DesktopDevice extends Model
             'created_by' => $userId,
             'last_cursor' => 0,
         ]);
+        $extra = [];
         if ($encrypted = static::encryptToken($plain)) {
-            $device->forceFill(['token_encrypted' => $encrypted])->save();
+            $extra['token_encrypted'] = $encrypted;
+        }
+        if (Schema::hasColumn('desktop_devices', 'prefix')) {
+            $extra['prefix'] = substr($plain, 0, 12);
+        }
+        if (Schema::hasColumn('desktop_devices', 'scopes')) {
+            $extra['scopes'] = ['read', 'write'];
+        }
+        if ($extra !== []) {
+            $device->forceFill($extra)->save();
         }
 
         return [$device, $plain];
@@ -99,5 +115,26 @@ class DesktopDevice extends Model
     public function isRevoked(): bool
     {
         return $this->revoked_at !== null;
+    }
+
+    /**
+     * Tokens issued before scopes existed stay able to read and write.
+     *
+     * @return list<string>
+     */
+    public function tokenScopes(): array
+    {
+        if (! Schema::hasColumn('desktop_devices', 'scopes')) {
+            return ['read', 'write'];
+        }
+        $scopes = $this->getAttribute('scopes');
+        if (is_string($scopes)) {
+            $scopes = json_decode($scopes, true);
+        }
+        if (! is_array($scopes) || $scopes === []) {
+            return ['read', 'write'];
+        }
+
+        return array_values(array_map('strval', $scopes));
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DesktopDevice;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class DesktopDeviceController extends Controller
@@ -21,6 +22,10 @@ class DesktopDeviceController extends Controller
             'syncUrl' => url('/api/desktop/v1/sync'),
             'pingUrl' => url('/api/desktop/v1/ping'),
             'specUrl' => url('/api/desktop/v1/spec'),
+            'apiBase' => url('/api/desktop-sync/v1'),
+            'logs' => Schema::hasTable('desktop_sync_log')
+                ? DB::table('desktop_sync_log')->orderByDesc('id')->limit(50)->get()
+                : collect(),
         ]);
     }
 

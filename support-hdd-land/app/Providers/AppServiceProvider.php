@@ -5,7 +5,12 @@ namespace App\Providers;
 use App\Http\Controllers\DesktopDeviceController;
 use App\Http\Middleware\EnsurePermission;
 use App\Observers\DesktopSyncObserver;
+use App\Observers\DesktopSyncTombstoneObserver;
 use App\Support\DesktopSync\Catalog;
+use App\Support\DesktopSync\SyncTableRegistry;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -28,6 +33,20 @@ class AppServiceProvider extends ServiceProvider
         foreach (Catalog::models() as $model) {
             $model::observe(DesktopSyncObserver::class);
         }
+        foreach (SyncTableRegistry::models() as $model) {
+            $model::observe(DesktopSyncTombstoneObserver::class);
+        }
+
+        RateLimiter::for('desktop-sync', function (Request $request) {
+            $id = $request->attributes->get('sync_token_id') ?: ($request->bearerToken() ?: $request->ip());
+
+            return Limit::perMinute(120)->by('desktop-sync:'.$id)->response(function (Request $request, array $headers) {
+                return response()->json([
+                    'ok' => false,
+                    'message' => 'تعداد درخواست بیش از حد است. کمی بعد دوباره تلاش کنید.',
+                ], 429, $headers);
+            });
+        });
 
         // Installs that already load these routes keep a single registration.
         // An older bootstrap still picks the API and the settings page up from here.
