@@ -6,6 +6,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeliveryController;
+use App\Http\Controllers\DesktopDeviceController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\WarehouseController;
@@ -321,6 +322,10 @@ Route::middleware('auth')->group(function () {
         Route::post('settings/lookups', [SettingController::class, 'storeLookup'])->name('settings.lookups');
         Route::put('settings/lookups/{lookup}', [SettingController::class, 'updateLookup'])->name('settings.lookups.update');
         Route::delete('settings/lookups/{lookup}', [SettingController::class, 'destroyLookup'])->name('settings.lookups.destroy');
+        Route::get('settings/desktop-sync', [DesktopDeviceController::class, 'index'])->name('settings.desktop-sync');
+        Route::post('settings/desktop-sync', [DesktopDeviceController::class, 'store'])->name('settings.desktop-sync.store');
+        Route::post('settings/desktop-sync/{device}/reissue', [DesktopDeviceController::class, 'reissue'])->name('settings.desktop-sync.reissue');
+        Route::post('settings/desktop-sync/{device}/revoke', [DesktopDeviceController::class, 'revoke'])->name('settings.desktop-sync.revoke');
     });
 
     Route::middleware(EnsurePermission::class.':system.tools')->group(function () {

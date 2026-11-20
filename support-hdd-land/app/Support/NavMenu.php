@@ -230,7 +230,8 @@ class NavMenu
                 'hint' => 'سیستم و منوها',
                 'any_of' => ['settings', 'profile', 'daily_logs.manage'],
                 'children' => [
-                    ['label' => 'تنظیمات سیستم', 'route' => 'settings.index', 'match' => 'settings.*', 'hint' => 'منو، فاکتور، SMS، بکاپ', 'mark' => 'ظ', 'permission' => 'settings'],
+                    ['label' => 'تنظیمات سیستم', 'route' => 'settings.index', 'match' => 'settings.index|settings.general|settings.fault-types*|settings.referral*|settings.lookups*|settings.sms*|settings.invoice|settings.labels|settings.payments|settings.backup*', 'hint' => 'منو، فاکتور، SMS، بکاپ', 'mark' => 'ظ', 'permission' => 'settings'],
+                    ['label' => 'همگام‌سازی رایانه', 'route' => 'settings.desktop-sync', 'match' => 'settings.desktop-sync*', 'hint' => 'توکن نرم‌افزار کامپیوتر و به‌روز ماندن دو طرف', 'mark' => 'ک', 'permission' => 'settings'],
                     ['label' => 'تنظیمات دفتر روز', 'route' => 'daily-logs.settings', 'match' => 'daily-logs.settings', 'hint' => 'دسته و قوانین — فقط ادمین', 'mark' => 'ر', 'permission' => 'daily_logs.manage'],
                     ['label' => 'پروفایل من', 'route' => 'profile.edit', 'match' => 'profile.*', 'hint' => 'نام و رمز', 'mark' => 'پ', 'permission' => 'profile'],
                 ],
