@@ -9,20 +9,26 @@ return new class extends Migration
     public function up(): void
     {
         if (Schema::hasTable('desktop_devices')) {
-            Schema::table('desktop_devices', function (Blueprint $table) {
-                if (! Schema::hasColumn('desktop_devices', 'prefix')) {
-                    $table->string('prefix', 12)->nullable();
-                }
-                if (! Schema::hasColumn('desktop_devices', 'scopes')) {
-                    $table->json('scopes')->nullable();
-                }
-                if (! Schema::hasColumn('desktop_devices', 'last_ip')) {
-                    $table->string('last_ip', 64)->nullable();
-                }
-                if (! Schema::hasColumn('desktop_devices', 'expires_at')) {
-                    $table->timestamp('expires_at')->nullable();
-                }
-            });
+            $missing = array_values(array_filter(
+                ['prefix', 'scopes', 'last_ip', 'expires_at'],
+                fn (string $column) => ! Schema::hasColumn('desktop_devices', $column)
+            ));
+            if ($missing !== []) {
+                Schema::table('desktop_devices', function (Blueprint $table) use ($missing) {
+                    if (in_array('prefix', $missing, true)) {
+                        $table->string('prefix', 12)->nullable();
+                    }
+                    if (in_array('scopes', $missing, true)) {
+                        $table->json('scopes')->nullable();
+                    }
+                    if (in_array('last_ip', $missing, true)) {
+                        $table->string('last_ip', 64)->nullable();
+                    }
+                    if (in_array('expires_at', $missing, true)) {
+                        $table->timestamp('expires_at')->nullable();
+                    }
+                });
+            }
         }
 
         if (! Schema::hasTable('desktop_sync_map')) {

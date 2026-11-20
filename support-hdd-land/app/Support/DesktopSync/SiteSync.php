@@ -61,15 +61,15 @@ class SiteSync
             'ok' => true,
             'api_version' => 1,
             'site' => [
-                'name' => shop_name(),
+                'name' => function_exists('shop_name') ? shop_name() : (string) config('app.name'),
                 'domain' => (string) (parse_url((string) config('app.url'), PHP_URL_HOST) ?: request()->getHost()),
-                'receipt_prefix' => Reception::receiptPrefix(),
+                'receipt_prefix' => method_exists(Reception::class, 'receiptPrefix') ? Reception::receiptPrefix() : '',
             ],
             'server_time' => $this->iso(now()),
             'money_unit' => 'IRT',
             'token' => [
                 'label' => $device->name,
-                'scopes' => $device->tokenScopes(),
+                'scopes' => $this->tokenScopes($device),
                 'last_used_at' => $this->iso($device->last_seen_at),
             ],
             'tables' => $this->existingTables(),
@@ -887,7 +887,7 @@ class SiteSync
     private function baseQuery(string $table, bool $withTrashed = true): mixed
     {
         $model = SyncTableRegistry::model($table);
-        if ($model) {
+        if (is_string($model) && class_exists($model)) {
             $query = $model::query();
             if ($withTrashed && in_array(SoftDeletes::class, class_uses_recursive($model), true)) {
                 $query->withTrashed();
@@ -968,6 +968,19 @@ class SiteSync
         if (Schema::hasTable('desktop_sync_log')) {
             DB::table('desktop_sync_log')->where('created_at', '<', now()->subDays(90))->delete();
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function tokenScopes(DesktopDevice $device): array
+    {
+        if (! method_exists($device, 'tokenScopes')) {
+            return ['read', 'write'];
+        }
+        $scopes = $device->tokenScopes();
+
+        return is_array($scopes) ? array_values(array_map('strval', $scopes)) : ['read', 'write'];
     }
 
     private function limit(int $limit): int

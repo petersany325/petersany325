@@ -2,33 +2,6 @@
 
 namespace App\Support\DesktopSync;
 
-use App\Models\Account;
-use App\Models\CostApproval;
-use App\Models\Customer;
-use App\Models\CustomerMessage;
-use App\Models\DailyLogCategory;
-use App\Models\DailyLogEntry;
-use App\Models\DeviceHandoff;
-use App\Models\FaultType;
-use App\Models\Intern;
-use App\Models\JournalEntry;
-use App\Models\JournalLine;
-use App\Models\LookupOption;
-use App\Models\Part;
-use App\Models\Payment;
-use App\Models\PaymentReceipt;
-use App\Models\Reception;
-use App\Models\ReceptionCostStage;
-use App\Models\ReceptionPart;
-use App\Models\ReceptionStatusLog;
-use App\Models\ReceptionWorkReport;
-use App\Models\ReferralSource;
-use App\Models\SmsStatusRule;
-use App\Models\StockMovement;
-use App\Models\Technician;
-use App\Models\User;
-use App\Models\Warehouse;
-
 class SyncTableRegistry
 {
     /** @var list<string> */
@@ -47,34 +20,39 @@ class SyncTableRegistry
         'app_settings',
     ];
 
-    /** @var array<string, class-string> */
+    /**
+     * String names, not ::class. A shop that does not have one of these models
+     * must still be able to load the registry and answer ping.
+     *
+     * @var array<string, class-string>
+     */
     private const MODELS = [
-        'customers' => Customer::class,
-        'referral_sources' => ReferralSource::class,
-        'receptions' => Reception::class,
-        'reception_status_logs' => ReceptionStatusLog::class,
-        'reception_work_reports' => ReceptionWorkReport::class,
-        'reception_parts' => ReceptionPart::class,
-        'reception_cost_stages' => ReceptionCostStage::class,
-        'cost_approvals' => CostApproval::class,
-        'device_handoffs' => DeviceHandoff::class,
-        'payments' => Payment::class,
-        'payment_receipts' => PaymentReceipt::class,
-        'customer_messages' => CustomerMessage::class,
-        'users' => User::class,
-        'technicians' => Technician::class,
-        'interns' => Intern::class,
-        'lookup_options' => LookupOption::class,
-        'fault_types' => FaultType::class,
-        'daily_log_categories' => DailyLogCategory::class,
-        'sms_status_rules' => SmsStatusRule::class,
-        'daily_log_entries' => DailyLogEntry::class,
-        'parts' => Part::class,
-        'warehouses' => Warehouse::class,
-        'stock_movements' => StockMovement::class,
-        'accounts' => Account::class,
-        'journal_entries' => JournalEntry::class,
-        'journal_lines' => JournalLine::class,
+        'customers' => 'App\\Models\\Customer',
+        'referral_sources' => 'App\\Models\\ReferralSource',
+        'receptions' => 'App\\Models\\Reception',
+        'reception_status_logs' => 'App\\Models\\ReceptionStatusLog',
+        'reception_work_reports' => 'App\\Models\\ReceptionWorkReport',
+        'reception_parts' => 'App\\Models\\ReceptionPart',
+        'reception_cost_stages' => 'App\\Models\\ReceptionCostStage',
+        'cost_approvals' => 'App\\Models\\CostApproval',
+        'device_handoffs' => 'App\\Models\\DeviceHandoff',
+        'payments' => 'App\\Models\\Payment',
+        'payment_receipts' => 'App\\Models\\PaymentReceipt',
+        'customer_messages' => 'App\\Models\\CustomerMessage',
+        'users' => 'App\\Models\\User',
+        'technicians' => 'App\\Models\\Technician',
+        'interns' => 'App\\Models\\Intern',
+        'lookup_options' => 'App\\Models\\LookupOption',
+        'fault_types' => 'App\\Models\\FaultType',
+        'daily_log_categories' => 'App\\Models\\DailyLogCategory',
+        'sms_status_rules' => 'App\\Models\\SmsStatusRule',
+        'daily_log_entries' => 'App\\Models\\DailyLogEntry',
+        'parts' => 'App\\Models\\Part',
+        'warehouses' => 'App\\Models\\Warehouse',
+        'stock_movements' => 'App\\Models\\StockMovement',
+        'accounts' => 'App\\Models\\Account',
+        'journal_entries' => 'App\\Models\\JournalEntry',
+        'journal_lines' => 'App\\Models\\JournalLine',
     ];
 
     /** @var array<string, list<string>> */

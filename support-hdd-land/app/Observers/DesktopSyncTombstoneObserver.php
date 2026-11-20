@@ -10,6 +10,25 @@ use Illuminate\Support\Facades\Schema;
 
 class DesktopSyncTombstoneObserver
 {
+    public static function register(): void
+    {
+        if (app()->bound('desktop.sync.tombstones')) {
+            return;
+        }
+        // Route files can load before Eloquent has a dispatcher. Retry on the
+        // next boot instead of remembering a failed attempt for the process.
+        if (Model::getEventDispatcher() === null) {
+            return;
+        }
+        app()->instance('desktop.sync.tombstones', true);
+
+        foreach (SyncTableRegistry::models() as $model) {
+            if (is_string($model) && class_exists($model)) {
+                $model::observe(self::class);
+            }
+        }
+    }
+
     public function deleting(Model $model): void
     {
         if (! Schema::hasTable('desktop_sync_tombstones')) {

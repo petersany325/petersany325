@@ -567,4 +567,15 @@ class DesktopSyncV1Test extends TestCase
         ]))->assertOk()->json('items');
         $this->assertFalse(collect($after)->contains(fn ($item) => (int) $item['id'] === $option->id && $item['op'] === 'delete'));
     }
+
+    public function test_main_site_does_not_install_the_customer_package(): void
+    {
+        config(['license.key' => '']);
+        $this->assertTrue(\App\Support\ReleasePolicy::isMainSite());
+        $this->assertFalse(\App\Support\ReleasePolicy::mayInstallCustomerPackage());
+
+        config(['license.key' => 'shop-license']);
+        $this->assertFalse(\App\Support\ReleasePolicy::isMainSite());
+        $this->assertTrue(\App\Support\ReleasePolicy::mayInstallCustomerPackage());
+    }
 }

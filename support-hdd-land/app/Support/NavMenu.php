@@ -331,7 +331,7 @@ class NavMenu
                 'hint' => 'کش، تعمیر، بکاپ و آپدیت زنده',
                 'children' => [
                     ['label' => 'نگهداری و بکاپ', 'route' => 'system-tools.index', 'match' => 'system-tools.index|system-tools.run|system-tools.backups*', 'hint' => 'کش، تعمیر، بکاپ و ریستور', 'mark' => 'ن'],
-                    ['label' => 'آپدیت نرم‌افزار', 'route' => 'system-tools.updates', 'match' => 'system-tools.updates*', 'hint' => 'بررسی زنده و نصب نسخه جدید', 'mark' => 'آ'],
+                    ['label' => 'آپدیت نرم‌افزار', 'route' => 'system-tools.updates', 'match' => 'system-tools.updates*', 'hint' => 'بررسی زنده و نصب نسخه جدید', 'mark' => 'آ', 'customer_only' => true],
                 ],
             ],
             [

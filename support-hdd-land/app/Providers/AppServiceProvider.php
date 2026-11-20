@@ -7,7 +7,6 @@ use App\Http\Middleware\EnsurePermission;
 use App\Observers\DesktopSyncObserver;
 use App\Observers\DesktopSyncTombstoneObserver;
 use App\Support\DesktopSync\Catalog;
-use App\Support\DesktopSync\SyncTableRegistry;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -33,9 +32,7 @@ class AppServiceProvider extends ServiceProvider
         foreach (Catalog::models() as $model) {
             $model::observe(DesktopSyncObserver::class);
         }
-        foreach (SyncTableRegistry::models() as $model) {
-            $model::observe(DesktopSyncTombstoneObserver::class);
-        }
+        DesktopSyncTombstoneObserver::register();
 
         RateLimiter::for('desktop-sync', function (Request $request) {
             $id = $request->attributes->get('sync_token_id') ?: ($request->bearerToken() ?: $request->ip());
@@ -53,6 +50,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->booted(function () {
             if (! Route::has('desktop.sync')) {
                 Route::middleware('api')->prefix('api')->group(base_path('routes/api.php'));
+            } elseif (! Route::has('desktop-sync.ping')) {
+                Route::middleware('api')->prefix('api')->group(base_path('routes/desktop-sync-v1.php'));
             }
             if (! Route::has('settings.desktop-sync')) {
                 Route::middleware(['web', 'auth', EnsurePermission::class.':settings'])->group(function () {

@@ -19,15 +19,20 @@ class EnsureDesktopSyncToken
 
         $digest = hash('sha256', $plain);
         $device = DesktopDevice::query()->where('token_hash', $digest)->first();
-        if (! $device || ! hash_equals((string) $device->token_hash, $digest) || $device->isRevoked()) {
+        $revoked = $device && (method_exists($device, 'isRevoked') ? $device->isRevoked() : $device->revoked_at !== null);
+        if (! $device || ! hash_equals((string) $device->token_hash, $digest) || $revoked) {
             return $this->deny();
         }
 
-        if ($device->isExpired()) {
+        $expired = method_exists($device, 'isExpired')
+            ? $device->isExpired()
+            : ($device->expires_at !== null && $device->expires_at->isPast());
+        if ($expired) {
             return $this->deny();
         }
 
-        if ($scope !== 'any' && ! $device->allows($scope)) {
+        $allowed = ! method_exists($device, 'allows') || $device->allows($scope);
+        if ($scope !== 'any' && ! $allowed) {
             return response()->json([
                 'ok' => false,
                 'message' => 'این توکن اجازه این کار را ندارد.',
