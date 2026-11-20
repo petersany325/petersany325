@@ -53,19 +53,21 @@ class StudioPayController
             $buyerPhone = StudioSms::normalizePhone((string) $request->input('phone', $user->phone ?? ''));
         } catch (\Throwable) {
         }
-        $ipKey = 'pay-record-ip:'.$request->ip();
-        $phoneKey = $buyerPhone !== '' ? 'pay-record-phone:'.hash('sha256', $buyerPhone) : '';
-        if (RateLimiter::tooManyAttempts($ipKey, 4) || ($phoneKey !== '' && RateLimiter::tooManyAttempts($phoneKey, 3))) {
-            return back()->withInput()->with('error', 'تعداد ثبت فاکتور در این ساعت زیاد شد. کمی بعد دوباره تلاش کنید.');
-        }
-        RateLimiter::hit($ipKey, 3600);
-        if ($phoneKey !== '') {
-            RateLimiter::hit($phoneKey, 3600);
-        }
         $isStaff = false;
         try {
-            $isStaff = $user && (method_exists($user, 'isStaff') && $user->isStaff() || method_exists($user, 'isAdmin') && $user->isAdmin());
+            $isStaff = $user && ((method_exists($user, 'isStaff') && $user->isStaff()) || (method_exists($user, 'isAdmin') && $user->isAdmin()));
         } catch (\Throwable) {
+        }
+        if (! $isStaff) {
+            $ipKey = 'pay-record-ip:'.$request->ip();
+            $phoneKey = $buyerPhone !== '' ? 'pay-record-phone:'.hash('sha256', $buyerPhone) : '';
+            if (RateLimiter::tooManyAttempts($ipKey, 4) || ($phoneKey !== '' && RateLimiter::tooManyAttempts($phoneKey, 3))) {
+                return back()->withInput()->with('error', 'تعداد ثبت فاکتور در این ساعت زیاد شد. کمی بعد دوباره تلاش کنید.');
+            }
+            RateLimiter::hit($ipKey, 3600);
+            if ($phoneKey !== '') {
+                RateLimiter::hit($phoneKey, 3600);
+            }
         }
         $offer['buyer_id'] = $isStaff ? 0 : (int) ($user->id ?? 0);
         $offer['buyer_phone'] = $buyerPhone;

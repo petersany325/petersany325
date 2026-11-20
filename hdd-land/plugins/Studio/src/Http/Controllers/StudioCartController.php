@@ -79,19 +79,21 @@ class StudioCartController
             $buyerPhone = StudioSms::normalizePhone((string) $request->input('phone', $user->phone ?? ''));
         } catch (\Throwable) {
         }
-        $ipKey = 'pay-cart-ip:'.$request->ip();
-        $phoneKey = $buyerPhone !== '' ? 'pay-cart-phone:'.hash('sha256', $buyerPhone) : '';
-        if (RateLimiter::tooManyAttempts($ipKey, 4) || ($phoneKey !== '' && RateLimiter::tooManyAttempts($phoneKey, 3))) {
-            return back()->withInput()->with('error', 'تعداد ثبت سبد در این ساعت زیاد شد. کمی بعد دوباره تلاش کنید.');
-        }
-        RateLimiter::hit($ipKey, 3600);
-        if ($phoneKey !== '') {
-            RateLimiter::hit($phoneKey, 3600);
-        }
         $isStaff = false;
         try {
             $isStaff = $user && ((method_exists($user, 'isStaff') && $user->isStaff()) || (method_exists($user, 'isAdmin') && $user->isAdmin()));
         } catch (\Throwable) {
+        }
+        if (! $isStaff) {
+            $ipKey = 'pay-cart-ip:'.$request->ip();
+            $phoneKey = $buyerPhone !== '' ? 'pay-cart-phone:'.hash('sha256', $buyerPhone) : '';
+            if (RateLimiter::tooManyAttempts($ipKey, 4) || ($phoneKey !== '' && RateLimiter::tooManyAttempts($phoneKey, 3))) {
+                return back()->withInput()->with('error', 'تعداد ثبت سبد در این ساعت زیاد شد. کمی بعد دوباره تلاش کنید.');
+            }
+            RateLimiter::hit($ipKey, 3600);
+            if ($phoneKey !== '') {
+                RateLimiter::hit($phoneKey, 3600);
+            }
         }
         $lines = [];
         foreach ($items as $row) {
