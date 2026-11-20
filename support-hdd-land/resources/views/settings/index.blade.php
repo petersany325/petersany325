@@ -64,6 +64,12 @@
     $backupIntervals = $backupIntervals ?? [];
     $backupWeekdays = $backupWeekdays ?? [];
     $backupProtocols = $backupProtocols ?? [];
+    $paymentGatewaysLoaded = $paymentGatewaysLoaded ?? true;
+    $paymentLinksLoaded = $paymentLinksLoaded ?? true;
+    $zarinpalLoaded = $zarinpalLoaded ?? true;
+    $bankTransferLoaded = $bankTransferLoaded ?? true;
+    $backupLoaded = $backupLoaded ?? true;
+    $paymentsFormReady = $paymentGatewaysLoaded || $paymentLinksLoaded || $zarinpalLoaded || $bankTransferLoaded;
     $href = function (string $name, mixed $params = []) {
         if (! \Illuminate\Support\Facades\Route::has($name)) {
             return '#';
@@ -359,9 +365,13 @@
                 <strong>وب‌سرویس مشتری:</strong>
                 <div dir="ltr" style="margin-top:4px;"><a href="{{ $portalUrl }}" target="_blank">{{ $portalUrl }}</a></div>
             </div>
+            @unless($paymentsFormReady)
+                <div class="alert alert-error">بخش پرداخت خوانده نشد. فرم ذخیره نشان داده نمی‌شود تا تنظیمات فعلی پاک نشود.</div>
+            @else
             <form method="POST" action="{{ $href('settings.payments') }}">
                 @csrf
                 <input type="hidden" name="settings_tab" value="payments">
+                @if($zarinpalLoaded)
                 <h3>زرین‌پال (IPG)</h3>
                 <div class="pay-settings-grid">
                     <div class="pay-settings-card tone-amber">
@@ -391,7 +401,11 @@
                         <span class="pill pill-off">Merchant ID وارد نشده</span>
                     @endif
                 </p>
+                @else
+                <div class="alert alert-error">تنظیمات زرین‌پال خوانده نشد و در ذخیرهٔ بعدی تغییر نمی‌کند.</div>
+                @endif
 
+                @if($paymentGatewaysLoaded)
                 <h3 style="margin-top:16px;">لینک موقت بانک‌ها (تا اتصال IPG)</h3>
                 <div class="pay-settings-grid">
                     @foreach($paymentGateways as $gw)
@@ -407,12 +421,18 @@
                         </div>
                     @endforeach
                 </div>
+                @else
+                <div class="alert alert-error">لینک بانک‌ها خوانده نشد و در ذخیرهٔ بعدی تغییر نمی‌کند.</div>
+                @endif
+                @if($paymentLinksLoaded)
                 <div class="toggle-grid" style="margin-top:10px;">
                     @include('partials.toggle', ['name' => 'pay_links_show_reception', 'label' => 'نمایش لینک بانک در صفحه قبض', 'checked' => $paymentLinksShow['reception']])
                     @include('partials.toggle', ['name' => 'pay_links_show_invoice', 'label' => 'نمایش لینک بانک روی فاکتور چاپ', 'checked' => $paymentLinksShow['invoice']])
                     @include('partials.toggle', ['name' => 'portal_otp_debug', 'label' => 'نمایش کد OTP کارتابل مشتری (فقط تست)', 'checked' => $paymentLinksShow['otp_debug']])
                 </div>
+                @endif
 
+                @if($bankTransferLoaded)
                 <h3 style="margin-top:18px;">واریز کارت‌به‌کارت (پرتال مشتری)</h3>
                 <p class="lead">شماره کارت شرکت برای نمایش در کارتابل مشتری. فیش‌ها فقط توسط مدیر و حسابدار تأیید می‌شوند.</p>
                 <div class="toggle-grid" style="margin-top:8px;">
@@ -449,10 +469,15 @@
                               placeholder="مثلاً بعد از واریز، تصویر فیش را از همین صفحه ارسال کنید.">{{ old('bank_transfer_instructions', $bankTransfer['instructions']) }}</textarea>
                 </div>
 
+                @else
+                <div class="alert alert-error">اطلاعات کارت‌به‌کارت خوانده نشد و در ذخیرهٔ بعدی تغییر نمی‌کند.</div>
+                @endif
+
                 <div class="actions">
                     <button class="btn btn-primary" type="submit">ذخیره تنظیمات پرداخت</button>
                 </div>
             </form>
+            @endunless
         </div>
 
         <div class="ws-pane {{ $activeTab === 'sms' ? 'active' : '' }}" data-ws-pane="sms">
@@ -544,9 +569,13 @@
             </div>
             @endif
 
+            @unless($backupLoaded)
+                <div class="alert alert-error">تنظیمات بکاپ خوانده نشد. فرم ذخیره نشان داده نمی‌شود تا رمز کلود و FTP پاک نشود.</div>
+            @else
             <form method="POST" action="{{ $href('settings.backup') }}">
                 @csrf
                 <input type="hidden" name="settings_tab" value="backup">
+                <input type="hidden" name="backup_settings_loaded" value="1">
                 <div class="panel" style="margin-bottom:10px;">
                     <h3 style="margin-top:0;">زمان‌بندی</h3>
                     <div class="accept-row accept-row-4" style="align-items:end;">
@@ -803,6 +832,7 @@
                     <a class="btn btn-ghost" href="{{ $href('system-tools.index') }}">ابزار بکاپ / ریستور</a>
                 </div>
             </form>
+            @endunless
 
             {{-- Forms خارج از فرم اصلی (HTML فرم تو در تو مجاز نیست) --}}
             <form id="backup-cloud-test-google" method="POST" action="{{ $href('settings.backup.cloud.test', 'google') }}" class="hidden">@csrf</form>

@@ -35,6 +35,7 @@ class SettingController extends Controller
         }
 
         $payments = $this->paymentView();
+        $bankTransfer = $this->bankTransferView();
         $backup = $this->backupView();
 
         return view('settings.index', [
@@ -74,7 +75,11 @@ class SettingController extends Controller
             'paymentGateways' => $payments['gateways'],
             'paymentLinksShow' => $payments['links'],
             'zarinpal' => $payments['zarinpal'],
-            'bankTransfer' => $this->bankTransferView(),
+            'paymentGatewaysLoaded' => $payments['gatewaysLoaded'],
+            'paymentLinksLoaded' => $payments['linksLoaded'],
+            'zarinpalLoaded' => $payments['zarinpalLoaded'],
+            'bankTransfer' => $bankTransfer['values'],
+            'bankTransferLoaded' => $bankTransfer['loaded'],
             'portalUrl' => url('/cartable'),
             'permissions' => Permissions::ALL,
             'backup' => $backup['backup'],
@@ -84,36 +89,54 @@ class SettingController extends Controller
             'backupProtocols' => $backup['protocols'],
             'backupCloudLabels' => $backup['labels'],
             'backupCronUrl' => $backup['cronUrl'],
+            'backupLoaded' => $backup['loaded'],
             'googleRedirectUri' => url('/settings/backup/cloud/google/callback'),
             'onedriveRedirectUri' => url('/settings/backup/cloud/onedrive/callback'),
         ]);
     }
 
-    /** @return array{gateways:list<array<string,mixed>>,links:array<string,bool>,zarinpal:array<string,mixed>} */
+    /** @return array{gateways:list<array<string,mixed>>,links:array<string,bool>,zarinpal:array<string,mixed>,gatewaysLoaded:bool,linksLoaded:bool,zarinpalLoaded:bool} */
     private function paymentView(): array
     {
-        $empty = [
-            'gateways' => [],
-            'links' => ['reception' => false, 'invoice' => false, 'otp_debug' => false],
-            'zarinpal' => ['configured' => false, 'sandbox' => false, 'merchant_id' => '', 'currency' => 'IRT'],
-        ];
-
+        $gateways = [];
+        $gatewaysLoaded = false;
         try {
-            return [
-                'gateways' => PaymentGateways::all(),
-                'links' => [
-                    'reception' => PaymentGateways::showOnReception(),
-                    'invoice' => PaymentGateways::showOnInvoice(),
-                    'otp_debug' => AppSetting::getValue('portal_otp_debug', '0') === '1',
-                ],
-                'zarinpal' => PaymentGateways::zarinpal(),
-            ];
+            $gateways = PaymentGateways::all();
+            $gatewaysLoaded = true;
         } catch (\Throwable) {
-            return $empty;
         }
+
+        $links = ['reception' => false, 'invoice' => false, 'otp_debug' => false];
+        $linksLoaded = false;
+        try {
+            $links = [
+                'reception' => PaymentGateways::showOnReception(),
+                'invoice' => PaymentGateways::showOnInvoice(),
+                'otp_debug' => AppSetting::getValue('portal_otp_debug', '0') === '1',
+            ];
+            $linksLoaded = true;
+        } catch (\Throwable) {
+        }
+
+        $zarinpal = ['configured' => false, 'sandbox' => false, 'merchant_id' => '', 'currency' => 'IRT'];
+        $zarinpalLoaded = false;
+        try {
+            $zarinpal = PaymentGateways::zarinpal();
+            $zarinpalLoaded = true;
+        } catch (\Throwable) {
+        }
+
+        return [
+            'gateways' => $gateways,
+            'links' => $links,
+            'zarinpal' => $zarinpal,
+            'gatewaysLoaded' => $gatewaysLoaded,
+            'linksLoaded' => $linksLoaded,
+            'zarinpalLoaded' => $zarinpalLoaded,
+        ];
     }
 
-    /** @return array<string,mixed> */
+    /** @return array{values:array<string,mixed>,loaded:bool} */
     private function bankTransferView(): array
     {
         $empty = [
@@ -126,17 +149,17 @@ class SettingController extends Controller
         ];
 
         if (! class_exists(BankTransferSettings::class)) {
-            return $empty;
+            return ['values' => $empty, 'loaded' => false];
         }
 
         try {
-            return array_merge($empty, BankTransferSettings::all());
+            return ['values' => array_merge($empty, BankTransferSettings::all()), 'loaded' => true];
         } catch (\Throwable) {
-            return $empty;
+            return ['values' => $empty, 'loaded' => false];
         }
     }
 
-    /** @return array{backup:array<string,mixed>,scopes:array<string,string>,intervals:array<string,string>,weekdays:array<int,string>,protocols:array<string,string>,labels:array<string,string>,cronUrl:string} */
+    /** @return array{backup:array<string,mixed>,scopes:array<string,string>,intervals:array<string,string>,weekdays:array<int,string>,protocols:array<string,string>,labels:array<string,string>,cronUrl:string,loaded:bool} */
     private function backupView(): array
     {
         $empty = [
@@ -151,6 +174,7 @@ class SettingController extends Controller
                 'mega' => 'MEGA',
             ],
             'cronUrl' => url('/cron/backup'),
+            'loaded' => false,
         ];
 
         try {
@@ -164,6 +188,7 @@ class SettingController extends Controller
                 'protocols' => BackupSettings::PROTOCOLS,
                 'labels' => BackupSettings::CLOUD_LABELS,
                 'cronUrl' => url('/cron/backup?token='.($backup['cron_token'] ?? '')),
+                'loaded' => true,
             ];
         } catch (\Throwable) {
             return $empty;
@@ -453,33 +478,55 @@ class SettingController extends Controller
         }
 
         $data = $request->validate($rules);
+        $wrote = false;
 
         foreach (PaymentGateways::definitions() as $def) {
             $key = PaymentGateways::settingKey($def['key']);
-            $url = trim((string) ($data[$key] ?? ''));
-            AppSetting::setValue($key, $url);
+            if (! $request->exists($key)) {
+                continue;
+            }
+            $wrote = true;
+            AppSetting::setValue($key, trim((string) ($data[$key] ?? '')));
         }
 
-        AppSetting::setValue('pay_links_show_reception', $request->boolean('pay_links_show_reception') ? '1' : '0');
-        AppSetting::setValue('pay_links_show_invoice', $request->boolean('pay_links_show_invoice') ? '1' : '0');
-        AppSetting::setValue('portal_otp_debug', $request->boolean('portal_otp_debug') ? '1' : '0');
-        AppSetting::setValue('zarinpal_merchant_id', trim((string) ($data['zarinpal_merchant_id'] ?? '')));
-        AppSetting::setValue('zarinpal_sandbox', $request->boolean('zarinpal_sandbox') ? '1' : '0');
-        AppSetting::setValue('zarinpal_currency', (string) ($data['zarinpal_currency'] ?? 'IRT'));
+        if ($request->exists('pay_links_show_reception')) {
+            $wrote = true;
+            AppSetting::setValue('pay_links_show_reception', $request->boolean('pay_links_show_reception') ? '1' : '0');
+            AppSetting::setValue('pay_links_show_invoice', $request->boolean('pay_links_show_invoice') ? '1' : '0');
+            AppSetting::setValue('portal_otp_debug', $request->boolean('portal_otp_debug') ? '1' : '0');
+        }
 
-        $cardDigits = preg_replace('/\D+/', '', (string) ($data['bank_card_number'] ?? '')) ?? '';
-        AppSetting::setValue('bank_transfer_enabled', $request->boolean('bank_transfer_enabled') ? '1' : '0');
-        AppSetting::setValue('bank_card_number', $cardDigits);
-        AppSetting::setValue('bank_card_holder', trim((string) ($data['bank_card_holder'] ?? '')));
-        AppSetting::setValue('bank_name', trim((string) ($data['bank_name'] ?? '')));
-        AppSetting::setValue('bank_iban', trim((string) ($data['bank_iban'] ?? '')));
-        AppSetting::setValue('bank_transfer_instructions', trim((string) ($data['bank_transfer_instructions'] ?? '')));
+        if ($request->exists('zarinpal_merchant_id')) {
+            $wrote = true;
+            AppSetting::setValue('zarinpal_merchant_id', trim((string) ($data['zarinpal_merchant_id'] ?? '')));
+            AppSetting::setValue('zarinpal_sandbox', $request->boolean('zarinpal_sandbox') ? '1' : '0');
+            AppSetting::setValue('zarinpal_currency', (string) ($data['zarinpal_currency'] ?? 'IRT'));
+        }
+
+        if ($request->exists('bank_card_number')) {
+            $wrote = true;
+            $cardDigits = preg_replace('/\D+/', '', (string) ($data['bank_card_number'] ?? '')) ?? '';
+            AppSetting::setValue('bank_transfer_enabled', $request->boolean('bank_transfer_enabled') ? '1' : '0');
+            AppSetting::setValue('bank_card_number', $cardDigits);
+            AppSetting::setValue('bank_card_holder', trim((string) ($data['bank_card_holder'] ?? '')));
+            AppSetting::setValue('bank_name', trim((string) ($data['bank_name'] ?? '')));
+            AppSetting::setValue('bank_iban', trim((string) ($data['bank_iban'] ?? '')));
+            AppSetting::setValue('bank_transfer_instructions', trim((string) ($data['bank_transfer_instructions'] ?? '')));
+        }
+
+        if (! $wrote) {
+            return $this->settingsRedirect($request, 'payments', 'error', 'بخش پرداخت خوانده نشد؛ چیزی ذخیره نشد.');
+        }
 
         return $this->settingsRedirect($request, 'payments', 'success', 'تنظیمات پرداخت ذخیره شد.');
     }
 
     public function updateBackup(Request $request)
     {
+        if ($request->input('backup_settings_loaded') !== '1') {
+            return $this->settingsRedirect($request, 'backup', 'error', 'تنظیمات بکاپ خوانده نشد؛ چیزی ذخیره نشد.');
+        }
+
         $data = $request->validate([
             'enabled' => ['nullable'],
             'scope' => ['nullable', 'in:full,accounting'],
