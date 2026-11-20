@@ -46,6 +46,96 @@
   </div>
 </section>
 
+<section class="ag-sec" id="prices">
+  <div class="ag-wrap">
+    <p class="ag-kicker">قیمت</p>
+    <h2>قیمت نرم‌افزار کامپیوتر</h2>
+    <p class="ag-lead">مبالغ به تومان است. همهٔ نسخه‌ها با هم ۲۰۰ میلیون تومان است.</p>
+    @php
+      $faPrice = function (int $million): string {
+          $digits = strtr((string) $million, ['0' => '۰', '1' => '۱', '2' => '۲', '3' => '۳', '4' => '۴', '5' => '۵', '6' => '۶', '7' => '۷', '8' => '۸', '9' => '۹']);
+
+          return $digits.' میلیون تومان';
+      };
+      $editions = [
+          ['نرم‌افزار فروشگاهی', 25, '/computer-accounting/shop'],
+          ['نرم‌افزار شرکتی', 30, '/computer-accounting/corporate'],
+          ['نرم‌افزار سوپرمارکت', 25, '/computer-accounting/supermarket'],
+          ['نرم‌افزار پخش', 30, '/computer-accounting/distribution'],
+          ['نرم‌افزار خدماتی', 20, '/computer-accounting/service'],
+          ['نرم‌افزار تولیدی', 30, '/computer-accounting/manufacturing'],
+          ['نرم‌افزار تعمیرکاران', 25, '/computer-accounting/technicians'],
+          ['نرم‌افزار رستوران', 25, '/computer-accounting/restaurant'],
+          ['نرم‌افزار کافی‌شاپ', 25, '/computer-accounting/cafe'],
+          ['نرم‌افزار پیمانکاری', 20, '/computer-accounting/contracting'],
+          ['نرم‌افزار اتوماسیون اداری', 25, '/computer-accounting/automation'],
+      ];
+      $addons = [
+          ['افزونه پیامک', 1],
+          ['افزونه صندوق فروشگاه', 1],
+          ['افزونه نسخه وب', 15],
+          ['افزونه چند شرکتی', 10],
+          ['افزونه پخش ویزیتور', 5],
+          ['افزونه اتصال برنامه‌های دیگر (API)', 10],
+          ['افزونه هوش مصنوعی اقتصادی داخلی', 25],
+          ['افزونه هوش مصنوعی داخلی حرفه‌ای', 80],
+          ['افزونه کلاینت', 2],
+          ['افزونه حسابداری مالیاتی', 15],
+          ['افزونه دفتر دوم', 10],
+          ['افزونه حسابداری چند ارزی', 25],
+      ];
+    @endphp
+    <style>
+      .ag-price-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+      .ag-price{width:100%;border-collapse:collapse;background:#101628;border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden}
+      .ag-price th,.ag-price td{padding:.72rem .9rem;border-bottom:1px solid rgba(255,255,255,.06);text-align:right;font-size:.92rem}
+      .ag-price thead th{color:#9aa3c7;font-weight:600;font-size:.74rem;background:#0c1224}
+      .ag-price tbody th{color:#eef2ff;font-weight:600}
+      .ag-price tbody th a{color:#eef2ff;text-decoration:none}
+      .ag-price tbody th a:hover{color:#c4b5fd}
+      .ag-price td{color:#fff;font-weight:700;white-space:nowrap}
+      .ag-price tr.is-all th,.ag-price tr.is-all td{background:rgba(124,92,255,.16);color:#fff}
+      .ag-price-block h3{margin:0 0 .55rem;font-size:1rem}
+      @media(max-width:800px){.ag-price-grid{grid-template-columns:1fr}.ag-price th,.ag-price td{padding:.62rem .7rem;font-size:.84rem}}
+    </style>
+    <div class="ag-price-grid">
+      <div class="ag-price-block">
+      <h3>قیمت نرم‌افزار کامپیوتر</h3>
+      <table class="ag-price">
+        <thead><tr><th>نسخه</th><th>قیمت</th></tr></thead>
+        <tbody>
+          @foreach($editions as [$name, $million, $path])
+            <tr>
+              <th><a href="{{ url($path) }}">{{ $name }}</a></th>
+              <td>{{ $faPrice($million) }}</td>
+            </tr>
+          @endforeach
+          <tr class="is-all">
+            <th>همه نسخه‌ها</th>
+            <td>{{ $faPrice(200) }}</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="ag-price-block">
+      <h3>قیمت افزونه‌ها</h3>
+      <table class="ag-price">
+        <thead><tr><th>افزونه</th><th>قیمت</th></tr></thead>
+        <tbody>
+          @foreach($addons as [$name, $million])
+            <tr>
+              <th>{{ $name }}</th>
+              <td>{{ $faPrice($million) }}</td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <p class="ag-note">مشاورهٔ فروش: <a href="tel:09113100473">۰۹۱۱۳۱۰۰۴۷۳</a></p>
+  </div>
+</section>
+
 <section class="ag-sec" id="shared">
   <div class="ag-wrap">
     <p class="ag-kicker">مشترک</p>

@@ -61,6 +61,7 @@ class DesignPageCache
             base_path('public/css/studio-chat.css'),
             base_path('plugins/Studio/resources/views/layout.blade.php'),
             base_path('plugins/Studio/resources/views/chat.blade.php'),
+            base_path('plugins/Studio/resources/views/computer-accounting.blade.php'),
         ];
         $stamp = 0;
         foreach ($files as $file) {
