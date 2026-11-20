@@ -17,4 +17,17 @@ class ReleasePolicy
     {
         return ! self::isMainSite();
     }
+
+    /**
+     * Opting out keeps the previous stable version. A first publish with the
+     * box unchecked must not become the version customers are offered.
+     */
+    public static function stableLatest(bool $setLatest, string $version, string $previous): string
+    {
+        if ($setLatest) {
+            return $version;
+        }
+
+        return trim($previous);
+    }
 }

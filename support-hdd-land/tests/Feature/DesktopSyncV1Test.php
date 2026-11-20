@@ -579,4 +579,40 @@ class DesktopSyncV1Test extends TestCase
         $this->assertFalse(\App\Support\ReleasePolicy::isMainSite());
         $this->assertTrue(\App\Support\ReleasePolicy::mayInstallCustomerPackage());
     }
+
+    public function test_unchecked_first_publish_is_not_the_stable_release(): void
+    {
+        $this->assertSame('1.3.81', \App\Support\ReleasePolicy::stableLatest(true, '1.3.81', ''));
+        $this->assertSame('', \App\Support\ReleasePolicy::stableLatest(false, '1.3.81', ''));
+        $this->assertSame('1.3.79', \App\Support\ReleasePolicy::stableLatest(false, '1.3.81', '1.3.79'));
+
+        $dir = storage_path('app/releases');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
+        $path = $dir.'/manifest.json';
+        $previous = is_file($path) ? file_get_contents($path) : null;
+        file_put_contents($path, json_encode([
+            'channel' => 'stable',
+            'latest' => '',
+            'releases' => [[
+                'version' => '1.3.81',
+                'file' => 'hddland-1.3.81.zip',
+                'sha256' => 'abc',
+                'changelog' => ['نگه‌داشته شد'],
+            ]],
+        ], JSON_UNESCAPED_UNICODE));
+
+        try {
+            $local = app(\App\Services\AppUpdateService::class)->localLatest();
+            $this->assertFalse($local['ok']);
+            $this->assertNull($local['latest']);
+        } finally {
+            if ($previous === null) {
+                @unlink($path);
+            } else {
+                file_put_contents($path, $previous);
+            }
+        }
+    }
 }

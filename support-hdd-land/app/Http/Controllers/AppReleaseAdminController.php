@@ -247,7 +247,7 @@ class AppReleaseAdminController extends Controller
         $setLatest = $request->boolean('set_latest');
         $manifest = [
             'channel' => (string) ($manifest['channel'] ?? 'stable'),
-            'latest' => $setLatest ? $version : (string) ($manifest['latest'] ?? $version),
+            'latest' => ReleasePolicy::stableLatest($setLatest, $version, (string) ($manifest['latest'] ?? '')),
             'product' => (string) config('updates.product', 'hddland-repair'),
             'releases' => $releases,
             'updated_at' => now()->toIso8601String(),
