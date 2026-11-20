@@ -7,6 +7,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DeviceBlacklistController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DesktopDeviceController;
 use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\PartController;
@@ -536,6 +537,9 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware(EnsurePermission::class.':settings')->group(function () {
         Route::get('settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::get('settings/desktop-sync', [DesktopDeviceController::class, 'index'])->name('settings.desktop-sync');
+        Route::post('settings/desktop-sync', [DesktopDeviceController::class, 'store'])->name('settings.desktop-sync.store');
+        Route::post('settings/desktop-sync/{device}/revoke', [DesktopDeviceController::class, 'revoke'])->name('settings.desktop-sync.revoke');
         Route::post('settings/general', [SettingController::class, 'updateGeneral'])->name('settings.general');
         Route::get('labels/preview', [LabelPrintController::class, 'preview'])->name('labels.preview');
         Route::post('settings/fault-types', [SettingController::class, 'storeFaultType'])->name('settings.fault-types');
