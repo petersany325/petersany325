@@ -10,6 +10,25 @@ use Illuminate\Support\Facades\Schema;
 
 class DesktopSyncTombstoneObserver
 {
+    public function deleting(Model $model): void
+    {
+        if (! Schema::hasTable('desktop_sync_tombstones')) {
+            return;
+        }
+        $children = match ($model->getTable()) {
+            'journal_entries' => ['journal_lines', 'journal_entry_id'],
+            'parts' => ['stock_movements', 'part_id'],
+            default => null,
+        };
+        if ($children === null || ! Schema::hasTable($children[0])) {
+            return;
+        }
+        $ids = DB::table($children[0])->where($children[1], $model->getKey())->pluck('id');
+        foreach ($ids as $id) {
+            $this->write((string) $children[0], (int) $id);
+        }
+    }
+
     public function deleted(Model $model): void
     {
         if (! Schema::hasTable('desktop_sync_tombstones')) {
@@ -23,9 +42,17 @@ class DesktopSyncTombstoneObserver
             return;
         }
 
+        $this->write($model->getTable(), (int) $model->getKey());
+    }
+
+    private function write(string $table, int $id): void
+    {
+        if (! SyncTableRegistry::readable($table) || $id <= 0) {
+            return;
+        }
         DB::table('desktop_sync_tombstones')->insert([
-            'table_name' => $model->getTable(),
-            'row_id' => (int) $model->getKey(),
+            'table_name' => $table,
+            'row_id' => $id,
             'deleted_at' => now(),
         ]);
     }

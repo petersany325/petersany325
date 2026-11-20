@@ -64,10 +64,7 @@ class AccountingService
             ->first();
 
         if ($total <= 0) {
-            if ($existing) {
-                $existing->lines()->delete();
-                $existing->delete();
-            }
+            $this->deleteEntry($existing);
 
             return null;
         }
@@ -269,10 +266,7 @@ class AccountingService
         ?int $customerId = null,
         ?string $date = null
     ): JournalEntry {
-        if ($existing) {
-            $existing->lines()->delete();
-            $existing->delete();
-        }
+        $this->deleteEntry($existing);
 
         return $this->writeEntry(null, $sourceType, $sourceId, $description, $reception, $lines, $customerId, $date);
     }
@@ -280,6 +274,17 @@ class AccountingService
     /**
      * @param  list<array{0:string,1:int,2:int,3?:string}>  $lines
      */
+    private function deleteEntry(?JournalEntry $existing): void
+    {
+        if (! $existing) {
+            return;
+        }
+        foreach ($existing->lines()->get() as $line) {
+            $line->delete();
+        }
+        $existing->delete();
+    }
+
     private function writeEntry(
         ?JournalEntry $reuse,
         string $sourceType,

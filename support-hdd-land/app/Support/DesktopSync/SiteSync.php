@@ -8,6 +8,7 @@ use App\Models\JournalEntry;
 use App\Models\Part;
 use App\Models\Payment;
 use App\Models\Reception;
+use App\Models\StockMovement;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\AccountingService;
@@ -127,9 +128,13 @@ class SiteSync
         $counts = [];
         $latest = null;
         foreach ($this->existingTables() as $table) {
-            $counts[$table] = (int) $this->baseQuery($table, false)->count();
+            $countQuery = $this->baseQuery($table, false);
+            $this->onlyPublicSettings($countQuery, $table);
+            $counts[$table] = (int) $countQuery->count();
             $time = $this->timeColumn($table);
-            $row = $this->baseQuery($table)
+            $latestQuery = $this->baseQuery($table, false);
+            $this->onlyPublicSettings($latestQuery, $table);
+            $row = $latestQuery
                 ->orderByDesc($time ?: 'id')
                 ->orderByDesc('id')
                 ->first();
@@ -279,10 +284,19 @@ class SiteSync
             ];
         }
 
+        $desiredStock = null;
+        if ($table === 'parts' && array_key_exists('stock', $data)) {
+            $desiredStock = (int) $data['stock'];
+            unset($data['stock']);
+            if ($desiredStock < 0) {
+                return $this->rejected($uid, 'موجودی نمی‌تواند منفی شود.');
+            }
+        }
+
         $created = $existing === null;
         $saved = $this->save($table, $existing, $data);
         $id = (int) $this->key($saved);
-        $this->afterSave($table, $saved);
+        $this->afterSave($table, $saved, $desiredStock);
         $this->remember($device, $table, $id, $uid);
         $fresh = $this->reload($table, $id);
         $this->audit($device, 'push', $table, $id, 'upsert', $created ? 'created' : 'updated', $before, $this->raw($table, $fresh), $ip);
@@ -491,16 +505,55 @@ class SiteSync
         }
     }
 
-    private function afterSave(string $table, mixed $saved): void
+    private function afterSave(string $table, mixed $saved, ?int $desiredStock = null): void
     {
-        if ($saved instanceof Part && blank($saved->warehouse_id) && Schema::hasTable('warehouses')) {
-            $saved->forceFill(['warehouse_id' => Warehouse::defaultId()])->save();
+        if ($saved instanceof Part) {
+            if (blank($saved->warehouse_id) && Schema::hasTable('warehouses')) {
+                $saved->forceFill(['warehouse_id' => Warehouse::defaultId()])->save();
+            }
+            $this->recordPartStock($saved, $desiredStock);
         }
         if (! $saved instanceof Payment) {
             return;
         }
         $saved->reception?->recalculateTotals();
         app(AccountingService::class)->postPayment($saved->fresh(['reception', 'customer']));
+    }
+
+    private function recordPartStock(Part $part, ?int $desiredStock): void
+    {
+        if ($desiredStock === null || ! Schema::hasTable('stock_movements')) {
+            return;
+        }
+        $delta = $desiredStock - (int) $part->stock;
+        if ($delta === 0) {
+            return;
+        }
+        $opening = (int) $part->stock === 0 && ! $part->stockMovements()->exists();
+        StockMovement::query()->create([
+            'doc_no' => StockMovement::nextDocNo($delta > 0 ? 'IN' : 'ADJ'),
+            'part_id' => $part->id,
+            'warehouse_id' => $part->warehouse_id ?: Warehouse::defaultId(),
+            'type' => $delta > 0 ? 'in' : 'out',
+            'doc_type' => $opening ? 'opening' : 'adjust',
+            'quantity' => $delta,
+            'unit_cost' => max(0, (int) $part->purchase_price),
+            'total_cost' => abs($delta) * max(0, (int) $part->purchase_price),
+            'stock_after' => $desiredStock,
+            'note' => $opening ? 'موجودی اول دوره از نرم‌افزار' : 'تعدیل موجودی از نرم‌افزار',
+        ]);
+        $part->forceFill(['stock' => $desiredStock])->save();
+        try {
+            app(AccountingService::class)->postStockPurchase(
+                (int) StockMovement::query()->where('part_id', $part->id)->latest('id')->value('id'),
+                $part,
+                $delta,
+                max(0, (int) $part->purchase_price),
+                'همگام‌سازی نرم‌افزار'
+            );
+        } catch (Throwable) {
+            // همان رفتار فرم انبار: قطعه می‌ماند حتی اگر سند خرید ساخته نشود.
+        }
     }
 
     private function refTable(string $name): ?string

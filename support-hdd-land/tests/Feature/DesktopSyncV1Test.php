@@ -7,11 +7,13 @@ use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\DesktopDevice;
 use App\Models\JournalEntry;
+use App\Models\JournalLine;
 use App\Models\LookupOption;
 use App\Models\Part;
 use App\Models\Payment;
 use App\Models\Reception;
 use App\Models\SmsLog;
+use App\Models\StockMovement;
 use App\Models\SmsStatusRule;
 use App\Models\User;
 use App\Services\SmsNotificationService;
@@ -357,6 +359,90 @@ class DesktopSyncV1Test extends TestCase
 
         $device->reissue();
         $this->assertSame(substr($device->fresh()->plainToken(), 0, 12), $device->fresh()->prefix);
+    }
+
+    public function test_stock_and_replaced_journal_lines_stay_in_sync(): void
+    {
+        [, $token] = DesktopDevice::issue('انبار', null);
+        $created = $this->withToken($token)->postJson('/api/desktop-sync/v1/push', [
+            'batch_id' => '99999999-aaaa-4bbb-8ccc-dddddddddddd',
+            'items' => [[
+                'table' => 'parts',
+                'op' => 'upsert',
+                'desktop_uid' => 'part:stock',
+                'data' => ['name' => 'برد', 'purchase_price' => 1000, 'sale_price' => 2000, 'stock' => 4],
+            ]],
+        ])->assertOk()->json('results.0');
+        $this->assertSame('created', $created['status']);
+        $part = Part::query()->find($created['site_id']);
+        $this->assertSame(4, (int) $part->stock);
+        $opening = StockMovement::query()->where('part_id', $part->id)->first();
+        $this->assertSame(4, (int) $opening->quantity);
+        $this->assertSame('opening', $opening->doc_type);
+
+        $this->withToken($token)->postJson('/api/desktop-sync/v1/push', [
+            'batch_id' => 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee',
+            'items' => [[
+                'table' => 'parts',
+                'op' => 'upsert',
+                'desktop_uid' => 'part:stock',
+                'data' => ['stock' => 6],
+            ]],
+        ])->assertOk()->assertJsonPath('results.0.status', 'updated');
+        $this->assertSame(6, (int) $part->fresh()->stock);
+        $this->assertSame(2, StockMovement::query()->where('part_id', $part->id)->count());
+
+        $customer = Customer::query()->create(['name' => 'سند', 'phone' => '09124445566']);
+        $reception = Reception::query()->create([
+            'ticket_no' => Reception::nextTicketNo(),
+            'customer_id' => $customer->id,
+            'product_name' => 'قطعه',
+            'labor_cost' => 10000,
+            'total_amount' => 10000,
+            'received_at' => now(),
+        ]);
+        $firstPay = $this->withToken($token)->postJson('/api/desktop-sync/v1/push', [
+            'batch_id' => 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff',
+            'items' => [[
+                'table' => 'payments',
+                'op' => 'upsert',
+                'desktop_uid' => 'pay:replace',
+                'data' => [
+                    'reception_id' => $reception->id,
+                    'customer_id' => $customer->id,
+                    'type' => 'partial',
+                    'method' => 'cash',
+                    'amount' => 4000,
+                ],
+            ]],
+        ])->assertOk()->json('results.0');
+        $oldLines = JournalLine::query()
+            ->whereIn('journal_entry_id', JournalEntry::query()->where('source_type', 'payment')->where('source_id', $firstPay['site_id'])->pluck('id'))
+            ->pluck('id');
+        $this->assertNotEmpty($oldLines);
+
+        $this->withToken($token)->postJson('/api/desktop-sync/v1/push', [
+            'batch_id' => 'cccccccc-dddd-4eee-8fff-000000000001',
+            'items' => [[
+                'table' => 'payments',
+                'op' => 'upsert',
+                'desktop_uid' => 'pay:replace',
+                'data' => ['amount' => 7000, 'type' => 'partial', 'method' => 'cash'],
+            ]],
+        ])->assertOk()->assertJsonPath('results.0.status', 'updated');
+
+        $deleted = collect($this->withToken($token)->getJson('/api/desktop-sync/v1/changes?tables=journal_lines&limit=100')->assertOk()->json('items'))
+            ->where('op', 'delete')
+            ->pluck('id');
+        foreach ($oldLines as $id) {
+            $this->assertTrue($deleted->contains($id));
+        }
+
+        AppSetting::setValue('sms_panel_password', 'hidden-secret');
+        AppSetting::setValue('receipt_prefix', 'R');
+        $statusCount = $this->withToken($token)->getJson('/api/desktop-sync/v1/status')->assertOk()->json('counts.app_settings');
+        $snapshotTotal = $this->withToken($token)->getJson('/api/desktop-sync/v1/snapshot?table=app_settings&per_page=100')->assertOk()->json('total');
+        $this->assertSame($snapshotTotal, $statusCount);
     }
 
     public function test_rate_limit_returns_retry_after(): void
