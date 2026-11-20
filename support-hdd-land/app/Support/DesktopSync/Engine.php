@@ -5,9 +5,13 @@ namespace App\Support\DesktopSync;
 use App\Models\Customer;
 use App\Models\DesktopDevice;
 use App\Models\LookupOption;
+use App\Models\Part;
+use App\Models\Payment;
 use App\Models\Reception;
 use App\Models\SyncChange;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Services\AccountingService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -200,12 +204,6 @@ class Engine
                 if ($op === 'upsert' && ! $model && $resourceName === 'customers') {
                     $model = $this->matchCustomerByPhone($data);
                 }
-                if ($op === 'upsert' && ! $model && $resourceName === 'receptions') {
-                    $ticket = trim((string) ($data['ticket_no'] ?? ''));
-                    if ($ticket !== '') {
-                        $model = Reception::query()->where('ticket_no', $ticket)->first();
-                    }
-                }
 
                 if ($op === 'delete') {
                     return $this->applyDelete($resource, $model, $clientKey);
@@ -232,8 +230,11 @@ class Engine
                 if ($this->usesSoftDeletes($resource['model']) && method_exists($model, 'trashed') && $model->trashed()) {
                     $model->setAttribute('deleted_at', null);
                 }
-                if ($created && $resourceName === 'receptions' && blank($model->getAttribute('ticket_no'))) {
-                    $model->setAttribute('ticket_no', Reception::nextTicketNo());
+                if ($resourceName === 'receptions') {
+                    $this->keepTicketNumbersDistinct($model, $created);
+                }
+                if ($created && $resourceName === 'parts') {
+                    $this->assignDefaultWarehouse($model);
                 }
                 if ($created && $resourceName === 'receptions' && blank($model->getAttribute('product_name'))) {
                     return $this->result($resourceName, $syncKey, 'rejected', 'نام کالا لازم است.');
@@ -243,6 +244,9 @@ class Engine
                 }
 
                 $model->save();
+                if ($resourceName === 'payments' && $model instanceof Payment) {
+                    $this->recordDesktopPayment($model);
+                }
                 $fresh = $model->fresh() ?: $model;
 
                 return $this->result($resourceName, (string) $fresh->getAttribute('sync_key'), 'applied', null, $this->present($fresh, 'upsert'), $clientKey);
@@ -265,6 +269,12 @@ class Engine
         }
         if (! $resource['deletable']) {
             return $this->result($name, (string) $model->getAttribute('sync_key'), 'rejected', 'حذف قبض و پرداخت از همگام‌سازی بسته است. وضعیت قبض را لغو کنید.', $this->present($model, 'upsert'), $clientKey);
+        }
+        if ($retired = $this->retireIfInUse($resource, $model, $clientKey)) {
+            return $retired;
+        }
+        if ($name === 'customers' && $model instanceof Customer) {
+            $this->releaseCustomerPhone($model);
         }
         $payload = $this->present($model, 'delete');
         $model->delete();
@@ -295,7 +305,112 @@ class Engine
             return null;
         }
 
-        return Customer::withTrashed()->where('phone', $phone)->orderByDesc('id')->first();
+        return Customer::query()->where('phone', $phone)->orderByDesc('id')->first();
+    }
+
+    private function keepTicketNumbersDistinct(Model $model, bool $created): void
+    {
+        $ticket = trim((string) $model->getAttribute('ticket_no'));
+        $taken = $ticket !== '' && Reception::query()
+            ->where('ticket_no', $ticket)
+            ->when($model->exists, fn ($query) => $query->whereKeyNot($model->getKey()))
+            ->exists();
+        if ($created && ($ticket === '' || $taken)) {
+            $model->setAttribute('ticket_no', Reception::nextTicketNo());
+        }
+        if (! $created && $taken) {
+            $model->setAttribute('ticket_no', $model->getOriginal('ticket_no'));
+        }
+    }
+
+    private function assignDefaultWarehouse(Model $model): void
+    {
+        if (! $model instanceof Part || ! $this->hasColumn('parts', 'warehouse_id') || filled($model->getAttribute('warehouse_id'))) {
+            return;
+        }
+        if (! Schema::hasTable('warehouses') || ! method_exists(Warehouse::class, 'defaultId')) {
+            return;
+        }
+        $model->setAttribute('warehouse_id', Warehouse::defaultId());
+    }
+
+    private function recordDesktopPayment(Payment $payment): void
+    {
+        $reception = $payment->reception;
+        if ($reception) {
+            $reception->recalculateTotals();
+        }
+        try {
+            app(AccountingService::class)->postPayment($payment->fresh(['reception', 'customer']));
+        } catch (Throwable $e) {
+            report($e);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $resource
+     * @return array<string, mixed>|null
+     */
+    private function retireIfInUse(array $resource, Model $model, string $clientKey): ?array
+    {
+        if (! $this->recordInUse($resource['name'], $model)) {
+            return null;
+        }
+        if (! $this->hasColumn($model->getTable(), 'is_active')) {
+            return $this->result($resource['name'], (string) $model->getAttribute('sync_key'), 'rejected', 'این مورد در قبض‌ها استفاده شده و حذف نمی‌شود.', $this->present($model, 'upsert'), $clientKey);
+        }
+        $model->setAttribute('is_active', false);
+        $model->save();
+        $fresh = $model->fresh() ?: $model;
+
+        return $this->result($resource['name'], (string) $fresh->getAttribute('sync_key'), 'applied', 'چون در قبض‌ها استفاده شده، به‌جای حذف غیرفعال شد.', $this->present($fresh, 'upsert'), $clientKey);
+    }
+
+    private function recordInUse(string $resource, Model $model): bool
+    {
+        $id = (int) $model->getKey();
+
+        return match ($resource) {
+            'fault_types' => Reception::query()->where('fault_type_id', $id)->exists(),
+            'referral_sources' => Customer::query()->where('referral_source_id', $id)->exists(),
+            'technicians' => Reception::query()
+                ->where('technician_id', $id)
+                ->when(
+                    $this->hasColumn('receptions', 'custody_technician_id'),
+                    fn ($query) => $query->orWhere('custody_technician_id', $id)
+                )
+                ->exists(),
+            'parts' => (Schema::hasTable('reception_parts') && DB::table('reception_parts')->where('part_id', $id)->exists())
+                || (Schema::hasTable('stock_movements') && DB::table('stock_movements')->where('part_id', $id)->exists()),
+            'lookup_options' => $this->lookupInUse($model),
+            default => false,
+        };
+    }
+
+    private function lookupInUse(Model $lookup): bool
+    {
+        $column = match ((string) $lookup->getAttribute('group_key')) {
+            'admission_type' => 'admission_type',
+            'service_type' => 'service_type',
+            'repair_type' => 'repair_type',
+            'warranty_type' => 'warranty_type',
+            'hdd_capacity' => 'hdd_capacity',
+            default => null,
+        };
+        if ($column === null || ! $this->hasColumn('receptions', $column)) {
+            return false;
+        }
+
+        return Reception::query()->where($column, (string) $lookup->getAttribute('name'))->exists();
+    }
+
+    private function releaseCustomerPhone(Customer $customer): void
+    {
+        $digits = preg_replace('/\D+/', '', (string) $customer->phone) ?? '';
+        $customer->forceFill([
+            'name' => mb_substr((string) $customer->name, 0, 100).' «حذف‌شده»',
+            'phone' => mb_substr('del'.$customer->id.'_'.$digits, 0, 20),
+        ])->save();
     }
 
     /**
