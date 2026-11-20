@@ -334,17 +334,20 @@ class Engine
         $model->setAttribute('warehouse_id', Warehouse::defaultId());
     }
 
+    private function signedPaymentAmount(string $type, mixed $amount): int
+    {
+        $value = abs((int) $amount);
+
+        return $type === 'refund' ? -$value : $value;
+    }
+
     private function recordDesktopPayment(Payment $payment): void
     {
         $reception = $payment->reception;
         if ($reception) {
             $reception->recalculateTotals();
         }
-        try {
-            app(AccountingService::class)->postPayment($payment->fresh(['reception', 'customer']));
-        } catch (Throwable $e) {
-            report($e);
-        }
+        app(AccountingService::class)->postPayment($payment->fresh(['reception', 'customer']));
     }
 
     /**
@@ -478,6 +481,12 @@ class Engine
         if ($created && $resource['name'] === 'payments' && blank($model->getAttribute('customer_id'))) {
             return 'مشتری این پرداخت هنوز روی سرور نیست.';
         }
+        if ($resource['name'] === 'payments' && $model->getAttribute('amount') !== null && $model->getAttribute('amount') !== '') {
+            $model->setAttribute(
+                'amount',
+                $this->signedPaymentAmount((string) $model->getAttribute('type'), $model->getAttribute('amount'))
+            );
+        }
 
         return null;
     }
@@ -495,6 +504,13 @@ class Engine
             [$value] = $this->importValue($data[$name], $type, $name);
             $current = $this->exportValue($model->getAttribute($name), $type);
             $incoming = $this->exportValue($value, $type);
+            if ($resource['name'] === 'payments' && $name === 'amount') {
+                $paymentType = array_key_exists('type', $data)
+                    ? (string) $data['type']
+                    : (string) $model->getAttribute('type');
+                $current = $this->signedPaymentAmount($paymentType, $current);
+                $incoming = $this->signedPaymentAmount($paymentType, $incoming);
+            }
             if ($current !== $incoming) {
                 return false;
             }

@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Account;
 use App\Models\Customer;
 use App\Models\DesktopDevice;
 use App\Models\FaultType;
 use App\Models\JournalEntry;
+use App\Models\JournalLine;
 use App\Models\Part;
 use App\Models\Payment;
 use App\Models\Reception;
@@ -257,6 +259,114 @@ class DesktopSyncTest extends TestCase
         $this->assertTrue(
             JournalEntry::query()->where('source_type', 'payment')->where('source_id', $payment->id)->exists()
         );
+    }
+
+    public function test_desktop_refund_reduces_paid_amount_and_credits_cash(): void
+    {
+        [, $token] = DesktopDevice::issue('صندوق عودت', null);
+        $customer = Customer::query()->create(['name' => 'رها', 'phone' => '09127778899']);
+        $reception = Reception::query()->create([
+            'ticket_no' => Reception::nextTicketNo(),
+            'customer_id' => $customer->id,
+            'product_name' => 'هارد',
+            'labor_cost' => 150000,
+            'total_amount' => 150000,
+            'paid_amount' => 40000,
+            'received_at' => now(),
+        ]);
+        Payment::query()->create([
+            'reception_id' => $reception->id,
+            'customer_id' => $customer->id,
+            'type' => 'partial',
+            'method' => 'cash',
+            'amount' => 40000,
+            'paid_at' => now(),
+        ]);
+
+        $response = $this->withToken($token)->postJson('/api/desktop/v1/sync', [
+            'cursor' => 0,
+            'changes' => [[
+                'resource' => 'payments',
+                'sync_key' => 'abababab-cdcd-4efe-8f0f-121212121212',
+                'op' => 'upsert',
+                'data' => [
+                    'reception_sync_key' => $reception->sync_key,
+                    'customer_sync_key' => $customer->sync_key,
+                    'type' => 'refund',
+                    'method' => 'cash',
+                    'amount' => 25000,
+                ],
+            ]],
+        ])->assertOk()->json();
+
+        $this->assertSame('applied', $response['applied'][0]['result']);
+        $this->assertSame(-25000, (int) $response['applied'][0]['server']['data']['amount']);
+        $refund = Payment::query()->where('sync_key', 'abababab-cdcd-4efe-8f0f-121212121212')->first();
+        $this->assertSame(-25000, (int) $refund->amount);
+        $this->assertSame(15000, (int) $reception->fresh()->paid_amount);
+
+        $entry = JournalEntry::query()->where('source_type', 'payment')->where('source_id', $refund->id)->first();
+        $cash = Account::byCode('1110');
+        $line = JournalLine::query()->where('journal_entry_id', $entry->id)->where('account_id', $cash->id)->first();
+        $this->assertSame(0, (int) $line->debit);
+        $this->assertSame(25000, (int) $line->credit);
+
+        $again = $this->withToken($token)->postJson('/api/desktop/v1/sync', [
+            'cursor' => $response['cursor'],
+            'changes' => [[
+                'resource' => 'payments',
+                'sync_key' => 'abababab-cdcd-4efe-8f0f-121212121212',
+                'op' => 'upsert',
+                'base_updated_at' => $response['applied'][0]['server']['updated_at'],
+                'data' => [
+                    'reception_sync_key' => $reception->sync_key,
+                    'type' => 'refund',
+                    'method' => 'cash',
+                    'amount' => 25000,
+                ],
+            ]],
+        ])->assertOk()->json();
+
+        $this->assertSame('unchanged', $again['applied'][0]['result']);
+        $this->assertSame(1, Payment::query()->where('type', 'refund')->count());
+        $this->assertSame(15000, (int) $reception->fresh()->paid_amount);
+    }
+
+    public function test_payment_is_rejected_when_the_journal_cannot_be_posted(): void
+    {
+        [, $token] = DesktopDevice::issue('صندوق ناقص', null);
+        $customer = Customer::query()->create(['name' => 'سام', 'phone' => '09128889900']);
+        $reception = Reception::query()->create([
+            'ticket_no' => Reception::nextTicketNo(),
+            'customer_id' => $customer->id,
+            'product_name' => 'ssd',
+            'labor_cost' => 80000,
+            'total_amount' => 80000,
+            'paid_amount' => 0,
+            'received_at' => now(),
+        ]);
+        Account::query()->where('code', '1110')->delete();
+
+        $response = $this->withToken($token)->postJson('/api/desktop/v1/sync', [
+            'cursor' => 0,
+            'changes' => [[
+                'resource' => 'payments',
+                'sync_key' => 'bcbcbcbc-dede-4f0f-8a1a-343434343434',
+                'op' => 'upsert',
+                'data' => [
+                    'reception_sync_key' => $reception->sync_key,
+                    'customer_sync_key' => $customer->sync_key,
+                    'type' => 'partial',
+                    'method' => 'cash',
+                    'amount' => 10000,
+                ],
+            ]],
+        ])->assertOk()->json();
+
+        $this->assertSame('rejected', $response['applied'][0]['result']);
+        $this->assertNull(Payment::query()->where('sync_key', 'bcbcbcbc-dede-4f0f-8a1a-343434343434')->first());
+        $this->assertSame(0, (int) $reception->fresh()->paid_amount);
+        $this->assertSame(0, JournalEntry::query()->where('source_type', 'payment')->count());
     }
 
     public function test_new_part_lands_in_the_default_warehouse(): void
