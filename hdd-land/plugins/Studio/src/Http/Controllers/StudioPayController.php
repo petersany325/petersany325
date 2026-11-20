@@ -9,6 +9,7 @@ use App\Support\StudioStaffDesk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
 use Plugins\Studio\Plugin as StudioPlugin;
 use Plugins\Studio\src\Support\StudioSms;
@@ -51,6 +52,15 @@ class StudioPayController
         try {
             $buyerPhone = StudioSms::normalizePhone((string) $request->input('phone', $user->phone ?? ''));
         } catch (\Throwable) {
+        }
+        $ipKey = 'pay-record-ip:'.$request->ip();
+        $phoneKey = $buyerPhone !== '' ? 'pay-record-phone:'.hash('sha256', $buyerPhone) : '';
+        if (RateLimiter::tooManyAttempts($ipKey, 4) || ($phoneKey !== '' && RateLimiter::tooManyAttempts($phoneKey, 3))) {
+            return back()->withInput()->with('error', 'تعداد ثبت فاکتور در این ساعت زیاد شد. کمی بعد دوباره تلاش کنید.');
+        }
+        RateLimiter::hit($ipKey, 3600);
+        if ($phoneKey !== '') {
+            RateLimiter::hit($phoneKey, 3600);
         }
         $isStaff = false;
         try {

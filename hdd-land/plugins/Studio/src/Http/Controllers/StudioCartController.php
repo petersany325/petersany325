@@ -9,6 +9,7 @@ use App\Support\StudioStaffDesk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
 use Plugins\Studio\Plugin as StudioPlugin;
 use Plugins\Studio\src\Support\StudioSms;
@@ -67,7 +68,7 @@ class StudioCartController
         if ($items === []) {
             return redirect()->to(url('/computer-accounting#prices'))->with('error', 'سبد خالی است.');
         }
-        $buyer = trim((string) $request->input('buyer', ''));
+        $buyer = mb_substr(trim((string) $request->input('buyer', '')), 0, 80);
         if ($buyer === '') {
             return back()->with('error', 'نام خریدار را بنویسید.');
         }
@@ -77,6 +78,15 @@ class StudioCartController
         try {
             $buyerPhone = StudioSms::normalizePhone((string) $request->input('phone', $user->phone ?? ''));
         } catch (\Throwable) {
+        }
+        $ipKey = 'pay-cart-ip:'.$request->ip();
+        $phoneKey = $buyerPhone !== '' ? 'pay-cart-phone:'.hash('sha256', $buyerPhone) : '';
+        if (RateLimiter::tooManyAttempts($ipKey, 4) || ($phoneKey !== '' && RateLimiter::tooManyAttempts($phoneKey, 3))) {
+            return back()->withInput()->with('error', 'تعداد ثبت سبد در این ساعت زیاد شد. کمی بعد دوباره تلاش کنید.');
+        }
+        RateLimiter::hit($ipKey, 3600);
+        if ($phoneKey !== '') {
+            RateLimiter::hit($phoneKey, 3600);
         }
         $isStaff = false;
         try {
