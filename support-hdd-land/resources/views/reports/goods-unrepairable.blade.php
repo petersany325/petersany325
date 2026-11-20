@@ -31,6 +31,9 @@
 </div>
 
 <div class="panel">
-    @include('reports._goods-table', ['rows' => $rows, 'dateField' => 'received_at'])
+    @include('reports._goods-table', [
+        'rows' => $rows,
+        'dateField' => $scope === 'updated' ? 'updated_at' : 'received_at',
+    ])
 </div>
 @endsection

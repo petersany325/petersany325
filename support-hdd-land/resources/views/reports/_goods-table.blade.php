@@ -18,9 +18,12 @@
         <tbody>
         @forelse($rows as $r)
             @php
-                $when = $dateField === 'delivered_at'
-                    ? $r->delivered_at
-                    : ($r->received_at ?: $r->created_at);
+                $when = match ($dateField) {
+                    'delivered_at' => $r->delivered_at,
+                    'created_at' => $r->created_at,
+                    'updated_at' => $r->updated_at,
+                    default => $r->received_at ?: $r->created_at,
+                };
             @endphp
             <tr>
                 <td dir="ltr">{{ jalali_like($when) }}</td>
