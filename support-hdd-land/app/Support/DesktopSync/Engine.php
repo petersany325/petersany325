@@ -658,7 +658,8 @@ class Engine
 
         return match ($type) {
             'bool' => [filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false, null],
-            'int' => $this->importInt($value, $field),
+            'int' => $this->importInt($value, $field, false),
+            'signed_int' => $this->importInt($value, $field, true),
             'date' => $this->importDate($value, $field, false),
             'datetime' => $this->importDate($value, $field, true),
             'text' => $this->importString($value, 5000, $field),
@@ -669,13 +670,13 @@ class Engine
     /**
      * @return array{0: mixed, 1: ?string}
      */
-    private function importInt(mixed $value, string $field): array
+    private function importInt(mixed $value, string $field, bool $allowNegative): array
     {
         if (! is_numeric($value)) {
             return [null, "مقدار {$field} عدد نیست."];
         }
         $number = (int) $value;
-        if ($number < 0) {
+        if ($number < 0 && ! $allowNegative) {
             return [null, "مقدار {$field} نمی‌تواند منفی باشد."];
         }
         if ($field === 'commission_percent' && $number > 100) {
@@ -720,7 +721,7 @@ class Engine
 
         return match ($type) {
             'bool' => (bool) $value,
-            'int' => (int) $value,
+            'int', 'signed_int' => (int) $value,
             'date' => $value instanceof Carbon ? $value->toDateString() : (string) $value,
             'datetime' => $value instanceof Carbon ? $value->toIso8601String() : (string) $value,
             default => (string) $value,

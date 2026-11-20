@@ -119,7 +119,7 @@ class Catalog
             self::item('payments', Payment::class, [
                 'type' => 'string',
                 'method' => 'string',
-                'amount' => 'int',
+                'amount' => 'signed_int',
                 'note' => 'text',
                 'paid_at' => 'datetime',
             ], [

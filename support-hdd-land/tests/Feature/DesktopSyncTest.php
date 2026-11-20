@@ -330,6 +330,20 @@ class DesktopSyncTest extends TestCase
         $this->assertSame('unchanged', $again['applied'][0]['result']);
         $this->assertSame(1, Payment::query()->where('type', 'refund')->count());
         $this->assertSame(15000, (int) $reception->fresh()->paid_amount);
+
+        $roundTrip = $this->withToken($token)->postJson('/api/desktop/v1/sync', [
+            'cursor' => $again['cursor'],
+            'changes' => [[
+                'resource' => 'payments',
+                'sync_key' => 'abababab-cdcd-4efe-8f0f-121212121212',
+                'op' => 'upsert',
+                'base_updated_at' => $response['applied'][0]['server']['updated_at'],
+                'data' => $response['applied'][0]['server']['data'],
+            ]],
+        ])->assertOk()->json();
+
+        $this->assertSame('unchanged', $roundTrip['applied'][0]['result']);
+        $this->assertSame(-25000, (int) $refund->fresh()->amount);
     }
 
     public function test_payment_is_rejected_when_the_journal_cannot_be_posted(): void
