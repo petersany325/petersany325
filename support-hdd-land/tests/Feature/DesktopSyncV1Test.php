@@ -6,6 +6,8 @@ use App\Models\Customer;
 use App\Models\CustomerMessage;
 use App\Models\DesktopDevice;
 use App\Models\JournalEntry;
+use App\Models\LookupOption;
+use App\Models\Part;
 use App\Models\Payment;
 use App\Models\Reception;
 use App\Models\SmsLog;
@@ -275,6 +277,75 @@ class DesktopSyncV1Test extends TestCase
         $status = $this->withToken($token)->getJson('/api/desktop-sync/v1/status')->assertOk()->json();
         $this->assertArrayHasKey('customers', $status['counts']);
         $this->assertNotEmpty($status['latest_cursor']);
+    }
+
+    public function test_menus_parts_and_books_sync_and_money_rows_are_not_deleted(): void
+    {
+        [$device, $token] = DesktopDevice::issue('دفتر', null);
+        $ping = $this->withToken($token)->getJson('/api/desktop-sync/v1/ping')->assertOk()->json();
+        foreach (['lookup_options', 'fault_types', 'parts', 'payments', 'journal_entries'] as $table) {
+            $this->assertContains($table, $ping['tables']);
+        }
+
+        $pushed = $this->withToken($token)->postJson('/api/desktop-sync/v1/push', [
+            'batch_id' => '77777777-8888-4999-8aaa-bbbbbbbbbbbb',
+            'items' => [[
+                'table' => 'lookup_options',
+                'op' => 'upsert',
+                'desktop_uid' => 'menu:admission:1',
+                'data' => ['group_key' => 'admission_type', 'name' => 'حضوری', 'sort_order' => 1, 'is_active' => true],
+            ], [
+                'table' => 'parts',
+                'op' => 'upsert',
+                'desktop_uid' => 'part:1',
+                'data' => ['name' => 'هد هارد', 'code' => 'HDD-1', 'sale_price' => 250000],
+            ]],
+        ])->assertOk()->json();
+
+        $this->assertSame('created', $pushed['results'][0]['status']);
+        $this->assertSame('created', $pushed['results'][1]['status']);
+        $this->assertSame('حضوری', LookupOption::query()->find($pushed['results'][0]['site_id'])->name);
+        $this->assertNotNull(Part::query()->find($pushed['results'][1]['site_id'])->warehouse_id);
+
+        $menus = $this->withToken($token)->getJson('/api/desktop-sync/v1/changes?tables=lookup_options&limit=50')
+            ->assertOk()->json('items');
+        $this->assertTrue(collect($menus)->contains(fn ($row) => ($row['data']['name'] ?? null) === 'حضوری'));
+
+        $customer = Customer::query()->create(['name' => 'حذف‌شده', 'phone' => '09120001122']);
+        $customer->delete();
+        $live = $this->withToken($token)->getJson('/api/desktop-sync/v1/snapshot?table=customers&per_page=100')
+            ->assertOk()->json('data');
+        $this->assertFalse(collect($live)->contains(fn ($row) => (int) ($row['id'] ?? 0) === $customer->id));
+
+        $payer = Customer::query()->create(['name' => 'پرداخت', 'phone' => '09120001123']);
+        $ticket = Reception::query()->create([
+            'ticket_no' => Reception::nextTicketNo(),
+            'customer_id' => $payer->id,
+            'product_name' => 'هارد',
+            'received_at' => now(),
+        ]);
+        $payment = Payment::query()->create([
+            'customer_id' => $payer->id,
+            'reception_id' => $ticket->id,
+            'type' => 'partial',
+            'method' => 'cash',
+            'amount' => 1000,
+            'paid_at' => now(),
+        ]);
+        $blocked = $this->withToken($token)->postJson('/api/desktop-sync/v1/push', [
+            'batch_id' => '88888888-9999-4aaa-8bbb-cccccccccccc',
+            'items' => [[
+                'table' => 'payments',
+                'op' => 'delete',
+                'site_id' => $payment->id,
+                'desktop_uid' => 'pay:keep',
+            ]],
+        ])->assertOk()->json('results.0');
+        $this->assertSame('rejected', $blocked['status']);
+        $this->assertNotNull(Payment::query()->find($payment->id));
+
+        $device->reissue();
+        $this->assertSame(substr($device->fresh()->plainToken(), 0, 12), $device->fresh()->prefix);
     }
 
     public function test_rate_limit_returns_retry_after(): void

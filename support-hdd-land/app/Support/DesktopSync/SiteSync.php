@@ -5,9 +5,11 @@ namespace App\Support\DesktopSync;
 use App\Models\Customer;
 use App\Models\DesktopDevice;
 use App\Models\JournalEntry;
+use App\Models\Part;
 use App\Models\Payment;
 use App\Models\Reception;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\AccountingService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -92,7 +94,7 @@ class SiteSync
         }
         $page = max(1, $page);
         $perPage = max(1, min(1000, $perPage));
-        $query = $this->baseQuery($table);
+        $query = $this->baseQuery($table, false);
         $total = (clone $query)->count();
         $rows = $query->orderBy('id')->forPage($page, $perPage)->get();
         $data = [];
@@ -124,7 +126,7 @@ class SiteSync
         $counts = [];
         $latest = null;
         foreach ($this->existingTables() as $table) {
-            $counts[$table] = (int) $this->baseQuery($table)->count();
+            $counts[$table] = (int) $this->baseQuery($table, false)->count();
             $time = $this->timeColumn($table);
             $row = $this->baseQuery($table)
                 ->orderByDesc($time ?: 'id')
@@ -227,6 +229,9 @@ class SiteSync
     {
         $table = (string) ($item['table'] ?? '');
         $op = (string) ($item['op'] ?? '');
+        if ($op === 'delete' && in_array($table, ['receptions', 'payments'], true)) {
+            return $this->rejected($uid, 'حذف قبض و پرداخت از همگام‌سازی بسته است. وضعیت قبض را لغو کنید.');
+        }
         $ops = SyncTableRegistry::ops($table);
         if ($ops === [] || ! Schema::hasTable($table)) {
             return $this->rejected($uid, 'این جدول از نرم‌افزار قابل تغییر نیست.');
@@ -304,10 +309,14 @@ class SiteSync
             if ($uid === '') {
                 continue;
             }
-            $mapped = DB::table('desktop_sync_map')
+            $refTable = $this->refTable(substr($key, 0, -4));
+            $mappedQuery = DB::table('desktop_sync_map')
                 ->where('token_id', $device->id)
-                ->where('desktop_uid', $uid)
-                ->first();
+                ->where('desktop_uid', $uid);
+            if ($refTable !== null) {
+                $mappedQuery->where('table_name', $refTable);
+            }
+            $mapped = $mappedQuery->first();
             if (! $mapped) {
                 return ['error' => 'ارجاع پیدا نشد.', 'errors' => [$key => 'ردیف ارجاع‌شده هنوز روی سایت نیست.']];
             }
@@ -483,11 +492,34 @@ class SiteSync
 
     private function afterSave(string $table, mixed $saved): void
     {
+        if ($saved instanceof Part && blank($saved->warehouse_id) && Schema::hasTable('warehouses')) {
+            $saved->forceFill(['warehouse_id' => Warehouse::defaultId()])->save();
+        }
         if (! $saved instanceof Payment) {
             return;
         }
         $saved->reception?->recalculateTotals();
         app(AccountingService::class)->postPayment($saved->fresh(['reception', 'customer']));
+    }
+
+    private function refTable(string $name): ?string
+    {
+        return [
+            'customer' => 'customers',
+            'reception' => 'receptions',
+            'technician' => 'technicians',
+            'custody_technician' => 'technicians',
+            'fault_type' => 'fault_types',
+            'referral_source' => 'referral_sources',
+            'payment' => 'payments',
+            'part' => 'parts',
+            'warehouse' => 'warehouses',
+            'user' => 'users',
+            'intern' => 'interns',
+            'account' => 'accounts',
+            'daily_log_category' => 'daily_log_categories',
+            'lookup_option' => 'lookup_options',
+        ][$name] ?? null;
     }
 
     /**
@@ -709,8 +741,10 @@ class SiteSync
         if ($table === 'users') {
             $data = array_intersect_key($data, array_flip(SyncTableRegistry::USER_COLUMNS));
         }
-        foreach (self::SECRETS as $secret) {
-            unset($data[$secret]);
+        foreach (array_keys($data) as $column) {
+            if (in_array($column, self::SECRETS, true) || preg_match('/password|secret|token|api_key|otp/i', (string) $column)) {
+                unset($data[$column]);
+            }
         }
         if (isset($data['image_path'])) {
             $path = (string) $data['image_path'];
@@ -741,12 +775,12 @@ class SiteSync
         return $data;
     }
 
-    private function baseQuery(string $table): mixed
+    private function baseQuery(string $table, bool $withTrashed = true): mixed
     {
         $model = SyncTableRegistry::model($table);
         if ($model) {
             $query = $model::query();
-            if (in_array(SoftDeletes::class, class_uses_recursive($model), true)) {
+            if ($withTrashed && in_array(SoftDeletes::class, class_uses_recursive($model), true)) {
                 $query->withTrashed();
             }
 

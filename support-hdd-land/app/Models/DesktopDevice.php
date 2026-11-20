@@ -70,11 +70,15 @@ class DesktopDevice extends Model
     public function reissue(): string
     {
         $plain = 'hds_'.bin2hex(random_bytes(24));
-        $this->forceFill([
+        $fill = [
             'token_hash' => hash('sha256', $plain),
             'token_encrypted' => static::encryptToken($plain),
             'revoked_at' => null,
-        ])->save();
+        ];
+        if (Schema::hasColumn('desktop_devices', 'prefix')) {
+            $fill['prefix'] = substr($plain, 0, 12);
+        }
+        $this->forceFill($fill)->save();
 
         return $plain;
     }

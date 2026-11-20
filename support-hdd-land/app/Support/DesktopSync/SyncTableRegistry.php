@@ -2,6 +2,7 @@
 
 namespace App\Support\DesktopSync;
 
+use App\Models\Account;
 use App\Models\CostApproval;
 use App\Models\Customer;
 use App\Models\CustomerMessage;
@@ -10,7 +11,10 @@ use App\Models\DailyLogEntry;
 use App\Models\DeviceHandoff;
 use App\Models\FaultType;
 use App\Models\Intern;
+use App\Models\JournalEntry;
+use App\Models\JournalLine;
 use App\Models\LookupOption;
+use App\Models\Part;
 use App\Models\Payment;
 use App\Models\PaymentReceipt;
 use App\Models\Reception;
@@ -20,8 +24,10 @@ use App\Models\ReceptionStatusLog;
 use App\Models\ReceptionWorkReport;
 use App\Models\ReferralSource;
 use App\Models\SmsStatusRule;
+use App\Models\StockMovement;
 use App\Models\Technician;
 use App\Models\User;
+use App\Models\Warehouse;
 
 class SyncTableRegistry
 {
@@ -35,6 +41,8 @@ class SyncTableRegistry
         'partners', 'network_referrals',
         'users', 'technicians', 'interns',
         'lookup_options', 'fault_types', 'daily_log_categories', 'price_tiers', 'sms_status_rules',
+        'parts', 'warehouses', 'stock_movements',
+        'accounts', 'journal_entries', 'journal_lines',
         'daily_log_entries',
         'app_settings',
     ];
@@ -61,19 +69,30 @@ class SyncTableRegistry
         'daily_log_categories' => DailyLogCategory::class,
         'sms_status_rules' => SmsStatusRule::class,
         'daily_log_entries' => DailyLogEntry::class,
+        'parts' => Part::class,
+        'warehouses' => Warehouse::class,
+        'stock_movements' => StockMovement::class,
+        'accounts' => Account::class,
+        'journal_entries' => JournalEntry::class,
+        'journal_lines' => JournalLine::class,
     ];
 
     /** @var array<string, list<string>> */
     private const OPS = [
         'customers' => ['upsert'],
         'referral_sources' => ['upsert'],
-        'receptions' => ['upsert', 'delete'],
+        'receptions' => ['upsert'],
         'reception_status_logs' => ['upsert'],
         'reception_work_reports' => ['upsert'],
         'reception_parts' => ['upsert'],
         'reception_cost_stages' => ['upsert'],
         'device_handoffs' => ['upsert'],
-        'payments' => ['upsert', 'delete'],
+        'payments' => ['upsert'],
+        'parts' => ['upsert'],
+        'warehouses' => ['upsert'],
+        'technicians' => ['upsert'],
+        'interns' => ['upsert'],
+        'sms_status_rules' => ['upsert'],
         'customer_messages' => ['upsert'],
         'remote_part_preorders' => ['update'],
         'payment_receipts' => ['update'],

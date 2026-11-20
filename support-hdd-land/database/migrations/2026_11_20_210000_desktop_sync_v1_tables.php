@@ -75,26 +75,6 @@ return new class extends Migration
                 $table->timestamp('created_at')->nullable()->index();
             });
         }
-
-        foreach ([
-            'customers', 'referral_sources', 'receptions', 'reception_status_logs',
-            'reception_work_reports', 'reception_parts', 'reception_cost_stages',
-            'cost_approvals', 'device_handoffs', 'payments', 'payment_receipts',
-            'customer_messages', 'users', 'technicians', 'interns', 'lookup_options',
-            'fault_types', 'daily_log_categories', 'daily_log_entries', 'sms_status_rules',
-            'app_settings', 'parts',
-        ] as $name) {
-            if (! Schema::hasTable($name) || ! Schema::hasColumn($name, 'updated_at')) {
-                continue;
-            }
-            try {
-                Schema::table($name, function (Blueprint $table) use ($name) {
-                    $table->index('updated_at', $name.'_updated_at_idx');
-                });
-            } catch (\Throwable) {
-                // Index already exists on this install.
-            }
-        }
     }
 
     public function down(): void

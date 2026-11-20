@@ -35,6 +35,7 @@ class AuthenticateDesktopDevice
         }
 
         $request->attributes->set('desktopDevice', $device);
+        app()->instance('sync.origin', 'desktop');
 
         return $next($request);
     }
