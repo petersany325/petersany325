@@ -78,7 +78,16 @@
                     <td dir="ltr">{{ $device->last_ip ?: '—' }}</td>
                     <td>{{ $device->revoked_at ? 'قطع‌شده' : 'فعال' }}</td>
                     <td>
-                        @php $token = $device->plainToken(); @endphp
+                        @php
+                            $token = null;
+                            if (! $device->revoked_at) {
+                                if ((int) $copyId === (int) $device->id && filled($copyToken ?? null)) {
+                                    $token = (string) $copyToken;
+                                } else {
+                                    $token = $device->plainToken();
+                                }
+                            }
+                        @endphp
                         @if($token)
                             <div class="device-token" dir="ltr">{{ $token }}</div>
                         @elseif(!$device->revoked_at)
@@ -89,7 +98,7 @@
                             <div class="device-menu-pop">
                                 @if($token)
                                     <button type="button" class="btn btn-primary" data-copy-token="{{ $token }}" @if((int) $copyId === (int) $device->id) data-autocopy @endif>کپی توکن</button>
-                                @elseif(!$device->revoked_at)
+                                @else
                                     <form method="POST" action="{{ route('settings.desktop-sync.reissue', $device) }}">
                                         @csrf
                                         <button class="btn btn-primary" type="submit" data-confirm="توکن جدید ساخته می‌شود و توکن قبلی این رایانه دیگر وصل نمی‌شود. ادامه می‌دهید؟">توکن جدید</button>

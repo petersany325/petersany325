@@ -19,6 +19,7 @@ class DesktopDeviceController extends Controller
                 ? DesktopDevice::query()->latest('id')->get()
                 : collect(),
             'copyId' => session('desktop_copy_id'),
+            'copyToken' => session('desktop_copy_token'),
             'syncUrl' => url('/api/desktop/v1/sync'),
             'pingUrl' => url('/api/desktop/v1/ping'),
             'specUrl' => url('/api/desktop/v1/spec'),
@@ -39,28 +40,30 @@ class DesktopDeviceController extends Controller
             'name' => ['required', 'string', 'max:80'],
         ]);
 
-        $device = DesktopDevice::issue($data['name'], $request->user()?->id)[0];
+        [$device, $plain] = DesktopDevice::issue($data['name'], $request->user()?->id);
 
         return redirect()
             ->route('settings.desktop-sync')
             ->with('success', 'توکن «'.$device->name.'» ساخته شد. از منوی همان ردیف، کپی توکن را بزنید.')
-            ->with('desktop_copy_id', $device->id);
+            ->with('desktop_copy_id', $device->id)
+            ->with('desktop_copy_token', $plain);
     }
 
     public function reissue(DesktopDevice $device)
     {
-        $device->reissue();
+        $plain = $device->reissue();
 
         return redirect()
             ->route('settings.desktop-sync')
             ->with('success', 'توکن جدید «'.$device->name.'» ساخته شد. توکن قبلی دیگر وصل نمی‌شود.')
-            ->with('desktop_copy_id', $device->id);
+            ->with('desktop_copy_id', $device->id)
+            ->with('desktop_copy_token', $plain);
     }
 
     public function revoke(DesktopDevice $device)
     {
         if ($device->revoked_at === null) {
-            $device->forceFill(['revoked_at' => now()])->save();
+            $device->revoke();
         }
 
         return redirect()

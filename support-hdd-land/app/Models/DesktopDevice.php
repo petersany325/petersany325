@@ -72,9 +72,11 @@ class DesktopDevice extends Model
         $plain = 'hds_'.bin2hex(random_bytes(24));
         $fill = [
             'token_hash' => hash('sha256', $plain),
-            'token_encrypted' => static::encryptToken($plain),
             'revoked_at' => null,
         ];
+        if ($encrypted = static::encryptToken($plain)) {
+            $fill['token_encrypted'] = $encrypted;
+        }
         if (Schema::hasColumn('desktop_devices', 'prefix')) {
             $fill['prefix'] = substr($plain, 0, 12);
         }
@@ -83,8 +85,21 @@ class DesktopDevice extends Model
         return $plain;
     }
 
+    public function revoke(): void
+    {
+        $fill = ['revoked_at' => now()];
+        if (Schema::hasColumn('desktop_devices', 'token_encrypted')) {
+            $fill['token_encrypted'] = null;
+        }
+        $this->forceFill($fill)->save();
+    }
+
     public function plainToken(): ?string
     {
+        if ($this->isRevoked()) {
+            return null;
+        }
+
         $stored = $this->getAttribute('token_encrypted');
         if (! is_string($stored) || $stored === '') {
             return null;
