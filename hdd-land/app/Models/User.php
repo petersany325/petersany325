@@ -64,7 +64,11 @@ class User extends Authenticatable
                 return $cache[$id] = null;
             }
             \Plugins\StaffHR\Plugin::ensureSchema();
-            $row = \Illuminate\Support\Facades\DB::table('staff_members')->where('user_id', $id)->first();
+            $query = \Illuminate\Support\Facades\DB::table('staff_members')->where('user_id', $id);
+            if (\Illuminate\Support\Facades\Schema::hasColumn('staff_members', 'is_active')) {
+                $query->where('is_active', 1);
+            }
+            $row = $query->first();
 
             return $cache[$id] = $row ?: null;
         } catch (\Throwable) {

@@ -46,6 +46,95 @@
   </div>
 </section>
 
+<section class="ag-sec" id="prices">
+  <div class="ag-wrap">
+    <p class="ag-kicker">قیمت</p>
+    <h2>قیمت نرم‌افزار کامپیوتر</h2>
+    <p class="ag-lead">مبالغ به تومان است. همهٔ نسخه‌ها با هم ۲۰۰ میلیون تومان است.</p>
+    @php
+      $editions = \App\Support\StudioPriceList::editions();
+      $bundle = \App\Support\StudioPriceList::bundle();
+      $addons = \App\Support\StudioPriceList::addons();
+      $cartCount = count(\App\Support\StudioCart::skus());
+    @endphp
+    <style>
+      .ag-price-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem}
+      .ag-price{width:100%;border-collapse:collapse;background:#101628;border:1px solid rgba(255,255,255,.08);border-radius:16px;overflow:hidden}
+      .ag-price th,.ag-price td{padding:.72rem .9rem;border-bottom:1px solid rgba(255,255,255,.06);text-align:right;font-size:.92rem}
+      .ag-price thead th{color:#9aa3c7;font-weight:600;font-size:.74rem;background:#0c1224}
+      .ag-price tbody th{color:#eef2ff;font-weight:600}
+      .ag-price tbody th a{color:#eef2ff;text-decoration:none}
+      .ag-price tbody th a:hover{color:#c4b5fd}
+      .ag-price td{color:#fff;font-weight:700;white-space:nowrap}
+      .ag-price tr.is-all th,.ag-price tr.is-all td{background:rgba(124,92,255,.16);color:#fff}
+      .ag-price-block h3{margin:0 0 .55rem;font-size:1rem}
+      .ag-price .ag-cart{border:0;border-radius:999px;background:#7c5cff;color:#fff;font:inherit;font-size:.74rem;font-weight:600;padding:.32rem .7rem;cursor:pointer}
+      .ag-price .ag-cart.is-in{background:transparent;color:#c4b5fd;border:1px solid rgba(124,92,255,.5);text-decoration:none;display:inline-block}
+      .ag-cart-bar{display:flex;justify-content:space-between;gap:.7rem;align-items:center;margin-top:.9rem;padding:.7rem .9rem;border-radius:14px;background:#101628;border:1px solid rgba(124,92,255,.35)}
+      @media(max-width:800px){.ag-price-grid{grid-template-columns:1fr}.ag-price th,.ag-price td{padding:.62rem .7rem;font-size:.84rem}.ag-cart-bar{flex-direction:column;align-items:stretch}}
+    </style>
+    <div class="ag-price-grid">
+      <div class="ag-price-block">
+      <h3>قیمت نرم‌افزار کامپیوتر</h3>
+      <table class="ag-price">
+        <thead><tr><th>نسخه</th><th>قیمت</th><th></th></tr></thead>
+        <tbody>
+          @foreach(array_merge($editions, [$bundle]) as $row)
+            <tr class="{{ $row['kind'] === 'bundle' ? 'is-all' : '' }}">
+              <th>@if($row['kind'] === 'edition')<a href="{{ url($row['url']) }}">{{ $row['title'] }}</a>@else{{ $row['title'] }}@endif</th>
+              <td>{{ \App\Support\StudioPriceList::label($row['million']) }}</td>
+              <td>@include('studio::price-cart-button', ['sku' => $row['sku']])</td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+      </div>
+      <div class="ag-price-block">
+      <h3>قیمت افزونه‌ها</h3>
+      <table class="ag-price">
+        <thead><tr><th>افزونه</th><th>قیمت</th><th></th></tr></thead>
+        <tbody>
+          @foreach($addons as $row)
+            <tr>
+              <th>{{ $row['title'] }}</th>
+              <td>{{ \App\Support\StudioPriceList::label($row['million']) }}</td>
+              <td>@include('studio::price-cart-button', ['sku' => $row['sku']])</td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <div class="ag-cart-bar">
+      <span>سبد شما: {{ strtr((string) $cartCount, ['0'=>'۰','1'=>'۱','2'=>'۲','3'=>'۳','4'=>'۴','5'=>'۵','6'=>'۶','7'=>'۷','8'=>'۸','9'=>'۹']) }} مورد</span>
+      <a class="ag-btn ag-btn--on" href="{{ url('/computer-accounting/cart') }}">کارتابل سبد و پرداخت<i>←</i></a>
+    </div>
+    <p class="ag-note">مشاورهٔ فروش: <a href="tel:09113100473">۰۹۱۱۳۱۰۰۴۷۳</a></p>
+  </div>
+</section>
+
+<section class="ag-sec" id="medical-prices">
+  <div class="ag-wrap">
+    <p class="ag-kicker">پزشکی</p>
+    <h2>قیمت نرم‌افزار کامپیوتر پزشکی</h2>
+    <p class="ag-lead">این جدول جدا از حسابداری صنوف است. هر نسخه ۴۰ میلیون تومان است.</p>
+    <div class="ag-price-block" style="max-width:720px">
+      <table class="ag-price">
+        <thead><tr><th>نسخه</th><th>قیمت</th><th></th></tr></thead>
+        <tbody>
+          @foreach(\App\Support\StudioPriceList::medical() as $row)
+            <tr>
+              <th><a href="{{ url($row['url']) }}">{{ $row['title'] }}</a></th>
+              <td>{{ \App\Support\StudioPriceList::label($row['million']) }}</td>
+              <td>@include('studio::price-cart-button', ['sku' => $row['sku']])</td>
+            </tr>
+          @endforeach
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
 <section class="ag-sec" id="shared">
   <div class="ag-wrap">
     <p class="ag-kicker">مشترک</p>

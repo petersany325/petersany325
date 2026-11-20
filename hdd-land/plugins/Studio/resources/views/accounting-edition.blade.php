@@ -12,6 +12,7 @@
     <div class="ag-actions">
       <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست دمو<i>←</i></a>
     </div>
+    @include('studio::sale-bar', ['sku' => 'acc-'.($edition['slug'] ?? '')])
     <figure class="ag-shot-ph">
       <span>{{ $edition['alt'] ?? '' }}</span>
     </figure>

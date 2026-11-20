@@ -16,7 +16,7 @@
     <div class="ag-auth-card">
       <p class="ag-kicker">{{ $isStaff ? 'پنل داخلی' : 'حساب کاربری' }}</p>
       <h1>{{ $isStaff ? 'ورود کارمند' : 'ورود و ثبت‌نام کاربر' }}</h1>
-      <p class="ag-lead">{{ $isStaff ? 'ورود کارمند فقط با نام کاربری و کد پیامک است. هر دو اجباری‌اند. ثبت‌نام کارمند فقط توسط مدیر انجام می‌شود.' : 'با شماره موبایل وارد شوید یا حساب بسازید. کد تایید پیامک می‌شود.' }}</p>
+      <p class="ag-lead">{{ $isStaff ? 'با نام کاربری و رمز وارد شوید. ثبت‌نام کارمند فقط توسط مدیر انجام می‌شود.' : 'با شماره موبایل وارد شوید یا حساب بسازید. کد تایید پیامک می‌شود.' }}</p>
 
       @if(session('success'))
         <div class="ag-note">{{ session('success') }}</div>
@@ -74,6 +74,18 @@
           @endif
           <button class="ag-btn ag-btn--on" type="submit">{{ $isStaff || $tab === 'login' ? 'ارسال کد ورود' : 'ارسال کد ثبت‌نام' }}</button>
         </form>
+        @if($isStaff)
+          <form class="ag-auth-form" method="post" action="{{ url('/auth/staff/password') }}">
+            @csrf
+            <label>نام کاربری
+              <input name="login" value="{{ old('login', $login ?? '') }}" required maxlength="120" autocomplete="username">
+            </label>
+            <label>رمز عبور
+              <input name="password" type="password" required maxlength="200" autocomplete="current-password">
+            </label>
+            <button class="ag-btn ag-btn--on" type="submit">ورود با رمز</button>
+          </form>
+        @endif
       @endif
 
       <div class="ag-auth-switch">

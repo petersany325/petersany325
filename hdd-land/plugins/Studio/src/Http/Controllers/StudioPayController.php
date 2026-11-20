@@ -9,6 +9,7 @@ use App\Support\StudioStaffDesk;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
 use Plugins\Studio\Plugin as StudioPlugin;
 use Plugins\Studio\src\Support\StudioSms;
@@ -54,16 +55,24 @@ class StudioPayController
         }
         $isStaff = false;
         try {
-            $isStaff = $user && (method_exists($user, 'isStaff') && $user->isStaff() || method_exists($user, 'isAdmin') && $user->isAdmin());
+            $isStaff = $user && ((method_exists($user, 'isStaff') && $user->isStaff()) || (method_exists($user, 'isAdmin') && $user->isAdmin()));
         } catch (\Throwable) {
         }
+        if (! $isStaff) {
+            $ipKey = 'pay-record-ip:'.$request->ip();
+            $phoneKey = $buyerPhone !== '' ? 'pay-record-phone:'.hash('sha256', $buyerPhone) : '';
+            if (RateLimiter::tooManyAttempts($ipKey, 4) || ($phoneKey !== '' && RateLimiter::tooManyAttempts($phoneKey, 3))) {
+                return back()->withInput()->with('error', 'تعداد ثبت فاکتور در این ساعت زیاد شد. کمی بعد دوباره تلاش کنید.');
+            }
+            RateLimiter::hit($ipKey, 3600);
+            if ($phoneKey !== '') {
+                RateLimiter::hit($phoneKey, 3600);
+            }
+        }
         $offer['buyer_id'] = $isStaff ? 0 : (int) ($user->id ?? 0);
+        $offer['buyer_phone'] = $buyerPhone;
         $sellerId = $isStaff ? (int) ($user->id ?? 0) : 0;
         $invoice = StudioStaffDesk::recordSale($offer, $sellerId, $buyer, $gateway);
-        $invoice['buyer_phone'] = $buyerPhone;
-        if (class_exists(\App\Support\StudioNotify::class) && $buyerPhone !== '') {
-            \App\Support\StudioNotify::invoice($invoice);
-        }
         $to = $isStaff ? '/staff/desk/invoices' : '/account/invoices';
 
         return redirect()->to(url($to))->with('success', 'فاکتور '.$invoice['id'].' ثبت شد.');

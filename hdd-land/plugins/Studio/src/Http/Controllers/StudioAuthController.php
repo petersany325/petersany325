@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -190,6 +191,37 @@ class StudioAuthController
         $this->markPhoneVerified($user);
         $this->touchStaffLogin($user);
         $this->forgetPending($request, 'staff');
+        $this->loginUser($request, $user);
+        if (class_exists(\App\Support\StudioNotify::class)) {
+            \App\Support\StudioNotify::login($user);
+        }
+
+        return redirect()->to($this->staffHome())->with('success', 'وارد پنل کارمند شدید.');
+    }
+
+    public function passwordStaff(Request $request): RedirectResponse
+    {
+        $login = trim((string) $request->input('login', ''));
+        $password = (string) $request->input('password', '');
+        $ipKey = 'staff-password-ip:'.$request->ip();
+        $loginKey = 'staff-password-login:'.hash('sha256', mb_strtolower($login));
+        if (RateLimiter::tooManyAttempts($ipKey, 8) || ($login !== '' && RateLimiter::tooManyAttempts($loginKey, 8))) {
+            return back()->withInput($request->except('password'))->with('error', 'چند بار رمز اشتباه آمد. کمی بعد دوباره تلاش کنید.');
+        }
+        $user = $this->findStaffByLogin($login);
+        $hash = (string) ($user->password ?? '');
+        if (! $user || ! $this->isStaffUser($user) || $password === '' || $hash === '' || ! \Illuminate\Support\Facades\Hash::check($password, $hash)) {
+            RateLimiter::hit($ipKey, 900);
+            if ($login !== '') {
+                RateLimiter::hit($loginKey, 900);
+            }
+
+            return back()->withInput($request->except('password'))->with('error', 'نام کاربری یا رمز درست نیست.');
+        }
+        if ($login !== '') {
+            RateLimiter::clear($loginKey);
+        }
+        $this->touchStaffLogin($user);
         $this->loginUser($request, $user);
         if (class_exists(\App\Support\StudioNotify::class)) {
             \App\Support\StudioNotify::login($user);
@@ -390,6 +422,11 @@ class StudioAuthController
 
     protected function staffHome(): string
     {
+        $user = Auth::user();
+        if ($user && method_exists($user, 'isAdmin') && $user->isAdmin()) {
+            return url('/admin');
+        }
+
         return url('/staff/desk');
     }
 }

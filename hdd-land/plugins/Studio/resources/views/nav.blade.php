@@ -39,7 +39,7 @@
     }
     return false;
   };
-  if ($agency && class_exists(\App\Support\StudioProductMenus::class)) {
+  if ($agency && empty($studioHome['menu_custom']) && class_exists(\App\Support\StudioProductMenus::class)) {
     $hasKids = false;
     foreach ($items as $it) {
       if (! empty($it['children'])) { $hasKids = true; break; }

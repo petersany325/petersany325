@@ -175,15 +175,89 @@ class StudioHomeConfig
         return $s;
     }
 
+    public static function saveNav(string $raw): array
+    {
+        $s = self::get();
+        $s['nav'] = mb_substr(trim($raw), 0, 2000);
+        SettingsStore::set(self::KEY, $s);
+
+        return $s;
+    }
+
+    /** @param  list<array<string, mixed>>  $tree */
+    public static function saveMenu(array $tree): array
+    {
+        $clean = self::normalizeTree($tree);
+        $s = self::get();
+        $s['menu_custom'] = true;
+        $s['menu_tree'] = $clean;
+        $lines = [];
+        foreach ($clean as $item) {
+            $lines[] = $item['label'].'|'.$item['url'];
+        }
+        $s['nav'] = mb_substr(implode("\n", $lines), 0, 2000);
+        SettingsStore::set(self::KEY, $s);
+
+        return $s;
+    }
+
+    public static function resetMenu(): array
+    {
+        $s = self::get();
+        $s['menu_custom'] = false;
+        $s['menu_tree'] = [];
+        $s['nav'] = (string) (self::defaults()['nav'] ?? '');
+        SettingsStore::set(self::KEY, $s);
+
+        return $s;
+    }
+
     /** @return list<array{label:string,url:string,children?:list<array<string,mixed>>}> */
     public static function navItems(?array $s = null): array
     {
-        $items = self::lines(($s ?? self::get())['nav'] ?? '');
+        $s = $s ?? self::get();
+        if (! empty($s['menu_custom'])) {
+            return self::normalizeTree($s['menu_tree'] ?? []);
+        }
+        $items = self::lines((string) ($s['nav'] ?? ''));
         if (class_exists(StudioProductMenus::class)) {
             return StudioProductMenus::attachToNav($items);
         }
 
         return $items;
+    }
+
+    /** @return list<array{label:string,url:string,children?:list<array<string,mixed>>}> */
+    public static function normalizeTree(mixed $tree, int $depth = 0): array
+    {
+        if (! is_array($tree) || $depth > 2) {
+            return [];
+        }
+        $out = [];
+        foreach (array_slice(array_values($tree), 0, 40) as $node) {
+            if (! is_array($node)) {
+                continue;
+            }
+            $label = mb_substr(trim((string) ($node['label'] ?? '')), 0, 80);
+            if ($label === '') {
+                continue;
+            }
+            $url = trim((string) ($node['url'] ?? '/'));
+            if ($url === '' || $url === '#') {
+                $url = '/';
+            }
+            if (! str_starts_with($url, '/') && ! preg_match('#^https?://#i', $url)) {
+                $url = '/'.$url;
+            }
+            $item = ['label' => $label, 'url' => mb_substr($url, 0, 300)];
+            $kids = self::normalizeTree($node['children'] ?? [], $depth + 1);
+            if ($kids !== []) {
+                $item['children'] = $kids;
+            }
+            $out[] = $item;
+        }
+
+        return $out;
     }
 
     /** @return list<array{title:string,text:string,url:string}> */

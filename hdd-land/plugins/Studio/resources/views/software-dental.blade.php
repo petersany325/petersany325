@@ -71,10 +71,8 @@
       <a class="ag-btn ag-btn--on" href="#demo">درخواست دموی رایگان<i>←</i></a>
       <a class="ag-btn ag-btn--line" href="#features">مشاهدهٔ امکانات</a>
     </div>
+    @include('studio::sale-bar', ['sku' => 'med-dental'])
     <p class="ag-note">نوبت‌دهی روی یونیت · چارت دندانی FDI · پیامک خودکار · آفلاین</p>
-    @if($staff)
-      <p class="ag-note">برای نمایندهٔ واردشده: سهم این نسخه ۱۲٪ است. این جمله در صفحهٔ عمومی دیده نمی‌شود.</p>
-    @endif
     <div class="cd" id="dn1">
       <div class="cd-bar"><div class="cd-dots" aria-hidden="true"><b></b><b></b><b></b></div><div class="cd-t">حساب مطب · نسخهٔ دندانپزشکی</div><div class="cd-r">مطب نمونه لبخند · امروز <span class="dn-sample">نمونه</span></div></div>
       <div class="dn-hero">

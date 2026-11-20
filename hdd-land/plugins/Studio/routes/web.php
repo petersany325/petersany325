@@ -6,6 +6,8 @@ use Plugins\Studio\src\Http\Controllers\StudioController;
 use Plugins\Studio\src\Http\Controllers\StudioPayController;
 use Plugins\Studio\src\Http\Controllers\StudioStaffDeskController;
 use Plugins\Studio\src\Http\Controllers\StudioSupportController;
+use Plugins\Studio\src\Http\Controllers\StudioCartController;
+use Plugins\Studio\src\Http\Controllers\StudioChatController;
 use Plugins\Studio\src\Http\Controllers\StudioCustomerDeskController;
 
 Route::get('/login', fn () => redirect()->to(url('/auth/customer')));
@@ -18,6 +20,7 @@ Route::post('/auth/customer/verify', [StudioAuthController::class, 'verifyCustom
 Route::get('/auth/staff', [StudioAuthController::class, 'staff'])->name('studio.auth.staff');
 Route::post('/auth/staff/sms', [StudioAuthController::class, 'sendStaff'])->name('studio.auth.staff.sms');
 Route::post('/auth/staff/verify', [StudioAuthController::class, 'verifyStaff'])->name('studio.auth.staff.verify');
+Route::post('/auth/staff/password', [StudioAuthController::class, 'passwordStaff'])->name('studio.auth.staff.password');
 Route::post('/auth/restart', [StudioAuthController::class, 'restart'])->name('studio.auth.restart');
 Route::post('/auth/logout', [StudioAuthController::class, 'logout'])->name('studio.auth.logout');
 
@@ -26,6 +29,7 @@ Route::get('/studio-sw.js', [StudioController::class, 'serviceWorker'])->name('s
 Route::post('/studio-webapp/dismiss', [StudioController::class, 'dismissBanner'])->name('studio.webapp.dismiss');
 Route::get('/design', [StudioController::class, 'design'])->name('studio.design');
 Route::post('/design/lead', [StudioController::class, 'designLead'])->name('studio.design.lead');
+Route::post('/chat/ask', [StudioChatController::class, 'ask'])->name('studio.chat.ask');
 Route::get('/design/{slug}', [StudioController::class, 'designService'])->name('studio.design.service');
 Route::get('/about', [StudioController::class, 'about'])->name('studio.about');
 Route::get('/ai', [StudioController::class, 'ai'])->name('studio.ai');
@@ -33,6 +37,9 @@ Route::get('/accounting', [StudioController::class, 'accounting'])->name('studio
 Route::get('/accounting/m/{slug}', [StudioController::class, 'accountingItem'])->name('studio.accounting.item');
 Route::get('/accounting/{slug}', [StudioController::class, 'accountingType'])->name('studio.accounting.type');
 Route::get('/computer-accounting', [StudioController::class, 'computerAccounting'])->name('studio.computer');
+Route::post('/computer-accounting/cart/add', [StudioCartController::class, 'add'])->name('studio.cart.add');
+Route::post('/computer-accounting/cart/remove', [StudioCartController::class, 'remove'])->name('studio.cart.remove');
+Route::get('/computer-accounting/cart', [StudioCartController::class, 'show'])->name('studio.cart');
 Route::get('/computer-accounting/m/{slug}', [StudioController::class, 'computerAccountingItem'])->name('studio.computer.item');
 Route::get('/computer-accounting/{slug}', [StudioController::class, 'computerAccountingType'])->name('studio.computer.type');
 Route::get('/projects', [StudioController::class, 'projects'])->name('studio.projects');
@@ -57,6 +64,8 @@ Route::post('/support', [StudioSupportController::class, 'send'])->name('studio.
 
 Route::get('/software/{slug}', [StudioController::class, 'softwareOffer'])->name('studio.software');
 
+Route::get('/pay/cart', [StudioCartController::class, 'pay'])->name('studio.pay.cart');
+Route::post('/pay/cart', [StudioCartController::class, 'record'])->name('studio.pay.cart.record');
 Route::get('/pay/start', [StudioPayController::class, 'start'])->name('studio.pay.start');
 Route::get('/pay/zarinpal', [StudioPayController::class, 'start'])->name('studio.pay.zarinpal');
 Route::get('/pay/melli', [StudioPayController::class, 'start'])->name('studio.pay.melli');
@@ -66,6 +75,7 @@ Route::get('/staff/desk', [StudioStaffDeskController::class, 'home'])->name('stu
 Route::get('/staff/desk/buy', [StudioStaffDeskController::class, 'buy'])->name('studio.staff.buy');
 Route::get('/staff/desk/sell', [StudioStaffDeskController::class, 'sell'])->name('studio.staff.sell');
 Route::get('/staff/desk/prices', [StudioStaffDeskController::class, 'prices'])->name('studio.staff.prices');
+Route::post('/staff/desk/prices', [StudioStaffDeskController::class, 'storePrice'])->name('studio.staff.prices.save');
 Route::get('/staff/desk/sales', [StudioStaffDeskController::class, 'sales'])->name('studio.staff.sales');
 Route::get('/staff/desk/invoices', [StudioStaffDeskController::class, 'invoices'])->name('studio.staff.invoices');
 Route::get('/staff/desk/reps', [StudioStaffDeskController::class, 'reps'])->name('studio.staff.reps');

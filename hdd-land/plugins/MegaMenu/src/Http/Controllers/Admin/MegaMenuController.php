@@ -15,49 +15,54 @@ class MegaMenuController extends Controller
 {
     public function index(Request $request): View
     {
-        MegaMenuPlugin::ensureSchema();
-        MegaMenuPlugin::seedDefaultsIfEmpty();
-
-        $tree = MegaMenuItem::query()
-            ->with(['children.children.children.children', 'category'])
-            ->whereNull('parent_id')
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get();
-
-        $flat = MegaMenuItem::query()
-            ->orderByRaw('CASE WHEN parent_id IS NULL THEN 0 ELSE 1 END')
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get()
-            ->keyBy('id');
-
-        $edit = null;
-        if ($request->filled('edit')) {
-            $edit = MegaMenuItem::query()->find($request->integer('edit'));
+        if (class_exists(\Plugins\Studio\Plugin::class)) {
+            \Plugins\Studio\Plugin::registerViews();
         }
-
-        return view('mega-menu::admin.index', [
-            'tree' => $tree,
-            'flat' => $flat,
-            'edit' => $edit,
-            'treeJson' => $this->serializeTree($tree),
-            'categories' => class_exists(Category::class) ? Category::treeOptions() : collect(),
-            'animations' => MegaMenuPlugin::animations(),
-            'effects' => MegaMenuPlugin::effects(),
-            'types' => MegaMenuPlugin::types(),
-            'fonts' => MegaMenuPlugin::fonts(),
-            'iconPresets' => MegaMenuPlugin::iconPresets(),
-            'openModes' => MegaMenuPlugin::openModes(),
-            'panelAligns' => MegaMenuPlugin::panelAligns(),
-            'media' => $this->listMedia(),
-            'uploadUrl' => route('admin.mega-menu.upload'),
-            'settings' => MegaMenuPlugin::settings(),
+        $home = class_exists(\App\Support\StudioHomeConfig::class) ? \App\Support\StudioHomeConfig::get() : [];
+        $items = class_exists(\App\Support\StudioHomeConfig::class) ? \App\Support\StudioHomeConfig::navItems($home) : [];
+        return view('studio::admin.site-menu', [
+            'items' => $items,
+            'custom' => ! empty($home['menu_custom']),
+            'brand' => (string) ($home['brand'] ?? 'شرکت فراز نت آمل (سرزمین هارد)'),
+            'tagline' => (string) ($home['tagline'] ?? 'طراحی سایت، نرم‌افزار و هوش مصنوعی'),
         ]);
     }
 
     public function saveSettings(Request $request): RedirectResponse|JsonResponse
     {
+        if ($request->has('site_menu') && class_exists(\App\Support\StudioHomeConfig::class)) {
+            if ($request->boolean('menu_reset')) {
+                \App\Support\StudioHomeConfig::resetMenu();
+            } elseif ($request->has('menu_json')) {
+                $tree = json_decode((string) $request->input('menu_json', '[]'), true);
+                \App\Support\StudioHomeConfig::saveMenu(is_array($tree) ? $tree : []);
+            } else {
+                $labels = (array) $request->input('nav_label', []);
+                $urls = (array) $request->input('nav_url', []);
+                $lines = [];
+                foreach ($labels as $i => $label) {
+                    $label = trim((string) $label);
+                    if ($label === '') {
+                        continue;
+                    }
+                    $url = trim((string) ($urls[$i] ?? '/'));
+                    if ($url === '' || $url === '#') {
+                        $url = '/';
+                    }
+                    if (! str_starts_with($url, '/') && ! preg_match('#^https?://#i', $url)) {
+                        $url = '/'.$url;
+                    }
+                    $lines[] = mb_substr($label, 0, 80).'|'.mb_substr($url, 0, 300);
+                }
+                \App\Support\StudioHomeConfig::saveNav(implode("\n", $lines));
+            }
+            if (class_exists(\App\Support\DesignPageCache::class)) {
+                \App\Support\DesignPageCache::forget();
+            }
+
+            return redirect()->to(url('/admin/mega-menu'))->with('success', $request->boolean('menu_reset') ? 'منوی پیش‌فرض سایت برگشت.' : 'منوی سایت ذخیره شد.');
+        }
+
         try {
             MegaMenuPlugin::ensureSchema();
             $saved = MegaMenuPlugin::saveSettings($request->all());

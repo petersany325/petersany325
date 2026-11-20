@@ -21,6 +21,8 @@
         <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست مشاوره و دمو<i>←</i></a>
         <a class="ag-btn ag-btn--line" href="{{ url('/computer-accounting') }}">→ همه حسابداری‌های کامپیوتر</a>
       </div>
+      <!-- sale-slot -->
+      @include('studio::sale-bar', ['sku' => 'acc-'.($industry['slug'] ?? '')])
       @if(!empty($industry['highlights']))
         <ul class="ag-list" style="margin-top:1.1rem">
           @foreach($industry['highlights'] as $row)

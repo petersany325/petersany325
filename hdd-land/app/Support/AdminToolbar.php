@@ -27,20 +27,32 @@ class AdminToolbar
         }
 
         $path = trim((string) $request->path(), '/');
+        $can = static fn (string $perm) => $isAdmin || (method_exists($user, 'hasStaffPermission') && $user->hasStaffPermission($perm));
         if ($path === 'admin' || str_starts_with($path, 'admin/') || $path === 'staff' || str_starts_with($path, 'staff/')) {
-            return null;
+            $ctx = [
+                'label' => str_starts_with($path, 'staff') ? 'کارتابل نماینده' : 'پنل مدیریت',
+                'primary' => $can('site.homepage') ? ['label' => 'تنظیمات صفحه اول', 'url' => url('/admin/studio-home')] : null,
+                'links' => [],
+            ];
+        } else {
+            $ctx = static::context($request, $path, $can);
         }
 
-        $can = static fn (string $perm) => $isAdmin || (method_exists($user, 'hasStaffPermission') && $user->hasStaffPermission($perm));
-        $ctx = static::context($request, $path, $can);
-
         $design = array_values(array_filter([
-            $can('site.homepage') ? ['label' => 'صفحه اول استودیو', 'url' => url('/admin/studio-home')] : null,
-            $can('site.homepage') ? ['label' => 'پیامک ورود / نیازپرداز', 'url' => url('/admin/studio-sms')] : null,
-            $can('site.homepage') ? ['label' => 'بنر و هیرو فروشگاه', 'url' => url('/admin/homepage-settings')] : null,
+            $can('site.homepage') ? ['label' => 'تنظیمات صفحه اول', 'url' => url('/admin/studio-home')] : null,
+            $can('site.homepage') ? ['label' => 'بنر صفحه اول فروشگاه', 'url' => url('/admin/homepage-settings')] : null,
+            $isAdmin || $can('full_site') ? ['label' => 'تنظیمات حسابداری', 'url' => url('/admin/accounting/settings')] : null,
+            $can('site.homepage') ? ['label' => 'تنظیم درگاه پیامک', 'url' => url('/admin/studio-sms')] : null,
+            $can('site.homepage') ? ['label' => 'تنظیمات چت آنلاین', 'url' => url('/admin/studio-chat')] : null,
+            $isAdmin || $can('full_site') ? ['label' => 'تنظیمات فاکتور', 'url' => url('/admin/invoice-design')] : null,
+            $isAdmin || $can('serials') || $can('sales') ? ['label' => 'بارکد و سریال', 'url' => url('/admin/serial-sales')] : null,
+            $isAdmin ? ['label' => 'تنظیمات ثبت‌نام مشتری', 'url' => url('/admin/auth-settings?tab=register')] : null,
+            $isAdmin ? ['label' => 'تنظیمات ثبت‌نام', 'url' => url('/admin/auth-settings')] : null,
+            $isAdmin ? ['label' => 'کارمند و دسترسی‌ها', 'url' => url('/admin/staff')] : null,
+            $isAdmin || $can('sales') ? ['label' => 'منوی نمایندگان', 'url' => url('/staff/desk/reps')] : null,
             $can('site.mega_menu') ? ['label' => 'مگامنو و هدر', 'url' => url('/admin/mega-menu')] : null,
             $can('site.footer') ? ['label' => 'فوتر', 'url' => url('/admin/footer-settings')] : null,
-            $can('site.webapp') ? ['label' => 'وب‌اپ / PWA', 'url' => url('/admin/web-app')] : null,
+            $can('site.webapp') ? ['label' => 'وب‌اپ', 'url' => url('/admin/web-app')] : null,
             $can('site.page_builder') ? ['label' => 'صفحه‌ساز', 'url' => url('/admin/page-builder')] : null,
             $can('site.shop_settings') ? ['label' => 'تنظیمات فروشگاه', 'url' => url('/admin/settings')] : null,
         ]));
@@ -94,9 +106,11 @@ class AdminToolbar
         if ($path === '' || $path === '/') {
             $label = $studio ? 'خانه استودیو' : 'خانه فروشگاه';
             if ($studio) {
-                $primary = static::builderEdit('/', $can) ?: ($can('site.homepage') ? ['label' => 'ویرایش', 'url' => url('/admin/studio-home')] : null);
-                $add($can('site.homepage') ? ['label' => 'کلیدهای نمایش خانه', 'url' => url('/admin/studio-home')] : null);
-                $add(['label' => 'بنر فروشگاه', 'url' => url('/admin/homepage-settings')]);
+                $primary = $can('site.homepage') ? ['label' => 'ویرایش', 'url' => url('/admin/studio-home')] : null;
+                $add($can('site.homepage') ? ['label' => 'تنظیمات صفحه اول', 'url' => url('/admin/studio-home')] : null);
+                $add($can('site.homepage') ? ['label' => 'طراحی سایت', 'url' => url('/design')] : null);
+                $add($can('site.homepage') ? ['label' => 'نرم‌افزار', 'url' => url('/computer-accounting')] : null);
+                $add($can('site.homepage') ? ['label' => 'هوش مصنوعی', 'url' => url('/ai')] : null);
             } elseif ($can('site.homepage')) {
                 $primary = ['label' => 'ویرایش', 'url' => url('/admin/homepage-settings')];
                 $add(['label' => 'صفحه اول استودیو', 'url' => url('/admin/studio-home')]);
@@ -161,17 +175,21 @@ class AdminToolbar
             return compact('label', 'primary', 'links');
         }
 
-        if (str_starts_with($path, 'design') || $path === 'ai' || $path === 'projects' || $path === 'about' || $path === 'contact' || $path === 'receipt-software') {
+        if (str_starts_with($path, 'design') || str_starts_with($path, 'software') || $path === 'ai' || $path === 'projects' || $path === 'about' || $path === 'contact' || $path === 'support' || $path === 'receipt-software') {
             $label = match (true) {
                 str_starts_with($path, 'design') => 'طراحی سایت',
+                str_starts_with($path, 'software') => 'نرم‌افزار',
                 $path === 'ai' => 'هوش مصنوعی',
                 $path === 'projects' => 'نمونه کار',
                 $path === 'about' => 'درباره ما',
                 $path === 'contact' => 'تماس',
+                $path === 'support' => 'پشتیبانی',
                 default => 'صفحه استودیو',
             };
-            $primary = static::builderEdit($path, $can);
-            $add($can('site.mega_menu') ? ['label' => 'لینک منو', 'url' => url('/admin/mega-menu')] : null);
+            if ($can('site.homepage')) {
+                $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            }
+            static::studioLinks($can, $add);
 
             return compact('label', 'primary', 'links');
         }
@@ -182,16 +200,20 @@ class AdminToolbar
                 str_starts_with($path, 'repair-shop') => 'تعمیرگاه',
                 default => 'حسابداری وب',
             };
-            $primary = static::builderEdit($path, $can);
-            $add($can('site.mega_menu') ? ['label' => 'منوی حسابداری', 'url' => url('/admin/mega-menu')] : null);
+            if ($can('site.homepage')) {
+                $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            }
+            static::studioLinks($can, $add);
 
             return compact('label', 'primary', 'links');
         }
 
         if ($path === 'sites' || str_starts_with($path, 'sites/')) {
             $label = 'فروش سایت';
-            $primary = static::builderEdit($path, $can);
-            $add($can('site.mega_menu') ? ['label' => 'مگامنو', 'url' => url('/admin/mega-menu')] : null);
+            if ($can('site.homepage')) {
+                $primary = ['label' => 'تنظیمات سایت', 'url' => url('/admin/studio-home')];
+            }
+            static::studioLinks($can, $add);
 
             return compact('label', 'primary', 'links');
         }
@@ -252,6 +274,25 @@ class AdminToolbar
      * @param  callable(string):bool  $can
      * @return array{label:string,url:string}|null
      */
+    protected static function studioLinks(callable $can, callable $add): void
+    {
+        $user = auth()->user();
+        $isAdmin = $user && method_exists($user, 'isAdmin') && $user->isAdmin();
+        $add($can('site.homepage') ? ['label' => 'تنظیمات صفحه اول', 'url' => url('/admin/studio-home')] : null);
+        $add($isAdmin || $can('full_site') ? ['label' => 'تنظیمات حسابداری', 'url' => url('/admin/accounting/settings')] : null);
+        $add($can('site.homepage') ? ['label' => 'تنظیم درگاه پیامک', 'url' => url('/admin/studio-sms')] : null);
+        $add($isAdmin || $can('full_site') ? ['label' => 'تنظیمات فاکتور', 'url' => url('/admin/invoice-design')] : null);
+        $add($isAdmin || $can('serials') || $can('sales') ? ['label' => 'بارکد و سریال', 'url' => url('/admin/serial-sales')] : null);
+        $add($isAdmin ? ['label' => 'تنظیمات ثبت‌نام', 'url' => url('/admin/auth-settings')] : null);
+        $add($isAdmin ? ['label' => 'کارمند و دسترسی‌ها', 'url' => url('/admin/staff')] : null);
+        $add($isAdmin || $can('sales') ? ['label' => 'منوی نمایندگان', 'url' => url('/staff/desk/reps')] : null);
+        $add($can('site.mega_menu') ? ['label' => 'منوی بالا', 'url' => url('/admin/mega-menu')] : null);
+        $add($can('site.footer') ? ['label' => 'فوتر', 'url' => url('/admin/footer-settings')] : null);
+        $add($can('site.page_builder') ? ['label' => 'صفحه‌ساز', 'url' => url('/admin/page-builder')] : null);
+        $add($can('site.webapp') ? ['label' => 'وب‌اپ', 'url' => url('/admin/web-app')] : null);
+        $add($can('site.shop_settings') ? ['label' => 'تنظیمات فروشگاه', 'url' => url('/admin/settings')] : null);
+    }
+
     protected static function builderEdit(string $path, callable $can): ?array
     {
         if (! $can('site.page_builder') && ! $can('site.homepage')) {

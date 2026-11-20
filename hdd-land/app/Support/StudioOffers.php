@@ -147,16 +147,58 @@ class StudioOffers
         ];
     }
 
+    /** @return list<array<string, mixed>> */
+    public static function catalog(): array
+    {
+        $saved = class_exists(StudioStaffDesk::class) ? StudioStaffDesk::priceMap() : [];
+        $rows = [];
+        foreach (array_merge(self::design(), self::software()) as $row) {
+            $over = $saved[$row['sku']] ?? null;
+            if (is_array($over)) {
+                if (($over['price'] ?? null) !== null && (int) $over['price'] > 0) {
+                    $row['price'] = (string) (int) $over['price'];
+                    $row['price_label'] = number_format((int) $over['price']).' تومان';
+                }
+                if (($over['commission'] ?? null) !== null) {
+                    $row['commission'] = (float) $over['commission'];
+                }
+            }
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
     /** @return array<string, mixed>|null */
     public static function find(string $sku): ?array
     {
-        foreach (array_merge(self::design(), self::software()) as $row) {
+        foreach (self::catalog() as $row) {
             if (($row['sku'] ?? '') === $sku) {
                 return $row;
             }
         }
 
         return null;
+    }
+
+    /** @param  array<string, mixed>  $offer
+     *  @return array{price:int,rate:float,share:int,source:string,base:float}
+     */
+    public static function quote(array $offer, int $userId = 0): array
+    {
+        $base = (float) ($offer['commission'] ?? 0);
+        $person = class_exists(StudioStaffDesk::class) ? StudioStaffDesk::personRate($userId) : null;
+        $rate = $person ?? $base;
+        $price = (int) preg_replace('/\D+/', '', (string) ($offer['price'] ?? '')) ?: 0;
+        $share = $price > 0 ? (int) round($price * $rate / 100) : 0;
+
+        return [
+            'price' => $price,
+            'rate' => $rate,
+            'share' => $share,
+            'source' => $person !== null ? 'person' : 'software',
+            'base' => $base,
+        ];
     }
 
     public static function priceText(array $row): string

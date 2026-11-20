@@ -24,6 +24,7 @@
       <a class="ag-btn ag-btn--on" href="{{ url('/contact') }}">درخواست دموی نسخهٔ شرکتی<i>←</i></a>
       <a class="ag-btn ag-btn--line" href="#features">مشاهدهٔ همهٔ امکانات</a>
     </div>
+    @include('studio::sale-bar', ['sku' => 'acc-corporate'])
     <p class="ag-note">سامانهٔ مؤدیان · چندکاربره و شبکه‌ای · فروش و خرید ارزی</p>
     @include('studio::accounting-corporate-demos', ['n' => 1])
   </div>

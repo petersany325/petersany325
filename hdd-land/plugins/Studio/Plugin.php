@@ -41,6 +41,7 @@ class Plugin extends BasePlugin
             ['label' => 'صفحه‌ساز منوها', 'url' => '/admin/page-builder'],
             ['label' => 'صفحه اول استودیو', 'url' => '/admin/studio-home'],
             ['label' => 'پیامک ورود سایت', 'url' => '/admin/studio-sms'],
+            ['label' => 'تنظیمات چت آنلاین', 'url' => '/admin/studio-chat'],
         ];
     }
 
@@ -84,6 +85,9 @@ class Plugin extends BasePlugin
             base_path('app/Support/StudioOffers.php'),
             base_path('app/Support/StudioHddCatalog.php'),
             base_path('app/Support/StudioStaffDesk.php'),
+            base_path('app/Support/StudioChat.php'),
+            base_path('app/Support/StudioPriceList.php'),
+            base_path('app/Support/StudioCart.php'),
             base_path('app/Support/StudioPay.php'),
             base_path('app/Support/StudioNotify.php'),
             base_path('app/Support/StudioPlugins.php'),
@@ -99,9 +103,12 @@ class Plugin extends BasePlugin
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioAuthController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioStaffDeskController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioPayController.php',
+            __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioCartController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioSupportController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioCustomerDeskController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'Admin'.DIRECTORY_SEPARATOR.'StudioHomeController.php',
+            __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'StudioChatController.php',
+            __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'Admin'.DIRECTORY_SEPARATOR.'StudioChatAdminController.php',
             __DIR__.DIRECTORY_SEPARATOR.'src'.DIRECTORY_SEPARATOR.'Http'.DIRECTORY_SEPARATOR.'Controllers'.DIRECTORY_SEPARATOR.'Admin'.DIRECTORY_SEPARATOR.'StudioSmsController.php',
         ];
         foreach ($files as $file) {

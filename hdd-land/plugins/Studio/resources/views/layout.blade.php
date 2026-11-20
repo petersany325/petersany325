@@ -77,6 +77,7 @@
   </div>
 </footer>
 @include('studio::mobile', ['studioHome' => $studioHome])
+@include('studio::chat')
 <script>
 (function(){
   var btn=document.querySelector('[data-ag-burger]');
