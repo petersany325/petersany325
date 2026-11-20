@@ -534,4 +534,37 @@ class DesktopSyncV1Test extends TestCase
         $this->assertNull($reception->customer_cost_approved_amount);
         $this->assertNull($reception->cost_confirmed_at);
     }
+
+    public function test_status_cursor_stays_ahead_of_deletes(): void
+    {
+        [, $token] = DesktopDevice::issue('حذف', null);
+        $kept = Customer::query()->create(['name' => 'مانده', 'phone' => '09121110001']);
+        $kept->forceFill(['updated_at' => now()->subDay()])->save();
+        $removed = Customer::query()->create(['name' => 'حذف‌شده', 'phone' => '09121110002']);
+        $removed->delete();
+
+        $cursor = $this->withToken($token)->getJson('/api/desktop-sync/v1/status')->assertOk()->json('latest_cursor');
+        $this->assertNotEmpty($cursor);
+        $after = $this->withToken($token)->getJson('/api/desktop-sync/v1/changes?'.http_build_query([
+            'since' => $cursor,
+            'tables' => 'customers',
+            'limit' => 50,
+        ]))->assertOk()->json('items');
+        $this->assertFalse(collect($after)->contains(fn ($item) => (int) $item['id'] === $removed->id && $item['op'] === 'delete'));
+
+        $option = LookupOption::query()->create([
+            'group_key' => 'admission_type',
+            'name' => 'حذف منو',
+            'sort_order' => 9,
+            'is_active' => true,
+        ]);
+        $option->delete();
+        $cursor = $this->withToken($token)->getJson('/api/desktop-sync/v1/status')->assertOk()->json('latest_cursor');
+        $after = $this->withToken($token)->getJson('/api/desktop-sync/v1/changes?'.http_build_query([
+            'since' => $cursor,
+            'tables' => 'lookup_options',
+            'limit' => 50,
+        ]))->assertOk()->json('items');
+        $this->assertFalse(collect($after)->contains(fn ($item) => (int) $item['id'] === $option->id && $item['op'] === 'delete'));
+    }
 }

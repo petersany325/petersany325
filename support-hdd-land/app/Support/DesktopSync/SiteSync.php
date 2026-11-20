@@ -150,7 +150,7 @@ class SiteSync
             $this->onlyPublicSettings($countQuery, $table);
             $counts[$table] = (int) $countQuery->count();
             $time = $this->timeColumn($table);
-            $latestQuery = $this->baseQuery($table, false);
+            $latestQuery = $this->baseQuery($table, true);
             $this->onlyPublicSettings($latestQuery, $table);
             $row = $latestQuery
                 ->orderByDesc($time ?: 'id')
@@ -163,6 +163,23 @@ class SiteSync
             $candidate = ['t' => $this->stamp($stamp), 'table' => $table, 'id' => (int) data_get($row, 'id')];
             if ($latest === null || $this->tuple($candidate) > $this->tuple($latest)) {
                 $latest = $candidate;
+            }
+        }
+        if (Schema::hasTable('desktop_sync_tombstones')) {
+            $tomb = DB::table('desktop_sync_tombstones')
+                ->orderByDesc('deleted_at')
+                ->orderByDesc('table_name')
+                ->orderByDesc('row_id')
+                ->first();
+            if ($tomb) {
+                $candidate = [
+                    't' => $this->stamp((string) $tomb->deleted_at),
+                    'table' => (string) $tomb->table_name,
+                    'id' => (int) $tomb->row_id,
+                ];
+                if ($latest === null || $this->tuple($candidate) > $this->tuple($latest)) {
+                    $latest = $candidate;
+                }
             }
         }
 
@@ -543,30 +560,34 @@ class SiteSync
         if ($desiredStock === null || ! Schema::hasTable('stock_movements')) {
             return;
         }
-        $delta = $desiredStock - (int) $part->stock;
+        $locked = Part::query()->lockForUpdate()->find($part->id);
+        if (! $locked) {
+            return;
+        }
+        $delta = $desiredStock - (int) $locked->stock;
         if ($delta === 0) {
             return;
         }
-        $opening = (int) $part->stock === 0 && ! $part->stockMovements()->exists();
-        StockMovement::query()->create([
+        $opening = (int) $locked->stock === 0 && ! $locked->stockMovements()->exists();
+        $movement = StockMovement::query()->create([
             'doc_no' => StockMovement::nextDocNo($delta > 0 ? 'IN' : 'ADJ'),
-            'part_id' => $part->id,
-            'warehouse_id' => $part->warehouse_id ?: Warehouse::defaultId(),
+            'part_id' => $locked->id,
+            'warehouse_id' => $locked->warehouse_id ?: Warehouse::defaultId(),
             'type' => $delta > 0 ? 'in' : 'out',
             'doc_type' => $opening ? 'opening' : 'adjust',
             'quantity' => $delta,
-            'unit_cost' => max(0, (int) $part->purchase_price),
-            'total_cost' => abs($delta) * max(0, (int) $part->purchase_price),
+            'unit_cost' => max(0, (int) $locked->purchase_price),
+            'total_cost' => abs($delta) * max(0, (int) $locked->purchase_price),
             'stock_after' => $desiredStock,
             'note' => $opening ? 'موجودی اول دوره از نرم‌افزار' : 'تعدیل موجودی از نرم‌افزار',
         ]);
-        $part->forceFill(['stock' => $desiredStock])->save();
+        $locked->forceFill(['stock' => $desiredStock])->save();
         try {
             app(AccountingService::class)->postStockPurchase(
-                (int) StockMovement::query()->where('part_id', $part->id)->latest('id')->value('id'),
-                $part,
+                (int) $movement->id,
+                $locked,
                 $delta,
-                max(0, (int) $part->purchase_price),
+                max(0, (int) $locked->purchase_price),
                 'همگام‌سازی نرم‌افزار'
             );
         } catch (Throwable) {
