@@ -288,11 +288,28 @@ class DesktopSyncTest extends TestCase
             'is_active' => true,
         ]);
 
+        [$device, $plain] = DesktopDevice::issue('پذیرش منو', $admin->id);
+
         $this->actingAs($admin)
             ->get('/settings/desktop-sync')
             ->assertOk()
             ->assertSee('همگام‌سازی نرم‌افزار رایانه')
-            ->assertSee('/api/desktop/v1/sync');
+            ->assertSee('/api/desktop/v1/sync')
+            ->assertSee('منو')
+            ->assertSee('کپی توکن')
+            ->assertSee($plain, false);
+
+        $this->assertSame($plain, $device->fresh()->plainToken());
+
+        $device->forceFill(['revoked_at' => now(), 'token_encrypted' => null])->save();
+        $this->actingAs($admin)
+            ->post('/settings/desktop-sync/'.$device->id.'/reissue')
+            ->assertRedirect('/settings/desktop-sync');
+
+        $device->refresh();
+        $this->assertNull($device->revoked_at);
+        $this->assertNotSame($plain, $device->plainToken());
+        $this->assertNotNull($device->plainToken());
     }
 
     public function test_revoked_token_is_rejected(): void

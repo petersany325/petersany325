@@ -40,6 +40,7 @@ class AppServiceProvider extends ServiceProvider
                     Route::get('settings/desktop-sync', [DesktopDeviceController::class, 'index'])->name('settings.desktop-sync');
                     Route::post('settings/desktop-sync', [DesktopDeviceController::class, 'store'])->name('settings.desktop-sync.store');
                     Route::post('settings/desktop-sync/{device}/revoke', [DesktopDeviceController::class, 'revoke'])->name('settings.desktop-sync.revoke');
+                    Route::post('settings/desktop-sync/{device}/reissue', [DesktopDeviceController::class, 'reissue'])->name('settings.desktop-sync.reissue');
                 });
             }
         });

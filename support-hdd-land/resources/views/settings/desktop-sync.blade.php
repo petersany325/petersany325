@@ -2,6 +2,26 @@
 @section('title', 'همگام‌سازی رایانه | سرزمین هارد')
 @section('page_title', 'همگام‌سازی نرم‌افزار رایانه')
 @section('window_title', 'اتصال نرم‌افزار کامپیوتر')
+@push('head')
+<style>
+.device-menu { position: relative; display: inline-block; }
+.device-menu-pop {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: 40;
+    min-width: 168px;
+    padding: 6px;
+    background: #fff;
+    border: 1px solid #c5cdd6;
+    box-shadow: 0 8px 20px rgba(20, 28, 38, .14);
+}
+.device-menu.is-open .device-menu-pop { display: flex; flex-direction: column; gap: 6px; }
+.device-menu-pop .btn,
+.device-menu-pop form .btn { width: 100%; }
+</style>
+@endpush
 @section('content')
 <div class="panel">
     <h2>نرم‌افزار کامپیوتر و سایت</h2>
@@ -9,13 +29,6 @@
 
     @if(!$ready)
         <div class="alert alert-error">جدول همگام‌سازی هنوز ساخته نشده. به‌روزرسانی نرم‌افزار را یک بار نصب کنید.</div>
-    @endif
-
-    @if($plainToken)
-        <div class="alert alert-success">
-            <div>این توکن را در نرم‌افزار رایانه وارد کنید. دوباره نشان داده نمی‌شود.</div>
-            <div dir="ltr" style="margin-top:8px;font-family:monospace;word-break:break-all;">{{ $plainToken }}</div>
-        </div>
     @endif
 
     <form method="POST" action="{{ route('settings.desktop-sync.store') }}" class="accept-row accept-row-4">
@@ -48,12 +61,26 @@
                     <td>{{ $device->last_seen_at ? jalali_like($device->last_seen_at) : 'هنوز وصل نشده' }}</td>
                     <td>{{ $device->revoked_at ? 'قطع‌شده' : 'فعال' }}</td>
                     <td>
-                        @if(!$device->revoked_at)
-                            <form method="POST" action="{{ route('settings.desktop-sync.revoke', $device) }}">
-                                @csrf
-                                <button class="btn btn-danger" type="submit" data-confirm="اتصال این رایانه قطع شود؟">قطع اتصال</button>
-                            </form>
-                        @endif
+                        @php $token = $device->plainToken(); @endphp
+                        <div class="device-menu" data-device-menu>
+                            <button type="button" class="btn btn-secondary" data-device-menu-btn>منو</button>
+                            <div class="device-menu-pop">
+                                @if($token)
+                                    <button type="button" class="btn btn-primary" data-copy-token="{{ $token }}" @if((int) $copyId === (int) $device->id) data-autocopy @endif>کپی توکن</button>
+                                @else
+                                    <form method="POST" action="{{ route('settings.desktop-sync.reissue', $device) }}">
+                                        @csrf
+                                        <button class="btn btn-primary" type="submit" data-confirm="توکن قبلی ذخیره نشده و با ساختن توکن جدید از کار می‌افتد. توکن جدید ساخته و کپی شود؟">کپی توکن</button>
+                                    </form>
+                                @endif
+                                @if(!$device->revoked_at)
+                                    <form method="POST" action="{{ route('settings.desktop-sync.revoke', $device) }}">
+                                        @csrf
+                                        <button class="btn btn-danger" type="submit" data-confirm="اتصال این رایانه قطع شود؟">قطع اتصال</button>
+                                    </form>
+                                @endif
+                            </div>
+                        </div>
                     </td>
                 </tr>
             @empty
@@ -85,4 +112,50 @@
   ]
 }</pre>
 </div>
+<script>
+(function () {
+    function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        }
+        var input = document.createElement('textarea');
+        input.value = text;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.left = '-9999px';
+        document.body.appendChild(input);
+        input.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        input.remove();
+        return Promise.resolve();
+    }
+
+    document.addEventListener('click', function (event) {
+        var menuBtn = event.target.closest('[data-device-menu-btn]');
+        document.querySelectorAll('[data-device-menu].is-open').forEach(function (menu) {
+            if (!menuBtn || !menu.contains(menuBtn)) menu.classList.remove('is-open');
+        });
+        if (menuBtn) {
+            menuBtn.closest('[data-device-menu]').classList.toggle('is-open');
+            event.preventDefault();
+        }
+
+        var copyBtn = event.target.closest('[data-copy-token]');
+        if (!copyBtn) return;
+        event.preventDefault();
+        copyText(copyBtn.getAttribute('data-copy-token') || '').then(function () {
+            copyBtn.textContent = 'کپی شد';
+        });
+    });
+
+    var auto = document.querySelector('[data-autocopy]');
+    if (auto) {
+        copyText(auto.getAttribute('data-copy-token') || '').then(function () {
+            auto.textContent = 'کپی شد';
+            var menu = auto.closest('[data-device-menu]');
+            if (menu) menu.classList.add('is-open');
+        });
+    }
+})();
+</script>
 @endsection

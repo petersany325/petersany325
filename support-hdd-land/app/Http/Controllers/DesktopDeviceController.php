@@ -17,7 +17,7 @@ class DesktopDeviceController extends Controller
             'devices' => $ready
                 ? DesktopDevice::query()->latest('id')->get()
                 : collect(),
-            'plainToken' => session('desktop_plain_token'),
+            'copyId' => session('desktop_copy_id'),
             'syncUrl' => url('/api/desktop/v1/sync'),
             'pingUrl' => url('/api/desktop/v1/ping'),
             'specUrl' => url('/api/desktop/v1/spec'),
@@ -34,12 +34,22 @@ class DesktopDeviceController extends Controller
             'name' => ['required', 'string', 'max:80'],
         ]);
 
-        [, $plain] = DesktopDevice::issue($data['name'], $request->user()?->id);
+        $device = DesktopDevice::issue($data['name'], $request->user()?->id)[0];
 
         return redirect()
             ->route('settings.desktop-sync')
-            ->with('success', 'توکن این رایانه ساخته شد. فقط همین یک بار نشان داده می‌شود؛ آن را در نرم‌افزار وارد کنید.')
-            ->with('desktop_plain_token', $plain);
+            ->with('success', 'توکن «'.$device->name.'» ساخته شد. از منوی همان ردیف، کپی توکن را بزنید.')
+            ->with('desktop_copy_id', $device->id);
+    }
+
+    public function reissue(DesktopDevice $device)
+    {
+        $device->reissue();
+
+        return redirect()
+            ->route('settings.desktop-sync')
+            ->with('success', 'توکن جدید «'.$device->name.'» ساخته شد. توکن قبلی دیگر وصل نمی‌شود.')
+            ->with('desktop_copy_id', $device->id);
     }
 
     public function revoke(DesktopDevice $device)
