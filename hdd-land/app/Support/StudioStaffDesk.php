@@ -180,6 +180,7 @@ class StudioStaffDesk
             'commission' => $rate,
             'share' => $share,
             'gateway' => $gateway,
+            'buyer_phone' => trim((string) ($offer['buyer_phone'] ?? '')),
             'status' => 'recorded',
             'created_at' => date('c'),
         ];

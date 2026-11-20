@@ -99,11 +99,11 @@ class StudioCartController
             'price' => (string) StudioCart::total(),
             'commission' => 0,
             'buyer_id' => $isStaff ? 0 : (int) ($user->id ?? 0),
+            'buyer_phone' => $buyerPhone,
             'lines' => $lines,
         ];
         $sellerId = $isStaff ? (int) ($user->id ?? 0) : 0;
         $invoice = StudioStaffDesk::recordSale($offer, $sellerId, $buyer, $gateway);
-        $invoice['buyer_phone'] = $buyerPhone;
         StudioCart::clear();
         if ($isStaff) {
             $to = '/staff/desk/invoices';

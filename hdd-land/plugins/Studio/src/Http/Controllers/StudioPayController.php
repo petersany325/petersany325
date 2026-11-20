@@ -58,12 +58,9 @@ class StudioPayController
         } catch (\Throwable) {
         }
         $offer['buyer_id'] = $isStaff ? 0 : (int) ($user->id ?? 0);
+        $offer['buyer_phone'] = $buyerPhone;
         $sellerId = $isStaff ? (int) ($user->id ?? 0) : 0;
         $invoice = StudioStaffDesk::recordSale($offer, $sellerId, $buyer, $gateway);
-        $invoice['buyer_phone'] = $buyerPhone;
-        if (class_exists(\App\Support\StudioNotify::class) && $buyerPhone !== '') {
-            \App\Support\StudioNotify::invoice($invoice);
-        }
         $to = $isStaff ? '/staff/desk/invoices' : '/account/invoices';
 
         return redirect()->to(url($to))->with('success', 'فاکتور '.$invoice['id'].' ثبت شد.');
